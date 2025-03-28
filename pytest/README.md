@@ -10,7 +10,7 @@ bazel_dep(name = "score_pytest", version = "0.1")
 
 BUILD
 ```
-load("@score_pytest:pytest.bzl", "score_py_pytest")
+load("@score_pytest//:pytest.bzl", "score_py_pytest")
 
 score_py_pytest(
     name = "test_my_first_check",
@@ -35,14 +35,14 @@ score_py_pytest(
 ## Development
 
 ### Updating pip dependencies
-It uses the dependencies from `docs/_tooling/requirements.txt`.  
+It uses the dependencies from `requirements.txt`.  
 If you have added new dependencies, make sure to update the *requirements_lock* file like so: 
 ```
-bazel run //docs:requirements.update -- --upgrade
+bazel run //:requirements.update -- --upgrade
 ```
 
 ### Running test
 To run the tests of the pytest module use:
 ```
-$ bazel test //test/...
+$ bazel test //...
 ```

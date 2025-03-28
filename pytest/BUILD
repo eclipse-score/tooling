@@ -17,6 +17,7 @@ exports_files([
     "pytest.ini",
     "main.py",
     "pytest.bzl",
+    "requirements_lock.txt"
 ])
 
 # In order to update the requirements, change the `requirements.txt` file and run:
