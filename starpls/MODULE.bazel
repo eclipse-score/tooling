@@ -1,0 +1,10 @@
+
+module(
+    name = "score_starpls",
+    version = "0.1.0",
+    compatibility_level = 0,
+)
+
+bazel_dep(name = "rules_shell", version = "0.4.0")
+
+
