@@ -8,6 +8,9 @@ MODULE.bazel
 bazel_dep(name = "score_pytest", version = "0.1.0")
 ```
 
+> The 'score_pytest' module will determin the `pytest` version. 
+
+
 BUILD
 ```
 load("@score_pytest//:pytest.bzl", "score_py_pytest")
@@ -34,7 +37,7 @@ score_py_pytest(
 
 ## Development
 
-### Updating pip dependencies
+### Updating pytest in score_pytest
 It uses the dependencies from `requirements.txt`.  
 If you have added new dependencies, make sure to update the *requirements_lock* file like so: 
 ```

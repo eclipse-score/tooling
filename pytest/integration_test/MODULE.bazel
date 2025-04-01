@@ -27,14 +27,6 @@ python.toolchain(
 )
 use_repo(python)
 
-pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
-pip.parse(
-    hub_name = "pip_score_pytest",
-    python_version = PYTHON_VERSION,
-    requirements_lock = "requirements_lock.txt",
-)
-use_repo(pip, "pip_score_pytest_test")
-
 ###############################################################################
 #
 # Generic linting and formatting rules
@@ -50,5 +42,5 @@ bazel_dep(
 
 local_path_override(
     module_name = "score_pytest",
-    path = "../pytest"
+    path = "../"
 )

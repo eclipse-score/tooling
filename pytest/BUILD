@@ -17,7 +17,6 @@ exports_files([
     "pytest.ini",
     "main.py",
     "pytest.bzl",
-    "requirements_lock.txt"
 ])
 
 # In order to update the requirements, change the `requirements.txt` file and run:
@@ -27,8 +26,8 @@ exports_files([
 # `bazel run //:requirements.update -- --upgrade`.
 compile_pip_requirements(
     name = "requirements",
-    src = "requirements.txt",
-    requirements_txt = "requirements_lock.txt",
+    src = "requirements.in",
+    requirements_txt = "requirements.txt",
     tags = [
         "manual",
     ],
