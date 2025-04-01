@@ -5,7 +5,7 @@ This module implements support for running [pytest](https://docs.pytest.org/en/l
 ## Usage
 MODULE.bazel
 ```
-bazel_dep(name = "score_pytest", version = "0.1")
+bazel_dep(name = "score_pytest", version = "0.1.0")
 ```
 
 BUILD
