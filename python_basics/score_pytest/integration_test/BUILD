@@ -10,12 +10,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("//:pytest.bzl", "score_py_pytest")
+load("@score_python_basics//score_pytest:py_pytest.bzl", "score_py_pytest")
 
 score_py_pytest(
-    name = "test_rules_are_working_correctly",
+    name = "pytest_version_correct",
     srcs = [
-        "conftest.py",
-        "test_rules_are_working_correctly.py",
+        "int_test.py",
     ],
 )   

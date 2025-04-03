@@ -12,15 +12,16 @@
 # *******************************************************************************
 """Bazel interface for running pytest"""
 
-load("@pip_score_pytest//:requirements.bzl", "all_requirements")
+load("@pip_score_python_basics//:requirements.bzl", "all_requirements")
 load("@rules_python//python:defs.bzl", "py_test")
 
 
 def score_py_pytest(name, srcs, args = [], data = [], deps = [], plugins = [], pytest_ini = None, **kwargs):
-    pytest_bootstrap = Label("//:main.py")
+    pytest_bootstrap = Label("//score_pytest:main.py")
 
     if not pytest_ini:
-        pytest_ini = Label("//:pytest.ini")
+        pytest_ini = Label("//score_pytest:pytest.ini")
+        #fail("$(location %s)" % pytest_ini)
 
     if not srcs:
         fail("No source files provided for %s! (Is your glob empty?)" % name)

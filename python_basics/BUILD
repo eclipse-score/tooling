@@ -13,11 +13,11 @@
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 package(default_visibility = ["//visibility:public"])
 
+# Exporting req. lock file
 exports_files([
-    "pytest.ini",
-    "main.py",
-    "pytest.bzl",
+    "requirements.txt"
 ])
+
 
 # In order to update the requirements, change the `requirements.txt` file and run:
 # `bazel run //:requirements.update`.

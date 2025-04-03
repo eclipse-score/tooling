@@ -13,7 +13,7 @@
 # *******************************************************************************
 
 module(
-    name = "score_pytest",
+    name = "score_python_basics",
     version = "0.1.0",
     compatibility_level = 0,
 )
@@ -37,11 +37,11 @@ use_repo(python)
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
-    hub_name = "pip_score_pytest",
+    hub_name = "pip_score_python_basics",
     python_version = PYTHON_VERSION,
-    requirements_lock = "requirements.txt",
+    requirements_lock = "//:requirements.txt",
 )
-use_repo(pip, "pip_score_pytest")
+use_repo(pip, "pip_score_python_basics")
 
 ###############################################################################
 #

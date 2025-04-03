@@ -10,11 +10,21 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@score_pytest//:pytest.bzl", "score_py_pytest")
+
+load("@aspect_rules_py//py:defs.bzl", "py_library")
+load("//score_pytest:py_pytest.bzl", "score_py_pytest")
+
+exports_files([
+    "pytest.ini",
+    "main.py",
+    "py_pytest.bzl",
+])
+
 
 score_py_pytest(
-    name = "pytest_version_correct",
-    srcs = [
-        "int_test.py",
-    ],
+    name = "test_rules_are_working_correctly",
+    srcs = glob([
+        "tests/*.py",
+    ]),
 )   
+

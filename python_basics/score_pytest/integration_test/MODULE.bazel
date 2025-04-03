@@ -36,11 +36,11 @@ bazel_dep(name = "aspect_rules_py", version = "1.0.0")
 
 
 bazel_dep(
-    name = "score_pytest",
+    name = "score_python_basics",
     version = "0.1.0"
 )
 
 local_path_override(
-    module_name = "score_pytest",
-    path = "../"
+    module_name = "score_python_basics",
+    path = "../../"
 )

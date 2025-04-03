@@ -5,15 +5,16 @@ This module implements support for running [pytest](https://docs.pytest.org/en/l
 ## Usage
 MODULE.bazel
 ```
-bazel_dep(name = "score_pytest", version = "0.1.0")
+bazel_dep(name = "score_python_basics", version = "0.1.0")
 ```
 
 > The 'score_pytest' module will determin the `pytest` version. 
+> It is not possible to overwrite this.
 
 
 BUILD
 ```
-load("@score_pytest//:pytest.bzl", "score_py_pytest")
+load("@score_python_basics//score_pytest:py_pytest.bzl", "score_py_pytest")
 
 score_py_pytest(
     name = "test_my_first_check",
@@ -35,7 +36,7 @@ score_py_pytest(
 )
 ```
 
-## Development
+## Development of score_pytest
 
 ### Updating pytest in score_pytest
 It uses the dependencies from `requirements.txt`.  
