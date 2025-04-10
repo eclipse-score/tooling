@@ -1,7 +1,7 @@
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 load("//:defs.bzl", "score_virtualenv")
 load("@aspect_rules_lint//format:defs.bzl", "format_multirun", "format_test")
-#package(default_visibility = ["//visibility:public"])
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
 
 # define ":ruff" target
 #score_python()
@@ -9,22 +9,29 @@ load("@aspect_rules_lint//format:defs.bzl", "format_multirun", "format_test")
 # Generate the virtualenv
 score_virtualenv()
 
+python_tool = "@aspect_rules_lint//format:ruff"
+
 format_multirun(
     name = "format.fix",
-    python = "@aspect_rules_lint//format:ruff",
+    python = python_tool,
+    print_command = True,
     visibility = [
         "//visibility:private",
     ],
 )
 
+# Ensure all files are formatted correctly
 format_test(
     name = "format.check",
-    no_sandbox= True,
-    python = "@aspect_rules_lint//format:ruff",
-    workspace = "@score_python_basics//:MODULE.bazel",
+    python = python_tool,
     visibility = [
         "//visibility:private",
     ],
+
+    # Scan the entire workspace.
+    # This mode causes the test to be non-hermetic and it cannot be cached.
+    no_sandbox= True,
+    workspace = "//:MODULE.bazel",
 )
 
 
@@ -35,9 +42,18 @@ format_test(
 # `bazel run //:requirements.update -- --upgrade`.
 compile_pip_requirements(
     name = "requirements",
-    src = "requirements.in",
-    requirements_txt = "requirements.txt",
+    src = "//:requirements.in",
+    requirements_txt = "//:requirements.txt",
     tags = [
         "manual",
+    ],
+)
+
+
+build_test(
+    name = "ensure_all_private_targets_work",
+    targets = [
+        ":format.fix", # Ensure format.fix is executable
+         ":requirements.update",
     ],
 )

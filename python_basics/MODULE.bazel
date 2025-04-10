@@ -38,7 +38,7 @@ pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
     hub_name = "pip_score_python_basics",
     python_version = PYTHON_VERSION,
-    requirements_lock = "//:requirements.txt",
+    requirements_lock = "requirements.txt",
 )
 use_repo(pip, "pip_score_python_basics")
 
@@ -52,10 +52,11 @@ bazel_dep(name = "aspect_rules_py", version = "1.0.0")
 bazel_dep(name = "aspect_rules_lint", version = "1.3.1")
 
 bazel_dep(name = "rules_multitool", version = "1.2.0")
+bazel_dep(name = "bazel_skylib", version = "1.7.1", dev_dependency=True)
 
-# multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
-# multitool.hub(lockfile = "multitool.lock.json")
-# use_repo(multitool, "multitool")
+multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
+multitool.hub(lockfile = "multitool.lock.json")
+use_repo(multitool, "multitool")
 
 
 # http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")

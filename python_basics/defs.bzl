@@ -2,8 +2,6 @@
 # load("//score_venv/py_pyvenv.bzl", "score_virtualenv")
 
 load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_library")
-load("@aspect_rules_lint//lint:lint_test.bzl", "lint_test")
-load("@aspect_rules_lint//lint:ruff.bzl", "lint_ruff_aspect")
 load("@aspect_rules_py//py:defs.bzl", "py_venv")
 load("//score_pytest:py_pytest.bzl", _score_py_pytest = "score_py_pytest")
 load("@pip_score_python_basics//:requirements.bzl", "all_requirements")

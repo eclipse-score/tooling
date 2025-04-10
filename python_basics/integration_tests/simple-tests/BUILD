@@ -10,25 +10,22 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+load("@score_python_basics//:defs.bzl", "score_virtualenv", "score_py_pytest")
 
-import subprocess
-import sys
+score_virtualenv(
+    name="basic_venv",
+    venv_name=".basic_venv"
+)
 
-tool_path = [
-    "bazel",
-    "run",
-    "@aspect_rules_lint//format:ruff",
-    "--",
-]
+score_py_pytest(
+    name = "venv_ok_test",
+    srcs = [ "test_venv_ok.py"],
+    data = [":basic_venv"]
+)
 
-
-# Is absoulte needed / right here?
-# config_path = Path(os.path.realpath(__file__)).parent.parent / "pyproject.toml"
-
-cmd = tool_path + sys.argv[1:]
-print("cmd:", " ".join(cmd))
-# [f"--config {config_path}"]
-proc = subprocess.run(cmd, capture_output=True, text=True)
-print("stdout:", proc.stdout)
-print("stderr:", proc.stderr)
-proc.check_returncode()
+score_py_pytest(
+    name = "pytest_version_correct",
+    srcs = [
+        "pytest_exists.py",
+    ],
+)
