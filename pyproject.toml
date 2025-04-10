@@ -1,7 +1,7 @@
 # This file is at the root level, so IDEs and tools can find it easily.
 
 [tool.pyright]
-extends = "python_basics/pyright.toml"
+extends = "python_basics/pyproject.toml"
 
 [tool.ruff]
 extend = "python_basics/pyproject.toml"

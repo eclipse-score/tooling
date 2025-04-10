@@ -70,6 +70,19 @@ score_py_pytest(
 
 ## Development of score_python_basics
 
+### Setting up the development environment
+To set up the development environment, you need to create a python virtual
+environment:
+```bash
+bazel run private:ide_support
+```
+
+*Note: for now the virtualenv is created in the `python_basics` directory. VS
+Code will not detect it automatically. You need to set the interpreter
+(`python_basics/.venv/bin/python`) manually via ctrl+shift+p and "Python: Select
+Interpreter".*
+
+
 ### Updating pytest in score_pytest
 It uses the dependencies from `requirements.txt`.  
 If you have added new dependencies, make sure to update the *requirements.txt* file like so: 
