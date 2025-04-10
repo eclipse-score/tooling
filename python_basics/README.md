@@ -64,6 +64,9 @@ score_py_pytest(
 )
 ```
 
+## basedpyright
+
+*Not ready to be used yet!*
 
 ## Development of score_python_basics
 
@@ -71,7 +74,11 @@ score_py_pytest(
 It uses the dependencies from `requirements.txt`.  
 If you have added new dependencies, make sure to update the *requirements.txt* file like so: 
 ```
-bazel run //:requirements.update -- --upgrade
+# Add new dependencies:
+bazel run //private:requirements.update
+
+# Upgrade all dependencies:
+bazel run //private:requirements.update -- --upgrade
 ```
 
 ### Running tests

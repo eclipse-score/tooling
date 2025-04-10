@@ -11,11 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-##############################################################################
-#
-# Python version & Pip
-#
-###############################################################################
+# Generic Python
 bazel_dep(name = "rules_python", version = "1.0.0")
 
 PYTHON_VERSION = "3.12"
@@ -26,6 +22,12 @@ python.toolchain(
     python_version = PYTHON_VERSION,
 )
 use_repo(python)
+
+# S-CORE Python Basics
+bazel_dep(name = "score_python_basics", version = "0.0.0")
+
+# Use local version
+local_path_override(module_name = "score_python_basics", path = "../")
 
 
 ###############################################################################
@@ -38,25 +40,3 @@ pip.parse(
 )
 use_repo(pip, "pip_score_venv_test")
 ###############################################################################
-
-
-###############################################################################
-#
-# Generic linting and formatting rules
-#
-###############################################################################
-bazel_dep(name = "aspect_rules_py", version = "1.0.0")
-
-
-
-bazel_dep(
-    name = "score_python_basics",
-    version = "0.0.0"
-)
-
-# Use local version
-local_path_override(
-    module_name = "score_python_basics",
-    path = "../"
-)
-

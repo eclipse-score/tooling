@@ -23,7 +23,7 @@ reportUnusedVariable = "warning"
 exclude = [
     "**/__pycache__",
     "**/.*",
-    "bazel-*",
+    "**/bazel-*",
 ]
 
 [tool.ruff]
