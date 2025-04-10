@@ -22,6 +22,7 @@ score_python()
 format_multirun(
     name = "format.fix",
     python = "//:ruff",
+    print_command = True,
     visibility = [
         "//visibility:public",
     ],
@@ -30,6 +31,7 @@ format_multirun(
 format_multirun(
     name = "format_aspect_rules.fix",
     python = "@aspect_rules_lint//format:ruff",
+    print_command = True,
     visibility = [
         "//visibility:public",
     ],
