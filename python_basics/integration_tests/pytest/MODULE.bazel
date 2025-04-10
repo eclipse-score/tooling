@@ -11,13 +11,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-module(
-    name = "score_python_basics",
-    version = "0.2.0",
-    compatibility_level = 0,
-)
-
-
 ##############################################################################
 #
 # Python version & Pip
@@ -34,14 +27,6 @@ python.toolchain(
 )
 use_repo(python)
 
-pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
-pip.parse(
-    hub_name = "pip_score_python_basics",
-    python_version = PYTHON_VERSION,
-    requirements_lock = "//:requirements.txt",
-)
-use_repo(pip, "pip_score_python_basics")
-
 ###############################################################################
 #
 # Generic linting and formatting rules
@@ -49,30 +34,13 @@ use_repo(pip, "pip_score_python_basics")
 ###############################################################################
 bazel_dep(name = "aspect_rules_py", version = "1.0.0")
 
-bazel_dep(name = "aspect_rules_lint", version = "1.3.1")
 
-bazel_dep(name = "rules_multitool", version = "1.2.0")
+bazel_dep(
+    name = "score_python_basics",
+    version = "0.1.0"
+)
 
-# multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
-# multitool.hub(lockfile = "multitool.lock.json")
-# use_repo(multitool, "multitool")
-
-
-# http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-#
-#
-# http_archive(
-#     name = "ruff",
-#     build_file_content = '''
-# exports_files(["ruff-x86_64-unknown-linux-gnu/ruff"])
-#
-# alias(
-#     name = "ruff",
-#     actual = ":ruff-x86_64-unknown-linux-gnu/ruff",
-#     visibility = ["//visibility:public"],
-# )
-# ''',
-#     sha256 = "69b9d9228ecadcffec970976e7d5c989064c2129ab03e606b3f96e588bcc1ffc",
-#     urls = ["https://github.com/astral-sh/ruff/releases/download/0.11.4/ruff-x86_64-unknown-linux-gnu.tar.gz"],
-#     strip_prefix = "", # Remove this if unnecessary
-# )
+local_path_override(
+    module_name = "score_python_basics",
+    path = "../"
+)

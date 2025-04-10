@@ -19,4 +19,5 @@ def score_virtualenv(name = "ide_support", venv_name =".venv",  reqs = []):
         name = name,
         venv_name = venv_name,
         deps = all_requirements + reqs
+        data = ["//pyproject.toml"]
     )

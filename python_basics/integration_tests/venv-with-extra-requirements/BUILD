@@ -10,10 +10,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
-load("@score_python_basics//score_venv:py_pyvenv.bzl", "score_virtualenv")
-load("@score_python_basics//score_pytest:py_pytest.bzl", "score_py_pytest")
+load("@score_python_basics//:defs.bzl", "score_virtualenv", "score_py_pytest")
 load("@pip_score_venv_test//:requirements.bzl", "all_requirements")
 
 compile_pip_requirements(
@@ -25,25 +23,6 @@ compile_pip_requirements(
     ],
 )
 
-
-build_test(
-    name = "venv_functions",
-    targets = [
-        ":basic_venv"
-    ],
-)
-
-score_virtualenv(
-    name="basic_venv",
-    venv_name=".basic_venv"
-)
-
-score_py_pytest(
-    name = "venv_ok_test",
-    srcs = [ "test_venv_ok.py"],
-    data = [":basic_venv"]
-)
-
 score_virtualenv(
     name="additional_req_venv",
     venv_name=".additional_req_venv",
@@ -53,5 +32,6 @@ score_virtualenv(
 score_py_pytest(
     name = "venv_accepts_outside_reqs",
     srcs = [ "test_extra_requirements_ok.py"],
-    data = [":additional_req_venv"]
+    data = [":additional_req_venv"],
+    deps = all_requirements
 )

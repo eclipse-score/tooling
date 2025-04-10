@@ -10,8 +10,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-import pytest
+load("@score_python_basics//defs.bzl", "score_py_pytest")
 
-
-def test_pytest_works():
-    assert pytest.__version__ >= "8.3.4"
+score_py_pytest(
+    name = "pytest_version_correct",
+    srcs = [
+        "int_test.py",
+    ],
+)   

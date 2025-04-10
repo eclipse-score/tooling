@@ -13,26 +13,22 @@
 
 import subprocess
 import sys
-import os
-from pathlib import Path
 
-
-# True = 'format' else 'check'
-print("sys.argv:", sys.argv)
-
-args = []
-format_flag = sys.argv[1]
-action = "format" if format_flag.lower() in ("true", "1") else "check"
-
-tool_path = ["bazel", "run", "@multitool//tools/ruff:cwd", action]
-
-# Accept all other arguments if there are some
-args.extend(sys.argv[3:])
+tool_path = [
+    "bazel",
+    "run",
+    "@aspect_rules_lint//format:ruff",
+    "--",
+]
 
 
 # Is absoulte needed / right here?
 # config_path = Path(os.path.realpath(__file__)).parent.parent / "pyproject.toml"
 
-cmd = tool_path + args
+cmd = tool_path + sys.argv[1:]
+print("cmd:", " ".join(cmd))
 # [f"--config {config_path}"]
 proc = subprocess.run(cmd, capture_output=True, text=True)
+print("stdout:", proc.stdout)
+print("stderr:", proc.stderr)
+proc.check_returncode()

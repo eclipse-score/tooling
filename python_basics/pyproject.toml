@@ -27,7 +27,7 @@ exclude = [
 ]
 
 [tool.ruff]
-line-length=59
+#line-length=59
 target-version = "py312" # Keep in sync with MODULE.bazel
 extend-exclude = [
     "__pycache__",

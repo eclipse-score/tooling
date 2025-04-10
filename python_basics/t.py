@@ -6,8 +6,7 @@ import sys
 
 
 def test():
-
-    " this i s n ot right     " 
+    "this i s n ot right"
     return ...
 
 

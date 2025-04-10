@@ -10,11 +10,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@score_python_basics//score_pytest:py_pytest.bzl", "score_py_pytest")
+import os
 
-score_py_pytest(
-    name = "pytest_version_correct",
-    srcs = [
-        "int_test.py",
-    ],
-)   
+
+def test_venv_ok():
+    runfiles = os.getenv("RUNFILES_DIR")
+    packages = os.listdir(runfiles)
+    assert any(x.endswith("requests") for x in packages), (
+        f"'Request not found in runfiles: {runfiles}"
+    )
