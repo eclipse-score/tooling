@@ -49,3 +49,30 @@ use_repo(pip, "pip_score_python_basics")
 ###############################################################################
 bazel_dep(name = "aspect_rules_py", version = "1.0.0")
 
+bazel_dep(name = "aspect_rules_lint", version = "1.3.1")
+
+bazel_dep(name = "rules_multitool", version = "1.2.0")
+
+multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
+multitool.hub(lockfile = "multitool.lock.json")
+use_repo(multitool, "multitool")
+
+
+# http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+#
+#
+# http_archive(
+#     name = "ruff",
+#     build_file_content = '''
+# exports_files(["ruff-x86_64-unknown-linux-gnu/ruff"])
+#
+# alias(
+#     name = "ruff",
+#     actual = ":ruff-x86_64-unknown-linux-gnu/ruff",
+#     visibility = ["//visibility:public"],
+# )
+# ''',
+#     sha256 = "69b9d9228ecadcffec970976e7d5c989064c2129ab03e606b3f96e588bcc1ffc",
+#     urls = ["https://github.com/astral-sh/ruff/releases/download/0.11.4/ruff-x86_64-unknown-linux-gnu.tar.gz"],
+#     strip_prefix = "", # Remove this if unnecessary
+# )
