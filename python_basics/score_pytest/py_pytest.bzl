@@ -37,8 +37,9 @@ def score_py_pytest(name, srcs, args = [], data = [], deps = [], plugins = [], p
         args = args +
                ["-c $(location %s)" % pytest_ini] +
                [
-                   "-p no:cacheprovider",
-                   "--show-capture=no",
+                    "-p no:cacheprovider",
+                    "--color=yes",
+                    "--show-capture=no",
                ] +
                plugins +
                ["$(location %s)" % x for x in srcs],

@@ -16,5 +16,6 @@ exports_files([
     "requirements.in",
     "pyproject.toml",
     "dummy_venv.py",
+    "score_pyright.py",
     "MODULE.bazel"
 ])

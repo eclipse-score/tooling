@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@score_python_basics//:defs.bzl", "score_virtualenv", "score_py_pytest")
+load("@score_python_basics//:defs.bzl", "score_virtualenv", "score_py_pytest", "score_type_checker")
 
 score_virtualenv(
     name="basic_venv",
@@ -28,4 +28,9 @@ score_py_pytest(
     srcs = [
         "pytest_exists.py",
     ],
+)
+
+score_type_checker(
+    name="integration_type_checker",
+    data=[":basic_venv"],
 )
