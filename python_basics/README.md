@@ -1,16 +1,16 @@
 # S-CORE Python Basics
 
-* ? Makes development of Python code easier inside Bazel
-* ? Provides a Python virtualenv target
-* ? Provides S-CORE wide defaults for linting and formatting
-* ? Provides pytest with S-CORE wide defaults for pytest
+* ✅ Makes development of Python code easier inside Bazel
+* ✅ Provides a Python virtualenv target
+* ✅ Provides S-CORE wide defaults for linting and formatting
+* ✅ Provides pytest with S-CORE wide defaults for pytest
 
 ## How To: Integrate
 
 In the consuming Bazel project, in your `MODULE.bazel` import the python basics
 
 ```python
-bazel_dep(name = "score_python_basics", version = "0.1.0")
+bazel_dep(name = "score_python_basics", version = "0.3.0")
 ```
 
 ## Python Virtualenv
@@ -39,7 +39,7 @@ run //:ide_support`.
 
 The `score_py_pytest` rule creates a pytest target.
 
-*Note: the pytest version is determined by the `score_pytest` module. It is intentionally not possible to overwrite it.*
+*Note: the pytest version is determined by the `score_python_basics` module. It is intentionally not possible to overwrite it.*
 
 ```python
 load("@score_python_basics//:defs.bzl", "score_py_pytest")
@@ -83,7 +83,7 @@ Code will not detect it automatically. You need to set the interpreter
 Interpreter".*
 
 
-### Updating pytest in score_pytest
+### Updating pytest in score_python_basics
 It uses the dependencies from `requirements.txt`.  
 If you have added new dependencies, make sure to update the *requirements.txt* file like so: 
 ```
