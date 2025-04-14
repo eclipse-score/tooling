@@ -10,13 +10,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@aspect_rules_py//py:defs.bzl", "py_venv")
-load("@pip_score_python_basics//:requirements.bzl", "all_requirements")
+import os
 
 
-def score_virtualenv(name = "ide_support", venv_name =".venv",  reqs = []):
-    py_venv(
-        name = name,
-        venv_name = venv_name,
-        deps = all_requirements + reqs
+def test_venv_ok():
+    runfiles = os.getenv("RUNFILES_DIR")
+    packages = os.listdir(runfiles)
+    assert any(x.endswith("requests") for x in packages), (
+        f"'Request not found in runfiles: {runfiles}"
     )
+    try:
+        import requests
+    except Exception as e:
+        assert False, f"Could not import requests. Error: {e}"

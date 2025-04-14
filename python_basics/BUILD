@@ -10,25 +10,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_python//python:pip.bzl", "compile_pip_requirements")
-package(default_visibility = ["//visibility:public"])
 
-# Exporting req. lock file
 exports_files([
-    "requirements.txt"
+    "requirements.txt",
+    "requirements.in",
+    "pyproject.toml",
+    "dummy_venv.py",
+    "score_pyright.py",
+    "MODULE.bazel"
 ])
-
-
-# In order to update the requirements, change the `requirements.txt` file and run:
-# `bazel run //:requirements.update`.
-# This will update the `requirements_lock.txt` file.
-# To upgrade all dependencies to their latest versions, run:
-# `bazel run //:requirements.update -- --upgrade`.
-compile_pip_requirements(
-    name = "requirements",
-    src = "requirements.in",
-    requirements_txt = "requirements.txt",
-    tags = [
-        "manual",
-    ],
-)

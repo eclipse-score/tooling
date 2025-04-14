@@ -10,14 +10,22 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-import os 
+load("@score_python_basics//:defs.bzl", "score_virtualenv", "score_py_pytest")
 
-def test_venv_ok():
-    
-    runfiles = os.getenv("RUNFILES_DIR")
-    packages = os.listdir(runfiles)
-    assert any(x.endswith("requests") for x in packages), f"'Request not found in runfiles: {runfiles}"
-    try:
-        import requests
-    except Exception  as e:
-        assert False, f"Could not import requests. Error: {e}"
+score_virtualenv(
+    name="basic_venv",
+    venv_name=".basic_venv"
+)
+
+score_py_pytest(
+    name = "venv_ok_test",
+    srcs = [ "test_venv_ok.py"],
+    data = [":basic_venv"]
+)
+
+score_py_pytest(
+    name = "pytest_version_correct",
+    srcs = [
+        "pytest_ok.py",
+    ],
+)
