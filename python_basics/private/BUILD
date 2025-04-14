@@ -1,5 +1,6 @@
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
-load("//:defs.bzl", "score_virtualenv")
+load("//:defs.bzl", "score_virtualenv", "score_type_checker")
+load("@pip_score_python_basics//:requirements.bzl", "requirement", "all_requirements")
 load("@aspect_rules_lint//format:defs.bzl", "format_multirun", "format_test")
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 
@@ -32,6 +33,10 @@ format_test(
     # This mode causes the test to be non-hermetic and it cannot be cached.
     no_sandbox= True,
     workspace = "//:MODULE.bazel",
+)
+
+score_type_checker(
+    data=[":ide_support"],
 )
 
 

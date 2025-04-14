@@ -25,7 +25,16 @@ def score_virtualenv(name = "ide_support", venv_name =".venv",  reqs = []):
     )
 
 
-def score_type_checker(name="type_checker", deps=[], data=[],args=[],plugins=[],pytest_ini=None, **kwargs):
-    _score_py_pytest(name, srcs=["@score_python_basics//:score_pyright.py"], args=["--no-header"]+ args, data =data, deps =deps, plugins =plugins, pytest_ini = pytest_ini, **kwargs)
+def score_type_checker(name="type_checker", deps=[], data=[],args=[],plugins=[],pytest_ini=None,target_path=".", **kwargs):
+    _score_py_pytest(
+        name, 
+        srcs=["@score_python_basics//:score_pyright.py"], 
+        args=["--no-header"] + args, 
+        data =data,
+        deps =deps, 
+        plugins =plugins, 
+        pytest_ini = pytest_ini, 
+        **kwargs
+    )
 
 
