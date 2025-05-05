@@ -48,7 +48,7 @@ This sets up:
 Declares this module and includes required dependencies:
 
 ```python
-module(name = "score_format_checker  ", version = "0.1.1")
+module(name = "score_format_checker", version = "0.1.1")
 
 bazel_dep(name = "aspect_rules_lint", version = "1.0.3")
 bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")
@@ -61,11 +61,11 @@ bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")
 ### 1️⃣ Declare the dependency in your project’s `MODULE.bazel`:
 
 ```python
-bazel_dep(name = "score_format_checker  ", version = "0.1.0")
+bazel_dep(name = "score_format_checker", version = "0.1.0")
 
 # If using local source:
 local_path_override(
-    module_name = "score_format_checker  ",
+    module_name = "score_format_checker",
     path = "../tooling/format",
 )
 
@@ -77,7 +77,7 @@ bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")
 ### 2️⃣ In your project’s `BUILD.bazel`:
 
 ```python
-load("@score_format_checker  //:macros.bzl", "use_format_targets")
+load("@score_format_checker//:macros.bzl", "use_format_targets")
 
 use_format_targets()
 ```
