@@ -61,7 +61,7 @@ bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")
 ### 1️⃣ Declare the dependency in your project’s `MODULE.bazel`:
 
 ```python
-bazel_dep(name = "score_format_checker", version = "0.1.0")
+bazel_dep(name = "score_format_checker", version = "0.1.1")
 
 # If using local source:
 local_path_override(
