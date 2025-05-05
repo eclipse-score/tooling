@@ -1,4 +1,4 @@
-module(name = "format_checker", version = "0.1.0")
+module(name = "score_format_checker", version = "0.1.1")
 
 bazel_dep(name = "aspect_rules_lint", version = "1.0.3")  
 bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")
