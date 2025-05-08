@@ -1,4 +1,4 @@
-# GitHub GraphQL Client
+# GitHub GraphQL Client for Bazel (rules_ghql)
 
 An **experimental** Bazel rule that generates a **typed, asynchronous Python client** for the GitHub GraphQL API using [`ariadne-codegen`](https://github.com/mirumee/ariadne-codegen).
 
