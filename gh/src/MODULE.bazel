@@ -1,0 +1,40 @@
+# *******************************************************************************
+# Copyright (c) 2025 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+
+module(name = "score_gh", version = "0.1.1")
+
+bazel_dep(name = "bazel_skylib", version = "1.4.1")
+
+############################################################################
+# Python
+bazel_dep(name = "rules_python", version = "1.0.0")
+
+PYTHON_VERSION = "3.12"
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    is_default = True,
+    python_version = PYTHON_VERSION,
+)
+use_repo(python)
+
+############################################################################
+# GitHub Schema
+bazel_dep(name = "rules_download", version = "0.9.0")
+download = use_extension("@rules_download//extensions:download.bzl", "download")
+download.download(
+    name = "github_schema",
+    url = "https://docs.github.com/public/fpt/schema.docs.graphql",
+    output = "schema.graphql",
+)
+use_repo(download, "github_schema")
