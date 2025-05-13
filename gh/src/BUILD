@@ -10,6 +10,25 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+load("@score_python_basics//:defs.bzl", "score_virtualenv", "score_py_pytest")
+load("@pip//:requirements.bzl", "all_requirements")
 
+compile_pip_requirements(
+    name = "requirements",
+    src = "requirements.in",
+    requirements_txt = "requirements.txt",
+    tags = [
+        "manual",
+    ],
+)
 
-#...
+score_virtualenv(
+    venv_name=".rules_ghql_venv",
+    reqs=all_requirements,
+)
+
+py_binary(
+    name = "update_schema",
+    srcs = ["update_schema.py"],
+)

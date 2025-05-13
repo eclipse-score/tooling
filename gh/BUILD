@@ -11,19 +11,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@rules_python//python:defs.bzl", "py_binary")
-load("//src:defs.bzl", "generate_github_library")
-
-# Generate a GitHub GraphQL client library from the GraphQL queries
-generate_github_library(
-    name = "generated_github_client",
-    queries = glob(["*.graphql"]),
-    client_name = "Client",
-)
-
-# Create a binary target using the generated client
-py_binary(
-    name = "main",
-    srcs = ["main.py"],
-    deps = [":generated_github_client"],
-)
+exports_files([
+    "requirements.txt",
+])

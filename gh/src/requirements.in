@@ -1,4 +1,4 @@
 ariadne-codegen
 diskcache
 python-dotenv
-qgl[all]
+# qgl[all]
