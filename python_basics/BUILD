@@ -10,10 +10,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-
 exports_files([
     "requirements.txt",
     "requirements.in",
     "pyproject.toml",
     "dummy_venv.py",
 ])
+
+# alias(
+#     name = "score_python_basics",
+#     actual = "//lib:score_python_basics",
+#     visibility = ["//visibility:public"],
+# )

@@ -10,17 +10,21 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_python//python:pip.bzl", "compile_pip_requirements")
-load("@score_python_basics//:defs.bzl", "score_virtualenv", "score_py_pytest")
-load("@score_rules_ghql_pip//:requirements.bzl", "all_requirements")
+# load("@aspect_rules_py//py:defs.bzl", "py_library")
+# load("@pip_score_python_basics//:requirements.bzl", "all_requirements")
+# load("@score_python_basics//:defs.bzl", "score_py_pytest")
 
-# TODO: auto inject?
-all_requirements = all_requirements + ["@score_python_basics//lib:score_python_basics"]
+# py_library(
+#     name = "score_python_basics",
+#     srcs = ["__init__.py"],
+#     visibility = ["//visibility:public"],
+# )
 
-exports_files([
-    "requirements.txt",
-])
-
-score_virtualenv(
-    reqs=all_requirements,
-)
+# score_py_pytest(
+#     name = "score_python_basics_test",
+#     size = "small",
+#     srcs = ["test_init.py"],
+#     deps = [
+#         ":score_python_basics",
+#     ],# + all_requirements,
+# )

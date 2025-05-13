@@ -2,8 +2,11 @@
 import os
 import urllib.request
 
+import score_python_basics
+
 SCHEMA_URL = "https://docs.github.com/public/fpt/schema.docs.graphql"
-DEST_PATH = os.path.join(os.path.dirname(__file__), "schema.graphql")
+DEST_PATH = os.path.join(score_python_basics.git_root(), "schema.graphql")
+
 
 print(f"Downloading GitHub GraphQL schema from:\n  {SCHEMA_URL}")
 with urllib.request.urlopen(SCHEMA_URL) as response:

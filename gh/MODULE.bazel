@@ -32,15 +32,24 @@ use_repo(python)
 # Python dependencies
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
-    hub_name = "pip",
+    # Use a unique pip name?!
+    hub_name = "score_rules_ghql_pip",
     python_version = PYTHON_VERSION,
     requirements_lock = "//src:requirements.txt",
 )
-use_repo(pip, "pip")
+use_repo(pip, "score_rules_ghql_pip")
 
 ############################################################################
 # S-CORE Python Basics
 bazel_dep(
     name = "score_python_basics",
     version = "0.3.0"
+)
+
+
+###############################################################################
+# DO NOT MERGE
+local_path_override(
+    module_name = "score_python_basics",
+    path = "../python_basics",
 )
