@@ -58,6 +58,6 @@ bazel_dep(
 
 local_path_override(
     module_name = "score_python_basics",
-    path = "../"
+    path = "../python_basics"
 )
 

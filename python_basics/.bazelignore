@@ -1,0 +1,3 @@
+# integration tests have their own MODULE file and cannot be included from the root
+integration_tests/
+python_basics/python_lib/test/external_module
