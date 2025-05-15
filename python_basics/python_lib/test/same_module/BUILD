@@ -11,15 +11,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-exports_files([
-    "requirements.txt",
-    "requirements.in",
-    "pyproject.toml",
-    "dummy_venv.py",
-])
-
-alias(
-    name = "python_basics_lib",
-    actual = "//lib/src:python_basics_lib",
-    visibility = ["//visibility:public"],
+# Simulates user
+py_binary(
+    name = "run_python_basics_path_utils",
+    srcs = ["run_python_basics_path_utils.py"],
+    deps = ["//lib/src:python_basics_lib"],
 )
+
+# Tests user behavior
+# TODO

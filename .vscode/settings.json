@@ -1,0 +1,4 @@
+{
+    "basedpyright.analysis.diagnosticMode": "workspace",
+    "python.analysis.diagnosticsSource": "Pyright"
+}
