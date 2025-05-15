@@ -2,7 +2,7 @@
 
 An **experimental** Bazel rule that generates a **typed, asynchronous Python client** for the GitHub GraphQL API using [`ariadne-codegen`](https://github.com/mirumee/ariadne-codegen).
 
-> ⚠️ **Status**: This is currently a **Request for Comments (RFC)**. It's not a production-ready implementation and doesn't even qualify as a proof of concept (POC). Expect changes, breakage, and missing features.
+> ⚠️ **Status**: This is currently a **Request for Comments (RFC)**. It's not a working implementation and doesn't even qualify as a proof of concept (POC). It simply does not work yet.
 
 ---
 
