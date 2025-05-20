@@ -128,7 +128,12 @@ bazel run //private:requirements.update -- --upgrade
 ```
 
 ### Running tests
-To run the tests of the pytest module use:
+To run the tests you need to run separate test commands:
 ```
+# Run the tests for the python_basics module
 $ bazel test //...
+
+# Run the integration tests
+$ cd integration_tests && bazel test //...
+$ cd python_basics/python_lib/test/external_module && bazel test //...
 ```

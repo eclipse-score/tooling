@@ -10,16 +10,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+# load("@score_python_basics//:defs.bzl", "score_py_pytest")
 
-exports_files([
-    "requirements.txt",
-    "requirements.in",
-    "pyproject.toml",
-    "dummy_venv.py",
-])
-
-alias(
+py_library(
     name = "python_basics_lib",
-    actual = "//lib/src:python_basics_lib",
+    srcs = glob(["**/*.py"]),
     visibility = ["//visibility:public"],
 )
