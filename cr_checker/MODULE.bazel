@@ -13,7 +13,7 @@
 
 module(
     name = "score_cr_checker",
-    version = "0.2.2",
+    version = "0.3.0",
     compatibility_level = 0,
 )
 
@@ -22,7 +22,7 @@ module(
 # Python version
 #
 ###############################################################################
-bazel_dep(name = "rules_python", version = "1.0.0")
+bazel_dep(name = "rules_python", version = "1.4.1")
 
 PYTHON_VERSION = "3.12"
 
@@ -38,4 +38,4 @@ use_repo(python)
 # Generic linting and formatting rules
 #
 ###############################################################################
-bazel_dep(name = "aspect_rules_py", version = "1.0.0")
+bazel_dep(name = "aspect_rules_py", version = "1.4.0")
