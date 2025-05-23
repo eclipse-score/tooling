@@ -1,0 +1,4 @@
+test --test_output=errors
+
+# stop legacy behavior of creating __init__.py files
+build --incompatible_default_to_explicit_init_py

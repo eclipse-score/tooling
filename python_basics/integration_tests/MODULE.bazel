@@ -16,7 +16,7 @@
 # Python version & Pip
 #
 ###############################################################################
-bazel_dep(name = "rules_python", version = "1.0.0")
+bazel_dep(name = "rules_python", version = "1.4.1")
 
 PYTHON_VERSION = "3.12"
 
@@ -46,14 +46,14 @@ use_repo(pip, "pip_score_venv_test")
 # Generic linting and formatting rules
 #
 ###############################################################################
-bazel_dep(name = "aspect_rules_py", version = "1.0.0")
+bazel_dep(name = "aspect_rules_py", version = "1.4.0")
 
 bazel_dep(name = "bazel_skylib", version = "1.7.1", dev_dependency=True)
 
 
 bazel_dep(
     name = "score_python_basics",
-    version = "0.3.0"
+    version = "0.3.2"
 )
 
 local_path_override(
