@@ -15,5 +15,4 @@ exports_files([
     "requirements.txt",
     "requirements.in",
     "pyproject.toml",
-    "dummy_venv.py",
 ])

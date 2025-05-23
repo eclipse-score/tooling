@@ -14,12 +14,6 @@ def score_virtualenv(name = "ide_support", venv_name =".venv",  reqs = []):
     py_venv(
         name = name,
         venv_name = venv_name,
-        deps = all_requirements + reqs + [":config", "@rules_python//python/runfiles"] 
-    )
-
-    py_library(
-        # Provides pyproject.toml as bazel-bin/{name}/_main/runfiles/pyproject.toml
-        name = "config",
-        srcs = ["@score_python_basics//:dummy_venv.py"],
-        data = ["@score_python_basics//:pyproject.toml"],
+        deps = all_requirements + reqs + [":config", "@rules_python//python/runfiles"] ,
+        data = ["@score_python_basics//:pyproject.toml"]
     )
