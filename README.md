@@ -110,12 +110,37 @@ load("@score_cr_checker//cr_checker:cr_checker.bzl", "copyright_checker")
 load("@score_tooling//cr_checker:cr_checker.bzl", "copyright_checker")
 ```
 
+### Registry Updates
+
+⚠️ **Important**: Once this unified module is available in the bazel_registry, the individual modules will be deprecated. Update your `.bazelrc` if needed:
+
+```bash
+# Use the custom registry for SCORE tooling
+common --registry=https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/
+common --registry=https://bcr.bazel.build
+```
+
+### Deprecation Timeline
+
+- **v1.0.0+**: Use unified `score_tooling` module
+- **Individual modules**: Will remain available but are deprecated
+- **Future releases**: Only the unified module will receive updates
+
 ## 🤝 Contributing
 
 1. Each tool maintains its own package structure under the root
 2. Common dependencies are consolidated in the root `MODULE.bazel`
 3. Integration tests validate the unified module functionality
 4. Follow existing patterns when adding new tools
+
+## 🚀 Next Steps for Maintainers
+
+- [ ] Update `bazel_registry` to include the unified `score_tooling` module
+- [ ] Deprecate individual tool modules in the `bazel_registry` (add `yanked_versions`)
+- [ ] Test the unified module in downstream projects
+- [ ] Communicate the change to downstream users
+- [ ] Update CI/CD in other repositories to use unified module
+- [ ] Monitor for any migration issues
 
 ## 📄 License
 

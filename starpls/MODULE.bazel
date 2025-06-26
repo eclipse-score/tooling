@@ -10,6 +10,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+
+# ⚠️  DEPRECATED: This individual module is deprecated.
+# 
+# Please use the unified tooling module instead:
+#   bazel_dep(name = "score_tooling", version = "1.0.0")
+#
+# Then load from: @score_tooling//starpls:starpls.bzl
+# 
+# See the root README.md for migration guidance.
+
 module(
     name = "score_starpls_lsp",
     version = "0.1.0",
