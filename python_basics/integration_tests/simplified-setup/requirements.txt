@@ -1,0 +1,3 @@
+# Simple test requirements for simplified setup test
+pytest>=6.0.0
+requests>=2.25.0

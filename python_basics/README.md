@@ -7,10 +7,43 @@
 
 ## How To: Integrate
 
-In the consuming Bazel project, in your `MODULE.bazel` import the python basics
+**🎯 Simple Setup - No More Boilerplate!**
 
-```python
+`score_python_basics` automatically provides Python toolchain setup, eliminating the need for manual `rules_python` configuration.
+
+### For projects without pip dependencies:
+```starlark
+# MODULE.bazel
 bazel_dep(name = "score_python_basics", version = "0.3.0")
+```
+
+That's it! You get:
+- ✅ `rules_python` (version 1.4.1) automatically included
+- ✅ Python 3.12 toolchain configured as default  
+- ✅ Python development tools (pytest, linting, formatting)
+
+### For projects with pip dependencies:
+```starlark
+# MODULE.bazel
+bazel_dep(name = "score_python_basics", version = "0.3.0")
+
+# Add your pip dependencies (Python 3.12 toolchain already configured)
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "pip",
+    python_version = "3.12",  # Must match score_python_basics
+    requirements_lock = "//path/to:requirements.txt",
+)
+use_repo(pip, "pip")
+```
+
+**🚫 No longer needed:** The old ~20-line boilerplate is eliminated:
+```starlark
+# ❌ This manual setup is no longer required:
+# bazel_dep(name = "rules_python", version = "1.4.1")
+# python = use_extension("@rules_python//python/extensions:python.bzl", "python") 
+# python.toolchain(is_default = True, python_version = "3.12")
+# use_repo(python)
 ```
 
 ## Python Virtualenv

@@ -1,0 +1,49 @@
+# *******************************************************************************
+# Copyright (c) 2025 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+
+"""
+Test MODULE.bazel demonstrating the simplified setup pattern.
+
+This shows how consumers can use score_python_basics with minimal boilerplate.
+"""
+
+module(
+    name = "simplified_setup_test",
+    version = "0.1.0",
+)
+
+# ✅ Simplified setup - just add score_python_basics dependency
+bazel_dep(name = "score_python_basics", version = "0.3.2")
+
+# For this test, we override to use the local version
+local_path_override(
+    module_name = "score_python_basics", 
+    path = "../../"
+)
+
+# ✅ Optional: Add pip dependencies if needed
+# Since score_python_basics already configures Python 3.12 toolchain,
+# we only need to add our own pip requirements
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "pip_test",
+    python_version = "3.12",  # Must match score_python_basics
+    requirements_lock = "//:requirements.txt",
+)
+use_repo(pip, "pip_test")
+
+# 🚫 No longer needed - score_python_basics handles this automatically:
+# bazel_dep(name = "rules_python", version = "1.4.1") 
+# python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+# python.toolchain(is_default = True, python_version = "3.12")
+# use_repo(python)
