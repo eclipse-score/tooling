@@ -10,22 +10,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@score_tooling//python_basics:defs.bzl", "score_virtualenv", "score_py_pytest")
 
-score_virtualenv(
-    name="basic_venv",
-    venv_name=".basic_venv"
-)
+# Root BUILD file for unified score_tooling module
 
-score_py_pytest(
-    name = "venv_ok_test",
-    srcs = [ "test_venv_ok.py"],
-    data = [":basic_venv"]
-)
+package(default_visibility = ["//visibility:public"])
 
-score_py_pytest(
-    name = "pytest_version_correct",
-    srcs = [
-        "pytest_ok.py",
-    ],
-)
+exports_files([
+    "MODULE.bazel",
+    "README.md",
+])

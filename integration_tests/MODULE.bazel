@@ -10,22 +10,24 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@score_tooling//python_basics:defs.bzl", "score_virtualenv", "score_py_pytest")
 
-score_virtualenv(
-    name="basic_venv",
-    venv_name=".basic_venv"
+module(
+    name = "score_tooling_integration_test",
+    version = "0.0.0",
 )
 
-score_py_pytest(
-    name = "venv_ok_test",
-    srcs = [ "test_venv_ok.py"],
-    data = [":basic_venv"]
+###############################################################################
+#
+# Test the unified tooling module
+#
+###############################################################################
+bazel_dep(
+    name = "score_tooling",
+    version = "1.0.0",
 )
 
-score_py_pytest(
-    name = "pytest_version_correct",
-    srcs = [
-        "pytest_ok.py",
-    ],
+# Use local override to test the unified module
+local_path_override(
+    module_name = "score_tooling",
+    path = "../",
 )

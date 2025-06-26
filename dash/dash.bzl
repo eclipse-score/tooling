@@ -79,7 +79,7 @@ def dash_license_checker(
         name = "license.check.{}".format(name),
         main_class = "org.eclipse.dash.licenses.cli.Main",
         runtime_deps = [
-            "@score_dash_license_checker//:jar",
+            "//dash:jar",
         ],
         # We'll build up "args" in the order: [ static options ] + [ file last ]
         args = [

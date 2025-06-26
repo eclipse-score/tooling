@@ -93,7 +93,7 @@ def copyright_checker(
             name = t_name,
             main = "cr_checker.py",
             srcs = [
-                "@score_cr_checker//tool:cr_checker_lib",
+                "//cr_checker/tool:cr_checker_lib",
             ],
             args = args,
             data = srcs + [

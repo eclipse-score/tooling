@@ -1,0 +1,94 @@
+# *******************************************************************************
+# Copyright (c) 2025 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+
+module(
+    name = "score_tooling",
+    version = "1.0.0",
+    compatibility_level = 0,
+)
+
+###############################################################################
+#
+# Python version & Pip
+#
+###############################################################################
+bazel_dep(name = "rules_python", version = "1.4.1")
+
+PYTHON_VERSION = "3.12"
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    is_default = True,
+    python_version = PYTHON_VERSION,
+)
+use_repo(python)
+
+# Python dependencies for python_basics package
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "pip_score_python_basics",
+    python_version = PYTHON_VERSION,
+    requirements_lock = "//python_basics:requirements.txt",
+)
+use_repo(pip, "pip_score_python_basics")
+
+# Python dependencies for starpls integration tests
+pip.parse(
+    hub_name = "pip_deps_test",
+    python_version = PYTHON_VERSION,
+    requirements_lock = "//starpls/integration_tests:requirements_lock.txt",
+)
+use_repo(pip, "pip_deps_test")
+
+# Python dependencies for python_basics venv test
+pip.parse(
+    hub_name = "pip_score_venv_test",
+    python_version = PYTHON_VERSION,
+    requirements_lock = "//python_basics/integration_tests/venv-with-extra-requirements:requirements.txt",
+)
+use_repo(pip, "pip_score_venv_test")
+
+###############################################################################
+#
+# Java dependencies
+#
+###############################################################################
+bazel_dep(name = "rules_java", version = "8.6.3")
+
+###############################################################################
+#
+# Shell rules for starpls
+#
+###############################################################################
+bazel_dep(name = "rules_shell", version = "0.4.0")
+
+###############################################################################
+#
+# Generic linting and formatting rules
+#
+###############################################################################
+bazel_dep(name = "aspect_rules_py", version = "1.4.0")
+bazel_dep(name = "aspect_rules_lint", version = "1.4.2")
+bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")
+
+###############################################################################
+#
+# Multitool for additional tooling
+#
+###############################################################################
+bazel_dep(name = "rules_multitool", version = "1.2.0")
+bazel_dep(name = "bazel_skylib", version = "1.7.1", dev_dependency = True)
+
+multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
+multitool.hub(lockfile = "//python_basics:multitool.lock.json")
+use_repo(multitool, "multitool")

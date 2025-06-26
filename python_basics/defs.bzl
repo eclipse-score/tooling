@@ -15,5 +15,5 @@ def score_virtualenv(name = "ide_support", venv_name =".venv",  reqs = []):
         name = name,
         venv_name = venv_name,
         deps = all_requirements + reqs + [":config", "@rules_python//python/runfiles"] ,
-        data = ["@score_python_basics//:pyproject.toml"]
+        data = ["//python_basics:pyproject.toml"]
     )

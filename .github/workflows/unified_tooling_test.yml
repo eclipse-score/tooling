@@ -1,0 +1,62 @@
+name: Test Unified Tooling Module
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  push:
+    branches: [main]
+
+jobs:
+  test-unified-module:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.9.0
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+
+      - name: Test all packages
+        run: |
+          bazel test ...
+
+      - name: Build all packages  
+        run: |
+          bazel build ...
+
+      - name: Test python_basics integration
+        run: |
+          cd python_basics/integration_tests
+          bazel test ...
+
+      - name: Test unified module integration
+        run: |
+          cd integration_tests
+          bazel test ...
+
+  test-individual-packages:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [cr_checker, dash, format_checker, python_basics, starpls]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.9.0
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+
+      - name: Test package ${{ matrix.package }}
+        run: |
+          bazel test //${{ matrix.package }}/...
+
+      - name: Build package ${{ matrix.package }}
+        run: |
+          bazel build //${{ matrix.package }}/...

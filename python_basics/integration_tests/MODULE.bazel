@@ -52,12 +52,12 @@ bazel_dep(name = "bazel_skylib", version = "1.7.1", dev_dependency=True)
 
 
 bazel_dep(
-    name = "score_python_basics",
-    version = "0.3.2"
+    name = "score_tooling",
+    version = "1.0.0"
 )
 
 local_path_override(
-    module_name = "score_python_basics",
-    path = "../"
+    module_name = "score_tooling", 
+    path = "../../"
 )
 

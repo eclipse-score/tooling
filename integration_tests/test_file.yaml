@@ -1,0 +1,10 @@
+# Test YAML file for format checking
+test:
+  name: "unified-tooling-test"
+  version: "1.0.0"
+  tools:
+    - cr_checker
+    - dash
+    - format_checker
+    - python_basics
+    - starpls
