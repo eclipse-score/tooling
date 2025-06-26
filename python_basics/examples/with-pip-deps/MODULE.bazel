@@ -1,0 +1,29 @@
+"""
+Example: Python project with pip dependencies using score_python_basics
+
+This shows how to add pip dependencies with minimal configuration.
+Only 6 lines instead of the old ~20 line boilerplate!
+"""
+
+module(
+    name = "with_pip_deps_example", 
+    version = "1.0.0",
+)
+
+# ✅ Step 1: Add score_python_basics (provides Python 3.12 toolchain)
+bazel_dep(name = "score_python_basics", version = "0.3.0")
+
+# ✅ Step 2: Add your pip dependencies (Python toolchain already configured!)
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "pip",
+    python_version = "3.12",  # Must match score_python_basics version
+    requirements_lock = "//:requirements.txt",
+)
+use_repo(pip, "pip")
+
+# 🚫 No longer needed - score_python_basics handles this automatically:
+# bazel_dep(name = "rules_python", version = "1.4.1")
+# python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+# python.toolchain(is_default = True, python_version = "3.12")
+# use_repo(python)

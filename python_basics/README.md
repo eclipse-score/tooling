@@ -1,5 +1,54 @@
 # S-CORE Python Basics
 
+**🎯 Zero-Boilerplate Python Setup for Bazel**
+
+`score_python_basics` provides a complete Python development environment with **minimal configuration**. No more ~20 lines of manual `rules_python` setup!
+
+## ⚡ Quick Start
+
+### For projects without pip dependencies (1 line!):
+```starlark
+# MODULE.bazel
+bazel_dep(name = "score_python_basics", version = "0.3.0")
+```
+
+### For projects with pip dependencies (~6 lines):
+```starlark
+# MODULE.bazel  
+bazel_dep(name = "score_python_basics", version = "0.3.0")
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "pip",
+    python_version = "3.12", 
+    requirements_lock = "//path/to:requirements.txt",
+)
+use_repo(pip, "pip")
+```
+
+**What you get automatically:**
+- ✅ `rules_python` (version 1.4.1) 
+- ✅ Python 3.12 toolchain configured as default
+- ✅ pytest testing framework
+- ✅ Python linting and formatting tools
+- ✅ Virtual environment support for IDEs
+
+**No longer needed:**
+```starlark
+# ❌ Manual setup eliminated (~20 lines):
+# bazel_dep(name = "rules_python", version = "1.4.1")
+# python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+# python.toolchain(is_default = True, python_version = "3.12")
+# use_repo(python)
+```
+
+## 📚 Examples
+
+See `/examples/` directory:
+- `simple-python/` - Minimal setup (1 line in MODULE.bazel)
+- `with-pip-deps/` - Adding pip dependencies  
+- Comprehensive migration guide in `MIGRATION.md`
+
 * ✅ Makes development of Python code easier inside Bazel
 * ✅ Provides a Python virtualenv target
 * ✅ Provides S-CORE wide defaults for linting and formatting

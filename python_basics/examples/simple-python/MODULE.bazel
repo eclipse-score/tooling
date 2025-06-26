@@ -1,0 +1,16 @@
+"""
+Example: Minimal Python project using score_python_basics
+
+This demonstrates the simplest possible setup - just one line in MODULE.bazel!
+"""
+
+module(
+    name = "simple_python_example",
+    version = "1.0.0",
+)
+
+# ✅ That's it! One line gives you:
+# - rules_python (version 1.4.1)
+# - Python 3.12 toolchain configured as default
+# - score_python_basics tools (pytest, linting, etc.)
+bazel_dep(name = "score_python_basics", version = "0.3.0")
