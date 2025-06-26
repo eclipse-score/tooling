@@ -1,2 +1,5 @@
 bazel-*
 MODULE.bazel.lock
+__pycache__/
+*.pyc
+*.pyo
