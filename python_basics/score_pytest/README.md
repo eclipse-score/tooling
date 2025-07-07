@@ -28,6 +28,10 @@ score_py_pytest(
         # Specify optional arguments, ex:
         "--basetemp /tmp/pytest",
     ],
+    env = {
+        # Specify additional environmental variables, ex:
+        "LD_LIBRARY_PATH": "/path/to/dynamic/lib",
+    },
     # Optionally provide pytest.ini file, that will override the default one
     pytest_ini = "//my_pytest:my_pytest_ini",
 
