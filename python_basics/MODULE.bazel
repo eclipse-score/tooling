@@ -37,7 +37,7 @@ use_repo(python)
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
     hub_name = "pip_score_python_basics",
-    requirements = "//:requirements.txt",
+    requirements_lock = "//:requirements.txt",
     python_version = PYTHON_VERSION,
 )
 use_repo(pip, "pip_score_python_basics")
