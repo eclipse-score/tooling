@@ -11,5 +11,8 @@ def cli_helper(name, visibility):
         name = "help",
         actual = ":" + name,
         visibility = visibility,
-        tags = ["cli_help=Output all bazel targets with cli_help tag: bazel run //:help"],
+        tags = [
+            "cli_help=Output all bazel targets with cli_help tag:\n" + \
+            "bazel run //:help"
+        ],
     )
