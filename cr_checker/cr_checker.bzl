@@ -107,4 +107,18 @@ def copyright_checker(
         name = "copyright-check",
         actual = ":" + name + ".check",
         visibility = visibility,
+        tags = [
+            "cli_help=Check for license headers:\n" + \
+            "bazel run //:copyright-check"
+        ],
+    )
+
+    native.alias(
+        name = "copyright-fix",
+        actual = ":" + name + ".fix",
+        visibility = visibility,
+        tags = [
+            "cli_help=Fix license headers:\n" + \
+            "bazel run //:copyright-fix"
+        ],
     )
