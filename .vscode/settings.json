@@ -1,0 +1,20 @@
+{
+  // General Settings
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": true,
+  "editor.rulers": [88],
+
+  // Python Settings
+  "[python]": {
+    // Opinionated option for the future:
+    // "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.sortImports": "explicit"
+    },
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "python.analysis.typeCheckingMode": "off",
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true
+}

@@ -34,14 +34,20 @@ def score_py_pytest(name, srcs, args = [], data = [], deps = [], env = {}, plugi
             pytest_bootstrap,
         ] + srcs,
         main = pytest_bootstrap,
-        args = ["-c $(location %s)" % pytest_ini] +
-               [
-                   "-p no:cacheprovider",
-                   "--show-capture=no",
-               ] +
-               args +
-               plugins +
-               ["$(location %s)" % x for x in srcs],
+        args = [
+                "-c $(location %s)" % pytest_ini,
+                "-p no:cacheprovider",
+                "--show-capture=no",
+
+                # XML_OUTPUT_FILE: Location to which test actions should write a test
+                # result XML output file. Otherwise, Bazel generates a default XML
+                # output file wrapping the test log as part of the test action. The XML
+                # schema is based on the JUnit test result schema.
+                "--junitxml=$$XML_OUTPUT_FILE",
+            ] +
+            args +
+            plugins +
+            ["$(location %s)" % x for x in srcs],
         deps = all_requirements + deps,
         data = [
             pytest_ini,
