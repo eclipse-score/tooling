@@ -1,0 +1,51 @@
+# *******************************************************************************
+# Copyright (c) 2025 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+
+module(
+    name = "score_linter",
+    version = "0.1.0",
+    compatibility_level = 1,
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.5.0")
+bazel_dep(name = "rules_multitool", version = "1.2.0")
+
+multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
+
+# Ruff Hub
+multitool.hub(
+    hub_name = "ruff_hub",
+    lockfile = "//:ruff.lock.json",
+)
+use_repo(multitool, "ruff_hub")
+
+# Actionlint Hub
+multitool.hub(
+    hub_name = "actionlint_hub",
+    lockfile = "//:actionlint.lock.json",
+)
+use_repo(multitool, "actionlint_hub")
+
+# Shellcheck Hub
+multitool.hub(
+    hub_name = "shellcheck_hub",
+    lockfile = "//:shellcheck.lock.json",
+)
+use_repo(multitool, "shellcheck_hub")
+
+# YAMLfmt Hub
+multitool.hub(
+    hub_name = "yamlfmt_hub",
+    lockfile = "//:yamlfmt.lock.json",
+)
+use_repo(multitool, "yamlfmt_hub")
