@@ -25,6 +25,6 @@ score_py_pytest(
     name = "test_rules_are_working_correctly",
     srcs = glob([
         "tests/*.py",
-    ]),
+    ], allow_empty = True,),
 )   
 
