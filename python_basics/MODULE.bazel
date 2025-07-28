@@ -13,7 +13,7 @@
 
 module(
     name = "score_python_basics",
-    version = "0.3.3",
+    version = "0.3.4",
     compatibility_level = 0,
 )
 
