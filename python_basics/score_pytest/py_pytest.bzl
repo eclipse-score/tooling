@@ -12,15 +12,15 @@
 # *******************************************************************************
 """Bazel interface for running pytest"""
 
-load("@pip_score_python_basics//:requirements.bzl", "all_requirements")
+load("@pip_tooling//:requirements.bzl", "all_requirements")
 load("@rules_python//python:defs.bzl", "py_test")
 
 
 def score_py_pytest(name, srcs, args = [], data = [], deps = [], env = {}, plugins = [], pytest_ini = None, **kwargs):
-    pytest_bootstrap = Label("//score_pytest:main.py")
+    pytest_bootstrap = Label("//python_basics/score_pytest:main.py")
 
     if not pytest_ini:
-        pytest_ini = Label("//score_pytest:pytest.ini")
+        pytest_ini = Label("//python_basics/score_pytest:pytest.ini")
         #fail("$(location %s)" % pytest_ini)
 
     if not srcs:

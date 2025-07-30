@@ -12,7 +12,7 @@
 # *******************************************************************************
 
 load("@rules_java//java:java_binary.bzl", "java_binary")
-load("//tool/formatters:dash_format_converter.bzl", "dash_format_converter")
+load("@score_tooling//dash/tool/formatters:dash_format_converter.bzl", "dash_format_converter")
 
 def dash_license_checker(
         visibility,
@@ -79,7 +79,7 @@ def dash_license_checker(
         name = "license.check.{}".format(name),
         main_class = "org.eclipse.dash.licenses.cli.Main",
         runtime_deps = [
-            "@score_dash_license_checker//:jar",
+            "@score_tooling//dash:jar",
         ],
         # We'll build up "args" in the order: [ static options ] + [ file last ]
         args = [

@@ -1,6 +1,6 @@
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
-load("//:defs.bzl", "score_virtualenv")
-load("@pip_score_python_basics//:requirements.bzl", "requirement", "all_requirements")
+load("@score_tooling//python_basics:defs.bzl", "score_virtualenv")
+load("@pip_tooling//:requirements.bzl", "requirement", "all_requirements")
 load("@aspect_rules_lint//format:defs.bzl", "format_multirun", "format_test")
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 
