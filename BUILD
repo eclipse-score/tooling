@@ -11,10 +11,4 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-module(
-    name = "score_dash_license_checker",
-    version = "0.1.2",
-    compatibility_level = 0,
-)
-
-bazel_dep(name = "rules_java", version = "8.6.3")
+package(default_visibility = ["//visibility:public"])

@@ -16,15 +16,11 @@ Currently binaries / executables for the following tools are provided
 Add the import of `multitool` as well as `score_linter` to your `MODULE.bazel` file.
 Adapt the `use_repo` and `register_toolchains` calls to only import/use the tools you need.
 ```
-bazel_dep(name = "rules_multitool", version = "1.2.0")
-bazel_dep(
-    name = "score_linter",
-    version = "0.1.0",
-)
+bazel_dep(name = "score_tooling", version = "1.0.0")
+bazel_dep(name = "rules_multitool", version = "1.8.0")
 
 multitool_root = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
-
-use_repo(multitool_root, "multitool", "actionlint_hub", "ruff_hub", "shellcheck_hub", "yamlfmt_hub")
+use_repo(multitool_root, "actionlint_hub", "multitool", "ruff_hub", "shellcheck_hub", "yamlfmt_hub")
 
 register_toolchains(
     "@ruff_hub//toolchains:all",
