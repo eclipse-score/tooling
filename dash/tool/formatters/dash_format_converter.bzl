@@ -47,7 +47,7 @@ dash_format_converter = rule(
             doc = "Type of input file: 'requirements' for requirements.txt or 'cargo' for Cargo.lock",
         ),
         "_tool": attr.label(
-            default = Label("//tool/formatters:dash_format_converter"),
+            default = Label("@score_tooling//dash/tool/formatters:dash_format_converter"),
             executable = True,
             cfg = "exec",
             doc = "",

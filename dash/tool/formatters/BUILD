@@ -25,3 +25,5 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [":dash_format_converter_lib"],
 )
+
+exports_files(["dash_format_converter.bzl"])

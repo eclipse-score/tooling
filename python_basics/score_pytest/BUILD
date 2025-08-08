@@ -12,7 +12,7 @@
 # *******************************************************************************
 
 load("@aspect_rules_py//py:defs.bzl", "py_library")
-load("//score_pytest:py_pytest.bzl", "score_py_pytest")
+load("@score_tooling//python_basics/score_pytest:py_pytest.bzl", "score_py_pytest")
 
 exports_files([
     "pytest.ini",
