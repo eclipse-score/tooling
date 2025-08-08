@@ -9,14 +9,14 @@ if ws:
     os.chdir(ws)
 
 # build a single query for all cli_help tags
-ext_labels = bazel("query", "//external:*", "--output=label").splitlines()
+ext_labels = bazel("query", "//external:*", "--output=label","--enable_workspace").splitlines()
 ext_names  = {re.match(r"@([^/]+)//", lbl).group(1)
               for lbl in ext_labels if lbl.startswith("@")}
 patterns   = ["//..."] + [f"@{n}//..." for n in ext_names]
 expr       = " + ".join(f'attr(tags,"cli_help=.*",{p})' for p in patterns)
 
 xml = bazel("query", expr, "--output=xml",
-            "--ui_event_filters=-INFO,-progress", "--noshow_progress")
+            "--ui_event_filters=-INFO,-progress", "--noshow_progress","--enable_workspace")
 root = ET.fromstring(xml)
 
 # format the output
