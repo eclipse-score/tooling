@@ -28,3 +28,9 @@ score_py_pytest(
     ], allow_empty = True,),
 )   
 
+py_library(
+    name="attribute_plugin",
+    srcs=["attribute_plugin.py"],
+    imports = ["."],
+    visibility = ["//visibility:public"]
+)
