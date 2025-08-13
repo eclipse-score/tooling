@@ -14,20 +14,31 @@ Decorator = Callable[[TestFunction], TestFunction]
 
 
 def find_git_root(start_path: str | Path = "") -> Path | None:
-    """Find the git root directory starting from the given path or __file__."""
+    """
+    Find the git root directory starting from the given path or __file__.
+
+    Please note that this does behave differently depending on which command you use:
+    'bazel run' => Path
+    'bazel build' => None
+    'esbonio / direct execution' => Path (if executed without input)
+    """
     if start_path == "":
         start_path = __file__
 
     git_root = Path(start_path).resolve()
-    esbonio_search = False
+    # Note: recoursion_break is a variable that will stop
+    #       certain execution types, like esbonio
+    #       from recousing forever if it can't find a .git
+    #       in the 'home' or 'root' folder.
+    recoursion_break = False
     while not (git_root / ".git").exists():
         git_root = git_root.parent
         if git_root == Path("/"):
             # fallback to cwd when building with python -m sphinx docs _build -T
-            if esbonio_search:
+            if recoursion_break:
                 return None
             git_root = Path.cwd().resolve()
-            esbonio_search = True
+            recoursion_break = True
     return git_root
 
 
@@ -100,11 +111,11 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) ->
     if call.when != "call":
         return
     # Since our decorator 'add_test_properties' will create a 'test_properties' marker
-    # This function then searches for the nearest dictionary attached to an item with 
+    # This function then searches for the nearest dictionary attached to an item with
     # that marker and parses this into properties.
 
-    # In short: 
-    #   => This function adds the properties specified via the decorator to the item so 
+    # In short:
+    #   => This function adds the properties specified via the decorator to the item so
     #      they can be written to the XML output in the end
     # Note: This does NOT add 'line' and 'file' to the testcase.
     marker = item.get_closest_marker("test_properties")
@@ -122,9 +133,7 @@ def add_file_and_line_attr(
     # node.fspath gives the path to the test file
     # node.file_path
     git_root = find_git_root(node.fspath)
-    file_path = (
-        Path(os.path.realpath(node.fspath)).relative_to(git_root)
-    )
+    file_path = Path(os.path.realpath(node.fspath)).relative_to(git_root)
     # file_path = Path(node.fspath).relative_to(git_root)
     # node.location is a tuple (filename, lineno, testname)
     line_number = node.location[1]
