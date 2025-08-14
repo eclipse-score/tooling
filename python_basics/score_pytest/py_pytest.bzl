@@ -48,7 +48,7 @@ def score_py_pytest(name, srcs, args = [], data = [], deps = [], env = {}, plugi
             args +
             plugins +
             ["$(location %s)" % x for x in srcs],
-        deps = ["@score_python_basics//score_pytest:attribute_plugin"] + all_requirements + deps,
+        deps = ["@score_tooling//score_pytest:attribute_plugin"] + all_requirements + deps,
         data = [
             pytest_ini,
         ] + data,
