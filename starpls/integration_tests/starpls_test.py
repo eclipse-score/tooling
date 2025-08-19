@@ -31,7 +31,7 @@ class StarplsIntegrationTest(unittest.TestCase):
         """Runs before each test method."""
         self.runfiles = Runfiles.Create()
 
-        binary_runfile_path = "_main/starpls/integration_tests/_starpls_binary_for_test_bin"
+        binary_runfile_path = "_main/_starpls_binary_for_test_bin"
         self.starpls_binary_path = self.runfiles.Rlocation(binary_runfile_path)
         
         if not self.starpls_binary_path:
