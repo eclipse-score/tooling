@@ -32,8 +32,6 @@ load("//format_checker:macros.bzl", _use_format_targets = "use_format_targets")
 
 # --- starpls ---
 load("//starpls:starpls.bzl", _setup_starpls = "setup_starpls")
-load("//starpls/integration_tests:defs.bzl",
-     _starpls_py_integration_test = "starpls_py_integration_test")
 
 score_virtualenv = _score_virtualenv
 score_py_pytest = _score_py_pytest
@@ -42,4 +40,3 @@ copyright_checker = _copyright_checker
 cli_helper = _cli_helper
 use_format_targets = _use_format_targets
 setup_starpls = _setup_starpls
-starpls_py_integration_test = _starpls_py_integration_test
