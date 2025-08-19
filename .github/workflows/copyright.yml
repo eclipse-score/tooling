@@ -11,9 +11,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-exports_files([
-    "requirements.txt",
-    "requirements.in",
-    "pyproject.toml",
-    "defs.bzl",
-])
+name: Copyright checks
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  merge_group:
+    types: [checks_requested]
+jobs:
+  copyright-check:
+    uses: eclipse-score/cicd-workflows/.github/workflows/copyright.yml@main
+    with:
+      bazel-target: "run //:copyright.check"

@@ -3,7 +3,7 @@ load(":defs.bzl", "starpls_py_integration_test")
 
 setup_starpls(
     name = "_starpls_binary_for_test",
-    visibility = ["@score_tooling//starpls/integration_tests:__pkg__"],
+    visibility = ["//visibility:public"],
 )
 
 starpls_py_integration_test(

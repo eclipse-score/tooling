@@ -57,22 +57,6 @@ pip.parse(
 )
 use_repo(pip, "pip_tooling")
 
-# Integration test pip
-pip.parse(
-    hub_name = "pip_score_venv_test",
-    python_version = PYTHON_VERSION,
-    requirements_lock = "//python_basics/integration_tests/venv-with-extra-requirements:requirements.txt",
-)
-use_repo(pip, "pip_score_venv_test")
-
-# PIP for starpls
-pip.parse(
-    hub_name = "pip_deps_test",
-    python_version = PYTHON_VERSION,
-    requirements_lock = "//starpls/integration_tests:requirements_lock.txt",
-)
-use_repo(pip, "pip_deps_test")
-
 ###############################################################################
 # Multitool Hub (for ruff, pyright, actionlint, etc.)
 ###############################################################################
