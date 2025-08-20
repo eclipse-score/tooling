@@ -32,6 +32,7 @@ copyright_checker(
         #"//tools",  # Use full label if src is a package
         "//:BUILD",
         "//:MODULE.bazel",
+        "python_basics"
 
         # Add other directories/files you want to check
     ],
