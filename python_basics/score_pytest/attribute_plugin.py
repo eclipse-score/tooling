@@ -2,48 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any
-from pathlib import Path
 from typing import Literal
-import os
 
 import pytest
 
 # Type aliases for better readability
 TestFunction = Callable[..., Any]
 Decorator = Callable[[TestFunction], TestFunction]
-
-
-
-def find_ws_root() -> Path | None:
-    """
-    Find the current MODULE.bazel workspace root directory.
-
-    Execution context behavior:
-    - 'bazel run' => ✅ Full workspace path
-    - 'bazel build' => ❌ None (sandbox isolation)
-    - 'direct sphinx' => ❌ None (no Bazel environment)
-    """
-    ws_dir = os.environ.get("BUILD_WORKSPACE_DIRECTORY", None)
-    return Path(ws_dir) if ws_dir else None
-
-def find_git_root() -> Path | None:
-    """
-    Find the git root directory, starting from workspace root or current directory.
-
-    Execution context behavior:
-    - 'bazel run' => ✅ Git root path (starts from workspace)
-    - 'bazel build' => ❌ None (sandbox has no .git)
-    - 'direct sphinx' => ✅ Git root path (fallback to cwd)
-    """
-    start_path = find_ws_root()
-    if start_path is None:
-        start_path = Path.cwd()
-    git_root = Path(start_path).resolve()
-    while not (git_root / ".git").exists():
-        git_root = git_root.parent
-        if git_root == Path("/"):
-            return None
-    return git_root
 
 
 def add_test_properties(
@@ -122,6 +87,7 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) ->
     #   => This function adds the properties specified via the decorator to the item so
     #      they can be written to the XML output in the end
     # Note: This does NOT add 'line' and 'file' to the testcase.
+
     marker = item.get_closest_marker("test_properties")
     if marker and isinstance(marker.args[0], dict):
         for k, v in marker.args[0].items():
@@ -132,11 +98,12 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) ->
 def add_file_and_line_attr(
     record_xml_attribute: Callable[[str, str], None], request: pytest.FixtureRequest
 ) -> None:
+    """Adding line & file to the <testcase> attribute in the XML"""
     node = request.node
-    git_root = find_git_root()
-    assert git_root is None, "Git root was none"
-    file_path = Path(os.path.realpath(node.fspath)).relative_to(str(git_root))
-    line_number = node.location[1]
+    raw_file_path, line_number, _ = node.location
 
-    record_xml_attribute("file", str(file_path))
-    record_xml_attribute("line", str(line_number))
+    # turning `../../../_main/<file_path>` into => <filepath>
+    clean_file_path = raw_file_path.split("_main")[-1].replace("/", "", 1)
+    record_xml_attribute("file", str(clean_file_path))
+    # Adding +1 to the line so we point to the decorator instead of above it
+    record_xml_attribute("line", str(line_number + 1))

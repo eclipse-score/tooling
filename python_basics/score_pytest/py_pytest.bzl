@@ -17,10 +17,10 @@ load("@rules_python//python:defs.bzl", "py_test")
 
 
 def score_py_pytest(name, srcs, args = [], data = [], deps = [], env = {}, plugins = [], pytest_ini = None, **kwargs):
-    pytest_bootstrap = Label("//python_basics/score_pytest:main.py")
+    pytest_bootstrap = Label("@score_tooling//python_basics/score_pytest:main.py")
 
     if not pytest_ini:
-        pytest_ini = Label("//python_basics/score_pytest:pytest.ini")
+        pytest_ini = Label("@score_tooling//python_basics/score_pytest:pytest.ini")
         #fail("$(location %s)" % pytest_ini)
 
     if not srcs:
@@ -48,7 +48,7 @@ def score_py_pytest(name, srcs, args = [], data = [], deps = [], env = {}, plugi
             args +
             plugins +
             ["$(location %s)" % x for x in srcs],
-        deps = ["@score_tooling//score_pytest:attribute_plugin"] + all_requirements + deps,
+        deps = ["@score_tooling//python_basics/score_pytest:attribute_plugin"] + all_requirements + deps,
         data = [
             pytest_ini,
         ] + data,
