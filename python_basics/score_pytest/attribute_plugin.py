@@ -115,7 +115,7 @@ def add_file_and_line_attr(
     raw_file_path, line_number, _ = node.location
 
     # turning `../../../_main/<file_path>` into => <filepath>
-    clean_file_path = raw_file_path.split("_main")[-1].replace("/", "", 1)
+    clean_file_path = raw_file_path.split("_main/")[-1]
     record_xml_attribute("file", str(clean_file_path))
     # Adding +1 to the line so we point to the decorator instead of above it
     record_xml_attribute("line", str(line_number + 1))
