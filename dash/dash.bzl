@@ -26,22 +26,22 @@ def dash_license_checker(
 
     Usage (Explicit mode):
       Provide the 'src' explicitly.
-      
+
       If 'file_type' is omitted (empty string) and a project_config is provided, the file_type is
       determined from the "source_code" field in project_config.
-      
+
       Example project_config (project_config.bzl):
-      
+
           PROJECT_CONFIG = {
               "asil_level": "QM",
               "source_code": ["python"]
           }
-      
+
       - If "python" is present, file_type becomes "requirements".
       - If "rust" is present, file_type becomes "cargo".
-    
+
     Example usage:
-    
+
          dash_license_checker(
              visibility = ["//visibility:public"],
              src = "//docs:requirements",  # a filegroup target pointing to your requirements.txt file

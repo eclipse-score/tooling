@@ -12,8 +12,10 @@
 # *******************************************************************************
 import os, subprocess, shutil, textwrap, xml.etree.ElementTree as ET
 
+
 def bazel(*args: str) -> str:
     return subprocess.check_output(["bazel", *args], text=True)
+
 
 # When invoked via `bazel run`, Bazel sets this env var
 ws = os.environ.get("BUILD_WORKSPACE_DIRECTORY")
@@ -51,9 +53,9 @@ for rule in root.iter("rule"):
             break
 
 # pretty-print
-col_w     = (max_len + 2) if rows else 2
+col_w = (max_len + 2) if rows else 2
 term_cols = shutil.get_terminal_size(fallback=(80, 24)).columns
-descr_w   = max(20, term_cols - col_w - 1)
+descr_w = max(20, term_cols - col_w - 1)
 
 CYAN = "\033[36m"
 print(f"{CYAN}BAZEL TARGETS:\n")
@@ -61,7 +63,9 @@ print(f"{CYAN}BAZEL TARGETS:\n")
 for label, desc in sorted(rows):
     paragraphs = desc.splitlines()
     first, *rest = paragraphs or [""]
-    wrapped_first = textwrap.wrap(first, width=descr_w, break_long_words=False, break_on_hyphens=False) or [""]
+    wrapped_first = textwrap.wrap(
+        first, width=descr_w, break_long_words=False, break_on_hyphens=False
+    ) or [""]
     print(f"{label.ljust(col_w)} {wrapped_first[0]}")
     for line in wrapped_first[1:]:
         print(" " * col_w + " " + line)

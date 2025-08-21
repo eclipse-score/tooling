@@ -2,19 +2,16 @@ name: Run Python Basics Integration Tests
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-
 jobs:
   code:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.2.2
-
       - name: Run python_basics integration tests
         run: |
           cd python_basics/integration_tests
           bazel test //...
-
       - name: Run starpls integration tests
         run: |
           cd starpls/integration_tests

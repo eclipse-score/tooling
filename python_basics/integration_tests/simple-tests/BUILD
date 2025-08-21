@@ -10,17 +10,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@score_tooling//python_basics:defs.bzl", "score_virtualenv", "score_py_pytest")
+load("@score_tooling//python_basics:defs.bzl", "score_py_pytest", "score_virtualenv")
 
 score_virtualenv(
-    name="basic_venv",
-    venv_name=".basic_venv"
+    name = "basic_venv",
+    venv_name = ".basic_venv",
 )
 
 score_py_pytest(
     name = "venv_ok_test",
-    srcs = [ "test_venv_ok.py"],
-    data = [":basic_venv"]
+    srcs = ["test_venv_ok.py"],
+    data = [":basic_venv"],
 )
 
 score_py_pytest(

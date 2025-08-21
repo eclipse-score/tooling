@@ -10,11 +10,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_python//python:pip.bzl", "compile_pip_requirements")
-load("@score_tooling//python_basics:defs.bzl", "score_virtualenv")
-load("@pip_tooling//:requirements.bzl", "requirement", "all_requirements")
 load("@aspect_rules_lint//format:defs.bzl", "format_multirun", "format_test")
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@pip_tooling//:requirements.bzl", "all_requirements", "requirement")
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+load("@score_tooling//python_basics:defs.bzl", "score_virtualenv")
 
 # define ":ruff" target
 #score_python()
@@ -26,8 +26,8 @@ python_tool = "@aspect_rules_lint//format:ruff"
 
 format_multirun(
     name = "format.fix",
-    python = python_tool,
     print_command = True,
+    python = python_tool,
     visibility = [
         "//visibility:private",
     ],
@@ -36,14 +36,14 @@ format_multirun(
 # Ensure all files are formatted correctly
 format_test(
     name = "format.check",
+
+    # Scan the entire workspace.
+    # This mode causes the test to be non-hermetic and it cannot be cached.
+    no_sandbox = True,
     python = python_tool,
     visibility = [
         "//visibility:private",
     ],
-
-    # Scan the entire workspace.
-    # This mode causes the test to be non-hermetic and it cannot be cached.
-    no_sandbox= True,
     workspace = "//:MODULE.bazel",
 )
 
@@ -61,11 +61,10 @@ compile_pip_requirements(
     ],
 )
 
-
 build_test(
     name = "ensure_all_private_targets_work",
     targets = [
-        ":format.fix", # Ensure format.fix is executable
-         ":requirements.update",
+        ":format.fix",  # Ensure format.fix is executable
+        ":requirements.update",
     ],
 )

@@ -10,9 +10,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_python//python:pip.bzl", "compile_pip_requirements")
-load("@score_tooling//python_basics:defs.bzl", "score_virtualenv", "score_py_pytest")
 load("@pip_score_venv_test//:requirements.bzl", "all_requirements")
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+load("@score_tooling//python_basics:defs.bzl", "score_py_pytest", "score_virtualenv")
 
 compile_pip_requirements(
     name = "requirements",
@@ -24,14 +24,14 @@ compile_pip_requirements(
 )
 
 score_virtualenv(
-    name="additional_req_venv",
-    venv_name=".additional_req_venv",
-    reqs=all_requirements,
+    name = "additional_req_venv",
+    reqs = all_requirements,
+    venv_name = ".additional_req_venv",
 )
 
 score_py_pytest(
     name = "venv_accepts_outside_reqs",
-    srcs = [ "test_extra_requirements_ok.py"],
+    srcs = ["test_extra_requirements_ok.py"],
     data = [":additional_req_venv"],
-    deps = all_requirements
+    deps = all_requirements,
 )

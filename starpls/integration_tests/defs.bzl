@@ -17,7 +17,6 @@ def starpls_py_integration_test(name, srcs, data, **kwargs):
     py_test(
         name = name,
         srcs = srcs,
-
         deps = ["@pip_deps_test//bazel_runfiles:bazel_runfiles"],
         data = data,
         python_version = "PY3",

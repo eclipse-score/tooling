@@ -15,7 +15,6 @@
 load("@pip_tooling//:requirements.bzl", "all_requirements")
 load("@rules_python//python:defs.bzl", "py_test")
 
-
 def score_py_pytest(name, srcs, args = [], data = [], deps = [], env = {}, plugins = [], pytest_ini = None, **kwargs):
     pytest_bootstrap = Label("@score_tooling//python_basics/score_pytest:main.py")
 
@@ -35,19 +34,19 @@ def score_py_pytest(name, srcs, args = [], data = [], deps = [], env = {}, plugi
         ] + srcs,
         main = pytest_bootstrap,
         args = [
-                "-c $(location %s)" % pytest_ini,
-                "-p no:cacheprovider",
-                "--show-capture=no",
+                   "-c $(location %s)" % pytest_ini,
+                   "-p no:cacheprovider",
+                   "--show-capture=no",
 
-                # XML_OUTPUT_FILE: Location to which test actions should write a test
-                # result XML output file. Otherwise, Bazel generates a default XML
-                # output file wrapping the test log as part of the test action. The XML
-                # schema is based on the JUnit test result schema.
-                "--junitxml=$$XML_OUTPUT_FILE",
-            ] +
-            args +
-            plugins +
-            ["$(location %s)" % x for x in srcs],
+                   # XML_OUTPUT_FILE: Location to which test actions should write a test
+                   # result XML output file. Otherwise, Bazel generates a default XML
+                   # output file wrapping the test log as part of the test action. The XML
+                   # schema is based on the JUnit test result schema.
+                   "--junitxml=$$XML_OUTPUT_FILE",
+               ] +
+               args +
+               plugins +
+               ["$(location %s)" % x for x in srcs],
         deps = ["@score_tooling//python_basics/score_pytest:attribute_plugin"] + all_requirements + deps,
         data = [
             pytest_ini,

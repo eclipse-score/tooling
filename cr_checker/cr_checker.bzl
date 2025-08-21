@@ -108,8 +108,8 @@ def copyright_checker(
         actual = ":" + name + ".check",
         visibility = visibility,
         tags = [
-            "cli_help=Check for license headers:\n" + \
-            "bazel run //:copyright-check"
+            "cli_help=Check for license headers:\n" +
+            "bazel run //:copyright-check",
         ],
     )
 
@@ -118,7 +118,7 @@ def copyright_checker(
         actual = ":" + name + ".fix",
         visibility = visibility,
         tags = [
-            "cli_help=Fix license headers:\n" + \
-            "bazel run //:copyright-fix"
+            "cli_help=Fix license headers:\n" +
+            "bazel run //:copyright-fix",
         ],
     )

@@ -192,7 +192,7 @@ def convert_cargo_to_dash_format(input_file: Path, output_file: Path) -> int:
             version = pkg.get("version")
             if name and version:
                 # Remove leading 'v' if present
-                version = version.lstrip('v')
+                version = version.lstrip("v")
                 line = f"crate/cratesio/-/{name}/{version}"
                 LOGGER.debug(f"Extracted package: {line}")
                 outfile.write(line + "\n")

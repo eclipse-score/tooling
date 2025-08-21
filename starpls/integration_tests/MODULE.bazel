@@ -18,7 +18,6 @@ module(
 
 bazel_dep(name = "rules_shell", version = "0.4.0")
 
-
 # begin Integration Tests
 
 # PYTHON
@@ -39,12 +38,12 @@ pip.parse(
     python_version = PYTHON_VERSION,
     requirements_lock = "//:requirements_lock.txt",
 )
-
 use_repo(pip, "pip_deps_test")
-bazel_dep(name="score_tooling",version="0.0.0")
+
+bazel_dep(name = "score_tooling", version = "0.0.0")
 local_path_override(
     module_name = "score_tooling",
-    path="../../"
+    path = "../../",
 )
 
 # end Integration Tests

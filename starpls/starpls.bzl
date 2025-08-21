@@ -15,7 +15,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 def setup_starpls(name, visibility = ["//visibility:public"]):
     native.genrule(
         name = name,
-        outs = [name + "_bin"], 
+        outs = [name + "_bin"],
         cmd = """
             echo "Downloading starpls binary via genrule defined in macro..." >&2
             curl -fsSL "https://github.com/withered-magic/starpls/releases/download/v0.1.21/starpls-linux-amd64" -o "$@" && \
