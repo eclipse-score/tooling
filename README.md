@@ -53,3 +53,8 @@ The available import targets are:
 - cli_helper
 - use_format_targets
 - setup_starpls
+
+## Format the tooling repository
+```bash 
+bazel run //:format.fix
+```
