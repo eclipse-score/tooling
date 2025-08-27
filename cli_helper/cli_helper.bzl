@@ -15,7 +15,7 @@ load("@aspect_rules_py//py:defs.bzl", "py_binary")
 def cli_helper(name, visibility):
     py_binary(
         name = name,
-        srcs = ["@score_cli_helper//tool:cli_help_lib"],
+        srcs = ["@score_tooling//cli_helper/tool:cli_help_lib"],
         visibility = visibility,
     )
 
