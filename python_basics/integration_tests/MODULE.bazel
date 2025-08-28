@@ -45,7 +45,7 @@ use_repo(pip, "pip_score_venv_test")
 # Generic linting and formatting rules
 #
 ###############################################################################
-bazel_dep(name = "aspect_rules_py", version = "1.6.3")
+bazel_dep(name = "aspect_rules_py", version = "1.4.0")
 
 bazel_dep(name = "bazel_skylib", version = "1.7.1", dev_dependency = True)
 
