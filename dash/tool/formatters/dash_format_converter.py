@@ -165,7 +165,12 @@ def convert_to_dash_format(input_file: Path, output_file: Path):
                 outfile.write(formatted_line + "\n")
 
 
-def convert_cargo_to_dash_format(input_file: Path, output_file: Path) -> int:
+def convert_cargo_to_dash_format(
+    input_file: Path,
+    output_file: Path,
+    skip_source_filter: bool = False,
+    filter_keywords: list[str] | None = None,
+) -> int:
     """
     Converts a Cargo.lock file into dash format.
 
@@ -174,6 +179,11 @@ def convert_cargo_to_dash_format(input_file: Path, output_file: Path) -> int:
         cargo/cargo/-/{name}/{version}
     """
     encoding = "utf-8"
+
+    # Set default keywords if none provided
+    if filter_keywords is None:
+        filter_keywords = ["dummy-source-keyword"]
+
     try:
         with open(input_file, "rb") as infile:
             cargo_data = tomllib.load(infile)
@@ -188,6 +198,16 @@ def convert_cargo_to_dash_format(input_file: Path, output_file: Path) -> int:
 
     with open(output_file, "w", encoding=encoding) as outfile:
         for pkg in packages:
+            if not skip_source_filter:
+                # If the package has no source, skip it, its developed internally
+                if "source" not in pkg:
+                    continue
+
+                # Filter out packages with any of the specified keywords in the source
+                source = pkg.get("source", "")
+                if any(keyword in source for keyword in filter_keywords):
+                    continue
+
             name = pkg.get("name")
             version = pkg.get("version")
             if name and version:
@@ -265,6 +285,19 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
         help="Type of input file: 'requirements' for requirements.txt or 'cargo' for Cargo.lock (default: requirements)",
     )
 
+    parser.add_argument(
+        "--skip-source-filter",
+        action="store_true",
+        help="Skip filtering out packages based on source (no source check, no keyword filtering)",
+    )
+
+    parser.add_argument(
+        "--filter-keywords",
+        nargs="*",
+        default=["dummy-source-keyword"],
+        help="Keywords to filter out from package sources. Packages containing any of these keywords in their source will be excluded.",
+    )
+
     return parser.parse_args(argv)
 
 
@@ -299,7 +332,9 @@ def main(argv: list[str] | None) -> int:
     args = parse_arguments(argv if argv is not None else sys.argv[1:])
     configure_logging(args.log_file, args.verbose)
     if args.type == "cargo":
-        ret = convert_cargo_to_dash_format(args.input, args.output)
+        ret = convert_cargo_to_dash_format(
+            args.input, args.output, args.skip_source_filter, args.filter_keywords
+        )
     else:
         ret = convert_to_dash_format(args.input, args.output)
     return 0

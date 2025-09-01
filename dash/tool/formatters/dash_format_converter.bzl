@@ -23,6 +23,11 @@ def _impl(ctx):
     args.add("-i", ctx.file.requirement_file)
     args.add("-o", output)
     args.add("-t", ctx.attr.file_type)
+    if ctx.attr.skip_source_filter:
+        args.add("--skip-source-filter")
+    if ctx.attr.filter_keywords:
+        args.add("--filter-keywords")
+        args.add_all(ctx.attr.filter_keywords)
 
     ctx.actions.run(
         inputs = [ctx.file.requirement_file],
@@ -45,6 +50,14 @@ dash_format_converter = rule(
         "file_type": attr.string(
             default = "requirements",
             doc = "Type of input file: 'requirements' for requirements.txt or 'cargo' for Cargo.lock",
+        ),
+        "skip_source_filter": attr.bool(
+            default = False,
+            doc = "If True, skip filtering out packages based on source (no source check, no keyword filtering)",
+        ),
+        "filter_keywords": attr.string_list(
+            default = ["dummy-source-keyword"],
+            doc = "List of keywords to filter out from package sources. Packages containing any of these keywords will be excluded.",
         ),
         "_tool": attr.label(
             default = Label("@score_tooling//dash/tool/formatters:dash_format_converter"),

@@ -94,6 +94,9 @@ dash_license_checker(
     src = "//:cargo_lock",
     visibility = ["//visibility:public"],
     file_type = "cargo",
+    #optional
+    skip_source_filter = False, # internal packages(that dont contain source) are skipped, only 3rd party verified
+    filter_keywords = ["qorix-group", "eclipse-score"] # keywords to filter packages containing this words
 )
 ```
 
@@ -111,8 +114,8 @@ Running the generated target will:
 
 ## Benefits
 
-✅ No need to fetch the JAR separately — it's embedded.  
-✅ Language-agnostic input support (Python, Rust).  
+✅ No need to fetch the JAR separately — it's embedded.
+✅ Language-agnostic input support (Python, Rust).
 ✅ Fully reproducible and self-contained via Bazel module.
 
 ---

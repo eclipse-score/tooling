@@ -18,7 +18,9 @@ def dash_license_checker(
         visibility,
         src,
         file_type = "",
-        project_config = None):
+        project_config = None,
+        skip_source_filter = False,
+        filter_keywords = ["dummy-source-keyword"]):
     """
     Defines a Bazel macro for creating a `java_binary` target that integrates the DASH license checker.
     The generated target is always named 'license_check', and an alias 'license-check' is automatically
@@ -46,7 +48,9 @@ def dash_license_checker(
              visibility = ["//visibility:public"],
              src = "//docs:requirements",  # a filegroup target pointing to your requirements.txt file
              file_type = "",                # omitted so that it's determined from project_config
-             project_config = PROJECT_CONFIG
+             project_config = PROJECT_CONFIG,
+             skip_source_filter = False,    # set to True to include all packages regardless of source
+             filter_keywords = ["qorix-group", "eclipse-score"]  # keywords to filter from package sources
          )
     """
     name = "license_check"
@@ -72,6 +76,8 @@ def dash_license_checker(
         name = "{}2dash".format(name),
         requirement_file = src,
         file_type = file_type,
+        skip_source_filter = skip_source_filter,
+        filter_keywords = filter_keywords,
     )
 
     # Create the java_binary target that runs the license checker.
