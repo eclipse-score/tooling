@@ -14,7 +14,7 @@ import os, subprocess, shutil, textwrap, xml.etree.ElementTree as ET
 
 
 def bazel(*args: str) -> str:
-    return subprocess.check_output(["bazel", *args], text=True)
+    return subprocess.run(["bazel", *args], text=True, capture_output=True).stdout
 
 
 # When invoked via `bazel run`, Bazel sets this env var
@@ -30,7 +30,7 @@ xml = bazel(
     expr,
     "--output=xml",
     "--keep_going",
-    "--ui_event_filters=-INFO,-progress",
+    "--ui_event_filters=-ERROR,-WARNING,-INFO,-progress",
     "--noshow_progress",
 )
 
