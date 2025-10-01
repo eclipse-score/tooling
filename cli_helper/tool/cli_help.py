@@ -14,7 +14,12 @@ import os, subprocess, shutil, textwrap, xml.etree.ElementTree as ET
 
 
 def bazel(*args: str) -> str:
-    return subprocess.check_output(["bazel", *args], text=True)
+    try:
+        output = subprocess.check_output(["bazel", *args], text=True)
+    except subprocess.CalledProcessError as e:
+        print(f"\033[31m !! Error in bazel query, help string is incomplete!!:\033[0m")
+        output = e.output
+    return output
 
 
 # When invoked via `bazel run`, Bazel sets this env var
