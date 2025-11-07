@@ -188,6 +188,39 @@ def configure_logging(log_file_path=None, verbose=False):
     LOGGER.addHandler(handler)
 
 
+def detect_shebang_offset(path, encoding):
+    """
+    Detects if a file starts with a shebang (#!) and returns the byte offset
+    to skip it (length of the first line including newline).
+
+    Args:
+        path (Path): A `pathlib.Path` object pointing to the file.
+        encoding (str): Encoding type to use when reading the file.
+
+    Returns:
+        int: The byte length of the shebang line (including newline) if present,
+             otherwise 0.
+    """
+    try:
+        with open(path, "r", encoding=encoding) as handle:
+            first_line = handle.readline()
+            if first_line.startswith("#!"):
+                # Calculate byte length of the first line
+                byte_length = len(first_line.encode(encoding))
+                while True:
+                    next_char = handle.read(1)
+                    if not next_char or next_char not in ("\n", "\r"):
+                        break
+                    byte_length += len(next_char.encode(encoding))
+                LOGGER.debug(
+                    "Detected shebang in %s with offset %d bytes", path, byte_length
+                )
+                return byte_length
+    except (IOError, OSError) as err:
+        LOGGER.debug("Could not detect shebang in %s: %s", path, err)
+    return 0
+
+
 def load_text_from_file(path, header_length, encoding, offset):
     """
     Reads the first portion of a file, up to `header_length` characters
@@ -210,7 +243,8 @@ def load_text_from_file(path, header_length, encoding, offset):
         "Reading first %d characters from file: %s [%s]", total_length, path, encoding
     )
     with open(path, "r", encoding=encoding) as handle:
-        return handle.read(total_length)
+        content = handle.read(total_length)
+        return content[offset:] if offset else content
 
 
 def load_text_from_file_with_mmap(path, header_length, encoding, offset):
@@ -240,10 +274,10 @@ def load_text_from_file_with_mmap(path, header_length, encoding, offset):
         )
         return ""
 
-    LOGGER.debug("Memory mapping first %d bytes from file: %s", header_length, path)
+    LOGGER.debug("Memory mapping first %d bytes from file: %s", total_length, path)
     with open(path, "r", encoding=encoding) as handle:
         with mmap.mmap(handle.fileno(), length=length, access=mmap.ACCESS_READ) as fmap:
-            return fmap[:header_length].decode(encoding)
+            return fmap[:length].decode(encoding)[offset:]
 
 
 def has_copyright(path, copyright_text, use_mmap, encoding, offset, config):
@@ -414,7 +448,7 @@ def fix_copyright(path, copyright_text, encoding, offset):
         with open(path, "w", encoding=encoding) as handle:
             temp.seek(0)
             if offset > 0:
-                handle.write(first_line + "\n")
+                handle.write(first_line)
                 temp.seek(offset)
             handle.write(copyright_text.format(year=datetime.now().year))
             for chunk in iter(lambda: temp.read(4096), ""):
@@ -463,11 +497,18 @@ def process_files(
                 "Skipped (no configuration for selected file extension): %s", item
             )
             continue
-        if not has_copyright(item, templates[key], use_mmap, encoding, offset, config):
+
+        # Automatically detect shebang and use its offset if no manual offset provided
+        shebang_offset = detect_shebang_offset(item, encoding)
+        effective_offset = offset + shebang_offset if offset == 0 else offset
+
+        if not has_copyright(
+            item, templates[key], use_mmap, encoding, effective_offset, config
+        ):
             if fix:
                 if remove_offset:
                     remove_old_header(item, encoding, remove_offset)
-                fix_copyright(item, templates[key], encoding, offset)
+                fix_copyright(item, templates[key], encoding, effective_offset)
                 results["no_copyright"] += 1
                 results["fixed"] += 1
             else:
