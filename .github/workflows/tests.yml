@@ -1,4 +1,4 @@
-name: Run Python Basics Integration Tests
+name: Run Python Basics Integration and Unit Tests
 on:
   pull_request:
     types: [opened, reopened, synchronize]
@@ -15,4 +15,8 @@ jobs:
       - name: Run starpls integration tests
         run: |
           cd starpls/integration_tests
+          bazel test //...
+      - name: Run cr_checker unit tests
+        run: |
+          cd cr_checker/tests
           bazel test //...
