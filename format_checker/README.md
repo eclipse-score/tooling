@@ -1,15 +1,13 @@
 
 # Source Format Targets for Bazel Projects
 
-This module provides reusable Bazel macros for formatting **Starlark**, **Python** and **YAML** files 
-using [`aspect-build/rules_lint`](https://github.com/aspect-build/rules_lint) and `buildifier`. It enables 
-consistent formatting enforcement across Bazel-based projects.
+This module provides reusable Bazel macros for formatting **Starlark**, **Python**, **YAML**, and **Rust** files using [`aspect-build/rules_lint`](https://github.com/aspect-build/rules_lint) and `buildifier`. By default Rust formatting uses the `@rules_rust//tools/upstream_wrapper:rustfmt` binary.
 
 ---
 
 ## Features
 
-- ✅ Supports Python (`ruff`), YAML (`yamlfmt`) and Starlark (`buildifier`)
+- ✅ Supports Python (`ruff`), YAML (`yamlfmt`), Starlark (`buildifier`) and Rust (via `@rules_rust` upstream wrapper by default)
 - ✅ Provides `format.fix` and `format.check` targets
 - ✅ Simple macro-based usage for local formatting scope
 - ✅ Centralized logic without Bazel module extensions
@@ -19,9 +17,8 @@ consistent formatting enforcement across Bazel-based projects.
 ## Directory Structure
 
 ```bash
-├── BUILD.bazel               
-├── MODULE.bazel              # Bazel module declaration with deps
-├── macros.bzl                # Contains the reusable macro
+├── BUILD.bazel
+├── macros.bzl
 └── README.md
 ```
 
@@ -89,10 +86,16 @@ This will register two Bazel targets:
 
 ---
 
+## Rust support
+
+- Default formatter label: `@rules_rust//tools/upstream_wrapper:rustfmt`.
+
+---
+
 ## Benefits
 
-✅ Centralized formatting config with local file scope  
-✅ Consistent developer experience across repositories  
+✅ Centralized formatting config with local file scope
+✅ Consistent developer experience across repositories
 ✅ Easily pluggable in CI pipelines or Git pre-commit hooks
 
 ---
