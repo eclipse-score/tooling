@@ -44,7 +44,7 @@ def copyright_checker(
                                      Defaults to an empty list, meaning all files are checked.
         offset (int, optional): The line offset for applying checks or modifications.
                                 Defaults to 0.
-        remove_offset (int, optional): The line offset for removing chars from begining of file.
+        remove_offset (int, optional): The line offset for removing chars from beginning of file.
                                 Defaults to 0.
         debug (bool, optional): Whether to enable debug mode, providing additional logs.
                                 Defaults to False.
