@@ -13,15 +13,19 @@
 """The tool for checking if artifacts have proper copyright."""
 
 import argparse
-import os
+import json
 import logging
+import mmap
+import os
+import re
+import shutil
 import sys
 import tempfile
-import mmap
-import json
-import shutil
 from datetime import datetime
 from pathlib import Path
+
+BYTES_TO_READ = 4 * 1024
+DEFAULT_AUTHOR = "Contributors to the Eclipse Foundation"
 
 LOGGER = logging.getLogger()
 
@@ -101,19 +105,36 @@ class ParamFileAction(argparse.Action):  # pylint: disable=too-few-public-method
             setattr(namespace, self.dest, values)
 
 
-def get_years_from_config(config_path):
+def get_author_from_config(config_path: Path = None) -> str:
     """
-    Reads the years from a JSON configuration file.
+    Reads the author from a JSON configuration file.
 
     Args:
         config_path (Path): Path to the configuration JSON file.
 
     Returns:
-        list: List of years from the configuration file.
+        str: Author from the configuration file.
     """
+    if not config_path:
+        return DEFAULT_AUTHOR
     with config_path.open("r") as file:
         config = json.load(file)
-    return config.get("years", [])
+    return config.get("author", DEFAULT_AUTHOR)
+
+
+def convert_bre_to_regex(template: str) -> str:
+    """
+    Convert BRE-style template (literal by default) to standard regex.
+    In the template: * is literal, \\* is a metacharacter.
+    """
+    # First, escape all regex metacharacters to make them literal
+    escaped = re.escape(template)
+    # Now, find escaped backslashes followed by escaped metacharacters
+    # and convert them back to actual regex metacharacters
+    metacharacters = r"\\.*+-?[]{}()^$|"
+    for char in metacharacters:
+        escaped = escaped.replace(re.escape("\\" + char), char)
+    return escaped
 
 
 def load_templates(path):
@@ -127,38 +148,39 @@ def load_templates(path):
         dict: A dictionary where each key is a file extension (e.g., ".cpp")
               and the value is the template string from the config.
     """
+
+    def add_template_for_extensions(templates: dict, extensions: list, template: str):
+        # Remove trailing lines from template and ensure line end
+        template = template.rstrip() + "\n"
+        for extension in extensions:
+            templates[extension] = template
+
     templates = {}
     current_extensions = []
 
     with open(path, "r", encoding="utf-8") as file:
         lines = file.readlines()
-        templates_for_extensions = ""
+        template_for_extensions = ""
 
         for line in lines:
             stripped_line = line.strip()
 
             if stripped_line.startswith("[") and stripped_line.endswith("]"):
-                if current_extensions:
-                    for ext in current_extensions:
-                        templates[ext] = templates_for_extensions
-                    templates_for_extensions = ""
-                    current_extensions = []
+                add_template_for_extensions(
+                    templates, current_extensions, template_for_extensions
+                )
+
+                template_for_extensions = ""
 
                 extensions = stripped_line[1:-1].split(",")
                 current_extensions = [ext.strip() for ext in extensions]
                 LOGGER.debug(current_extensions)
-            elif current_extensions:
-                templates_for_extensions += line
+            else:
+                template_for_extensions += line
 
-            if line.strip() == "":
-                for ext in current_extensions:
-                    templates[ext] = templates_for_extensions
-                templates_for_extensions = ""
-                current_extensions = []
-
-        if current_extensions:
-            for ext in current_extensions:
-                templates[ext] = templates_for_extensions
+        add_template_for_extensions(
+            templates, current_extensions, template_for_extensions
+        )
 
     LOGGER.debug(templates)
     return templates
@@ -280,13 +302,13 @@ def load_text_from_file_with_mmap(path, header_length, encoding, offset):
             return fmap[:length].decode(encoding)[offset:]
 
 
-def has_copyright(path, copyright_text, use_mmap, encoding, offset, config):
+def has_copyright(path, template, use_mmap, encoding, offset, config=None):
     """
     Checks if the specified copyright text is present in the beginning of a file.
 
     Args:
         path (Path): A `pathlib.Path` object pointing to the file to check.
-        copyright_text (str): The copyright text to search for at the beginning
+        template (str): The copyright text to search for at the beginning
                               of the file.
         use_mmap (bool): If True, uses memory-mapped file reading for efficient
                          large file handling.
@@ -308,11 +330,13 @@ def has_copyright(path, copyright_text, use_mmap, encoding, offset, config):
     if use_mmap:
         load_text = load_text_from_file_with_mmap
 
-    for year in get_years_from_config(config):
-        formated_cr = copyright_text.format(year=year)
-        if formated_cr in load_text(path, len(formated_cr), encoding, offset):
-            LOGGER.debug("File %s has copyright.", path)
-            return True
+    template_regex = convert_bre_to_regex(
+        template.format(year=r"\\d\{4\}", author=r"\.\*")
+    )
+
+    if re.match(template_regex, load_text(path, BYTES_TO_READ, encoding, offset)):
+        LOGGER.debug("File %s has copyright.", path)
+        return True
 
     LOGGER.debug("File %s doesn't have copyright.", path)
     return False
@@ -420,7 +444,7 @@ def remove_old_header(file_path, encoding, num_of_chars):
     shutil.move(temp_file.name, file_path)
 
 
-def fix_copyright(path, copyright_text, encoding, offset):
+def fix_copyright(path, copyright_text, encoding, offset, config=None):
     """
     Inserts a copyright header into the specified file, ensuring that existing
     content is preserved according to the provided offset.
@@ -433,6 +457,8 @@ def fix_copyright(path, copyright_text, encoding, offset):
                       If 0, the first line is overwritten unless it's empty.
                       For non-zero offsets, ensures the correct number of bytes
                       are preserved.
+        config (Path): Path to the config JSON file where configuration
+                variables are stored (e.g. years for copyright headers).
     """
 
     temporary_file = create_temp_file(path, encoding)
@@ -450,7 +476,11 @@ def fix_copyright(path, copyright_text, encoding, offset):
             if offset > 0:
                 handle.write(first_line)
                 temp.seek(offset)
-            handle.write(copyright_text.format(year=datetime.now().year))
+            handle.write(
+                copyright_text.format(
+                    year=datetime.now().year, author=get_author_from_config(config)
+                )
+            )
             for chunk in iter(lambda: temp.read(4096), ""):
                 handle.write(chunk)
     LOGGER.info("Fixed missing header in: %s", path)
@@ -460,7 +490,7 @@ def process_files(
     files,
     templates,
     fix,
-    config,
+    config=None,
     use_mmap=False,
     encoding="utf-8",
     offset=0,
@@ -508,7 +538,7 @@ def process_files(
             if fix:
                 if remove_offset:
                     remove_old_header(item, encoding, remove_offset)
-                fix_copyright(item, templates[key], encoding, effective_offset)
+                fix_copyright(item, templates[key], encoding, effective_offset, config)
                 results["no_copyright"] += 1
                 results["fixed"] += 1
             else:
@@ -546,7 +576,7 @@ def parse_arguments(argv):
         "-c",
         "--config-file",
         type=Path,
-        required=True,
+        default=None,
         help="Path to the config file",
     )
 
@@ -574,7 +604,7 @@ def parse_arguments(argv):
     parser.add_argument(
         "--use_memory_map",
         action="store_true",
-        help="Use memory map for reading conent of files \
+        help="Use memory map for reading content of files \
               (should be used reading gigabyte ranged files).",
     )
 
@@ -602,7 +632,7 @@ def parse_arguments(argv):
         dest="remove_offset",
         type=int,
         default=0,
-        help="Offset to remove old header from begining of the file \
+        help="Offset to remove old header from beginning of the file \
              (supported only with --fix mode)",
     )
 
@@ -644,7 +674,7 @@ def main(argv=None):
     try:
         files = collect_inputs(args.inputs, args.extensions)
     except IOError as err:
-        LOGGER.error("Failed to prcess file %s with error", err.filename)
+        LOGGER.error("Failed to process file %s with error", err.filename)
         return err.errno
 
     LOGGER.debug("Running check on files: %s", files)

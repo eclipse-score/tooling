@@ -41,9 +41,9 @@ def load_py_template() -> str:
 
 # write the config file here so that the year is always up to date with the year
 # written in the mock "script.py" file
-def write_config(path: Path, years: list[int]) -> Path:
+def write_config(path: Path, author: str) -> Path:
     config_path = path / "config.json"
-    config_path.write_text(json.dumps({"years": years}), encoding="utf-8")
+    config_path.write_text(json.dumps({"author": author}), encoding="utf-8")
     return config_path
 
 
@@ -67,18 +67,16 @@ def test_process_files_accepts_header_after_shebang(tmp_path):
     script = tmp_path / "script.py"
     header_template = load_py_template()
     current_year = datetime.now().year
-    header = header_template.format(year=current_year)
+    header = header_template.format(year=current_year, author="Author")
     script.write_text(
         "#!/usr/bin/env python3\n" + header + "print('hi')\n",
         encoding="utf-8",
     )
-    config = write_config(tmp_path, [current_year])
 
     results = cr_checker.process_files(
         [script],
         {"py": header_template},
         False,
-        config,
         use_mmap=False,
         encoding="utf-8",
         offset=0,
@@ -98,7 +96,8 @@ def test_process_files_fix_inserts_header_after_shebang(tmp_path):
     )
     header_template = load_py_template()
     current_year = datetime.now().year
-    config = write_config(tmp_path, [current_year])
+    author = "Author"
+    config = write_config(tmp_path, author)
 
     results = cr_checker.process_files(
         [script],
@@ -113,7 +112,7 @@ def test_process_files_fix_inserts_header_after_shebang(tmp_path):
 
     assert results["fixed"] == 1
     assert results["no_copyright"] == 1
-    expected_header = header_template.format(year=current_year)
+    expected_header = header_template.format(year=current_year, author=author)
     assert script.read_text(encoding="utf-8") == (
         "#!/usr/bin/env python3\n" + expected_header + "print('hi')\n"
     )
@@ -125,15 +124,13 @@ def test_process_files_accepts_header_without_shebang(tmp_path):
     script = tmp_path / "script.py"
     header_template = load_py_template()
     current_year = datetime.now().year
-    header = header_template.format(year=current_year)
+    header = header_template.format(year=current_year, author="Author")
     script.write_text(header + "print('hi')\n", encoding="utf-8")
-    config = write_config(tmp_path, [current_year])
 
     results = cr_checker.process_files(
         [script],
         {"py": header_template},
         False,
-        config,
         use_mmap=False,
         encoding="utf-8",
         offset=0,
@@ -150,7 +147,8 @@ def test_process_files_fix_inserts_header_without_shebang(tmp_path):
     script.write_text("print('hi')\n", encoding="utf-8")
     header_template = load_py_template()
     current_year = datetime.now().year
-    config = write_config(tmp_path, [current_year])
+    author = "Author"
+    config = write_config(tmp_path, author)
 
     results = cr_checker.process_files(
         [script],
@@ -165,5 +163,5 @@ def test_process_files_fix_inserts_header_without_shebang(tmp_path):
 
     assert results["fixed"] == 1
     assert results["no_copyright"] == 1
-    expected_header = header_template.format(year=current_year)
+    expected_header = header_template.format(year=current_year, author=author)
     assert script.read_text(encoding="utf-8") == expected_header + "print('hi')\n"

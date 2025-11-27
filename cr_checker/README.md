@@ -1,6 +1,6 @@
 # CopyRight Checker
 
-`cr_checker.py` is a tool designed to check if files contain a specified copyright header. It provides configurable logging, color-coded console output, and can handle large file sets efficiently. The script supports reading configuration files for custom copyright templates and can utilize memory-mapped file reading for better performance with large files. Tool itself can also appened copyright header at the beggining of file if flag `--fix` is used.
+`cr_checker.py` is a tool designed to check if files contain a specified copyright header. It provides configurable logging, color-coded console output, and can handle large file sets efficiently. The script supports reading configuration files for custom copyright templates and can utilize memory-mapped file reading for better performance with large files. Tool itself can also append copyright header at the beginning of file if flag `--fix` is used.
 
 ## Features
 
@@ -10,7 +10,7 @@
 - Can use memory mapping for large file handling.
 - Customizable file encoding and offset adjustments for header text positioning.
 - Can append copyright headers.
-- Can remove provided number of characters from begining of the file.
+- Can remove provided number of characters from beginning of the file.
 
 ## Requirements
 
@@ -44,7 +44,7 @@ python cr_checker.py -t <template_file> [options] <inputs>
 
 > NOTE: Option `--remove-offset` can have severe consequences if the offset is miscalculated. Use with **extreme caution**.
 
-> NOTE: Setting directory as `.` will cause that tool removes your complete workspace! This is conected with how Bazel includes python into build. **DO NOT USE THIS OPTION UNLESS YOU'RE 100% SURE IN WHAT YOURE DOING**.
+> NOTE: Setting directory as `.` will cause that tool removes your complete workspace! This is connected with how Bazel includes python into build. **DO NOT USE THIS OPTION UNLESS YOU'RE 100% SURE IN WHAT YOU'RE DOING**.
 
 ### Examples
 
@@ -59,7 +59,7 @@ python cr_checker.py -t templates.ini -e py cpp --fix --offset 24 --use_memory_m
 
 #### A bit more about `--offset`
 
-This mode is special that will enable tool to do advance search & replace copyright headers. For example, asuming that we have following python implementation:
+This mode is special that will enable tool to do advance search & replace copyright headers. For example, assuming that we have following python implementation:
 
 ```python
 #!/usr/bin/env python3
@@ -97,21 +97,22 @@ if we apply this arguments now on same file, the outcome is different.
 import os
 ```
 
-On another hand, `--offset` has also another role. Asuming that a header text in file is soo big that copyright header is in the middle of the file, with regular command, the tool will not detect copyright headed. With `--offset=<NUM>` we can tell the tool from where to start considering the search for
+On another hand, `--offset` has also another role. Assuming that a header text in file is soo big that copyright header is in the middle of the file, with regular command, the tool will not detect copyright headed. With `--offset=<NUM>` we can tell the tool from where to start considering the search for
 copyright header.
 
 ### Template File Format
 
-The template file should be in INI format, with each section representing a file extension and a template key specifying the copyright text.
+The template file should be in INI format, with each section representing a file extension and a section specifying the copyright text.
+The copyright text can use format expressions to match the year and the author.
 
 Example templates.ini:
 
 ```ini
 [py,sh]
-template = # Copyright (c) 2024 Score Project
+# Copyright (c) {year} {author}
 
 [cpp,c,hpp, h]
-template = // Copyright (c) 2024 Score Project
+// Copyright (c) {year} {author}
 ```
 
 ## Exit Codes
@@ -166,7 +167,7 @@ copyright_checker(
 
 ### Integrate `cr_checker` using Bazel module
 
-The CopyRight check tool is integrated in other bazel repositroy using Bazel modules mechanism. The current tool is not registerd within BCR so private Bazel registry needs to be select. To select custom Bazel registery add following lines into .bazelrc:
+The CopyRight check tool is integrated in other bazel repository using Bazel modules mechanism. The current tool is not registered within BCR so private Bazel registry needs to be select. To select custom Bazel registry add following lines into .bazelrc:
 
 ```python
 common --registry=https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/
