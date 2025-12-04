@@ -16,7 +16,7 @@ def use_format_targets(fix_name = "format.fix", check_name = "format.check"):
     format_multirun(
         name = fix_name,
         python = "@aspect_rules_lint//format:ruff",
-        rust = "@rules_rust//tools/upstream_wrapper:rustfmt",
+        rust = "@score_tooling//format_checker:rustfmt_with_policies",
         starlark = "@buildifier_prebuilt//:buildifier",
         yaml = "@aspect_rules_lint//format:yamlfmt",
         visibility = ["//visibility:public"],
@@ -26,7 +26,7 @@ def use_format_targets(fix_name = "format.fix", check_name = "format.check"):
         name = check_name,
         no_sandbox = True,
         python = "@aspect_rules_lint//format:ruff",
-        rust = "@rules_rust//tools/upstream_wrapper:rustfmt",
+        rust = "@score_tooling//format_checker:rustfmt_with_policies",
         starlark = "@buildifier_prebuilt//:buildifier",
         yaml = "@aspect_rules_lint//format:yamlfmt",
         workspace = "//:MODULE.bazel",

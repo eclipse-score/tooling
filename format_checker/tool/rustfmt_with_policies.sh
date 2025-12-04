@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # *******************************************************************************
 # Copyright (c) 2025 Contributors to the Eclipse Foundation
 #
@@ -10,15 +11,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+set -euo pipefail
 
-package(default_visibility = ["//visibility:public"])
+RUSTFMT_BIN="$(rlocation rules_rust/tools/upstream_wrapper/rustfmt)"
+RUSTFMT_CONFIG="$(rlocation score_rust_policies/rustfmt/rustfmt.toml)"
 
-sh_binary(
-    name = "rustfmt_with_policies",
-    srcs = ["tool/rustfmt_with_policies.sh"],
-    data = [
-        "@bazel_tools//tools/bash/runfiles",
-        "@rules_rust//tools/upstream_wrapper:rustfmt",
-        "@score_rust_policies//rustfmt:rustfmt.toml",
-    ],
-)
+exec "${RUSTFMT_BIN}" --config-path "${RUSTFMT_CONFIG}" "$@"

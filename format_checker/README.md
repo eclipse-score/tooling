@@ -1,13 +1,13 @@
 
 # Source Format Targets for Bazel Projects
 
-This module provides reusable Bazel macros for formatting **Starlark**, **Python**, **YAML**, and **Rust** files using [`aspect-build/rules_lint`](https://github.com/aspect-build/rules_lint) and `buildifier`. By default Rust formatting uses the `@rules_rust//tools/upstream_wrapper:rustfmt` binary.
+This module provides reusable Bazel macros for formatting **Starlark**, **Python**, **YAML**, and **Rust** files using [`aspect-build/rules_lint`](https://github.com/aspect-build/rules_lint) and `buildifier`. Rust formatting uses the shared S-CORE policies via `@score_tooling//format_checker:rustfmt_with_policies`.
 
 ---
 
 ## Features
 
-- ✅ Supports Python (`ruff`), YAML (`yamlfmt`), Starlark (`buildifier`) and Rust (via `@rules_rust` upstream wrapper by default)
+- ✅ Supports Python (`ruff`), YAML (`yamlfmt`), Starlark (`buildifier`) and Rust (policy-backed `rustfmt` by default)
 - ✅ Provides `format.fix` and `format.check` targets
 - ✅ Simple macro-based usage for local formatting scope
 - ✅ Centralized logic without Bazel module extensions
@@ -49,6 +49,7 @@ module(name = "score_format_checker", version = "0.1.1")
 
 bazel_dep(name = "aspect_rules_lint", version = "1.0.3")
 bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")
+bazel_dep(name = "score_rust_policies", version = "0.0.2")
 ```
 
 ---
@@ -69,6 +70,7 @@ local_path_override(
 # Explicit dependencies required by the macro
 bazel_dep(name = "aspect_rules_lint", version = "1.0.3")
 bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")
+bazel_dep(name = "score_rust_policies", version = "0.0.2")
 ```
 
 ### 2️⃣ In your project’s `BUILD.bazel`:
@@ -88,7 +90,8 @@ This will register two Bazel targets:
 
 ## Rust support
 
-- Default formatter label: `@rules_rust//tools/upstream_wrapper:rustfmt`.
+- Default formatter label: `@score_tooling//format_checker:rustfmt_with_policies`, which wraps the
+  upstream `rustfmt` binary with the shared `rustfmt.toml` policies from `score_rust_policies`.
 
 ---
 

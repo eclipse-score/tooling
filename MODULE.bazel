@@ -13,7 +13,7 @@
 
 module(
     name = "score_tooling",
-    version = "1.0.4",
+    version = "1.0.5",
     compatibility_level = 1,
 )
 
@@ -27,6 +27,7 @@ bazel_dep(name = "rules_shell", version = "0.5.0")
 bazel_dep(name = "rules_java", version = "8.15.1")
 bazel_dep(name = "rules_rust", version = "0.61.0")
 bazel_dep(name = "rules_multitool", version = "1.9.0")
+bazel_dep(name = "score_rust_policies", version = "0.0.2")
 
 bazel_dep(name = "bazel_skylib", version = "1.7.1", dev_dependency = True)
 
