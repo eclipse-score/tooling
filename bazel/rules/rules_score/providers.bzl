@@ -52,21 +52,7 @@ ComponentInfo = provider(
         "name": "Name of the component target",
         "requirements": "Depset of component requirements artifacts",
         "implementation": "Depset of implementation targets (libraries, binaries)",
-        "units": "Depset of unit targets that comprise this component",
+        "components": "Depset of unit targets that comprise this component",
         "tests": "Depset of component-level integration test targets",
-    },
-)
-
-DependableElementInfo = provider(
-    doc = "Provider for dependable element (SEooC) artifacts",
-    fields = {
-        "name": "Name of the dependable element target",
-        "description": "Description of the dependable element",
-        "assumptions_of_use": "Depset of assumptions of use artifacts",
-        "requirements": "Depset of requirements artifacts (safety and feature requirements)",
-        "architectural_design": "Depset of architectural design artifacts",
-        "dependability_analysis": "Depset of dependability analysis artifacts",
-        "consists_of": "Depset of component/unit targets that comprise this element",
-        "tests": "Depset of system-level integration test targets",
     },
 )

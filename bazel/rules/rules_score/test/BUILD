@@ -40,8 +40,6 @@ load(
     ":unit_component_test.bzl",
     "component_provider_test",
     "component_sphinx_sources_test",
-    "dependable_element_provider_test",
-    "dependable_element_sphinx_sources_test",
     "unit_component_test_suite",
     "unit_provider_test",
     "unit_sphinx_sources_test",
@@ -97,7 +95,6 @@ feature_requirements(
 component_requirements(
     name = "comp_req",
     srcs = ["fixtures/seooc_test/component_requirements.rst"],
-    feature_requirement = [":feat_req"],
 )
 
 # - Assumptions of Use:       wp__requirements_comp_aou
@@ -197,9 +194,9 @@ unit(
 component(
     name = "test_component",
     testonly = True,
+    components = [":test_unit"],
     requirements = [":comp_req"],
     tests = [],  # Empty for testing
-    units = [":test_unit"],
     implementation = [":test_component_binary"],
 )
 
@@ -300,17 +297,6 @@ component_provider_test(
 component_sphinx_sources_test(
     name = "component_sphinx_sources_test",
     target_under_test = ":test_component",
-)
-
-# Dependable Element tests
-dependable_element_provider_test(
-    name = "dependable_element_provider_test",
-    target_under_test = ":test_dependable_element_provider",
-)
-
-dependable_element_sphinx_sources_test(
-    name = "dependable_element_sphinx_sources_test",
-    target_under_test = ":test_dependable_element_provider",
 )
 
 # Unit, Component, and Dependable Element test suite

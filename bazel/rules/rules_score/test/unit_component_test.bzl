@@ -20,7 +20,7 @@ Tests the new hierarchical structure for S-CORE process compliance:
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//bazel/rules/rules_score:providers.bzl", "ComponentInfo", "DependableElementInfo", "SphinxSourcesInfo", "UnitInfo")
+load("//bazel/rules/rules_score:providers.bzl", "ComponentInfo", "SphinxSourcesInfo", "UnitInfo")
 
 # ============================================================================
 # Unit Tests
@@ -118,8 +118,8 @@ def _component_provider_test_impl(ctx):
 
     asserts.true(
         env,
-        comp_info.units != None,
-        "ComponentInfo should have units field",
+        comp_info.components != None,
+        "ComponentInfo should have components field",
     )
 
     asserts.true(
@@ -151,89 +151,8 @@ component_sphinx_sources_test = analysistest.make(_component_sphinx_sources_test
 # ============================================================================
 # Dependable Element Tests
 # ============================================================================
-
-def _dependable_element_provider_test_impl(ctx):
-    """Test that dependable_element rule provides DependableElementInfo."""
-    env = analysistest.begin(ctx)
-    target_under_test = analysistest.target_under_test(env)
-
-    # Check DependableElementInfo provider exists
-    asserts.true(
-        env,
-        DependableElementInfo in target_under_test,
-        "Dependable element should provide DependableElementInfo",
-    )
-
-    de_info = target_under_test[DependableElementInfo]
-
-    # Verify fields are populated
-    asserts.true(
-        env,
-        de_info.name != None,
-        "DependableElementInfo should have name field",
-    )
-
-    asserts.true(
-        env,
-        de_info.description != None,
-        "DependableElementInfo should have description field",
-    )
-
-    asserts.true(
-        env,
-        de_info.assumptions_of_use != None,
-        "DependableElementInfo should have assumptions_of_use field",
-    )
-
-    asserts.true(
-        env,
-        de_info.requirements != None,
-        "DependableElementInfo should have requirements field",
-    )
-
-    asserts.true(
-        env,
-        de_info.architectural_design != None,
-        "DependableElementInfo should have architectural_design field",
-    )
-
-    asserts.true(
-        env,
-        de_info.dependability_analysis != None,
-        "DependableElementInfo should have dependability_analysis field",
-    )
-
-    asserts.true(
-        env,
-        de_info.consists_of != None,
-        "DependableElementInfo should have consists_of field",
-    )
-
-    asserts.true(
-        env,
-        de_info.tests != None,
-        "DependableElementInfo should have tests field",
-    )
-
-    return analysistest.end(env)
-
-dependable_element_provider_test = analysistest.make(_dependable_element_provider_test_impl)
-
-def _dependable_element_sphinx_sources_test_impl(ctx):
-    """Test that dependable_element rule provides SphinxSourcesInfo."""
-    env = analysistest.begin(ctx)
-    target_under_test = analysistest.target_under_test(env)
-
-    # Check SphinxSourcesInfo provider exists
-    asserts.true(
-        env,
-        SphinxSourcesInfo in target_under_test,
-        "Dependable element should provide SphinxSourcesInfo",
-    )
-
-    return analysistest.end(env)
-
-dependable_element_sphinx_sources_test = analysistest.make(_dependable_element_sphinx_sources_test_impl)
+# Note: Provider tests removed as dependable_element no longer creates a
+# separate provider target. The main target is now a sphinx_module.
 
 # ============================================================================
 # Test Suite Definition
@@ -252,7 +171,5 @@ def unit_component_test_suite(name):
             ":unit_sphinx_sources_test",
             ":component_provider_test",
             ":component_sphinx_sources_test",
-            ":dependable_element_provider_test",
-            ":dependable_element_sphinx_sources_test",
         ],
     )

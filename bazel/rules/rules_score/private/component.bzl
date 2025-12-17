@@ -49,8 +49,8 @@ def _component_impl(ctx):
     # Collect implementation targets
     implementation_depset = depset(ctx.attr.implementation)
 
-    # Collect units and tests
-    units_depset = depset(ctx.attr.units)
+    # Collect components and tests
+    components_depset = depset(ctx.attr.components)
     tests_depset = depset(ctx.attr.tests)
 
     # Combine all files for DefaultInfo
@@ -64,7 +64,7 @@ def _component_impl(ctx):
             name = ctx.label.name,
             requirements = requirements_depset,
             implementation = implementation_depset,
-            units = units_depset,
+            components = components_depset,
             tests = tests_depset,
         ),
         SphinxSourcesInfo(
@@ -89,7 +89,7 @@ _component = rule(
             doc = "Implementation targets (libraries, binaries) that realize this component",
             default = [],
         ),
-        "units": attr.label_list(
+        "components": attr.label_list(
             mandatory = True,
             doc = "Unit targets that comprise this component",
         ),
@@ -149,20 +149,11 @@ def component(
         ```
     """
 
-    # Support both old parameter names and new aliases
-    final_requirements = requirements
-    final_units = units if units != None else components
-
-    if final_requirements == None:
-        fail("component() requires 'requirements' parameter")
-    if final_units == None:
-        fail("component() requires either 'units' or 'components' parameter")
-
     _component(
         name = name,
-        requirements = final_requirements,
+        requirements = requirements,
         implementation = implementation,
-        units = final_units,
+        components = components,
         tests = tests,
         testonly = testonly,
         visibility = visibility,

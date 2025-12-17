@@ -3,7 +3,6 @@ load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load(
     "//bazel/rules/rules_score:providers.bzl",
     _ComponentInfo = "ComponentInfo",
-    _DependableElementInfo = "DependableElementInfo",
     _SphinxSourcesInfo = "SphinxSourcesInfo",
     _UnitInfo = "UnitInfo",
 )
@@ -61,4 +60,3 @@ dependable_element = _dependable_element
 SphinxSourcesInfo = _SphinxSourcesInfo
 UnitInfo = _UnitInfo
 ComponentInfo = _ComponentInfo
-DependableElementInfo = _DependableElementInfo

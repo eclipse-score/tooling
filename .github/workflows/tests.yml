@@ -23,3 +23,6 @@ jobs:
       - name: Run coverage module tests
         run: |
           bazel test //coverage/tests:all
+      - name: Run rules_score tests
+        run: |
+          bazel test //bazel/rules/rules_score/...

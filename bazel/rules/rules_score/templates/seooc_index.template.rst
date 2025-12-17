@@ -11,8 +11,8 @@
 .. SPDX-License-Identifier: Apache-2.0
 .. *******************************************************************************
 
-{title}
-{underline}
+Dependable element: {title}
+===================={underline}
 
 {description}
 
@@ -24,13 +24,10 @@ Assumptions of Use
 
    {assumptions_of_use}
 
-Component Requirements
-----------------------
+Components
+----------
 
-.. toctree::
-   :maxdepth: 2
-
-   {component_requirements}
+{components}
 
 Architectural Design
 --------------------

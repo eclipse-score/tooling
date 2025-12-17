@@ -30,6 +30,7 @@ ComponentRequirementsInfo = provider(
     doc = "Provider for component requirements artifacts",
     fields = {
         "srcs": "Depset of source files containing component requirements",
+        "requirements": "List of FeatureRequirementsInfo providers this component traces to",
         "name": "Name of the component requirements target",
     },
 )
@@ -54,15 +55,9 @@ def _component_requirements_impl(ctx):
 
     # Collect feature requirements providers
     feature_reqs = []
-    for feat_req in ctx.attr.feature_requirement:
-        if FeatureRequirementsInfo in feat_req:
-            feature_reqs.append(feat_req[FeatureRequirementsInfo])
 
     # Collect transitive sphinx sources from feature requirements
     transitive = [srcs]
-    for feat_req in ctx.attr.feature_requirement:
-        if SphinxSourcesInfo in feat_req:
-            transitive.append(feat_req[SphinxSourcesInfo].transitive_srcs)
 
     return [
         DefaultInfo(files = srcs),
@@ -99,7 +94,6 @@ _component_requirements = rule(
 def component_requirements(
         name,
         srcs,
-        feature_requirement = [],
         visibility = None):
     """Define component requirements following S-CORE process guidelines.
 
@@ -114,9 +108,6 @@ def component_requirements(
         srcs: List of labels to .rst, .md, or .trlc files containing the
             component requirements specifications as defined in the S-CORE
             process.
-        feature_requirement: Optional list of labels to feature_requirements
-            targets that these component requirements trace to. Establishes
-            bidirectional traceability as defined in the S-CORE process.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -127,13 +118,11 @@ def component_requirements(
         component_requirements(
             name = "my_component_requirements",
             srcs = ["component_requirements.rst"],
-            feature_requirement = [":my_feature_requirements"],
         )
         ```
     """
     _component_requirements(
         name = name,
         srcs = srcs,
-        feature_requirement = feature_requirement,
         visibility = visibility,
     )

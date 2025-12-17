@@ -22,7 +22,6 @@ assumptions of use, requirements, design, and safety analysis.
 
 load(
     "//bazel/rules/rules_score:providers.bzl",
-    "DependableElementInfo",
     "SphinxSourcesInfo",
 )
 load("//bazel/rules/rules_score/private:sphinx_module.bzl", "sphinx_module")
@@ -250,6 +249,9 @@ def _process_deps(ctx):
 
     return "\n".join(links)
 
+def _get_component_names(components):
+    return [c.label.name for c in components]
+
 # ============================================================================
 # Index Generation Rule Implementation
 # ============================================================================
@@ -271,9 +273,10 @@ def _dependable_element_index_impl(ctx):
     index_rst = ctx.actions.declare_file(ctx.label.name + "/index.rst")
     output_files = [index_rst]
 
-    # Define artifact types to process
+    # Define artifacts
     # Note: "requirements" can contain both component_requirements and feature_requirements
     artifact_types = [
+        "components",
         "assumptions_of_use",
         "requirements",
         "architectural_design",
@@ -294,6 +297,7 @@ def _dependable_element_index_impl(ctx):
     # Generate index file from template
     title = ctx.attr.module_name
     underline = "=" * len(title)
+    component_names = _get_component_names(ctx.attr.components)  # Collect list of components
 
     ctx.actions.expand_template(
         template = ctx.file.template,
@@ -302,6 +306,7 @@ def _dependable_element_index_impl(ctx):
             "{title}": title,
             "{underline}": underline,
             "{description}": ctx.attr.description,
+            "{components}": "\n-   ".join(component_names),
             "{assumptions_of_use}": "\n   ".join(artifacts_by_type["assumptions_of_use"]),
             "{component_requirements}": "\n   ".join(artifacts_by_type["requirements"]),
             "{architectural_design}": "\n   ".join(artifacts_by_type["architectural_design"]),
@@ -343,6 +348,10 @@ _dependable_element_index = rule(
             mandatory = True,
             doc = "Dependability analysis targets or files.",
         ),
+        "components": attr.label_list(
+            default = [],
+            doc = "Safety checklists targets or files.",
+        ),
         "checklists": attr.label_list(
             default = [],
             doc = "Safety checklists targets or files.",
@@ -355,91 +364,6 @@ _dependable_element_index = rule(
         "deps": attr.label_list(
             default = [],
             doc = "Dependencies on other dependable element modules (submodules).",
-        ),
-    },
-)
-
-# ============================================================================
-# Provider Rule Implementation
-# ============================================================================
-
-def _dependable_element_provider_impl(ctx):
-    """Provide DependableElementInfo for a dependable element.
-
-    This rule collects metadata about the dependable element and provides
-    it through the DependableElementInfo provider.
-
-    Args:
-        ctx: Rule context
-
-    Returns:
-        List of providers including DependableElementInfo and SphinxSourcesInfo
-    """
-
-    # Collect depsets for each artifact type
-    assumptions_depset = depset(ctx.files.assumptions_of_use)
-    requirements_depset = depset(ctx.files.requirements)
-    arch_design_depset = depset(ctx.files.architectural_design)
-    dep_analysis_depset = depset(ctx.files.dependability_analysis)
-    components_depset = depset(ctx.attr.components)
-    tests_depset = depset(ctx.attr.tests)
-
-    # Collect all source files for Sphinx
-    all_files = depset(
-        direct = ctx.files.assumptions_of_use +
-                 ctx.files.requirements +
-                 ctx.files.architectural_design +
-                 ctx.files.dependability_analysis,
-    )
-
-    return [
-        DependableElementInfo(
-            name = ctx.label.name,
-            description = ctx.attr.description,
-            assumptions_of_use = assumptions_depset,
-            requirements = requirements_depset,
-            architectural_design = arch_design_depset,
-            dependability_analysis = dep_analysis_depset,
-            consists_of = components_depset,
-            tests = tests_depset,
-        ),
-        SphinxSourcesInfo(
-            srcs = all_files,
-            transitive_srcs = all_files,
-        ),
-    ]
-
-_dependable_element_provider = rule(
-    implementation = _dependable_element_provider_impl,
-    doc = "Provider rule for dependable element metadata",
-    attrs = {
-        "description": attr.string(
-            mandatory = True,
-            doc = "Description of the dependable element",
-        ),
-        "assumptions_of_use": attr.label_list(
-            mandatory = True,
-            doc = "Assumptions of Use targets or files",
-        ),
-        "requirements": attr.label_list(
-            mandatory = True,
-            doc = "Requirements targets",
-        ),
-        "architectural_design": attr.label_list(
-            mandatory = True,
-            doc = "Architectural design targets or files",
-        ),
-        "dependability_analysis": attr.label_list(
-            mandatory = True,
-            doc = "Dependability analysis targets or files",
-        ),
-        "components": attr.label_list(
-            default = [],
-            doc = "Component and/or unit targets that comprise this element",
-        ),
-        "tests": attr.label_list(
-            default = [],
-            doc = "Test targets",
         ),
     },
 )
@@ -499,49 +423,13 @@ def dependable_element(
         visibility: Bazel visibility specification for the dependable element target.
 
     Generated Targets:
-        <name>_provider: Internal metadata provider with DependableElementInfo
         <name>_index: Internal rule that generates index.rst and copies artifacts
         <name>: Main dependable element target (sphinx_module) with HTML documentation
-        <name>_needs: Internal target for sphinx-needs JSON generation
+        <name>_needs: Sphinx-needs JSON target (created by sphinx_module for cross-referencing)
 
-    Example:
-        ```python
-        dependable_element(
-            name = "persistency_kvs",
-            description = '''
-            The Key-Value Store (KVS) component provides persistent storage capabilities
-            for safety-critical applications.
-            ''',
-            assumptions_of_use = [":kvs_assumptions_of_use"],
-            requirements = [":kvs_component_requirements"],
-            architectural_design = [":kvs_architectural_design"],
-            dependability_analysis = [":kvs_dependability_analysis"],
-            components = [":kvs_component", ":kvs_unit"],
-            tests = ["//persistency/kvs/tests:score_kvs_integration_tests"],
-            deps = [
-                "@score_process//:score_process_module",
-                "@score_platform//:score_platform_module",
-            ],
-            visibility = ["//visibility:public"],
-        )
-        ```
     """
 
-    # Step 1: Create provider target with DependableElementInfo
-    _dependable_element_provider(
-        name = name + "_provider",
-        description = description,
-        assumptions_of_use = assumptions_of_use,
-        requirements = requirements,
-        architectural_design = architectural_design,
-        dependability_analysis = dependability_analysis,
-        components = components,
-        tests = tests,
-        testonly = testonly,
-        visibility = ["//visibility:private"],
-    )
-
-    # Step 2: Generate index.rst and collect all artifacts
+    # Step 1: Generate index.rst and collect all artifacts
     _dependable_element_index(
         name = name + "_index",
         module_name = name,
@@ -549,6 +437,7 @@ def dependable_element(
         template = Label("//bazel/rules/rules_score:templates/seooc_index.template.rst"),
         assumptions_of_use = assumptions_of_use,
         requirements = requirements,
+        components = components,
         architectural_design = architectural_design,
         dependability_analysis = dependability_analysis,
         checklists = checklists,
@@ -557,7 +446,7 @@ def dependable_element(
         visibility = ["//visibility:private"],
     )
 
-    # Step 3: Create sphinx_module using generated index and artifacts
+    # Step 2: Create sphinx_module using generated index and artifacts
     sphinx_module(
         name = name,
         srcs = [":" + name + "_index"],
