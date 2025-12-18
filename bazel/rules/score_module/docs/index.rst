@@ -1,7 +1,7 @@
 SCORE Module Bazel Rules
 =========================
 
-This directory contains Bazel rules for defining and building SCORE safety modules following ISO 26262 SEooC (Safety Element out of Context) standards.
+This package provides Bazel build rules for defining and building SCORE documentation modules with integrated Sphinx-based HTML generation.
 
 .. contents:: Table of Contents
    :depth: 2
@@ -11,321 +11,426 @@ This directory contains Bazel rules for defining and building SCORE safety modul
 Overview
 --------
 
-The ``score_module`` package provides Bazel build rules to structure,
-validate, and document safety-critical software modules. These rules
-integrate with Sphinx documentation generation to produce comprehensive
-safety documentation.
+The ``score_module`` package provides two complementary Bazel rules for structuring and documenting software modules:
+
+1. **score_module**: A generic documentation module rule that builds Sphinx-based HTML documentation from RST source files. Suitable for any type of documentation module.
+
+2. **safety_element_out_of_context**: A specialized rule for Safety Elements out of Context (SEooC) that enforces documentation structure with standardized artifacts for assumptions of use, requirements, architecture, and safety analysis.
+
+Both rules support **cross-module dependencies** through the ``deps`` attribute, enabling automatic integration of external sphinx-needs references and HTML merging for comprehensive documentation sets.
 
 .. uml::
 
    @startuml
-    [SEooC] as SEooC
-    [bazel module] as bzlmod
-    Artifact "Assumptions of Use" as AoU
-    Artifact "(Assumed) Component Requirements" as CR <<document>>
-    Artifact "Architecture Design" as AD <<document>>
-    Artifact "Safety Analysis" as SA <<document>>
-    Card "Implementation" as Impl <<target>>
-    Card "Testsuite" as Test <<target>>
+   package "score_module Rules" {
+       component "score_module" as SM <<generic>>
+       component "safety_element_out_of_context" as SEooC <<specialized>>
+   }
 
+   ' score_module structure
+   artifact "RST Sources" as RST <<files>>
+   artifact "index.rst" as IDX <<file>>
+   artifact "conf.py" as CONF <<optional>>
 
+   ' SEooC-specific artifacts
+   artifact "Assumptions of Use" as AoU <<document>>
+   artifact "Component Requirements" as CR <<document>>
+   artifact "Architecture Design" as AD <<document>>
+   artifact "Safety Analysis" as SA <<document>>
 
-    bzlmod "1" *-- "*" SEooC : contains
-    SEooC ..> SEooC : depends on
-    SEooC "1" *-- "1" AoU : has
-    SEooC "1" *-- "1" CR : has
-    SEooC "1" *-- "1" AD : has
-    SEooC "1" *-- "1" Impl : has
-    SEooC "1" *-- "1" Test : has
-    SEooC "1" *-- "1" SA : has
+   ' Implementation artifacts
+   card "Implementation" as Impl <<cc_library>>
+   card "Test Suite" as Test <<cc_test>>
 
-    note right of bzlmod
-        A score_module can contain
-        one or more Safety Elements
-        out of Context (SEooC)
-    end note
+   ' Generated outputs
+   folder "HTML Output" as HTML {
+       artifact "index.html" as HTMLIDX
+       folder "dependencies" as DEPS
+   }
+   artifact "needs.json" as NEEDS <<sphinx-needs>>
+
+   ' Dependencies
+   component "Process Module" as PROC <<dependency>>
+   component "Platform Module" as PLAT <<dependency>>
+
+   ' Relationships for score_module
+   SM *-- RST : contains
+   SM *-- IDX : has
+   SM -- CONF : may have
+   SM ..> PROC : deps
+   SM ..> PLAT : deps
+   SM --> HTML : generates
+   SM --> NEEDS : exports
+
+   ' Relationships for SEooC
+   SEooC *-- AoU : requires
+   SEooC *-- CR : requires
+   SEooC *-- AD : requires
+   SEooC *-- SA : requires
+   SEooC *-- Impl : requires
+   SEooC *-- Test : requires
+   SEooC ..> PROC : deps
+   SEooC ..> PLAT : deps
+   SEooC --> HTML : generates
+   SEooC --> NEEDS : exports
+   SEooC ..> SM : delegates to
+
+   ' Cross-module dependencies
+   SM ..> SM : can depend on
+   SEooC ..> SEooC : can depend on
+   SEooC ..> SM : can depend on
+
+   DEPS -- PROC : merges
+   DEPS -- PLAT : merges
+
+   note right of SEooC
+       SEooC automatically generates
+       index.rst and symlinks artifacts,
+       then delegates to score_module
+       for Sphinx build
+   end note
+
+   note right of DEPS
+       Dependencies' HTML is merged
+       into the output, enabling
+       unified navigation
+   end note
 
    @enduml
 
 
-
-
-
 Rules and Macros
 ----------------
+
+score_module
+~~~~~~~~~~~~
+
+**File:** ``score_module.bzl``
+
+**Purpose:** Generic rule for building Sphinx-based HTML documentation modules from RST source files with support for dependencies and cross-referencing.
+
+**Usage:**
+
+.. code-block:: python
+
+   score_module(
+       name = "my_documentation",
+       srcs = glob(["docs/**/*.rst"]),
+       index = "docs/index.rst",
+       deps = [
+           "@score_process//:score_process_module",
+           "//other_module:documentation",
+       ],
+       sphinx = "//bazel/rules/score_module:score_build",
+       visibility = ["//visibility:public"]
+   )
+
+**Parameters:**
+
+- ``name``: The name of the documentation module
+- ``srcs``: List of RST source files for the documentation
+- ``index``: Path to the main index.rst file
+- ``deps``: Optional list of other ``score_module`` or ``safety_element_out_of_context`` targets that this module depends on. Dependencies are automatically integrated for cross-referencing via sphinx-needs and their HTML is merged into the output.
+- ``sphinx``: Label to the Sphinx build binary (default: ``//bazel/rules/score_module:score_build``)
+- ``config``: Optional custom conf.py file. If not provided, a default configuration is generated.
+- ``visibility``: Bazel visibility specification
+
+**Generated Targets:**
+
+- ``<name>``: Main target producing the HTML documentation directory
+- ``<name>_needs``: Internal target generating the sphinx-needs JSON file for cross-referencing
+
+**Output:**
+
+- ``<name>/html``: Directory containing the built HTML documentation with integrated dependencies
+- ``<name>/needs.json``: Sphinx-needs JSON file for external cross-references
+
+**Build Strategy**
+
+The ``score_module`` rule implements a multi-phase build strategy to ensure proper dependency resolution and documentation integration:
+
+**Phase 1: Generate Needs JSON**
+
+First, the rule builds a ``needs.json`` file for the current module by running Sphinx in a preliminary pass. This JSON file contains all sphinx-needs definitions (requirements, architecture elements, test cases, etc.) from the module's documentation. The needs.json is generated using the ``score_needs`` internal rule.
+
+**Phase 2: Build Dependent Modules**
+
+Before building the main module's HTML, Bazel ensures all modules listed in the ``deps`` attribute are built first. This gives us:
+
+- The ``needs.json`` files from all dependencies for external cross-referencing
+- The complete HTML documentation trees from all dependencies for merging
+
+This phase leverages Bazel's dependency graph to parallelize builds where possible.
+
+**Phase 3: Generate Main Module HTML**
+
+With all dependency needs.json files available, Sphinx builds the main module's HTML documentation. During this phase:
+
+- The ``needs_external_needs`` configuration is automatically populated with paths to all dependency needs.json files
+- Sphinx resolves ``:need:`` references across module boundaries
+- HTML pages are generated in a temporary ``_html`` directory
+
+**Phase 4: Merge HTML Documentation**
+
+Finally, the ``sphinx_html_merge`` tool combines the documentation:
+
+1. Copies the main module's HTML from ``_html/`` to the final ``html/`` output directory
+2. For each dependency, copies its ``html/`` directory into the output as a subdirectory
+3. Preserves the module hierarchy, enabling navigation between related documentation
+
+The result is a unified documentation tree where users can seamlessly navigate from the main module to any of its dependencies.
+
+**Build Artifacts**
+
+Each successful build produces:
+
+- ``<name>/html/``: Complete merged HTML documentation
+- ``<name>/needs.json``: Sphinx-needs export for this module
+- ``<name>/_html/``: Intermediate HTML (before merging)
+
 
 safety_element_out_of_context
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **File:** ``score_module.bzl``
 
-**Purpose:** Main macro for defining a Safety Element out of Context
-(SEooC) module with integrated documentation generation following ISO 26262
-standards.
+**Purpose:** Specialized macro for defining a Safety Element out of Context (SEooC) module documentation structure and automatic index generation.
 
 **Usage:**
 
 .. code-block:: python
 
    safety_element_out_of_context(
-       name = "my_module",
-       assumptions_of_use = ":assumptions",
-       component_requirements = ":requirements",
-       architectural_design = ":architecture",
-       safety_analysis = ":safety_analysis",
-       implementations = [":my_lib", ":my_component"],
-       tests = [":my_lib_test", ":my_integration_test"],
+       name = "my_seooc",
+       assumptions_of_use = ["docs/assumptions_of_use.rst"],
+       component_requirements = ["docs/requirements.rst"],
+       architectural_design = ["docs/architecture.rst"],
+       safety_analysis = ["docs/safety_analysis.rst"],
+       deps = [
+           "@score_platform//:score_platform_module",
+           "@score_process//:score_process_module",
+       ],
+       implementations = [":my_lib"],
+       tests = [":my_lib_test"],
        visibility = ["//visibility:public"]
    )
 
 **Parameters:**
 
-- ``name``: The name of the safety element module. Used as the base name
-  for all generated targets.
-- ``assumptions_of_use``: Label to a ``.rst`` or ``.md`` file containing the
-  Assumptions of Use, which define the safety-relevant operating conditions
-  and constraints for the SEooC as required by ISO 26262-10 clause 5.4.4.
-- ``component_requirements``: Label to a ``.rst`` or ``.md`` file containing
-  the component requirements specification, defining functional and safety
-  requirements as required by ISO 26262-3 clause 7.
-- ``architectural_design``: Label to a ``.rst`` or ``.md`` file containing
-  the architectural design specification, describing the software architecture
-  and design decisions as required by ISO 26262-6 clause 7.
-- ``safety_analysis``: Label to a ``.rst`` or ``.md`` file containing the
-  safety analysis, including FMEA, FMEDA, FTA, or other safety analysis
-  results as required by ISO 26262-9 clause 8. Documents hazard analysis and
-  safety measures.
-- ``implementations``: List of labels to Bazel targets representing the actual
-  software implementation (cc_library, cc_binary, etc.) that realizes the
-  component requirements. This is the source code that implements the safety
-  functions as required by ISO 26262-6 clause 8.
-- ``tests``: List of labels to Bazel test targets (cc_test, py_test, etc.)
-  that verify the implementation against requirements. Includes unit tests and
-  integration tests as required by ISO 26262-6 clause 9 for software unit
-  verification.
-- ``visibility``: Bazel visibility specification for the generated SEooC
-  target. Controls which other packages can depend on this safety element.
+- ``name``: The name of the safety element module
+- ``assumptions_of_use``: List of labels to ``.rst`` or ``.md`` files containing Assumptions of Use documentation
+- ``component_requirements``: List of labels to ``.rst`` or ``.md`` files containing component requirements specification
+- ``architectural_design``: List of labels to ``.rst`` or ``.md`` files containing architectural design specification
+- ``safety_analysis``: List of labels to ``.rst`` or ``.md`` files containing safety analysis documentation (FMEA, DFA, etc.)
+- ``deps``: Optional list of other ``score_module`` or ``safety_element_out_of_context`` targets that this SEooC depends on. Dependencies enable cross-referencing between modules and merge their HTML documentation into the final output.
+- ``implementations``: List of labels to implementation targets (cc_library, cc_binary, etc.) that realize the component requirements
+- ``tests``: List of labels to test targets (cc_test, py_test, etc.) that verify the implementation against requirements
+- ``sphinx``: Label to the Sphinx build binary (default: ``//bazel/rules/score_module:score_build``)
+- ``visibility``: Bazel visibility specification
 
 **Generated Targets:**
 
-This macro creates multiple targets automatically:
-
-1. ``<name>_index``: Generates index.rst and conf.py files for the module
-   documentation
-2. ``<name>_seooc_index_lib``: Sphinx documentation library for the
-   generated index
-3. ``<name>``: The main SEooC target that aggregates all documentation
-4. ``<name>.html``: Convenience target to build HTML documentation
+- ``<name>_seooc_index``: Internal target that generates index.rst and symlinks all artifact files
+- ``<name>``: Main SEooC target (internally calls ``score_module``) producing HTML documentation
+- ``<name>_needs``: Sphinx-needs JSON file for cross-referencing
 
 **Implementation Details:**
 
-The macro orchestrates several internal rules to:
+The macro automatically:
 
-- Generate a documentation index with a structured table of contents
-- Organize documentation files under ``docs/safety_elements/<module_name>/``
-- Integrate assumptions of use and component requirements into a unified documentation structure
-- Provide Sphinx-compatible output for HTML generation
+- Generates an index.rst file with a toctree referencing all provided artifacts
+- Creates symlinks to artifact files (assumptions of use, requirements, architecture, safety analysis) for co-location with the generated index
+- Delegates to ``score_module`` for actual Sphinx build and HTML generation
+- Integrates dependencies for cross-module referencing and HTML merging
 
-Private Rules
--------------
+Dependency Management
+---------------------
 
-seooc
-~~~~~
+Both ``score_module`` and ``safety_element_out_of_context`` support cross-module dependencies through the ``deps`` attribute. This enables:
 
-**File:** ``private/seooc.bzl``
+**Cross-Referencing with Sphinx-Needs**
 
-**Purpose:** Internal rule that aggregates safety documentation artifacts
-into a Sphinx-compatible structure.
+Dependencies are automatically configured for sphinx-needs external references, allowing documents to reference requirements, architecture elements, and other needs across module boundaries using the ``:need:`` role.
 
-**Implementation:** ``_seooc_build_impl``
+**HTML Documentation Merging**
 
-**Functionality:**
+When building a module with dependencies, the HTML output from all dependent modules is merged into a unified documentation tree. For example:
 
-- Collects documentation from ``assumptions_of_use`` and
-  ``component_requirements`` dependencies
-- Reorganizes file paths to place artifacts under
-  ``docs/safety_elements/<module_name>/``
-- Merges the generated index with artifact documentation
-- Returns a ``SphinxDocsLibraryInfo`` provider for downstream consumption
+.. code-block:: text
 
-**Attributes:**
+   <name>/html/
+   ├── index.html                    # Main module documentation
+   ├── _static/                      # Sphinx static assets
+   ├── dependency_module_1/          # Merged from first dependency
+   │   └── index.html
+   └── dependency_module_2/          # Merged from second dependency
+       └── index.html
 
-- ``assumptions_of_use``: Label to assumptions of use documentation (mandatory)
-- ``component_requirements``: Label to component requirements documentation (mandatory)
-- ``index``: Label to the generated index file (mandatory)
+This allows seamless navigation between related documentation modules while maintaining independent build targets.
 
-**Output:**
+**Example with Dependencies:**
 
-Returns a ``SphinxDocsLibraryInfo`` provider containing:
+.. code-block:: python
 
-- ``transitive``: Depset of documentation file structs with relocated paths
-- ``files``: Empty list (files are in transitive dependencies)
+   # Process module (external dependency)
+   # @score_process//:score_process_module
 
-seooc_sphinx_environment
-~~~~~~~~~~~~~~~~~~~~~~~~
+   # Platform module (external dependency)
+   # @score_platform//:score_platform_module
 
-**File:** ``private/seooc_index.bzl``
-
-**Purpose:** Generates the Sphinx environment files (index.rst and conf.py)
-for a safety module.
-
-**Implementation:** ``_seooc_sphinx_environment_impl``
-
-**Functionality:**
-
-- Creates a module-specific ``index.rst`` with:
-
-  - Module name as header (uppercase with underline)
-  - Table of contents (toctree) linking to all safety artifacts
-  - References to assumptions of use and component requirements index files
-
-- Generates a ``conf.py`` configuration file (currently placeholder content)
-
-**Attributes:**
-
-- ``module_name``: String name of the module (used for header generation)
-- ``assumptions_of_use``: Label to assumptions documentation
-- ``component_requirements``: Label to requirements documentation
-
-**Generated Content Example:**
-
-.. code-block:: rst
-
-   MY_MODULE
-   =========
-
-   .. toctree::
-      :maxdepth: 2
-      :caption: Contents:
-
-      assumptions_of_use/index
-      component_requirements/index
-      architectural_design/index
-      safety_analysis/index
-
-**Output:**
-
-Returns ``DefaultInfo`` with generated ``index.rst`` files.
+   # My component that depends on process and platform
+   safety_element_out_of_context(
+       name = "my_component_seooc",
+       assumptions_of_use = ["docs/assumptions.rst"],
+       component_requirements = ["docs/requirements.rst"],
+       architectural_design = ["docs/architecture.rst"],
+       safety_analysis = ["docs/safety.rst"],
+       deps = [
+           "@score_process//:score_process_module",
+           "@score_platform//:score_platform_module",
+       ],
+   )
 
 Documentation Structure
 -----------------------
 
-When using these rules, documentation is organized in the Bazel sandbox as
-follows::
+**For safety_element_out_of_context:**
+
+The macro automatically generates an index.rst and organizes files::
+
+   bazel-bin/<name>_seooc_index/
+   ├── index.rst                     # Generated toctree
+   ├── assumptions_of_use.rst        # Symlinked artifact
+   ├── component_requirements.rst    # Symlinked artifact
+   ├── architectural_design.rst      # Symlinked artifact
+   └── safety_analysis.rst           # Symlinked artifact
+
+**For score_module:**
+
+User provides the complete source structure::
 
    docs/
-   └── safety_elements/
-       └── <module_name>/
-           ├── index.rst (generated)
-           ├── conf.py (generated)
-           ├── assumptions_of_use/
-           │   └── (user-provided documentation)
-           ├── component_requirements/
-           │   └── (user-provided documentation)
-           ├── architectural_design/
-           │   └── (user-provided documentation)
-           └── safety_analysis/
-               └── (user-provided documentation)
+   ├── index.rst                     # User-provided
+   ├── section1.rst
+   ├── section2.rst
+   └── subsection/
+       └── details.rst
 
-   bazel-bin/
-   └── <module_name>/
-       └── _sources/
-           └── (generated documentation sources)
+**Output Structure:**
 
-This structure reflects the file organization created in the Bazel sandbox
-during the documentation generation process. The generated ``index.rst`` file
-includes a table of contents that references all provided artifacts.
+Both rules produce a standardized output::
+
+   bazel-bin/<name>/
+   ├── html/                         # Built HTML documentation
+   │   ├── index.html
+   │   ├── _static/
+   │   ├── <dependency1>/            # Merged dependency HTML
+   │   └── <dependency2>/            # Merged dependency HTML
+   └── needs.json                    # Sphinx-needs export
 
 Integration with Sphinx
 ------------------------
 
-The rules generate ``SphinxDocsLibraryInfo`` providers that are compatible
-with ``@rules_python//sphinxdocs``. This enables:
+The rules provide first-class Sphinx integration:
 
-- Automatic discovery of documentation files by Sphinx
-- Proper path relocation for modular documentation
-- Transitive dependency handling across multiple safety modules
-- HTML, PDF, and other Sphinx output formats
+**Sphinx-Needs Support**
 
-Usage Example
--------------
+- Automatic configuration of external needs references from dependencies
+- Export of needs.json for downstream consumers
+- Cross-module traceability using ``:need:`` references
 
-Complete example in a BUILD file:
+**Sphinx Extensions**
+
+The default configuration includes common SCORE extensions:
+
+- sphinx-needs: Requirements management and traceability
+- sphinx_design: Modern UI components
+- myst_parser: Markdown support alongside RST
+
+**Custom Configuration**
+
+For ``score_module``, provide a custom conf.py via the ``config`` attribute to override the default Sphinx configuration.
+
+
+Usage Examples
+--------------
+
+Example 1: Generic Documentation Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   load("@baselibs//bazel/score_module:score_module.bzl",
-        "safety_element_out_of_context")
+   load("//bazel/rules/score_module:score_module.bzl", "score_module")
 
-   # Documentation artifacts
-   sphinx_docs_library(
-       name = "assumptions",
-       srcs = ["docs/assumptions_of_use.rst"],
+   score_module(
+       name = "platform_docs",
+       srcs = glob(["docs/**/*.rst"]),
+       index = "docs/index.rst",
+       deps = [
+           "@score_process//:score_process_module",
+       ],
    )
 
-   sphinx_docs_library(
-       name = "requirements",
-       srcs = ["docs/component_requirements.rst"],
-   )
-
-   sphinx_docs_library(
-       name = "architecture",
-       srcs = ["docs/architectural_design.rst"],
-   )
-
-   sphinx_docs_library(
-       name = "safety",
-       srcs = ["docs/safety_analysis.rst"],
-   )
-
-   # Implementation targets
-   cc_library(
-       name = "lifecycle_lib",
-       srcs = ["lifecycle_manager.cpp"],
-       hdrs = ["lifecycle_manager.h"],
-   )
-
-   # Test targets
-   cc_test(
-       name = "lifecycle_test",
-       srcs = ["lifecycle_manager_test.cpp"],
-       deps = [":lifecycle_lib"],
-   )
-
-   # Safety Element out of Context
-   safety_element_out_of_context(
-       name = "lifecycle_manager_seooc",
-       assumptions_of_use = ":assumptions",
-       component_requirements = ":requirements",
-       architectural_design = ":architecture",
-       safety_analysis = ":safety",
-       implementations = [":lifecycle_lib"],
-       tests = [":lifecycle_test"],
-       visibility = ["//visibility:public"],
-   )
-
-Then build the documentation:
+Build and view:
 
 .. code-block:: bash
 
-   # Build the SEooC target
-   bazel build //:lifecycle_manager_seooc
+   bazel build //:platform_docs
+   # Output: bazel-bin/platform_docs/html/
 
+Example 2: Safety Element out of Context
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Dependencies
-------------
+.. code-block:: python
 
-- ``@rules_python//sphinxdocs``: Sphinx documentation build rules
-- ``SphinxDocsLibraryInfo``: Provider for documentation artifacts
+   load("//bazel/rules/score_module:score_module.bzl",
+        "safety_element_out_of_context")
+
+   # Implementation
+   cc_library(
+       name = "kvs_lib",
+       srcs = ["kvs.cpp"],
+       hdrs = ["kvs.h"],
+   )
+
+   # Tests
+   cc_test(
+       name = "kvs_test",
+       srcs = ["kvs_test.cpp"],
+       deps = [":kvs_lib"],
+   )
+
+   # SEooC with dependencies
+   safety_element_out_of_context(
+       name = "kvs_seooc",
+       assumptions_of_use = ["docs/assumptions.rst"],
+       component_requirements = ["docs/requirements.rst"],
+       architectural_design = ["docs/architecture.rst"],
+       safety_analysis = ["docs/fmea.rst", "docs/dfa.rst"],
+       deps = [
+           "@score_platform//:score_platform_module",
+           "@score_process//:score_process_module",
+       ],
+       implementations = [":kvs_lib"],
+       tests = [":kvs_test"],
+   )
+
+Build and view:
+
+.. code-block:: bash
+
+   bazel build //:kvs_seooc
+   # Output: bazel-bin/kvs_seooc/html/
+   # Includes merged HTML from score_platform and score_process modules
 
 Design Rationale
 ----------------
 
-These rules enforce a structured approach to safety documentation by:
+These rules provide a structured approach to documentation by:
 
-1. **Standardization**: All safety modules follow the same documentation
-   structure
-2. **Traceability**: Build system ensures all required artifacts are present
-3. **Modularity**: Documentation can be composed from multiple sources
-4. **Automation**: Index generation and path management are automated
-5. **Integration**: Seamless integration with existing Sphinx workflows
+1. **Two-Tier Architecture**: Generic ``score_module`` for flexibility, specialized ``safety_element_out_of_context`` for safety-critical work
+2. **Dependency Management**: Automatic cross-referencing and HTML merging across modules
+3. **Standardization**: SEooC enforces consistent structure for safety documentation
+4. **Traceability**: Sphinx-needs integration enables bidirectional traceability
+5. **Automation**: Index generation, symlinking, and configuration management are automatic
+6. **Build System Integration**: Bazel ensures reproducible, cacheable documentation builds
