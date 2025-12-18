@@ -3,8 +3,8 @@ Architecture Design
 
 This document describes the architectural design of the test SEooC module.
 
-System Architecture
--------------------
+Software Architecture
+---------------------
 
 The system consists of the following components:
 

@@ -60,17 +60,6 @@ seooc(
     tags = ["manual"],
 )
 
-# Complete seooc test target with all mandatory attributes
-seooc(
-    name = "test_seooc_complete",
-    architectural_design = ":test_architecture",
-    assumptions_of_use = ":test_assumptions",
-    component_requirements = ":test_requirements",
-    index = ":test_index_lib",
-    safety_analysis = ":test_safety",
-    tags = ["manual"],
-)
-
 # Run the test suite
 seooc_test_suite(name = "seooc_tests")
 

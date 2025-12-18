@@ -1,7 +1,7 @@
 SCORE Module Bazel Rules
 =========================
 
-This directory contains Bazel rules for defining and building SCORE safety modules following ISO 26262 SEooC (Safety Element out of Context) standards.
+This directory contains Bazel rules for defining and building SCORE safety modules.
 
 .. contents:: Table of Contents
    :depth: 2
@@ -87,7 +87,7 @@ standards.
   and constraints for the SEooC as required by ISO 26262-10 clause 5.4.4.
 - ``component_requirements``: Label to a ``.rst`` or ``.md`` file containing
   the component requirements specification, defining functional and safety
-  requirements as required by ISO 26262-3 clause 7.
+  requirements.
 - ``architectural_design``: Label to a ``.rst`` or ``.md`` file containing
   the architectural design specification, describing the software architecture
   and design decisions as required by ISO 26262-6 clause 7.
