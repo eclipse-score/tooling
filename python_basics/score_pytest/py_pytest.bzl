@@ -15,12 +15,12 @@
 load("@pip_tooling//:requirements.bzl", "all_requirements")
 load("@rules_python//python:defs.bzl", "py_test")
 
-def score_py_pytest(name, srcs, args = [], data = [], deps = [], env = {}, plugins = [], pytest_ini = None, **kwargs):
+def score_py_pytest(name, srcs, args = [], data = [], deps = [], env = {}, plugins = [], pytest_config = None, **kwargs):
     pytest_bootstrap = Label("@score_tooling//python_basics/score_pytest:main.py")
 
-    if not pytest_ini:
-        pytest_ini = Label("@score_tooling//python_basics/score_pytest:pytest.ini")
-        #fail("$(location %s)" % pytest_ini)
+    if not pytest_config:
+        pytest_config = Label("@score_tooling//python_basics/score_pytest:pytest.ini")
+        #fail("$(location %s)" % pytest_config)
 
     if not srcs:
         fail("No source files provided for %s! (Is your glob empty?)" % name)
@@ -34,7 +34,7 @@ def score_py_pytest(name, srcs, args = [], data = [], deps = [], env = {}, plugi
         ] + srcs,
         main = pytest_bootstrap,
         args = [
-                   "-c $(location %s)" % pytest_ini,
+                   "-c $(location %s)" % pytest_config,
                    "-p no:cacheprovider",
 
                    # XML_OUTPUT_FILE: Location to which test actions should write a test
@@ -48,7 +48,7 @@ def score_py_pytest(name, srcs, args = [], data = [], deps = [], env = {}, plugi
                ["$(location %s)" % x for x in srcs],
         deps = ["@score_tooling//python_basics/score_pytest:attribute_plugin"] + all_requirements + deps,
         data = [
-            pytest_ini,
+            pytest_config,
         ] + data,
         env = env | {
             "PYTHONDONOTWRITEBYTECODE": "1",
