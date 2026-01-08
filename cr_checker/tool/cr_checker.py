@@ -528,6 +528,10 @@ def process_files(
             )
             continue
 
+        if os.path.getsize(item) == 0:
+            # No need to add copyright headers to empty files
+            continue
+
         # Automatically detect shebang and use its offset if no manual offset provided
         shebang_offset = detect_shebang_offset(item, encoding)
         effective_offset = offset + shebang_offset if offset == 0 else offset
