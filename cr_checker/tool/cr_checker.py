@@ -186,6 +186,40 @@ def load_templates(path):
     return templates
 
 
+def load_exclusion(path):
+    """
+    Loads the list of files being excluded from the copyright check.
+
+    Args:
+        path (str): Path to the exclusion file.
+
+    Returns:
+        tuple(list, bool): a list of files that are excluded from the coypright check and a boolean indicating whether
+                           all paths listed in the exclusion file exist and are files.
+    """
+
+    exclusion = []
+    valid = True
+    with open(path, "r", encoding="utf-8") as file:
+        exclusion = file.read().splitlines()
+
+        for item in exclusion:
+            path = Path(item)
+            if not path.exists():
+                LOGGER.error("Excluded file %s does not exist.", item)
+                exclusion.remove(item)
+                valid = False
+                continue
+            if not path.is_file():
+                exclusion.remove(item)
+                LOGGER.error("Excluded file %s is not a file.", item)
+                valid = False
+                continue
+
+    LOGGER.debug(exclusion)
+    return exclusion, valid
+
+
 def configure_logging(log_file_path=None, verbose=False):
     """
     Configures logging to write messages to the specified log file.
@@ -490,6 +524,7 @@ def process_files(
     files,
     templates,
     fix,
+    exclusion=[],
     config=None,
     use_mmap=False,
     encoding="utf-8",
@@ -504,6 +539,8 @@ def process_files(
         templates (dict): A dictionary where keys are file extensions
                           (e.g., '.py', '.txt') and values are strings or patterns
                           representing the required copyright text.
+        exclusion (list): A list of paths to files to be excluded from the copyright
+                          check.
         config (Path): Path to the config JSON file where configuration
                        variables are stored (e.g. years for copyright headers).
         use_mmap (bool): Flag for using mmap function for reading files
@@ -526,6 +563,10 @@ def process_files(
             logging.debug(
                 "Skipped (no configuration for selected file extension): %s", item
             )
+            continue
+
+        if str(item) in exclusion:
+            logging.debug("Skipped due to exclusion: %s", item)
             continue
 
         if os.path.getsize(item) == 0:
@@ -574,6 +615,13 @@ def parse_arguments(argv):
         type=Path,
         required=True,
         help="Path to the template file",
+    )
+
+    parser.add_argument(
+        "--exclusion-file",
+        type=Path,
+        required=False,
+        help="Path to the file listing file paths excluded from the copyright check.",
     )
 
     parser.add_argument(
@@ -675,6 +723,15 @@ def main(argv=None):
         LOGGER.error("Failed to load copyright text: %s", err)
         return err.errno
 
+    exclusion = []
+    exclusion_valid = True
+    if args.exclusion_file:
+        try:
+            exclusion, exclusion_valid = load_exclusion(args.exclusion_file)
+        except IOError as err:
+            LOGGER.error("Failed to load exclusion list: %s", err)
+            return err.errno
+
     try:
         files = collect_inputs(args.inputs, args.extensions)
     except IOError as err:
@@ -695,6 +752,7 @@ def main(argv=None):
         files,
         templates,
         args.fix,
+        exclusion,
         args.config_file,
         args.use_memory_map,
         args.encoding,
@@ -712,6 +770,8 @@ def main(argv=None):
         total_no,
         COLORS["ENDC"],
     )
+    if not exclusion_valid:
+        LOGGER.info("The exclusion file contains paths that do not exist.")
     if args.fix:
         total_not_fixed = total_no - total_fixes
         LOGGER.info(
@@ -728,7 +788,7 @@ def main(argv=None):
         )
     LOGGER.info("=" * 64)
 
-    return 0 if total_no == 0 else 1
+    return 0 if (total_no == 0 and exclusion_valid) else 1
 
 
 if __name__ == "__main__":

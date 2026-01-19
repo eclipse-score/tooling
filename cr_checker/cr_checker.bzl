@@ -21,6 +21,7 @@ def copyright_checker(
         visibility,
         template,
         config,
+        exclusion = None,
         extensions = [],
         offset = 0,
         remove_offset = 0,
@@ -40,6 +41,8 @@ def copyright_checker(
                                   Defaults to "//tools/cr_checker/resources:templates".
         config (str, optional): Path to the config resource used for project variables.
                                 Defaults to "//tools/cr_checker/resources:config".
+        exclusion (str, optional): Path to a text file listing files to be excluded from the copyright check.
+                                   File format: one path per line, relative to the repository root.
         extensions (list, optional): A list of file extensions to filter the source files.
                                      Defaults to an empty list, meaning all files are checked.
         offset (int, optional): The line offset for applying checks or modifications.
@@ -65,11 +68,13 @@ def copyright_checker(
         "-t $(location {})".format(template),
         "-c $(location {})".format(config),
     ]
-    data = []
     if len(extensions):
         args.append("-e {exts}".format(
             exts = " ".join([exts for exts in extensions]),
         ))
+
+    if exclusion:
+        args.append("--exclusion-file $(location {})".format(exclusion))
 
     if offset:
         args.append("--offset {}".format(offset))
@@ -89,6 +94,12 @@ def copyright_checker(
             if remove_offset:
                 args.append("--remove_offset {}".format(remove_offset))
 
+        data = srcs[:]
+        data.append(template)
+        data.append(config)
+        if exclusion:
+            data.append(exclusion)
+
         py_binary(
             name = t_name,
             main = "cr_checker.py",
@@ -96,10 +107,7 @@ def copyright_checker(
                 "@score_tooling//cr_checker/tool:cr_checker_lib",
             ],
             args = args,
-            data = srcs + [
-                template,
-                config,
-            ],
+            data = data,
             visibility = visibility,
         )
 
