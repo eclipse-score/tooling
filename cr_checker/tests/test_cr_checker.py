@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import pytest
 from datetime import datetime
 from pathlib import Path
 
@@ -32,15 +33,15 @@ def load_cr_checker_module():
 
 
 # load the license template
-def load_py_template() -> str:
+def load_template(extension: str) -> str:
     cr_checker = load_cr_checker_module()
     template_file = Path(__file__).resolve().parents[1] / "resources" / "templates.ini"
     templates = cr_checker.load_templates(template_file)
-    return templates["py"]
+    return templates[extension]
 
 
 # write the config file here so that the year is always up to date with the year
-# written in the mock "script.py" file
+# written in the test file
 def write_config(path: Path, author: str) -> Path:
     config_path = path / "config.json"
     config_path.write_text(json.dumps({"author": author}), encoding="utf-8")
@@ -61,11 +62,127 @@ def test_detect_shebang_offset_counts_trailing_newlines(tmp_path):
     assert offset == len("#!/usr/bin/env python3\n\n".encode("utf-8"))
 
 
+@pytest.fixture(
+    params=[
+        "cpp",
+        "c",
+        "h",
+        "hpp",
+        "py",
+        "sh",
+        "bzl",
+        "ini",
+        "yml",
+        "BUILD",
+        "bazel",
+        "rs",
+        "rst",
+    ]
+)
+def prepare_test_with_header(request: SubRequest, tmp_path: PosixPath) -> tuple:
+    extension = request.param
+    test_file = tmp_path / ("file." + extension)
+    header_template = load_template(extension)
+    current_year = datetime.now().year
+    header = header_template.format(year=current_year, author="Author")
+    test_file.write_text(
+        header + "some content\n",
+        encoding="utf-8",
+    )
+    return test_file, extension, header_template
+
+
+@pytest.fixture(
+    params=[
+        "cpp",
+        "c",
+        "h",
+        "hpp",
+        "py",
+        "sh",
+        "bzl",
+        "ini",
+        "yml",
+        "BUILD",
+        "bazel",
+        "rs",
+        "rst",
+    ]
+)
+def prepare_test_no_header(request: SubRequest, tmp_path: PosixPath) -> tuple:
+    extension = request.param
+    test_file = tmp_path / ("file." + extension)
+    header_template = load_template(extension)
+    current_year = datetime.now().year
+    test_file.write_text(
+        "some content\n",
+        encoding="utf-8",
+    )
+    return test_file, extension, header_template, tmp_path
+
+
+def test_process_files_detects_header(prepare_test_with_header):
+    cr_checker = load_cr_checker_module()
+    test_file, extension, header_template = prepare_test_with_header
+
+    results = cr_checker.process_files(
+        [test_file],
+        {extension: header_template},
+        False,
+        use_mmap=False,
+        encoding="utf-8",
+        offset=0,
+        remove_offset=0,
+    )
+
+    assert results["no_copyright"] == 0
+
+
+def test_process_files_detects_missing_header(prepare_test_no_header):
+    cr_checker = load_cr_checker_module()
+    test_file, extension, header_template, tmp_path = prepare_test_no_header
+
+    results = cr_checker.process_files(
+        [test_file],
+        {extension: header_template},
+        False,
+        use_mmap=False,
+        encoding="utf-8",
+        offset=0,
+        remove_offset=0,
+    )
+
+    assert results["no_copyright"] == 1
+
+
+def test_process_files_inserts_missing_header(prepare_test_no_header):
+    cr_checker = load_cr_checker_module()
+    test_file, extension, header_template, tmp_path = prepare_test_no_header
+    author = "Author"
+    config = write_config(tmp_path, author)
+
+    results = cr_checker.process_files(
+        [test_file],
+        {extension: header_template},
+        True,
+        config=config,
+        use_mmap=False,
+        encoding="utf-8",
+        offset=0,
+        remove_offset=0,
+    )
+
+    assert results["no_copyright"] == 1
+    assert results["fixed"] == 1
+    expected_header = header_template.format(year=datetime.now().year, author="Author")
+    assert test_file.read_text(encoding="utf-8").startswith(expected_header)
+
+
 # test that process_files function validates a license header after the shebang line
 def test_process_files_accepts_header_after_shebang(tmp_path):
     cr_checker = load_cr_checker_module()
     script = tmp_path / "script.py"
-    header_template = load_py_template()
+    header_template = load_template("py")
     current_year = datetime.now().year
     header = header_template.format(year=current_year, author="Author")
     script.write_text(
@@ -94,7 +211,7 @@ def test_process_files_fix_inserts_header_after_shebang(tmp_path):
         "#!/usr/bin/env python3\nprint('hi')\n",
         encoding="utf-8",
     )
-    header_template = load_py_template()
+    header_template = load_template("py")
     current_year = datetime.now().year
     author = "Author"
     config = write_config(tmp_path, author)
@@ -122,7 +239,7 @@ def test_process_files_fix_inserts_header_after_shebang(tmp_path):
 def test_process_files_accepts_header_without_shebang(tmp_path):
     cr_checker = load_cr_checker_module()
     script = tmp_path / "script.py"
-    header_template = load_py_template()
+    header_template = load_template("py")
     current_year = datetime.now().year
     header = header_template.format(year=current_year, author="Author")
     script.write_text(header + "print('hi')\n", encoding="utf-8")
@@ -145,7 +262,7 @@ def test_process_files_fix_inserts_header_without_shebang(tmp_path):
     cr_checker = load_cr_checker_module()
     script = tmp_path / "script.py"
     script.write_text("print('hi')\n", encoding="utf-8")
-    header_template = load_py_template()
+    header_template = load_template("py")
     current_year = datetime.now().year
     author = "Author"
     config = write_config(tmp_path, author)

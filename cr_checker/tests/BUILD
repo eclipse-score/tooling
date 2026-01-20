@@ -14,9 +14,9 @@
 load("@score_tooling//python_basics:defs.bzl", "score_py_pytest")
 
 score_py_pytest(
-    name = "shebang_unit_tests",
+    name = "unit_tests",
     srcs = [
-        "test_shebang_handling.py",
+        "test_cr_checker.py",
     ],
     deps = [
         "@score_tooling//cr_checker/tool:cr_checker_lib",
