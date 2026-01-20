@@ -178,6 +178,24 @@ def test_process_files_inserts_missing_header(prepare_test_no_header):
     assert test_file.read_text(encoding="utf-8").startswith(expected_header)
 
 
+def test_process_files_skips_exclusion_with_missing_header(prepare_test_no_header):
+    cr_checker = load_cr_checker_module()
+    test_file, extension, header_template, tmp_path = prepare_test_no_header
+
+    results = cr_checker.process_files(
+        [test_file],
+        {extension: header_template},
+        False,
+        [str(test_file)],
+        use_mmap=False,
+        encoding="utf-8",
+        offset=0,
+        remove_offset=0,
+    )
+
+    assert results["no_copyright"] == 0
+
+
 # test that process_files function validates a license header after the shebang line
 def test_process_files_accepts_header_after_shebang(tmp_path):
     cr_checker = load_cr_checker_module()
