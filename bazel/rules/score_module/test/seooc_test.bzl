@@ -1,15 +1,15 @@
 """
-Test suite for safety_element_out_of_context macro.
+Test suite for score_component macro.
 
 Tests the SEooC (Safety Element out of Context) functionality including:
 - Index generation with artifact references
-- Integration with score_module
+- Integration with sphinx_module
 - Sphinx-needs cross-referencing
 - HTML output generation
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//bazel/rules/score_module/private:score_module.bzl", "ScoreModuleInfo", "ScoreNeedsInfo")
+load("//bazel/rules/score_module/private:sphinx_module.bzl", "ScoreModuleInfo", "ScoreNeedsInfo")
 
 def _seooc_index_generation_test_impl(ctx):
     """Test that SEooC generates proper index.rst file."""
@@ -51,7 +51,7 @@ def _seooc_artifacts_copied_test_impl(ctx):
         "assumptions_of_use.rst",
         "component_requirements.rst",
         "architectural_design.rst",
-        "safety_analysis.rst",
+        "dependability_analysis.rst",
     ]
 
     # Check each artifact exists
@@ -69,8 +69,8 @@ seooc_artifacts_copied_test = analysistest.make(
     impl = _seooc_artifacts_copied_test_impl,
 )
 
-def _seooc_score_module_generated_test_impl(ctx):
-    """Test that SEooC generates score_module with HTML output."""
+def _seooc_sphinx_module_generated_test_impl(ctx):
+    """Test that SEooC generates sphinx_module with HTML output."""
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
@@ -78,13 +78,13 @@ def _seooc_score_module_generated_test_impl(ctx):
     asserts.true(
         env,
         ScoreModuleInfo in target_under_test,
-        "Expected SEooC to provide ScoreModuleInfo from score_module",
+        "Expected SEooC to provide ScoreModuleInfo from sphinx_module",
     )
 
     return analysistest.end(env)
 
-seooc_score_module_generated_test = analysistest.make(
-    impl = _seooc_score_module_generated_test_impl,
+seooc_sphinx_module_generated_test = analysistest.make(
+    impl = _seooc_sphinx_module_generated_test_impl,
 )
 
 def _seooc_needs_provider_test_impl(ctx):

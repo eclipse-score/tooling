@@ -10,17 +10,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""Test rules for score_module HTML generation and dependencies."""
+"""Test rules for sphinx_module HTML generation and dependencies."""
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//bazel/rules/score_module/private:score_module.bzl", "ScoreModuleInfo", "ScoreNeedsInfo")
+load("//bazel/rules/score_module/private:sphinx_module.bzl", "ScoreModuleInfo", "ScoreNeedsInfo")
 
 # ============================================================================
 # Provider Tests
 # ============================================================================
 
 def _providers_test_impl(ctx):
-    """Test that score_module provides the correct providers."""
+    """Test that sphinx_module provides the correct providers."""
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
@@ -67,7 +67,7 @@ basic_html_generation_test = analysistest.make(_basic_html_generation_test_impl)
 # ============================================================================
 
 def _needs_generation_test_impl(ctx):
-    """Test that score_module generates needs.json files."""
+    """Test that sphinx_module generates needs.json files."""
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
@@ -199,8 +199,8 @@ explicit_config_test = analysistest.make(_explicit_config_test_impl)
 # Test Suite
 # ============================================================================
 
-def score_module_test_suite(name):
-    """Create a comprehensive test suite for score_module.
+def sphinx_module_test_suite(name):
+    """Create a comprehensive test suite for sphinx_module.
 
     Tests cover:
     - Needs.json generation and transitive collection

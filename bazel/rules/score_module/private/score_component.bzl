@@ -19,13 +19,13 @@ following S-CORE process guidelines. A SEooC is a safety-related element develop
 independently of a specific vehicle project.
 """
 
-load("//bazel/rules/score_module/private:score_module.bzl", "score_module")
+load("//bazel/rules/score_module/private:sphinx_module.bzl", "sphinx_module")
 
 # ============================================================================
 # Private Rule Implementation
 # ============================================================================
 
-def _generate_seooc_index_impl(ctx):
+def _software_component_index_impl(ctx):
     """Generate index.rst file with references to all SEooC artifacts.
 
     This rule creates a Sphinx index.rst file that includes references to all
@@ -48,11 +48,12 @@ def _generate_seooc_index_impl(ctx):
         "assumptions_of_use": [],
         "component_requirements": [],
         "architectural_design": [],
-        "safety_analysis": [],
+        "dependability_analysis": [],
+        "checklists": [],
     }
 
     # Process each artifact type
-    for artifact_name in ["assumptions_of_use", "component_requirements", "architectural_design", "safety_analysis"]:
+    for artifact_name in artifacts_by_type:
         attr_list = getattr(ctx.attr, artifact_name)
         if attr_list:
             # For label_list attributes, iterate over each label
@@ -97,7 +98,8 @@ def _generate_seooc_index_impl(ctx):
             "{assumptions_of_use}": "\n   ".join(artifacts_by_type["assumptions_of_use"]),
             "{component_requirements}": "\n   ".join(artifacts_by_type["component_requirements"]),
             "{architectural_design}": "\n   ".join(artifacts_by_type["architectural_design"]),
-            "{safety_analysis}": "\n   ".join(artifacts_by_type["safety_analysis"]),
+            "{dependability_analysis}": "\n   ".join(artifacts_by_type["dependability_analysis"]),
+            "{checklists}": "\n   ".join(artifacts_by_type["checklists"]),
         },
     )
 
@@ -109,8 +111,8 @@ def _generate_seooc_index_impl(ctx):
 # Private Rule Definition
 # ============================================================================
 
-_generate_seooc_index = rule(
-    implementation = _generate_seooc_index_impl,
+_software_component_index = rule(
+    implementation = _software_component_index_impl,
     doc = "Generates index.rst file with references to SEooC artifacts",
     attrs = {
         "module_name": attr.string(
@@ -141,7 +143,12 @@ _generate_seooc_index = rule(
             mandatory = True,
             doc = "Architectural design specification as defined in the S-CORE process",
         ),
-        "safety_analysis": attr.label_list(
+        "dependability_analysis": attr.label_list(
+            allow_files = [".rst", ".md"],
+            mandatory = True,
+            doc = "Safety analysis documentation as defined in the S-CORE process",
+        ),
+        "checklists": attr.label_list(
             allow_files = [".rst", ".md"],
             mandatory = True,
             doc = "Safety analysis documentation as defined in the S-CORE process",
@@ -153,13 +160,14 @@ _generate_seooc_index = rule(
 # Public Macro
 # ============================================================================
 
-def safety_element_out_of_context(
+def score_component(
         name,
         assumptions_of_use,
         component_requirements,
         architectural_design,
-        safety_analysis,
+        dependability_analysis,
         description,
+        checklists = [],
         implementations = [],
         tests = [],
         deps = [],
@@ -169,7 +177,7 @@ def safety_element_out_of_context(
 
     This macro creates a complete SEooC module with integrated documentation
     generation. It generates an index.rst file referencing all SEooC artifacts
-    and builds HTML documentation using the score_module infrastructure.
+    and builds HTML documentation using the sphinx_module infrastructure.
 
     A SEooC is a safety-related architectural element (e.g., a software component)
     that is developed independently of a specific vehicle project and can be
@@ -187,7 +195,7 @@ def safety_element_out_of_context(
         architectural_design: Label to a .rst or .md file containing the
             architectural design specification, describing the software
             architecture and design decisions as defined in the S-CORE process.
-        safety_analysis: Label to a .rst or .md file containing the safety
+        dependability_analysis: Label to a .rst or .md file containing the safety
             analysis, including FMEA, FMEDA, FTA, or other safety analysis
             results as defined in the S-CORE process.
         description: String containing a high-level description of the SEooC
@@ -201,19 +209,19 @@ def safety_element_out_of_context(
         tests: Optional list of labels to Bazel test targets (cc_test, py_test, etc.)
             that verify the implementation against requirements. Includes unit
             tests and integration tests as defined in the S-CORE process.
-        deps: Optional list of other score_module or SEooC targets this module
+        deps: Optional list of other sphinx_module or SEooC targets this module
             depends on. Cross-references will work automatically.
         sphinx: Label to sphinx build binary. Default: //bazel/rules/score_module:score_build
         visibility: Bazel visibility specification for the generated SEooC targets.
 
     Generated Targets:
         <name>_seooc_index: Internal rule that generates index.rst and copies artifacts
-        <name>: Main SEooC target (score_module) with HTML documentation
+        <name>: Main SEooC target (sphinx_module) with HTML documentation
         <name>_needs: Internal target for sphinx-needs JSON generation
     """
 
     # Step 1: Generate index.rst and collect all artifacts
-    _generate_seooc_index(
+    _software_component_index(
         name = name + "_seooc_index",
         module_name = name,
         description = description,
@@ -221,13 +229,14 @@ def safety_element_out_of_context(
         assumptions_of_use = assumptions_of_use,
         component_requirements = component_requirements,
         architectural_design = architectural_design,
-        safety_analysis = safety_analysis,
+        dependability_analysis = dependability_analysis,
+        checklists = checklists,
         visibility = ["//visibility:private"],
     )
 
-    # Step 2: Create score_module using generated index and artifacts
+    # Step 2: Create sphinx_module using generated index and artifacts
     # The index file is part of the _seooc_index target outputs
-    score_module(
+    sphinx_module(
         name = name,
         srcs = [":" + name + "_seooc_index"],
         index = ":" + name + "_seooc_index",  # Label to the target, not a path

@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""Tests for score_module providers and two-phase build system."""
+"""Tests for sphinx_module providers and two-phase build system."""
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 load("//bazel/rules/score_module/private:score_module.bzl", "ScoreModuleInfo", "ScoreNeedsInfo")
@@ -19,7 +19,7 @@ load("//bazel/rules/score_module/private:score_module.bzl", "ScoreModuleInfo", "
 # ScoreModuleInfo Provider Tests
 # ============================================================================
 
-def _score_module_info_fields_test_impl(ctx):
+def _sphinx_module_info_fields_test_impl(ctx):
     """Test that ScoreModuleInfo provides all required fields."""
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
@@ -47,7 +47,7 @@ def _score_module_info_fields_test_impl(ctx):
 
     return analysistest.end(env)
 
-score_module_info_fields_test = analysistest.make(_score_module_info_fields_test_impl)
+sphinx_module_info_fields_test = analysistest.make(_sphinx_module_info_fields_test_impl)
 
 # ============================================================================
 # ScoreNeedsInfo Provider Tests
@@ -299,8 +299,8 @@ deps_needs_collection_test = analysistest.make(_deps_needs_collection_test_impl)
 # Test Suite
 # ============================================================================
 
-def score_module_providers_test_suite(name):
-    """Create a test suite for score_module providers and build phases.
+def sphinx_module_providers_test_suite(name):
+    """Create a test suite for sphinx_module providers and build phases.
 
     Tests cover:
     - Transitive needs.json collection

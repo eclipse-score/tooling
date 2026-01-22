@@ -67,7 +67,7 @@ sphinx_rule_attrs = {
         mandatory = True,
     ),
     "deps": attr.label_list(
-        doc = "List of other score_module targets this module depends on for intersphinx.",
+        doc = "List of other sphinx_module targets this module depends on for intersphinx.",
     ),
     "_config_template": attr.label(
         default = Label("//bazel/rules/score_module:templates/conf.template.py"),
@@ -254,7 +254,7 @@ _score_html = rule(
 # Rule wrappers
 # ======================================================================================
 
-def score_module(
+def sphinx_module(
         name,
         srcs,
         index,
@@ -273,7 +273,7 @@ def score_module(
         srcs: List of source files (.rst, .md) with index file first
         index: Label to index.rst file
         config: Label to conf.py configuration file (optional, will be auto-generated if not provided)
-        deps: List of other score_module targets this module depends on
+        deps: List of other sphinx_module targets this module depends on
         sphinx: Label to sphinx build binary (default: :sphinx_build)
         visibility: Bazel visibility
     """

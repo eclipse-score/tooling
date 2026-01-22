@@ -23,4 +23,4 @@
    {architectural_design}
    {component_requirements}
    {assumptions_of_use}
-   {safety_analysis}
+   {dependability_analysis}

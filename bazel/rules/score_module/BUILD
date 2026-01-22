@@ -1,6 +1,6 @@
 load(
     "//bazel/rules/score_module:score_module.bzl",
-    "score_module",
+    "sphinx_module",
 )
 
 exports_files([
@@ -34,11 +34,12 @@ py_binary(
     ],
 )
 
-score_module(
-    name = "score_module",
+sphinx_module(
+    name = "score_module_doc",
     srcs = glob(
         [
             "docs/**/*.rst",
+            "docs/**/*.puml",
         ],
         allow_empty = True,
     ),
