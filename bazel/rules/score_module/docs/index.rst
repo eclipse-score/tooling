@@ -124,11 +124,13 @@ score_component
 .. code-block:: python
 
    score_component(
-       name = "my_seooc",
-       assumptions_of_use = ["docs/assumptions_of_use.rst"],
-       component_requirements = ["docs/requirements.rst"],
-       architectural_design = ["docs/architecture.rst"],
-       dependability_analysis = ["docs/dependability_analysis.rst"],
+       name = "my_component",
+       description = "My safety component providing core functionality.",
+       assumptions_of_use = [":my_assumptions_of_use"],
+       component_requirements = [":my_component_requirements"],
+       architectural_design = [":my_architectural_design"],
+       dependability_analysis = [":my_dependability_analysis"],
+       checklists = ["docs/safety_checklist.rst"],
        deps = [
            "@score_platform//:score_platform_module",
            "@score_process//:score_process_module",
@@ -141,10 +143,12 @@ score_component
 **Parameters:**
 
 - ``name``: The name of the safety element module
-- ``assumptions_of_use``: List of labels to ``.rst`` or ``.md`` files containing Assumptions of Use documentation
-- ``component_requirements``: List of labels to ``.rst`` or ``.md`` files containing component requirements specification
-- ``architectural_design``: List of labels to ``.rst`` or ``.md`` files containing architectural design specification
-- ``dependability_analysis``: List of labels to ``.rst`` or ``.md`` files containing safety analysis documentation (FMEA, DFA, etc.)
+- ``description``: String containing a high-level description of the SEooC component. This text appears at the beginning of the generated documentation, providing context about what the component does and its purpose. Supports RST formatting.
+- ``assumptions_of_use``: List of labels to ``assumptions_of_use`` targets or raw ``.rst``/``.md`` files containing Assumptions of Use documentation
+- ``component_requirements``: List of labels to ``component_requirements`` targets or raw ``.rst``/``.md`` files containing component requirements specification
+- ``architectural_design``: List of labels to ``architectural_design`` targets or raw ``.rst``/``.md`` files containing architectural design specification
+- ``dependability_analysis``: List of labels to ``dependability_analysis`` targets or raw ``.rst``/``.md`` files containing safety analysis documentation (FMEA, DFA, etc.)
+- ``checklists``: Optional list of labels to ``.rst`` or ``.md`` files containing safety checklists and verification documents
 - ``deps``: Optional list of other ``sphinx_module`` or ``score_component`` targets that this SEooC depends on. Dependencies enable cross-referencing between modules and merge their HTML documentation into the final output.
 - ``implementations``: List of labels to implementation targets (cc_library, cc_binary, etc.) that realize the component requirements
 - ``tests``: List of labels to test targets (cc_test, py_test, etc.) that verify the implementation against requirements
@@ -169,15 +173,8 @@ The macro automatically:
 Dependency Management
 ---------------------
 
-Both ``sphinx_module`` and ``score_component`` support cross-module dependencies through the ``deps`` attribute. This enables:
-
-**Cross-Referencing with Sphinx-Needs**
-
-Dependencies are automatically configured for sphinx-needs external references, allowing documents to reference requirements, architecture elements, and other needs across module boundaries using the ``:need:`` role.
-
-**HTML Documentation Merging**
-
-When building a module with dependencies, the HTML output from all dependent modules is merged into a unified documentation tree. For example:
+Both ``sphinx_module`` and ``score_component`` support cross-module dependencies through the ``deps`` attribute.
+The generated html structure whill look as follows:
 
 .. code-block:: text
 
@@ -357,3 +354,12 @@ These rules provide a structured approach to documentation by:
 4. **Traceability**: Sphinx-needs integration enables bidirectional traceability
 5. **Automation**: Index generation, symlinking, and configuration management are automatic
 6. **Build System Integration**: Bazel ensures reproducible, cacheable documentation builds
+
+Reference Implementation
+------------------------
+
+For complete working examples of all rules and macros, see the test BUILD file:
+
+.. literalinclude:: ../test/BUILD
+   :language: python
+   :caption: test/BUILD - Complete usage examples

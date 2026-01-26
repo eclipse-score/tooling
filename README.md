@@ -58,14 +58,15 @@ bazel run //:rust_coverage -- --min-line-coverage 80
 
 ## Upgrading from separate MODULES
 
-If you are still using separate module imports and want to upgrade to the new version. 
+If you are still using separate module imports and want to upgrade to the new version.
 Here are two examples to showcase how to do this.
 
 ```
 load("@score_python_basics//:defs.bzl", "score_py_pytest") => load("@score_tooling//:defs.bzl", "score_py_pytest")
 load("@score_cr_checker//:cr_checker.bzl", "copyright_checker") => load("@score_tooling//:defs.bzl", "copyright_checker")
 ```
-All things inside of 'tooling' can now be imported from `@score_tooling//:defs.bzl`. 
+
+All things inside of 'tooling' can now be imported from `@score_tooling//:defs.bzl`.
 The available import targets are:
 
 - score_virtualenv
@@ -78,6 +79,7 @@ The available import targets are:
 - rust_coverage_report
 
 ## Format the tooling repository
-```bash 
+
+```bash
 bazel run //:format.fix
 ```

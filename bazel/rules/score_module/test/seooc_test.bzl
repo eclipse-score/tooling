@@ -46,12 +46,11 @@ def _seooc_artifacts_copied_test_impl(ctx):
 
     files = target_under_test[DefaultInfo].files.to_list()
 
-    # Expected artifact basenames
+    # Expected artifact basenames - these come from the SphinxSourcesInfo providers
+    # and are filtered to only include .rst/.md files for the index
     expected_artifacts = [
-        "assumptions_of_use.rst",
-        "component_requirements.rst",
-        "architectural_design.rst",
-        "dependability_analysis.rst",
+        "component_requirements.rst",  # from both :comp_req and :aous (same fixture file)
+        "dfa.rst",  # from :dependability_analysis_target
     ]
 
     # Check each artifact exists

@@ -10,7 +10,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("//bazel/rules/score_module:score_module.bzl", "score_component", "sphinx_module")
+load(
+    "//bazel/rules/score_module:score_module.bzl",
+    "architectural_design",
+    "assumptions_of_use",
+    "component_requirements",
+    "dependability_analysis",
+    "feature_requirements",
+    "safety_analysis",
+    "score_component",
+    "sphinx_module",
+)
 load(
     ":html_generation_test.bzl",
     "html_merging_test",
@@ -21,7 +31,6 @@ load(
 load(
     ":seooc_test.bzl",
     "seooc_artifacts_copied_test",
-    "seooc_index_generation_test",
     "seooc_needs_provider_test",
     "seooc_sphinx_module_generated_test",
 )
@@ -63,15 +72,65 @@ sphinx_module(
 
 # Test 2: SEooC (Safety Element out of Context) Module
 # Tests the score_component macro with S-CORE process artifacts
+
+# - Feature Requirements:     wp__requirements_feat
+# TODO: Feature requirements are a stand-alone artifact for now
+# We have to link them manually to component requirements
+feature_requirements(
+    name = "feat_req",
+    srcs = ["fixtures/seooc_test/feature_requirements.rst"],
+)
+
+# - Component Requirements:   wp__requirements_comp
+component_requirements(
+    name = "comp_req",
+    srcs = ["fixtures/seooc_test/component_requirements.rst"],
+    feature_requirement = [":feat_req"],
+)
+
+# - Assumptions of Use:       wp__requirements_comp_aou
+assumptions_of_use(
+    name = "aous",
+    srcs = ["fixtures/seooc_test/assumptions_of_use.rst"],
+    feature_requirement = [":feat_req"],
+)
+
+# - Architecture Design:      wp__component_arch
+architectural_design(
+    name = "arch_design",
+    dynamic = ["fixtures/seooc_test/dynamic_architecture.rst"],
+    static = ["fixtures/seooc_test/static_architecture.rst"],
+)
+
+# - Safety Analysis (DFA):    wp__sw_component_dfa
+# - Safety Analysis (FMEA):   wp__sw_component_fmea
+dependability_analysis(
+    name = "dependability_analysis_target",
+    arch_design = ":arch_design",
+    dfa = ["fixtures/seooc_test/dfa.rst"],
+    safety_analysis = [":samplelibrary_safety_analysis"],
+)
+
+safety_analysis(
+    name = "samplelibrary_safety_analysis",
+    # TODO
+    # controlmeasures = [], # can be AoUs or requirements
+    # failuremodes = [],
+    # fta = [],
+    arch_design = ":arch_design",
+)
+
 score_component(
     name = "seooc_test_lib",
-    architectural_design = ["fixtures/seooc_test/architectural_design.rst"],
-    assumptions_of_use = ["fixtures/seooc_test/assumptions_of_use.rst"],
-    component_requirements = ["fixtures/seooc_test/component_requirements.rst"],
-    dependability_analysis = ["fixtures/seooc_test/dependability_analysis.rst"],
+    architectural_design = [":arch_design"],
+    assumptions_of_use = [":aous"],
+    component_requirements = [":comp_req"],
+    dependability_analysis = [":dependability_analysis_target"],
     description = "Test SEooC module demonstrating S-CORE process compliance structure.",
+    implementations = [],
+    tests = [],
     deps = [
-        ":module_c_lib",
+        ":module_c_lib",  # dependency to other seoocs/score_components
     ],
 )
 

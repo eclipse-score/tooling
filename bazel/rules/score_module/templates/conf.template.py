@@ -137,9 +137,9 @@ def load_external_needs() -> List[Dict[str, Any]]:
         config["json_path"] = str(json_path)
 
         print(f"INFO: Added external needs config for '{key}':")
-        print(f"  json_path: {config['json_path']}")
-        print(f"  id_prefix: {config.get('id_prefix', 'none')}")
-        print(f"  version: {config.get('version', 'none')}")
+        print(f"INFO:   json_path: {config['json_path']}")
+        print(f"INFO:   id_prefix: {config.get('id_prefix', 'none')}")
+        print(f"INFO:   version: {config.get('version', 'none')}")
 
         external_needs.append(config)
 
@@ -148,19 +148,27 @@ def load_external_needs() -> List[Dict[str, Any]]:
 
 def verify_config(app: Any, config: Any) -> None:
     """
-    Verify that configuration was properly loaded.
+    Initialize and verify external needs configuration.
 
     This is called during Sphinx's config-inited event to ensure
-    external needs configuration is correctly set up.
+    external needs configuration is correctly set up. We need to
+    explicitly set the config value here because Sphinx doesn't
+    automatically pick up module-level variables for extension configs.
 
     Args:
         app: Sphinx application object
         config: Sphinx configuration object
     """
+    # Set the config from our module-level variable
+    # This is needed because sphinx-needs registers its config with add_config_value
+    # which doesn't automatically pick up module-level variables from conf.py
+    if needs_external_needs:
+        config.needs_external_needs = needs_external_needs
+
     print("=" * 80)
     print("INFO: Verifying Sphinx configuration")
-    print(f"  Project: {config.project}")
-    print(f"  External needs count: {len(config.needs_external_needs)}")
+    print(f"INFO:   Project: {config.project}")
+    print(f"INFO:   External needs count: {len(config.needs_external_needs)}")
     print("=" * 80)
 
 
@@ -189,4 +197,6 @@ print(f"INFO: Sphinx configuration loaded for project: {project}")
 print(f"INFO: Current working directory: {Path.cwd()}")
 
 # Load external needs configuration
+# Note: This sets a module-level variable that is then applied to the Sphinx
+# config object in the verify_config callback during the config-inited event
 needs_external_needs = load_external_needs()

@@ -192,7 +192,7 @@ def _score_html_impl(ctx):
         inputs = html_inputs,
         outputs = [sphinx_html_output],
         arguments = html_args,
-        progress_message = "Building HTML with external needs: %s" % ctx.label.name,
+        progress_message = "Building HTML: %s" % ctx.label.name,
         executable = ctx.executable.sphinx,
     )
 
@@ -260,7 +260,7 @@ def sphinx_module(
         index,
         config = None,
         deps = [],
-        sphinx = "@//bazel/rules/score_module:score_build",
+        sphinx = Label("//bazel/rules/score_module:score_build"),
         visibility = ["//visibility:public"]):
     """Build a Sphinx module with transitive HTML dependencies.
 
