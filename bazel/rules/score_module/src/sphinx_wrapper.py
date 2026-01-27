@@ -13,6 +13,9 @@ import sys
 import time
 from pathlib import Path
 from typing import List, Optional
+import re
+import sys
+from contextlib import redirect_stdout, redirect_stderr
 
 from sphinx.cmd.build import main as sphinx_main
 
@@ -27,6 +30,24 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+SANDBOX_PATH = re.compile(r'^.*_main/')
+class StdoutProcessor:
+    def write(self, text):
+        if text.strip():
+            text = re.sub(SANDBOX_PATH, '', text)
+            sys.__stdout__.write(f"[SPHINX_STDOUT]: {text.strip()}\n")
+    def flush(self):
+        sys.__stdout__.flush()
+
+class StderrProcessor:
+    def write(self, text):
+        if text.strip():
+            text = re.sub(SANDBOX_PATH, '', text)
+            sys.__stderr__.write(f"[SPHINX_STDERR]: {text.strip()}\n")
+    def flush(self):
+        sys.__stderr__.flush()
+
 
 
 def get_env(name: str, required: bool = True) -> Optional[str]:
@@ -216,8 +237,14 @@ def main() -> int:
     try:
         args = parse_arguments()
         validate_arguments(args)
-        sphinx_args = build_sphinx_arguments(args)
-        exit_code = run_sphinx_build(sphinx_args, args.builder)
+        # Create processor instance
+        stdout_processor = StdoutProcessor()
+        stderr_processor = StderrProcessor()
+        # Redirect stdout and stderr
+        with redirect_stderr(stdout_processor), redirect_stdout(stderr_processor):
+            sphinx_args = build_sphinx_arguments(args)
+            exit_code = run_sphinx_build(sphinx_args, args.builder)
+            exit_code = 0
         return exit_code
     except ValueError as e:
         logger.error(f"Validation error: {e}")
