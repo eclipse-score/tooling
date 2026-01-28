@@ -55,3 +55,9 @@ Checklists
    :maxdepth: 2
 
    {checklists}
+
+Submodules
+----------
+This module includes the following submodules:
+
+{submodules}

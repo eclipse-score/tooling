@@ -225,6 +225,33 @@ def _process_artifact_type(ctx, artifact_name):
 
     return (output_files, index_refs)
 
+def _process_deps(ctx):
+    """Process deps to generate references to submodule documentation.
+
+    The HTML merger in sphinx_module will copy the HTML directories from deps.
+    We generate RST bullet list with links to those HTML directories.
+
+    Args:
+        ctx: Rule context
+
+    Returns:
+        String containing RST-formatted bullet list of links
+    """
+    if not ctx.attr.deps:
+        return ""
+
+    # Generate RST bullet list with links to submodule HTML
+    links = []
+    for dep in ctx.attr.deps:
+        dep_name = dep.label.name
+        # Create a link to the index.html that will be merged
+        # Format: * `Module Name <module_name/index.html>`_
+        # Use underscores in name for readability, convert to spaces for display
+        display_name = dep_name.replace("_", " ").title()
+        links.append("* `{} <{}/index.html>`_".format(display_name, dep_name))
+
+    return "\n".join(links)
+
 def _software_component_index_impl(ctx):
     """Generate index.rst file with references to all SEooC artifacts.
 
@@ -259,6 +286,11 @@ def _software_component_index_impl(ctx):
         output_files.extend(files)
         artifacts_by_type[artifact_name] = refs
 
+    # Process dependencies (submodules)
+    # The HTML merger will handle copying the actual HTML files
+    # We generate RST links that will work once HTML is merged
+    deps_links = _process_deps(ctx)
+
     # Generate index file from template
     title = ctx.attr.module_name
     underline = "=" * len(title)
@@ -275,6 +307,7 @@ def _software_component_index_impl(ctx):
             "{architectural_design}": "\n   ".join(artifacts_by_type["architectural_design"]),
             "{dependability_analysis}": "\n   ".join(artifacts_by_type["dependability_analysis"]),
             "{checklists}": "\n   ".join(artifacts_by_type["checklists"]),
+            "{submodules}": deps_links,
         },
     )
 
@@ -322,6 +355,10 @@ _software_component_index = rule(
             allow_single_file = [".rst"],
             mandatory = True,
             doc = "Template file for generating index.rst",
+        ),
+        "deps": attr.label_list(
+            default = [],
+            doc = "Dependencies on other score_component modules (submodules). Their index.rst files will be linked in the Submodules section.",
         ),
     },
 )
@@ -405,6 +442,7 @@ def score_component(
         architectural_design = architectural_design,
         dependability_analysis = dependability_analysis,
         checklists = checklists,
+        deps = deps,
         visibility = ["//visibility:private"],
     )
 
