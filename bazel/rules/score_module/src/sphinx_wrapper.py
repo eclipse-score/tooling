@@ -31,23 +31,27 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-SANDBOX_PATH = re.compile(r'^.*_main/')
+SANDBOX_PATH = re.compile(r"^.*_main/")
+
+
 class StdoutProcessor:
     def write(self, text):
         if text.strip():
-            text = re.sub(SANDBOX_PATH, '', text)
+            text = re.sub(SANDBOX_PATH, "", text)
             sys.__stdout__.write(f"[SPHINX_STDOUT]: {text.strip()}\n")
+
     def flush(self):
         sys.__stdout__.flush()
+
 
 class StderrProcessor:
     def write(self, text):
         if text.strip():
-            text = re.sub(SANDBOX_PATH, '', text)
+            text = re.sub(SANDBOX_PATH, "", text)
             sys.__stderr__.write(f"[SPHINX_STDERR]: {text.strip()}\n")
+
     def flush(self):
         sys.__stderr__.flush()
-
 
 
 def get_env(name: str, required: bool = True) -> Optional[str]:

@@ -33,6 +33,7 @@ DependabilityAnalysisInfo = provider(
     fields = {
         "safety_analysis": "List of SafetyAnalysisInfo providers",
         "dfa": "Depset of Dependent Failure Analysis documentation",
+        "fmea": "Depset of Failure Mode and Effects Analysis documentation",
         "arch_design": "ArchitecturalDesignInfo provider for linked architectural design",
         "name": "Name of the dependability analysis target",
     },
@@ -55,6 +56,7 @@ def _dependability_analysis_impl(ctx):
         List of providers including DefaultInfo and DependabilityAnalysisInfo
     """
     dfa_files = depset(ctx.files.dfa)
+    fmea_files = depset(ctx.files.fmea)
 
     # Collect safety analysis providers
     safety_analysis_infos = []
@@ -71,7 +73,7 @@ def _dependability_analysis_impl(ctx):
 
     # Combine all files for DefaultInfo
     all_files = depset(
-        transitive = [dfa_files] + safety_analysis_files,
+        transitive = [dfa_files, fmea_files] + safety_analysis_files,
     )
 
     # Collect transitive sphinx sources from safety analysis and architectural design
@@ -87,6 +89,7 @@ def _dependability_analysis_impl(ctx):
         DependabilityAnalysisInfo(
             safety_analysis = safety_analysis_infos,
             dfa = dfa_files,
+            fmea = fmea_files,
             arch_design = arch_design_info,
             name = ctx.label.name,
         ),
@@ -114,6 +117,11 @@ _dependability_analysis = rule(
             mandatory = False,
             doc = "Dependent Failure Analysis (DFA) documentation",
         ),
+        "fmea": attr.label_list(
+            allow_files = [".rst", ".md"],
+            mandatory = False,
+            doc = "Failure Mode and Effects Analysis (FMEA) documentation",
+        ),
         "arch_design": attr.label(
             providers = [ArchitecturalDesignInfo],
             mandatory = False,
@@ -130,6 +138,7 @@ def dependability_analysis(
         name,
         safety_analysis = [],
         dfa = [],
+        fmea = [],
         arch_design = None,
         visibility = None):
     """Define dependability analysis following S-CORE process guidelines.
@@ -149,6 +158,10 @@ def dependability_analysis(
             Dependent Failure Analysis (DFA) documentation. DFA identifies
             failures that could affect multiple components or functions
             as defined in the S-CORE process.
+        fmea: Optional list of labels to .rst or .md files containing
+            Failure Mode and Effects Analysis (FMEA) documentation. FMEA
+            identifies potential failure modes and their effects on the
+            system as defined in the S-CORE process.
         arch_design: Optional label to an architectural_design target for
             establishing traceability between dependability analysis and
             the software architecture.
@@ -163,6 +176,7 @@ def dependability_analysis(
             name = "my_dependability_analysis",
             safety_analysis = [":my_safety_analysis"],
             dfa = ["dependent_failure_analysis.rst"],
+            fmea = ["failure_mode_effects_analysis.rst"],
             arch_design = ":my_architectural_design",
         )
         ```
@@ -171,6 +185,7 @@ def dependability_analysis(
         name = name,
         safety_analysis = safety_analysis,
         dfa = dfa,
+        fmea = fmea,
         arch_design = arch_design,
         visibility = visibility,
     )

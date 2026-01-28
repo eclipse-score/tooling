@@ -256,7 +256,7 @@ def score_component(
         name = name + "_seooc_index",
         module_name = name,
         description = description,
-        template = "//bazel/rules/score_module:templates/seooc_index.template.rst",
+        template = Label("//bazel/rules/score_module:templates/seooc_index.template.rst"),
         assumptions_of_use = assumptions_of_use,
         component_requirements = component_requirements,
         architectural_design = architectural_design,
