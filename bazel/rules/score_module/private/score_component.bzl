@@ -29,7 +29,6 @@ load("//bazel/rules/score_module/private:sphinx_module.bzl", "sphinx_module")
 def _get_sphinx_files(target):
     return target[SphinxSourcesInfo].srcs.to_list()
 
-
 def _filter_doc_files(files):
     """Filter files to only include documentation files.
 
@@ -140,7 +139,7 @@ def _create_artifact_symlink(ctx, artifact_name, artifact_file, relative_path):
         Declared output file
     """
     output_file = ctx.actions.declare_file(
-        ctx.label.name + "/" + artifact_name + "/" + relative_path
+        ctx.label.name + "/" + artifact_name + "/" + relative_path,
     )
 
     ctx.actions.symlink(
@@ -184,7 +183,7 @@ def _process_artifact_files(ctx, artifact_name, label):
             ctx,
             artifact_name,
             artifact_file,
-            relative_path
+            relative_path,
         )
         output_files.append(output_file)
 
@@ -219,7 +218,7 @@ def _process_artifact_type(ctx, artifact_name):
         label_outputs, label_refs = _process_artifact_files(
             ctx,
             artifact_name,
-            label
+            label,
         )
         output_files.extend(label_outputs)
         index_refs.extend(label_refs)
