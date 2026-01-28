@@ -27,22 +27,11 @@ load("//bazel/rules/score_module/private:sphinx_module.bzl", "sphinx_module")
 # ============================================================================
 
 def _get_sphinx_files(target):
-    """Extract documentation files from a target.
+    return target[SphinxSourcesInfo].srcs.to_list()
 
-    Handles both targets with SphinxSourcesInfo provider and raw file targets.
-
-    Args:
-        target: A Bazel target that may provide SphinxSourcesInfo or raw files
-
-    Returns:
-        List of files suitable for Sphinx documentation
-    """
-    if SphinxSourcesInfo in target:
-        return target[SphinxSourcesInfo].srcs.to_list()
-    return target.files.to_list()
 
 def _filter_doc_files(files):
-    """Filter files to only include documentation files (.rst, .md).
+    """Filter files to only include documentation files.
 
     Args:
         files: List of files to filter
@@ -50,7 +39,192 @@ def _filter_doc_files(files):
     Returns:
         List of documentation files
     """
-    return [f for f in files if f.extension in ["rst", "md"]]
+    return [f for f in files if f.extension in ["rst", "md", "puml", "plantuml", "png", "svg"]]
+
+def _find_common_directory(files):
+    """Find the longest common directory path for a list of files.
+
+    Args:
+        files: List of File objects
+
+    Returns:
+        String representing the common directory path, or empty string if none
+    """
+    if not files:
+        return ""
+
+    # Get all directory paths
+    dirs = [f.dirname for f in files]
+
+    if not dirs:
+        return ""
+
+    # Start with first directory
+    common = dirs[0]
+
+    # Iterate through all directories to find common prefix
+    for d in dirs[1:]:
+        # Find common prefix between common and d
+        # Split into path components
+        common_parts = common.split("/")
+        d_parts = d.split("/")
+
+        # Find matching prefix
+        new_common_parts = []
+        for i in range(min(len(common_parts), len(d_parts))):
+            if common_parts[i] == d_parts[i]:
+                new_common_parts.append(common_parts[i])
+            else:
+                break
+
+        common = "/".join(new_common_parts)
+
+        if not common:
+            break
+
+    return common
+
+# ============================================================================
+# Path Computation and Validation Helpers
+# ============================================================================
+
+def _compute_relative_path(file, common_dir):
+    """Compute relative path from common directory to file.
+
+    Args:
+        file: File object
+        common_dir: Common directory path string
+
+    Returns:
+        String containing the relative path
+    """
+    file_dir = file.dirname
+
+    if not common_dir:
+        return file.basename
+
+    if not file_dir.startswith(common_dir):
+        return file.basename
+
+    if file_dir == common_dir:
+        return file.basename
+
+    relative_subdir = file_dir[len(common_dir):].lstrip("/")
+    return relative_subdir + "/" + file.basename
+
+def _is_document_file(file):
+    """Check if file should be included in toctree.
+
+    Args:
+        file: File object
+
+    Returns:
+        Boolean indicating if file is a document (.rst or .md)
+    """
+    return file.extension in ["rst", "md"]
+
+# ============================================================================
+# Artifact Processing Functions
+# ============================================================================
+
+def _create_artifact_symlink(ctx, artifact_name, artifact_file, relative_path):
+    """Create symlink for artifact file in output directory.
+
+    Args:
+        ctx: Rule context
+        artifact_name: Name of artifact type (e.g., "architectural_design")
+        artifact_file: Source file
+        relative_path: Relative path within artifact directory
+
+    Returns:
+        Declared output file
+    """
+    output_file = ctx.actions.declare_file(
+        ctx.label.name + "/" + artifact_name + "/" + relative_path
+    )
+
+    ctx.actions.symlink(
+        output = output_file,
+        target_file = artifact_file,
+    )
+
+    return output_file
+
+def _process_artifact_files(ctx, artifact_name, label):
+    """Process all files from a single label for a given artifact type.
+
+    Args:
+        ctx: Rule context
+        artifact_name: Name of artifact type
+        label: Label to process
+
+    Returns:
+        Tuple of (output_files, index_references)
+    """
+    output_files = []
+    index_refs = []
+
+    # Get and filter files
+    all_files = _get_sphinx_files(label)
+    doc_files = _filter_doc_files(all_files)
+
+    if not doc_files:
+        return (output_files, index_refs)
+
+    # Find common directory to preserve hierarchy
+    common_dir = _find_common_directory(doc_files)
+
+    # Process each file
+    for artifact_file in doc_files:
+        # Compute paths
+        relative_path = _compute_relative_path(artifact_file, common_dir)
+
+        # Create symlink
+        output_file = _create_artifact_symlink(
+            ctx,
+            artifact_name,
+            artifact_file,
+            relative_path
+        )
+        output_files.append(output_file)
+
+        # Add to index if it's a document file
+        if _is_document_file(artifact_file):
+            doc_ref = (artifact_name + "/" + relative_path) \
+                .replace(".rst", "") \
+                .replace(".md", "")
+            index_refs.append(doc_ref)
+
+    return (output_files, index_refs)
+
+def _process_artifact_type(ctx, artifact_name):
+    """Process all labels for a given artifact type.
+
+    Args:
+        ctx: Rule context
+        artifact_name: Name of artifact type (e.g., "architectural_design")
+
+    Returns:
+        Tuple of (output_files, index_references)
+    """
+    output_files = []
+    index_refs = []
+
+    attr_list = getattr(ctx.attr, artifact_name)
+    if not attr_list:
+        return (output_files, index_refs)
+
+    # Process each label
+    for label in attr_list:
+        label_outputs, label_refs = _process_artifact_files(
+            ctx,
+            artifact_name,
+            label
+        )
+        output_files.extend(label_outputs)
+        index_refs.extend(label_refs)
+
+    return (output_files, index_refs)
 
 def _software_component_index_impl(ctx):
     """Generate index.rst file with references to all SEooC artifacts.
@@ -66,57 +240,27 @@ def _software_component_index_impl(ctx):
         DefaultInfo provider with generated index.rst file
     """
 
-    # Declare output index.rst file
+    # Declare output index file
     index_rst = ctx.actions.declare_file(ctx.label.name + "/index.rst")
-
-    # Collect all artifact files and create symlinks
     output_files = [index_rst]
-    artifacts_by_type = {
-        "assumptions_of_use": [],
-        "component_requirements": [],
-        "architectural_design": [],
-        "dependability_analysis": [],
-        "checklists": [],
-    }
+
+    # Define artifact types to process
+    artifact_types = [
+        "assumptions_of_use",
+        "component_requirements",
+        "architectural_design",
+        "dependability_analysis",
+        "checklists",
+    ]
 
     # Process each artifact type
-    for artifact_name in artifacts_by_type:
-        attr_list = getattr(ctx.attr, artifact_name)
-        if attr_list:
-            # For label_list attributes, iterate over each label
-            for label in attr_list:
-                # Get files from SphinxSourcesInfo if available, otherwise use raw files
-                all_files = _get_sphinx_files(label)
+    artifacts_by_type = {}
+    for artifact_name in artifact_types:
+        files, refs = _process_artifact_type(ctx, artifact_name)
+        output_files.extend(files)
+        artifacts_by_type[artifact_name] = refs
 
-                # Filter to only include documentation files for the index
-                doc_files = _filter_doc_files(all_files)
-
-                for artifact_file in doc_files:
-                    # Check that artifact is not named index.rst
-                    if artifact_file.basename == "index.rst":
-                        fail("Error in {}: Artifact file '{}' in '{}' cannot be named 'index.rst' as this file is generated by the SEooC rule and would be overwritten.".format(
-                            ctx.label,
-                            artifact_file.path,
-                            artifact_name,
-                        ))
-
-                    # Create symlink in same directory as index
-                    output_file = ctx.actions.declare_file(
-                        ctx.label.name + "/" + artifact_file.basename,
-                    )
-                    output_files.append(output_file)
-
-                    # Symlink instead of copying for better performance
-                    ctx.actions.symlink(
-                        output = output_file,
-                        target_file = artifact_file,
-                    )
-
-                    # Add reference to index (without file extension)
-                    doc_ref = artifact_file.basename.replace(".rst", "").replace(".md", "")
-                    artifacts_by_type[artifact_name].append(doc_ref)
-
-    # Substitute template variables (template handles indentation)
+    # Generate index file from template
     title = ctx.attr.module_name
     underline = "=" * len(title)
 

@@ -16,11 +16,42 @@
 
 {description}
 
+Assumptions of Use
+------------------
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+
+   {assumptions_of_use}
+
+Component Requirements
+----------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   {component_requirements}
+
+Architectural Design
+--------------------
+
+.. toctree::
+   :maxdepth: 2
 
    {architectural_design}
-   {component_requirements}
-   {assumptions_of_use}
+
+Dependability Analysis
+----------------------
+
+.. toctree::
+   :maxdepth: 2
+
    {dependability_analysis}
+
+Checklists
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   {checklists}
