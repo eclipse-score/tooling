@@ -19,7 +19,7 @@ documentation following S-CORE process guidelines. Architectural design
 documents describe the software architecture including static and dynamic views.
 """
 
-load("//bazel/rules/score_module/private:providers.bzl", "SphinxSourcesInfo")
+load("//bazel/rules/score_module:providers.bzl", "SphinxSourcesInfo")
 
 # ============================================================================
 # Provider Definition

@@ -14,12 +14,14 @@ load(
     "//bazel/rules/score_module:score_module.bzl",
     "architectural_design",
     "assumptions_of_use",
+    "component",
     "component_requirements",
     "dependability_analysis",
+    "dependable_element",
     "feature_requirements",
     "safety_analysis",
-    "score_component",
     "sphinx_module",
+    "unit",
 )
 load(
     ":html_generation_test.bzl",
@@ -33,6 +35,16 @@ load(
     "seooc_artifacts_copied_test",
     "seooc_needs_provider_test",
     "seooc_sphinx_module_generated_test",
+)
+load(
+    ":unit_component_test.bzl",
+    "component_provider_test",
+    "component_sphinx_sources_test",
+    "dependable_element_provider_test",
+    "dependable_element_sphinx_sources_test",
+    "unit_component_test_suite",
+    "unit_provider_test",
+    "unit_sphinx_sources_test",
 )
 
 package(default_visibility = ["//visibility:public"])
@@ -120,18 +132,86 @@ safety_analysis(
     arch_design = ":arch_design",
 )
 
-score_component(
+dependable_element(
     name = "seooc_test_lib",
     architectural_design = [":arch_design"],
     assumptions_of_use = [":aous"],
-    component_requirements = [":comp_req"],
     dependability_analysis = [":dependability_analysis_target"],
     description = "Test SEooC module demonstrating S-CORE process compliance structure.",
-    implementations = [],
+    requirements = [":comp_req"],
+    consists_of = [],
     tests = [],
     deps = [
         ":module_c_lib",  # dependency to other seoocs/score_components
     ],
+)
+
+# ============================================================================
+# Test Fixtures - Unit, Component, and Dependable Element
+# ============================================================================
+
+# Mock implementation targets with dummy functions
+cc_library(
+    name = "mock_lib1",
+    srcs = ["fixtures/mock_lib1.cc"],
+)
+
+cc_library(
+    name = "mock_lib2",
+    srcs = ["fixtures/mock_lib2.cc"],
+)
+
+cc_binary(
+    name = "test_component_binary",
+    srcs = ["fixtures/test_component_main.cc"],
+    deps = [
+        ":mock_lib1",
+        ":mock_lib2",
+    ],
+)
+
+cc_test(
+    name = "test_unit_tests",
+    srcs = ["fixtures/test_unit_test.cc"],
+    deps = [
+        ":mock_lib1",
+        ":mock_lib2",
+    ],
+)
+
+# Test Unit
+unit(
+    name = "test_unit",
+    implementation = [
+        ":mock_lib1",
+        ":mock_lib2",
+    ],
+    tests = [":test_unit_tests"],
+    testonly = True,
+    unit_design = [":arch_design"],
+)
+
+# Test Component
+component(
+    name = "test_component",
+    component_requirements = [":comp_req"],
+    implementation = [":test_component_binary"],
+    tests = [],  # Empty for testing
+    testonly = True,
+    units = [":test_unit"],
+)
+
+# Test Dependable Element
+dependable_element(
+    name = "test_dependable_element",
+    architectural_design = [":arch_design"],
+    assumptions_of_use = [":aous"],
+    consists_of = [":test_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    description = "Test dependable element for unit testing",
+    requirements = [":comp_req"],
+    tests = [],  # Empty for testing
+    testonly = True,
 )
 
 # ============================================================================
@@ -162,7 +242,7 @@ html_merging_test(
 # Test that all artifacts are copied
 seooc_artifacts_copied_test(
     name = "seooc_tests_artifacts_copied",
-    target_under_test = ":seooc_test_lib_seooc_index",
+    target_under_test = ":seooc_test_lib_index",
 )
 
 # Test that sphinx_module is generated with correct providers
@@ -194,11 +274,56 @@ test_suite(
     ],
 )
 
+# ============================================================================
+# Unit, Component, and Dependable Element Test Instantiations
+# ============================================================================
+
+# Unit tests
+unit_provider_test(
+    name = "unit_provider_test",
+    target_under_test = ":test_unit",
+)
+
+unit_sphinx_sources_test(
+    name = "unit_sphinx_sources_test",
+    target_under_test = ":test_unit",
+)
+
+# Component tests
+component_provider_test(
+    name = "component_provider_test",
+    target_under_test = ":test_component",
+)
+
+component_sphinx_sources_test(
+    name = "component_sphinx_sources_test",
+    target_under_test = ":test_component",
+)
+
+# Dependable Element tests
+dependable_element_provider_test(
+    name = "dependable_element_provider_test",
+    target_under_test = ":test_dependable_element_provider",
+)
+
+dependable_element_sphinx_sources_test(
+    name = "dependable_element_sphinx_sources_test",
+    target_under_test = ":test_dependable_element_provider",
+)
+
+# Unit, Component, and Dependable Element test suite
+unit_component_test_suite(name = "unit_component_tests")
+
+# ============================================================================
+# Combined Test Suite
+# ============================================================================
+
 # Combined test suite for all tests
 test_suite(
     name = "all_tests",
     tests = [
         ":seooc_tests",
         ":sphinx_module_tests",
+        ":unit_component_tests",
     ],
 )

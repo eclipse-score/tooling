@@ -12,18 +12,19 @@
 # *******************************************************************************
 
 """
-Safety Element out of Context (SEooC) build rules for S-CORE projects.
+Dependable Element build rules for S-CORE projects.
 
-This module provides macros and rules for building SEooC documentation modules
-following S-CORE process guidelines. A SEooC is a safety-related element developed
-independently of a specific vehicle project.
+This module provides macros and rules for defining dependable elements (Safety
+Elements out of Context - SEooC) following S-CORE process guidelines. A dependable
+element is a safety-critical component with comprehensive documentation including
+assumptions of use, requirements, design, and safety analysis.
 """
 
-load("//bazel/rules/score_module/private:providers.bzl", "SphinxSourcesInfo")
 load("//bazel/rules/score_module/private:sphinx_module.bzl", "sphinx_module")
+load("//bazel/rules/score_module:providers.bzl", "SphinxSourcesInfo")
 
 # ============================================================================
-# Private Rule Implementation
+# Helper Functions for Documentation Generation
 # ============================================================================
 
 def _get_sphinx_files(target):
@@ -83,10 +84,6 @@ def _find_common_directory(files):
 
     return common
 
-# ============================================================================
-# Path Computation and Validation Helpers
-# ============================================================================
-
 def _compute_relative_path(file, common_dir):
     """Compute relative path from common directory to file.
 
@@ -121,10 +118,6 @@ def _is_document_file(file):
         Boolean indicating if file is a document (.rst or .md)
     """
     return file.extension in ["rst", "md"]
-
-# ============================================================================
-# Artifact Processing Functions
-# ============================================================================
 
 def _create_artifact_symlink(ctx, artifact_name, artifact_file, relative_path):
     """Create symlink for artifact file in output directory.
@@ -244,6 +237,7 @@ def _process_deps(ctx):
     links = []
     for dep in ctx.attr.deps:
         dep_name = dep.label.name
+
         # Create a link to the index.html that will be merged
         # Format: * `Module Name <module_name/index.html>`_
         # Use underscores in name for readability, convert to spaces for display
@@ -252,12 +246,15 @@ def _process_deps(ctx):
 
     return "\n".join(links)
 
-def _software_component_index_impl(ctx):
-    """Generate index.rst file with references to all SEooC artifacts.
+# ============================================================================
+# Index Generation Rule Implementation
+# ============================================================================
+
+def _dependable_element_index_impl(ctx):
+    """Generate index.rst file with references to all dependable element artifacts.
 
     This rule creates a Sphinx index.rst file that includes references to all
-    the SEooC documentation artifacts (assumptions of use, requirements, design,
-    and safety analysis).
+    the documentation artifacts for the dependable element.
 
     Args:
         ctx: Rule context
@@ -271,9 +268,10 @@ def _software_component_index_impl(ctx):
     output_files = [index_rst]
 
     # Define artifact types to process
+    # Note: "requirements" can contain both component_requirements and feature_requirements
     artifact_types = [
         "assumptions_of_use",
-        "component_requirements",
+        "requirements",
         "architectural_design",
         "dependability_analysis",
         "checklists",
@@ -287,8 +285,6 @@ def _software_component_index_impl(ctx):
         artifacts_by_type[artifact_name] = refs
 
     # Process dependencies (submodules)
-    # The HTML merger will handle copying the actual HTML files
-    # We generate RST links that will work once HTML is merged
     deps_links = _process_deps(ctx)
 
     # Generate index file from template
@@ -303,7 +299,7 @@ def _software_component_index_impl(ctx):
             "{underline}": underline,
             "{description}": ctx.attr.description,
             "{assumptions_of_use}": "\n   ".join(artifacts_by_type["assumptions_of_use"]),
-            "{component_requirements}": "\n   ".join(artifacts_by_type["component_requirements"]),
+            "{component_requirements}": "\n   ".join(artifacts_by_type["requirements"]),
             "{architectural_design}": "\n   ".join(artifacts_by_type["architectural_design"]),
             "{dependability_analysis}": "\n   ".join(artifacts_by_type["dependability_analysis"]),
             "{checklists}": "\n   ".join(artifacts_by_type["checklists"]),
@@ -315,41 +311,37 @@ def _software_component_index_impl(ctx):
         DefaultInfo(files = depset(output_files)),
     ]
 
-# ============================================================================
-# Private Rule Definition
-# ============================================================================
-
-_software_component_index = rule(
-    implementation = _software_component_index_impl,
-    doc = "Generates index.rst file with references to SEooC artifacts",
+_dependable_element_index = rule(
+    implementation = _dependable_element_index_impl,
+    doc = "Generates index.rst file with references to dependable element artifacts",
     attrs = {
         "module_name": attr.string(
             mandatory = True,
-            doc = "Name of the SEooC module (used as document title)",
+            doc = "Name of the dependable element module (used as document title)",
         ),
         "description": attr.string(
             mandatory = True,
-            doc = "Description of the SEooC component that appears at the beginning of the documentation. Supports RST formatting.",
+            doc = "Description of the dependable element. Supports RST formatting.",
         ),
         "assumptions_of_use": attr.label_list(
             mandatory = True,
-            doc = "Assumptions of Use targets or files as defined in the S-CORE process. Can be assumptions_of_use targets or raw .rst/.md files.",
+            doc = "Assumptions of Use targets or files.",
         ),
-        "component_requirements": attr.label_list(
+        "requirements": attr.label_list(
             mandatory = True,
-            doc = "Component requirements targets or files as defined in the S-CORE process. Can be component_requirements targets or raw .rst/.md files.",
+            doc = "Requirements targets (component_requirements, feature_requirements, etc.).",
         ),
         "architectural_design": attr.label_list(
             mandatory = True,
-            doc = "Architectural design targets or files as defined in the S-CORE process. Can be architectural_design targets or raw .rst/.md files.",
+            doc = "Architectural design targets or files.",
         ),
         "dependability_analysis": attr.label_list(
             mandatory = True,
-            doc = "Dependability analysis targets or files as defined in the S-CORE process. Can be dependability_analysis targets or raw .rst/.md files.",
+            doc = "Dependability analysis targets or files.",
         ),
         "checklists": attr.label_list(
-            mandatory = True,
-            doc = "Safety checklists targets or files as defined in the S-CORE process.",
+            default = [],
+            doc = "Safety checklists targets or files.",
         ),
         "template": attr.label(
             allow_single_file = [".rst"],
@@ -358,101 +350,118 @@ _software_component_index = rule(
         ),
         "deps": attr.label_list(
             default = [],
-            doc = "Dependencies on other score_component modules (submodules). Their index.rst files will be linked in the Submodules section.",
+            doc = "Dependencies on other dependable element modules (submodules).",
         ),
     },
 )
+
 
 # ============================================================================
 # Public Macro
 # ============================================================================
 
-def score_component(
+def dependable_element(
         name,
+        description,
         assumptions_of_use,
-        component_requirements,
+        requirements,
         architectural_design,
         dependability_analysis,
-        description,
+        components,
+        tests,
         checklists = [],
-        implementations = [],
-        tests = [],
         deps = [],
-        sphinx = "//bazel/rules/score_module:score_build",
+        sphinx = Label("@score_tooling//bazel/rules/score_module:score_build"),
+        testonly = True,
         visibility = None):
-    """Define a Safety Element out of Context (SEooC) following S-CORE process guidelines.
+    """Define a dependable element (Safety Element out of Context - SEooC) following S-CORE process guidelines.
 
-    This macro creates a complete SEooC module with integrated documentation
-    generation. It generates an index.rst file referencing all SEooC artifacts
-    and builds HTML documentation using the sphinx_module infrastructure.
+    This macro creates a complete dependable element with integrated documentation
+    generation. It generates an index.rst file referencing all artifacts and builds
+    HTML documentation using the sphinx_module infrastructure.
 
-    A SEooC is a safety-related architectural element (e.g., a software component)
-    that is developed independently of a specific vehicle project and can be
-    integrated into different vehicle platforms.
+    A dependable element is a safety-critical component that can be developed
+    independently and integrated into different systems. It includes comprehensive
+    documentation covering all aspects required for safety certification.
 
     Args:
-        name: The name of the safety element module. Used as the base name for
+        name: The name of the dependable element. Used as the base name for
             all generated targets.
-        assumptions_of_use: List of labels to assumptions_of_use targets or raw
-            .rst/.md files containing the Assumptions of Use, which define the
-            safety-relevant operating conditions and constraints for the SEooC
-            as defined in the S-CORE process.
-        component_requirements: List of labels to component_requirements targets
-            or raw .rst/.md files containing the component requirements specification,
-            defining functional and safety requirements as defined in the S-CORE process.
-        architectural_design: List of labels to architectural_design targets or raw
-            .rst/.md files containing the architectural design specification, describing
-            the software architecture and design decisions as defined in the S-CORE process.
-        dependability_analysis: List of labels to dependability_analysis targets or raw
-            .rst/.md files containing the safety analysis, including FMEA, FMEDA, FTA,
-            or other safety analysis results as defined in the S-CORE process.
-        description: String containing a high-level description of the SEooC
-            component. This text appears at the beginning of the generated documentation,
-            providing context about what the component does and its purpose.
+        description: String containing a high-level description of the element.
+            This text provides context about what the element does and its purpose.
             Supports RST formatting.
+        assumptions_of_use: List of labels to assumptions_of_use targets that
+            define the safety-relevant operating conditions and constraints.
+        requirements: List of labels to requirements targets (component_requirements,
+            feature_requirements, etc.) that define functional and safety requirements.
+        architectural_design: List of labels to architectural_design targets that
+            describe the software architecture and design decisions.
+        dependability_analysis: List of labels to dependability_analysis targets
+            containing safety analysis results (FMEA, FMEDA, FTA, DFA, etc.).
+        components: List of labels to component and/or unit targets that implement
+            this dependable element.
+        tests: List of labels to Bazel test targets that verify the dependable
+            element at the system level (integration tests, system tests).
         checklists: Optional list of labels to .rst or .md files containing
-            safety checklists and verification documents as defined in the
-            S-CORE process.
-        implementations: Optional list of labels to Bazel targets representing
-            the actual software implementation (cc_library, cc_binary, etc.)
-            that realizes the component requirements. This is the source code
-            that implements the safety functions as defined in the S-CORE process.
-        tests: Optional list of labels to Bazel test targets (cc_test, py_test, etc.)
-            that verify the implementation against requirements. Includes unit
-            tests and integration tests as defined in the S-CORE process.
-        deps: Optional list of other sphinx_module or SEooC targets this module
-            depends on. Cross-references will work automatically.
+            safety checklists and verification documents.
+        deps: Optional list of other module targets this element depends on.
+            Cross-references will work automatically.
         sphinx: Label to sphinx build binary. Default: //bazel/rules/score_module:score_build
-        visibility: Bazel visibility specification for the generated SEooC targets.
+        testonly: If True, only testonly targets can depend on this target.
+        visibility: Bazel visibility specification for the dependable element target.
 
     Generated Targets:
-        <name>_seooc_index: Internal rule that generates index.rst and copies artifacts
-        <name>: Main SEooC target (sphinx_module) with HTML documentation
+        <name>_provider: Internal metadata provider with DependableElementInfo
+        <name>_index: Internal rule that generates index.rst and copies artifacts
+        <name>: Main dependable element target (sphinx_module) with HTML documentation
         <name>_needs: Internal target for sphinx-needs JSON generation
+
+    Example:
+        ```python
+        dependable_element(
+            name = "persistency_kvs",
+            description = '''
+            The Key-Value Store (KVS) component provides persistent storage capabilities
+            for safety-critical applications.
+            ''',
+            assumptions_of_use = [":kvs_assumptions_of_use"],
+            requirements = [":kvs_component_requirements"],
+            architectural_design = [":kvs_architectural_design"],
+            dependability_analysis = [":kvs_dependability_analysis"],
+            components = [":kvs_component", ":kvs_unit"],
+            tests = ["//persistency/kvs/tests:score_kvs_integration_tests"],
+            deps = [
+                "@score_process//:score_process_module",
+                "@score_platform//:score_platform_module",
+            ],
+            visibility = ["//visibility:public"],
+        )
+        ```
     """
 
     # Step 1: Generate index.rst and collect all artifacts
-    _software_component_index(
-        name = name + "_seooc_index",
+    _dependable_element_index(
+        name = name + "_index",
         module_name = name,
         description = description,
         template = Label("//bazel/rules/score_module:templates/seooc_index.template.rst"),
         assumptions_of_use = assumptions_of_use,
-        component_requirements = component_requirements,
+        requirements = requirements,
         architectural_design = architectural_design,
         dependability_analysis = dependability_analysis,
         checklists = checklists,
         deps = deps,
+        testonly = testonly,
         visibility = ["//visibility:private"],
     )
 
     # Step 2: Create sphinx_module using generated index and artifacts
-    # The index file is part of the _seooc_index target outputs
     sphinx_module(
         name = name,
-        srcs = [":" + name + "_seooc_index"],
-        index = ":" + name + "_seooc_index",  # Label to the target, not a path
+        srcs = [":" + name + "_index"],
+        index = ":" + name + "_index",
         deps = deps,
         sphinx = sphinx,
+        testonly = testonly,
         visibility = visibility,
     )

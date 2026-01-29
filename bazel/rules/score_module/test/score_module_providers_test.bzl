@@ -13,30 +13,30 @@
 """Tests for sphinx_module providers and two-phase build system."""
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//bazel/rules/score_module/private:score_module.bzl", "ScoreModuleInfo", "ScoreNeedsInfo")
+load("//bazel/rules/score_module/private:score_module.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
 
 # ============================================================================
-# ScoreModuleInfo Provider Tests
+# SphinxModuleInfo Provider Tests
 # ============================================================================
 
 def _sphinx_module_info_fields_test_impl(ctx):
-    """Test that ScoreModuleInfo provides all required fields."""
+    """Test that SphinxModuleInfo provides all required fields."""
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
     asserts.true(
         env,
-        ScoreModuleInfo in target_under_test,
-        "Target should provide ScoreModuleInfo",
+        SphinxModuleInfo in target_under_test,
+        "Target should provide SphinxModuleInfo",
     )
 
-    score_info = target_under_test[ScoreModuleInfo]
+    score_info = target_under_test[SphinxModuleInfo]
 
     # Verify html_dir field
     asserts.true(
         env,
         hasattr(score_info, "html_dir"),
-        "ScoreModuleInfo should have html_dir field",
+        "SphinxModuleInfo should have html_dir field",
     )
 
     asserts.true(
@@ -50,27 +50,27 @@ def _sphinx_module_info_fields_test_impl(ctx):
 sphinx_module_info_fields_test = analysistest.make(_sphinx_module_info_fields_test_impl)
 
 # ============================================================================
-# ScoreNeedsInfo Provider Tests
+# SphinxNeedsInfo Provider Tests
 # ============================================================================
 
 def _score_needs_info_fields_test_impl(ctx):
-    """Test that ScoreNeedsInfo provides all required fields."""
+    """Test that SphinxNeedsInfo provides all required fields."""
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
     asserts.true(
         env,
-        ScoreNeedsInfo in target_under_test,
-        "Needs target should provide ScoreNeedsInfo",
+        SphinxNeedsInfo in target_under_test,
+        "Needs target should provide SphinxNeedsInfo",
     )
 
-    needs_info = target_under_test[ScoreNeedsInfo]
+    needs_info = target_under_test[SphinxNeedsInfo]
 
     # Verify needs_json_file field (direct file)
     asserts.true(
         env,
         hasattr(needs_info, "needs_json_file"),
-        "ScoreNeedsInfo should have needs_json_file field",
+        "SphinxNeedsInfo should have needs_json_file field",
     )
 
     asserts.true(
@@ -83,7 +83,7 @@ def _score_needs_info_fields_test_impl(ctx):
     asserts.true(
         env,
         hasattr(needs_info, "needs_json_files"),
-        "ScoreNeedsInfo should have needs_json_files field",
+        "SphinxNeedsInfo should have needs_json_files field",
     )
 
     asserts.true(
@@ -108,7 +108,7 @@ def _score_needs_transitive_collection_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    needs_info = target_under_test[ScoreNeedsInfo]
+    needs_info = target_under_test[SphinxNeedsInfo]
 
     # Get the list of transitive needs files
     transitive_needs = needs_info.needs_json_files.to_list()
@@ -137,7 +137,7 @@ def _score_needs_with_deps_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    needs_info = target_under_test[ScoreNeedsInfo]
+    needs_info = target_under_test[SphinxNeedsInfo]
     transitive_needs = needs_info.needs_json_files.to_list()
 
     # Module with dependencies should have multiple needs files
@@ -161,11 +161,11 @@ def _two_phase_needs_first_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    # Verify ScoreNeedsInfo provider
+    # Verify SphinxNeedsInfo provider
     asserts.true(
         env,
-        ScoreNeedsInfo in target_under_test,
-        "Phase 1 should provide ScoreNeedsInfo",
+        SphinxNeedsInfo in target_under_test,
+        "Phase 1 should provide SphinxNeedsInfo",
     )
 
     # Verify DefaultInfo with needs.json output
@@ -194,14 +194,14 @@ def _two_phase_html_second_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    # Verify ScoreModuleInfo provider
+    # Verify SphinxModuleInfo provider
     asserts.true(
         env,
-        ScoreModuleInfo in target_under_test,
-        "Phase 2 should provide ScoreModuleInfo",
+        SphinxModuleInfo in target_under_test,
+        "Phase 2 should provide SphinxModuleInfo",
     )
 
-    score_info = target_under_test[ScoreModuleInfo]
+    score_info = target_under_test[SphinxModuleInfo]
 
     # Verify HTML output
     asserts.true(
@@ -223,7 +223,7 @@ def _config_auto_generation_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    score_info = target_under_test[ScoreModuleInfo]
+    score_info = target_under_test[SphinxModuleInfo]
 
     # Module without explicit config should still build
     asserts.true(
@@ -241,7 +241,7 @@ def _config_explicit_usage_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    score_info = target_under_test[ScoreModuleInfo]
+    score_info = target_under_test[SphinxModuleInfo]
 
     # Module with explicit config should build
     asserts.true(
@@ -263,7 +263,7 @@ def _deps_html_merging_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    score_info = target_under_test[ScoreModuleInfo]
+    score_info = target_under_test[SphinxModuleInfo]
 
     # Module with dependencies should generate merged HTML
     asserts.true(
@@ -281,7 +281,7 @@ def _deps_needs_collection_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    needs_info = target_under_test[ScoreNeedsInfo]
+    needs_info = target_under_test[SphinxNeedsInfo]
     transitive_needs = needs_info.needs_json_files.to_list()
 
     # Should collect needs from dependencies

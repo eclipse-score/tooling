@@ -21,7 +21,7 @@ a comprehensive view of component reliability and safety.
 """
 
 load("//bazel/rules/score_module/private:architectural_design.bzl", "ArchitecturalDesignInfo")
-load("//bazel/rules/score_module/private:providers.bzl", "SphinxSourcesInfo")
+load("//bazel/rules/score_module:providers.bzl", "SphinxSourcesInfo")
 load("//bazel/rules/score_module/private:safety_analysis.bzl", "SafetyAnalysisInfo")
 
 # ============================================================================

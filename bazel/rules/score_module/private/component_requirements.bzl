@@ -20,7 +20,7 @@ feature requirements and define the specific requirements for a software compone
 """
 
 load("//bazel/rules/score_module/private:feature_requirements.bzl", "FeatureRequirementsInfo")
-load("//bazel/rules/score_module/private:providers.bzl", "SphinxSourcesInfo")
+load("//bazel/rules/score_module:providers.bzl", "SphinxSourcesInfo")
 
 # ============================================================================
 # Provider Definition

@@ -2,14 +2,14 @@
 # Providers
 # ======================================================================================
 
-ScoreModuleInfo = provider(
+SphinxModuleInfo = provider(
     doc = "Provider for Sphinx HTML module documentation",
     fields = {
         "html_dir": "Directory containing HTML files",
     },
 )
 
-ScoreNeedsInfo = provider(
+SphinxNeedsInfo = provider(
     doc = "Provider for sphinx-needs info",
     fields = {
         "needs_json_file": "Direct needs.json file for this module",
@@ -117,18 +117,19 @@ def _score_needs_impl(ctx):
         executable = ctx.executable.sphinx,
     )
 
-    transitive_needs = [dep[ScoreNeedsInfo].needs_json_files for dep in ctx.attr.deps if ScoreNeedsInfo in dep]
+    transitive_needs = [dep[SphinxNeedsInfo].needs_json_files for dep in ctx.attr.deps if SphinxNeedsInfo in dep]
     needs_json_files = depset([needs_output], transitive = transitive_needs)
 
     return [
         DefaultInfo(
             files = needs_json_files,
         ),
-        ScoreNeedsInfo(
+        SphinxNeedsInfo(
             needs_json_file = needs_output,  # Direct file only
             needs_json_files = needs_json_files,  # Transitive depset
         ),
     ]
+
 
 def _score_html_impl(ctx):
     """Implementation for building a Sphinx module with two-phase build.
@@ -142,18 +143,18 @@ def _score_html_impl(ctx):
 
     needs_external_needs = {}
     for dep in ctx.attr.needs:
-        if ScoreNeedsInfo in dep:
+        if SphinxNeedsInfo in dep:
             dep_name = dep.label.name.replace("_needs", "")
             needs_external_needs[dep.label.name] = {
                 "base_url": dep_name,  # Relative path to the subdirectory where dep HTML is copied
-                "json_path": dep[ScoreNeedsInfo].needs_json_file.path,  # Use direct file
+                "json_path": dep[SphinxNeedsInfo].needs_json_file.path,  # Use direct file
                 "id_prefix": "",
                 "css_class": "",
             }
 
     for dep in ctx.attr.deps:
-        if ScoreModuleInfo in dep:
-            modules.extend([dep[ScoreModuleInfo].html_dir])
+        if SphinxModuleInfo in dep:
+            modules.extend([dep[SphinxModuleInfo].html_dir])
 
     needs_external_needs_json = ctx.actions.declare_file(ctx.label.name + "/needs_external_needs.json")
 
@@ -211,8 +212,8 @@ def _score_html_impl(ctx):
 
     # Add each dependency
     for dep in ctx.attr.deps:
-        if ScoreModuleInfo in dep:
-            dep_html_dir = dep[ScoreModuleInfo].html_dir
+        if SphinxModuleInfo in dep:
+            dep_html_dir = dep[SphinxModuleInfo].html_dir
             dep_name = dep.label.name
             merge_inputs.append(dep_html_dir)
             merge_args.extend(["--dep", dep_name + ":" + dep_html_dir.path])
@@ -228,7 +229,7 @@ def _score_html_impl(ctx):
 
     return [
         DefaultInfo(files = depset(ctx.files.needs + [html_output])),
-        ScoreModuleInfo(
+        SphinxModuleInfo(
             html_dir = html_output,
         ),
     ]
@@ -261,6 +262,7 @@ def sphinx_module(
         config = None,
         deps = [],
         sphinx = Label("//bazel/rules/score_module:score_build"),
+        testonly = False,
         visibility = ["//visibility:public"]):
     """Build a Sphinx module with transitive HTML dependencies.
 
@@ -284,6 +286,7 @@ def sphinx_module(
         index = index,
         deps = [d + "_needs" for d in deps],
         sphinx = sphinx,
+        testonly = testonly,
         visibility = visibility,
     )
 
@@ -295,5 +298,6 @@ def sphinx_module(
         deps = deps,
         needs = [d + "_needs" for d in deps],
         sphinx = sphinx,
+        testonly = testonly,
         visibility = visibility,
     )

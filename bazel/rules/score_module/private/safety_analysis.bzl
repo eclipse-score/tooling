@@ -20,7 +20,7 @@ control measures, fault tree analysis, and other safety-related artifacts.
 """
 
 load("//bazel/rules/score_module/private:architectural_design.bzl", "ArchitecturalDesignInfo")
-load("//bazel/rules/score_module/private:providers.bzl", "SphinxSourcesInfo")
+load("//bazel/rules/score_module:providers.bzl", "SphinxSourcesInfo")
 
 # ============================================================================
 # Provider Definition

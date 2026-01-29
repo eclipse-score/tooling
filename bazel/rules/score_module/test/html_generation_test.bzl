@@ -13,7 +13,7 @@
 """Test rules for sphinx_module HTML generation and dependencies."""
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//bazel/rules/score_module/private:sphinx_module.bzl", "ScoreModuleInfo", "ScoreNeedsInfo")
+load("//bazel/rules/score_module/private:sphinx_module.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
 
 # ============================================================================
 # Provider Tests
@@ -27,8 +27,8 @@ def _providers_test_impl(ctx):
     # Verify required providers
     asserts.true(
         env,
-        ScoreModuleInfo in target_under_test,
-        "Target should provide ScoreModuleInfo",
+        SphinxModuleInfo in target_under_test,
+        "Target should provide SphinxModuleInfo",
     )
 
     asserts.true(
@@ -51,7 +51,7 @@ def _basic_html_generation_test_impl(ctx):
     target_under_test = analysistest.target_under_test(env)
 
     # Check that HTML directory exists
-    score_info = target_under_test[ScoreModuleInfo]
+    score_info = target_under_test[SphinxModuleInfo]
     asserts.true(
         env,
         score_info.html_dir != None,
@@ -71,7 +71,7 @@ def _needs_generation_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    # Check for ScoreNeedsInfo provider on _needs target
+    # Check for SphinxNeedsInfo provider on _needs target
     # Note: This test requires the _needs suffix target
     asserts.true(
         env,
@@ -88,14 +88,14 @@ def _needs_transitive_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    # Verify ScoreNeedsInfo provider
+    # Verify SphinxNeedsInfo provider
     asserts.true(
         env,
-        ScoreNeedsInfo in target_under_test,
-        "Needs target should provide ScoreNeedsInfo",
+        SphinxNeedsInfo in target_under_test,
+        "Needs target should provide SphinxNeedsInfo",
     )
 
-    needs_info = target_under_test[ScoreNeedsInfo]
+    needs_info = target_under_test[SphinxNeedsInfo]
 
     # Check direct needs.json file
     asserts.true(
@@ -124,7 +124,7 @@ def _module_dependencies_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    score_info = target_under_test[ScoreModuleInfo]
+    score_info = target_under_test[SphinxModuleInfo]
 
     # Module with dependencies should still generate HTML
     asserts.true(
@@ -142,7 +142,7 @@ def _html_merging_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    score_info = target_under_test[ScoreModuleInfo]
+    score_info = target_under_test[SphinxModuleInfo]
 
     # Verify merged HTML output exists
     asserts.true(
@@ -164,7 +164,7 @@ def _auto_config_generation_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    score_info = target_under_test[ScoreModuleInfo]
+    score_info = target_under_test[SphinxModuleInfo]
 
     # Module without explicit config should still generate HTML
     asserts.true(
@@ -182,7 +182,7 @@ def _explicit_config_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    score_info = target_under_test[ScoreModuleInfo]
+    score_info = target_under_test[SphinxModuleInfo]
 
     # Module with explicit config should generate HTML
     asserts.true(
