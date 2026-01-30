@@ -128,32 +128,33 @@ def get_author_from_config(config_path: Path = None) -> str:
 def convert_bre_to_regex(template: str) -> str:
     """
     Convert a BRE-like template into a regex:
-    - '\' escapes one character into a regex meta character
-    - '*' is literal unless escaped as '\*' (implicitly covered)
-    - everything else is taken literally
+    - '\' escapes the following character and inserts it as a regex meta character
+    - '*' is treated as a literal asterisk character
+    - '\*' in the template yields the regex meta character '*' (zero or more of the preceding element)
+    - everything else is taken literally (escaped with re.escape)
     """
 
-    out = []
+    escaped = []
     i = 0
-    L = len(template)
+    template_len = len(template)
 
-    while i < L:
-        ch = template[i]
+    while i < template_len:
+        current_ch = template[i]
 
         # Escape sequences
-        if ch == "\\" and i + 1 < L:
+        if current_ch == "\\" and i + 1 < template_len:
             nxt = template[i + 1]
 
             # Next char becomes regex meta character
-            out.append(nxt)
+            escaped.append(nxt)
             i += 2
             continue
 
         # Literal characters → re.escape
-        out.append(re.escape(ch))
+        escaped.append(re.escape(current_ch))
         i += 1
 
-    return "".join(out)
+    return "".join(escaped)
 
 
 def load_templates(path):
