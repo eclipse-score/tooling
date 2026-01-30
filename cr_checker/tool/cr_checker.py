@@ -124,17 +124,33 @@ def get_author_from_config(config_path: Path = None) -> str:
 
 def convert_bre_to_regex(template: str) -> str:
     """
-    Convert BRE-style template (literal by default) to standard regex.
-    In the template: * is literal, \\* is a metacharacter.
+    Convert a BRE-like template into a regex:
+    - '\' escapes one character into a regex meta character
+    - '*' is literal unless escaped as '\*' (implicitly covered)
+    - everything else is taken literally
     """
-    # First, escape all regex metacharacters to make them literal
-    escaped = re.escape(template)
-    # Now, find escaped backslashes followed by escaped metacharacters
-    # and convert them back to actual regex metacharacters
-    metacharacters = r"\\.*+-?[]{}()^$|"
-    for char in metacharacters:
-        escaped = escaped.replace(re.escape("\\" + char), char)
-    return escaped
+
+    out = []
+    i = 0
+    L = len(template)
+
+    while i < L:
+        ch = template[i]
+
+        # Escape sequences
+        if ch == "\\" and i + 1 < L:
+            nxt = template[i + 1]
+
+            # Next char becomes regex meta character
+            out.append(nxt)
+            i += 2
+            continue
+
+        # Literal characters → re.escape
+        out.append(re.escape(ch))
+        i += 1
+
+    return "".join(out)
 
 
 def load_templates(path):
@@ -194,7 +210,7 @@ def load_exclusion(path):
         path (str): Path to the exclusion file.
 
     Returns:
-        tuple(list, bool): a list of files that are excluded from the coypright check and a boolean indicating whether
+        tuple(list, bool): a list of files that are excluded from the copyright check and a boolean indicating whether
                            all paths listed in the exclusion file exist and are files.
     """
 
