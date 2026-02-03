@@ -112,7 +112,7 @@ def _component_provider_test_impl(ctx):
 
     asserts.true(
         env,
-        comp_info.component_requirements != None,
+        comp_info.requirements != None,
         "ComponentInfo should have component_requirements field",
     )
 

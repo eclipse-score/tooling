@@ -225,7 +225,7 @@ Complete Example
    # Structure
    unit(name = "kvs_unit", unit_design = [":arch"],
         implementation = [":kvs_lib"], tests = [":kvs_test"])
-   component(name = "kvs_component", component_requirements = [":reqs"],
+   component(name = "kvs_component", requirements = [":reqs"],
              units = [":kvs_unit"], implementation = [":kvs_lib"], tests = [])
 
    # SEooC

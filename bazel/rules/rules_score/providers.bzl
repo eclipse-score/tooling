@@ -50,7 +50,7 @@ ComponentInfo = provider(
     doc = "Provider for component artifacts",
     fields = {
         "name": "Name of the component target",
-        "component_requirements": "Depset of component requirements artifacts",
+        "requirements": "Depset of component requirements artifacts",
         "implementation": "Depset of implementation targets (libraries, binaries)",
         "units": "Depset of unit targets that comprise this component",
         "tests": "Depset of component-level integration test targets",

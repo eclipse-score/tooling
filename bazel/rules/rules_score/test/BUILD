@@ -197,7 +197,7 @@ unit(
 component(
     name = "test_component",
     testonly = True,
-    component_requirements = [":comp_req"],
+    requirements = [":comp_req"],
     tests = [],  # Empty for testing
     units = [":test_unit"],
     implementation = [":test_component_binary"],

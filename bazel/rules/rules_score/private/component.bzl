@@ -40,7 +40,7 @@ def _component_impl(ctx):
 
     # Collect requirements files from component_requirements targets
     requirements_files = []
-    for req_target in ctx.attr.component_requirements:
+    for req_target in ctx.attr.requirements:
         if SphinxSourcesInfo in req_target:
             requirements_files.append(req_target[SphinxSourcesInfo].srcs)
 
@@ -62,7 +62,7 @@ def _component_impl(ctx):
         DefaultInfo(files = all_files),
         ComponentInfo(
             name = ctx.label.name,
-            component_requirements = requirements_depset,
+            requirements = requirements_depset,
             implementation = implementation_depset,
             units = units_depset,
             tests = tests_depset,
@@ -81,7 +81,7 @@ _component = rule(
     implementation = _component_impl,
     doc = "Defines a software component composed of multiple units for S-CORE process compliance",
     attrs = {
-        "component_requirements": attr.label_list(
+        "requirements": attr.label_list(
             mandatory = True,
             doc = "Component requirements artifacts (typically component_requirements targets)",
         ),
@@ -106,7 +106,6 @@ _component = rule(
 
 def component(
         name,
-        component_requirements = None,
         units = None,
         tests = [],
         implementation = [],
@@ -141,7 +140,7 @@ def component(
         ```python
         component(
             name = "kvs_component",
-            component_requirements = [":kvs_component_requirements"],
+            requirements = [":kvs_component_requirements"],
             implementation = [":kvs_lib", ":kvs_tool"],
             units = [":kvs_unit1", ":kvs_unit2"],
             tests = ["//persistency/kvs/tests:score_kvs_component_integration_tests"],
@@ -151,17 +150,17 @@ def component(
     """
 
     # Support both old parameter names and new aliases
-    final_requirements = component_requirements if component_requirements != None else requirements
+    final_requirements = requirements
     final_units = units if units != None else components
 
     if final_requirements == None:
-        fail("component() requires either 'component_requirements' or 'requirements' parameter")
+        fail("component() requires 'requirements' parameter")
     if final_units == None:
         fail("component() requires either 'units' or 'components' parameter")
 
     _component(
         name = name,
-        component_requirements = final_requirements,
+        requirements = final_requirements,
         implementation = implementation,
         units = final_units,
         tests = tests,
