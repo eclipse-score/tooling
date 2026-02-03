@@ -30,7 +30,6 @@ ComponentRequirementsInfo = provider(
     doc = "Provider for component requirements artifacts",
     fields = {
         "srcs": "Depset of source files containing component requirements",
-        "feature_requirements": "List of FeatureRequirementsInfo providers this component traces to",
         "name": "Name of the component requirements target",
     },
 )
@@ -69,7 +68,6 @@ def _component_requirements_impl(ctx):
         DefaultInfo(files = srcs),
         ComponentRequirementsInfo(
             srcs = srcs,
-            feature_requirements = feature_reqs,
             name = ctx.label.name,
         ),
         SphinxSourcesInfo(
@@ -90,11 +88,6 @@ _component_requirements = rule(
             allow_files = [".rst", ".md", ".trlc"],
             mandatory = True,
             doc = "Source files containing component requirements specifications",
-        ),
-        "feature_requirement": attr.label_list(
-            providers = [FeatureRequirementsInfo],
-            mandatory = False,
-            doc = "List of feature_requirements targets that these component requirements trace to",
         ),
     },
 )
