@@ -97,7 +97,7 @@ use_repo(multitool, "yamlfmt_hub")
 bazel_dep(name = "score_docs_as_code", version = "2.2.0")
 git_override(
     module_name = "score_docs_as_code",
-    commit = "17cf66e3449f0aa9e9fe22fe3ab1fbbffad733cf",
+    commit = "718388bd5e0f10debd97a131d238ad4d758ddd1e",
     remote = "https://github.com/eclipse-score/docs-as-code.git",
 )
 
