@@ -19,7 +19,7 @@ following S-CORE process guidelines. A component consists of multiple units
 with associated requirements and tests.
 """
 
-load("//bazel/rules/score_module:providers.bzl", "ComponentInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "ComponentInfo", "SphinxSourcesInfo")
 
 # ============================================================================
 # Private Rule Implementation
@@ -149,6 +149,7 @@ def component(
         )
         ```
     """
+
     # Support both old parameter names and new aliases
     final_requirements = component_requirements if component_requirements != None else requirements
     final_units = units if units != None else components

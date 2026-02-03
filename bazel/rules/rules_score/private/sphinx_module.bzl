@@ -70,12 +70,12 @@ sphinx_rule_attrs = {
         doc = "List of other sphinx_module targets this module depends on for intersphinx.",
     ),
     "_config_template": attr.label(
-        default = Label("//bazel/rules/score_module:templates/conf.template.py"),
+        default = Label("//bazel/rules/rules_score:templates/conf.template.py"),
         allow_single_file = True,
         doc = "Template for generating default conf.py",
     ),
     "_html_merge_tool": attr.label(
-        default = Label("//bazel/rules/score_module:sphinx_html_merge"),
+        default = Label("//bazel/rules/rules_score:sphinx_html_merge"),
         executable = True,
         cfg = "exec",
         doc = "Tool for merging HTML directories",
@@ -129,7 +129,6 @@ def _score_needs_impl(ctx):
             needs_json_files = needs_json_files,  # Transitive depset
         ),
     ]
-
 
 def _score_html_impl(ctx):
     """Implementation for building a Sphinx module with two-phase build.
@@ -261,7 +260,7 @@ def sphinx_module(
         index,
         config = None,
         deps = [],
-        sphinx = Label("//bazel/rules/score_module:score_build"),
+        sphinx = Label("//bazel/rules/rules_score:score_build"),
         testonly = False,
         visibility = ["//visibility:public"]):
     """Build a Sphinx module with transitive HTML dependencies.

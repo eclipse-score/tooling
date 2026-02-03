@@ -20,8 +20,12 @@ element is a safety-critical component with comprehensive documentation includin
 assumptions of use, requirements, design, and safety analysis.
 """
 
-load("//bazel/rules/score_module/private:sphinx_module.bzl", "sphinx_module")
-load("//bazel/rules/score_module:providers.bzl", "SphinxSourcesInfo")
+load(
+    "//bazel/rules/rules_score:providers.bzl",
+    "DependableElementInfo",
+    "SphinxSourcesInfo",
+)
+load("//bazel/rules/rules_score/private:sphinx_module.bzl", "sphinx_module")
 
 # ============================================================================
 # Helper Functions for Documentation Generation
@@ -355,6 +359,90 @@ _dependable_element_index = rule(
     },
 )
 
+# ============================================================================
+# Provider Rule Implementation
+# ============================================================================
+
+def _dependable_element_provider_impl(ctx):
+    """Provide DependableElementInfo for a dependable element.
+
+    This rule collects metadata about the dependable element and provides
+    it through the DependableElementInfo provider.
+
+    Args:
+        ctx: Rule context
+
+    Returns:
+        List of providers including DependableElementInfo and SphinxSourcesInfo
+    """
+
+    # Collect depsets for each artifact type
+    assumptions_depset = depset(ctx.files.assumptions_of_use)
+    requirements_depset = depset(ctx.files.requirements)
+    arch_design_depset = depset(ctx.files.architectural_design)
+    dep_analysis_depset = depset(ctx.files.dependability_analysis)
+    components_depset = depset(ctx.attr.components)
+    tests_depset = depset(ctx.attr.tests)
+
+    # Collect all source files for Sphinx
+    all_files = depset(
+        direct = ctx.files.assumptions_of_use +
+                 ctx.files.requirements +
+                 ctx.files.architectural_design +
+                 ctx.files.dependability_analysis,
+    )
+
+    return [
+        DependableElementInfo(
+            name = ctx.label.name,
+            description = ctx.attr.description,
+            assumptions_of_use = assumptions_depset,
+            requirements = requirements_depset,
+            architectural_design = arch_design_depset,
+            dependability_analysis = dep_analysis_depset,
+            consists_of = components_depset,
+            tests = tests_depset,
+        ),
+        SphinxSourcesInfo(
+            srcs = all_files,
+            transitive_srcs = all_files,
+        ),
+    ]
+
+_dependable_element_provider = rule(
+    implementation = _dependable_element_provider_impl,
+    doc = "Provider rule for dependable element metadata",
+    attrs = {
+        "description": attr.string(
+            mandatory = True,
+            doc = "Description of the dependable element",
+        ),
+        "assumptions_of_use": attr.label_list(
+            mandatory = True,
+            doc = "Assumptions of Use targets or files",
+        ),
+        "requirements": attr.label_list(
+            mandatory = True,
+            doc = "Requirements targets",
+        ),
+        "architectural_design": attr.label_list(
+            mandatory = True,
+            doc = "Architectural design targets or files",
+        ),
+        "dependability_analysis": attr.label_list(
+            mandatory = True,
+            doc = "Dependability analysis targets or files",
+        ),
+        "components": attr.label_list(
+            default = [],
+            doc = "Component and/or unit targets that comprise this element",
+        ),
+        "tests": attr.label_list(
+            default = [],
+            doc = "Test targets",
+        ),
+    },
+)
 
 # ============================================================================
 # Public Macro
@@ -371,7 +459,7 @@ def dependable_element(
         tests,
         checklists = [],
         deps = [],
-        sphinx = Label("@score_tooling//bazel/rules/score_module:score_build"),
+        sphinx = Label("@score_tooling//bazel/rules/rules_score:score_build"),
         testonly = True,
         visibility = None):
     """Define a dependable element (Safety Element out of Context - SEooC) following S-CORE process guidelines.
@@ -406,7 +494,7 @@ def dependable_element(
             safety checklists and verification documents.
         deps: Optional list of other module targets this element depends on.
             Cross-references will work automatically.
-        sphinx: Label to sphinx build binary. Default: //bazel/rules/score_module:score_build
+        sphinx: Label to sphinx build binary. Default: //bazel/rules/rules_score:score_build
         testonly: If True, only testonly targets can depend on this target.
         visibility: Bazel visibility specification for the dependable element target.
 
@@ -439,12 +527,26 @@ def dependable_element(
         ```
     """
 
-    # Step 1: Generate index.rst and collect all artifacts
+    # Step 1: Create provider target with DependableElementInfo
+    _dependable_element_provider(
+        name = name + "_provider",
+        description = description,
+        assumptions_of_use = assumptions_of_use,
+        requirements = requirements,
+        architectural_design = architectural_design,
+        dependability_analysis = dependability_analysis,
+        components = components,
+        tests = tests,
+        testonly = testonly,
+        visibility = ["//visibility:private"],
+    )
+
+    # Step 2: Generate index.rst and collect all artifacts
     _dependable_element_index(
         name = name + "_index",
         module_name = name,
         description = description,
-        template = Label("//bazel/rules/score_module:templates/seooc_index.template.rst"),
+        template = Label("//bazel/rules/rules_score:templates/seooc_index.template.rst"),
         assumptions_of_use = assumptions_of_use,
         requirements = requirements,
         architectural_design = architectural_design,
@@ -455,7 +557,7 @@ def dependable_element(
         visibility = ["//visibility:private"],
     )
 
-    # Step 2: Create sphinx_module using generated index and artifacts
+    # Step 3: Create sphinx_module using generated index and artifacts
     sphinx_module(
         name = name,
         srcs = [":" + name + "_index"],

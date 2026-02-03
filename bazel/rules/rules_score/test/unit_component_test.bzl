@@ -20,7 +20,7 @@ Tests the new hierarchical structure for S-CORE process compliance:
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//bazel/rules/score_module:providers.bzl", "ComponentInfo", "DependableElementInfo", "SphinxSourcesInfo", "UnitInfo")
+load("//bazel/rules/rules_score:providers.bzl", "ComponentInfo", "DependableElementInfo", "SphinxSourcesInfo", "UnitInfo")
 
 # ============================================================================
 # Unit Tests

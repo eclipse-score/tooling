@@ -19,7 +19,7 @@ following S-CORE process guidelines. Feature requirements describe the
 high-level features that a software component must implement.
 """
 
-load("//bazel/rules/score_module:providers.bzl", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
 
 # ============================================================================
 # Provider Definition

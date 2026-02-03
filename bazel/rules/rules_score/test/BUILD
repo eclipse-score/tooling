@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load(
-    "//bazel/rules/score_module:score_module.bzl",
+    "//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
     "assumptions_of_use",
     "component",
@@ -60,14 +60,14 @@ sphinx_module(
     name = "module_c_lib",
     srcs = glob(["fixtures/module_c/*.rst"]),
     index = "fixtures/module_c/index.rst",
-    sphinx = "//bazel/rules/score_module:score_build",
+    sphinx = "//bazel/rules/rules_score:score_build",
 )
 
 sphinx_module(
     name = "module_b_lib",
     srcs = glob(["fixtures/module_b/*.rst"]),
     index = "fixtures/module_b/index.rst",
-    sphinx = "//bazel/rules/score_module:score_build",
+    sphinx = "//bazel/rules/rules_score:score_build",
     deps = [":module_c_lib"],
 )
 
@@ -75,7 +75,7 @@ sphinx_module(
     name = "module_a_lib",
     srcs = glob(["fixtures/module_a/*.rst"]),
     index = "fixtures/module_a/index.rst",
-    sphinx = "//bazel/rules/score_module:score_build",
+    sphinx = "//bazel/rules/rules_score:score_build",
     deps = [
         ":module_b_lib",
         ":module_c_lib",
@@ -136,10 +136,10 @@ dependable_element(
     name = "seooc_test_lib",
     architectural_design = [":arch_design"],
     assumptions_of_use = [":aous"],
+    components = [],
     dependability_analysis = [":dependability_analysis_target"],
     description = "Test SEooC module demonstrating S-CORE process compliance structure.",
     requirements = [":comp_req"],
-    consists_of = [],
     tests = [],
     deps = [
         ":module_c_lib",  # dependency to other seoocs/score_components
@@ -172,7 +172,9 @@ cc_binary(
 
 cc_test(
     name = "test_unit_tests",
+    testonly = True,
     srcs = ["fixtures/test_unit_test.cc"],
+    tags = ["manual"],
     deps = [
         ":mock_lib1",
         ":mock_lib2",
@@ -182,36 +184,36 @@ cc_test(
 # Test Unit
 unit(
     name = "test_unit",
+    testonly = True,
+    tests = [":test_unit_tests"],
+    unit_design = [":arch_design"],
     implementation = [
         ":mock_lib1",
         ":mock_lib2",
     ],
-    tests = [":test_unit_tests"],
-    testonly = True,
-    unit_design = [":arch_design"],
 )
 
 # Test Component
 component(
     name = "test_component",
-    component_requirements = [":comp_req"],
-    implementation = [":test_component_binary"],
-    tests = [],  # Empty for testing
     testonly = True,
+    component_requirements = [":comp_req"],
+    tests = [],  # Empty for testing
     units = [":test_unit"],
+    implementation = [":test_component_binary"],
 )
 
 # Test Dependable Element
 dependable_element(
     name = "test_dependable_element",
+    testonly = True,
     architectural_design = [":arch_design"],
     assumptions_of_use = [":aous"],
-    consists_of = [":test_component"],
+    components = [":test_component"],
     dependability_analysis = [":dependability_analysis_target"],
     description = "Test dependable element for unit testing",
     requirements = [":comp_req"],
     tests = [],  # Empty for testing
-    testonly = True,
 )
 
 # ============================================================================

@@ -20,9 +20,9 @@ combines safety analysis with dependent failure analysis (DFA) to provide
 a comprehensive view of component reliability and safety.
 """
 
-load("//bazel/rules/score_module/private:architectural_design.bzl", "ArchitecturalDesignInfo")
-load("//bazel/rules/score_module:providers.bzl", "SphinxSourcesInfo")
-load("//bazel/rules/score_module/private:safety_analysis.bzl", "SafetyAnalysisInfo")
+load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:architectural_design.bzl", "ArchitecturalDesignInfo")
+load("//bazel/rules/rules_score/private:safety_analysis.bzl", "SafetyAnalysisInfo")
 
 # ============================================================================
 # Provider Definition

@@ -28,9 +28,7 @@ bazel_dep(name = "rules_java", version = "8.15.1")
 bazel_dep(name = "rules_rust", version = "0.61.0")
 bazel_dep(name = "rules_multitool", version = "1.9.0")
 bazel_dep(name = "score_rust_policies", version = "0.0.2")
-
 bazel_dep(name = "bazel_skylib", version = "1.7.1")
-
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2")
 
 ###############################################################################

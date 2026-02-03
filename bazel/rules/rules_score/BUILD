@@ -1,5 +1,5 @@
 load(
-    "//bazel/rules/score_module:score_module.bzl",
+    "//bazel/rules/rules_score:rules_score.bzl",
     "sphinx_module",
 )
 
@@ -35,7 +35,7 @@ py_binary(
 )
 
 sphinx_module(
-    name = "score_module_doc",
+    name = "rules_score_doc",
     srcs = glob(
         [
             "docs/**/*.rst",

@@ -19,8 +19,8 @@ following S-CORE process guidelines. Safety analysis includes failure mode analy
 control measures, fault tree analysis, and other safety-related artifacts.
 """
 
-load("//bazel/rules/score_module/private:architectural_design.bzl", "ArchitecturalDesignInfo")
-load("//bazel/rules/score_module:providers.bzl", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:architectural_design.bzl", "ArchitecturalDesignInfo")
 
 # ============================================================================
 # Provider Definition

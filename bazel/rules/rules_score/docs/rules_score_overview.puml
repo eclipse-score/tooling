@@ -1,0 +1,89 @@
+@startuml
+
+skinparam linetype ortho
+skinparam artifact<<document>> {
+    BackgroundColor LightGreen
+    BorderColor Green
+}
+skinparam component<<rule>> {
+    BackgroundColor LightBlue
+    BorderColor Blue
+}
+skinparam component<<provider>> {
+    BackgroundColor LightYellow
+    BorderColor Orange
+}
+
+' Main aggregation
+component "sphinx_module" as sphinx_module <<rule>>
+
+' Structural rules
+component "component" as component <<rule>>
+component "unit" as unit <<rule>>
+component "dependable_element" as dependable_element <<rule>>
+
+' Document generation rules
+component "assumptions_of_use" as assumptions_of_use <<rule>>
+component "component_requirements" as component_requirements <<rule>>
+component "architectural_design" as architectural_design <<rule>>
+component "feature_requirements" as feature_requirements <<rule>>
+component "dependability_analysis" as dependability_analysis <<rule>>
+component "safety_analysis" as safety_analysis <<rule>>
+
+' Providers
+component "SphinxSourcesInfo" as SphinxSourcesInfo <<provider>>
+component "UnitInfo" as UnitInfo <<provider>>
+component "ComponentInfo" as ComponentInfo <<provider>>
+component "DependableElementInfo" as DependableElementInfo <<provider>>
+
+' Document artifacts
+artifact "Assumptions of Use" as aou_doc <<document>>
+artifact "Component Requirements" as cr_doc <<document>>
+artifact "Architectural Design" as ad_doc <<document>>
+artifact "Feature Requirements" as fr_doc <<document>>
+artifact "Dependability Analysis" as da_doc <<document>>
+artifact "Safety Analysis" as sa_doc <<document>>
+artifact "Detailed Design" as dd_doc <<document>>
+
+' Implementation artifacts
+card "Implementation" as impl <<cc_library>>
+card "Test Suite" as test <<cc_test>>
+
+' Relationships - Document generation rules create documents
+assumptions_of_use --> aou_doc : generates
+component_requirements --> cr_doc : generates
+architectural_design --> ad_doc : generates
+feature_requirements --> fr_doc : generates
+dependability_analysis --> da_doc : generates
+safety_analysis --> sa_doc : generates
+
+' Unit relationships
+unit *-- dd_doc
+unit --> UnitInfo : provides
+unit *-- impl
+unit *-- test
+
+' Component relationships
+component *-- unit : contains
+component --> ComponentInfo : provides
+component *-- assumptions_of_use
+component *-- component_requirements
+component *-- architectural_design
+component *-- feature_requirements
+component *-- safety_analysis
+
+' Dependable element relationships
+dependable_element --> DependableElementInfo : provides
+dependability_analysis ..> DependableElementInfo : uses
+dependability_analysis --> da_doc : generates
+
+' Sphinx module aggregation
+sphinx_module *-- component : aggregates
+sphinx_module --> SphinxSourcesInfo : provides
+sphinx_module ..> sphinx_module : can depend on
+
+' Cross-dependencies
+component ..> component : can depend on
+component ..> dependable_element : can depend on
+
+@enduml

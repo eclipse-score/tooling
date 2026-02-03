@@ -1,5 +1,5 @@
-SCORE Module Bazel Rules
-=========================
+SCORE Rules for Bazel
+=====================
 
 This package provides Bazel build rules for defining and building SCORE documentation modules with integrated Sphinx-based HTML generation.
 
@@ -11,7 +11,7 @@ This package provides Bazel build rules for defining and building SCORE document
 Overview
 --------
 
-The ``sphinx_module`` package provides two complementary Bazel rules for structuring and documenting software modules:
+The ``rules_score`` package provides two complementary Bazel rules for structuring and documenting software modules:
 
 1. **sphinx_module**: A generic documentation module rule that builds Sphinx-based HTML documentation from RST source files. Suitable for any type of documentation module.
 
@@ -19,7 +19,7 @@ The ``sphinx_module`` package provides two complementary Bazel rules for structu
 
 Both rules support **cross-module dependencies** through the ``deps`` attribute, enabling automatic integration of external sphinx-needs references and HTML merging for comprehensive documentation sets.
 
-.. uml:: score_module_overview.puml
+.. uml:: rules_score_overview.puml
 
 
 Rules and Macros
@@ -28,7 +28,7 @@ Rules and Macros
 sphinx_module
 ~~~~~~~~~~~~
 
-**File:** ``score_module.bzl``
+**File:** ``rules_score.bzl``
 
 **Purpose:** Generic rule for building Sphinx-based HTML documentation modules from RST source files with support for dependencies and cross-referencing.
 
@@ -44,7 +44,7 @@ sphinx_module
            "@score_process//:score_process_module",
            "//other_module:documentation",
        ],
-       sphinx = "//bazel/rules/score_module:score_build",
+       sphinx = "//bazel/rules/rules_score:score_build",
        visibility = ["//visibility:public"]
    )
 
@@ -54,7 +54,7 @@ sphinx_module
 - ``srcs``: List of RST source files for the documentation
 - ``index``: Path to the main index.rst file
 - ``deps``: Optional list of other ``sphinx_module`` or ``score_component`` targets that this module depends on. Dependencies are automatically integrated for cross-referencing via sphinx-needs and their HTML is merged into the output.
-- ``sphinx``: Label to the Sphinx build binary (default: ``//bazel/rules/score_module:score_build``)
+- ``sphinx``: Label to the Sphinx build binary (default: ``//bazel/rules/rules_score:score_build``)
 - ``config``: Optional custom conf.py file. If not provided, a default configuration is generated.
 - ``visibility``: Bazel visibility specification
 
@@ -115,7 +115,7 @@ Each successful build produces:
 score_component
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**File:** ``score_module.bzl``
+**File:** ``rules_score.bzl``
 
 **Purpose:** Specialized macro for defining a Safety Element out of Context (SEooC) module documentation structure and automatic index generation.
 
@@ -152,7 +152,7 @@ score_component
 - ``deps``: Optional list of other ``sphinx_module`` or ``score_component`` targets that this SEooC depends on. Dependencies enable cross-referencing between modules and merge their HTML documentation into the final output.
 - ``implementations``: List of labels to implementation targets (cc_library, cc_binary, etc.) that realize the component requirements
 - ``tests``: List of labels to test targets (cc_test, py_test, etc.) that verify the implementation against requirements
-- ``sphinx``: Label to the Sphinx build binary (default: ``//bazel/rules/score_module:score_build``)
+- ``sphinx``: Label to the Sphinx build binary (default: ``//bazel/rules/rules_score:score_build``)
 - ``visibility``: Bazel visibility specification
 
 **Generated Targets:**
@@ -280,7 +280,7 @@ Example 1: Generic Documentation Module
 
 .. code-block:: python
 
-   load("//bazel/rules/score_module:score_module.bzl", "sphinx_module")
+   load("//bazel/rules/rules_score:rules_score.bzl", "sphinx_module")
 
    sphinx_module(
        name = "platform_docs",
@@ -303,7 +303,7 @@ Example 2: Safety Element out of Context
 
 .. code-block:: python
 
-   load("//bazel/rules/score_module:score_module.bzl",
+   load("//bazel/rules/rules_score:rules_score.bzl",
         "score_component")
 
    # Implementation

@@ -19,7 +19,7 @@ following S-CORE process guidelines. A unit is the smallest testable
 software element with associated design, implementation, and tests.
 """
 
-load("//bazel/rules/score_module:providers.bzl", "SphinxSourcesInfo", "UnitInfo")
+load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo", "UnitInfo")
 
 # ============================================================================
 # Private Rule Implementation
