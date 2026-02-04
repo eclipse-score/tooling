@@ -51,7 +51,6 @@ ComponentInfo = provider(
     fields = {
         "name": "Name of the component target",
         "requirements": "Depset of component requirements artifacts",
-        "implementation": "Depset of implementation targets (libraries, binaries)",
         "components": "Depset of unit targets that comprise this component",
         "tests": "Depset of component-level integration test targets",
     },

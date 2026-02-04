@@ -26,7 +26,7 @@ load("//bazel/rules/rules_score/private:architectural_design.bzl", "Architectura
 # Provider Definition
 # ============================================================================
 
-SafetyAnalysisInfo = provider(
+AnalysisInfo = provider(
     doc = "Provider for safety analysis artifacts",
     fields = {
         "controlmeasures": "Depset of control measures documentation or requirements",
@@ -41,7 +41,7 @@ SafetyAnalysisInfo = provider(
 # Private Rule Implementation
 # ============================================================================
 
-def _safety_analysis_impl(ctx):
+def _analysis_impl(ctx):
     """Implementation for safety_analysis rule.
 
     Collects safety analysis artifacts including control measures, failure modes,
@@ -51,7 +51,7 @@ def _safety_analysis_impl(ctx):
         ctx: Rule context
 
     Returns:
-        List of providers including DefaultInfo and SafetyAnalysisInfo
+        List of providers including DefaultInfo and AnalysisInfo
     """
     controlmeasures = depset(ctx.files.controlmeasures)
     failuremodes = depset(ctx.files.failuremodes)
@@ -74,7 +74,7 @@ def _safety_analysis_impl(ctx):
 
     return [
         DefaultInfo(files = all_files),
-        SafetyAnalysisInfo(
+        AnalysisInfo(
             controlmeasures = controlmeasures,
             failuremodes = failuremodes,
             fta = fta,
@@ -91,8 +91,8 @@ def _safety_analysis_impl(ctx):
 # Rule Definition
 # ============================================================================
 
-_safety_analysis = rule(
-    implementation = _safety_analysis_impl,
+_analysis = rule(
+    implementation = _analysis_impl,
     doc = "Collects safety analysis documents for S-CORE process compliance",
     attrs = {
         "controlmeasures": attr.label_list(
@@ -152,7 +152,7 @@ def safety_analysis(
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
-        <name>: Main safety analysis target providing SafetyAnalysisInfo
+        <name>: Main safety analysis target providing AnalysisInfo
 
     Example:
         ```starlark
@@ -165,7 +165,7 @@ def safety_analysis(
         )
         ```
     """
-    _safety_analysis(
+    _analysis(
         name = name,
         controlmeasures = controlmeasures,
         failuremodes = failuremodes,

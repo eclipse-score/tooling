@@ -6,6 +6,8 @@ load(
 exports_files([
     "templates/conf.template.py",
     "templates/seooc_index.template.rst",
+    "templates/unit.template.rst",
+    "templates/component.template.rst",
 ])
 
 # HTML merge tool

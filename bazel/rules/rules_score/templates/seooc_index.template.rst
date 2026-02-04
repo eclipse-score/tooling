@@ -16,6 +16,15 @@ Dependable element: {title}
 
 {description}
 
+Architectural Design
+--------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   {architectural_design}
+
+
 Assumptions of Use
 ------------------
 
@@ -27,15 +36,22 @@ Assumptions of Use
 Components
 ----------
 
+.. toctree::
+    :maxdepth: 1
+
 {components}
 
-Architectural Design
---------------------
+
+Units
+-----
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   {architectural_design}
+{units}
+
+
+
 
 Dependability Analysis
 ----------------------

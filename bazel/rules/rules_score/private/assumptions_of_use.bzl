@@ -20,6 +20,7 @@ operating conditions and constraints for a Safety Element out of Context (SEooC)
 """
 
 load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:component_requirements.bzl", "ComponentRequirementsInfo")
 load("//bazel/rules/rules_score/private:feature_requirements.bzl", "FeatureRequirementsInfo")
 
 # ============================================================================
@@ -55,13 +56,13 @@ def _assumptions_of_use_impl(ctx):
 
     # Collect feature requirements providers
     feature_reqs = []
-    for feat_req in ctx.attr.feature_requirement:
+    for feat_req in ctx.attr.feature_requirements:
         if FeatureRequirementsInfo in feat_req:
             feature_reqs.append(feat_req[FeatureRequirementsInfo])
 
     # Collect transitive sphinx sources from feature requirements
     transitive = [srcs]
-    for feat_req in ctx.attr.feature_requirement:
+    for feat_req in ctx.attr.feature_requirements:
         if SphinxSourcesInfo in feat_req:
             transitive.append(feat_req[SphinxSourcesInfo].transitive_srcs)
 
@@ -91,8 +92,13 @@ _assumptions_of_use = rule(
             mandatory = True,
             doc = "Source files containing Assumptions of Use specifications",
         ),
-        "feature_requirement": attr.label_list(
+        "feature_requirements": attr.label_list(
             providers = [FeatureRequirementsInfo],
+            mandatory = False,
+            doc = "List of feature_requirements targets that these Assumptions of Use trace to",
+        ),
+        "component_requirements": attr.label_list(
+            providers = [ComponentRequirementsInfo],
             mandatory = False,
             doc = "List of feature_requirements targets that these Assumptions of Use trace to",
         ),
@@ -107,6 +113,7 @@ def assumptions_of_use(
         name,
         srcs,
         feature_requirement = [],
+        component_requirements = [],
         visibility = None):
     """Define Assumptions of Use following S-CORE process guidelines.
 
@@ -141,6 +148,7 @@ def assumptions_of_use(
     _assumptions_of_use(
         name = name,
         srcs = srcs,
-        feature_requirement = feature_requirement,
+        feature_requirements = feature_requirement,
+        component_requirements = component_requirements,
         visibility = visibility,
     )

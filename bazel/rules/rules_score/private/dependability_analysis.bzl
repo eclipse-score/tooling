@@ -22,7 +22,7 @@ a comprehensive view of component reliability and safety.
 
 load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:architectural_design.bzl", "ArchitecturalDesignInfo")
-load("//bazel/rules/rules_score/private:safety_analysis.bzl", "SafetyAnalysisInfo")
+load("//bazel/rules/rules_score/private:safety_analysis.bzl", "AnalysisInfo")
 
 # ============================================================================
 # Provider Definition
@@ -31,9 +31,8 @@ load("//bazel/rules/rules_score/private:safety_analysis.bzl", "SafetyAnalysisInf
 DependabilityAnalysisInfo = provider(
     doc = "Provider for dependability analysis artifacts",
     fields = {
-        "safety_analysis": "List of SafetyAnalysisInfo providers",
-        "dfa": "Depset of Dependent Failure Analysis documentation",
-        "fmea": "Depset of Failure Mode and Effects Analysis documentation",
+        "safety_analysis": "List of AnalysisInfo providers",
+        "security_analysis": "List of AnalysisInfo providers",
         "arch_design": "ArchitecturalDesignInfo provider for linked architectural design",
         "name": "Name of the dependability analysis target",
     },
@@ -55,16 +54,8 @@ def _dependability_analysis_impl(ctx):
     Returns:
         List of providers including DefaultInfo and DependabilityAnalysisInfo
     """
-    dfa_files = depset(ctx.files.dfa)
-    fmea_files = depset(ctx.files.fmea)
-
-    # Collect safety analysis providers
-    safety_analysis_infos = []
-    safety_analysis_files = []
-    for sa in ctx.attr.safety_analysis:
-        if SafetyAnalysisInfo in sa:
-            safety_analysis_infos.append(sa[SafetyAnalysisInfo])
-        safety_analysis_files.append(sa.files)
+    security_analysis_files = depset(ctx.files.dfa)
+    safety_analysis_files = depset(ctx.files.fmea)
 
     # Get architectural design provider if available
     arch_design_info = None
@@ -72,13 +63,11 @@ def _dependability_analysis_impl(ctx):
         arch_design_info = ctx.attr.arch_design[ArchitecturalDesignInfo]
 
     # Combine all files for DefaultInfo
-    all_files = depset(
-        transitive = [dfa_files, fmea_files] + safety_analysis_files,
-    )
+    all_files = depset(transitive = [security_analysis_files, safety_analysis_files])
 
     # Collect transitive sphinx sources from safety analysis and architectural design
     transitive = [all_files]
-    for sa in ctx.attr.safety_analysis:
+    for sa in ctx.attr.security_analysis:
         if SphinxSourcesInfo in sa:
             transitive.append(sa[SphinxSourcesInfo].transitive_srcs)
     if ctx.attr.arch_design and SphinxSourcesInfo in ctx.attr.arch_design:
@@ -87,9 +76,8 @@ def _dependability_analysis_impl(ctx):
     return [
         DefaultInfo(files = all_files),
         DependabilityAnalysisInfo(
-            safety_analysis = safety_analysis_infos,
-            dfa = dfa_files,
-            fmea = fmea_files,
+            safety_analysis = security_analysis_files,
+            security_analysis = security_analysis_files,
             arch_design = arch_design_info,
             name = ctx.label.name,
         ),
@@ -107,8 +95,9 @@ _dependability_analysis = rule(
     implementation = _dependability_analysis_impl,
     doc = "Collects dependability analysis documents for S-CORE process compliance",
     attrs = {
-        "safety_analysis": attr.label_list(
-            providers = [SafetyAnalysisInfo],
+        "security_analysis": attr.label_list(
+            # TODO: change provider name
+            providers = [AnalysisInfo],
             mandatory = False,
             doc = "List of safety_analysis targets containing FMEA, FMEDA, FTA results",
         ),
@@ -183,7 +172,10 @@ def dependability_analysis(
     """
     _dependability_analysis(
         name = name,
-        safety_analysis = safety_analysis,
+        # TODO: this needs to be fixed. A security is not a safety_analysis.
+        # we leave it for now for compatibility reasons until there is alignment on the a
+        # attributes of a dependability analysis
+        security_analysis = safety_analysis,
         dfa = dfa,
         fmea = fmea,
         arch_design = arch_design,

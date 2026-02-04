@@ -22,9 +22,66 @@ assumptions of use, requirements, design, and safety analysis.
 
 load(
     "//bazel/rules/rules_score:providers.bzl",
+    "ComponentInfo",
     "SphinxSourcesInfo",
+    "UnitInfo",
 )
 load("//bazel/rules/rules_score/private:sphinx_module.bzl", "sphinx_module")
+
+# ============================================================================
+# Template Constants
+# ============================================================================
+
+_UNIT_DESIGN_SECTION_TEMPLATE = """Unit Design
+-----------
+
+.. toctree::
+   :maxdepth: 2
+
+{design_refs}"""
+
+_IMPLEMENTATION_SECTION_TEMPLATE = """Implementation
+--------------
+
+This {entity_type} is implemented by the following targets:
+
+{implementation_list}"""
+
+_TESTS_SECTION_TEMPLATE = """Tests
+-----
+
+This {entity_type} is verified by the following test targets:
+
+{test_list}"""
+
+_COMPONENT_REQUIREMENTS_SECTION_TEMPLATE = """Component Requirements
+----------------------
+
+.. toctree::
+   :maxdepth: 2
+
+{requirements_refs}"""
+
+_COMPONENT_UNITS_SECTION_TEMPLATE = """Units
+-----
+
+This component is composed of the following units:
+
+{unit_links}"""
+
+_UNIT_TEMPLATE = """
+
+Unit: {unit_name}
+{underline}
+
+{design_section}{implementation_section}{tests_section}"""
+
+_COMPONENT_TEMPLATE = """
+
+Component: {component_name}
+{underline}
+
+{requirements_section}{units_section}{implementation_section}{tests_section}"""
 
 # ============================================================================
 # Helper Functions for Documentation Generation
@@ -252,6 +309,242 @@ def _process_deps(ctx):
 def _get_component_names(components):
     return [c.label.name for c in components]
 
+def _collect_units_recursive(components, visited_units = None):
+    """Iteratively collect all units from components, handling nested components.
+
+    Uses a stack-based approach to avoid Starlark recursion limitations.
+
+    Args:
+        components: List of component targets
+        visited_units: Dict of unit names already visited (for deduplication)
+
+    Returns:
+        Dict mapping unit names to unit targets
+    """
+    if visited_units == None:
+        visited_units = {}
+
+    # Process components iteratively using a work queue approach
+    # Since Starlark doesn't support while loops, we use a for loop with a large enough range
+    # and track our own index
+    to_process = [] + components
+
+    for _ in range(1000):  # Max depth to prevent infinite loops
+        if not to_process:
+            break
+        comp_target = to_process.pop(0)
+
+        # Check if this is a component with ComponentInfo
+        if ComponentInfo in comp_target:
+            comp_info = comp_target[ComponentInfo]
+
+            # Process nested components
+            nested_components = comp_info.components.to_list()
+            for nested in nested_components:
+                # Check if nested item is a unit or component
+                if UnitInfo in nested:
+                    unit_name = nested.label.name
+                    if unit_name not in visited_units:
+                        visited_units[unit_name] = nested
+                elif ComponentInfo in nested:
+                    # Add nested component to queue for processing
+                    to_process.append(nested)
+
+            # Check if this is directly a unit
+        elif UnitInfo in comp_target:
+            unit_name = comp_target.label.name
+            if unit_name not in visited_units:
+                visited_units[unit_name] = comp_target
+
+    return visited_units
+
+def _generate_unit_doc(ctx, unit_target, unit_name):
+    """Generate RST documentation for a single unit.
+
+    Args:
+        ctx: Rule context
+        unit_target: The unit target
+        unit_name: Name of the unit
+
+    Returns:
+        Tuple of (rst_file, list_of_output_files)
+    """
+    unit_info = unit_target[UnitInfo]
+
+    # Create RST file for this unit
+    unit_rst = ctx.actions.declare_file(ctx.label.name + "/units/" + unit_name + ".rst")
+
+    # Collect design files - unit_design depset contains File objects
+    design_files = []
+    design_refs = []
+    if unit_info.unit_design:
+        doc_files = _filter_doc_files(unit_info.unit_design.to_list())
+
+        if doc_files:
+            # Find common directory
+            common_dir = _find_common_directory(doc_files)
+
+            for f in doc_files:
+                relative_path = _compute_relative_path(f, common_dir)
+                output_file = _create_artifact_symlink(
+                    ctx,
+                    "units/" + unit_name + "_design",
+                    f,
+                    relative_path,
+                )
+                design_files.append(output_file)
+
+                if _is_document_file(f):
+                    doc_ref = ("units/" + unit_name + "_design/" + relative_path) \
+                        .replace(".rst", "") \
+                        .replace(".md", "")
+                    design_refs.append("   " + doc_ref)
+
+    # Collect implementation target names
+    impl_names = []
+    if unit_info.implementation:
+        for impl in unit_info.implementation.to_list():
+            impl_names.append(impl.label)
+
+    # Collect test target names
+    test_names = []
+    if unit_info.tests:
+        for test in unit_info.tests.to_list():
+            test_names.append(test.label)
+
+    # Generate RST content using template
+    underline = "=" * (len("Unit: " + unit_name))
+
+    # Generate sections from template constants
+    design_section = ""
+    if design_refs:
+        design_section = "\n" + _UNIT_DESIGN_SECTION_TEMPLATE.format(
+            design_refs = "\n".join(design_refs),
+        ) + "\n"
+
+    implementation_section = ""
+    if impl_names:
+        impl_list = "\n".join(["- ``" + str(impl) + "``" for impl in impl_names])
+        implementation_section = "\n" + _IMPLEMENTATION_SECTION_TEMPLATE.format(
+            entity_type = "unit",
+            implementation_list = impl_list,
+        ) + "\n"
+
+    tests_section = ""
+    if test_names:
+        test_list = "\n".join(["- ``" + str(test) + "``" for test in test_names])
+        tests_section = "\n" + _TESTS_SECTION_TEMPLATE.format(
+            entity_type = "unit",
+            test_list = test_list,
+        ) + "\n"
+
+    # Generate unit RST content from template constant
+    unit_content = _UNIT_TEMPLATE.format(
+        unit_name = unit_name,
+        underline = underline,
+        design_section = design_section,
+        implementation_section = implementation_section,
+        tests_section = tests_section,
+    )
+
+    ctx.actions.write(
+        output = unit_rst,
+        content = unit_content,
+    )
+
+    return (unit_rst, design_files)
+
+def _generate_component_doc(ctx, comp_target, comp_name, unit_names):
+    """Generate RST documentation for a single component.
+
+    Args:
+        ctx: Rule context
+        comp_target: The component target
+        comp_name: Name of the component
+        unit_names: List of unit names that belong to this component
+
+    Returns:
+        Tuple of (rst_file, list_of_output_files)
+    """
+    comp_info = comp_target[ComponentInfo]
+
+    # Create RST file for this component
+    comp_rst = ctx.actions.declare_file(ctx.label.name + "/components/" + comp_name + ".rst")
+
+    # Collect requirements files - requirements depset contains File objects
+    req_files = []
+    req_refs = []
+    if comp_info.requirements:
+        doc_files = _filter_doc_files(comp_info.requirements.to_list())
+
+        if doc_files:
+            # Find common directory
+            common_dir = _find_common_directory(doc_files)
+
+            for f in doc_files:
+                relative_path = _compute_relative_path(f, common_dir)
+                output_file = _create_artifact_symlink(
+                    ctx,
+                    "components/" + comp_name + "_requirements",
+                    f,
+                    relative_path,
+                )
+                req_files.append(output_file)
+
+                if _is_document_file(f):
+                    doc_ref = ("components/" + comp_name + "_requirements/" + relative_path) \
+                        .replace(".rst", "") \
+                        .replace(".md", "")
+                    req_refs.append("   " + doc_ref)
+
+    # Collect test target names
+    test_names = []
+    if comp_info.tests:
+        for test in comp_info.tests.to_list():
+            test_names.append(test.label)
+
+    # Generate RST content using template
+    underline = "=" * (len("Component: " + comp_name))
+
+    # Generate sections from template constants
+    requirements_section = ""
+    if req_refs:
+        requirements_section = "\n" + _COMPONENT_REQUIREMENTS_SECTION_TEMPLATE.format(
+            requirements_refs = "\n".join(req_refs),
+        ) + "\n"
+
+    units_section = ""
+    if unit_names:
+        unit_links = "\n".join(["- :doc:`../units/" + unit_name + "`" for unit_name in unit_names])
+        units_section = "\n" + _COMPONENT_UNITS_SECTION_TEMPLATE.format(
+            unit_links = unit_links,
+        ) + "\n"
+
+    tests_section = ""
+    if test_names:
+        test_list = "\n".join(["- ``" + str(test) + "``" for test in test_names])
+        tests_section = "\n" + _TESTS_SECTION_TEMPLATE.format(
+            entity_type = "component",
+            test_list = test_list,
+        ) + "\n"
+
+    # Generate component RST content from template constant
+    component_content = _COMPONENT_TEMPLATE.format(
+        component_name = comp_name,
+        underline = underline,
+        requirements_section = requirements_section,
+        units_section = units_section,
+        implementation_section = "",
+        tests_section = tests_section,
+    )
+
+    ctx.actions.write(
+        output = comp_rst,
+        content = component_content,
+    )
+
+    return (comp_rst, req_files)
+
 # ============================================================================
 # Index Generation Rule Implementation
 # ============================================================================
@@ -291,13 +584,45 @@ def _dependable_element_index_impl(ctx):
         output_files.extend(files)
         artifacts_by_type[artifact_name] = refs
 
+    # Collect all units recursively from components
+    all_units = _collect_units_recursive(ctx.attr.components)
+
+    # Generate documentation for each unit
+    unit_refs = []
+    for unit_name, unit_target in all_units.items():
+        unit_rst, unit_files = _generate_unit_doc(ctx, unit_target, unit_name)
+        output_files.append(unit_rst)
+        output_files.extend(unit_files)
+        unit_refs.append("   units/" + unit_name)
+
+    # Generate documentation for each component
+    component_refs = []
+    for comp_target in ctx.attr.components:
+        if ComponentInfo in comp_target:
+            comp_info = comp_target[ComponentInfo]
+            comp_name = comp_info.name
+
+            # Collect units that belong to this component
+            comp_unit_names = []
+            for nested in comp_info.components.to_list():
+                if UnitInfo in nested:
+                    comp_unit_names.append(nested.label.name)
+                elif ComponentInfo in nested:
+                    # For nested components, collect their units recursively
+                    nested_units = _collect_units_recursive([nested])
+                    comp_unit_names.extend(nested_units.keys())
+
+            comp_rst, comp_files = _generate_component_doc(ctx, comp_target, comp_name, comp_unit_names)
+            output_files.append(comp_rst)
+            output_files.extend(comp_files)
+            component_refs.append("   components/" + comp_name)
+
     # Process dependencies (submodules)
     deps_links = _process_deps(ctx)
 
     # Generate index file from template
     title = ctx.attr.module_name
     underline = "=" * len(title)
-    component_names = _get_component_names(ctx.attr.components)  # Collect list of components
 
     ctx.actions.expand_template(
         template = ctx.file.template,
@@ -306,7 +631,8 @@ def _dependable_element_index_impl(ctx):
             "{title}": title,
             "{underline}": underline,
             "{description}": ctx.attr.description,
-            "{components}": "\n-   ".join(component_names),
+            "{units}": "\n".join(unit_refs) if unit_refs else "   (none)",
+            "{components}": "\n".join(component_refs) if component_refs else "   (none)",
             "{assumptions_of_use}": "\n   ".join(artifacts_by_type["assumptions_of_use"]),
             "{component_requirements}": "\n   ".join(artifacts_by_type["requirements"]),
             "{architectural_design}": "\n   ".join(artifacts_by_type["architectural_design"]),
@@ -351,6 +677,10 @@ _dependable_element_index = rule(
         "components": attr.label_list(
             default = [],
             doc = "Safety checklists targets or files.",
+        ),
+        "tests": attr.label_list(
+            default = [],
+            doc = "Integration tests for the dependable element.",
         ),
         "checklists": attr.label_list(
             default = [],
@@ -441,6 +771,7 @@ def dependable_element(
         architectural_design = architectural_design,
         dependability_analysis = dependability_analysis,
         checklists = checklists,
+        tests = tests,
         deps = deps,
         testonly = testonly,
         visibility = ["//visibility:private"],

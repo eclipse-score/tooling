@@ -190,14 +190,24 @@ unit(
     ],
 )
 
+unit(
+    name = "test_binary_unit",
+    testonly = True,
+    tests = [":test_unit_tests"],
+    unit_design = [":arch_design"],
+    implementation = [":test_component_binary"],
+)
+
 # Test Component
 component(
     name = "test_component",
     testonly = True,
-    components = [":test_unit"],
+    components = [
+        ":test_unit",
+        "test_binary_unit",
+    ],
     requirements = [":comp_req"],
     tests = [],  # Empty for testing
-    implementation = [":test_component_binary"],
 )
 
 # Test Dependable Element
@@ -211,6 +221,68 @@ dependable_element(
     description = "Test dependable element for unit testing",
     requirements = [":comp_req"],
     tests = [],  # Empty for testing
+)
+
+# ============================================================================
+# Test Fixtures - Nested Components for Recursive Testing
+# ============================================================================
+
+# Additional mock implementations
+cc_library(
+    name = "mock_lib3",
+    srcs = ["fixtures/mock_lib1.cc"],  # Reuse same source for testing
+)
+
+cc_test(
+    name = "test_unit2_tests",
+    testonly = True,
+    srcs = ["fixtures/test_unit_test.cc"],
+    tags = ["manual"],
+    deps = [":mock_lib3"],
+)
+
+# Second unit that will be shared between components
+unit(
+    name = "test_unit2",
+    testonly = True,
+    tests = [":test_unit2_tests"],
+    unit_design = [":arch_design"],
+    implementation = [":mock_lib3"],
+)
+
+# Nested component containing unit2
+component(
+    name = "test_nested_component",
+    testonly = True,
+    components = [":test_unit2"],
+    requirements = [":comp_req"],
+    tests = [],
+)
+
+# Parent component containing nested component and shared unit
+component(
+    name = "test_parent_component",
+    testonly = True,
+    components = [
+        ":test_nested_component",
+        ":test_unit2",  # Same unit appears here and in nested component
+        ":test_unit",  # Different unit
+    ],
+    requirements = [":comp_req"],
+    tests = [],
+)
+
+# Dependable element with nested components to test recursive collection
+dependable_element(
+    name = "test_dependable_element_nested",
+    testonly = True,
+    architectural_design = [":arch_design"],
+    assumptions_of_use = [":aous"],
+    components = [":test_parent_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    description = "Test dependable element with nested components for testing recursive unit collection and deduplication",
+    requirements = [":comp_req"],
+    tests = [],
 )
 
 # ============================================================================

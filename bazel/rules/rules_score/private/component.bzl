@@ -46,9 +46,6 @@ def _component_impl(ctx):
 
     requirements_depset = depset(transitive = requirements_files)
 
-    # Collect implementation targets
-    implementation_depset = depset(ctx.attr.implementation)
-
     # Collect components and tests
     components_depset = depset(ctx.attr.components)
     tests_depset = depset(ctx.attr.tests)
@@ -63,7 +60,6 @@ def _component_impl(ctx):
         ComponentInfo(
             name = ctx.label.name,
             requirements = requirements_depset,
-            implementation = implementation_depset,
             components = components_depset,
             tests = tests_depset,
         ),
@@ -85,10 +81,6 @@ _component = rule(
             mandatory = True,
             doc = "Component requirements artifacts (typically component_requirements targets)",
         ),
-        "implementation": attr.label_list(
-            doc = "Implementation targets (libraries, binaries) that realize this component",
-            default = [],
-        ),
         "components": attr.label_list(
             mandatory = True,
             doc = "Unit targets that comprise this component",
@@ -108,7 +100,6 @@ def component(
         name,
         units = None,
         tests = [],
-        implementation = [],
         requirements = None,
         components = None,
         testonly = True,
@@ -152,7 +143,6 @@ def component(
     _component(
         name = name,
         requirements = requirements,
-        implementation = implementation,
         components = components,
         tests = tests,
         testonly = testonly,
