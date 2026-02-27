@@ -1,0 +1,111 @@
+name: SBOM Dependency Submission
+# Submit SBOM-derived dependency snapshot to GitHub Dependency Graph,
+# enabling Dependabot vulnerability alerts for SBOM-declared packages.
+#
+# Requirements (configured by org/repo admin):
+#   - Dependency Graph must be enabled in repo Settings → Code security
+#   - Write permission on contents (for dependency-graph/snapshots)
+#
+# GitHub Dependency Submission API:
+#   https://docs.github.com/en/rest/dependency-graph/dependency-submission
+
+on:
+  workflow_call:
+    inputs:
+      sbom_target:
+        description: 'Bazel SBOM target to build (e.g. //:sbom_all)'
+        required: false
+        type: string
+        default: '//:sbom_all'
+      release_tag:
+        description: 'Version tag for the SBOM component_version'
+        required: false
+        type: string
+        default: 'dev'
+
+jobs:
+  sbom-dependency-submission:
+    name: Build SBOM and submit to Dependency Graph
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write  # Required for dependency-graph/snapshots API
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.15.0
+        with:
+          disk-cache: true
+          repository-cache: true
+          bazelisk-cache: true
+
+      - name: Build SBOM
+        run: |
+          bazel build ${{ inputs.sbom_target }} \
+            --define=component_version=${{ inputs.release_tag }}
+
+      - name: Collect SPDX outputs
+        run: |
+          mkdir -p sbom_output
+          find bazel-bin -name "*.spdx.json" -exec cp {} sbom_output/ \;
+          echo "SBOM files collected:"
+          ls -lh sbom_output/ || echo "(none)"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Convert SPDX → GitHub Dependency Snapshot
+        run: |
+          mkdir -p snapshots
+          for spdx_file in sbom_output/*.spdx.json; do
+            [ -f "$spdx_file" ] || continue
+            base=$(basename "$spdx_file" .spdx.json)
+            correlator="${{ github.workflow }}_${base}"
+            echo "Converting $spdx_file (correlator: $correlator)"
+            python3 sbom/scripts/spdx_to_github_snapshot.py \
+              --input "$spdx_file" \
+              --output "snapshots/${base}_snapshot.json" \
+              --sha "${{ github.sha }}" \
+              --ref "${{ github.ref }}" \
+              --job-correlator "$correlator" \
+              --job-id "${{ github.run_id }}"
+          done
+
+      - name: Submit snapshots to GitHub Dependency Graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          repo="${{ github.repository }}"
+          submitted=0
+          failed=0
+          for snapshot_file in snapshots/*_snapshot.json; do
+            [ -f "$snapshot_file" ] || continue
+            echo "Submitting $snapshot_file to $repo ..."
+            http_code=$(gh api \
+              "repos/${repo}/dependency-graph/snapshots" \
+              --method POST \
+              --input "$snapshot_file" \
+              --jq '.message // "submitted"' \
+              2>&1) && {
+              echo "  OK: $http_code"
+              submitted=$((submitted + 1))
+            } || {
+              echo "  FAILED: $http_code"
+              failed=$((failed + 1))
+            }
+          done
+          echo "---"
+          echo "Submitted: $submitted, Failed: $failed"
+          [ "$failed" -eq 0 ] || exit 1
+
+      - name: Upload snapshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-snapshots-${{ inputs.release_tag }}
+          path: snapshots/
+          retention-days: 30

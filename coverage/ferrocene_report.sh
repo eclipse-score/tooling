@@ -335,6 +335,12 @@ label_to_path() {
   local label
   local pkg="${2:-}"
   label="$(strip_quotes "$1")"
+  # External labels look like "@repo//pkg:target". Strip the repo prefix so
+  # path conversion works for both workspace and external repos.
+  if [[ "${label}" == @*//?* ]]; then
+    label="//${label#*//}"
+  fi
+  # If the label still starts with "@", we do not know how to map it to a path.
   if [[ "${label}" == @* ]]; then
     echo ""
     return 0
@@ -403,12 +409,47 @@ label_pkg() {
   if [[ "${label}" =~ ^Label\\(\"(.*)\"\\)$ ]]; then
     label="${BASH_REMATCH[1]}"
   fi
+  # External labels include "@repo//". Strip the repo prefix to get the package.
+  if [[ "${label}" == @*//?* ]]; then
+    label="//${label#*//}"
+  fi
   if [[ "${label}" == //* ]]; then
     local rest="${label#//}"
     echo "${rest%%:*}"
     return 0
   fi
   echo ""
+}
+
+# Resolve the "external/<repo>" prefix for an external label.
+# We use bazel query --output=location to find a real file path, then extract
+# the repo name from either "external/<repo>/..." or ".../external/<repo>/...".
+workspace_root_for_label() {
+  local label
+  label="$(strip_quotes "$1")"
+  if [[ "${label}" =~ ^Label\\(\"(.*)\"\\)$ ]]; then
+    label="${BASH_REMATCH[1]}"
+  fi
+  # Non-external labels live in the workspace, so no external prefix is needed.
+  if [[ "${label}" != @* ]]; then
+    echo ""
+    return 0
+  fi
+  # The location output may be absolute; handle both direct external paths
+  # and absolute paths that contain "/external/<repo>/".
+  local location
+  location="$(bazel query --output=location "${label}" 2>/dev/null | head -n 1)"
+  location="${location%%:*}"
+  local rest=""
+  if [[ "${location}" == external/* ]]; then
+    rest="${location#external/}"
+  elif [[ "${location}" == */external/* ]]; then
+    rest="${location#*/external/}"
+  fi
+  local repo="${rest%%/*}"
+  if [[ -n "${repo}" ]]; then
+    echo "external/${repo}"
+  fi
 }
 
 resolve_runfile() {
@@ -563,10 +604,20 @@ for label in "${targets[@]}"; do
   pkg="${pkg%%:*}"
   name="${label##*:}"
 
+  # Resolve the package path and repo root so test.outputs works for
+  # workspace labels (//pkg:target) and external labels (@repo//pkg:target).
+  label_pkg_path="$(label_pkg "${label}")"
+  if [[ -z "${label_pkg_path}" ]]; then
+    label_pkg_path="${pkg}"
+  fi
+  label_repo_root="$(workspace_root_for_label "${label}")"
+
   if [[ -n "${PROFRAW_DIR}" ]]; then
     test_out_dir="${PROFRAW_DIR}"
+  elif [[ -n "${label_repo_root}" ]]; then
+    test_out_dir="${PROFRAW_ROOT}/${label_repo_root}/${label_pkg_path}/${name}/test.outputs"
   else
-    test_out_dir="${PROFRAW_ROOT}/${pkg}/${name}/test.outputs"
+    test_out_dir="${PROFRAW_ROOT}/${label_pkg_path}/${name}/test.outputs"
   fi
 
   shopt -s nullglob
@@ -622,14 +673,44 @@ for label in "${targets[@]}"; do
   if [[ -z "${crate_pkg}" ]]; then
     crate_pkg="${pkg}"
   fi
+  repo_root="$(workspace_root_for_label "${crate_target}")"
 
   crate_root_raw="$(query_labels_attr "${crate_target}" "crate_root")"
   if [[ -z "${crate_root_raw}" ]]; then
     crate_root_raw="$(query_attr_build "${crate_target}" "crate_root")"
   fi
   crate_root="$(label_to_path "${crate_root_raw}" "${crate_pkg}")"
+  # First, try conventional crate roots to avoid choosing a random source file.
   if [[ -z "${crate_root}" ]]; then
-    # Prefer explicit srcs for rust_test targets when no crate attribute is set.
+    for candidate in \
+      "${crate_pkg}/src/lib.rs" \
+      "${crate_pkg}/src/main.rs" \
+      "${crate_pkg}/lib.rs" \
+      "${crate_pkg}/main.rs"; do
+      if [[ -n "${repo_root}" ]]; then
+        if [[ -f "${exec_root}/${repo_root}/${candidate}" ]]; then
+          crate_root="${candidate}"
+          break
+        fi
+      elif [[ -f "${workspace}/${candidate}" ]]; then
+        crate_root="${candidate}"
+        break
+      fi
+    done
+  fi
+  # If there is no conventional root, fall back to the crate's declared srcs.
+  if [[ -z "${crate_root}" ]]; then
+    srcs_label="$(query_labels_attr "${crate_target}" "srcs")"
+    if [[ -n "${srcs_label}" ]]; then
+      srcs_path="$(label_to_path "${srcs_label}" "${crate_pkg}")"
+      if [[ -n "${srcs_path}" && "${srcs_path}" == *.rs ]]; then
+        crate_root="${srcs_path}"
+      fi
+    fi
+  fi
+  if [[ -z "${crate_root}" ]]; then
+    # As a last resort, try rust_test srcs when the test target defines them.
+    # This handles rust_test targets that directly list their sources.
     srcs_label="$(query_labels_attr "${label}" "srcs")"
     if [[ -n "${srcs_label}" ]]; then
       srcs_path="$(label_to_path "${srcs_label}" "${pkg}")"
@@ -638,30 +719,31 @@ for label in "${targets[@]}"; do
       fi
     fi
   fi
+  # Without a crate root, symbol-report cannot build the crate.
   if [[ -z "${crate_root}" ]]; then
-    for candidate in \
-      "${crate_pkg}/src/lib.rs" \
-      "${crate_pkg}/src/main.rs" \
-      "${crate_pkg}/lib.rs" \
-      "${crate_pkg}/main.rs"; do
-      if [[ -f "${workspace}/${candidate}" ]]; then
-        crate_root="${candidate}"
-        break
-      fi
-    done
-    if [[ -z "${crate_root}" ]]; then
-      echo "Skipping ${label}: could not determine crate root for ${crate_target}" >&2
-      continue
+    echo "Skipping ${label}: could not determine crate root for ${crate_target}" >&2
+    continue
+  fi
+  # Convert the crate root into an absolute path. External repos live under
+  # exec_root/external/<repo> (symlinked from output_base), while workspace
+  # sources live under $workspace.
+  if [[ "${crate_root}" != /* ]]; then
+    if [[ -n "${repo_root}" && "${crate_root}" != "${repo_root}/"* ]]; then
+      crate_root="${repo_root}/${crate_root}"
+    fi
+    if [[ "${crate_root}" == external/* ]]; then
+      crate_root="${exec_root}/${crate_root}"
+    else
+      crate_root="${workspace}/${crate_root}"
     fi
   fi
 
-  if [[ "${crate_root}" != /* ]]; then
-    crate_root="${workspace}/${crate_root}"
-  fi
-
+  # Keep a workspace- or exec_root-relative path for reporting and mapping.
   crate_root_rel="${crate_root}"
   if [[ "${crate_root_rel}" == "${workspace}/"* ]]; then
     crate_root_rel="${crate_root_rel#${workspace}/}"
+  elif [[ "${crate_root_rel}" == "${exec_root}/"* ]]; then
+    crate_root_rel="${crate_root_rel#${exec_root}/}"
   fi
 
   crate_name="$(normalize_scalar "$(query_attr_build "${crate_target}" "crate_name")")"
@@ -754,6 +836,7 @@ for label in "${targets[@]}"; do
     remap_args+=("--remap-path-prefix=${workspace}/=.")
   fi
 
+  # Pass the absolute crate root; relative external paths fail to canonicalize.
   (
     cd "${exec_root}"
     SYMBOL_REPORT_OUT="${symbol_report_json}" \
@@ -767,7 +850,7 @@ for label in "${targets[@]}"; do
       --sysroot "${sysroot_arg}" \
       -o /dev/null \
       "${remap_args[@]}" \
-      "${crate_root_rel}"
+      "${crate_root}"
   )
 
   # Normalize symbol-report paths to be workspace-relative (like the demo),
@@ -779,18 +862,23 @@ for label in "${targets[@]}"; do
     bin_arg="${bin_rel}"
   fi
 
-  # Blanket expects report paths to resolve under --ferrocene-src; add a
-  # path-equivalence so workspace files map cleanly to report entries.
+  # Blanket resolves report filenames by joining them with --ferrocene-src.
+  # Use a path-equivalence so source files map cleanly to report entries.
+  # For external crates, profiler paths are absolute under output_base/external,
+  # so we point --ferrocene-src there instead of the workspace.
   ferrocene_src="${workspace}"
+  if [[ "${crate_root_rel}" == external/* ]]; then
+    ferrocene_src="${output_base}"
+  fi
   crate_root_dir_rel="$(dirname "${crate_root_rel}")"
   path_prefix="${crate_root_rel%%/*}"
   if [[ -n "${path_prefix}" && "${path_prefix}" != "${crate_root_rel}" && "${path_prefix}" != "." ]]; then
     # Broader remap to cover any file under the top-level directory (e.g. src/...).
-    path_equiv_args=("--path-equivalence" "${path_prefix},${workspace}/${path_prefix}")
+    path_equiv_args=("--path-equivalence" "${path_prefix},${ferrocene_src}/${path_prefix}")
   elif [[ "${crate_root_dir_rel}" == "." ]]; then
-    path_equiv_args=("--path-equivalence" ".,${workspace}")
+    path_equiv_args=("--path-equivalence" ".,${ferrocene_src}")
   else
-    path_equiv_args=("--path-equivalence" "${crate_root_dir_rel},${workspace}/${crate_root_dir_rel}")
+    path_equiv_args=("--path-equivalence" "${crate_root_dir_rel},${ferrocene_src}/${crate_root_dir_rel}")
   fi
 
   (

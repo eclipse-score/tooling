@@ -1,0 +1,5 @@
+package(default_visibility = ["//sbom:__subpackages__"])
+
+exports_files([
+    "generate_crates_metadata_cache.py",
+])

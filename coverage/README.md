@@ -108,6 +108,26 @@ and point the report generator to the directory:
 bazel run //:rust_coverage -- --profraw-dir /path/to/profraw
 ```
 
+## Running from an integration workspace (external labels)
+
+You can invoke the report generator from a top-level integration repo (for
+example, reference_integration) while targeting tests that live in external
+modules. Use a query that references external labels and run the wrapper
+target from the integration repo:
+
+```bash
+bazel run //images/linux_x86_64:per_rust_coverage --config=ferrocene-coverage -- \
+  --query 'kind("rust_test", @score_persistency//src/rust/...)'
+```
+
+If the `.profraw` files were produced in that same workspace, the reporter
+auto-discovers them under `bazel-testlogs/` (including
+`bazel-testlogs/external/<repo>+` for external labels), so you do not need
+to pass `--profraw-dir`. If they were copied from elsewhere, pass
+`--profraw-dir` to point to the directory containing the `.profraw` files.
+External source paths are resolved via Bazel's output_base so
+`external/<repo>/...` paths are handled.
+
 ## Coverage Gate Behavior
 
 `--min-line-coverage` applies per target. If any target is below the minimum,

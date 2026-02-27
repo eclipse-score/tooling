@@ -1,0 +1,33 @@
+# SBOM Generation Package
+#
+# This package provides Bazel-native SBOM (Software Bill of Materials) generation
+# using module extensions and aspects.
+#
+# Public API:
+#   - load("@score_tooling//sbom:defs.bzl", "sbom")
+#   - use_extension("@score_tooling//sbom:extensions.bzl", "sbom_metadata")
+
+load("@rules_python//python:defs.bzl", "py_library")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "defs.bzl",
+    "extensions.bzl",
+])
+
+# Filegroup for all SBOM-related bzl files
+filegroup(
+    name = "bzl_files",
+    srcs = [
+        "defs.bzl",
+        "extensions.bzl",
+        "//sbom/internal:bzl_files",
+    ],
+)
+
+# npm wrapper (uses system-installed npm from PATH)
+sh_binary(
+    name = "npm_wrapper",
+    srcs = ["npm_wrapper.sh"],
+)
