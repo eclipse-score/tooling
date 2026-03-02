@@ -152,7 +152,3 @@ class TestNoManualFallbackInCppMetadata(unittest.TestCase):
                     f"fields: {manually_present}. All SBOM fields must come from "
                     f"automated sources only.",
                 )
-
-
-if __name__ == "__main__":
-    unittest.main()

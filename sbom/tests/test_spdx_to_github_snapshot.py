@@ -264,7 +264,3 @@ class TestConvertSpdxToSnapshot(unittest.TestCase):
         self.assertEqual(
             boost_entry["package_url"], "pkg:generic/boost.filesystem@1.83.0"
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

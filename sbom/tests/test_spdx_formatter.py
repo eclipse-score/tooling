@@ -200,7 +200,3 @@ class TestNormalizeSpdxLicense(unittest.TestCase):
         serde_pkg = next(p for p in spdx["packages"] if p["name"] == "serde")
         self.assertEqual(serde_pkg["licenseConcluded"], "Apache-2.0 OR MIT")
         self.assertEqual(serde_pkg["licenseDeclared"], "Apache-2.0 OR MIT")
-
-
-if __name__ == "__main__":
-    unittest.main()

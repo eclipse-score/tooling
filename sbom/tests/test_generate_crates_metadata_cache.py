@@ -380,7 +380,3 @@ class TestEndToEndLicenseExtraction(unittest.TestCase):
         for name in crates:
             self.assertIn(name, license_map, f"Missing license for {name}")
             self.assertTrue(license_map[name], f"Empty license for {name}")
-
-
-if __name__ == "__main__":
-    unittest.main()

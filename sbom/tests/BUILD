@@ -1,30 +1,39 @@
-# SBOM Tests Package
+# *******************************************************************************
+# Copyright (c) 2025 Contributors to the Eclipse Foundation
 #
-# This package contains tests for the SBOM generation system.
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
 
-load("@rules_python//python:defs.bzl", "py_test")
+load("@score_tooling//python_basics:defs.bzl", "score_py_pytest")
 
 package(default_visibility = ["//visibility:private"])
 
-py_test(
+score_py_pytest(
     name = "test_spdx_formatter",
     srcs = ["test_spdx_formatter.py"],
     deps = ["//sbom/internal/generator:spdx_formatter"],
 )
 
-py_test(
+score_py_pytest(
     name = "test_cyclonedx_formatter",
     srcs = ["test_cyclonedx_formatter.py"],
     deps = ["//sbom/internal/generator:cyclonedx_formatter"],
 )
 
-py_test(
+score_py_pytest(
     name = "test_bcr_known_licenses",
     srcs = ["test_bcr_known_licenses.py"],
     deps = ["//sbom/internal/generator:sbom_generator_lib"],
 )
 
-py_test(
+score_py_pytest(
     name = "test_cpp_enrich_checksum",
     srcs = ["test_cpp_enrich_checksum.py"],
     data = ["//sbom:cpp_metadata.json"],

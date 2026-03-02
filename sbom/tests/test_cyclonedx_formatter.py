@@ -211,7 +211,3 @@ class TestNormalizeSpdxLicenseCdx(unittest.TestCase):
         )
         self.assertEqual(licenses[0]["expression"], "Apache-2.0 OR MIT")
         self.assertNotIn("license", licenses[0])
-
-
-if __name__ == "__main__":
-    unittest.main()

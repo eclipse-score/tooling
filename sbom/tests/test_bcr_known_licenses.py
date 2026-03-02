@@ -282,7 +282,3 @@ class TestResolveComponentWithLicenses(unittest.TestCase):
         self.assertIsNotNone(comp)
         self.assertEqual(comp["name"], "boost.config")
         self.assertEqual(comp["license"], "BSL-1.0")
-
-
-if __name__ == "__main__":
-    unittest.main()
