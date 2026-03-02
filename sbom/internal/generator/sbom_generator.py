@@ -151,8 +151,6 @@ def load_crates_cache(cache_path: str | None = None) -> dict[str, Any]:
         return {}
 
 
-
-
 # Known licenses for Bazel Central Registry (BCR) C++ modules.
 # Used as a fallback when cdxgen and lockfile parsing cannot provide license data.
 # Keys are BCR module names (exact or prefix for sub-modules like boost.*).
@@ -373,7 +371,9 @@ def load_cdxgen_sbom(cdxgen_path: str) -> list[dict[str, Any]]:
     return components
 
 
-def mark_missing_cpp_descriptions(components: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def mark_missing_cpp_descriptions(
+    components: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     """Mark missing descriptions for non-Rust libraries as 'Missing'."""
     for comp in components:
         if comp.get("description"):
@@ -495,9 +495,7 @@ def main() -> int:
     # Filter out the main component from the dependency list to avoid self-dependency
     # (e.g., sbom for score_kyron should not list score_kyron as its own dependency)
     if component_name:
-        components = [
-            c for c in components if c.get("name") != component_name
-        ]
+        components = [c for c in components if c.get("name") != component_name]
 
     # Generate outputs
     if args.spdx_output:

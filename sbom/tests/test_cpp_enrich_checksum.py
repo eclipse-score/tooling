@@ -42,7 +42,9 @@ class TestCppEnrichChecksumPropagation(unittest.TestCase):
         """An existing checksum on a component is preserved — cache is skipped."""
         existing = "aaaa" * 16
         cache_sha = "bbbb" * 16
-        components = [{"name": "flatbuffers", "version": "25.2.10", "checksum": existing}]
+        components = [
+            {"name": "flatbuffers", "version": "25.2.10", "checksum": existing}
+        ]
         cpp_cache = [{"name": "flatbuffers", "checksum": cache_sha}]
 
         result = self._run(components, cpp_cache)

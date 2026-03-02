@@ -3,7 +3,10 @@
 import unittest
 from datetime import datetime, timezone
 
-from sbom.internal.generator.spdx_formatter import generate_spdx, _normalize_spdx_license
+from sbom.internal.generator.spdx_formatter import (
+    generate_spdx,
+    _normalize_spdx_license,
+)
 
 
 class TestSpdxFormatter(unittest.TestCase):
@@ -104,7 +107,6 @@ class TestSpdxFormatter(unittest.TestCase):
         self.assertIsNotNone(purl_ref)
         self.assertEqual(purl_ref["referenceLocator"], "pkg:cargo/tokio@1.10.0")
 
-
     def test_generate_spdx_component_checksum(self):
         """Test that SHA-256 checksums are emitted when available."""
         components_with_hash = [
@@ -144,20 +146,31 @@ class TestNormalizeSpdxLicense(unittest.TestCase):
     """Tests for SPDX boolean operator normalization."""
 
     def test_lowercase_or_uppercased(self):
-        self.assertEqual(_normalize_spdx_license("Apache-2.0 or MIT"), "Apache-2.0 OR MIT")
+        self.assertEqual(
+            _normalize_spdx_license("Apache-2.0 or MIT"), "Apache-2.0 OR MIT"
+        )
 
     def test_lowercase_and_uppercased(self):
-        self.assertEqual(_normalize_spdx_license("MIT and Apache-2.0"), "MIT AND Apache-2.0")
+        self.assertEqual(
+            _normalize_spdx_license("MIT and Apache-2.0"), "MIT AND Apache-2.0"
+        )
 
     def test_lowercase_with_uppercased(self):
-        self.assertEqual(_normalize_spdx_license("GPL-2.0 with Classpath-exception-2.0"), "GPL-2.0 WITH Classpath-exception-2.0")
+        self.assertEqual(
+            _normalize_spdx_license("GPL-2.0 with Classpath-exception-2.0"),
+            "GPL-2.0 WITH Classpath-exception-2.0",
+        )
 
     def test_already_uppercase_unchanged(self):
-        self.assertEqual(_normalize_spdx_license("Apache-2.0 OR MIT"), "Apache-2.0 OR MIT")
+        self.assertEqual(
+            _normalize_spdx_license("Apache-2.0 OR MIT"), "Apache-2.0 OR MIT"
+        )
 
     def test_gpl_or_later_identifier_not_mangled(self):
         """GPL-2.0-or-later has '-or-' (hyphen-delimited) — must not be uppercased."""
-        self.assertEqual(_normalize_spdx_license("GPL-2.0-or-later"), "GPL-2.0-or-later")
+        self.assertEqual(
+            _normalize_spdx_license("GPL-2.0-or-later"), "GPL-2.0-or-later"
+        )
 
     def test_mixed_compound_expression(self):
         self.assertEqual(
@@ -180,7 +193,9 @@ class TestNormalizeSpdxLicense(unittest.TestCase):
             "namespace": "https://example.com",
         }
         timestamp = "2024-01-01T00:00:00+00:00"
-        components = [{"name": "serde", "version": "1.0.228", "license": "Apache-2.0 or MIT"}]
+        components = [
+            {"name": "serde", "version": "1.0.228", "license": "Apache-2.0 or MIT"}
+        ]
         spdx = generate_spdx(components, config, timestamp)
         serde_pkg = next(p for p in spdx["packages"] if p["name"] == "serde")
         self.assertEqual(serde_pkg["licenseConcluded"], "Apache-2.0 OR MIT")

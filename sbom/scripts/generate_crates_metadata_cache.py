@@ -166,9 +166,7 @@ def generate_synthetic_cargo_lock(
         lines.append("[[package]]")
         lines.append(f'name = "{info["name"]}"')
         lines.append(f'version = "{info["version"]}"')
-        lines.append(
-            'source = "registry+https://github.com/rust-lang/crates.io-index"'
-        )
+        lines.append('source = "registry+https://github.com/rust-lang/crates.io-index"')
         lines.append("")
 
     with open(output_path, "w", encoding="utf-8") as f:
@@ -190,9 +188,7 @@ def _find_uvx() -> str:
     return "uvx"  # fall back, will raise FileNotFoundError in subprocess
 
 
-def run_dash_license_scan(
-    cargo_lock_path: str, summary_output_path: str
-) -> None:
+def run_dash_license_scan(cargo_lock_path: str, summary_output_path: str) -> None:
     """Invoke dash-license-scan via uvx and write summary to file.
 
     Args:
@@ -238,9 +234,7 @@ def run_dash_license_scan(
         )
         sys.exit(1)
     except subprocess.TimeoutExpired:
-        print(
-            "ERROR: dash-license-scan timed out after 600 seconds", file=sys.stderr
-        )
+        print("ERROR: dash-license-scan timed out after 600 seconds", file=sys.stderr)
         sys.exit(1)
 
     # dash-license-scan exits with returncode = number of restricted items.
@@ -267,9 +261,7 @@ def run_dash_license_scan(
         sys.exit(1)
 
     if result.returncode > 0:
-        print(
-            f"  NOTE: {result.returncode} crate(s) have 'restricted' license status"
-        )
+        print(f"  NOTE: {result.returncode} crate(s) have 'restricted' license status")
 
 
 def parse_dash_summary(summary_path: str) -> Dict[str, str]:
@@ -413,7 +405,7 @@ def generate_cache(
         print(f"Found {len(crates)} crates from Cargo.lock")
 
     # Merge crates from MODULE.bazel.lock files
-    for module_lock_path in (module_lock_paths or []):
+    for module_lock_path in module_lock_paths or []:
         print(f"Parsing {module_lock_path}...")
         module_crates = parse_module_bazel_lock(module_lock_path)
         added = 0

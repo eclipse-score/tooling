@@ -19,9 +19,7 @@ def _make_spdx(
     }
 
 
-def _cargo_pkg(
-    spdx_id: str, name: str, version: str, purl: str | None = None
-) -> dict:
+def _cargo_pkg(spdx_id: str, name: str, version: str, purl: str | None = None) -> dict:
     pkg: dict = {
         "SPDXID": spdx_id,
         "name": name,
@@ -30,13 +28,16 @@ def _cargo_pkg(
     }
     if purl:
         pkg["externalRefs"] = [
-            {"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": purl}
+            {
+                "referenceCategory": "PACKAGE-MANAGER",
+                "referenceType": "purl",
+                "referenceLocator": purl,
+            }
         ]
     return pkg
 
 
 class TestConvertSpdxToSnapshot(unittest.TestCase):
-
     def _base_snapshot(self, spdx: dict, **kwargs) -> dict:
         return convert_spdx_to_snapshot(
             spdx=spdx,
@@ -73,12 +74,21 @@ class TestConvertSpdxToSnapshot(unittest.TestCase):
         self.assertEqual(snapshot["job"]["id"], "42")
 
     def test_packages_without_purl_are_excluded(self):
-        root_pkg = _cargo_pkg("SPDXRef-root", "myapp", "1.0.0", purl="pkg:github/eclipse-score/myapp@1.0.0")
+        root_pkg = _cargo_pkg(
+            "SPDXRef-root",
+            "myapp",
+            "1.0.0",
+            purl="pkg:github/eclipse-score/myapp@1.0.0",
+        )
         no_purl_pkg = _cargo_pkg("SPDXRef-nopurl", "internal-tool", "0.1.0")
         spdx = _make_spdx(
             packages=[root_pkg, no_purl_pkg],
             relationships=[
-                {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-root"},
+                {
+                    "spdxElementId": "SPDXRef-DOCUMENT",
+                    "relationshipType": "DESCRIBES",
+                    "relatedSpdxElement": "SPDXRef-root",
+                },
             ],
         )
         snapshot = self._base_snapshot(spdx)
@@ -88,13 +98,28 @@ class TestConvertSpdxToSnapshot(unittest.TestCase):
         self.assertFalse(any("internal-tool" in k for k in resolved))
 
     def test_root_package_excluded_from_resolved(self):
-        root_pkg = _cargo_pkg("SPDXRef-root", "myapp", "1.0.0", purl="pkg:github/eclipse-score/myapp@1.0.0")
-        dep_pkg = _cargo_pkg("SPDXRef-serde", "serde", "1.0.228", purl="pkg:cargo/serde@1.0.228")
+        root_pkg = _cargo_pkg(
+            "SPDXRef-root",
+            "myapp",
+            "1.0.0",
+            purl="pkg:github/eclipse-score/myapp@1.0.0",
+        )
+        dep_pkg = _cargo_pkg(
+            "SPDXRef-serde", "serde", "1.0.228", purl="pkg:cargo/serde@1.0.228"
+        )
         spdx = _make_spdx(
             packages=[root_pkg, dep_pkg],
             relationships=[
-                {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-root"},
-                {"spdxElementId": "SPDXRef-root", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-serde"},
+                {
+                    "spdxElementId": "SPDXRef-DOCUMENT",
+                    "relationshipType": "DESCRIBES",
+                    "relatedSpdxElement": "SPDXRef-root",
+                },
+                {
+                    "spdxElementId": "SPDXRef-root",
+                    "relationshipType": "DEPENDS_ON",
+                    "relatedSpdxElement": "SPDXRef-serde",
+                },
             ],
         )
         snapshot = self._base_snapshot(spdx)
@@ -106,15 +131,36 @@ class TestConvertSpdxToSnapshot(unittest.TestCase):
         self.assertTrue(any("serde" in k for k in resolved))
 
     def test_direct_vs_indirect_relationship(self):
-        root_pkg = _cargo_pkg("SPDXRef-root", "myapp", "1.0.0", purl="pkg:github/eclipse-score/myapp@1.0.0")
-        direct_pkg = _cargo_pkg("SPDXRef-tokio", "tokio", "1.0.0", purl="pkg:cargo/tokio@1.0.0")
-        indirect_pkg = _cargo_pkg("SPDXRef-mio", "mio", "0.8.0", purl="pkg:cargo/mio@0.8.0")
+        root_pkg = _cargo_pkg(
+            "SPDXRef-root",
+            "myapp",
+            "1.0.0",
+            purl="pkg:github/eclipse-score/myapp@1.0.0",
+        )
+        direct_pkg = _cargo_pkg(
+            "SPDXRef-tokio", "tokio", "1.0.0", purl="pkg:cargo/tokio@1.0.0"
+        )
+        indirect_pkg = _cargo_pkg(
+            "SPDXRef-mio", "mio", "0.8.0", purl="pkg:cargo/mio@0.8.0"
+        )
         spdx = _make_spdx(
             packages=[root_pkg, direct_pkg, indirect_pkg],
             relationships=[
-                {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-root"},
-                {"spdxElementId": "SPDXRef-root", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-tokio"},
-                {"spdxElementId": "SPDXRef-tokio", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-mio"},
+                {
+                    "spdxElementId": "SPDXRef-DOCUMENT",
+                    "relationshipType": "DESCRIBES",
+                    "relatedSpdxElement": "SPDXRef-root",
+                },
+                {
+                    "spdxElementId": "SPDXRef-root",
+                    "relationshipType": "DEPENDS_ON",
+                    "relatedSpdxElement": "SPDXRef-tokio",
+                },
+                {
+                    "spdxElementId": "SPDXRef-tokio",
+                    "relationshipType": "DEPENDS_ON",
+                    "relatedSpdxElement": "SPDXRef-mio",
+                },
             ],
         )
         snapshot = self._base_snapshot(spdx)
@@ -128,13 +174,28 @@ class TestConvertSpdxToSnapshot(unittest.TestCase):
         self.assertEqual(mio_entry["relationship"], "indirect")
 
     def test_package_url_preserved(self):
-        root_pkg = _cargo_pkg("SPDXRef-root", "myapp", "1.0.0", purl="pkg:github/eclipse-score/myapp@1.0.0")
-        dep_pkg = _cargo_pkg("SPDXRef-serde", "serde", "1.0.228", purl="pkg:cargo/serde@1.0.228")
+        root_pkg = _cargo_pkg(
+            "SPDXRef-root",
+            "myapp",
+            "1.0.0",
+            purl="pkg:github/eclipse-score/myapp@1.0.0",
+        )
+        dep_pkg = _cargo_pkg(
+            "SPDXRef-serde", "serde", "1.0.228", purl="pkg:cargo/serde@1.0.228"
+        )
         spdx = _make_spdx(
             packages=[root_pkg, dep_pkg],
             relationships=[
-                {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-root"},
-                {"spdxElementId": "SPDXRef-root", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-serde"},
+                {
+                    "spdxElementId": "SPDXRef-DOCUMENT",
+                    "relationshipType": "DESCRIBES",
+                    "relatedSpdxElement": "SPDXRef-root",
+                },
+                {
+                    "spdxElementId": "SPDXRef-root",
+                    "relationshipType": "DEPENDS_ON",
+                    "relatedSpdxElement": "SPDXRef-serde",
+                },
             ],
         )
         snapshot = self._base_snapshot(spdx)
@@ -168,13 +229,31 @@ class TestConvertSpdxToSnapshot(unittest.TestCase):
 
     def test_generic_purl_included(self):
         """pkg:generic/ PURLs (BCR modules) are accepted by GitHub Dependency Graph."""
-        root_pkg = _cargo_pkg("SPDXRef-root", "myapp", "1.0.0", purl="pkg:github/eclipse-score/myapp@1.0.0")
-        boost_pkg = _cargo_pkg("SPDXRef-boost", "boost.filesystem", "1.83.0", purl="pkg:generic/boost.filesystem@1.83.0")
+        root_pkg = _cargo_pkg(
+            "SPDXRef-root",
+            "myapp",
+            "1.0.0",
+            purl="pkg:github/eclipse-score/myapp@1.0.0",
+        )
+        boost_pkg = _cargo_pkg(
+            "SPDXRef-boost",
+            "boost.filesystem",
+            "1.83.0",
+            purl="pkg:generic/boost.filesystem@1.83.0",
+        )
         spdx = _make_spdx(
             packages=[root_pkg, boost_pkg],
             relationships=[
-                {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-root"},
-                {"spdxElementId": "SPDXRef-root", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-boost"},
+                {
+                    "spdxElementId": "SPDXRef-DOCUMENT",
+                    "relationshipType": "DESCRIBES",
+                    "relatedSpdxElement": "SPDXRef-root",
+                },
+                {
+                    "spdxElementId": "SPDXRef-root",
+                    "relationshipType": "DEPENDS_ON",
+                    "relatedSpdxElement": "SPDXRef-boost",
+                },
             ],
         )
         snapshot = self._base_snapshot(spdx)
@@ -182,7 +261,9 @@ class TestConvertSpdxToSnapshot(unittest.TestCase):
         resolved = manifest["resolved"]
         boost_entry = next((v for k, v in resolved.items() if "boost" in k), None)
         self.assertIsNotNone(boost_entry)
-        self.assertEqual(boost_entry["package_url"], "pkg:generic/boost.filesystem@1.83.0")
+        self.assertEqual(
+            boost_entry["package_url"], "pkg:generic/boost.filesystem@1.83.0"
+        )
 
 
 if __name__ == "__main__":

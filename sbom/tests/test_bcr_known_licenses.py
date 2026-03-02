@@ -38,7 +38,10 @@ class TestApplyKnownLicenses(unittest.TestCase):
         """boost.config should inherit BSL-1.0 from the 'boost' BCR entry."""
         metadata = {
             "modules": {
-                "boost.config": {"version": "1.87.0", "purl": "pkg:bazel/boost.config@1.87.0"},
+                "boost.config": {
+                    "version": "1.87.0",
+                    "purl": "pkg:bazel/boost.config@1.87.0",
+                },
             },
             "licenses": {},
         }
@@ -50,13 +53,17 @@ class TestApplyKnownLicenses(unittest.TestCase):
     def test_multiple_boost_submodules(self):
         """All boost.* sub-modules should receive BSL-1.0."""
         names = [
-            "boost.config", "boost.assert", "boost.mp11", "boost.container",
-            "boost.interprocess", "boost.core", "boost.predef",
+            "boost.config",
+            "boost.assert",
+            "boost.mp11",
+            "boost.container",
+            "boost.interprocess",
+            "boost.core",
+            "boost.predef",
         ]
         metadata = {
             "modules": {
-                n: {"version": "1.87.0", "purl": f"pkg:bazel/{n}@1.87.0"}
-                for n in names
+                n: {"version": "1.87.0", "purl": f"pkg:bazel/{n}@1.87.0"} for n in names
             },
             "licenses": {},
         }
@@ -64,7 +71,8 @@ class TestApplyKnownLicenses(unittest.TestCase):
 
         for n in names:
             self.assertEqual(
-                metadata["modules"][n]["license"], "BSL-1.0",
+                metadata["modules"][n]["license"],
+                "BSL-1.0",
                 f"{n} should have BSL-1.0 license",
             )
 
@@ -72,7 +80,10 @@ class TestApplyKnownLicenses(unittest.TestCase):
         """A module matching a BCR key exactly gets the license."""
         metadata = {
             "modules": {
-                "abseil-cpp": {"version": "20230802.0", "purl": "pkg:bazel/abseil-cpp@20230802.0"},
+                "abseil-cpp": {
+                    "version": "20230802.0",
+                    "purl": "pkg:bazel/abseil-cpp@20230802.0",
+                },
             },
             "licenses": {},
         }
@@ -84,7 +95,10 @@ class TestApplyKnownLicenses(unittest.TestCase):
         """Modules not in BCR_KNOWN_LICENSES remain without a license."""
         metadata = {
             "modules": {
-                "some_unknown_lib": {"version": "1.0.0", "purl": "pkg:bazel/some_unknown_lib@1.0.0"},
+                "some_unknown_lib": {
+                    "version": "1.0.0",
+                    "purl": "pkg:bazel/some_unknown_lib@1.0.0",
+                },
             },
             "licenses": {},
         }
@@ -98,7 +112,10 @@ class TestApplyKnownLicenses(unittest.TestCase):
         """User-declared license in metadata['licenses'] takes priority."""
         metadata = {
             "modules": {
-                "boost.config": {"version": "1.87.0", "purl": "pkg:bazel/boost.config@1.87.0"},
+                "boost.config": {
+                    "version": "1.87.0",
+                    "purl": "pkg:bazel/boost.config@1.87.0",
+                },
             },
             "licenses": {
                 "boost.config": {"license": "MIT", "supplier": "Custom"},
@@ -113,8 +130,14 @@ class TestApplyKnownLicenses(unittest.TestCase):
         """Parent-level license declaration covers all sub-modules."""
         metadata = {
             "modules": {
-                "boost.config": {"version": "1.87.0", "purl": "pkg:bazel/boost.config@1.87.0"},
-                "boost.container": {"version": "1.87.0", "purl": "pkg:bazel/boost.container@1.87.0"},
+                "boost.config": {
+                    "version": "1.87.0",
+                    "purl": "pkg:bazel/boost.config@1.87.0",
+                },
+                "boost.container": {
+                    "version": "1.87.0",
+                    "purl": "pkg:bazel/boost.container@1.87.0",
+                },
             },
             "licenses": {
                 "boost": {"license": "BSL-1.0-custom", "supplier": "My Boost Fork"},
@@ -122,14 +145,21 @@ class TestApplyKnownLicenses(unittest.TestCase):
         }
         apply_known_licenses(metadata)
 
-        self.assertEqual(metadata["modules"]["boost.config"]["license"], "BSL-1.0-custom")
-        self.assertEqual(metadata["modules"]["boost.container"]["license"], "BSL-1.0-custom")
+        self.assertEqual(
+            metadata["modules"]["boost.config"]["license"], "BSL-1.0-custom"
+        )
+        self.assertEqual(
+            metadata["modules"]["boost.container"]["license"], "BSL-1.0-custom"
+        )
 
     def test_explicit_beats_parent(self):
         """Exact-name license takes priority over parent-level declaration."""
         metadata = {
             "modules": {
-                "boost.config": {"version": "1.87.0", "purl": "pkg:bazel/boost.config@1.87.0"},
+                "boost.config": {
+                    "version": "1.87.0",
+                    "purl": "pkg:bazel/boost.config@1.87.0",
+                },
             },
             "licenses": {
                 "boost": {"license": "BSL-1.0", "supplier": "Boost.org"},
@@ -144,7 +174,10 @@ class TestApplyKnownLicenses(unittest.TestCase):
         """User-declared license overrides the BCR known-license database."""
         metadata = {
             "modules": {
-                "boost.config": {"version": "1.87.0", "purl": "pkg:bazel/boost.config@1.87.0"},
+                "boost.config": {
+                    "version": "1.87.0",
+                    "purl": "pkg:bazel/boost.config@1.87.0",
+                },
             },
             "licenses": {
                 "boost": {"license": "Apache-2.0", "supplier": "Custom Boost"},
@@ -190,7 +223,9 @@ class TestApplyKnownLicenses(unittest.TestCase):
         apply_known_licenses(metadata)
 
         self.assertEqual(metadata["modules"]["boost.config"]["license"], "BSL-1.0")
-        self.assertEqual(metadata["modules"]["boost.config"]["supplier"], "My Custom Supplier")
+        self.assertEqual(
+            metadata["modules"]["boost.config"]["supplier"], "My Custom Supplier"
+        )
 
     # -- Edge cases -----------------------------------------------------------
 
@@ -203,7 +238,10 @@ class TestApplyKnownLicenses(unittest.TestCase):
         """Missing 'licenses' key does not raise."""
         metadata = {
             "modules": {
-                "boost.config": {"version": "1.87.0", "purl": "pkg:bazel/boost.config@1.87.0"},
+                "boost.config": {
+                    "version": "1.87.0",
+                    "purl": "pkg:bazel/boost.config@1.87.0",
+                },
             },
         }
         apply_known_licenses(metadata)

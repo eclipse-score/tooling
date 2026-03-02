@@ -109,9 +109,7 @@ class TestParseDashSummary(unittest.TestCase):
 
     def test_restricted_crate_still_gets_license(self):
         """Restricted crates still have their license extracted."""
-        summary = (
-            "crate/cratesio/-/openssl-sys/0.9.104, OpenSSL, restricted, clearlydefined\n"
-        )
+        summary = "crate/cratesio/-/openssl-sys/0.9.104, OpenSSL, restricted, clearlydefined\n"
         path = self._write_summary(summary)
         result = parse_dash_summary(path)
 
@@ -119,9 +117,7 @@ class TestParseDashSummary(unittest.TestCase):
 
     def test_licenseref_expression(self):
         """LicenseRef-* expressions are preserved."""
-        summary = (
-            "crate/cratesio/-/ring/0.17.14, LicenseRef-ring, restricted, clearlydefined\n"
-        )
+        summary = "crate/cratesio/-/ring/0.17.14, LicenseRef-ring, restricted, clearlydefined\n"
         path = self._write_summary(summary)
         result = parse_dash_summary(path)
 
@@ -170,9 +166,7 @@ class TestBuildDashCoordinates(unittest.TestCase):
         }
         coords = build_dash_coordinates(crates)
 
-        self.assertEqual(
-            coords[0], "crate/cratesio/-/iceoryx2-bb-lock-free/0.7.0"
-        )
+        self.assertEqual(coords[0], "crate/cratesio/-/iceoryx2-bb-lock-free/0.7.0")
 
 
 class TestParseModuleBazelLock(unittest.TestCase):
@@ -258,11 +252,7 @@ class TestParseModuleBazelLock(unittest.TestCase):
 
     def test_no_crate_extension(self):
         """Lockfile without crate extension returns empty dict."""
-        lockfile = {
-            "moduleExtensions": {
-                "some_other_extension": {"general": {}}
-            }
-        }
+        lockfile = {"moduleExtensions": {"some_other_extension": {"general": {}}}}
         path = self._write_lockfile(lockfile)
         result = parse_module_bazel_lock(path)
 
@@ -389,9 +379,7 @@ class TestEndToEndLicenseExtraction(unittest.TestCase):
         # All crates should have licenses
         for name in crates:
             self.assertIn(name, license_map, f"Missing license for {name}")
-            self.assertTrue(
-                license_map[name], f"Empty license for {name}"
-            )
+            self.assertTrue(license_map[name], f"Empty license for {name}")
 
 
 if __name__ == "__main__":

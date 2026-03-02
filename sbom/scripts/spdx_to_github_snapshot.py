@@ -168,12 +168,8 @@ def main() -> int:
     )
     parser.add_argument("--input", required=True, help="Path to SPDX 2.3 JSON file")
     parser.add_argument("--output", required=True, help="Output snapshot JSON path")
-    parser.add_argument(
-        "--sha", required=True, help="Git commit SHA (40 hex chars)"
-    )
-    parser.add_argument(
-        "--ref", required=True, help="Git ref (e.g. refs/heads/main)"
-    )
+    parser.add_argument("--sha", required=True, help="Git commit SHA (40 hex chars)")
+    parser.add_argument("--ref", required=True, help="Git ref (e.g. refs/heads/main)")
     parser.add_argument(
         "--job-correlator",
         default="score-sbom_sbom",
@@ -215,9 +211,7 @@ def main() -> int:
     with output_path.open("w") as f:
         json.dump(snapshot, f, indent=2)
 
-    total_packages = sum(
-        len(m["resolved"]) for m in snapshot["manifests"].values()
-    )
+    total_packages = sum(len(m["resolved"]) for m in snapshot["manifests"].values())
     print(
         f"Converted {len(spdx.get('packages', []))} SPDX packages → "
         f"{total_packages} Dependency Submission packages"
