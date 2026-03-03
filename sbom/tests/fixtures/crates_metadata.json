@@ -1,0 +1,2306 @@
+{
+  "adler32": {
+    "checksum": "aae1277d39aeec15cb388266ecc24b11c80469deae6067e17a1a7aa9e5c1f234",
+    "description": "Minimal Adler32 implementation for Rust.",
+    "license": "Zlib",
+    "purl": "pkg:cargo/adler32@1.2.0",
+    "supplier": "remram44",
+    "version": "1.2.0"
+  },
+  "aho-corasick": {
+    "checksum": "ddd31a130427c27518df266943a5308ed92d4b226cc639f5a8f1002816174301",
+    "description": "Fast multiple substring searching.",
+    "license": "MIT OR Unlicense",
+    "purl": "pkg:cargo/aho-corasick@1.1.4",
+    "supplier": "BurntSushi",
+    "version": "1.1.4"
+  },
+  "aliasable": {
+    "checksum": "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd",
+    "description": "Basic aliasable (non unique pointer) types",
+    "license": "MIT",
+    "purl": "pkg:cargo/aliasable@0.1.3",
+    "supplier": "avitex",
+    "version": "0.1.3"
+  },
+  "anstream": {
+    "checksum": "43d5b281e737544384e969a5ccad3f1cdd24b48086a0fc1b2a5262a26b8f4f4a",
+    "description": "IO stream adapters for writing colored text that will gracefully degrade according to your terminal's capabilities.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/anstream@0.6.21",
+    "supplier": "rust-cli",
+    "version": "0.6.21"
+  },
+  "anstyle": {
+    "checksum": "5192cca8006f1fd4f7237516f40fa183bb07f8fbdfedaa0036de5ea9b0b45e78",
+    "description": "ANSI text styling",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/anstyle@1.0.13",
+    "supplier": "rust-cli",
+    "version": "1.0.13"
+  },
+  "anstyle-parse": {
+    "checksum": "4e7644824f0aa2c7b9384579234ef10eb7efb6a0deb83f9630a49594dd9c15c2",
+    "description": "Parse ANSI Style Escapes",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/anstyle-parse@0.2.7",
+    "supplier": "rust-cli",
+    "version": "0.2.7"
+  },
+  "anstyle-query": {
+    "checksum": "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc",
+    "description": "Look up colored console capabilities",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/anstyle-query@1.1.5",
+    "supplier": "rust-cli",
+    "version": "1.1.5"
+  },
+  "anstyle-wincon": {
+    "checksum": "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d",
+    "description": "Styling legacy Windows terminals",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/anstyle-wincon@3.0.11",
+    "supplier": "rust-cli",
+    "version": "3.0.11"
+  },
+  "anyhow": {
+    "checksum": "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61",
+    "description": "Flexible concrete Error type built on std::error::Error",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/anyhow@1.0.100",
+    "supplier": "dtolnay",
+    "version": "1.0.100"
+  },
+  "argh": {
+    "checksum": "34ff18325c8a36b82f992e533ece1ec9f9a9db446bd1c14d4f936bac88fcd240",
+    "description": "Derive-based argument parsing optimized for code size",
+    "license": "BSD-3-Clause",
+    "purl": "pkg:cargo/argh@0.1.13",
+    "supplier": "google",
+    "version": "0.1.13"
+  },
+  "argh_derive": {
+    "checksum": "adb7b2b83a50d329d5d8ccc620f5c7064028828538bdf5646acd60dc1f767803",
+    "description": "Derive-based argument parsing optimized for code size",
+    "license": "BSD-3-Clause",
+    "purl": "pkg:cargo/argh_derive@0.1.13",
+    "supplier": "google",
+    "version": "0.1.13"
+  },
+  "argh_shared": {
+    "checksum": "a464143cc82dedcdc3928737445362466b7674b5db4e2eb8e869846d6d84f4f6",
+    "description": "Derive-based argument parsing optimized for code size",
+    "license": "BSD-3-Clause",
+    "purl": "pkg:cargo/argh_shared@0.1.13",
+    "supplier": "google",
+    "version": "0.1.13"
+  },
+  "arrayvec": {
+    "checksum": "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50",
+    "description": "A vector with fixed capacity, backed by an array (it can be stored on the stack too). Implements fixed capacity ArrayVec and ArrayString.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/arrayvec@0.7.6",
+    "supplier": "bluss",
+    "version": "0.7.6"
+  },
+  "async-stream": {
+    "checksum": "0b5a71a6f37880a80d1d7f19efd781e4b5de42c88f0722cc13bcb6cc2cfe8476",
+    "description": "Asynchronous streams using async & await notation",
+    "license": "MIT",
+    "purl": "pkg:cargo/async-stream@0.3.6",
+    "supplier": "tokio-rs",
+    "version": "0.3.6"
+  },
+  "async-stream-impl": {
+    "checksum": "c7c24de15d275a1ecfd47a380fb4d5ec9bfe0933f309ed5e705b775596a3574d",
+    "description": "proc macros for async-stream crate",
+    "license": "MIT",
+    "purl": "pkg:cargo/async-stream-impl@0.3.6",
+    "supplier": "tokio-rs",
+    "version": "0.3.6"
+  },
+  "async-trait": {
+    "checksum": "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb",
+    "description": "Type erasure for async trait methods",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/async-trait@0.1.89",
+    "supplier": "dtolnay",
+    "version": "0.1.89"
+  },
+  "atomic-polyfill": {
+    "checksum": "8cf2bce30dfe09ef0bfaef228b9d414faaf7e563035494d7fe092dba54b300f4",
+    "description": "Atomic polyfills, for targets where they're not available.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/atomic-polyfill@1.0.3",
+    "supplier": "embassy-rs",
+    "version": "1.0.3"
+  },
+  "atomic-waker": {
+    "checksum": "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0",
+    "description": "A synchronization primitive for task wakeup",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/atomic-waker@1.1.2",
+    "supplier": "smol-rs",
+    "version": "1.1.2"
+  },
+  "axum": {
+    "checksum": "5b098575ebe77cb6d14fc7f32749631a6e44edbef6b796f89b020e99ba20d425",
+    "description": "Web framework that focuses on ergonomics and modularity",
+    "license": "MIT",
+    "purl": "pkg:cargo/axum@0.8.7",
+    "supplier": "tokio-rs",
+    "version": "0.8.7"
+  },
+  "axum-core": {
+    "checksum": "59446ce19cd142f8833f856eb31f3eb097812d1479ab224f54d72428ca21ea22",
+    "description": "Core types and traits for axum",
+    "license": "MIT",
+    "purl": "pkg:cargo/axum-core@0.5.5",
+    "supplier": "tokio-rs",
+    "version": "0.5.5"
+  },
+  "base64": {
+    "checksum": "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6",
+    "description": "encodes and decodes base64 as bytes or utf8",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/base64@0.22.1",
+    "supplier": "marshallpierce",
+    "version": "0.22.1"
+  },
+  "bincode": {
+    "checksum": "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad",
+    "description": "A binary serialization / deserialization strategy for transforming structs into bytes and vice versa!",
+    "license": "MIT",
+    "purl": "pkg:cargo/bincode@1.3.3",
+    "supplier": "bincode-org",
+    "version": "1.3.3"
+  },
+  "bindgen": {
+    "checksum": "993776b509cfb49c750f11b8f07a46fa23e0a1386ffc01fb1e7d343efc387895",
+    "description": "Automatically generates Rust FFI bindings to C and C++ libraries.",
+    "license": "BSD-3-Clause",
+    "purl": "pkg:cargo/bindgen@0.72.1",
+    "supplier": "rust-lang",
+    "version": "0.72.1"
+  },
+  "bitflags": {
+    "checksum": "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3",
+    "description": "A macro to generate structures which behave like bitflags.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/bitflags@2.10.0",
+    "supplier": "bitflags",
+    "version": "2.10.0"
+  },
+  "block2": {
+    "checksum": "cdeb9d870516001442e364c5220d3574d2da8dc765554b4a617230d33fa58ef5",
+    "description": "Apple's C language extension of blocks",
+    "license": "MIT",
+    "purl": "pkg:cargo/block2@0.6.2",
+    "supplier": "madsmtm",
+    "version": "0.6.2"
+  },
+  "bumpalo": {
+    "checksum": "46c5e41b57b8bba42a04676d81cb89e9ee8e859a1a66f80a5a72e1cb76b34d43",
+    "description": "A fast bump allocation arena for Rust.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/bumpalo@3.19.0",
+    "supplier": "fitzgen",
+    "version": "3.19.0"
+  },
+  "byteorder": {
+    "checksum": "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b",
+    "description": "Library for reading/writing numbers in big-endian and little-endian.",
+    "license": "Unlicense OR MIT",
+    "purl": "pkg:cargo/byteorder@1.5.0",
+    "supplier": "BurntSushi",
+    "version": "1.5.0"
+  },
+  "bytes": {
+    "checksum": "b35204fbdc0b3f4446b89fc1ac2cf84a8a68971995d0bf2e925ec7cd960f9cb3",
+    "description": "Types and traits for working with bytes",
+    "license": "MIT",
+    "purl": "pkg:cargo/bytes@1.11.0",
+    "supplier": "tokio-rs",
+    "version": "1.11.0"
+  },
+  "cc": {
+    "checksum": "90583009037521a116abf44494efecd645ba48b6622457080f080b85544e2215",
+    "description": "A build-time dependency for Cargo build scripts to assist in invoking the native\nC compiler to compile native C code into a static archive to be linked into Rust\ncode.",
+    "license": "",
+    "purl": "pkg:cargo/cc@1.2.49",
+    "supplier": "rust-lang",
+    "version": "1.2.49"
+  },
+  "cdr": {
+    "checksum": "9617422bf43fde9280707a7e90f8f7494389c182f5c70b0f67592d0f06d41dfa",
+    "description": "A serialization/deserialization implementation of Common Data Representation",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/cdr@0.2.4",
+    "supplier": "hrektts",
+    "version": "0.2.4"
+  },
+  "cexpr": {
+    "checksum": "6fac387a98bb7c37292057cffc56d62ecb629900026402633ae9160df93a8766",
+    "description": "A C expression parser and evaluator",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/cexpr@0.6.0",
+    "supplier": "jethrogb",
+    "version": "0.6.0"
+  },
+  "cfg-if": {
+    "checksum": "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801",
+    "description": "A macro to ergonomically define an item depending on a large number of #[cfg]\nparameters. Structured like an if-else chain, the first matching branch is the\nitem that gets emitted.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/cfg-if@1.0.4",
+    "supplier": "rust-lang",
+    "version": "1.0.4"
+  },
+  "cfg_aliases": {
+    "checksum": "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724",
+    "description": "A tiny utility to help save you a lot of effort with long winded `#[cfg()]` checks.",
+    "license": "MIT",
+    "purl": "pkg:cargo/cfg_aliases@0.2.1",
+    "supplier": "katharostech",
+    "version": "0.2.1"
+  },
+  "clang-sys": {
+    "checksum": "0b023947811758c97c59bf9d1c188fd619ad4718dcaa767947df1cadb14f39f4",
+    "description": "Rust bindings for libclang.",
+    "license": "Apache-2.0",
+    "purl": "pkg:cargo/clang-sys@1.8.1",
+    "supplier": "KyleMayes",
+    "version": "1.8.1"
+  },
+  "clap": {
+    "checksum": "c9e340e012a1bf4935f5282ed1436d1489548e8f72308207ea5df0e23d2d03f8",
+    "description": "A simple to use, efficient, and full-featured Command Line Argument Parser",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/clap@4.5.53",
+    "supplier": "clap-rs",
+    "version": "4.5.53"
+  },
+  "clap_builder": {
+    "checksum": "d76b5d13eaa18c901fd2f7fca939fefe3a0727a953561fefdf3b2922b8569d00",
+    "description": "A simple to use, efficient, and full-featured Command Line Argument Parser",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/clap_builder@4.5.53",
+    "supplier": "clap-rs",
+    "version": "4.5.53"
+  },
+  "clap_derive": {
+    "checksum": "2a0b5487afeab2deb2ff4e03a807ad1a03ac532ff5a2cee5d86884440c7f7671",
+    "description": "Parse command line argument by defining a struct, derive crate.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT AND (Apache-2.0 AND MIT AND MIT-0)",
+    "purl": "pkg:cargo/clap_derive@4.5.49",
+    "supplier": "clap-rs",
+    "version": "4.5.49"
+  },
+  "clap_lex": {
+    "checksum": "a1d728cc89cf3aee9ff92b05e62b19ee65a02b5702cff7d5a377e32c6ae29d8d",
+    "description": "Minimal, flexible command line parser",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/clap_lex@0.7.6",
+    "supplier": "clap-rs",
+    "version": "0.7.6"
+  },
+  "cobs": {
+    "checksum": "0fa961b519f0b462e3a3b4a34b64d119eeaca1d59af726fe450bbba07a9fc0a1",
+    "description": "This is an implementation of the Consistent Overhead Byte Stuffing (COBS) algorithm.\n    COBS is an algorithm for transforming a message into an encoding where a specific value\n    (the \"sentinel\" value) is not used. This value can then be used to mark frame boundaries\n    in a serial communication channel.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/cobs@0.3.0",
+    "supplier": "jamesmunns",
+    "version": "0.3.0"
+  },
+  "colorchoice": {
+    "checksum": "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75",
+    "description": "Global override of color control",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/colorchoice@1.0.4",
+    "supplier": "rust-cli",
+    "version": "1.0.4"
+  },
+  "console": {
+    "checksum": "b430743a6eb14e9764d4260d4c0d8123087d504eeb9c48f2b2a5e810dd369df4",
+    "description": "A terminal and console abstraction for Rust",
+    "license": "MIT",
+    "purl": "pkg:cargo/console@0.16.1",
+    "supplier": "console-rs",
+    "version": "0.16.1"
+  },
+  "critical-section": {
+    "checksum": "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b",
+    "description": "Cross-platform critical section",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/critical-section@1.2.0",
+    "supplier": "rust-embedded",
+    "version": "1.2.0"
+  },
+  "crossbeam-channel": {
+    "checksum": "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2",
+    "description": "Multi-producer multi-consumer channels for message passing",
+    "license": "(Apache-2.0 or MIT) AND BSD-3-Clause AND CC-BY-3.0",
+    "purl": "pkg:cargo/crossbeam-channel@0.5.15",
+    "supplier": "crossbeam-rs",
+    "version": "0.5.15"
+  },
+  "crossbeam-utils": {
+    "checksum": "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28",
+    "description": "Utilities for concurrent programming",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/crossbeam-utils@0.8.21",
+    "supplier": "crossbeam-rs",
+    "version": "0.8.21"
+  },
+  "ctrlc": {
+    "checksum": "73736a89c4aff73035ba2ed2e565061954da00d4970fc9ac25dcc85a2a20d790",
+    "description": "Easy Ctrl-C handler for Rust projects",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/ctrlc@3.5.1",
+    "supplier": "Detegr",
+    "version": "3.5.1"
+  },
+  "deranged": {
+    "checksum": "ececcb659e7ba858fb4f10388c250a7252eb0a27373f1a72b8748afdd248e587",
+    "description": "Ranged integers",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/deranged@0.5.5",
+    "supplier": "jhpratt",
+    "version": "0.5.5"
+  },
+  "dispatch2": {
+    "checksum": "89a09f22a6c6069a18470eb92d2298acf25463f14256d24778e1230d789a2aec",
+    "description": "Bindings and wrappers for Apple's Grand Central Dispatch (GCD)",
+    "license": "Zlib OR Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/dispatch2@0.3.0",
+    "supplier": "madsmtm",
+    "version": "0.3.0"
+  },
+  "either": {
+    "checksum": "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719",
+    "description": "The enum `Either` with variants `Left` and `Right` is a general purpose sum type with two cases.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/either@1.15.0",
+    "supplier": "rayon-rs",
+    "version": "1.15.0"
+  },
+  "embedded-io": {
+    "checksum": "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d",
+    "description": "Embedded IO traits",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/embedded-io@0.6.1",
+    "supplier": "rust-embedded",
+    "version": "0.6.1"
+  },
+  "encode_unicode": {
+    "checksum": "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0",
+    "description": "UTF-8 and UTF-16 character types, iterators and related methods for char, u8 and u16.",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/encode_unicode@1.0.0",
+    "supplier": "tormol",
+    "version": "1.0.0"
+  },
+  "enum-iterator": {
+    "checksum": "a4549325971814bda7a44061bf3fe7e487d447cba01e4220a4b454d630d7a016",
+    "description": "Tools to iterate over all values of a type (e.g. all variants of an enumeration)",
+    "license": "0BSD",
+    "purl": "pkg:cargo/enum-iterator@2.3.0",
+    "supplier": "stephaneyfx",
+    "version": "2.3.0"
+  },
+  "enum-iterator-derive": {
+    "checksum": "685adfa4d6f3d765a26bc5dbc936577de9abf756c1feeb3089b01dd395034842",
+    "description": "Procedural macro to derive Sequence",
+    "license": "0BSD",
+    "purl": "pkg:cargo/enum-iterator-derive@1.5.0",
+    "supplier": "stephaneyfx",
+    "version": "1.5.0"
+  },
+  "env_filter": {
+    "checksum": "1bf3c259d255ca70051b30e2e95b5446cdb8949ac4cd22c0d7fd634d89f568e2",
+    "description": "Filter log events using environment variables",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/env_filter@0.1.4",
+    "supplier": "rust-cli",
+    "version": "0.1.4"
+  },
+  "env_logger": {
+    "checksum": "13c863f0904021b108aa8b2f55046443e6b1ebde8fd4a15c399893aae4fa069f",
+    "description": "A logging implementation for `log` which is configured via an environment\nvariable.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/env_logger@0.11.8",
+    "supplier": "rust-cli",
+    "version": "0.11.8"
+  },
+  "equivalent": {
+    "checksum": "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f",
+    "description": "Traits for key comparison in maps.",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/equivalent@1.0.2",
+    "supplier": "indexmap-rs",
+    "version": "1.0.2"
+  },
+  "errno": {
+    "checksum": "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb",
+    "description": "Cross-platform interface to the `errno` variable.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/errno@0.3.14",
+    "supplier": "lambda-fairy",
+    "version": "0.3.14"
+  },
+  "fastrand": {
+    "checksum": "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be",
+    "description": "A simple and fast random number generator",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/fastrand@2.3.0",
+    "supplier": "smol-rs",
+    "version": "2.3.0"
+  },
+  "filedesc": {
+    "checksum": "c4960c866d9cf4c48f64f11ef0020c98900d0cb32e9b019c000ed838470daa1d",
+    "description": "thin wrapper around raw file descriptors",
+    "license": "BSD-2-Clause",
+    "purl": "pkg:cargo/filedesc@0.6.3",
+    "supplier": "de-vri-es",
+    "version": "0.6.3"
+  },
+  "find-msvc-tools": {
+    "checksum": "3a3076410a55c90011c298b04d0cfa770b00fa04e1e3c97d3f6c9de105a03844",
+    "description": "Find windows-specific tools, read MSVC versions from the registry and from COM interfaces",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/find-msvc-tools@0.1.5",
+    "supplier": "rust-lang",
+    "version": "0.1.5"
+  },
+  "fixedbitset": {
+    "checksum": "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99",
+    "description": "FixedBitSet is a simple bitset collection",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/fixedbitset@0.5.7",
+    "supplier": "petgraph",
+    "version": "0.5.7"
+  },
+  "fnv": {
+    "checksum": "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1",
+    "description": "Fowler\u2013Noll\u2013Vo hash function",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/fnv@1.0.7",
+    "supplier": "servo",
+    "version": "1.0.7"
+  },
+  "foldhash": {
+    "checksum": "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2",
+    "description": "A fast, non-cryptographic, minimally DoS-resistant hashing algorithm.",
+    "license": "Zlib",
+    "purl": "pkg:cargo/foldhash@0.1.5",
+    "supplier": "orlp",
+    "version": "0.1.5"
+  },
+  "futures": {
+    "checksum": "65bc07b1a8bc7c85c5f2e110c476c7389b4554ba72af57d8445ea63a576b0876",
+    "description": "An implementation of futures and streams featuring zero allocations,\ncomposability, and iterator-like interfaces.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/futures@0.3.31",
+    "supplier": "rust-lang",
+    "version": "0.3.31"
+  },
+  "futures-channel": {
+    "checksum": "2dff15bf788c671c1934e366d07e30c1814a8ef514e1af724a602e8a2fbe1b10",
+    "description": "Channels for asynchronous communication using futures-rs.",
+    "license": "(Apache-2.0 or MIT) AND BSD-2-Clause-Views",
+    "purl": "pkg:cargo/futures-channel@0.3.31",
+    "supplier": "rust-lang",
+    "version": "0.3.31"
+  },
+  "futures-core": {
+    "checksum": "05f29059c0c2090612e8d742178b0580d2dc940c837851ad723096f87af6663e",
+    "description": "The core traits and types in for the `futures` library.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/futures-core@0.3.31",
+    "supplier": "rust-lang",
+    "version": "0.3.31"
+  },
+  "futures-executor": {
+    "checksum": "1e28d1d997f585e54aebc3f97d39e72338912123a67330d723fdbb564d646c9f",
+    "description": "Executors for asynchronous tasks based on the futures-rs library.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/futures-executor@0.3.31",
+    "supplier": "rust-lang",
+    "version": "0.3.31"
+  },
+  "futures-io": {
+    "checksum": "9e5c1b78ca4aae1ac06c48a526a655760685149f0d465d21f37abfe57ce075c6",
+    "description": "The `AsyncRead`, `AsyncWrite`, `AsyncSeek`, and `AsyncBufRead` traits for the futures-rs library.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/futures-io@0.3.31",
+    "supplier": "rust-lang",
+    "version": "0.3.31"
+  },
+  "futures-macro": {
+    "checksum": "162ee34ebcb7c64a8abebc059ce0fee27c2262618d7b60ed8faf72fef13c3650",
+    "description": "The futures-rs procedural macro implementations.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/futures-macro@0.3.31",
+    "supplier": "rust-lang",
+    "version": "0.3.31"
+  },
+  "futures-sink": {
+    "checksum": "e575fab7d1e0dcb8d0c7bcf9a63ee213816ab51902e6d244a95819acacf1d4f7",
+    "description": "The asynchronous `Sink` trait for the futures-rs library.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/futures-sink@0.3.31",
+    "supplier": "rust-lang",
+    "version": "0.3.31"
+  },
+  "futures-task": {
+    "checksum": "f90f7dce0722e95104fcb095585910c0977252f286e354b5e3bd38902cd99988",
+    "description": "Tools for working with tasks.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/futures-task@0.3.31",
+    "supplier": "rust-lang",
+    "version": "0.3.31"
+  },
+  "futures-util": {
+    "checksum": "9fa08315bb612088cc391249efdc3bc77536f16c91f6cf495e6fbe85b20a4a81",
+    "description": "Common utilities and extension traits for the futures-rs library.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/futures-util@0.3.31",
+    "supplier": "rust-lang",
+    "version": "0.3.31"
+  },
+  "getrandom": {
+    "checksum": "899def5c37c4fd7b2664648c28120ecec138e4d395b459e5ca34f9cce2dd77fd",
+    "description": "A small cross-platform library for retrieving random data from system source",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/getrandom@0.3.4",
+    "supplier": "rust-random",
+    "version": "0.3.4"
+  },
+  "glob": {
+    "checksum": "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280",
+    "description": "Support for matching file paths against Unix shell style patterns.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/glob@0.3.3",
+    "supplier": "rust-lang",
+    "version": "0.3.3"
+  },
+  "h2": {
+    "checksum": "f3c0b69cfcb4e1b9f1bf2f53f95f766e4661169728ec61cd3fe5a0166f2d1386",
+    "description": "An HTTP/2 client and server",
+    "license": "MIT",
+    "purl": "pkg:cargo/h2@0.4.12",
+    "supplier": "hyperium",
+    "version": "0.4.12"
+  },
+  "hash32": {
+    "checksum": "b0c35f58762feb77d74ebe43bdbc3210f09be9fe6742234d573bacc26ed92b67",
+    "description": "32-bit hashing algorithms",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/hash32@0.2.1",
+    "supplier": "rust-embedded-community",
+    "version": "0.2.1"
+  },
+  "hashbrown": {
+    "checksum": "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100",
+    "description": "A Rust port of Google's SwissTable hash map",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/hashbrown@0.16.1",
+    "supplier": "rust-lang",
+    "version": "0.16.1"
+  },
+  "heapless": {
+    "checksum": "cdc6457c0eb62c71aac4bc17216026d8410337c4126773b9c5daba343f17964f",
+    "description": "`static` friendly data structures that don't require dynamic memory allocation",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/heapless@0.7.17",
+    "supplier": "rust-embedded",
+    "version": "0.7.17"
+  },
+  "heck": {
+    "checksum": "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea",
+    "description": "heck is a case conversion library.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/heck@0.5.0",
+    "supplier": "withoutboats",
+    "version": "0.5.0"
+  },
+  "home": {
+    "checksum": "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d",
+    "description": "Shared definitions of home directories.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/home@0.5.12",
+    "supplier": "rust-lang",
+    "version": "0.5.12"
+  },
+  "http": {
+    "checksum": "e3ba2a386d7f85a81f119ad7498ebe444d2e22c2af0b86b069416ace48b3311a",
+    "description": "A set of types for representing HTTP requests and responses.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/http@1.4.0",
+    "supplier": "hyperium",
+    "version": "1.4.0"
+  },
+  "http-body": {
+    "checksum": "1efedce1fb8e6913f23e0c92de8e62cd5b772a67e7b3946df930a62566c93184",
+    "description": "Trait representing an asynchronous, streaming, HTTP request or response body.",
+    "license": "MIT",
+    "purl": "pkg:cargo/http-body@1.0.1",
+    "supplier": "hyperium",
+    "version": "1.0.1"
+  },
+  "http-body-util": {
+    "checksum": "b021d93e26becf5dc7e1b75b1bed1fd93124b374ceb73f43d4d4eafec896a64a",
+    "description": "Combinators and adapters for HTTP request or response bodies.",
+    "license": "MIT",
+    "purl": "pkg:cargo/http-body-util@0.1.3",
+    "supplier": "hyperium",
+    "version": "0.1.3"
+  },
+  "httparse": {
+    "checksum": "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87",
+    "description": "A tiny, safe, speedy, zero-copy HTTP/1.x parser.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/httparse@1.10.1",
+    "supplier": "seanmonstar",
+    "version": "1.10.1"
+  },
+  "httpdate": {
+    "checksum": "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9",
+    "description": "HTTP date parsing and formatting",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/httpdate@1.0.3",
+    "supplier": "pyfisch",
+    "version": "1.0.3"
+  },
+  "human_bytes": {
+    "checksum": "91f255a4535024abf7640cb288260811fc14794f62b063652ed349f9a6c2348e",
+    "description": "Crate to convert bytes into human-readable values",
+    "license": "BSD-2-Clause",
+    "purl": "pkg:cargo/human_bytes@0.4.3",
+    "supplier": "",
+    "version": "0.4.3"
+  },
+  "hyper": {
+    "checksum": "2ab2d4f250c3d7b1c9fcdff1cece94ea4e2dfbec68614f7b87cb205f24ca9d11",
+    "description": "A protective and efficient HTTP library for all.",
+    "license": "MIT",
+    "purl": "pkg:cargo/hyper@1.8.1",
+    "supplier": "hyperium",
+    "version": "1.8.1"
+  },
+  "hyper-timeout": {
+    "checksum": "2b90d566bffbce6a75bd8b09a05aa8c2cb1fabb6cb348f8840c9e4c90a0d83b0",
+    "description": "A connect, read and write timeout aware connector to be used with hyper Client.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/hyper-timeout@0.5.2",
+    "supplier": "hjr3",
+    "version": "0.5.2"
+  },
+  "hyper-util": {
+    "checksum": "727805d60e7938b76b826a6ef209eb70eaa1812794f9424d4a4e2d740662df5f",
+    "description": "hyper utilities",
+    "license": "MIT",
+    "purl": "pkg:cargo/hyper-util@0.1.19",
+    "supplier": "hyperium",
+    "version": "0.1.19"
+  },
+  "iceoryx2": {
+    "checksum": "12c091b5786a230240f8f2691b9d29508ed0a02c025c254abaed8bc788a66bb3",
+    "description": "iceoryx2: Lock-Free Zero-Copy Interprocess Communication",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT) AND Apache-2.0",
+    "purl": "pkg:cargo/iceoryx2@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-bb-container": {
+    "checksum": "fff9d75921f8ccd3e19261d72082b52ccc4704dcdd6930efe6c17b15693ab519",
+    "description": "iceoryx2: IPC shared memory compatible containers",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/iceoryx2-bb-container@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-bb-container-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: IPC shared memory compatible containers",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-container-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-bb-derive-macros": {
+    "checksum": "9257482fb822946bb3028225b6807350e3f815068961ff5bf683735ce01d59a4",
+    "description": "iceoryx2: [internal] helper derive proc-macros",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT) AND Apache-2.0",
+    "purl": "pkg:cargo/iceoryx2-bb-derive-macros@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-bb-derive-macros-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] helper derive proc-macros",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-derive-macros-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-bb-elementary": {
+    "checksum": "38aae0237ff1575a7d9672c0202e5d313e7f674a635f6aaf619d2090fb7a12c2",
+    "description": "iceoryx2: [internal] elementary constructs that have (almost) no dependencies at all",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/iceoryx2-bb-elementary@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-bb-elementary-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] elementary constructs that have (almost) no dependencies at all",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-elementary-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-bb-elementary-traits-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] elementary traits that have (almost) no dependencies at all",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-elementary-traits-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-bb-linux-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] high level safe abstractions for low level unsafe linux constructs",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-linux-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-bb-lock-free": {
+    "checksum": "3ec3227a0c8b1d9e1ea4c61fa6a773e7c3b721fa3e2fd4363324f302b35ac85b",
+    "description": "iceoryx2: [internal] lock-free containers and constructs",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/iceoryx2-bb-lock-free@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-bb-lock-free-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] lock-free containers and constructs",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-lock-free-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-bb-log": {
+    "checksum": "07df5e6ff06cc2ffb0a86b67c7cd4be86b11264d5e83c02a52b384e2d5e6363a",
+    "description": "iceoryx2: [internal] the logger",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/iceoryx2-bb-log@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-bb-log-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] the logger",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-log-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-bb-memory": {
+    "checksum": "55a4ae8856404b6e7eca567004673ca39109fc70fcf387b96ca6d6d27c61f31b",
+    "description": "iceoryx2: [internal] allocators and tools for memory management",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/iceoryx2-bb-memory@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-bb-memory-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] allocators and tools for memory management",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-memory-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-bb-posix": {
+    "checksum": "122ff88c452a3045a9de6db73d0429da736578f76eab75779dd0d3681de75d57",
+    "description": "iceoryx2: [internal] high level safe abstractions for low level unsafe posix constructs",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/iceoryx2-bb-posix@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-bb-posix-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] high level safe abstractions for low level unsafe posix constructs",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-posix-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-bb-system-types": {
+    "checksum": "ac2fb11a94823c3b9117a5e14edf16fd467794cf5391738eb2d8b7fc8e9b04fd",
+    "description": "iceoryx2: [internal] strong types that represents low level constructs like file, path, ip address, etc...",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/iceoryx2-bb-system-types@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-bb-system-types-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] strong types that represents low level constructs like file, path, ip address, etc...",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-system-types-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-bb-testing-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] simple testing primitives",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-testing-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-bb-threadsafe-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] threadsafe non-lock-free containers and constructs",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-bb-threadsafe-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-cal": {
+    "checksum": "6c64b8eee1d57c4336d7df7d521671d8b76c72cac16af0db651e40f8c45f0946",
+    "description": "iceoryx2: [internal] high-level traits and implementations that represents OS primitives in an exchangeable fashion",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/iceoryx2-cal@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-cal-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] high-level traits and implementations that represents OS primitives in an exchangeable fashion",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-cal-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-pal-concurrency-sync": {
+    "checksum": "92dc4ec7c023819c41b5a14c9ca58e8dbb86476053321decda73ac440996f35f",
+    "description": "iceoryx2: [internal] low-level basic building blocks to implement posix mutex, condition variables etc.",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/iceoryx2-pal-concurrency-sync@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-pal-concurrency-sync-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] low-level basic building blocks to implement posix mutex, condition variables etc.",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-pal-concurrency-sync-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-pal-configuration": {
+    "checksum": "d900aa8f9c5b661a9c5ddfbdc28eb87ac8c32be5375ca9b055b087d1c89c984d",
+    "description": "iceoryx2: [internal] platform specific settings",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/iceoryx2-pal-configuration@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-pal-configuration-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] platform specific settings",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-pal-configuration-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-pal-os-api-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] OS api layer for OS specific features",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-pal-os-api-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-pal-posix": {
+    "checksum": "5789169791a6274b492561b95543e1c635285cb454d547f78e53cbc1acd9b3f5",
+    "description": "iceoryx2: [internal] A posix layer that ensures uniform posix behavior on all platforms according to https://posix.opengroup.org",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/iceoryx2-pal-posix@0.5.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.5.0"
+  },
+  "iceoryx2-pal-posix-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] A posix layer that ensures uniform posix behavior on all platforms according to https://posix.opengroup.org",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-pal-posix-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-pal-testing-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: [internal] simple testing primitives",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-pal-testing-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "iceoryx2-qnx8": {
+    "checksum": "",
+    "description": "iceoryx2: Lock-Free Zero-Copy Interprocess Communication",
+    "license": "",
+    "purl": "pkg:cargo/iceoryx2-qnx8@0.7.0",
+    "supplier": "eclipse-iceoryx",
+    "version": "0.7.0"
+  },
+  "indexmap": {
+    "checksum": "0ad4bb2b565bca0645f4d68c5c9af97fba094e9791da685bf83cb5f3ce74acf2",
+    "description": "A hash table with consistent order and fast iteration.",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/indexmap@2.12.1",
+    "supplier": "indexmap-rs",
+    "version": "2.12.1"
+  },
+  "indicatif": {
+    "checksum": "9375e112e4b463ec1b1c6c011953545c65a30164fbab5b581df32b3abf0dcb88",
+    "description": "A progress bar and cli reporting library for Rust",
+    "license": "MIT",
+    "purl": "pkg:cargo/indicatif@0.18.3",
+    "supplier": "console-rs",
+    "version": "0.18.3"
+  },
+  "indicatif-log-bridge": {
+    "checksum": "63703cf9069b85dbe6fe26e1c5230d013dee99d3559cd3d02ba39e099ef7ab02",
+    "description": "Bridge the log crate and indicatif to stop log lines from mixing up with progress bars",
+    "license": "",
+    "purl": "pkg:cargo/indicatif-log-bridge@0.2.3",
+    "supplier": "djugei",
+    "version": "0.2.3"
+  },
+  "ipc-channel": {
+    "checksum": "f93600b5616c2d075f8af8dbd23c1d69278c5d24e4913d220cbc60b14c95c180",
+    "description": "A multiprocess drop-in replacement for Rust channels",
+    "license": "",
+    "purl": "pkg:cargo/ipc-channel@0.20.2",
+    "supplier": "servo",
+    "version": "0.20.2"
+  },
+  "is_terminal_polyfill": {
+    "checksum": "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695",
+    "description": "Polyfill for `is_terminal` stdlib feature for use with older MSRVs",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/is_terminal_polyfill@1.70.2",
+    "supplier": "polyfill-rs",
+    "version": "1.70.2"
+  },
+  "itertools": {
+    "checksum": "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285",
+    "description": "Extra iterator adaptors, iterator methods, free functions, and macros.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/itertools@0.14.0",
+    "supplier": "rust-itertools",
+    "version": "0.14.0"
+  },
+  "itoa": {
+    "checksum": "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c",
+    "description": "Fast integer primitive to string conversion",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/itoa@1.0.15",
+    "supplier": "dtolnay",
+    "version": "1.0.15"
+  },
+  "jiff": {
+    "checksum": "49cce2b81f2098e7e3efc35bc2e0a6b7abec9d34128283d7a26fa8f32a6dbb35",
+    "description": "A date-time library that encourages you to jump into the pit of success.\n\nThis library is heavily inspired by the Temporal project.",
+    "license": "MIT AND Unlicense AND MIT AND Unlicense",
+    "purl": "pkg:cargo/jiff@0.2.16",
+    "supplier": "BurntSushi",
+    "version": "0.2.16"
+  },
+  "jiff-static": {
+    "checksum": "980af8b43c3ad5d8d349ace167ec8170839f753a42d233ba19e08afe1850fa69",
+    "description": "Create static TimeZone values for Jiff (useful in core-only environments).",
+    "license": "MIT AND Unlicense AND MIT AND Unlicense",
+    "purl": "pkg:cargo/jiff-static@0.2.16",
+    "supplier": "BurntSushi",
+    "version": "0.2.16"
+  },
+  "js-sys": {
+    "checksum": "464a3709c7f55f1f721e5389aa6ea4e3bc6aba669353300af094b29ffbdde1d8",
+    "description": "Bindings for all JS global objects and functions in all JS environments like\nNode.js and browsers, built on `#[wasm_bindgen]` using the `wasm-bindgen` crate.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/js-sys@0.3.83",
+    "supplier": "wasm-bindgen",
+    "version": "0.3.83"
+  },
+  "lazy_static": {
+    "checksum": "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe",
+    "description": "A macro for declaring lazily evaluated statics in Rust.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/lazy_static@1.5.0",
+    "supplier": "rust-lang-nursery",
+    "version": "1.5.0"
+  },
+  "lazycell": {
+    "checksum": "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55",
+    "description": "A library providing a lazily filled Cell struct",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/lazycell@1.3.0",
+    "supplier": "indiv0",
+    "version": "1.3.0"
+  },
+  "libc": {
+    "checksum": "37c93d8daa9d8a012fd8ab92f088405fb202ea0b6ab73ee2482ae66af4f42091",
+    "description": "Raw FFI bindings to platform libraries like libc.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/libc@0.2.178",
+    "supplier": "rust-lang",
+    "version": "0.2.178"
+  },
+  "libloading": {
+    "checksum": "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55",
+    "description": "Bindings around the platform's dynamic library loading primitives with greatly improved memory safety.",
+    "license": "ISC",
+    "purl": "pkg:cargo/libloading@0.8.9",
+    "supplier": "nagisa",
+    "version": "0.8.9"
+  },
+  "linux-raw-sys": {
+    "checksum": "df1d3c3b53da64cf5760482273a98e575c651a67eec7f77df96b5b642de8f039",
+    "description": "Generated bindings for Linux's userspace API",
+    "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/linux-raw-sys@0.11.0",
+    "supplier": "sunfishcode",
+    "version": "0.11.0"
+  },
+  "lock_api": {
+    "checksum": "224399e74b87b5f3557511d98dff8b14089b3dadafcab6bb93eab67d3aace965",
+    "description": "Wrappers to create fully-featured Mutex and RwLock types. Compatible with no_std.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/lock_api@0.4.14",
+    "supplier": "Amanieu",
+    "version": "0.4.14"
+  },
+  "log": {
+    "checksum": "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897",
+    "description": "A lightweight logging facade for Rust",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/log@0.4.29",
+    "supplier": "rust-lang",
+    "version": "0.4.29"
+  },
+  "matchit": {
+    "checksum": "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3",
+    "description": "A high performance, zero-copy URL router.",
+    "license": "MIT AND BSD-3-Clause",
+    "purl": "pkg:cargo/matchit@0.8.4",
+    "supplier": "ibraheemdev",
+    "version": "0.8.4"
+  },
+  "memchr": {
+    "checksum": "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273",
+    "description": "Provides extremely fast (uses SIMD on x86_64, aarch64 and wasm32) routines for\n1, 2 or 3 byte search and single substring search.",
+    "license": "Unlicense AND (MIT AND Unlicense) AND MIT",
+    "purl": "pkg:cargo/memchr@2.7.6",
+    "supplier": "BurntSushi",
+    "version": "2.7.6"
+  },
+  "mime": {
+    "checksum": "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a",
+    "description": "Strongly Typed Mimes",
+    "license": "Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/mime@0.3.17",
+    "supplier": "hyperium",
+    "version": "0.3.17"
+  },
+  "minimal-lexical": {
+    "checksum": "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a",
+    "description": "Fast float parsing conversion routines.",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/minimal-lexical@0.2.1",
+    "supplier": "Alexhuszagh",
+    "version": "0.2.1"
+  },
+  "mio": {
+    "checksum": "a69bcab0ad47271a0234d9422b131806bf3968021e5dc9328caf2d4cd58557fc",
+    "description": "Lightweight non-blocking I/O.",
+    "license": "MIT",
+    "purl": "pkg:cargo/mio@1.1.1",
+    "supplier": "tokio-rs",
+    "version": "1.1.1"
+  },
+  "multimap": {
+    "checksum": "1d87ecb2933e8aeadb3e3a02b828fed80a7528047e68b4f424523a0981a3a084",
+    "description": "A multimap implementation.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/multimap@0.10.1",
+    "supplier": "havarnov",
+    "version": "0.10.1"
+  },
+  "nix": {
+    "checksum": "74523f3a35e05aba87a1d978330aef40f67b0304ac79c1c00b294c9830543db6",
+    "description": "Rust friendly bindings to *nix APIs",
+    "license": "MIT",
+    "purl": "pkg:cargo/nix@0.30.1",
+    "supplier": "nix-rust",
+    "version": "0.30.1"
+  },
+  "nom": {
+    "checksum": "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a",
+    "description": "A byte-oriented, zero-copy, parser combinators library",
+    "license": "MIT AND CC0-1.0",
+    "purl": "pkg:cargo/nom@7.1.3",
+    "supplier": "rust-bakery",
+    "version": "7.1.3"
+  },
+  "nu-ansi-term": {
+    "checksum": "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5",
+    "description": "Library for ANSI terminal colors and styles (bold, underline)",
+    "license": "MIT",
+    "purl": "pkg:cargo/nu-ansi-term@0.50.3",
+    "supplier": "nushell",
+    "version": "0.50.3"
+  },
+  "num-conv": {
+    "checksum": "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9",
+    "description": "`num_conv` is a crate to convert between integer types without using `as` casts. This provides\nbetter certainty when refactoring, makes the exact behavior of code more explicit, and allows using\nturbofish syntax.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/num-conv@0.1.0",
+    "supplier": "jhpratt",
+    "version": "0.1.0"
+  },
+  "objc2": {
+    "checksum": "b7c2599ce0ec54857b29ce62166b0ed9b4f6f1a70ccc9a71165b6154caca8c05",
+    "description": "Objective-C interface and runtime bindings",
+    "license": "MIT",
+    "purl": "pkg:cargo/objc2@0.6.3",
+    "supplier": "madsmtm",
+    "version": "0.6.3"
+  },
+  "objc2-encode": {
+    "checksum": "ef25abbcd74fb2609453eb695bd2f860d389e457f67dc17cafc8b8cbc89d0c33",
+    "description": "Objective-C type-encoding representation and parsing",
+    "license": "MIT",
+    "purl": "pkg:cargo/objc2-encode@4.1.0",
+    "supplier": "madsmtm",
+    "version": "4.1.0"
+  },
+  "once_cell": {
+    "checksum": "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d",
+    "description": "Single assignment cells and lazy values.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/once_cell@1.21.3",
+    "supplier": "matklad",
+    "version": "1.21.3"
+  },
+  "once_cell_polyfill": {
+    "checksum": "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe",
+    "description": "Polyfill for `OnceCell` stdlib feature for use with older MSRVs",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/once_cell_polyfill@1.70.2",
+    "supplier": "polyfill-rs",
+    "version": "1.70.2"
+  },
+  "ouroboros": {
+    "checksum": "1e0f050db9c44b97a94723127e6be766ac5c340c48f2c4bb3ffa11713744be59",
+    "description": "Easy, safe self-referential struct generation.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/ouroboros@0.18.5",
+    "supplier": "someguynamedjosh",
+    "version": "0.18.5"
+  },
+  "ouroboros_macro": {
+    "checksum": "3c7028bdd3d43083f6d8d4d5187680d0d3560d54df4cc9d752005268b41e64d0",
+    "description": "Proc macro for ouroboros crate.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/ouroboros_macro@0.18.5",
+    "supplier": "someguynamedjosh",
+    "version": "0.18.5"
+  },
+  "paste": {
+    "checksum": "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a",
+    "description": "Macros for all your token pasting needs",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/paste@1.0.15",
+    "supplier": "dtolnay",
+    "version": "1.0.15"
+  },
+  "percent-encoding": {
+    "checksum": "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220",
+    "description": "Percent encoding and decoding",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/percent-encoding@2.3.2",
+    "supplier": "servo",
+    "version": "2.3.2"
+  },
+  "petgraph": {
+    "checksum": "3672b37090dbd86368a4145bc067582552b29c27377cad4e0a306c97f9bd7772",
+    "description": "Graph data structure library. Provides graph types and graph algorithms.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/petgraph@0.7.1",
+    "supplier": "petgraph",
+    "version": "0.7.1"
+  },
+  "pico-args": {
+    "checksum": "5be167a7af36ee22fe3115051bc51f6e6c7054c9348e28deb4f49bd6f705a315",
+    "description": "An ultra simple CLI arguments parser.",
+    "license": "MIT",
+    "purl": "pkg:cargo/pico-args@0.5.0",
+    "supplier": "RazrFalcon",
+    "version": "0.5.0"
+  },
+  "pin-project": {
+    "checksum": "677f1add503faace112b9f1373e43e9e054bfdd22ff1a63c1bc485eaec6a6a8a",
+    "description": "A crate for safe and ergonomic pin-projection.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT AND (Apache-2.0 OR MIT)",
+    "purl": "pkg:cargo/pin-project@1.1.10",
+    "supplier": "taiki-e",
+    "version": "1.1.10"
+  },
+  "pin-project-internal": {
+    "checksum": "6e918e4ff8c4549eb882f14b3a4bc8c8bc93de829416eacf579f1207a8fbf861",
+    "description": "Implementation detail of the `pin-project` crate.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT AND (Apache-2.0 OR MIT)",
+    "purl": "pkg:cargo/pin-project-internal@1.1.10",
+    "supplier": "taiki-e",
+    "version": "1.1.10"
+  },
+  "pin-project-lite": {
+    "checksum": "3b3cff922bd51709b605d9ead9aa71031d81447142d828eb4a6eba76fe619f9b",
+    "description": "A lightweight version of pin-project written with declarative macros.",
+    "license": "Apache-2.0 or MIT",
+    "purl": "pkg:cargo/pin-project-lite@0.2.16",
+    "supplier": "taiki-e",
+    "version": "0.2.16"
+  },
+  "pin-utils": {
+    "checksum": "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184",
+    "description": "Utilities for pinning",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/pin-utils@0.1.0",
+    "supplier": "rust-lang-nursery",
+    "version": "0.1.0"
+  },
+  "portable-atomic": {
+    "checksum": "f84267b20a16ea918e43c6a88433c2d54fa145c92a811b5b047ccbe153674483",
+    "description": "Portable atomic types including support for 128-bit atomics, atomic float, etc.",
+    "license": "Apache-2.0 OR MIT AND (Apache-2.0 AND MIT) AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/portable-atomic@1.11.1",
+    "supplier": "taiki-e",
+    "version": "1.11.1"
+  },
+  "portable-atomic-util": {
+    "checksum": "d8a2f0d8d040d7848a709caf78912debcc3f33ee4b3cac47d73d1e1069e83507",
+    "description": "Synchronization primitives built with portable-atomic.",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/portable-atomic-util@0.2.4",
+    "supplier": "taiki-e",
+    "version": "0.2.4"
+  },
+  "postcard": {
+    "checksum": "6764c3b5dd454e283a30e6dfe78e9b31096d9e32036b5d1eaac7a6119ccb9a24",
+    "description": "A no_std + serde compatible message library for Rust",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/postcard@1.1.3",
+    "supplier": "jamesmunns",
+    "version": "1.1.3"
+  },
+  "postcard-derive": {
+    "checksum": "e0232bd009a197ceec9cc881ba46f727fcd8060a2d8d6a9dde7a69030a6fe2bb",
+    "description": "A no_std + serde compatible message library for Rust - Derive Crate",
+    "license": "",
+    "purl": "pkg:cargo/postcard-derive@0.2.2",
+    "supplier": "jamesmunns",
+    "version": "0.2.2"
+  },
+  "powerfmt": {
+    "checksum": "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391",
+    "description": "`powerfmt` is a library that provides utilities for formatting values. This crate makes it\n    significantly easier to support filling to a minimum width with alignment, avoid heap\n    allocation, and avoid repetitive calculations.",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/powerfmt@0.2.0",
+    "supplier": "jhpratt",
+    "version": "0.2.0"
+  },
+  "ppv-lite86": {
+    "checksum": "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9",
+    "description": "Cross-platform cryptography-oriented low-level SIMD library.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/ppv-lite86@0.2.21",
+    "supplier": "cryptocorrosion",
+    "version": "0.2.21"
+  },
+  "prettyplease": {
+    "checksum": "479ca8adacdd7ce8f1fb39ce9ecccbfe93a3f1344b3d0d97f20bc0196208f62b",
+    "description": "A minimal `syn` syntax tree pretty-printer",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/prettyplease@0.2.37",
+    "supplier": "dtolnay",
+    "version": "0.2.37"
+  },
+  "proc-macro2": {
+    "checksum": "5ee95bc4ef87b8d5ba32e8b7714ccc834865276eab0aed5c9958d00ec45f49e8",
+    "description": "A substitute implementation of the compiler's `proc_macro` API to decouple token-based libraries from the procedural macro use case.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/proc-macro2@1.0.103",
+    "supplier": "dtolnay",
+    "version": "1.0.103"
+  },
+  "proc-macro2-diagnostics": {
+    "checksum": "af066a9c399a26e020ada66a034357a868728e72cd426f3adcd35f80d88d88c8",
+    "description": "Diagnostics for proc-macro2.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/proc-macro2-diagnostics@0.10.1",
+    "supplier": "SergioBenitez",
+    "version": "0.10.1"
+  },
+  "prost": {
+    "checksum": "7231bd9b3d3d33c86b58adbac74b5ec0ad9f496b19d22801d773636feaa95f3d",
+    "description": "A Protocol Buffers implementation for the Rust Language.",
+    "license": "Apache-2.0",
+    "purl": "pkg:cargo/prost@0.14.1",
+    "supplier": "tokio-rs",
+    "version": "0.14.1"
+  },
+  "prost-build": {
+    "checksum": "ac6c3320f9abac597dcbc668774ef006702672474aad53c6d596b62e487b40b1",
+    "description": "Generate Prost annotated Rust types from Protocol Buffers files.",
+    "license": "Apache-2.0",
+    "purl": "pkg:cargo/prost-build@0.14.1",
+    "supplier": "tokio-rs",
+    "version": "0.14.1"
+  },
+  "prost-derive": {
+    "checksum": "9120690fafc389a67ba3803df527d0ec9cbbc9cc45e4cc20b332996dfb672425",
+    "description": "Generate encoding and decoding implementations for Prost annotated types.",
+    "license": "Apache-2.0",
+    "purl": "pkg:cargo/prost-derive@0.14.1",
+    "supplier": "tokio-rs",
+    "version": "0.14.1"
+  },
+  "prost-types": {
+    "checksum": "b9b4db3d6da204ed77bb26ba83b6122a73aeb2e87e25fbf7ad2e84c4ccbf8f72",
+    "description": "Prost definitions of Protocol Buffers well known types.",
+    "license": "Apache-2.0",
+    "purl": "pkg:cargo/prost-types@0.14.1",
+    "supplier": "tokio-rs",
+    "version": "0.14.1"
+  },
+  "protoc-gen-prost": {
+    "checksum": "77eb17a7657a703f30cb9b7ba4d981e4037b8af2d819ab0077514b0bef537406",
+    "description": "Protocol Buffers compiler plugin powered by Prost!",
+    "license": "",
+    "purl": "pkg:cargo/protoc-gen-prost@0.4.0",
+    "supplier": "neoeinstein",
+    "version": "0.4.0"
+  },
+  "protoc-gen-tonic": {
+    "checksum": "6ab6a0d73a0914752ed8fd7cc51afe169e28da87be3efef292de5676cc527634",
+    "description": "Protocol Buffers compiler plugin for gRPC services powered by Prost! and Tonic",
+    "license": "",
+    "purl": "pkg:cargo/protoc-gen-tonic@0.4.1",
+    "supplier": "neoeinstein",
+    "version": "0.4.1"
+  },
+  "quote": {
+    "checksum": "a338cc41d27e6cc6dce6cefc13a0729dfbb81c262b1f519331575dd80ef3067f",
+    "description": "Quasi-quoting macro quote!(...)",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/quote@1.0.42",
+    "supplier": "dtolnay",
+    "version": "1.0.42"
+  },
+  "r-efi": {
+    "checksum": "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f",
+    "description": "UEFI Reference Specification Protocol Constants and Definitions",
+    "license": "Apache-2.0 AND LGPL-2.1-or-later AND MIT AND (Apache-2.0 AND MIT) AND MIT",
+    "purl": "pkg:cargo/r-efi@5.3.0",
+    "supplier": "r-efi",
+    "version": "5.3.0"
+  },
+  "rand": {
+    "checksum": "6db2770f06117d490610c7488547d543617b21bfa07796d7a12f6f1bd53850d1",
+    "description": "Random number generators and other randomness functionality.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/rand@0.9.2",
+    "supplier": "rust-random",
+    "version": "0.9.2"
+  },
+  "rand_chacha": {
+    "checksum": "d3022b5f1df60f26e1ffddd6c66e8aa15de382ae63b3a0c1bfc0e4d3e3f325cb",
+    "description": "ChaCha random number generator",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/rand_chacha@0.9.0",
+    "supplier": "rust-random",
+    "version": "0.9.0"
+  },
+  "rand_core": {
+    "checksum": "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38",
+    "description": "Core random number generation traits and tools for implementation.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/rand_core@0.9.3",
+    "supplier": "rust-random",
+    "version": "0.9.3"
+  },
+  "regex": {
+    "checksum": "843bc0191f75f3e22651ae5f1e72939ab2f72a4bc30fa80a066bd66edefc24d4",
+    "description": "An implementation of regular expressions for Rust. This implementation uses\nfinite automata and guarantees linear time matching on all inputs.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/regex@1.12.2",
+    "supplier": "rust-lang",
+    "version": "1.12.2"
+  },
+  "regex-automata": {
+    "checksum": "5276caf25ac86c8d810222b3dbb938e512c55c6831a10f3e6ed1c93b84041f1c",
+    "description": "Automata construction and matching using regular expressions.",
+    "license": "Apache-2.0 or MIT",
+    "purl": "pkg:cargo/regex-automata@0.4.13",
+    "supplier": "rust-lang",
+    "version": "0.4.13"
+  },
+  "regex-syntax": {
+    "checksum": "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58",
+    "description": "A regular expression parser.",
+    "license": "(Apache-2.0 or MIT) AND Unicode-DFS-2016",
+    "purl": "pkg:cargo/regex-syntax@0.8.8",
+    "supplier": "rust-lang",
+    "version": "0.8.8"
+  },
+  "rust-fuzzy-search": {
+    "checksum": "a157657054ffe556d8858504af8a672a054a6e0bd9e8ee531059100c0fa11bb2",
+    "description": "Fuzzy Search with trigrams implemented in Rust",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/rust-fuzzy-search@0.1.1",
+    "supplier": "",
+    "version": "0.1.1"
+  },
+  "rustc-hash": {
+    "checksum": "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d",
+    "description": "A speedy, non-cryptographic hashing algorithm used by rustc",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/rustc-hash@2.1.1",
+    "supplier": "rust-lang",
+    "version": "2.1.1"
+  },
+  "rustc_version": {
+    "checksum": "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92",
+    "description": "A library for querying the version of a installed rustc compiler",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/rustc_version@0.4.1",
+    "supplier": "djc",
+    "version": "0.4.1"
+  },
+  "rustix": {
+    "checksum": "cd15f8a2c5551a84d56efdc1cd049089e409ac19a3072d5037a17fd70719ff3e",
+    "description": "Safe Rust bindings to POSIX/Unix/Linux/Winsock-like syscalls",
+    "license": "(MIT OR Apache-2.0 OR (Apache-2.0 WITH LLVM-exception)) AND (Apache-2.0 OR MIT)",
+    "purl": "pkg:cargo/rustix@1.1.2",
+    "supplier": "bytecodealliance",
+    "version": "1.1.2"
+  },
+  "rustversion": {
+    "checksum": "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d",
+    "description": "Conditional compilation according to rustc compiler version",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/rustversion@1.0.22",
+    "supplier": "dtolnay",
+    "version": "1.0.22"
+  },
+  "ryu": {
+    "checksum": "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f",
+    "description": "Fast floating point to string conversion",
+    "license": "Apache-2.0 AND BSL-1.0 AND CC-BY-SA-3.0",
+    "purl": "pkg:cargo/ryu@1.0.20",
+    "supplier": "dtolnay",
+    "version": "1.0.20"
+  },
+  "scopeguard": {
+    "checksum": "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49",
+    "description": "A RAII scope guard that will run a given closure when it goes out of scope,\neven if the code between panics (assuming unwinding panic).\n\nDefines the macros `defer!`, `defer_on_unwind!`, `defer_on_success!` as\nshorthands for guards with one of the implemented strategies.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/scopeguard@1.2.0",
+    "supplier": "bluss",
+    "version": "1.2.0"
+  },
+  "semver": {
+    "checksum": "d767eb0aabc880b29956c35734170f26ed551a859dbd361d140cdbeca61ab1e2",
+    "description": "Parser and evaluator for Cargo's flavor of Semantic Versioning",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/semver@1.0.27",
+    "supplier": "dtolnay",
+    "version": "1.0.27"
+  },
+  "serde": {
+    "checksum": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e",
+    "description": "A generic serialization/deserialization framework",
+    "license": "Apache-2.0 or MIT",
+    "purl": "pkg:cargo/serde@1.0.228",
+    "supplier": "serde-rs",
+    "version": "1.0.228"
+  },
+  "serde_core": {
+    "checksum": "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad",
+    "description": "Serde traits only, with no support for derive -- use the `serde` crate instead",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/serde_core@1.0.228",
+    "supplier": "serde-rs",
+    "version": "1.0.228"
+  },
+  "serde_derive": {
+    "checksum": "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79",
+    "description": "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]",
+    "license": "Apache-2.0 or MIT",
+    "purl": "pkg:cargo/serde_derive@1.0.228",
+    "supplier": "serde-rs",
+    "version": "1.0.228"
+  },
+  "serde_json": {
+    "checksum": "402a6f66d8c709116cf22f558eab210f5a50187f702eb4d7e5ef38d9a7f1c79c",
+    "description": "A JSON serialization file format",
+    "license": "Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/serde_json@1.0.145",
+    "supplier": "serde-rs",
+    "version": "1.0.145"
+  },
+  "serde_spanned": {
+    "checksum": "bf41e0cfaf7226dca15e8197172c295a782857fcb97fad1808a166870dee75a3",
+    "description": "Serde-compatible spanned Value",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/serde_spanned@0.6.9",
+    "supplier": "toml-rs",
+    "version": "0.6.9"
+  },
+  "sha1_smol": {
+    "checksum": "bbfa15b3dddfee50a0fff136974b3e1bde555604ba463834a7eb7deb6417705d",
+    "description": "Minimal dependency-free implementation of SHA1 for Rust.",
+    "license": "BSD-3-Clause AND MIT",
+    "purl": "pkg:cargo/sha1_smol@1.0.1",
+    "supplier": "mitsuhiko",
+    "version": "1.0.1"
+  },
+  "sharded-slab": {
+    "checksum": "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6",
+    "description": "A lock-free concurrent slab.",
+    "license": "MIT",
+    "purl": "pkg:cargo/sharded-slab@0.1.7",
+    "supplier": "hawkw",
+    "version": "0.1.7"
+  },
+  "shlex": {
+    "checksum": "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64",
+    "description": "Split a string into shell words, like Python's shlex.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/shlex@1.3.0",
+    "supplier": "comex",
+    "version": "1.3.0"
+  },
+  "signal-hook": {
+    "checksum": "d881a16cf4426aa584979d30bd82cb33429027e42122b169753d6ef1085ed6e2",
+    "description": "Unix signal handling",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/signal-hook@0.3.18",
+    "supplier": "vorner",
+    "version": "0.3.18"
+  },
+  "signal-hook-registry": {
+    "checksum": "7664a098b8e616bdfcc2dc0e9ac44eb231eedf41db4e9fe95d8d32ec728dedad",
+    "description": "Backend crate for signal-hook",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/signal-hook-registry@1.4.7",
+    "supplier": "vorner",
+    "version": "1.4.7"
+  },
+  "slab": {
+    "checksum": "7a2ae44ef20feb57a68b23d846850f861394c2e02dc425a50098ae8c90267589",
+    "description": "Pre-allocated storage for a uniform data type",
+    "license": "MIT",
+    "purl": "pkg:cargo/slab@0.4.11",
+    "supplier": "tokio-rs",
+    "version": "0.4.11"
+  },
+  "smallvec": {
+    "checksum": "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03",
+    "description": "'Small vector' optimization: store up to a small number of items on the stack",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/smallvec@1.15.1",
+    "supplier": "servo",
+    "version": "1.15.1"
+  },
+  "socket2": {
+    "checksum": "17129e116933cf371d018bb80ae557e889637989d8638274fb25622827b03881",
+    "description": "Utilities for handling networking sockets with a maximal amount of configuration\npossible intended.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/socket2@0.6.1",
+    "supplier": "rust-lang",
+    "version": "0.6.1"
+  },
+  "spin": {
+    "checksum": "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67",
+    "description": "Spin-based synchronization primitives",
+    "license": "MIT AND (Apache-2.0 AND MIT)",
+    "purl": "pkg:cargo/spin@0.9.8",
+    "supplier": "mvdnes",
+    "version": "0.9.8"
+  },
+  "stable_deref_trait": {
+    "checksum": "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596",
+    "description": "An unsafe marker trait for types like Box and Rc that dereference to a stable address even when moved, and hence can be used with libraries such as owning_ref and rental.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/stable_deref_trait@1.2.1",
+    "supplier": "storyyeller",
+    "version": "1.2.1"
+  },
+  "static_assertions": {
+    "checksum": "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f",
+    "description": "Compile-time assertions to ensure that invariants are met.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/static_assertions@1.1.0",
+    "supplier": "nvzqz",
+    "version": "1.1.0"
+  },
+  "strsim": {
+    "checksum": "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f",
+    "description": "Implementations of string similarity metrics. Includes Hamming, Levenshtein,\nOSA, Damerau-Levenshtein, Jaro, Jaro-Winkler, and S\u00f8rensen-Dice.",
+    "license": "MIT",
+    "purl": "pkg:cargo/strsim@0.11.1",
+    "supplier": "rapidfuzz",
+    "version": "0.11.1"
+  },
+  "syn": {
+    "checksum": "390cc9a294ab71bdb1aa2e99d13be9c753cd2d7bd6560c77118597410c4d2e87",
+    "description": "Parser for Rust source code",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/syn@2.0.111",
+    "supplier": "dtolnay",
+    "version": "2.0.111"
+  },
+  "sync_wrapper": {
+    "checksum": "0bf256ce5efdfa370213c1dabab5935a12e49f2c58d15e9eac2870d3b4f27263",
+    "description": "A tool for enlisting the compiler's help in proving the absence of concurrency",
+    "license": "Apache-2.0",
+    "purl": "pkg:cargo/sync_wrapper@1.0.2",
+    "supplier": "Actyx",
+    "version": "1.0.2"
+  },
+  "tempfile": {
+    "checksum": "2d31c77bdf42a745371d260a26ca7163f1e0924b64afa0b688e61b5a9fa02f16",
+    "description": "A library for managing temporary files and directories.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/tempfile@3.23.0",
+    "supplier": "Stebalien",
+    "version": "3.23.0"
+  },
+  "termsize": {
+    "checksum": "6f11ff5c25c172608d5b85e2fb43ee9a6d683a7f4ab7f96ae07b3d8b590368fd",
+    "description": "Retrieves terminal size",
+    "license": "MIT",
+    "purl": "pkg:cargo/termsize@0.1.9",
+    "supplier": "softprops",
+    "version": "0.1.9"
+  },
+  "thiserror": {
+    "checksum": "f63587ca0f12b72a0600bcba1d40081f830876000bb46dd2337a3051618f4fc8",
+    "description": "derive(Error)",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/thiserror@2.0.17",
+    "supplier": "dtolnay",
+    "version": "2.0.17"
+  },
+  "thiserror-impl": {
+    "checksum": "3ff15c8ecd7de3849db632e14d18d2571fa09dfc5ed93479bc4485c7a517c913",
+    "description": "Implementation detail of the `thiserror` crate",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/thiserror-impl@2.0.17",
+    "supplier": "dtolnay",
+    "version": "2.0.17"
+  },
+  "thread_local": {
+    "checksum": "f60246a4944f24f6e018aa17cdeffb7818b76356965d03b07d6a9886e8962185",
+    "description": "Per-object thread-local storage",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/thread_local@1.1.9",
+    "supplier": "Amanieu",
+    "version": "1.1.9"
+  },
+  "time": {
+    "checksum": "91e7d9e3bb61134e77bde20dd4825b97c010155709965fedf0f49bb138e52a9d",
+    "description": "Date and time library. Fully interoperable with the standard library. Mostly compatible with #![no_std].",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/time@0.3.44",
+    "supplier": "time-rs",
+    "version": "0.3.44"
+  },
+  "time-core": {
+    "checksum": "40868e7c1d2f0b8d73e4a8c7f0ff63af4f6d19be117e90bd73eb1d62cf831c6b",
+    "description": "This crate is an implementation detail and should not be relied upon directly.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/time-core@0.1.6",
+    "supplier": "time-rs",
+    "version": "0.1.6"
+  },
+  "time-macros": {
+    "checksum": "30cfb0125f12d9c277f35663a0a33f8c30190f4e4574868a330595412d34ebf3",
+    "description": "Procedural macros for the time crate.\n    This crate is an implementation detail and should not be relied upon directly.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/time-macros@0.2.24",
+    "supplier": "time-rs",
+    "version": "0.2.24"
+  },
+  "tiny-fn": {
+    "checksum": "9659b108631d1e1cf3e8e489f894bee40bc9d68fd6cc67ec4d4ce9b72d565228",
+    "description": "Type erased closures on stack",
+    "license": "",
+    "purl": "pkg:cargo/tiny-fn@0.1.9",
+    "supplier": "zakarumych",
+    "version": "0.1.9"
+  },
+  "tinyjson": {
+    "checksum": "9ab95735ea2c8fd51154d01e39cf13912a78071c2d89abc49a7ef102a7dd725a",
+    "description": "Tiny simple JSON parser/generator",
+    "license": "MIT",
+    "purl": "pkg:cargo/tinyjson@2.5.1",
+    "supplier": "rhysd",
+    "version": "2.5.1"
+  },
+  "tokio": {
+    "checksum": "ff360e02eab121e0bc37a2d3b4d4dc622e6eda3a8e5253d5435ecf5bd4c68408",
+    "description": "An event-driven, non-blocking I/O platform for writing asynchronous I/O\nbacked applications.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tokio@1.48.0",
+    "supplier": "tokio-rs",
+    "version": "1.48.0"
+  },
+  "tokio-macros": {
+    "checksum": "af407857209536a95c8e56f8231ef2c2e2aff839b22e07a1ffcbc617e9db9fa5",
+    "description": "Tokio's proc macros.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tokio-macros@2.6.0",
+    "supplier": "tokio-rs",
+    "version": "2.6.0"
+  },
+  "tokio-seqpacket": {
+    "checksum": "ab144b76e4ffb1d1a4e8b404073c922a243baebcc580cd75f415ae3ae9e42add",
+    "description": "unix seqpacket sockets for tokio",
+    "license": "",
+    "purl": "pkg:cargo/tokio-seqpacket@0.8.1",
+    "supplier": "de-vri-es",
+    "version": "0.8.1"
+  },
+  "tokio-stream": {
+    "checksum": "eca58d7bba4a75707817a2c44174253f9236b2d5fbd055602e9d5c07c139a047",
+    "description": "Utilities to work with `Stream` and `tokio`.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tokio-stream@0.1.17",
+    "supplier": "tokio-rs",
+    "version": "0.1.17"
+  },
+  "tokio-util": {
+    "checksum": "2efa149fe76073d6e8fd97ef4f4eca7b67f599660115591483572e406e165594",
+    "description": "Additional utilities for working with Tokio.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tokio-util@0.7.17",
+    "supplier": "tokio-rs",
+    "version": "0.7.17"
+  },
+  "toml": {
+    "checksum": "dc1beb996b9d83529a9e75c17a1686767d148d70663143c7854d8b4a09ced362",
+    "description": "A native Rust encoder and decoder of TOML-formatted files and streams. Provides\nimplementations of the standard Serialize/Deserialize traits for TOML data to\nfacilitate deserializing and serializing Rust structures.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/toml@0.8.23",
+    "supplier": "toml-rs",
+    "version": "0.8.23"
+  },
+  "toml_datetime": {
+    "checksum": "22cddaf88f4fbc13c51aebbf5f8eceb5c7c5a9da2ac40a13519eb5b0a0e8f11c",
+    "description": "A TOML-compatible datetime type",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/toml_datetime@0.6.11",
+    "supplier": "toml-rs",
+    "version": "0.6.11"
+  },
+  "toml_edit": {
+    "checksum": "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a",
+    "description": "Yet another format-preserving TOML parser.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/toml_edit@0.22.27",
+    "supplier": "toml-rs",
+    "version": "0.22.27"
+  },
+  "toml_write": {
+    "checksum": "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801",
+    "description": "A low-level interface for writing out TOML",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/toml_write@0.1.2",
+    "supplier": "toml-rs",
+    "version": "0.1.2"
+  },
+  "tonic": {
+    "checksum": "eb7613188ce9f7df5bfe185db26c5814347d110db17920415cf2fbcad85e7203",
+    "description": "A gRPC over HTTP/2 implementation focused on high performance, interoperability, and flexibility.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tonic@0.14.2",
+    "supplier": "hyperium",
+    "version": "0.14.2"
+  },
+  "tonic-build": {
+    "checksum": "9557ce109ea773b399c9b9e5dca39294110b74f1f342cb347a80d1fce8c26a11",
+    "description": "Codegen module of `tonic` gRPC implementation.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tonic-build@0.12.3",
+    "supplier": "hyperium",
+    "version": "0.12.3"
+  },
+  "tower": {
+    "checksum": "d039ad9159c98b70ecfd540b2573b97f7f52c3e8d9f8ad57a24b916a536975f9",
+    "description": "Tower is a library of modular and reusable components for building robust\nclients and servers.",
+    "license": "MIT AND Apache-2.0",
+    "purl": "pkg:cargo/tower@0.5.2",
+    "supplier": "tower-rs",
+    "version": "0.5.2"
+  },
+  "tower-layer": {
+    "checksum": "121c2a6cda46980bb0fcd1647ffaf6cd3fc79a013de288782836f6df9c48780e",
+    "description": "Decorates a `Service` to allow easy composition between `Service`s.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tower-layer@0.3.3",
+    "supplier": "tower-rs",
+    "version": "0.3.3"
+  },
+  "tower-service": {
+    "checksum": "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3",
+    "description": "Trait representing an asynchronous, request / response based, client or server.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tower-service@0.3.3",
+    "supplier": "tower-rs",
+    "version": "0.3.3"
+  },
+  "tracing": {
+    "checksum": "2d15d90a0b5c19378952d479dc858407149d7bb45a14de0142f6c534b16fc647",
+    "description": "Application-level tracing for Rust.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tracing@0.1.43",
+    "supplier": "tokio-rs",
+    "version": "0.1.43"
+  },
+  "tracing-attributes": {
+    "checksum": "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da",
+    "description": "Procedural macro attributes for automatically instrumenting functions.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tracing-attributes@0.1.31",
+    "supplier": "tokio-rs",
+    "version": "0.1.31"
+  },
+  "tracing-core": {
+    "checksum": "7a04e24fab5c89c6a36eb8558c9656f30d81de51dfa4d3b45f26b21d61fa0a6c",
+    "description": "Core primitives for application-level tracing.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tracing-core@0.1.35",
+    "supplier": "tokio-rs",
+    "version": "0.1.35"
+  },
+  "tracing-log": {
+    "checksum": "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3",
+    "description": "Provides compatibility between `tracing` and the `log` crate.",
+    "license": "MIT",
+    "purl": "pkg:cargo/tracing-log@0.2.0",
+    "supplier": "tokio-rs",
+    "version": "0.2.0"
+  },
+  "tracing-serde": {
+    "checksum": "704b1aeb7be0d0a84fc9828cae51dab5970fee5088f83d1dd7ee6f6246fc6ff1",
+    "description": "A compatibility layer for serializing trace data with `serde`",
+    "license": "MIT",
+    "purl": "pkg:cargo/tracing-serde@0.2.0",
+    "supplier": "tokio-rs",
+    "version": "0.2.0"
+  },
+  "tracing-subscriber": {
+    "checksum": "2f30143827ddab0d256fd843b7a66d164e9f271cfa0dde49142c5ca0ca291f1e",
+    "description": "Utilities for implementing and composing `tracing` subscribers.",
+    "license": "MIT AND BSD-3-Clause AND BSD-2-Clause AND LicenseRef-Public-Domain",
+    "purl": "pkg:cargo/tracing-subscriber@0.3.22",
+    "supplier": "tokio-rs",
+    "version": "0.3.22"
+  },
+  "try-lock": {
+    "checksum": "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b",
+    "description": "A lightweight atomic lock.",
+    "license": "MIT",
+    "purl": "pkg:cargo/try-lock@0.2.5",
+    "supplier": "seanmonstar",
+    "version": "0.2.5"
+  },
+  "unicode-ident": {
+    "checksum": "9312f7c4f6ff9069b165498234ce8be658059c6728633667c526e27dc2cf1df5",
+    "description": "Determine whether characters have the XID_Start or XID_Continue properties according to Unicode Standard Annex #31",
+    "license": "Apache-2.0 AND MIT AND LicenseRef-unicode",
+    "purl": "pkg:cargo/unicode-ident@1.0.22",
+    "supplier": "dtolnay",
+    "version": "1.0.22"
+  },
+  "unicode-width": {
+    "checksum": "b4ac048d71ede7ee76d585517add45da530660ef4390e49b098733c6e897f254",
+    "description": "Determine displayed width of `char` and `str` types\naccording to Unicode Standard Annex #11 rules.",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/unicode-width@0.2.2",
+    "supplier": "unicode-rs",
+    "version": "0.2.2"
+  },
+  "unit-prefix": {
+    "checksum": "81e544489bf3d8ef66c953931f56617f423cd4b5494be343d9b9d3dda037b9a3",
+    "description": "Format numbers with metric and binary unit prefixes",
+    "license": "MIT",
+    "purl": "pkg:cargo/unit-prefix@0.5.2",
+    "supplier": "",
+    "version": "0.5.2"
+  },
+  "utf8parse": {
+    "checksum": "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821",
+    "description": "Table-driven UTF-8 parser",
+    "license": "Apache-2.0 OR MIT",
+    "purl": "pkg:cargo/utf8parse@0.2.2",
+    "supplier": "alacritty",
+    "version": "0.2.2"
+  },
+  "uuid": {
+    "checksum": "e2e054861b4bd027cd373e18e8d8d8e6548085000e41290d95ce0c373a654b4a",
+    "description": "A library to generate and parse UUIDs.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/uuid@1.19.0",
+    "supplier": "uuid-rs",
+    "version": "1.19.0"
+  },
+  "valuable": {
+    "checksum": "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65",
+    "description": "Object-safe value inspection, used to pass un-typed structured data across trait-object boundaries.",
+    "license": "MIT",
+    "purl": "pkg:cargo/valuable@0.1.1",
+    "supplier": "tokio-rs",
+    "version": "0.1.1"
+  },
+  "version_check": {
+    "checksum": "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a",
+    "description": "Tiny crate to check the version of the installed/running rustc.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/version_check@0.9.5",
+    "supplier": "SergioBenitez",
+    "version": "0.9.5"
+  },
+  "want": {
+    "checksum": "bfa7760aed19e106de2c7c0b581b509f2f25d3dacaf737cb82ac61bc6d760b0e",
+    "description": "Detect when another Future wants a result.",
+    "license": "MIT",
+    "purl": "pkg:cargo/want@0.3.1",
+    "supplier": "seanmonstar",
+    "version": "0.3.1"
+  },
+  "wasi": {
+    "checksum": "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b",
+    "description": "WASI API bindings for Rust",
+    "license": "(Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT)",
+    "purl": "pkg:cargo/wasi@0.11.1-wasi-snapshot-preview1",
+    "supplier": "bytecodealliance",
+    "version": "0.11.1-wasi-snapshot-preview1"
+  },
+  "wasip2": {
+    "checksum": "0562428422c63773dad2c345a1882263bbf4d65cf3f42e90921f787ef5ad58e7",
+    "description": "WASIp2 API bindings for Rust",
+    "license": "Apache-2.0 WITH LLVM-exception AND MIT",
+    "purl": "pkg:cargo/wasip2@1.0.1-wasi-0.2.4",
+    "supplier": "bytecodealliance",
+    "version": "1.0.1-wasi-0.2.4"
+  },
+  "wasm-bindgen": {
+    "checksum": "0d759f433fa64a2d763d1340820e46e111a7a5ab75f993d1852d70b03dbb80fd",
+    "description": "Easy support for interacting between JS and Rust.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/wasm-bindgen@0.2.106",
+    "supplier": "wasm-bindgen",
+    "version": "0.2.106"
+  },
+  "wasm-bindgen-macro": {
+    "checksum": "48cb0d2638f8baedbc542ed444afc0644a29166f1595371af4fecf8ce1e7eeb3",
+    "description": "Definition of the `#[wasm_bindgen]` attribute, an internal dependency",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/wasm-bindgen-macro@0.2.106",
+    "supplier": "wasm-bindgen",
+    "version": "0.2.106"
+  },
+  "wasm-bindgen-macro-support": {
+    "checksum": "cefb59d5cd5f92d9dcf80e4683949f15ca4b511f4ac0a6e14d4e1ac60c6ecd40",
+    "description": "Implementation APIs for the `#[wasm_bindgen]` attribute",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/wasm-bindgen-macro-support@0.2.106",
+    "supplier": "wasm-bindgen",
+    "version": "0.2.106"
+  },
+  "wasm-bindgen-shared": {
+    "checksum": "cbc538057e648b67f72a982e708d485b2efa771e1ac05fec311f9f63e5800db4",
+    "description": "Shared support between wasm-bindgen and wasm-bindgen cli, an internal\ndependency.",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/wasm-bindgen-shared@0.2.106",
+    "supplier": "wasm-bindgen",
+    "version": "0.2.106"
+  },
+  "web-time": {
+    "checksum": "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb",
+    "description": "Drop-in replacement for std::time for Wasm in browsers",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/web-time@1.1.0",
+    "supplier": "daxpedda",
+    "version": "1.1.0"
+  },
+  "which": {
+    "checksum": "87ba24419a2078cd2b0f2ede2691b6c66d8e47836da3b6db8265ebad47afbfc7",
+    "description": "A Rust equivalent of Unix command \"which\". Locate installed executable in cross platforms.",
+    "license": "MIT",
+    "purl": "pkg:cargo/which@4.4.2",
+    "supplier": "harryfei",
+    "version": "4.4.2"
+  },
+  "winapi": {
+    "checksum": "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419",
+    "description": "Raw FFI bindings for all of Windows API.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/winapi@0.3.9",
+    "supplier": "retep998",
+    "version": "0.3.9"
+  },
+  "winapi-i686-pc-windows-gnu": {
+    "checksum": "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6",
+    "description": "Import libraries for the i686-pc-windows-gnu target. Please don't use this crate directly, depend on winapi instead.",
+    "license": "Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/winapi-i686-pc-windows-gnu@0.4.0",
+    "supplier": "retep998",
+    "version": "0.4.0"
+  },
+  "winapi-x86_64-pc-windows-gnu": {
+    "checksum": "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f",
+    "description": "Import libraries for the x86_64-pc-windows-gnu target. Please don't use this crate directly, depend on winapi instead.",
+    "license": "Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/winapi-x86_64-pc-windows-gnu@0.4.0",
+    "supplier": "retep998",
+    "version": "0.4.0"
+  },
+  "windows": {
+    "checksum": "9babd3a767a4c1aef6900409f85f5d53ce2544ccdfaa86dad48c91782c6d6893",
+    "description": "Rust for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows@0.61.3",
+    "supplier": "microsoft",
+    "version": "0.61.3"
+  },
+  "windows-collections": {
+    "checksum": "3beeceb5e5cfd9eb1d76b381630e82c4241ccd0d27f1a39ed41b2760b255c5e8",
+    "description": "Windows collection types",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows-collections@0.2.0",
+    "supplier": "microsoft",
+    "version": "0.2.0"
+  },
+  "windows-core": {
+    "checksum": "c0fdd3ddb90610c7638aa2b3a3ab2904fb9e5cdbecc643ddb3647212781c4ae3",
+    "description": "Core type support for COM and Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows-core@0.61.2",
+    "supplier": "microsoft",
+    "version": "0.61.2"
+  },
+  "windows-future": {
+    "checksum": "fc6a41e98427b19fe4b73c550f060b59fa592d7d686537eebf9385621bfbad8e",
+    "description": "Windows async types",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/windows-future@0.2.1",
+    "supplier": "microsoft",
+    "version": "0.2.1"
+  },
+  "windows-implement": {
+    "checksum": "053e2e040ab57b9dc951b72c264860db7eb3b0200ba345b4e4c3b14f67855ddf",
+    "description": "The implement macro for the Windows crates",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows-implement@0.60.2",
+    "supplier": "microsoft",
+    "version": "0.60.2"
+  },
+  "windows-interface": {
+    "checksum": "3f316c4a2570ba26bbec722032c4099d8c8bc095efccdc15688708623367e358",
+    "description": "The interface macro for the Windows crates",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows-interface@0.59.3",
+    "supplier": "microsoft",
+    "version": "0.59.3"
+  },
+  "windows-link": {
+    "checksum": "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5",
+    "description": "Linking for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows-link@0.2.1",
+    "supplier": "microsoft",
+    "version": "0.2.1"
+  },
+  "windows-numerics": {
+    "checksum": "9150af68066c4c5c07ddc0ce30421554771e528bde427614c61038bc2c92c2b1",
+    "description": "Windows numeric types",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows-numerics@0.2.0",
+    "supplier": "microsoft",
+    "version": "0.2.0"
+  },
+  "windows-result": {
+    "checksum": "56f42bd332cc6c8eac5af113fc0c1fd6a8fd2aa08a0119358686e5160d0586c6",
+    "description": "Windows error handling",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows-result@0.3.4",
+    "supplier": "microsoft",
+    "version": "0.3.4"
+  },
+  "windows-strings": {
+    "checksum": "56e6c93f3a0c3b36176cb1327a4958a0353d5d166c2a35cb268ace15e91d3b57",
+    "description": "Windows string types",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows-strings@0.4.2",
+    "supplier": "microsoft",
+    "version": "0.4.2"
+  },
+  "windows-sys": {
+    "checksum": "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc",
+    "description": "Rust for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows-sys@0.61.2",
+    "supplier": "microsoft",
+    "version": "0.61.2"
+  },
+  "windows-targets": {
+    "checksum": "4945f9f551b88e0d65f3db0bc25c33b8acea4d9e41163edf90dcd0b19f9069f3",
+    "description": "Import libs for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows-targets@0.53.5",
+    "supplier": "microsoft",
+    "version": "0.53.5"
+  },
+  "windows-threading": {
+    "checksum": "b66463ad2e0ea3bbf808b7f1d371311c80e115c0b71d60efc142cafbcfb057a6",
+    "description": "Windows threading",
+    "license": "Apache-2.0 AND MIT AND Apache-2.0 AND MIT",
+    "purl": "pkg:cargo/windows-threading@0.1.0",
+    "supplier": "microsoft",
+    "version": "0.1.0"
+  },
+  "windows_aarch64_gnullvm": {
+    "checksum": "a9d8416fa8b42f5c947f8482c43e7d89e73a173cead56d044f6a56104a6d1b53",
+    "description": "Import lib for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows_aarch64_gnullvm@0.53.1",
+    "supplier": "microsoft",
+    "version": "0.53.1"
+  },
+  "windows_aarch64_msvc": {
+    "checksum": "b9d782e804c2f632e395708e99a94275910eb9100b2114651e04744e9b125006",
+    "description": "Import lib for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows_aarch64_msvc@0.53.1",
+    "supplier": "microsoft",
+    "version": "0.53.1"
+  },
+  "windows_i686_gnu": {
+    "checksum": "960e6da069d81e09becb0ca57a65220ddff016ff2d6af6a223cf372a506593a3",
+    "description": "Import lib for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows_i686_gnu@0.53.1",
+    "supplier": "microsoft",
+    "version": "0.53.1"
+  },
+  "windows_i686_gnullvm": {
+    "checksum": "fa7359d10048f68ab8b09fa71c3daccfb0e9b559aed648a8f95469c27057180c",
+    "description": "Import lib for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows_i686_gnullvm@0.53.1",
+    "supplier": "microsoft",
+    "version": "0.53.1"
+  },
+  "windows_i686_msvc": {
+    "checksum": "1e7ac75179f18232fe9c285163565a57ef8d3c89254a30685b57d83a38d326c2",
+    "description": "Import lib for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows_i686_msvc@0.53.1",
+    "supplier": "microsoft",
+    "version": "0.53.1"
+  },
+  "windows_x86_64_gnu": {
+    "checksum": "9c3842cdd74a865a8066ab39c8a7a473c0778a3f29370b5fd6b4b9aa7df4a499",
+    "description": "Import lib for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows_x86_64_gnu@0.53.1",
+    "supplier": "microsoft",
+    "version": "0.53.1"
+  },
+  "windows_x86_64_gnullvm": {
+    "checksum": "0ffa179e2d07eee8ad8f57493436566c7cc30ac536a3379fdf008f47f6bb7ae1",
+    "description": "Import lib for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows_x86_64_gnullvm@0.53.1",
+    "supplier": "microsoft",
+    "version": "0.53.1"
+  },
+  "windows_x86_64_msvc": {
+    "checksum": "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650",
+    "description": "Import lib for Windows",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/windows_x86_64_msvc@0.53.1",
+    "supplier": "microsoft",
+    "version": "0.53.1"
+  },
+  "winnow": {
+    "checksum": "5a5364e9d77fcdeeaa6062ced926ee3381faa2ee02d3eb83a5c27a8825540829",
+    "description": "A byte-oriented, zero-copy, parser combinators library",
+    "license": "MIT",
+    "purl": "pkg:cargo/winnow@0.7.14",
+    "supplier": "winnow-rs",
+    "version": "0.7.14"
+  },
+  "wit-bindgen": {
+    "checksum": "f17a85883d4e6d00e8a97c586de764dabcc06133f7f1d55dce5cdc070ad7fe59",
+    "description": "Rust bindings generator and runtime support for WIT and the component model.\nUsed when compiling Rust programs to the component model.",
+    "license": "(Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT)",
+    "purl": "pkg:cargo/wit-bindgen@0.46.0",
+    "supplier": "bytecodealliance",
+    "version": "0.46.0"
+  },
+  "yansi": {
+    "checksum": "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049",
+    "description": "A dead simple ANSI terminal color painting library.",
+    "license": "MIT OR Apache-2.0",
+    "purl": "pkg:cargo/yansi@1.0.1",
+    "supplier": "SergioBenitez",
+    "version": "1.0.1"
+  },
+  "zerocopy": {
+    "checksum": "fd74ec98b9250adb3ca554bdde269adf631549f51d8a8f8f0a10b50f1cb298c3",
+    "description": "Zerocopy makes zero-cost memory manipulation effortless. We write \"unsafe\" so you don't have to.",
+    "license": "Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND MIT AND (Apache-2.0 AND BSD-3-Clause AND MIT) AND (Apache-2.0 AND BSD-2-Clause AND MIT) AND Apache-2.0 AND BSD-2-Clause AND MIT",
+    "purl": "pkg:cargo/zerocopy@0.8.31",
+    "supplier": "google",
+    "version": "0.8.31"
+  },
+  "zerocopy-derive": {
+    "checksum": "d8a8d209fdf45cf5138cbb5a506f6b52522a25afccc534d1475dad8e31105c6a",
+    "description": "Custom derive for traits from the zerocopy crate",
+    "license": "Apache-2.0 AND BSD-2-Clause AND MIT AND (Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND MIT) AND Apache-2.0 AND BSD-2-Clause AND MIT AND (Apache-2.0 AND BSD-3-Clause AND MIT)",
+    "purl": "pkg:cargo/zerocopy-derive@0.8.31",
+    "supplier": "google",
+    "version": "0.8.31"
+  },
+  "zmij": {
+    "checksum": "3ff05f8caa9038894637571ae6b9e29466c1f4f829d26c9b28f869a29cbe3445",
+    "description": "A double-to-string conversion algorithm based on Schubfach and yy",
+    "license": "MIT",
+    "purl": "pkg:cargo/zmij@1.0.19",
+    "supplier": "dtolnay",
+    "version": "1.0.19"
+  }
+}

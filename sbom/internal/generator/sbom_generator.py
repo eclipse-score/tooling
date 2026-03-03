@@ -546,6 +546,44 @@ def filter_repos(repos: list[str], exclude_patterns: list[str]) -> list[str]:
     return filtered
 
 
+def _build_crate_result(
+    crate_name: str,
+    version: str,
+    crate_meta: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a crate component dict from parsed name/version and cache metadata."""
+    result: dict[str, Any] = {
+        "name": crate_name,
+        "version": version,
+        "purl": f"pkg:cargo/{crate_name}@{version}",
+        "type": "library",
+        "source": "crates.io",
+    }
+    if crate_meta.get("license"):
+        result["license"] = crate_meta["license"]
+    if crate_meta.get("description"):
+        result["description"] = crate_meta["description"]
+    if crate_meta.get("supplier"):
+        result["supplier"] = crate_meta["supplier"]
+    if crate_meta.get("cpe"):
+        result["cpe"] = crate_meta["cpe"]
+    if crate_meta.get("aliases"):
+        result["aliases"] = crate_meta["aliases"]
+    if crate_meta.get("pedigree_ancestors"):
+        result["pedigree_ancestors"] = crate_meta["pedigree_ancestors"]
+    if crate_meta.get("pedigree_descendants"):
+        result["pedigree_descendants"] = crate_meta["pedigree_descendants"]
+    if crate_meta.get("pedigree_variants"):
+        result["pedigree_variants"] = crate_meta["pedigree_variants"]
+    if crate_meta.get("pedigree_notes"):
+        result["pedigree_notes"] = crate_meta["pedigree_notes"]
+    if crate_meta.get("repository"):
+        result["url"] = crate_meta["repository"]
+    if crate_meta.get("checksum"):
+        result["checksum"] = crate_meta["checksum"]
+    return result
+
+
 def resolve_component(
     repo_name: str, metadata: dict[str, Any]
 ) -> dict[str, Any] | None:
@@ -711,37 +749,7 @@ def resolve_component(
                 crate_meta = cached_crates.get(crate_name) or cached_crates.get(
                     crate_name.replace("-", "_"), {}
                 )
-
-                result = {
-                    "name": crate_name,
-                    "version": version,
-                    "purl": f"pkg:cargo/{crate_name}@{version}",
-                    "type": "library",
-                    "source": "crates.io",
-                }
-                if crate_meta.get("license"):
-                    result["license"] = crate_meta["license"]
-                if crate_meta.get("description"):
-                    result["description"] = crate_meta["description"]
-                if crate_meta.get("supplier"):
-                    result["supplier"] = crate_meta["supplier"]
-                if crate_meta.get("cpe"):
-                    result["cpe"] = crate_meta["cpe"]
-                if crate_meta.get("aliases"):
-                    result["aliases"] = crate_meta["aliases"]
-                if crate_meta.get("pedigree_ancestors"):
-                    result["pedigree_ancestors"] = crate_meta["pedigree_ancestors"]
-                if crate_meta.get("pedigree_descendants"):
-                    result["pedigree_descendants"] = crate_meta["pedigree_descendants"]
-                if crate_meta.get("pedigree_variants"):
-                    result["pedigree_variants"] = crate_meta["pedigree_variants"]
-                if crate_meta.get("pedigree_notes"):
-                    result["pedigree_notes"] = crate_meta["pedigree_notes"]
-                if crate_meta.get("repository"):
-                    result["url"] = crate_meta["repository"]
-                if crate_meta.get("checksum"):
-                    result["checksum"] = crate_meta["checksum"]
-                return result
+                return _build_crate_result(crate_name, version, crate_meta)
 
     # Handle legacy crate universe format (e.g., crates_io__tokio-1.10.0)
     if repo_name.startswith("crates_io__") or "_crates__" in repo_name:
@@ -759,37 +767,7 @@ def resolve_component(
                 crate_meta = cached_crates.get(crate_name) or cached_crates.get(
                     crate_name.replace("-", "_"), {}
                 )
-
-                result = {
-                    "name": crate_name,
-                    "version": version,
-                    "purl": f"pkg:cargo/{crate_name}@{version}",
-                    "type": "library",
-                    "source": "crates.io",
-                }
-                if crate_meta.get("license"):
-                    result["license"] = crate_meta["license"]
-                if crate_meta.get("description"):
-                    result["description"] = crate_meta["description"]
-                if crate_meta.get("supplier"):
-                    result["supplier"] = crate_meta["supplier"]
-                if crate_meta.get("cpe"):
-                    result["cpe"] = crate_meta["cpe"]
-                if crate_meta.get("aliases"):
-                    result["aliases"] = crate_meta["aliases"]
-                if crate_meta.get("pedigree_ancestors"):
-                    result["pedigree_ancestors"] = crate_meta["pedigree_ancestors"]
-                if crate_meta.get("pedigree_descendants"):
-                    result["pedigree_descendants"] = crate_meta["pedigree_descendants"]
-                if crate_meta.get("pedigree_variants"):
-                    result["pedigree_variants"] = crate_meta["pedigree_variants"]
-                if crate_meta.get("pedigree_notes"):
-                    result["pedigree_notes"] = crate_meta["pedigree_notes"]
-                if crate_meta.get("repository"):
-                    result["url"] = crate_meta["repository"]
-                if crate_meta.get("checksum"):
-                    result["checksum"] = crate_meta["checksum"]
-                return result
+                return _build_crate_result(crate_name, version, crate_meta)
 
     # Check if repo is a sub-library of a known parent (e.g., boost.config+ -> boost)
     # rules_boost splits Boost into individual repos like boost.config+, boost.assert+, etc.

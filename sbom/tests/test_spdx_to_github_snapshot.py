@@ -1,4 +1,36 @@
-"""Tests for SPDX 2.3 → GitHub Dependency Submission snapshot conversion."""
+"""Tests for SPDX 2.3 → GitHub Dependency Submission snapshot conversion.
+
+What this file tests
+---------------------
+Top-level snapshot fields
+  - version = 0, sha, ref, job, detector, scanned, manifests all present.
+  - detector.name = "score-sbom-generator"; version and url also present.
+  - job.correlator and job.id match what was passed.
+
+Package filtering
+  - Packages without a PURL are excluded from the resolved map.
+  - The root package (DESCRIBES target) is excluded from resolved.
+
+Direct vs. indirect dependency classification
+  - Package reached via root DEPENDS_ON → "direct".
+  - Package reached via a non-root DEPENDS_ON → "indirect".
+  - Misclassification is silent in the output, making this test critical:
+    GitHub Dependabot uses the relationship field to scope alerts.
+
+Package URL preservation
+  - package_url in the snapshot entry equals the PURL from the SPDX package.
+
+Manifest naming and structure
+  - The manifest key is the SPDX document name.
+  - Empty SPDX document produces an empty resolved dict.
+
+pkg:generic/ PURLs (BCR C++ modules)
+  - pkg:generic/ PURLs are accepted and included in the resolved map.
+
+Bazel target : //sbom/tests:test_spdx_to_github_snapshot
+Run          : bazel test //sbom/tests:test_spdx_to_github_snapshot
+               pytest sbom/tests/test_spdx_to_github_snapshot.py -v
+"""
 
 import unittest
 

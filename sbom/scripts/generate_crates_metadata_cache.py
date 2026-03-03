@@ -27,10 +27,10 @@ import tempfile
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 
-def parse_cargo_lock(lockfile_path: str) -> Dict[str, Dict[str, Any]]:
+def parse_cargo_lock(lockfile_path: str) -> dict[str, dict[str, Any]]:
     """Parse Cargo.lock and extract crate information.
 
     Args:
@@ -71,7 +71,7 @@ def parse_cargo_lock(lockfile_path: str) -> Dict[str, Dict[str, Any]]:
     return crates
 
 
-def parse_module_bazel_lock(lockfile_path: str) -> Dict[str, Dict[str, Any]]:
+def parse_module_bazel_lock(lockfile_path: str) -> dict[str, dict[str, Any]]:
     """Parse MODULE.bazel.lock and extract crate information from cargo-bazel resolution.
 
     The MODULE.bazel.lock (from score_crates or similar) contains resolved crate
@@ -134,23 +134,8 @@ def parse_module_bazel_lock(lockfile_path: str) -> Dict[str, Dict[str, Any]]:
     return crates
 
 
-def build_dash_coordinates(crates: Dict[str, Dict[str, Any]]) -> list[str]:
-    """Build Eclipse dash-license-scan coordinate strings from crate data.
-
-    Args:
-        crates: Dict mapping crate name to {name, version, checksum, ...}
-
-    Returns:
-        Sorted list of coordinate strings: "crate/cratesio/-/{name}/{version}"
-    """
-    return [
-        f"crate/cratesio/-/{info['name']}/{info['version']}"
-        for _key, info in sorted(crates.items())
-    ]
-
-
 def generate_synthetic_cargo_lock(
-    crates: Dict[str, Dict[str, Any]], output_path: str
+    crates: dict[str, dict[str, Any]], output_path: str
 ) -> None:
     """Generate a minimal synthetic Cargo.lock from parsed crate data.
 
@@ -264,7 +249,7 @@ def run_dash_license_scan(cargo_lock_path: str, summary_output_path: str) -> Non
         print(f"  NOTE: {result.returncode} crate(s) have 'restricted' license status")
 
 
-def parse_dash_summary(summary_path: str) -> Dict[str, str]:
+def parse_dash_summary(summary_path: str) -> dict[str, str]:
     """Parse the dash-licenses summary CSV file into a license lookup dict.
 
     Each line has format:
@@ -276,7 +261,7 @@ def parse_dash_summary(summary_path: str) -> Dict[str, str]:
     Returns:
         Dict mapping crate name to SPDX license expression string
     """
-    licenses: Dict[str, str] = {}
+    licenses: dict[str, str] = {}
     with open(summary_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -312,7 +297,7 @@ def _extract_supplier(repository_url: str) -> str:
     return m.group(1) if m else ""
 
 
-def _fetch_one_crate_meta(name: str) -> tuple[str, Dict[str, str]]:
+def _fetch_one_crate_meta(name: str) -> tuple[str, dict[str, str]]:
     """Fetch metadata for a single crate from crates.io API.
 
     Returns (name, {description, supplier}) dict.
@@ -346,7 +331,7 @@ def _fetch_one_crate_meta(name: str) -> tuple[str, Dict[str, str]]:
 
 def fetch_crate_metadata_from_cratesio(
     crate_names: list[str],
-) -> Dict[str, Dict[str, str]]:
+) -> dict[str, dict[str, str]]:
     """Fetch metadata (description, supplier) from crates.io API (parallel).
 
     Args:
@@ -358,7 +343,7 @@ def fetch_crate_metadata_from_cratesio(
     total = len(crate_names)
     print(f"Fetching metadata from crates.io for {total} crates...")
 
-    metadata: Dict[str, Dict[str, str]] = {}
+    metadata: dict[str, dict[str, str]] = {}
     done = 0
     with ThreadPoolExecutor(max_workers=10) as pool:
         futures = {pool.submit(_fetch_one_crate_meta, n): n for n in crate_names}
@@ -381,7 +366,7 @@ def fetch_crate_metadata_from_cratesio(
 def generate_cache(
     cargo_lock_path: str | None = None,
     module_lock_paths: list[str] | None = None,
-) -> Dict[str, Dict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """Generate metadata cache from lockfiles + dash-license-scan.
 
     1. Parse Cargo.lock and/or MODULE.bazel.lock files for crate names, versions, checksums
@@ -397,7 +382,7 @@ def generate_cache(
     Returns:
         Dict mapping crate name to metadata
     """
-    crates: Dict[str, Dict[str, Any]] = {}
+    crates: dict[str, dict[str, Any]] = {}
 
     if cargo_lock_path:
         print(f"Parsing {cargo_lock_path}...")
@@ -441,7 +426,7 @@ def generate_cache(
     cratesio_meta = fetch_crate_metadata_from_cratesio(list(crates.keys()))
 
     # Build final cache
-    cache: Dict[str, Dict[str, Any]] = {}
+    cache: dict[str, dict[str, Any]] = {}
     for name, info in crates.items():
         meta = cratesio_meta.get(name, {})
         cache[name] = {

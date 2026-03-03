@@ -1,8 +1,26 @@
-"""Tests for enrich_components_from_cpp_cache and the no-manual-fallback rule.
+"""Tests for enrich_components_from_cpp_cache() and the no-manual-curation rule.
 
-Requirement: All SBOM fields must originate from automated sources.
-No manually-curated fallback values are permitted for any field —
-not checksum, not license, not supplier, not version, not PURL.
+What this file tests
+---------------------
+enrich_components_from_cpp_cache() — field propagation
+  - SHA-256 checksum is copied from cache to a component that has none.
+  - An existing checksum on the component is never overwritten.
+  - A cache entry with no checksum leaves the component's checksum empty.
+  - Components with no matching cache entry are left unchanged.
+  - Normalised-name matching: nlohmann_json (underscore) matches
+    nlohmann-json (hyphen) cache entry.
+  - Parent-name matching: boost.config component matches a "boost" cache entry.
+
+No-manual-curation rule (on-disk cpp_metadata.json)
+  - cpp_metadata.json must be empty ({}); any entry signals a policy violation.
+    All C++ metadata must be produced by generate_cpp_metadata_cache.py from
+    cdxgen output, never written by hand.
+  - Belt-and-suspenders: even if the file is non-empty, no SBOM field
+    (checksum, license, supplier, version, purl, description) may appear.
+
+Bazel target : //sbom/tests:test_cpp_enrich_checksum
+Run          : bazel test //sbom/tests:test_cpp_enrich_checksum
+               pytest sbom/tests/test_cpp_enrich_checksum.py -v
 """
 
 import json

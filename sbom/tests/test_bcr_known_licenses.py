@@ -1,8 +1,29 @@
 """Tests for BCR known-license resolution in sbom_generator.
 
-These tests verify that C++ modules from the Bazel Central Registry
-(e.g. boost.*) receive correct license data even when cdxgen and
-lockfile parsing cannot provide it.
+What this file tests
+---------------------
+BCR_KNOWN_LICENSES table
+  - Every entry carries a non-empty license field.
+  - Spot-check: boost entry has BSL-1.0.
+
+apply_known_licenses() — priority chain (highest to lowest)
+  - Priority 1: module already has a license → nothing is overwritten.
+  - Priority 2: exact-name entry in metadata["licenses"] (user override) → wins.
+  - Priority 3: parent-level entry in metadata["licenses"]
+    (e.g. "boost" covers "boost.config" and "boost.container").
+  - Priority 4: exact match in BCR_KNOWN_LICENSES (e.g. "abseil-cpp", "zlib").
+  - Priority 5: parent match in BCR_KNOWN_LICENSES
+    (e.g. "boost" entry covers all "boost.*" sub-modules).
+  - Existing supplier field is preserved even when a new license is filled in.
+  - Empty metadata and missing "licenses" key do not raise.
+
+resolve_component() integration
+  - After apply_known_licenses() the license field flows through to the
+    component dict returned by resolve_component().
+
+Bazel target : //sbom/tests:test_bcr_known_licenses
+Run          : bazel test //sbom/tests:test_bcr_known_licenses
+               pytest sbom/tests/test_bcr_known_licenses.py -v
 """
 
 import unittest

@@ -39,3 +39,34 @@ score_py_pytest(
     data = ["//sbom:cpp_metadata.json"],
     deps = ["//sbom/internal/generator:sbom_generator_lib"],
 )
+
+score_py_pytest(
+    name = "test_sbom_generator",
+    srcs = ["test_sbom_generator.py"],
+    deps = ["//sbom/internal/generator:sbom_generator_lib"],
+)
+
+score_py_pytest(
+    name = "test_generate_crates_metadata_cache",
+    srcs = ["test_generate_crates_metadata_cache.py"],
+    deps = ["//sbom/scripts:generate_crates_metadata_cache"],
+)
+
+score_py_pytest(
+    name = "test_generate_cpp_metadata_cache",
+    srcs = ["test_generate_cpp_metadata_cache.py"],
+    deps = ["//sbom/scripts:generate_cpp_metadata_cache"],
+)
+
+score_py_pytest(
+    name = "test_spdx_to_github_snapshot",
+    srcs = ["test_spdx_to_github_snapshot.py"],
+    deps = ["//sbom/scripts:spdx_to_github_snapshot"],
+)
+
+score_py_pytest(
+    name = "test_real_sbom_integration",
+    srcs = ["test_real_sbom_integration.py"],
+    data = glob(["fixtures/**"]),
+    deps = ["//sbom/internal/generator:sbom_generator_lib"],
+)

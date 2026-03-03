@@ -6,23 +6,10 @@ information collected by the Bazel aspect and module extension.
 CycloneDX 1.6 Specification: https://cyclonedx.org/docs/1.6/json/
 """
 
-import re
 import uuid
 from typing import Any
 
-
-def _normalize_spdx_license(expr: str) -> str:
-    """Normalize SPDX boolean operators to uppercase as required by the spec.
-
-    dash-license-scan returns lowercase operators (e.g. 'Apache-2.0 or MIT').
-    SPDX 2.3 Appendix IV and CycloneDX 1.6 both require uppercase OR/AND/WITH.
-    Uses space-delimited substitution to avoid modifying license identifiers
-    that contain 'or'/'and' as substrings (e.g. GPL-2.0-or-later).
-    """
-    expr = re.sub(r" or ", " OR ", expr, flags=re.IGNORECASE)
-    expr = re.sub(r" and ", " AND ", expr, flags=re.IGNORECASE)
-    expr = re.sub(r" with ", " WITH ", expr, flags=re.IGNORECASE)
-    return expr
+from sbom.internal.generator.utils import _normalize_spdx_license
 
 
 def generate_cyclonedx(

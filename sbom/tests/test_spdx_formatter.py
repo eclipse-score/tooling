@@ -1,4 +1,41 @@
-"""Tests for SPDX 2.3 formatter."""
+"""Tests for the SPDX 2.3 JSON formatter.
+
+What this file tests
+---------------------
+Document structure
+  - spdxVersion = "SPDX-2.3", dataLicense = "CC0-1.0",
+    SPDXID = "SPDXRef-DOCUMENT".
+  - creationInfo: created timestamp, creators list contains
+    "Organization: <name>" and "Tool: score-sbom-generator".
+  - documentNamespace is present.
+
+Package representation
+  - One root package + one package per component.
+  - PURL emitted as externalRef with
+    referenceCategory = "PACKAGE-MANAGER", referenceType = "purl".
+  - SHA-256 checksum emitted in checksums[] when provided.
+  - checksums field absent when no checksum is available.
+
+Relationships
+  - DESCRIBES: SPDXRef-DOCUMENT → root package (exactly one).
+  - DEPENDS_ON: root package → each component (one per component).
+
+LicenseRef-* declarations
+  - hasExtractedLicensingInfos is populated for every LicenseRef-* identifier
+    that appears in licenseConcluded or licenseDeclared.
+  - Each entry carries licenseId and extractedText.
+
+_normalize_spdx_license() unit tests
+  - or → OR, and → AND, with → WITH.
+  - Already-uppercase expressions unchanged.
+  - GPL-2.0-or-later unchanged (hyphen-delimited "or" must not be uppercased).
+  - Mixed compound expressions normalised correctly.
+  - End-to-end: lowercase "or" in component input → uppercase in SPDX output.
+
+Bazel target : //sbom/tests:test_spdx_formatter
+Run          : bazel test //sbom/tests:test_spdx_formatter
+               pytest sbom/tests/test_spdx_formatter.py -v
+"""
 
 import unittest
 from datetime import datetime, timezone

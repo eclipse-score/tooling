@@ -1,4 +1,41 @@
-"""Tests for CycloneDX 1.6 formatter."""
+"""Tests for the CycloneDX 1.6 JSON formatter.
+
+What this file tests
+---------------------
+Document structure
+  - bomFormat = "CycloneDX", specVersion = "1.6".
+  - $schema URL uses https://.
+  - serialNumber starts with "urn:uuid:".
+  - metadata: timestamp, component (name/version/type), tools present.
+
+Component fields
+  - name, version, type ("library"), purl, bom-ref all set correctly.
+  - bom-refs are unique across all components.
+
+License encoding (CycloneDX spec requirement)
+  - Single SPDX identifiers  → {"license": {"id": …}}.
+  - Compound expressions (OR / AND) → {"expression": …}.
+  - Lowercase operators ("or", "and") from dash-license-scan are normalised
+    to uppercase before the expression-vs-id routing decision.
+  - GPL-2.0-or-later is not mangled (hyphen-delimited "or" untouched).
+
+Dependency graph
+  - Root component depends on every listed component.
+  - Empty component list → one root dependency entry with empty dependsOn.
+
+External references
+  - Crates with source = "crates.io" get a distribution externalReference.
+
+_normalize_spdx_license() unit tests
+  - or → OR, and → AND, with → WITH.
+  - Already-uppercase expressions unchanged.
+  - GPL-2.0-or-later unchanged.
+  - End-to-end: lowercase "or" in component input → "expression" field in output.
+
+Bazel target : //sbom/tests:test_cyclonedx_formatter
+Run          : bazel test //sbom/tests:test_cyclonedx_formatter
+               pytest sbom/tests/test_cyclonedx_formatter.py -v
+"""
 
 import unittest
 from datetime import datetime, timezone

@@ -27,11 +27,18 @@ py_library(
 )
 
 py_library(
+    name = "utils",
+    srcs = ["utils.py"],
+)
+
+py_library(
     name = "spdx_formatter",
     srcs = ["spdx_formatter.py"],
+    deps = [":utils"],
 )
 
 py_library(
     name = "cyclonedx_formatter",
     srcs = ["cyclonedx_formatter.py"],
+    deps = [":utils"],
 )

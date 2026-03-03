@@ -1,7 +1,37 @@
 """Tests for generate_crates_metadata_cache.py.
 
-These tests verify the core parsing and data transformation functions
-used to extract Rust crate license metadata via dash-license-scan.
+What this file tests
+---------------------
+parse_dash_summary()
+  - Standard "crate/cratesio/-/NAME/VERSION, SPDX, STATUS, SOURCE" lines
+    produce correct crate → license mappings.
+  - Lines with an empty license expression are excluded.
+  - Compound SPDX expressions (AND / OR / LicenseRef-*) are preserved verbatim.
+  - Malformed lines (fewer than 4 comma-separated fields) are silently skipped.
+  - Non-crate entries (pypi, npm) are ignored.
+  - Empty file returns an empty dict.
+  - Restricted crates still yield their license expression.
+
+parse_module_bazel_lock()
+  - Crate name and version are extracted from generatedRepoSpecs keys
+    (format: crate_index__NAME-VERSION).
+  - sha256 checksum is extracted from the attributes dict.
+  - The bare "crate_index" meta-repo entry is not treated as a real crate.
+  - Complex names (iceoryx2-bb-lock-free-qnx8-0.7.0) are parsed correctly.
+  - Lockfiles without a crate extension return an empty dict.
+  - Completely empty lockfiles return an empty dict.
+
+generate_synthetic_cargo_lock()
+  - Produces valid TOML with [[package]] entries and crates.io-index source.
+  - Entries are sorted alphabetically by crate name.
+
+TestEndToEndLicenseExtraction
+  - parse_dash_summary() correctly round-trips JAR-style CSV output.
+  - Full pipeline verified for a representative set of score_kyron crates.
+
+Bazel target : //sbom/tests:test_generate_crates_metadata_cache
+Run          : bazel test //sbom/tests:test_generate_crates_metadata_cache
+               pytest sbom/tests/test_generate_crates_metadata_cache.py -v
 """
 
 import json
@@ -9,17 +39,7 @@ import os
 import tempfile
 import unittest
 
-# The script lives under sbom/scripts/ and is not a regular Python package.
-# Import functions by adding the scripts directory to sys.path.
-import sys
-
-sys.path.insert(
-    0,
-    os.path.join(os.path.dirname(__file__), "..", "scripts"),
-)
-
-from generate_crates_metadata_cache import (
-    build_dash_coordinates,
+from sbom.scripts.generate_crates_metadata_cache import (
     generate_synthetic_cargo_lock,
     parse_dash_summary,
     parse_module_bazel_lock,
@@ -122,51 +142,6 @@ class TestParseDashSummary(unittest.TestCase):
         result = parse_dash_summary(path)
 
         self.assertEqual(result["ring"], "LicenseRef-ring")
-
-
-class TestBuildDashCoordinates(unittest.TestCase):
-    """Tests for build_dash_coordinates — coordinate string construction."""
-
-    def test_basic_coordinate_building(self):
-        """Crate data produces correct coordinate strings."""
-        crates = {
-            "serde": {"name": "serde", "version": "1.0.228", "checksum": "abc123"},
-            "tokio": {"name": "tokio", "version": "1.10.0", "checksum": "def456"},
-        }
-        coords = build_dash_coordinates(crates)
-
-        self.assertEqual(len(coords), 2)
-        self.assertIn("crate/cratesio/-/serde/1.0.228", coords)
-        self.assertIn("crate/cratesio/-/tokio/1.10.0", coords)
-
-    def test_empty_crates(self):
-        """Empty crates dict produces empty coordinates list."""
-        coords = build_dash_coordinates({})
-        self.assertEqual(coords, [])
-
-    def test_coordinates_are_sorted(self):
-        """Coordinates are sorted by crate name."""
-        crates = {
-            "z-crate": {"name": "z-crate", "version": "1.0.0", "checksum": ""},
-            "a-crate": {"name": "a-crate", "version": "2.0.0", "checksum": ""},
-        }
-        coords = build_dash_coordinates(crates)
-
-        self.assertEqual(coords[0], "crate/cratesio/-/a-crate/2.0.0")
-        self.assertEqual(coords[1], "crate/cratesio/-/z-crate/1.0.0")
-
-    def test_hyphenated_crate_name(self):
-        """Crate names with hyphens are preserved in coordinates."""
-        crates = {
-            "iceoryx2-bb-lock-free": {
-                "name": "iceoryx2-bb-lock-free",
-                "version": "0.7.0",
-                "checksum": "",
-            },
-        }
-        coords = build_dash_coordinates(crates)
-
-        self.assertEqual(coords[0], "crate/cratesio/-/iceoryx2-bb-lock-free/0.7.0")
 
 
 class TestParseModuleBazelLock(unittest.TestCase):
@@ -314,8 +289,7 @@ class TestEndToEndLicenseExtraction(unittest.TestCase):
     """Integration tests verifying the full license extraction pipeline.
 
     These tests verify that the parse_dash_summary function correctly
-    handles the output format of the Eclipse dash-licenses JAR, which
-    is the format that build_dash_coordinates + JAR invocation produces.
+    handles the output format of the Eclipse dash-licenses JAR.
     """
 
     def _write_summary(self, content: str) -> str:
@@ -325,20 +299,8 @@ class TestEndToEndLicenseExtraction(unittest.TestCase):
         self.addCleanup(os.unlink, path)
         return path
 
-    def test_coordinates_match_summary_format(self):
-        """Coordinates built by build_dash_coordinates match the format
-        that parse_dash_summary expects in the JAR output."""
-        crates = {
-            "serde": {"name": "serde", "version": "1.0.228", "checksum": "abc"},
-            "tokio": {"name": "tokio", "version": "1.10.0", "checksum": "def"},
-        }
-
-        # Build coordinates (what we send to the JAR)
-        coords = build_dash_coordinates(crates)
-        self.assertEqual(coords[0], "crate/cratesio/-/serde/1.0.228")
-        self.assertEqual(coords[1], "crate/cratesio/-/tokio/1.10.0")
-
-        # Simulate JAR summary output (what the JAR would produce)
+    def test_summary_format_round_trip(self):
+        """parse_dash_summary correctly maps crate names from JAR-style CSV output."""
         summary = (
             "crate/cratesio/-/serde/1.0.228, Apache-2.0 OR MIT, approved, clearlydefined\n"
             "crate/cratesio/-/tokio/1.10.0, MIT, approved, clearlydefined\n"
@@ -346,27 +308,13 @@ class TestEndToEndLicenseExtraction(unittest.TestCase):
         path = self._write_summary(summary)
         license_map = parse_dash_summary(path)
 
-        # Verify licenses are correctly mapped back to crate names
         self.assertEqual(license_map["serde"], "Apache-2.0 OR MIT")
         self.assertEqual(license_map["tokio"], "MIT")
 
-        # Verify all crates got licenses
-        for name in crates:
-            self.assertIn(name, license_map, f"Missing license for crate: {name}")
-
     def test_kyron_style_crates(self):
         """Verify license extraction works for crates typical in the score_kyron module."""
-        crates = {
-            "proc-macro2": {"name": "proc-macro2", "version": "1.0.92", "checksum": ""},
-            "quote": {"name": "quote", "version": "1.0.37", "checksum": ""},
-            "syn": {"name": "syn", "version": "2.0.96", "checksum": ""},
-            "iceoryx2": {"name": "iceoryx2", "version": "0.7.0", "checksum": ""},
-        }
+        crate_names = ["proc-macro2", "quote", "syn", "iceoryx2"]
 
-        coords = build_dash_coordinates(crates)
-        self.assertEqual(len(coords), 4)
-
-        # Simulate JAR output
         summary = (
             "crate/cratesio/-/proc-macro2/1.0.92, Apache-2.0 OR MIT, approved, clearlydefined\n"
             "crate/cratesio/-/quote/1.0.37, Apache-2.0 OR MIT, approved, clearlydefined\n"
@@ -376,7 +324,6 @@ class TestEndToEndLicenseExtraction(unittest.TestCase):
         path = self._write_summary(summary)
         license_map = parse_dash_summary(path)
 
-        # All crates should have licenses
-        for name in crates:
+        for name in crate_names:
             self.assertIn(name, license_map, f"Missing license for {name}")
             self.assertTrue(license_map[name], f"Empty license for {name}")
