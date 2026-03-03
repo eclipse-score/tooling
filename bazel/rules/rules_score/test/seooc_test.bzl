@@ -9,7 +9,7 @@ Tests the SEooC (Safety Element out of Context) functionality including:
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//bazel/rules/rules_score/private:sphinx_module.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
+load("@score_tooling//bazel/rules/rules_score/private:sphinx_module.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
 
 def _seooc_index_generation_test_impl(ctx):
     """Test that dependable_element generates proper index.rst file."""

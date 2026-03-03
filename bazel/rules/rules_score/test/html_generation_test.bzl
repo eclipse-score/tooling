@@ -13,7 +13,7 @@
 """Test rules for sphinx_module HTML generation and dependencies."""
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//bazel/rules/rules_score/private:sphinx_module.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
+load("@score_tooling//bazel/rules/rules_score/private:sphinx_module.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
 
 # ============================================================================
 # Provider Tests

@@ -26,20 +26,18 @@ def _create_config_py(ctx):
     Args:
         ctx: Rule context
     """
-    if ctx.attr.config:
-        config_file = ctx.attr.config.files.to_list()[0]
-    else:
-        config_file = ctx.actions.declare_file(ctx.label.name + "/conf.py")
-        template = ctx.file._config_template
+    sphinx_toolchain = ctx.toolchains["//bazel/rules/rules_score:toolchain_type"].sphinxinfo
+    config_file = ctx.actions.declare_file(ctx.label.name + "/conf.py")
+    template = sphinx_toolchain.conf_template.files.to_list()[0]
 
-        # Read template and substitute PROJECT_NAME
-        ctx.actions.expand_template(
-            template = template,
-            output = config_file,
-            substitutions = {
-                "{PROJECT_NAME}": ctx.label.name.replace("_", " ").title(),
-            },
-        )
+    # Read template and substitute PROJECT_NAME
+    ctx.actions.expand_template(
+        template = template,
+        output = config_file,
+        substitutions = {
+            "{PROJECT_NAME}": ctx.label.name.replace("_", " ").title(),
+        },
+    )
     return config_file
 
 # ======================================================================================
@@ -50,17 +48,6 @@ sphinx_rule_attrs = {
         allow_files = True,
         doc = "List of source files for the Sphinx documentation.",
     ),
-    "sphinx": attr.label(
-        doc = "The Sphinx build binary to use.",
-        mandatory = True,
-        executable = True,
-        cfg = "exec",
-    ),
-    "config": attr.label(
-        allow_files = [".py"],
-        doc = "Configuration file (conf.py) for the Sphinx documentation. If not provided, a default config will be generated.",
-        mandatory = False,
-    ),
     "index": attr.label(
         allow_files = [".rst"],
         doc = "Index file (index.rst) for the Sphinx documentation.",
@@ -69,23 +56,13 @@ sphinx_rule_attrs = {
     "deps": attr.label_list(
         doc = "List of other sphinx_module targets this module depends on for intersphinx.",
     ),
-    "_config_template": attr.label(
-        default = Label("//bazel/rules/rules_score:templates/conf.template.py"),
-        allow_single_file = True,
-        doc = "Template for generating default conf.py",
-    ),
-    "_html_merge_tool": attr.label(
-        default = Label("//bazel/rules/rules_score:sphinx_html_merge"),
-        executable = True,
-        cfg = "exec",
-        doc = "Tool for merging HTML directories",
-    ),
 }
 
 # ======================================================================================
 # Rule implementations
 # ======================================================================================
 def _score_needs_impl(ctx):
+    sphinx_toolchain = ctx.toolchains["//bazel/rules/rules_score:toolchain_type"].sphinxinfo
     output_path = ctx.label.name.replace("_needs", "") + "/needs.json"
     needs_output = ctx.actions.declare_file(output_path)
 
@@ -94,9 +71,6 @@ def _score_needs_impl(ctx):
 
     # Phase 1: Build needs.json (without external needs)
     needs_inputs = ctx.files.srcs + [config_file]
-
-    if ctx.attr.config:
-        needs_inputs = needs_inputs + ctx.files.config
 
     needs_args = [
         "--index_file",
@@ -114,7 +88,10 @@ def _score_needs_impl(ctx):
         outputs = [needs_output],
         arguments = needs_args,
         progress_message = "Generating needs.json for: %s" % ctx.label.name,
-        executable = ctx.executable.sphinx,
+        executable = sphinx_toolchain.sphinx.files_to_run.executable,
+        tools = [
+            sphinx_toolchain.sphinx.files_to_run,
+        ],
     )
 
     transitive_needs = [dep[SphinxNeedsInfo].needs_json_files for dep in ctx.attr.deps if SphinxNeedsInfo in dep]
@@ -139,7 +116,7 @@ def _score_html_impl(ctx):
 
     # Collect all transitive dependencies with deduplication
     modules = []
-
+    sphinx_toolchain = ctx.toolchains["//bazel/rules/rules_score:toolchain_type"].sphinxinfo
     needs_external_needs = {}
     for dep in ctx.attr.needs:
         if SphinxNeedsInfo in dep:
@@ -147,6 +124,7 @@ def _score_html_impl(ctx):
             needs_external_needs[dep.label.name] = {
                 "base_url": dep_name,  # Relative path to the subdirectory where dep HTML is copied
                 "json_path": dep[SphinxNeedsInfo].needs_json_file.path,  # Use direct file
+                "version": "1.0",
                 "id_prefix": "",
                 "css_class": "",
             }
@@ -162,17 +140,7 @@ def _score_html_impl(ctx):
         content = json.encode_indent(needs_external_needs, indent = "  "),
     )
 
-    # Read template and substitute PROJECT_NAME
-    config_file = ctx.actions.declare_file(ctx.label.name + "/conf.py")
-    template = ctx.file._config_template
-
-    ctx.actions.expand_template(
-        template = template,
-        output = config_file,
-        substitutions = {
-            "{PROJECT_NAME}": ctx.label.name.replace("_", " ").title(),
-        },
-    )
+    config_file = _create_config_py(ctx)
 
     # Build HTML with external needs
     html_inputs = ctx.files.srcs + ctx.files.needs + [config_file, needs_external_needs_json]
@@ -193,7 +161,10 @@ def _score_html_impl(ctx):
         outputs = [sphinx_html_output],
         arguments = html_args,
         progress_message = "Building HTML: %s" % ctx.label.name,
-        executable = ctx.executable.sphinx,
+        executable = sphinx_toolchain.sphinx.files_to_run.executable,
+        tools = [
+            sphinx_toolchain.sphinx.files_to_run,
+        ],
     )
 
     # Create final HTML output directory with dependencies using Python merge script
@@ -223,7 +194,8 @@ def _score_html_impl(ctx):
         outputs = [html_output],
         arguments = merge_args,
         progress_message = "Merging HTML with dependencies for %s" % ctx.label.name,
-        executable = ctx.executable._html_merge_tool,
+        executable = sphinx_toolchain.html_merge_tool.files_to_run.executable,
+        tools = [sphinx_toolchain.html_merge_tool.files_to_run],
     )
 
     return [
@@ -240,6 +212,7 @@ def _score_html_impl(ctx):
 _score_needs = rule(
     implementation = _score_needs_impl,
     attrs = sphinx_rule_attrs,
+    toolchains = ["//bazel/rules/rules_score:toolchain_type"],
 )
 
 _score_html = rule(
@@ -248,6 +221,7 @@ _score_html = rule(
         allow_files = True,
         doc = "Submodule symbols.needs targets for this module.",
     )),
+    toolchains = ["//bazel/rules/rules_score:toolchain_type"],
 )
 
 # ======================================================================================
@@ -258,7 +232,6 @@ def sphinx_module(
         name,
         srcs,
         index,
-        config = None,
         deps = [],
         sphinx = Label("//bazel/rules/rules_score:score_build"),
         testonly = False,
@@ -269,11 +242,13 @@ def sphinx_module(
     transitive dependency collection. All dependencies are automatically
     included in a modules/ subdirectory for intersphinx cross-referencing.
 
+    The Sphinx binary and conf.py template are provided by the registered
+    sphinx_toolchain. See sphinx_toolchain.bzl for configuration details.
+
     Args:
         name: Name of the target
         srcs: List of source files (.rst, .md) with index file first
         index: Label to index.rst file
-        config: Label to conf.py configuration file (optional, will be auto-generated if not provided)
         deps: List of other sphinx_module targets this module depends on
         sphinx: Label to sphinx build binary (default: :sphinx_build)
         visibility: Bazel visibility
@@ -281,10 +256,8 @@ def sphinx_module(
     _score_needs(
         name = name + "_needs",
         srcs = srcs,
-        config = config,
         index = index,
         deps = [d + "_needs" for d in deps],
-        sphinx = sphinx,
         testonly = testonly,
         visibility = visibility,
     )
@@ -292,11 +265,9 @@ def sphinx_module(
     _score_html(
         name = name,
         srcs = srcs,
-        config = config,
         index = index,
         deps = deps,
         needs = [d + "_needs" for d in deps],
-        sphinx = sphinx,
         testonly = testonly,
         visibility = visibility,
     )
