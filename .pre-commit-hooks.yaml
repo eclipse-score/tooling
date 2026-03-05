@@ -11,7 +11,6 @@
 # SPDX-FileCopyrightText: 2026 Contributors to the Eclipse Foundation
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-
 - id: copyright
   name: Check and fix copyright headers with cr_checker
   entry: cr_checker/tool/pre-commit_wrapper --extensions h hpp c cpp rs rst py sh bzl ini yml yaml BUILD bazel --fix
