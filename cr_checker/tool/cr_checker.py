@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # *******************************************************************************
 # Copyright (c) 2024 Contributors to the Eclipse Foundation
 #
