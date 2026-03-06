@@ -39,4 +39,4 @@ repos:
         # language: python
         language: unsupported_script
         minimum_pre_commit_version: 3.2.0
-        types_or: [python, yaml, sh, shell, bash, c, c++, rust]
+        types_or: [python, yaml, ini, rst, sh, shell, bash, bazel, c, c++, rust]
