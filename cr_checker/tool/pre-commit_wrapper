@@ -22,8 +22,14 @@ if __name__ == "__main__":
     # --template-file and --config-file cannot be set via .pre-commit-config.yaml
     script_dir = os.path.dirname(os.path.abspath(__file__))
     sys.argv.insert(1, '--template-file')
-    sys.argv.insert(2, script_dir + '/../resources/templates.ini')
+    sys.argv.insert(
+        2,
+        os.path.normpath(os.path.join(script_dir, '..', 'resources', 'templates.ini')),
+    )
     sys.argv.insert(3, '--config-file')
-    sys.argv.insert(4, script_dir + '/../resources/config.json')
+    sys.argv.insert(
+        4,
+        os.path.normpath(os.path.join(script_dir, '..', 'resources', 'config.json')),
+    )
 
     sys.exit(cr_checker.main(sys.argv[1:]))
