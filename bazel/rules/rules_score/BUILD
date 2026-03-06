@@ -14,6 +14,7 @@ exports_files([
     "templates/unit.template.rst",
     "templates/component.template.rst",
     "src/sphinx_wrapper.py",
+    "src/bazel_sphinx_needs.py",
 ])
 
 sphinx_module(
@@ -42,7 +43,7 @@ py_binary(
 
 py_library(
     name = "sphinx_module_ext",
-    srcs = ["src/sphinx_module_ext.py"],
+    srcs = ["src/bazel_sphinx_needs.py"],
     imports = ["src"],
     visibility = ["//visibility:public"],
 )

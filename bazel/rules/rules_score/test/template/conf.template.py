@@ -18,15 +18,7 @@ This file is auto-generated from a template and should not be edited directly.
 Template variables like {PROJECT_NAME} are replaced during Bazel build.
 """
 
-import json
-import os
-from pathlib import Path
-from typing import Any, Dict, List
-
-from sphinx.util import logging
-
-# Create a logger with the Sphinx namespace
-logger = logging.getLogger(__name__)
+import bazel_sphinx_needs
 
 # Project configuration - {PROJECT_NAME} will be replaced by the module name during build
 project = "{PROJECT_NAME}"
@@ -39,7 +31,6 @@ project_url = (
 
 # Sphinx extensions - comprehensive list for SCORE modules
 extensions = [
-    "sphinx_module_ext",
     "sphinx_needs",
     "sphinx_design",
     "myst_parser",
@@ -71,3 +62,11 @@ numfig = True
 
 # HTML theme
 html_theme = "sphinx_rtd_theme"
+
+# Load external needs and log configuration
+needs_external_needs = bazel_sphinx_needs.load_external_needs()
+bazel_sphinx_needs.log_config_info(project)
+
+
+def setup(app):
+    return bazel_sphinx_needs.setup_sphinx_extension(app, needs_external_needs)

@@ -313,6 +313,19 @@ html_merging_test(
 )
 
 # ============================================================================
+# HTML Content Validation Tests
+# ============================================================================
+
+# Test that generated HTML does not contain "Unknown need" statements
+sh_test(
+    name = "no_unknown_needs_test",
+    srcs = ["check_unknown_needs.sh"],
+    # args = ["$(location //:module_a_lib/html/index.html)"],
+    data = [":module_a_lib"],
+    tags = ["manual"],
+)
+
+# ============================================================================
 # SEooC-Specific Tests
 # ============================================================================
 

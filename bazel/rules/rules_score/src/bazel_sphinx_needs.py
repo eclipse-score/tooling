@@ -105,30 +105,58 @@ def load_external_needs() -> List[Dict[str, Any]]:
     return external_needs
 
 
-def init_external_needs(app: Any, config: Any) -> None:
+def log_config_info(project_name: str) -> None:
     """
-    Initialize external needs configuration.
+    Log Sphinx configuration information.
 
     Args:
-        app: Sphinx application object
+        project_name: Name of the Sphinx project
+    """
+    logger.info("=" * 80)
+    logger.info(f"Sphinx configuration loaded for project: {project_name}")
+    logger.info(f"Current working directory: {Path.cwd()}")
+    logger.info("=" * 80)
+
+
+def verify_config(
+    app: Any, config: Any, needs_external_needs: List[Dict[str, Any]]
+) -> None:
+    """
+    Verify and update Sphinx configuration with external needs.
+
+    Args:
+        app: Sphinx application instance
         config: Sphinx configuration object
+        needs_external_needs: List of external needs configurations
     """
+    config.needs_external_needs = needs_external_needs
+    logger.info("=" * 80)
+    logger.info("Verifying Sphinx configuration")
+    logger.info(f"  Project: {config.project}")
+    logger.info(f"  External needs count: {len(config.needs_external_needs)}")
+    logger.info("=" * 80)
 
-    config.needs_external_needs = load_external_needs()
 
-
-def setup(app: Any) -> Dict[str, Any]:
+def setup_sphinx_extension(
+    app: Any, needs_external_needs: List[Dict[str, Any]]
+) -> Dict[str, Any]:
     """
-    Sphinx setup hook to register event listeners.
+    Setup function for Sphinx extension.
+
+    This should be called from the conf.py setup() function to register
+    the configuration verification callback.
 
     Args:
-        app: Sphinx application object
+        app: Sphinx application instance
+        needs_external_needs: List of external needs configurations
 
     Returns:
         Extension metadata dictionary
     """
-    app.connect("config-inited", init_external_needs)
-
+    app.connect(
+        "config-inited",
+        lambda app, config: verify_config(app, config, needs_external_needs),
+    )
     return {
         "version": "1.0",
         "parallel_read_safe": True,
