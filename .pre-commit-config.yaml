@@ -11,25 +11,25 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 repos:
-  # - repo: https://github.com/pre-commit/pre-commit-hooks
-  #   rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # v6.0.0
-  #   hooks:
-  #     - id: check-yaml
-  #     - id: end-of-file-fixer
-  #       exclude: devcontainer-lock.json
-  #     - id: trailing-whitespace
-  #     - id: check-shebang-scripts-are-executable
-  #     - id: check-executables-have-shebangs
-  #     - id: check-added-large-files
-  #       args: [--maxkb=50, --enforce-all] # increase or add git lfs if too strict
-  # - repo: https://github.com/google/yamlfmt
-  #   rev: 21ca5323a9c87ee37a434e0ca908efc0a89daa07 # v0.21.0
-  #   hooks:
-  #     - id: yamlfmt
-  # - repo: https://codeberg.org/fsfe/reuse-tool
-  #   rev: a1bb792acda6fd0724936b4ebbdbc8eceb9c0459 # v6.2.0
-  #   hooks:
-  #     - id: reuse-lint-file
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+        exclude: requirements_lock.txt
+      - id: trailing-whitespace
+      - id: check-shebang-scripts-are-executable
+      - id: check-executables-have-shebangs
+      - id: check-added-large-files
+        args: [--maxkb=50, --enforce-all] # increase or add git lfs if too strict
+  - repo: https://github.com/google/yamlfmt
+    rev: 21ca5323a9c87ee37a434e0ca908efc0a89daa07 # v0.21.0
+    hooks:
+      - id: yamlfmt
+  - repo: https://codeberg.org/fsfe/reuse-tool
+    rev: a1bb792acda6fd0724936b4ebbdbc8eceb9c0459 # v6.2.0
+    hooks:
+      - id: reuse-lint-file
   - repo: local
     hooks:
       - id: copyright
