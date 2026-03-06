@@ -13,10 +13,16 @@
 import os
 import subprocess
 from pathlib import Path
+from python.runfiles import Runfiles
 
 
 def test_venv_ok():
-    runfiles = os.getenv("RUNFILES_DIR")
+    """
+    This test checks if the pytest module is available in the runfiles and if it can be used without
+    installing pytest explicitly inside the virtualenv
+    """
+    if (r := Runfiles.Create()) and (rd := r.EnvVars().get("RUNFILES_DIR")):
+        runfiles = Path(rd)
     assert runfiles, "runfiles could not be found, RUNFILES_DIR is not set"
     packages = os.listdir(runfiles)
     assert any(x.endswith("pytest") for x in packages), (
@@ -26,7 +32,6 @@ def test_venv_ok():
         import pytest  # type ignore
 
         python_venv_folder = [x for x in packages if "python_3_12_" in x][0]
-
         # Trying to actually use pytest module and collect current test & file
         proc = subprocess.run(
             [

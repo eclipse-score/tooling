@@ -11,10 +11,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 import os
+from python.runfiles import Runfiles
+from pathlib import Path
 
 
 def test_venv_ok():
-    runfiles = os.getenv("RUNFILES_DIR")
+    if (r := Runfiles.Create()) and (rd := r.EnvVars().get("RUNFILES_DIR")):
+        runfiles = Path(rd)
     packages = os.listdir(runfiles)
     assert any(x.endswith("requests") for x in packages), (
         f"'Request not found in runfiles: {runfiles}"
