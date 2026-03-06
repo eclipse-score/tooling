@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # *******************************************************************************
 # Copyright (c) 2024 Contributors to the Eclipse Foundation
 #
@@ -504,7 +506,9 @@ def fix_copyright(path, copyright_text, encoding, offset, config=None) -> bool:
         byte_array = len(first_line.encode(encoding))
 
         if offset > 0 and offset != byte_array:
-            LOGGER.error("Invalid offset value: %d, expected: %d", offset, byte_array)
+            LOGGER.error(
+                "%s: Invalid offset value: %d, expected: %d", path, offset, byte_array
+            )
             return False
 
         with open(path, "w", encoding=encoding) as handle:
