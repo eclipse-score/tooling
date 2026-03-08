@@ -1,3 +1,9 @@
+<!--
+Copyright (c) 2026 Contributors to the Eclipse Foundation
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # DASH License Checker Bazel Integration
 
 This module provides Bazel build configurations and a macro to integrate the [Eclipse DASH license checker](https://github.com/eclipse/dash-licenses) into S-CORE Bazel-based project. It includes:

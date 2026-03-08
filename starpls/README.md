@@ -1,3 +1,9 @@
+<!--
+Copyright (c) 2026 Contributors to the Eclipse Foundation
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # StarPLS Bazel Module
 
 This Bazel module provides a convenient way to integrate the pre-built `starpls` Starlark language server into your Bazel workspace.

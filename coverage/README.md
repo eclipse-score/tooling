@@ -1,3 +1,9 @@
+<!--
+Copyright (c) 2026 Contributors to the Eclipse Foundation
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Ferrocene Rust Coverage
 
 This directory provides the Ferrocene Rust coverage workflow for Bazel-based

@@ -1,3 +1,9 @@
+<!--
+Copyright (c) 2026 Contributors to the Eclipse Foundation
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Score pytest wrapper & plugin
 
 This module provides support for running [pytest](https://docs.pytest.org/en/latest/contents.html)-based tests with Bazel, and includes a **pytest plugin** that adds structured metadata to JUnit XML reports, improving traceability, test classification, and documentation.
