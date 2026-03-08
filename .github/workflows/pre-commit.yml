@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-name: Pull Request Workflow
+name: pre-commit
 on:
   pull_request:
     types: [opened, reopened, synchronize]
