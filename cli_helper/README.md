@@ -67,7 +67,7 @@ The `cli_help` tag should follow this format:
 
 ### Using CLI Helper in Your Project
 
-To integrate the CLI helper into your Bazel-based project, you can use Bazel modules. 
+To integrate the CLI helper into your Bazel-based project, you can use Bazel modules.
 
 Add the following to your `MODULE.bazel`:
 

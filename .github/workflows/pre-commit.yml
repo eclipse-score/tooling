@@ -10,12 +10,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-
 name: pre-commit
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-
 jobs:
   self_test:
     name: 🔬 Self Test
@@ -23,9 +21,7 @@ jobs:
     steps:
       - name: 📥 Check out
         uses: actions/checkout@v6
-
       - name: ⚙️ Setup uv
         uses: astral-sh/setup-uv@v5
-
       - name: 🛠️ Run pre-commit
         run: uvx pre-commit run --all-files
