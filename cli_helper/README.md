@@ -1,3 +1,9 @@
+<!--
+Copyright (c) 2026 Contributors to the Eclipse Foundation
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # CLI Helper
 
 `cli_help.py` is a Bazel tool designed to discover and display Bazel targets that have been tagged with `cli_help` tags. This tool helps developers quickly find available command-line tools and their descriptions within a Bazel workspace.

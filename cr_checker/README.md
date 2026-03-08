@@ -1,3 +1,9 @@
+<!--
+Copyright (c) 2026 Contributors to the Eclipse Foundation
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # CopyRight Checker
 
 `cr_checker.py` is a tool designed to check if files contain a specified copyright header. It provides configurable logging, color-coded console output, and can handle large file sets efficiently. The script supports reading configuration files for custom copyright templates and can utilize memory-mapped file reading for better performance with large files. Tool itself can also append copyright header at the beginning of file if flag `--fix` is used.
