@@ -1,0 +1,15 @@
+{
+    "name": "eclipse-s-core",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "detachhead.basedpyright",
+                "github.vscode-github-actions",
+                "streetsidesoftware.code-spell-checker"
+            ]
+        }
+    }
+}

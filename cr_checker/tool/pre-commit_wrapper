@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+
+# *******************************************************************************
+# Copyright (c) 2024 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+"""The tool for checking if artifacts have proper copyright."""
+
+import cr_checker
+import os
+import sys
+
+if __name__ == "__main__":
+    # --template-file and --config-file cannot be set via .pre-commit-config.yaml
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.argv.insert(1, '--template-file')
+    sys.argv.insert(
+        2,
+        os.path.normpath(os.path.join(script_dir, '..', 'resources', 'templates.ini')),
+    )
+    sys.argv.insert(3, '--config-file')
+    sys.argv.insert(
+        4,
+        os.path.normpath(os.path.join(script_dir, '..', 'resources', 'config.json')),
+    )
+
+    sys.exit(cr_checker.main(sys.argv[1:]))

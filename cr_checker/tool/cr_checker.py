@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # *******************************************************************************
 # Copyright (c) 2024 Contributors to the Eclipse Foundation
 #
@@ -478,7 +480,7 @@ def remove_old_header(file_path, encoding, num_of_chars):
     shutil.move(temp_file.name, file_path)
 
 
-def fix_copyright(path, copyright_text, encoding, offset, config=None):
+def fix_copyright(path, copyright_text, encoding, offset, config=None) -> bool:
     """
     Inserts a copyright header into the specified file, ensuring that existing
     content is preserved according to the provided offset.
@@ -493,6 +495,8 @@ def fix_copyright(path, copyright_text, encoding, offset, config=None):
                       are preserved.
         config (Path): Path to the config JSON file where configuration
                 variables are stored (e.g. years for copyright headers).
+    Returns:
+        bool: True if the copyright header was successfully added, False if there was an error
     """
 
     temporary_file = create_temp_file(path, encoding)
@@ -502,8 +506,10 @@ def fix_copyright(path, copyright_text, encoding, offset, config=None):
         byte_array = len(first_line.encode(encoding))
 
         if offset > 0 and offset != byte_array:
-            LOGGER.error("Invalid offset value: %d, expected: %d", offset, byte_array)
-            return
+            LOGGER.error(
+                "%s: Invalid offset value: %d, expected: %d", path, offset, byte_array
+            )
+            return False
 
         with open(path, "w", encoding=encoding) as handle:
             temp.seek(0)
@@ -518,6 +524,7 @@ def fix_copyright(path, copyright_text, encoding, offset, config=None):
             for chunk in iter(lambda: temp.read(4096), ""):
                 handle.write(chunk)
     LOGGER.info("Fixed missing header in: %s", path)
+    return True
 
 
 def process_files(
@@ -583,9 +590,12 @@ def process_files(
             if fix:
                 if remove_offset:
                     remove_old_header(item, encoding, remove_offset)
-                fix_copyright(item, templates[key], encoding, effective_offset, config)
+                fix_result = fix_copyright(
+                    item, templates[key], encoding, effective_offset, config
+                )
                 results["no_copyright"] += 1
-                results["fixed"] += 1
+                if fix_result:
+                    results["fixed"] += 1
             else:
                 LOGGER.error(
                     "Missing copyright header in: %s, use --fix to introduce it", item
