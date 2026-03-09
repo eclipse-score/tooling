@@ -1,3 +1,16 @@
+..
+   # *******************************************************************************
+   # Copyright (c) 2026 Contributors to the Eclipse Foundation
+   #
+   # See the NOTICE file(s) distributed with this work for additional
+   # information regarding copyright ownership.
+   #
+   # This program and the accompanying materials are made available under the
+   # terms of the Apache License Version 2.0 which is available at
+   # https://www.apache.org/licenses/LICENSE-2.0
+   #
+   # SPDX-License-Identifier: Apache-2.0
+   # *******************************************************************************
 SCORE Rules for Bazel
 =====================
 
@@ -48,10 +61,10 @@ In your MODULE.bazel:
 
    # Add rules_score dependency
    bazel_dep(name = "score_tooling", version = "1.3.2")
-   
+
    # Add dependencies for custom Sphinx extensions (if needed)
    bazel_dep(name = "score_docs_as_code", version = "3.0.1")
-   
+
    # Register your custom toolchain
    register_toolchains("//:my_toolchain")
 

@@ -1,3 +1,9 @@
+<!--
+Copyright (c) 2026 Contributors to the Eclipse Foundation
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # StarPLS Bazel Module
 
 This Bazel module provides a convenient way to integrate the pre-built `starpls` Starlark language server into your Bazel workspace.
@@ -25,7 +31,7 @@ This Bazel module provides a convenient way to integrate the pre-built `starpls`
     # If using a local path override for testing:
     # local_path_override(
     #     module_name = "score_starpls_lsp",
-    #     path = "/path/to/your/local/score_starpls_lsp" 
+    #     path = "/path/to/your/local/score_starpls_lsp"
     # )
     ```
 
@@ -35,7 +41,7 @@ This Bazel module provides a convenient way to integrate the pre-built `starpls`
     load("@score_starpls_lsp//:starpls.bzl", "setup_starpls")
 
     setup_starpls(
-        name = "starpls_server", 
+        name = "starpls_server",
         visibility = ["//visibility:public"],
     )
     ```
@@ -44,7 +50,7 @@ This Bazel module provides a convenient way to integrate the pre-built `starpls`
 
     You can now run the language server directly using Bazel:
     ```bash
-    bazel run //starpls_server-- [arguments_for_starpls...] 
+    bazel run //starpls_server-- [arguments_for_starpls...]
     ```
 
 4.  **Configure your IDE (e.g., VS Code):**

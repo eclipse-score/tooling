@@ -1,3 +1,9 @@
+<!--
+Copyright (c) 2026 Contributors to the Eclipse Foundation
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Score pytest wrapper & plugin
 
 This module provides support for running [pytest](https://docs.pytest.org/en/latest/contents.html)-based tests with Bazel, and includes a **pytest plugin** that adds structured metadata to JUnit XML reports, improving traceability, test classification, and documentation.
@@ -6,11 +12,11 @@ This module provides support for running [pytest](https://docs.pytest.org/en/lat
 
 ## Features
 
-- **Test Classification**: Categorize tests by type and derivation technique  
-- **Requirements Traceability**: Link tests to requirement IDs  
-- **Automatic File/Line Attribution**: Annotates tests with file path and line number  
-- **JUnit XML Integration**: Exports metadata as `<properties>` in test reports  
-- **Bazel Integration**: Run tests with `score_py_pytest` Bazel rule  
+- **Test Classification**: Categorize tests by type and derivation technique
+- **Requirements Traceability**: Link tests to requirement IDs
+- **Automatic File/Line Attribution**: Annotates tests with file path and line number
+- **JUnit XML Integration**: Exports metadata as `<properties>` in test reports
+- **Bazel Integration**: Run tests with `score_py_pytest` Bazel rule
 
 ---
 
@@ -71,9 +77,9 @@ def test_user_login():
 
 ### Required Parameters
 
-- `test_type`: Type of test being executed  
-- `derivation_technique`: Method used to derive the test  
-- **Either** `partially_verifies` or `fully_verifies`: List of requirement IDs  
+- `test_type`: Type of test being executed
+- `derivation_technique`: Method used to derive the test
+- **Either** `partially_verifies` or `fully_verifies`: List of requirement IDs
 
 > ?? All decorated tests **must include a docstring**.
 
@@ -83,20 +89,20 @@ def test_user_login():
 
 #### Test Types
 
-- `fault-injection`  
-- `interface-test`  
-- `requirements-based`  
-- `resource-usage`  
+- `fault-injection`
+- `interface-test`
+- `requirements-based`
+- `resource-usage`
 
 #### Derivation Techniques
 
-- `requirements-analysis`  
-- `design-analysis`  
-- `boundary-values`  
-- `equivalence-classes`  
-- `fuzz-testing`  
-- `error-guessing`  
-- `explorative-testing`  
+- `requirements-analysis`
+- `design-analysis`
+- `boundary-values`
+- `equivalence-classes`
+- `fuzz-testing`
+- `error-guessing`
+- `explorative-testing`
 
 ---
 

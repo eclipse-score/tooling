@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # *******************************************************************************
 # Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
@@ -11,22 +10,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-import re
-import sys
-from pathlib import Path
-
-if len(sys.argv) != 2:
-    print("usage: parse_line_coverage.py <html_path>", file=sys.stderr)
-    sys.exit(2)
-
-path = Path(sys.argv[1])
-try:
-    text = path.read_text(encoding="utf-8", errors="ignore")
-except FileNotFoundError:
-    sys.exit(1)
-
-m = re.search(r"([0-9]+(?:\.[0-9]+)?)%\s*\((\d+)/(\d+)\s+lines\)", text)
-if not m:
-    sys.exit(2)
-
-print(f"{m.group(1)} {m.group(2)} {m.group(3)}")
+name: pre-commit
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+jobs:
+  self_test:
+    name: 🔬 Self Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Check out
+        uses: actions/checkout@v6
+      - name: ⚙️ Setup uv
+        uses: astral-sh/setup-uv@v5
+      - name: 🛠️ Run pre-commit
+        run: uvx pre-commit run --all-files

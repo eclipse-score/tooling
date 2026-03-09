@@ -1,0 +1,50 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+
+version = 1
+
+[[annotations]]
+path = [".devcontainer/*.json"]
+SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundation"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [".vscode/*.json"]
+SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundation"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["**/*.lock.json"]
+SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundation"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["**/requirements_lock.txt"]
+SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundation"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["cr_checker/resources/config.json",
+        "**/.bazelversion",
+        "coverage/tests/fixtures/symbol_report.json",
+        "python_basics/.bazelversion",
+        "python_basics/integration_tests/venv-with-extra-requirements/requirements.in",
+        "python_basics/requirements.in",
+ ]
+SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundation"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["dash/org.eclipse.dash.licenses-1.1.0.jar"]
+SPDX-FileCopyrightText = "2020 Eclipse Foundation"
+SPDX-License-Identifier = "EPL-2.0"

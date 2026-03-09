@@ -1,3 +1,9 @@
+<!--
+Copyright (c) 2026 Contributors to the Eclipse Foundation
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Score Tooling
 
 A unified Bazel module containing development tools and utilities for building, testing, and maintaining code quality.
