@@ -54,8 +54,8 @@ format_test(
 # `bazel run //:requirements.update -- --upgrade`.
 compile_pip_requirements(
     name = "requirements",
-    src = "//:requirements.in",
-    requirements_txt = "//:requirements.txt",
+    src = "//python_basics:requirements.in",
+    requirements_txt = "//python_basics:requirements.txt",
     tags = [
         "manual",
     ],

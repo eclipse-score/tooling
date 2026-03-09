@@ -713,7 +713,6 @@ def dependable_element(
         tests,
         checklists = [],
         deps = [],
-        sphinx = Label("@score_tooling//bazel/rules/rules_score:score_build"),
         testonly = True,
         visibility = None):
     """Define a dependable element (Safety Element out of Context - SEooC) following S-CORE process guidelines.
@@ -783,7 +782,6 @@ def dependable_element(
         srcs = [":" + name + "_index"],
         index = ":" + name + "_index",
         deps = deps,
-        sphinx = sphinx,
         testonly = testonly,
         visibility = visibility,
     )
