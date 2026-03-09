@@ -61,10 +61,10 @@ In your MODULE.bazel:
 
    # Add rules_score dependency
    bazel_dep(name = "score_tooling", version = "1.3.2")
-   
+
    # Add dependencies for custom Sphinx extensions (if needed)
    bazel_dep(name = "score_docs_as_code", version = "3.0.1")
-   
+
    # Register your custom toolchain
    register_toolchains("//:my_toolchain")
 
