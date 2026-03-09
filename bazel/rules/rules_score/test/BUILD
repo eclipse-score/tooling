@@ -10,8 +10,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load(
-    "//bazel/rules/rules_score:rules_score.bzl",
+    "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
     "assumptions_of_use",
     "component",
@@ -22,6 +24,10 @@ load(
     "safety_analysis",
     "sphinx_module",
     "unit",
+)
+load(
+    "@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl",
+    "sphinx_toolchain",
 )
 load(
     ":html_generation_test.bzl",
@@ -58,14 +64,14 @@ sphinx_module(
     name = "module_c_lib",
     srcs = glob(["fixtures/module_c/*.rst"]),
     index = "fixtures/module_c/index.rst",
-    sphinx = "//bazel/rules/rules_score:score_build",
+    sphinx = "@score_tooling//bazel/rules/rules_score:score_build",
 )
 
 sphinx_module(
     name = "module_b_lib",
     srcs = glob(["fixtures/module_b/*.rst"]),
     index = "fixtures/module_b/index.rst",
-    sphinx = "//bazel/rules/rules_score:score_build",
+    sphinx = "@score_tooling//bazel/rules/rules_score:score_build",
     deps = [":module_c_lib"],
 )
 
@@ -73,7 +79,7 @@ sphinx_module(
     name = "module_a_lib",
     srcs = glob(["fixtures/module_a/*.rst"]),
     index = "fixtures/module_a/index.rst",
-    sphinx = "//bazel/rules/rules_score:score_build",
+    sphinx = "@score_tooling//bazel/rules/rules_score:score_build",
     deps = [
         ":module_b_lib",
         ":module_c_lib",
@@ -307,6 +313,19 @@ html_merging_test(
 )
 
 # ============================================================================
+# HTML Content Validation Tests
+# ============================================================================
+
+# Test that generated HTML does not contain "Unknown need" statements
+sh_test(
+    name = "no_unknown_needs_test",
+    srcs = ["check_unknown_needs.sh"],
+    # args = ["$(location //:module_a_lib/html/index.html)"],
+    data = [":module_a_lib"],
+    tags = ["manual"],
+)
+
+# ============================================================================
 # SEooC-Specific Tests
 # ============================================================================
 
@@ -386,4 +405,46 @@ test_suite(
         ":sphinx_module_tests",
         ":unit_component_tests",
     ],
+)
+
+# ============================================================================
+# Toolchain for the score build
+# ============================================================================
+py_binary(
+    name = "score_build",
+    srcs = ["@score_tooling//bazel/rules/rules_score:src/sphinx_wrapper.py"],
+    data = [],
+    env = {
+        "SOURCE_DIRECTORY": "",
+        "DATA": "",
+        "ACTION": "check",
+    },
+    main = "@score_tooling//bazel/rules/rules_score:src/sphinx_wrapper.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@score_docs_as_code//src:plantuml_for_python",
+        "@score_docs_as_code//src/extensions/score_sphinx_bundle",
+        "@score_tooling//bazel/rules/rules_score:sphinx_module_ext",
+    ],
+)
+
+sphinx_toolchain(
+    name = "score_sphinx_toolchain",
+    conf_template = "template/conf.template.py",
+    sphinx = ":score_build",
+)
+
+toolchain(
+    name = "score_toolchain",
+    exec_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    toolchain = ":score_sphinx_toolchain",
+    toolchain_type = "@score_tooling//bazel/rules/rules_score:toolchain_type",
+    visibility = ["//visibility:public"],
 )

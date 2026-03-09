@@ -29,7 +29,6 @@ This module references:
 * :external+module_a_lib:doc:`index` from Module A
 * :external+module_c_lib:doc:`index` from Module C
 * Need reference to Module C :need:`doc__module_fixtures_module_c`
-* Need reference to Module C :need:`doc__module_fixtures_module_d`
 
 Dependencies
 ------------

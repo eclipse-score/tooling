@@ -25,4 +25,5 @@ jobs:
           bazel test //coverage/tests:all
       - name: Run rules_score tests
         run: |
-          bazel test //bazel/rules/rules_score/...
+          cd bazel/rules/rules_score/test
+          bazel test //...
