@@ -19,23 +19,9 @@ following S-CORE process guidelines. FMEA documents failure modes, control
 measures, and root-cause fault tree analysis diagrams for a component.
 """
 
-load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:architectural_design.bzl", "ArchitecturalDesignInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
 
-# ============================================================================
-# Provider Definition
-# ============================================================================
-
-AnalysisInfo = provider(
-    doc = "Provider for FMEA and safety analysis artifacts",
-    fields = {
-        "controlmeasures": "Depset of control measures documentation or requirements",
-        "failuremodes": "Depset of failure modes documentation or requirements",
-        "fta": "Depset of Fault Tree Analysis diagrams",
-        "arch_design": "ArchitecturalDesignInfo provider for linked architectural design",
-        "name": "Name of the analysis target",
-    },
-)
+# AnalysisInfo and ArchitecturalDesignInfo are re-exported from providers.bzl for backward compatibility.
 
 # ============================================================================
 # Private Rule Implementation

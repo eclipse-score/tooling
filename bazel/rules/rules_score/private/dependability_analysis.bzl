@@ -20,23 +20,9 @@ combines safety analysis with dependent failure analysis (DFA) to provide
 a comprehensive view of component reliability and safety.
 """
 
-load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:architectural_design.bzl", "ArchitecturalDesignInfo")
-load("//bazel/rules/rules_score/private:fmea.bzl", "AnalysisInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "ArchitecturalDesignInfo", "DependabilityAnalysisInfo", "SphinxSourcesInfo")
 
-# ============================================================================
-# Provider Definition
-# ============================================================================
-
-DependabilityAnalysisInfo = provider(
-    doc = "Provider for dependability analysis artifacts",
-    fields = {
-        "safety_analysis": "List of AnalysisInfo providers",
-        "security_analysis": "List of AnalysisInfo providers",
-        "arch_design": "ArchitecturalDesignInfo provider for linked architectural design",
-        "name": "Name of the dependability analysis target",
-    },
-)
+# DependabilityAnalysisInfo is re-exported from providers.bzl for backward compatibility.
 
 # ============================================================================
 # Private Rule Implementation

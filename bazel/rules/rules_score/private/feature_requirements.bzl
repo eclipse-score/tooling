@@ -19,19 +19,9 @@ following S-CORE process guidelines. Feature requirements describe the
 high-level features that a software component must implement.
 """
 
-load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "FeatureRequirementsInfo", "SphinxSourcesInfo")
 
-# ============================================================================
-# Provider Definition
-# ============================================================================
-
-FeatureRequirementsInfo = provider(
-    doc = "Provider for feature requirements artifacts",
-    fields = {
-        "srcs": "Depset of source files containing feature requirements",
-        "name": "Name of the feature requirements target",
-    },
-)
+# FeatureRequirementsInfo is re-exported from providers.bzl for backward compatibility.
 
 # ============================================================================
 # Private Rule Implementation

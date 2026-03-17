@@ -13,7 +13,7 @@
 """Tests for sphinx_module providers and two-phase build system."""
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//bazel/rules/rules_score/private:sphinx_module.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
+load("//bazel/rules/rules_score:providers.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
 
 # ============================================================================
 # SphinxModuleInfo Provider Tests

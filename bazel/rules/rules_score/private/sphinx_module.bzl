@@ -14,20 +14,9 @@
 # Providers
 # ======================================================================================
 
-SphinxModuleInfo = provider(
-    doc = "Provider for Sphinx HTML module documentation",
-    fields = {
-        "html_dir": "Directory containing HTML files",
-    },
-)
+load("//bazel/rules/rules_score:providers.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
 
-SphinxNeedsInfo = provider(
-    doc = "Provider for sphinx-needs info",
-    fields = {
-        "needs_json_file": "Direct needs.json file for this module",
-        "needs_json_files": "Depset of needs.json files including transitive dependencies",
-    },
-)
+# SphinxModuleInfo and SphinxNeedsInfo are re-exported from providers.bzl for backward compatibility.
 
 # ======================================================================================
 # Helpers
