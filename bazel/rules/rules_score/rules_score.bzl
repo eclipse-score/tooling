@@ -46,8 +46,8 @@ load(
     _feature_requirements = "feature_requirements",
 )
 load(
-    "//bazel/rules/rules_score/private:safety_analysis.bzl",
-    _safety_analysis = "safety_analysis",
+    "//bazel/rules/rules_score/private:fmea.bzl",
+    _fmea = "fmea",
 )
 load(
     "//bazel/rules/rules_score/private:sphinx_module.bzl",
@@ -67,7 +67,7 @@ assumptions_of_use = _assumptions_of_use
 component_requirements = _component_requirements
 dependability_analysis = _dependability_analysis
 feature_requirements = _feature_requirements
-safety_analysis = _safety_analysis
+fmea = _fmea
 sphinx_module = _sphinx_module
 unit = _unit
 unit_design = _unit_design

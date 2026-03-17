@@ -20,6 +20,7 @@ module(
 ###############################################################################
 # Core Dependencies
 ###############################################################################
+bazel_dep(name = "rules_cc", version = "0.2.14")
 bazel_dep(name = "rules_python", version = "1.4.1")
 bazel_dep(name = "aspect_rules_py", version = "1.4.0")
 bazel_dep(name = "platforms", version = "1.0.0")
@@ -98,3 +99,8 @@ use_repo(multitool, "yamlfmt_hub")
 register_toolchains(
     "//bazel/rules/rules_score:sphinx_default_toolchain",
 )
+
+###############################################################################
+# Dev Dependencies (for testing)
+###############################################################################
+bazel_dep(name = "score_docs_as_code", version = "3.0.1", dev_dependency = True)

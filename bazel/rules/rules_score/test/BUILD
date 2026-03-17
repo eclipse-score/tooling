@@ -21,7 +21,7 @@ load(
     "dependability_analysis",
     "dependable_element",
     "feature_requirements",
-    "safety_analysis",
+    "fmea",
     "sphinx_module",
     "unit",
 )
@@ -126,12 +126,12 @@ dependability_analysis(
     safety_analysis = [":samplelibrary_safety_analysis"],
 )
 
-safety_analysis(
+fmea(
     name = "samplelibrary_safety_analysis",
-    # TODO
-    # controlmeasures = [], # can be AoUs or requirements
+    # TODO: add failure modes, control measures, and root causes here
     # failuremodes = [],
-    # fta = [],
+    # controlmeasures = [], # can be AoUs or requirements
+    # root_causes = [],
     arch_design = ":arch_design",
 )
 

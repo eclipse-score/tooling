@@ -22,7 +22,7 @@ a comprehensive view of component reliability and safety.
 
 load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:architectural_design.bzl", "ArchitecturalDesignInfo")
-load("//bazel/rules/rules_score/private:safety_analysis.bzl", "AnalysisInfo")
+load("//bazel/rules/rules_score/private:fmea.bzl", "AnalysisInfo")
 
 # ============================================================================
 # Provider Definition
