@@ -19,7 +19,7 @@ following S-CORE process guidelines. Component requirements are derived from
 feature requirements and define the specific requirements for a software component.
 """
 
-load("//bazel/rules/rules_score:providers.bzl", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "ComponentRequirementsInfo", "SphinxSourcesInfo")
 
 # ComponentRequirementsInfo and FeatureRequirementsInfo are re-exported from providers.bzl for backward compatibility.
 

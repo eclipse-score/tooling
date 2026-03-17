@@ -1,0 +1,77 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml
+
+skinparam linetype ortho
+skinparam ArrowFontSize 10
+skinparam ArrowFontStyle italic
+skinparam messageAlign center
+
+skinparam component {
+    BackgroundColor<<design>> #D7E8F7
+    BorderColor<<design>> #0066B1
+    BackgroundColor<<requirements>> #F1887D
+    BorderColor<<requirements>> #E22718
+    BackgroundColor<<implementation>> #B5A99B
+    BorderColor<<implementation>> #533F24
+    BackgroundColor<<analysis>> #B2B2B2
+    BorderColor<<analysis>> #494949
+    BackgroundColor<<docs>> #F2F2F2
+    BorderColor<<docs>> #929292
+}
+
+' ── Design / Diagram rules ────────────────────────────────────────────────────
+component "unit_design" <<design>> as unit_design
+component "architectural_design" <<design>> as arch
+
+' ── Requirements rules ────────────────────────────────────────────────────────
+component "feature_requirements" <<requirements>> as feat_req
+component "component_requirements" <<requirements>> as comp_req
+component "assumptions_of_use" <<requirements>> as aou
+
+' ── Implementation rules ──────────────────────────────────────────────────────
+component "unit" <<implementation>> as unit
+component "component" <<implementation>> as comp
+
+' ── Safety Analysis rules ─────────────────────────────────────────────────────
+component "fmea" <<analysis>> as fmea
+component "dependability_analysis" <<analysis>> as da
+
+' ── Documentation rules ───────────────────────────────────────────────────────
+component "sphinx_module" <<docs>> as sphinx
+
+' ── Top-level assembly rule ───────────────────────────────────────────────────
+component "dependable_element" as de
+
+unit_design  -->  unit  : <<UnitDesignInfo>>
+
+arch  -->  fmea   : <<ArchitecturalDesignInfo>>
+arch  -->  de     : <<ArchitecturalDesignInfo>>
+
+feat_req  -->  aou  : <<FeatureRequirementsInfo>>
+feat_req  -->  de   : <<FeatureRequirementsInfo>>
+
+comp_req  -->  comp  : <<ComponentRequirementsInfo>>
+comp_req  -->  aou   : <<ComponentRequirementsInfo>>
+
+fmea  -->  da  : <<AnalysisInfo>>
+da    -->  de  : <<DependabilityAnalysisInfo>>
+
+aou   -->  de  : <<AssumptionsOfUseInfo>>
+unit  -->  comp : <<UnitInfo>>
+comp  -->  de   : <<ComponentInfo>>
+
+sphinx  -->  de  : <<SphinxModuleInfo>>\n<<SphinxNeedsInfo>>
+
+@enduml
