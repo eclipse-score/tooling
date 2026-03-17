@@ -55,3 +55,17 @@ ComponentInfo = provider(
         "tests": "Depset of component-level integration test targets",
     },
 )
+
+UnitDesignInfo = provider(
+    doc = """Provider for unit design artifacts.
+
+    Carries parsed representations of static and dynamic design views for a
+    software unit. The depset fields are populated once a diagram parser is
+    integrated; until then they are empty stubs.
+    """,
+    fields = {
+        "static": "Depset of parsed static design view artifacts (e.g., class diagrams)",
+        "dynamic": "Depset of parsed dynamic design view artifacts (e.g., sequence diagrams)",
+        "name": "Name of the unit design target",
+    },
+)

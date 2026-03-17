@@ -11,8 +11,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@rules_python//sphinxdocs:sphinx.bzl", "sphinx_docs")
-load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load(
     "//bazel/rules/rules_score:providers.bzl",
     _ComponentInfo = "ComponentInfo",
@@ -59,6 +57,10 @@ load(
     "//bazel/rules/rules_score/private:unit.bzl",
     _unit = "unit",
 )
+load(
+    "//bazel/rules/rules_score/private:unit_design.bzl",
+    _unit_design = "unit_design",
+)
 
 architectural_design = _architectural_design
 assumptions_of_use = _assumptions_of_use
@@ -68,6 +70,7 @@ feature_requirements = _feature_requirements
 safety_analysis = _safety_analysis
 sphinx_module = _sphinx_module
 unit = _unit
+unit_design = _unit_design
 component = _component
 dependable_element = _dependable_element
 SphinxSourcesInfo = _SphinxSourcesInfo
