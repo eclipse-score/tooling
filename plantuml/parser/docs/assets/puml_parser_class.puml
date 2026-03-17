@@ -1,0 +1,91 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml
+skinparam componentStyle rectangle
+skinparam shadowing false
+title PUML Multi-File Parser - Class Diagram
+
+package "Puml Parser" {
+
+    package "Command Line Interface" {
+        enum DiagramType {
+            NONE
+            COMPONENT
+            CLASS
+            SEQUENCE
+        }
+
+        struct "CLI" as CLI  {
+            + main(args: List<String>) : void
+            - parse_puml_file(path, content, log_level, diagram_type) : ParsedDiagram
+        }
+    }
+
+    package "Include Parser" {
+        struct Preprocessor <<preprocess>> {
+            + preprocess(file_list, log_level): HashMap<PathBuf, String>
+        }
+    }
+
+    package "Parsing Layer (pest)" {
+        interface DiagramParser {
+            + parse_file(path, content, log_level) : Output
+        }
+
+        struct PumlClassParser <<parser>>
+        struct PumlSequenceParser <<parser>>
+        struct PumlComponentParser <<parser>>
+
+        DiagramParser <|.. PumlClassParser
+        DiagramParser <|.. PumlSequenceParser
+        DiagramParser <|.. PumlComponentParser
+
+    }
+
+    package "Semantic Resolution" {
+        interface DiagramResolver {
+            + visit_document(document) : Output
+        }
+
+        class ComponentResolver {
+            + new() : ComponentResolver
+            + visit_document(ast: CompPumlDocument) : HashMap<String, LogicComponent>
+        }
+
+        DiagramResolver <|.. ComponentResolver
+    }
+
+
+    package "FlatBuffers Serialization" {
+        class ComponentSerializer <<serializer>> {
+            + serialize(model: HashMap<String, LogicComponent>, source_file: &str) : Vec<u8>
+        }
+    }
+
+    package "Lobster Output" {
+        class LobsterWriter <<writer>> {
+            + model_to_lobster(model: HashMap<String, LogicComponent>, source_path: &str) : Value
+            + write_lobster_to_file(model: HashMap<String, LogicComponent>, source_path: &str, output_dir: &Path)
+        }
+    }
+}
+
+' Data Flow
+CLI --> Preprocessor : preprocess
+CLI --> DiagramParser : dispatch
+CLI --> ComponentResolver : visit_document
+CLI --> ComponentSerializer : serialize
+CLI --> LobsterWriter : write lobster trace
+
+@enduml

@@ -1,0 +1,34 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+sample_fta.puml: |
+  @startuml
+      rectangle "SampleFailureMode takes over the world" as SampleLibrary.SampleFailureMode
+
+      rectangle " " <<$or>> as OG1
+      OG1 -u-> SampleLibrary.SampleFailureMode
+
+      rectangle "SampleFailureMode is Angry" as IEF
+      IEF -u-> OG1
+
+      usecase "Just bad luck" as SampleLibrary.JustBadLuck
+      SampleLibrary.JustBadLuck -u-> OG1
+
+      rectangle " " <<$and>> as AG2
+      AG2 -u-> IEF
+
+      usecase "No More Cookies" as SampleLibrary.NoMoreCookies
+      SampleLibrary.NoMoreCookies -u-> AG2
+
+      usecase "No More Coffee" as SampleLibrary.NoMoreCoffee
+      SampleLibrary.NoMoreCoffee -u-> AG2
+  @enduml

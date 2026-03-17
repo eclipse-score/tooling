@@ -1,0 +1,94 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package Tools
+
+section "Tool Requirements" {
+
+    section "PlantUML Parser" {
+
+        section "General" {
+
+            ToolRequirement ArchitectureModelingSyntax {
+                description = '''All PlantUML diagrams shall be checked automatically for syntactical correctness during build process and shall fail errors are detected'''
+            }
+
+        }
+
+        section "Component Diagram" {
+
+            ToolRequirement ArchitectureModelingComponentContentSEooC {
+                description = '''For PlantUML Component Diagrams the contributor shall define SEooC elements according to the notation::
+                package "SEooC" as SampleSEooC <<SEooC>>'''
+            }
+
+            ToolRequirement ArchitectureModelingComponentContentComponent {
+                description = '''For PlantUML Component Diagrams the contributor shall define Software Components according to the notation::
+                component "SampleComponent" as CompSample <<component>>'''
+            }
+
+            ToolRequirement ArchitectureModelingComponentContentSWUnit {
+                description = '''For PlantUML component diagrams the contributor shall define software units according to the notation::
+                component "Sample Unit" as UnitSample <<unit>>'''
+            }
+
+            ToolRequirement ArchitectureModelingComponentContentAbstractInterface {
+                description = '''For PlantUML component diagrams the contributor shall define abstract interfaces according to the notation::
+                interface "Sample Interface" as IfSampleInterface'''
+            }
+
+            ToolRequirement ArchitectureModelingComponentHierarchySEooC {
+                description = '''The tooling shall verify during traceability build that a contributor defined the hierarchy within a SEooC via nesting::
+                - SEooC { Component[1..n] }'''
+            }
+
+            ToolRequirement ArchitectureModelingComponentHierarchyComponent {
+                description = '''The tooling shall verify during traceability build that a contributor defined the hierarchy within a software component via nesting::
+                - Component {
+                Component[1..n]
+                Unit[1..n]
+                }'''
+            }
+
+            ToolRequirement ArchitectureModelingComponentInteract {
+                description = '''The tooling shall verify during traceability build that a contributor defined the relations between software units via interfaces::
+                - Unit --() Interface : provides
+                - Unit --( Interface : requires'''
+            }
+
+        }
+
+        section "Sequence Diagram" {
+
+            ToolRequirement ArchitectureModelingSequenceContentActors {
+                description = '''The tooling shall verify during traceability build that a contributor defined actors in sequence diagrams according to the notation::
+                actor "Sample Actor" as ActorSample'''
+            }
+
+            ToolRequirement ArchitectureModelingSequenceContentSWUnits {
+                description = '''The tooling shall verify during traceability build that a contributor defined software units in sequence diagrams according to the notation::
+                participant "Sample Unit" as UnitSample <<unit>>'''
+            }
+
+            ToolRequirement ArchitectureModelingSequenceContentMessages {
+                description = '''The tooling shall verify during traceability build that a contributor defined messages in sequence diagrams according to the notation::
+                UnitSample -> UnitAnotherSample : MethodA()'''
+            }
+
+            ToolRequirement ArchitectureModelingSequenceContentActivity {
+                description = '''The tooling shall verify during traceability build that a contributor defined activity bars in sequence diagrams to indicate concurrency according to the notation::
+                activate UnitSample / deactivate UnitSample'''
+            }
+
+        }
+    }
+}

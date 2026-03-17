@@ -1,0 +1,81 @@
+{"struct.puml":
+  {
+    "name": "struct",
+    "elements": [
+      {
+        "Namespace": {
+          "name": {
+            "internal": "aaa",
+            "display": null
+          },
+          "types": [
+            {
+              "StructDef": {
+                "name": {
+                  "internal": "Packet",
+                  "display": null
+                },
+                "namespace": "aaa",
+                "package": "",
+                "attributes": [],
+                "methods": []
+              }
+            }
+          ],
+          "namespaces": []
+        }
+      },
+      {
+        "Types": {
+          "StructDef": {
+            "name": {
+              "internal": "Message",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [
+              {
+                "visibility": "Public",
+                "name": "header",
+                "type": "int"
+              },
+              {
+                "visibility": "Public",
+                "name": "payload",
+                "type": "string"
+              }
+            ],
+            "methods": []
+          }
+        }
+      },
+      {
+        "Types": {
+          "StructDef": {
+            "name": {
+              "internal": "Node",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [
+              {
+                "visibility": "Public",
+                "name": "id",
+                "type": null
+              },
+              {
+                "visibility": "Private",
+                "name": "name",
+                "type": null
+              }
+            ],
+            "methods": []
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

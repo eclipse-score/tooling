@@ -1,0 +1,68 @@
+{
+  "relationship_arrows.puml": {
+    "name": "relationship_arrows",
+    "elements": [],
+    "relationships": [
+      {
+        "left": "Car",
+        "right": "Wheel",
+        "arrow": {
+          "left": {
+            "raw": "o"
+          },
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": null
+        },
+        "label": "belongs"
+      },
+      {
+        "left": "House",
+        "right": "Room",
+        "arrow": {
+          "left": {
+            "raw": "*"
+          },
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": null
+        },
+        "label": "in"
+      },
+      {
+        "left": "Student",
+        "right": "School",
+        "arrow": {
+          "left": null,
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": {
+            "raw": ">"
+          }
+        },
+        "label": null
+      },
+      {
+        "left": "Parser",
+        "right": "Lexer",
+        "arrow": {
+          "left": null,
+          "line": {
+            "raw": ".."
+          },
+          "middle": null,
+          "right": {
+            "raw": ">"
+          }
+        },
+        "label": null
+      }
+    ]
+  }
+}

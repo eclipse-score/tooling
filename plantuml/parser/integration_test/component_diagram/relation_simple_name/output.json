@@ -1,0 +1,55 @@
+{
+  "relation_simple_name.puml": {
+    "SampleSEooC.ComponentB": {
+      "id": "SampleSEooC.ComponentB",
+      "name": "Component B",
+      "alias": "ComponentB",
+      "parent_id": "SampleSEooC",
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": []
+    },
+    "SampleSEooC": {
+      "id": "SampleSEooC",
+      "name": "Sample SEooC",
+      "alias": "SampleSEooC",
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": []
+    },
+    "SampleSEooC.ComponentA": {
+      "id": "SampleSEooC.ComponentA",
+      "name": "Component A",
+      "alias": "ComponentA",
+      "parent_id": "SampleSEooC",
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": [
+        {
+          "target": "SampleSEooC.ComponentB",
+          "annotation": "uses",
+          "relation_type": "None"
+        }
+      ]
+    },
+    "SampleSEooC.ComponentB.UnitB": {
+      "id": "SampleSEooC.ComponentB.UnitB",
+      "name": "Unit B",
+      "alias": "UnitB",
+      "parent_id": "SampleSEooC.ComponentB",
+      "comp_type": "Component",
+      "stereotype": "unit",
+      "relations": []
+    },
+    "SampleSEooC.ComponentA.UnitA": {
+      "id": "SampleSEooC.ComponentA.UnitA",
+      "name": "Unit A",
+      "alias": "UnitA",
+      "parent_id": "SampleSEooC.ComponentA",
+      "comp_type": "Component",
+      "stereotype": "unit",
+      "relations": []
+    }
+  }
+}

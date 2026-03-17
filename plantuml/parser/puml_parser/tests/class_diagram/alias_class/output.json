@@ -1,0 +1,79 @@
+{
+  "alias_class.puml": {
+    "name": "alias_class",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "SerializedRoutineControl<RoutineControlImplementation>",
+              "display": "SRC"
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": []
+          }
+        }
+      },
+      {
+        "Types": {
+          "StructDef": {
+            "name": {
+              "internal": "StartRequestPayload",
+              "display": "Req"
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": []
+          }
+        }
+      },
+      {
+        "Enum": {
+          "name": {
+            "internal": "ErrorInfo",
+            "display": "Err"
+          },
+          "namespace": "",
+          "package": "",
+          "stereotypes": [],
+          "items": []
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "left": "SRC",
+        "right": "Req",
+        "arrow": {
+          "left": null,
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": {
+            "raw": ">"
+          }
+        },
+        "label": null
+      },
+      {
+        "left": "Req",
+        "right": "Err",
+        "arrow": {
+          "left": null,
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": {
+            "raw": ">"
+          }
+        },
+        "label": null
+      }
+    ]
+  }
+}

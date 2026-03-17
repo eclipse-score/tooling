@@ -1,0 +1,97 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml
+title Main Parsing Flow
+
+participant "CLI" as Cli
+participant "Preprocessor" as include
+participant "PumlSequenceParser" as seq
+participant "PumlClassParser" as class
+participant "PumlComponentParser" as component
+participant "ComponentResolver" as resolver
+participant "ComponentSerializer" as serializer
+participant "puml_lobster" as lobster
+
+activate Cli
+
+== Preprocessing ==
+
+Cli -> include **: new()
+activate include
+return include_resolver
+
+Cli -> include ++: preprocess(file_list, log_level)
+return HashMap<PathBuf, String>
+
+== Parsing ==
+
+loop for each file in file_list
+    note over Cli: If no CLI argument, try parsers in order\notherwise use specified parser via CLI
+
+    Cli -> seq **: parse_file(path, content, log_level)
+    activate seq
+    seq --> Cli: Result<SeqPumlDocument>
+    deactivate seq
+    destroy seq
+
+    opt sequence parser not succeeded
+        note right: return early
+    end
+
+    Cli -> class **: parse_file(path, content, log_level)
+    activate class
+    class --> Cli: Result<ClassUmlFile>
+    deactivate class
+    destroy class
+
+    opt class parser not succeeded
+        note right: return early
+    end
+
+    Cli -> component **: parse_file(path, content, log_level)
+    activate component
+    component --> Cli: Result<CompPumlDocument>
+    deactivate component
+    destroy component
+
+    opt component parser not succeeded
+        note right: return early
+    end
+
+    Cli --> Cli: Error(NoDiagramTypeMatched)
+end
+
+== Semantic Resolution ==
+
+Cli -> resolver **: visit_document(&ast)
+activate resolver
+return HashMap<String, LogicComponent>
+destroy resolver
+
+== Serialization ==
+
+Cli -> serializer **: serialize(&components, source_file)
+activate serializer
+serializer --> Cli: Vec<u8>
+deactivate serializer
+destroy serializer
+
+opt lobster_output_dir provided
+    Cli -> lobster: model_to_lobster(&components, source_path)
+    activate lobster
+    lobster --> Cli: JSON
+    deactivate lobster
+end
+
+@enduml

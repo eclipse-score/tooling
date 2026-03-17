@@ -1,0 +1,207 @@
+///////////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2026 Contributors to the Eclipse Foundation
+//
+// See the NOTICE file(s) distributed with this work for additional
+// information regarding copyright ownership.
+//
+// This program and the accompanying materials are made available under the
+// terms of the Apache License Version 2.0 which is available at
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// SPDX-License-Identifier: Apache-2.0
+////////////////////////////////////////////////////////////////////////////////////
+
+namespace class_metamodel;
+
+/// Visibility modifier for class members
+enum Visibility : byte {
+    Public = 0,
+    Private = 1,
+    Protected = 2,
+    Package = 3
+}
+
+/// Type of entity in a class diagram
+enum EntityType : byte {
+    Class = 0,
+    Struct = 1,
+    Interface = 2,
+    Enum = 3,
+    AbstractClass = 4,
+    Annotation = 5
+}
+
+/// Type of container/grouping
+enum ContainerType : byte {
+    Namespace = 0,
+    Package = 1
+}
+
+/// Types of relationships between entities
+enum RelationType : byte {
+    Inheritance = 0,
+    Implementation = 1,
+    Composition = 2,
+    Aggregation = 3,
+    Association = 4,
+    Dependency = 5,
+    Link = 6,
+    DashedLink = 7
+}
+
+/// Method parameter
+table Parameter {
+    /// Parameter name
+    name: string;
+    /// Parameter type (e.g., "int", "const char*")
+    param_type: string;
+    /// Default value if any
+    default_value: string;
+    /// Whether passed by reference
+    is_reference: bool = false;
+    /// Whether the parameter is const
+    is_const: bool = false;
+    /// Whether this is a variadic parameter (...)
+    is_variadic: bool = false;
+}
+
+/// Class attribute (member variable)
+table Attribute {
+    /// Attribute name
+    name: string (required);
+    /// Data type (e.g., "int", "std::string")
+    data_type: string;
+    /// Visibility modifier
+    visibility: Visibility = Public;
+    /// Default/initial value
+    default_value: string;
+    /// Whether this is a static member
+    is_static: bool = false;
+    /// Whether this is a const member
+    is_const: bool = false;
+    /// Description or documentation
+    description: string;
+}
+
+/// Class method (member function)
+table Method {
+    /// Method name
+    name: string (required);
+    /// Return type
+    return_type: string;
+    /// Visibility modifier
+    visibility: Visibility = Public;
+    /// Method parameters
+    parameters: [Parameter];
+    /// Template parameters for generic methods
+    template_params: [string];
+    /// Whether this is a static method
+    is_static: bool = false;
+    /// Whether this is a const method
+    is_const: bool = false;
+    /// Whether this is a virtual method
+    is_virtual: bool = false;
+    /// Whether this is a pure virtual (abstract) method
+    is_abstract: bool = false;
+    /// Whether this is an override
+    is_override: bool = false;
+    /// Whether this is a constructor
+    is_constructor: bool = false;
+    /// Whether this is a destructor
+    is_destructor: bool = false;
+}
+
+/// Enum literal/value
+table EnumLiteral {
+    /// Literal name
+    name: string (required);
+    /// Visibility (if specified)
+    visibility: Visibility = Public;
+    /// Explicit value (e.g., "0", "1")
+    value: string;
+    /// Description/documentation
+    description: string;
+}
+
+/// Entity representing a class, struct, interface, enum, etc.
+table Entity {
+    /// Fully Qualified Name (FQN) - unique identifier
+    id: string (required);
+    /// Display name
+    name: string;
+    /// Short alias for referencing
+    alias: string;
+    /// FQN of parent namespace/package
+    parent_id: string;
+    /// Type of entity
+    entity_type: EntityType = Class;
+    /// Stereotypes applied (e.g., "Model", "Singleton")
+    stereotypes: [string];
+    /// Attributes (member variables)
+    attributes: [Attribute];
+    /// Methods (member functions)
+    methods: [Method];
+    /// Template parameters for generic types
+    template_params: [string];
+    /// Enum literals (only for Enum type)
+    enum_literals: [EnumLiteral];
+    /// Source file location
+    source_file: string;
+    /// Line number in source
+    source_line: uint32;
+}
+
+/// Container representing a namespace or package
+table Container {
+    /// Fully Qualified Name (FQN)
+    id: string (required);
+    /// Display name
+    name: string (required);
+    /// FQN of parent container
+    parent_id: string;
+    /// Type of container
+    container_type: ContainerType = Namespace;
+}
+
+/// Relationship between two entities
+table Relationship {
+    /// FQN of the source entity
+    source: string (required);
+    /// FQN of the target entity
+    target: string (required);
+    /// Type of relationship
+    relation_type: RelationType = Association;
+    /// Label/annotation on the relationship
+    label: string;
+    /// Stereotype on the relationship
+    stereotype: string;
+    /// Source multiplicity (e.g., "1", "0..*")
+    source_multiplicity: string;
+    /// Target multiplicity
+    target_multiplicity: string;
+    /// Source role name
+    source_role: string;
+    /// Target role name
+    target_role: string;
+}
+
+/// Complete class diagram model
+table ClassDiagram {
+    /// Diagram name (usually the source file)
+    name: string (required);
+    /// All entities in the diagram
+    entities: [Entity];
+    /// All containers (namespaces/packages)
+    containers: [Container];
+    /// All relationships between entities
+    relationships: [Relationship];
+    /// Source files parsed
+    source_files: [string];
+    /// Parser/writer version
+    version: string;
+}
+
+root_type ClassDiagram;
+
+file_identifier "CLSD";
+file_extension "clsd";

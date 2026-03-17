@@ -1,0 +1,101 @@
+{"stereotype_definition.puml":
+  {
+    "name": "stereotype_definition",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "User",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [
+              {
+                "visibility": "Private",
+                "name": "id",
+                "type": "int"
+              }
+            ],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "getName",
+                "generic_params": [],
+                "params": [],
+                "type": "String"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "Types": {
+          "StructDef": {
+            "name": {
+              "internal": "Config",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [
+              {
+                "visibility": "Private",
+                "name": "instance",
+                "type": "Config"
+              }
+            ],
+            "methods": []
+          }
+        }
+      },
+      {
+        "Types": {
+          "InterfaceDef": {
+            "name": {
+              "internal": "AbstractService",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "doSomething",
+                "generic_params": [],
+                "params": [],
+                "type": "void"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "Enum": {
+          "name": {
+            "internal": "Gender",
+            "display": null
+          },
+          "namespace": "",
+          "package": "",
+          "stereotypes": [],
+          "items": [
+            {
+              "visibility": null,
+              "name": "MALE",
+              "value": null
+            },
+            {
+              "visibility": null,
+              "name": "FEMALE",
+              "value": null
+            }
+          ]
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

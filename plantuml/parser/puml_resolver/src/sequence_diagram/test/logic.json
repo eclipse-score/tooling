@@ -1,0 +1,105 @@
+[
+  {
+    "event": {
+      "Interaction": {
+        "caller": "ComponentA",
+        "callee": "ComponentB",
+        "method": "Call Method1()"
+      }
+    },
+    "branches_node": [
+      {
+        "event": {
+          "Condition": {
+            "condition_type": "Alt",
+            "condition_value": "Contidition1"
+          }
+        },
+        "branches_node": [
+          {
+            "event": {
+              "Return": {
+                "caller": "ComponentA",
+                "callee": "ComponentB",
+                "return_content": "Return Result"
+              }
+            },
+            "branches_node": []
+          }
+        ]
+      },
+      {
+        "event": {
+          "Condition": {
+            "condition_type": "Else",
+            "condition_value": ""
+          }
+        },
+        "branches_node": [
+          {
+            "event": {
+              "Interaction": {
+                "caller": "ComponentB",
+                "callee": "ComponentC",
+                "method": "Call Method2()"
+              }
+            },
+            "branches_node": [
+              {
+                "event": {
+                  "Return": {
+                    "caller": "ComponentB",
+                    "callee": "ComponentC",
+                    "return_content": "Return Result"
+                  }
+                },
+                "branches_node": []
+              }
+            ]
+          },
+          {
+            "event": {
+              "Condition": {
+                "condition_type": "Alt",
+                "condition_value": "Contidition2"
+              }
+            },
+            "branches_node": [
+              {
+                "event": {
+                  "Interaction": {
+                    "caller": "ComponentB",
+                    "callee": "ComponentC",
+                    "method": "Call Method2()"
+                  }
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Return": {
+                        "caller": "ComponentB",
+                        "callee": "ComponentC",
+                        "return_content": "Return Result"
+                      }
+                    },
+                    "branches_node": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "event": {
+              "Return": {
+                "caller": "ComponentA",
+                "callee": "ComponentB",
+                "return_content": "Return Result"
+              }
+            },
+            "branches_node": []
+          }
+        ]
+      }
+    ]
+  }
+]

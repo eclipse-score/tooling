@@ -1,0 +1,187 @@
+[
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "Component A",
+          "id": "ComponentA"
+        }
+      },
+      "stereotype": "component"
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "Component B",
+          "id": "ComponentB"
+        }
+      },
+      "stereotype": "component"
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "Component C",
+          "id": "ComponentC"
+        }
+      },
+      "stereotype": "component"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentA",
+          "arrow": {
+            "left": null,
+            "line": { "raw": "-" },
+            "middle": null,
+            "right": { "raw": ">" }
+          },
+          "right": "ComponentB"
+        }
+      },
+      "description": "Call Method1()"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "Contidition1"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": { "raw": "--" },
+            "middle": null,
+            "right": { "raw": ">" }
+          },
+          "right": "ComponentA"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Else",
+      "text": null
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": { "raw": "-" },
+            "middle": null,
+            "right": { "raw": ">" }
+          },
+          "right": "ComponentC"
+        }
+      },
+      "description": "Call Method2()"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentC",
+          "arrow": {
+            "left": null,
+            "line": { "raw": "--" },
+            "middle": null,
+            "right": { "raw": ">" }
+          },
+          "right": "ComponentB"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "Contidition2"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": { "raw": "-" },
+            "middle": null,
+            "right": { "raw": ">" }
+          },
+          "right": "ComponentC"
+        }
+      },
+      "description": "Call Method2()"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentC",
+          "arrow": {
+            "left": null,
+            "line": { "raw": "--" },
+            "middle": null,
+            "right": { "raw": ">" }
+          },
+          "right": "ComponentB"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": { "raw": "--" },
+            "middle": null,
+            "right": { "raw": ">" }
+          },
+          "right": "ComponentA"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  }
+]

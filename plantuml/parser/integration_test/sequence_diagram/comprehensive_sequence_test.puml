@@ -1,0 +1,387 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+@startuml
+
+' Comprehensive PlantUML Sequence Diagram Test
+' This file contains a wide range of supported syntax patterns
+
+!pragma teoz true
+skinparam SequenceMessageAlignment center
+title Comprehensive Sequence Diagram Test Suite
+
+' ========================================
+' PARTICIPANT DECLARATIONS - All Variations
+' ========================================
+
+' Simple unquoted participants
+participant Actor1
+participant Actor2
+
+' Participants with aliases using quotes and special characters
+participant "core::runtime" as runtime
+participant "core::service::ResourceBuilder" as Builder
+participant "core::messaging" as messaging
+
+' Participants with stereotypes and newlines
+participant "<<Task>>\nTaskHandler" as TaskHandler
+
+' Participants with namespaces and generics
+participant "core::service::ProxyHandle<>" as ProxyHandle
+participant "platform::ServiceHost" as ServiceHost
+
+' ========================================
+' ARROW TYPES - All Variations
+' ========================================
+
+group Arrow Types
+    ' Standard solid arrow
+    Actor1 -> Actor2 : Standard message
+
+    ' Dashed return arrow
+    Actor2 --> Actor1 : Return message
+
+    ' Left-pointing arrows
+    Actor2 <- Actor1 : Reverse message
+    Actor2 <-- Actor1 : Reverse return
+    --> Actor1 : Incoming request
+    Actor1 <-- : Outgoing response
+
+    ' ' Hidden arrow for layout
+    ' Actor1 -[hidden]-> Actor1
+end group
+
+' ========================================
+' ACTIVATION - All Patterns
+' ========================================
+
+group Activation Patterns
+    ' Standard activation
+    activate Actor1
+    Actor1 -> Actor2 : Activate target
+    activate Actor2
+
+    ' Nested activations
+    Actor2 -> Builder : Nested call
+    activate Builder
+    Builder --> Actor2
+    deactivate Builder
+
+    Actor2 --> Actor1
+    deactivate Actor2
+    deactivate Actor1
+end group
+
+' ========================================
+' LIFECYCLE - Create
+' ========================================
+
+group Lifecycle Events
+    create TaskHandler
+    Actor1 -> TaskHandler : create
+    TaskHandler --> Actor1
+end group
+
+' ========================================
+' SELF-MESSAGES
+' ========================================
+
+group Self Messages
+    Actor1 -> Actor1 : Internal operation
+    Actor1 -> Actor1 : runtime::wait_for_shutdown()
+end group
+
+' ========================================
+' NOTES - All Variations
+' ========================================
+
+note left
+    Multiline note on left
+    Second line
+    Third line
+end note
+
+note right
+    Multiline note on right
+end note
+
+note right of Builder #LightBlue
+Note with background color
+end note
+
+note over ProxyHandle #Orange
+Note spanning participant
+with colored background
+--
+Separator line
+end note
+
+Actor1 -> Actor2 : Message with inline note
+note left: Single-line inline note
+
+' ========================================
+' GROUPS - Alt with multiple conditions
+' ========================================
+
+alt configuration is cached
+    Actor1 --> Actor2 : Cached result
+else configuration needs to be fetched
+    Actor1 -> messaging : Fetch from service
+    messaging --> Actor1 : Result
+end
+
+alt system is in restricted mode and the access token is invalid\n or it does not match the request
+    TaskHandler --> Actor1 : Error response
+else access token is valid
+    TaskHandler --> Actor1 : Success response
+end
+
+' ========================================
+' LOOPS - All Variations
+' ========================================
+
+loop For each item
+    Actor1 -> Actor2 : Process item
+end loop
+
+loop (item_list) [Call FetchValue for each item]
+    Actor2 -> Builder : FetchValue(item)
+end
+
+loop 0..2 {0..3000ms}
+    alt timeout not reached
+        Actor1 -> Actor2 : Retry
+    end
+end
+
+loop For Segment in Segments
+    Actor2 -> Actor2 : Process segment
+end
+
+' ========================================
+' BREAK Statement
+' ========================================
+
+loop Until success
+    alt condition met
+        break
+    end
+    Actor1 -> Actor2 : Continue processing
+end
+
+' ========================================
+' COMPLEX MESSAGE LABELS
+' ========================================
+
+group Complex Messages
+    ' Long method signatures
+    Actor1 -> Builder : Run(config_collection, callback, stop_token, error_reporter)
+
+    ' Return values with enum codes
+    Builder <-- TaskHandler : StartResponse::ValidationResult::kAccepted (0x00)
+
+    ' Generic types
+    Actor1 -> ProxyHandle : std::unique_ptr<IServiceProxy>>
+
+    ' Hyperlink in message (not visible in SVG but valid syntax)
+    Actor2 -> Actor2 : PerformQualification() [[https://example.com/diagram View Activity Diagram]]
+end group
+
+' ========================================
+' MULTIPLE PARTICIPANTS IN COMPLEX FLOW
+' ========================================
+
+group Complex Flow with All Elements
+    activate runtime
+    runtime -> messaging : Initialize(context)
+    activate messaging
+
+    create Builder
+    messaging -> Builder : create
+    Builder --> messaging
+
+    messaging -> Builder : Configure(params)
+    activate Builder
+
+    Builder -> Builder : ValidateConfiguration()
+
+    alt configuration is valid
+        Builder --> messaging : Success
+
+        loop For each service
+            messaging -> ServiceHost : StartService()
+            ServiceHost --> messaging
+        end
+    else configuration invalid
+        Builder --> messaging : Error
+        note right: Configuration failed
+    end
+
+    deactivate Builder
+    messaging --> runtime : ExitCodeOk
+    deactivate messaging
+    deactivate runtime
+end group
+
+' ========================================
+' NESTED GROUPS
+' ========================================
+
+group Construction stage
+    create Actor1
+    runtime -> Actor1 : create
+end group
+
+group Initialization stage
+    runtime -> Actor1 : Initialize()
+
+    alt system ready
+        Actor1 -> Actor2 : StartServices()
+    end
+end group
+
+group Run stage
+    runtime -> Actor1 : Run(stop_token)
+
+    loop Until stop requested
+        Actor1 -> Actor1 : ProcessEvents()
+    end
+end group
+
+' ========================================
+' EDGE CASES
+' ========================================
+
+group Edge Cases
+    ' Message with no label
+    Actor1 -> Actor2
+    Actor2 --> Actor1
+
+    ' Empty alt branch
+    alt condition
+    else
+        Actor1 -> Actor2 : Default action
+    end
+
+    ' Deeply nested activations
+    activate Actor1
+    Actor1 -> Actor2 : Call1
+    activate Actor2
+    Actor2 -> Builder : Call2
+    activate Builder
+    Builder -> TaskHandler : Call3
+    activate TaskHandler
+    TaskHandler --> Builder
+    deactivate TaskHandler
+    Builder --> Actor2
+    deactivate Builder
+    Actor2 --> Actor1
+    deactivate Actor2
+    deactivate Actor1
+end group
+
+' ========================================
+' EXTENDED SYNTAX PATTERNS
+' ========================================
+
+group Extended Patterns: Preprocessor Functions
+    ' PlantUML preprocessor functions for colored text
+    !function $redtext($a)
+    !return "<color:#ff0000>" + $a + "</color>"
+    !endfunction
+
+    !function $greentext($a)
+    !return "<color:#00ff00>" + $a + "</color>"
+    !endfunction
+
+    Actor1 -> Actor2 : $redtext("Error message")
+    Actor2 --> Actor1 : $greentext("Success message")
+end group
+
+group Extended Patterns: Participants with Colors
+    ' Participants with color specifications
+    participant ColoredActor1 #LightSkyBlue
+    participant ColoredActor2 #Lavender
+    participant ColoredActor3 #MediumSpringGreen
+
+    ColoredActor1 -> ColoredActor2 : Message
+    ColoredActor2 -> ColoredActor3 : Another message
+end group
+
+group Extended Patterns: Boxes with Colors
+    box "Test Box" #White
+        participant BoxedActor1
+        participant BoxedActor2
+    end box
+
+    BoxedActor1 -> BoxedActor2 : Message inside box
+end group
+
+group Extended Patterns: Lost and Found Messages
+    ' Lost messages (no source participant)
+    [o-> Actor1 : Incoming request
+    [-> Actor2 : Another incoming
+    [x-> Builder : Third variant
+
+    ' Found messages (no target participant)
+    Actor1 -->o] : Outgoing response
+    Actor2 -->] : Another outgoing
+    Actor2 -->x] : Third variant
+
+    ' Lost/found with brackets on different sides
+    [o-> Actor1 : Right bracket on left
+    Actor1 -->o[ : Left bracket on right
+end group
+
+group Extended Patterns: Activation Markers
+    ' Activation markers on messages
+    Actor1 -> Actor2++ : Activate with message
+    Actor2 -> Builder++ : Nested activation
+    Builder --> Actor2-- : Deactivate with response
+    Actor2 --> Actor1-- : Deactivate outer
+
+    ' Creation activation
+    Actor1 -> TaskHandler** : Create and activate
+
+    ' Destruction marker
+    Actor1 -> Actor2!! : Destroy marker
+end group
+
+group Extended Patterns: Ref Blocks
+    ref over Actor1, Actor2
+        See other diagram for details
+        [[https://example.com/reference Reference document]]
+    end ref
+
+    ref over Builder
+        Another reference block
+    end
+end group
+
+group Extended Patterns: Dividers with URLs
+    == Setup Phase ==
+    Actor1 -> Actor2 : Initialize
+
+    == Processing https://example.com/docs ==
+    Actor2 -> Builder : Process
+
+    == Verification\n(see https://issues.example.com/tickets/123) ==
+    Builder -> Actor1 : Verify
+end group
+
+group Extended Patterns: Standalone Ellipsis
+    Actor1 -> Actor2 : Start process
+    ...
+    Actor2 --> Actor1 : Complete
+end group
+
+@enduml

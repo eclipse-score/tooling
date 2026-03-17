@@ -1,0 +1,83 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+@startuml
+title test_all_class_diagram_puml()
+
+skinparam linetype ortho
+skinparam defaultFontSize 12
+
+start
+
+:Get runfiles_dir;
+:Get workspace;
+:Compute dir path;
+:Compute output_dir;
+:create_dir_all(output_dir);
+
+:Get optional filter_file;
+
+if (filter_file exists and not empty?) then (yes)
+    :Check if specified file exists;
+    :Add file to files_to_test;
+else (no)
+    :Iterate through dir;
+    if (file extension is .puml?) then (yes)
+        :Add file to files_to_test;
+    endif
+endif
+
+:Initialize passed_cnt = 0;
+:Initialize failed = empty list;
+:Get write_json configuration;
+
+' --- 文件循环 ---
+repeat
+    :Get next file;
+    :Print "Testing ..." message;
+    :Compute json_output_path;
+    :Read file content;
+    :Call test_parser -> (ast, ret_val);
+
+    if (ret_val == false?) then (yes)
+        :Check AST is not empty;
+    endif
+
+    if (write_json?) then (yes)
+        :Save AST JSON;
+        :Print "JSON saved";
+    else (no)
+        :Print "Pass (JSON not written)";
+    endif
+
+    if (panic occurred?) then (yes)
+        :Print "FAIL";
+        :Add file to failed list;
+    else (no)
+        :Increment passed_cnt;
+    endif
+repeat while (files remain?)
+
+:Print SUMMARY;
+:Print passed_cnt;
+:Print failed.len;
+
+if (failed not empty) then
+    :Print list of failed files;
+endif
+if (failed not empty) then
+    :assert! failure;
+endif
+
+
+stop
+@enduml

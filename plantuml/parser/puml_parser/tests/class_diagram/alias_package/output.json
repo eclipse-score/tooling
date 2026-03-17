@@ -1,0 +1,94 @@
+{"alias_package.puml":
+  {
+    "name": "alias_package",
+    "elements": [
+      {
+        "Types": {
+          "StructDef": {
+            "name": {
+              "internal": "TestResult",
+              "display": "TR"
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": []
+          }
+        }
+      },
+      {
+        "Package": {
+          "name": {
+            "internal": "diag",
+            "display": "mwdiag"
+          },
+          "types": [
+            {
+              "ClassDef": {
+                "name": {
+                  "internal": "A",
+                  "display": null
+                },
+                "namespace": "",
+                "package": "diag",
+                "attributes": [],
+                "methods": []
+              }
+            },
+            {
+              "ClassDef": {
+                "name": {
+                  "internal": "B",
+                  "display": null
+                },
+                "namespace": "",
+                "package": "diag",
+                "attributes": [],
+                "methods": []
+              }
+            }
+          ],
+          "relationships": [],
+          "packages": []
+        }
+      },
+      {
+        "Package": {
+          "name": {
+            "internal": "activate",
+            "display": "act"
+          },
+          "types": [
+            {
+              "StructDef": {
+                "name": {
+                  "internal": "StartResponsePayload",
+                  "display": "SRP"
+                },
+                "namespace": "",
+                "package": "activate",
+                "attributes": [],
+                "methods": []
+              }
+            },
+            {
+              "EnumDef": {
+                "name": {
+                  "internal": "ErrorInfo",
+                  "display": "ERR"
+                },
+                "namespace": "",
+                "package": "activate",
+                "stereotypes": [],
+                "items": []
+              }
+            }
+          ],
+          "relationships": [],
+          "packages": []
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

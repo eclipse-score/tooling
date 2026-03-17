@@ -1,0 +1,139 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+@startuml
+title UML AST Core Structure - Full Fields with Types
+
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+' ========================
+' AST
+' ========================
+class ClassDef {
+  name: Name
+  namespace: String
+  package: String
+  attributes: Vec<Attribute>
+  methods: Vec<Method>
+}
+
+class StructDef {
+  name: Name
+  namespace: String
+  package: String
+  attributes: Vec<Attribute>
+  methods: Vec<Method>
+}
+
+class InterfaceDef {
+  name: Name
+  namespace: String
+  package: String
+  attributes: Vec<Attribute>
+  methods: Vec<Method>
+}
+
+class EnumDef {
+  name: Name
+  namespace: String
+  package: String
+  stereotypes: Vec<String>
+  items: Vec<EnumItem>
+}
+
+class EnumItem {
+  visibility: Option<Visibility>
+  name: String
+  value: Option<EnumValue>
+}
+
+class Namespace {
+  name: Name
+  types: Vec<Element>
+  namespaces: Vec<Namespace>
+}
+
+class Package {
+  name: Name
+  types: Vec<Element>
+  packages: Vec<Package>
+  relationships: Vec<Relationship>
+}
+
+class ClassUmlFile {
+  name: String
+  elements: Vec<ClassUmlTopLevel>
+  relationships: Vec<Relationship>
+}
+
+class Method {
+  visibility: Visibility
+  name: String
+  generic_params: Vec<String>
+  params: Vec<Param>
+  type: Option<String>
+}
+
+class Attribute {
+  visibility: Visibility
+  name: String
+  type: Option<String>
+}
+
+' ========================
+' enum
+' ========================
+enum Element {
+  ClassDef
+  StructDef
+  EnumDef
+  InterfaceDef
+}
+
+enum ClassUmlTopLevel {
+  Types
+  Enum
+  Namespace
+  Package
+}
+
+' ========================
+' relationship
+' ========================
+ClassDef "1" o-- "*" Attribute
+ClassDef "1" o-- "*" Method
+
+StructDef "1" o-- "*" Attribute
+StructDef "1" o-- "*" Method
+
+InterfaceDef "1" o-- "*" Attribute
+InterfaceDef "1" o-- "*" Method
+
+EnumDef "1" o-- "*" EnumItem
+
+Element <|-- ClassDef
+Element <|-- StructDef
+Element <|-- EnumDef
+Element <|-- InterfaceDef
+
+Namespace "1" o-- "*" Element
+Namespace "1" o-- "*" Namespace
+
+Package "1" o-- "*" Element
+Package "1" o-- "*" Package
+Package "1" o-- "*" Relationship
+
+ClassUmlFile "1" o-- "*" ClassUmlTopLevel
+ClassUmlFile "1" o-- "*" Relationship
+
+@enduml

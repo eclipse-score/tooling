@@ -1,0 +1,30 @@
+{"only_method.puml":
+  {
+    "name": "only_method",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "Node",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "nodeMethod",
+                "generic_params": [],
+                "params": [],
+                "type": null
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

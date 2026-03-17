@@ -1,0 +1,41 @@
+{"attr_method.puml":
+  {
+    "name": "attr_method",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "User",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [
+              {
+                "visibility": "Public",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "visibility": "Private",
+                "name": "id",
+                "type": "int"
+              }
+            ],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "getName",
+                "generic_params": [],
+                "params": [],
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

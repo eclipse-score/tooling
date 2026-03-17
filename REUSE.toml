@@ -48,3 +48,13 @@ SPDX-License-Identifier = "Apache-2.0"
 path = ["dash/org.eclipse.dash.licenses-1.1.0.jar"]
 SPDX-FileCopyrightText = "2020 Eclipse Foundation"
 SPDX-License-Identifier = "EPL-2.0"
+
+[[annotations]]
+path = ["plantuml/**/*.json"]
+SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundation"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["plantuml/**/*.svg"]
+SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundation"
+SPDX-License-Identifier = "Apache-2.0"

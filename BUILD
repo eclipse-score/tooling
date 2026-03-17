@@ -28,6 +28,7 @@ copyright_checker(
         "python_basics",
         "starpls",
         "tools",
+        "plantuml",
 
         # Add other directories/files you want to check
     ],

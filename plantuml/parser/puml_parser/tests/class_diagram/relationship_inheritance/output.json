@@ -1,0 +1,38 @@
+{
+  "relationship_inheritance.puml": {
+    "name": "relationship_inheritance",
+    "elements": [],
+    "relationships": [
+      {
+        "left": "Base",
+        "right": "Derived",
+        "arrow": {
+          "left": {
+            "raw": "<|"
+          },
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": null
+        },
+        "label": null
+      },
+      {
+        "left": "Sub",
+        "right": "Derived",
+        "arrow": {
+          "left": null,
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": {
+            "raw": "|>"
+          }
+        },
+        "label": null
+      }
+    ]
+  }
+}

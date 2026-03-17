@@ -1,0 +1,252 @@
+// *******************************************************************************
+// Copyright (c) 2026 Contributors to the Eclipse Foundation
+//
+// See the NOTICE file(s) distributed with this work for additional
+// information regarding copyright ownership.
+//
+// This program and the accompanying materials are made available under the
+// terms of the Apache License Version 2.0 which is available at
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// SPDX-License-Identifier: Apache-2.0
+// *******************************************************************************
+
+// PlantUML Sequence Diagram Grammar for Pest Parser
+
+sequence_start = { empty_line* ~ startuml ~ (note_multiline | ref_multiline | sequence_statement | empty_line)* ~ enduml }
+
+sequence_statement = {
+    (
+        note_declaration |
+        pragma | ignored_stmt |
+        minwidth | rotate | transformation |
+        hide_unlinked | show_unlinked |
+        sprite_inline | sprite_block_start |
+        hide_show_member | hide_show_stereotype |
+        participant_def |
+        activate_cmd | deactivate_cmd | destroy_cmd | create_cmd |
+        box_start | box_end |
+        group_cmd |
+        divider | delay |
+        return_cmd |
+        ref_inline | ref_block_start |
+        skin | autonumber | autonumber_stop | autonumber_resume | autonumber_inc |
+        autoactivate | footbox_cmd | ellipsis |
+        function_def | function_return | function_end |
+        message |
+        activation_short
+    ) ~ EOL
+}
+
+// Basic elements
+pragma = { ^"!pragma" ~ identifier ~ pragma_value? }
+pragma_value = { (!EOL ~ ANY)+ }
+
+// Function definitions (preprocessor functions)
+function_def = { ^"!function" ~ function_content }
+function_return = { ^"!return" ~ function_content }
+function_end = { ^"!endfunction" }
+function_content = { (!EOL ~ ANY)+ }
+
+// Multi-line blocks
+
+legend_block_start = { ^"legend" ~ legend_pos? ~ legend_align? }
+legend_pos = { ^"top" | ^"bottom" }
+legend_align = { ^"left" | ^"right" | ^"center" }
+legend_block_end = { ^"end" ~ WHITESPACE? ~ ^"legend" }
+
+// rotate, etc.
+minwidth = { ^"minwidth" ~ NUMBER }
+rotate = { ^"rotate" }
+
+
+transformation = { ^"!transformation" ~ transformation_value }
+transformation_value = { (!("{" | EOL) ~ ANY)+ }
+transformation_block_start = { ^"!transformation" ~ "{" }
+transformation_block_end = { "!" ~ "}" }
+
+hide_unlinked = { ^"hide" ~ ^"unlinked" }
+show_unlinked = { ^"show" ~ ^"unlinked" }
+
+// Sprite
+sprite_block_start = {
+    ^"sprite" ~ sprite_name ~ sprite_dimensions? ~ "{"
+}
+sprite_block_end = { (^"end" ~ WHITESPACE? ~ ^"sprite") | "}" }
+sprite_inline = {
+    ^"sprite" ~ sprite_name ~ sprite_dimensions? ~ (sprite_encoding | sprite_data)
+}
+sprite_name = { "$"? ~ identifier }
+sprite_dimensions = {
+    "[" ~ NUMBER ~ "x" ~ NUMBER ~ "/" ~
+    (NUMBER ~ "z"? | ^"color") ~
+    "]"
+}
+sprite_encoding = { ASCII_ALPHANUMERIC+ }
+sprite_data = { ANY+ }
+
+// Hide/Show
+hide_show_member = {
+    hide_or_show ~ visibility_list ~ member_type
+}
+hide_show_stereotype = {
+    hide_or_show ~ stereotype_target* ~ empty_kw? ~ stereotype_elem
+}
+hide_or_show = { ^"hide" | ^"show" }
+visibility_list = { sequence_visibility ~ ("," ~ sequence_visibility)* }
+sequence_visibility = { ^"public" | ^"private" | ^"protected" | ^"package" }
+member_type = { ^"members" | ^"member" | ^"attributes" | ^"attribute" | ^"fields" | ^"field" | ^"methods" | ^"method" }
+stereotype_target = { class_type | sequence_qualified_name | quoted_string | stereotype }
+class_type = { ^"class" | ^"object" | ^"interface" | ^"enum" | ^"annotation" | ^"abstract" }
+empty_kw = { ^"empty" }
+stereotype_elem = {
+    ^"members" | ^"member" | ^"attributes" | ^"attribute" | ^"fields" | ^"field" |
+    ^"methods" | ^"method" | ^"circle" ~ ASCII_ALPHANUMERIC* | ^"stereotypes" | ^"stereotype"
+}
+
+// Participant definitions
+participant_def = {
+    create_kw? ~ participant_type ~
+    (quoted_participant_as_id | participant_id_as_quoted | participant_id_as_id | quoted_participant | participant_id) ~
+    color_spec? ~ stereotype? ~ order_clause?
+}
+
+create_kw = { ^"create" }
+participant_type = @{
+    (^"participant" | ^"collections" | ^"database" | ^"boundary" | ^"control" |
+     ^"entity" | ^"queue" | ^"actor") ~ &(" " | "\t" | "\n" | "\r")
+}
+
+quoted_participant_as_id = { quoted_string ~ alias_clause }
+participant_id_as_quoted = { participant_id ~ alias_clause }
+participant_id_as_id = { participant_id ~ alias_clause }
+quoted_participant = { quoted_string }
+participant_id = { CNAME }
+
+color_spec = @{ BASIC_COLOR }
+
+order_clause = { ^"order" ~ signed_number }
+signed_number = { "-"? ~ NUMBER }
+
+// Activate/Deactivate/Destroy/Create commands
+activate_cmd = { ^"activate" ~ participant_ref }
+deactivate_cmd = { ^"deactivate" ~ participant_ref? }
+destroy_cmd = { ^"destroy" ~ participant_ref }
+create_cmd = { ^"create" ~ participant_ref }
+
+// Sequence Arrow
+SEQUENCE_ARROW_PREFIX_CHAR = _{ "<" | "/" | "\\" | "|" | "*" | "(" | ")" | "#" | "^" | "@" }
+SEQUENCE_ARROW_SUFFIX_CHAR = _{ ">" | "/" | "\\" | "|" | "*" | "(" | ")" | "#" | "^" | "@" }
+
+sequence_arrow_prefix = @{ SEQUENCE_ARROW_PREFIX_CHAR+ }
+sequence_arrow_suffix = @{ SEQUENCE_ARROW_SUFFIX_CHAR+ }
+
+sequence_arrow = {
+    sequence_arrow_prefix?
+    ~ arrow_segment
+    ~ arrow_middle?
+    ~ arrow_segment?
+    ~ sequence_arrow_suffix?
+}
+
+// Messages
+message = {
+    async_marker? ~
+    message_participant? ~ sequence_arrow ~ message_participant? ~
+    activation_marker? ~ sequence_description?
+}
+
+async_marker = { "&" }
+message_participant = {
+    lost_found_marker |
+    participant_ref |
+    quoted_string |
+    quoted_participant_as_id |
+    participant_id_as_quoted
+}
+lost_found_marker = { "[" ~ ("o" | "x")? | ("o" | "x")? ~ ("[" | "]") }
+participant_ref = { CNAME | quoted_string }
+
+activation_marker = { "+"+ | "-"+ | "*"+ | "!"+ }
+
+// Short activation syntax
+activation_short = { participant_ref ~ ("++" | "--") }
+
+// Return
+return_cmd = { async_marker? ~ ^"return" ~ sequence_text_content? }
+
+// Box
+box_start = { "box" ~ quoted_string? ~ color_spec? }
+box_end = { ^"end" ~ WHITESPACE? ~ ^"box" }
+
+// Group commands (alt, opt, loop, etc.)
+group_cmd = {
+    async_marker? ~ group_type ~ group_condition?
+}
+
+group_condition = @{ (!EOL ~ ANY)+ }
+
+group_type = @{
+    (^"critical" | ^"par2" | ^"par" | ^"opt" | ^"alt" | ^"loop" | ^"break" |
+     ^"else" | ^"also" | ^"group" | ^"end") ~ &(" " | "\t" | "\n" | "\r")
+}
+
+// Divider and delay
+divider = { "==" ~ divider_text? ~ "==" }
+divider_text = @{ (!"==" ~ !EOL ~ ANY)+ }
+delay = { ("||" ~ NUMBER? ~ "|"+) | ("…" ~ sequence_text_content? ~ "…") | ("..." ~ sequence_text_content? ~ "...") }
+ellipsis = { ("..." ~ sequence_text_content? ~ "...") | ("…" ~ sequence_text_content? ~ "…") | "..." | "…" }
+
+// Reference
+ref_inline = {
+    ^"ref" ~ ^"over" ~ participant_list ~ ":" ~ sequence_text_content
+}
+
+ref_multiline = @{
+    ^"ref" ~
+    (!NEWLINE ~ ANY)* ~  // rest of header line ("over participant")
+    NEWLINE ~
+    (
+        !(WHITESPACE* ~ (^"endref" | (^"end" ~ WHITESPACE ~ ^"ref") | (^"end" ~ WHITESPACE* ~ NEWLINE))) ~
+        (!NEWLINE ~ ANY)* ~
+        NEWLINE
+    )* ~
+    WHITESPACE* ~ (^"endref" | (^"end" ~ WHITESPACE ~ ^"ref") | (^"end" ~ WHITESPACE* ~ NEWLINE)) ~
+    EOL?
+}
+
+ref_block_start = {
+    ^"ref" ~ ^"over" ~ participant_list
+}
+
+ref_block_end = { ^"end" ~ WHITESPACE? ~ (^"ref")? }
+
+participant_list = { participant_ref ~ ("," ~ participant_ref)* }
+
+// Skin
+skin = { ^"skin" ~ sequence_qualified_name }
+
+// Autonumber
+autonumber = {
+    ^"autonumber" ~ autonumber_format? ~ autonumber_start? ~ autonumber_step?
+}
+autonumber_format = { (ASCII_DIGIT ~ (!(WHITESPACE | EOL) ~ ANY)* ~ ASCII_DIGIT) | ASCII_DIGIT }
+autonumber_start = { NUMBER }
+autonumber_step = { quoted_string }
+
+autonumber_stop = { ^"autonumber" ~ ^"stop" }
+autonumber_resume = { ^"autonumber" ~ ^"resume" ~ NUMBER? ~ quoted_string? }
+autonumber_inc = { ^"autonumber" ~ ^"inc" ~ (ASCII_ALPHA)? }
+
+// Autoactivate
+autoactivate = { ^"autoactivate" ~ autoactivate_state? }
+autoactivate_state = { ^"on" | ^"off" }
+
+// Footbox
+footbox_cmd = { hide_or_show? ~ ^"footbox" ~ footbox_state? }
+footbox_state = { ^"on" | ^"off" }
+
+sequence_qualified_name = @{ identifier ~ ("." ~ identifier)* }
+
+sequence_text_content = { (!EOL ~ ANY)+ }
+sequence_description = { ":" ~ sequence_text_content? }

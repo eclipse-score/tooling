@@ -1,0 +1,85 @@
+// *******************************************************************************
+// Copyright (c) 2026 Contributors to the Eclipse Foundation
+//
+// See the NOTICE file(s) distributed with this work for additional
+// information regarding copyright ownership.
+//
+// This program and the accompanying materials are made available under the
+// terms of the Apache License Version 2.0 which is available at
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// SPDX-License-Identifier: Apache-2.0
+// *******************************************************************************
+
+/*
+---- For include / include_once / include many ----
+    1. Local file:
+        1) relative path: !include "diagrams/class.puml"
+        2) absolute path: !include /usr/local/plantuml/common.puml or !include "/Users/me/My PUML Files/common.puml"
+    2. Built-in/Standard Library: !include <aws/common> (will not be supported currently)
+    3. URL: !include "https://domain/file.puml" (will not be supported currently)
+
+---- For includesub ----
+    Only support local file
+*/
+
+// Common
+WHITESPACE = _{ " " | "\t" }
+NEWLINE = _{ "\n" | "\r\n" }
+COMMENT = _{ "'" ~ (!NEWLINE ~ ANY)* | "//" ~ (!NEWLINE ~ ANY)* }
+IGNORED   = _{ (WHITESPACE | COMMENT)+ }
+
+// Entry Rule
+file = { SOI ~ line* ~ EOI }
+
+line= _{
+      includesub_line
+    | include_line
+    | sub_block
+    | text_line
+}
+
+// ---------------- Include ----------------
+include_line = { include_directive ~ NEWLINE }
+include_directive = {
+    include_keyword ~ include_path
+}
+include_keyword = {
+      "!include_once"
+    | "!include_many"
+    | "!include"
+}
+include_path = @{ (!"!" ~(ASCII_ALPHANUMERIC | "_" | "-" | "." | "/" | " "))+ }
+
+// --------------- IncludeSub ---------------
+includesub_line = { includesub_directive ~ NEWLINE }
+includesub_directive = {
+    "!includesub" ~ include_path ~ include_suffix ~ !include_suffix
+}
+include_suffix = {
+      "!" ~ (include_index | include_label)
+}
+include_label = @{ (ASCII_ALPHANUMERIC | "_" | "-" | "." | "@" )+ }
+include_index = @{ ASCII_DIGIT+ }
+
+
+// ---------------- SubBlock ----------------
+sub_block = {
+    startsub_directive ~ NEWLINE ~ sub_content* ~ endsub_directive ~ NEWLINE
+}
+startsub_directive = { "!startsub" ~ ((include_index | include_label)) }
+endsub_directive = { "!endsub" }
+sub_content = _{
+      includesub_line
+    | include_line
+    | text_line
+ }
+
+// ---------------- Text Line ----------------
+text_line = { (!("!" ~ preprocess_keyword) ~ (!NEWLINE ~ ANY)*) ~ NEWLINE }
+preprocess_keyword = {
+      include_keyword
+    | "includesub"
+    | "startsub"
+    | "endsub"
+}

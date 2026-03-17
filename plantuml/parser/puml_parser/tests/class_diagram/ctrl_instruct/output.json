@@ -1,0 +1,52 @@
+{
+  "ctrl_instruct.puml": {
+    "name": "ctrl_instruct",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "A",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": []
+          }
+        }
+      },
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "B",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": []
+          }
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "left": "A",
+        "right": "B",
+        "arrow": {
+          "left": null,
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": {
+            "raw": ">"
+          }
+        },
+        "label": null
+      }
+    ]
+  }
+}

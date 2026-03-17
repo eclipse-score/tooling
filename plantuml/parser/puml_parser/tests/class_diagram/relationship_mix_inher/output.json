@@ -1,0 +1,38 @@
+{
+  "relationship_mix_inher.puml": {
+    "name": "relationship_mix_inher",
+    "elements": [],
+    "relationships": [
+      {
+        "left": "Base",
+        "right": "Child",
+        "arrow": {
+          "left": {
+            "raw": "<|"
+          },
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": null
+        },
+        "label": null
+      },
+      {
+        "left": "IInterface",
+        "right": "Child",
+        "arrow": {
+          "left": {
+            "raw": "<|"
+          },
+          "line": {
+            "raw": ".."
+          },
+          "middle": null,
+          "right": null
+        },
+        "label": null
+      }
+    ]
+  }
+}

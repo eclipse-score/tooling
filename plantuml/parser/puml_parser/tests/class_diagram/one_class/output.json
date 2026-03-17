@@ -1,0 +1,22 @@
+{"one_class.puml":
+  {
+    "name": "one_class",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "A",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": []
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}
