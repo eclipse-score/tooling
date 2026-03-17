@@ -11,8 +11,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@rules_python//sphinxdocs:sphinx.bzl", "sphinx_docs")
-load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load(
     "//bazel/rules/rules_score:providers.bzl",
     _ComponentInfo = "ComponentInfo",
@@ -48,8 +46,8 @@ load(
     _feature_requirements = "feature_requirements",
 )
 load(
-    "//bazel/rules/rules_score/private:safety_analysis.bzl",
-    _safety_analysis = "safety_analysis",
+    "//bazel/rules/rules_score/private:fmea.bzl",
+    _fmea = "fmea",
 )
 load(
     "//bazel/rules/rules_score/private:sphinx_module.bzl",
@@ -59,15 +57,20 @@ load(
     "//bazel/rules/rules_score/private:unit.bzl",
     _unit = "unit",
 )
+load(
+    "//bazel/rules/rules_score/private:unit_design.bzl",
+    _unit_design = "unit_design",
+)
 
 architectural_design = _architectural_design
 assumptions_of_use = _assumptions_of_use
 component_requirements = _component_requirements
 dependability_analysis = _dependability_analysis
 feature_requirements = _feature_requirements
-safety_analysis = _safety_analysis
+fmea = _fmea
 sphinx_module = _sphinx_module
 unit = _unit
+unit_design = _unit_design
 component = _component
 dependable_element = _dependable_element
 SphinxSourcesInfo = _SphinxSourcesInfo

@@ -328,6 +328,12 @@ The macro automatically:
 - Delegates to ``sphinx_module`` for actual Sphinx build and HTML generation
 - Integrates dependencies for cross-module referencing and HTML merging
 
+**Overview and interrelations:**
+
+.. uml:: rules_score_overview.puml
+   :align: center
+   :alt: Overview of rules_score architecture
+   :width: 100%
 
 Complete Example
 ----------------

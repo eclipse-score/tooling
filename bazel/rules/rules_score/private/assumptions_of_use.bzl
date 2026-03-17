@@ -19,22 +19,9 @@ following S-CORE process guidelines. Assumptions of Use define the safety-releva
 operating conditions and constraints for a Safety Element out of Context (SEooC).
 """
 
-load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:component_requirements.bzl", "ComponentRequirementsInfo")
-load("//bazel/rules/rules_score/private:feature_requirements.bzl", "FeatureRequirementsInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
 
-# ============================================================================
-# Provider Definition
-# ============================================================================
-
-AssumptionsOfUseInfo = provider(
-    doc = "Provider for assumptions of use artifacts",
-    fields = {
-        "srcs": "Depset of source files containing assumptions of use",
-        "feature_requirements": "List of FeatureRequirementsInfo providers this AoU traces to",
-        "name": "Name of the assumptions of use target",
-    },
-)
+# AssumptionsOfUseInfo is re-exported from providers.bzl for backward compatibility.
 
 # ============================================================================
 # Private Rule Implementation

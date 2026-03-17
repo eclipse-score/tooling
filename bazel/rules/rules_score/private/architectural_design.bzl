@@ -19,20 +19,9 @@ documentation following S-CORE process guidelines. Architectural design
 documents describe the software architecture including static and dynamic views.
 """
 
-load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
 
-# ============================================================================
-# Provider Definition
-# ============================================================================
-
-ArchitecturalDesignInfo = provider(
-    doc = "Provider for architectural design artifacts",
-    fields = {
-        "static": "Depset of static architecture diagram files (e.g., class diagrams, component diagrams)",
-        "dynamic": "Depset of dynamic architecture diagram files (e.g., sequence diagrams, activity diagrams)",
-        "name": "Name of the architectural design target",
-    },
-)
+# ArchitecturalDesignInfo is re-exported from providers.bzl for backward compatibility.
 
 # ============================================================================
 # Private Rule Implementation

@@ -12,50 +12,42 @@
 # *******************************************************************************
 
 """
-Safety Analysis build rules for S-CORE projects.
+FMEA (Failure Mode and Effects Analysis) build rules for S-CORE projects.
 
-This module provides macros and rules for defining safety analysis documentation
-following S-CORE process guidelines. Safety analysis includes failure mode analysis,
-control measures, fault tree analysis, and other safety-related artifacts.
+This module provides macros and rules for defining FMEA documentation
+following S-CORE process guidelines. FMEA documents failure modes, control
+measures, and root-cause fault tree analysis diagrams for a component.
 """
 
-load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:architectural_design.bzl", "ArchitecturalDesignInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
 
-# ============================================================================
-# Provider Definition
-# ============================================================================
-
-AnalysisInfo = provider(
-    doc = "Provider for safety analysis artifacts",
-    fields = {
-        "controlmeasures": "Depset of control measures documentation or requirements",
-        "failuremodes": "Depset of failure modes documentation or requirements",
-        "fta": "Depset of Fault Tree Analysis diagrams",
-        "arch_design": "ArchitecturalDesignInfo provider for linked architectural design",
-        "name": "Name of the safety analysis target",
-    },
-)
+# AnalysisInfo and ArchitecturalDesignInfo are re-exported from providers.bzl for backward compatibility.
 
 # ============================================================================
 # Private Rule Implementation
 # ============================================================================
 
-def _analysis_impl(ctx):
-    """Implementation for safety_analysis rule.
+def _fmea_impl(ctx):
+    """Implementation for fmea rule.
 
-    Collects safety analysis artifacts including control measures, failure modes,
-    and fault tree analysis diagrams, linking them to architectural design.
+    Collects FMEA artifacts including failure modes, control measures, and
+    fault tree diagrams, linking them to architectural design.
 
     Args:
         ctx: Rule context
 
     Returns:
-        List of providers including DefaultInfo and AnalysisInfo
+        List of providers including DefaultInfo, AnalysisInfo, SphinxSourcesInfo
     """
     controlmeasures = depset(ctx.files.controlmeasures)
     failuremodes = depset(ctx.files.failuremodes)
-    fta = depset(ctx.files.fta)
+    fta = depset(ctx.files.root_causes)
+
+    # TODO: render requirement sources (failuremodes, controlmeasures) into
+    # documentation and extract traceability artifacts.
+
+    # TODO: preprocess fault tree diagrams (root_causes) and extract
+    # traceability artifacts.
 
     # Get architectural design provider if available
     arch_design_info = None
@@ -91,24 +83,24 @@ def _analysis_impl(ctx):
 # Rule Definition
 # ============================================================================
 
-_analysis = rule(
-    implementation = _analysis_impl,
-    doc = "Collects safety analysis documents for S-CORE process compliance",
+_fmea = rule(
+    implementation = _fmea_impl,
+    doc = "Collects FMEA documents and diagrams for S-CORE process compliance",
     attrs = {
-        "controlmeasures": attr.label_list(
-            allow_files = [".rst", ".md", ".trlc"],
-            mandatory = False,
-            doc = "Control measures documentation or requirements targets (can be AoUs or requirements)",
-        ),
         "failuremodes": attr.label_list(
             allow_files = [".rst", ".md", ".trlc"],
             mandatory = False,
             doc = "Failure modes documentation or requirements targets",
         ),
-        "fta": attr.label_list(
+        "controlmeasures": attr.label_list(
+            allow_files = [".rst", ".md", ".trlc"],
+            mandatory = False,
+            doc = "Control measures documentation or requirements targets (can be AoUs or requirements)",
+        ),
+        "root_causes": attr.label_list(
             allow_files = [".puml", ".plantuml", ".png", ".svg"],
             mandatory = False,
-            doc = "Fault Tree Analysis (FTA) diagrams",
+            doc = "Root-cause Fault Tree Analysis (FTA) diagrams",
         ),
         "arch_design": attr.label(
             providers = [ArchitecturalDesignInfo],
@@ -122,54 +114,38 @@ _analysis = rule(
 # Public Macro
 # ============================================================================
 
-def safety_analysis(
+def fmea(
         name,
-        controlmeasures = [],
         failuremodes = [],
-        fta = [],
+        controlmeasures = [],
+        root_causes = [],
         arch_design = None,
         visibility = None):
-    """Define safety analysis following S-CORE process guidelines.
+    """Define FMEA documentation following S-CORE process guidelines.
 
-    Safety analysis documents the safety-related analysis of a component,
-    including failure mode and effects analysis (FMEA/FMEDA), fault tree
-    analysis (FTA), and control measures that mitigate identified risks.
+    FMEA (Failure Mode and Effects Analysis) documents the failure modes of a
+    component, the control measures that mitigate them, and optional fault tree
+    analysis diagrams that trace root causes.
 
     Args:
-        name: The name of the safety analysis target. Used as the base
-            name for all generated targets.
+        name: The name of the FMEA target.
+        failuremodes: Optional list of labels to documentation files or
+            requirements targets containing identified failure modes.
         controlmeasures: Optional list of labels to documentation files or
             requirements targets containing control measures that mitigate
             identified failure modes. Can reference Assumptions of Use or
             requirements as defined in the S-CORE process.
-        failuremodes: Optional list of labels to documentation files or
-            requirements targets containing identified failure modes as
-            defined in the S-CORE process.
-        fta: Optional list of labels to Fault Tree Analysis diagram files
-            (.puml, .plantuml, .png, .svg) as defined in the S-CORE process.
+        root_causes: Optional list of labels to Fault Tree Analysis diagram
+            files (.puml, .plantuml, .png, .svg) tracing root causes.
         arch_design: Optional label to an architectural_design target for
-            establishing traceability between safety analysis and architecture.
-        visibility: Bazel visibility specification for the generated targets.
-
-    Generated Targets:
-        <name>: Main safety analysis target providing AnalysisInfo
-
-    Example:
-        ```starlark
-        safety_analysis(
-            name = "my_safety_analysis",
-            controlmeasures = [":my_control_measures"],
-            failuremodes = [":my_failure_modes"],
-            fta = ["fault_tree.puml"],
-            arch_design = ":my_architectural_design",
-        )
-        ```
+            establishing traceability between the FMEA and the architecture.
+        visibility: Bazel visibility specification. Default is None.
     """
-    _analysis(
+    _fmea(
         name = name,
-        controlmeasures = controlmeasures,
         failuremodes = failuremodes,
-        fta = fta,
+        controlmeasures = controlmeasures,
+        root_causes = root_causes,
         arch_design = arch_design,
         visibility = visibility,
     )

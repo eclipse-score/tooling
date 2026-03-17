@@ -4,5 +4,7 @@
 
 bazel-*
 MODULE.bazel.lock
+external
+.vscode/
 
 __pycache__
