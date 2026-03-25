@@ -33,6 +33,7 @@ path = ["**/requirements_lock.txt"]
 SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundation"
 SPDX-License-Identifier = "Apache-2.0"
 
+
 [[annotations]]
 path = ["cr_checker/resources/config.json",
         "**/.bazelversion",
@@ -40,6 +41,9 @@ path = ["cr_checker/resources/config.json",
         "python_basics/.bazelversion",
         "python_basics/integration_tests/venv-with-extra-requirements/requirements.in",
         "python_basics/requirements.in",
+        "python_basics/requirements.txt",
+        "bazel/rules/rules_score/test/requirements.in",
+        "bazel/rules/rules_score/test/requirements.txt"
  ]
 SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundation"
 SPDX-License-Identifier = "Apache-2.0"
