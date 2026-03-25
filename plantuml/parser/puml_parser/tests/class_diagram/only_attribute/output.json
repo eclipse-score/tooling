@@ -1,0 +1,28 @@
+{"only_attribute.puml":
+  {
+    "name": "only_attribute",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "Node",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [
+              {
+                "visibility": "Public",
+                "name": "name",
+                "type": null
+              }
+            ],
+            "methods": []
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

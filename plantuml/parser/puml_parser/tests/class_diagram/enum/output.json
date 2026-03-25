@@ -1,0 +1,109 @@
+{"enum.puml":
+  {
+    "name": "enum",
+    "elements": [
+      {
+        "Enum": {
+          "name": {
+            "internal": "Status",
+            "display": null
+          },
+          "namespace": "",
+          "package": "",
+          "stereotypes": [],
+          "items": []
+        }
+      },
+      {
+        "Enum": {
+          "name": {
+            "internal": "Response",
+            "display": null
+          },
+          "namespace": "",
+          "package": "",
+          "stereotypes": [],
+          "items": [
+            {
+              "visibility": "Public",
+              "name": "OK",
+              "value": null
+            },
+            {
+              "visibility": "Private",
+              "name": "ERROR",
+              "value": null
+            },
+            {
+              "visibility": "Protected",
+              "name": "UNKNOWN",
+              "value": null
+            }
+          ]
+        }
+      },
+      {
+        "Enum": {
+          "name": {
+            "internal": "State",
+            "display": null
+          },
+          "namespace": "",
+          "package": "",
+          "stereotypes": [],
+          "items": [
+            {
+              "visibility": null,
+              "name": "INIT",
+              "value": {
+                "Description": "initialize"
+              }
+            },
+            {
+              "visibility": null,
+              "name": "RUNNING",
+              "value": {
+                "Description": "running"
+              }
+            },
+            {
+              "visibility": null,
+              "name": "STOPPED",
+              "value": {
+                "Description": "stoped"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Enum": {
+          "name": {
+            "internal": "CAN",
+            "display": null
+          },
+          "namespace": "",
+          "package": "",
+          "stereotypes": [],
+          "items": [
+            {
+              "visibility": null,
+              "name": "HIGH",
+              "value": {
+                "Literal": "0"
+              }
+            },
+            {
+              "visibility": null,
+              "name": "LOW",
+              "value": {
+                "Literal": "1"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

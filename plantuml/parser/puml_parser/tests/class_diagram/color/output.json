@@ -1,0 +1,39 @@
+{"color.puml":
+  {
+    "name": "color",
+    "elements": [
+      {
+        "Namespace": {
+          "name": {
+            "internal": "Service",
+            "display": null
+          },
+          "types": [
+            {
+              "ClassDef": {
+                "name": {
+                  "internal": "Api",
+                  "display": null
+                },
+                "namespace": "Service",
+                "package": "",
+                "attributes": [],
+                "methods": [
+                  {
+                    "visibility": "Public",
+                    "name": "Request",
+                    "generic_params": [],
+                    "params": [],
+                    "type": null
+                  }
+                ]
+              }
+            }
+          ],
+          "namespaces": []
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

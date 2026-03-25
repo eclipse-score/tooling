@@ -1,0 +1,28 @@
+{"interface.puml":
+  {
+    "name": "",
+    "elements": [
+      {
+        "Types": {
+          "InterfaceDef": {
+            "name": {
+              "internal": "J",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [
+              {
+                "visibility": "Public",
+                "name": "doSomething",
+                "type": null
+              }
+            ],
+            "methods": []
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "relationship_normal.puml": {
+    "name": "relationship_normal",
+    "elements": [],
+    "relationships": [
+      {
+        "left": "Base",
+        "right": "Child",
+        "arrow": {
+          "left": null,
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": null
+        },
+        "label": null
+      }
+    ]
+  }
+}

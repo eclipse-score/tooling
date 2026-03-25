@@ -1,0 +1,43 @@
+{"namespace_1.puml":
+  {
+    "name": "namespace_1",
+    "elements": [
+      {
+        "Namespace": {
+          "name": {
+            "internal": "Core",
+            "display": null
+          },
+          "types": [
+            {
+              "ClassDef": {
+                "name": {
+                  "internal": "A",
+                  "display": null
+                },
+                "namespace": "Core",
+                "package": "",
+                "attributes": [],
+                "methods": []
+              }
+            },
+            {
+              "ClassDef": {
+                "name": {
+                  "internal": "B",
+                  "display": null
+                },
+                "namespace": "Core",
+                "package": "",
+                "attributes": [],
+                "methods": []
+              }
+            }
+          ],
+          "namespaces": []
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

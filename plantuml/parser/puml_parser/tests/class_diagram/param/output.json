@@ -1,0 +1,41 @@
+{"param.puml":
+  {
+    "name": "param",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "Calculator",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "Add",
+                "generic_params": [],
+                "params": [
+                  {
+                    "name": "a",
+                    "param_type": "int",
+                    "varargs": false
+                  },
+                  {
+                    "name": "b",
+                    "param_type": "int",
+                    "varargs": false
+                  }
+                ],
+                "type": "int"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

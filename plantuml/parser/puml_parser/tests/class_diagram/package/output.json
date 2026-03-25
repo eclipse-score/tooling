@@ -1,0 +1,78 @@
+{"package.puml":
+  {
+    "name": "package",
+    "elements": [
+      {
+        "Package": {
+          "name": {
+            "internal": "Core",
+            "display": null
+          },
+          "types": [
+            {
+              "ClassDef": {
+                "name": {
+                  "internal": "A",
+                  "display": null
+                },
+                "namespace": "",
+                "package": "Core",
+                "attributes": [],
+                "methods": []
+              }
+            },
+            {
+              "ClassDef": {
+                "name": {
+                  "internal": "B",
+                  "display": null
+                },
+                "namespace": "",
+                "package": "Core",
+                "attributes": [],
+                "methods": []
+              }
+            }
+          ],
+          "relationships": [],
+          "packages": []
+        }
+      },
+      {
+        "Package": {
+          "name": {
+            "internal": "App",
+            "display": null
+          },
+          "types": [],
+          "relationships": [],
+          "packages": [
+            {
+              "name": {
+                "internal": "UI",
+                "display": null
+              },
+              "types": [
+                {
+                  "ClassDef": {
+                    "name": {
+                      "internal": "Button",
+                      "display": null
+                    },
+                    "namespace": "",
+                    "package": "UI",
+                    "attributes": [],
+                    "methods": []
+                  }
+                }
+              ],
+              "relationships": [],
+              "packages": []
+            }
+          ]
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

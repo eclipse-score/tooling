@@ -1,0 +1,275 @@
+// *******************************************************************************
+// Copyright (c) 2026 Contributors to the Eclipse Foundation
+//
+// See the NOTICE file(s) distributed with this work for additional
+// information regarding copyright ownership.
+//
+// This program and the accompanying materials are made available under the
+// terms of the Apache License Version 2.0 which is available at
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// SPDX-License-Identifier: Apache-2.0
+// *******************************************************************************
+
+////////////////////////////////////////////////////////////////////////////////
+// File: common.pest
+//
+// Description:
+//   Shared grammar definitions for PlantUML parsing, reused by Class, Component,
+//   and Sequence diagrams. This module centralizes common syntax to reduce
+//   duplication and ensure consistent parsing behavior.
+//
+// Supported Features:
+//   File structure, comments, title, skinparam, direction, grouping containers,
+//   alias, color, arrows, line styles, notes, scaling, and stereotypes.
+//
+// Design Principles:
+//   - Keep grammar minimal and reusable
+//   - Avoid diagram-specific semantics
+//   - Maintain PlantUML compatibility
+//
+// Usage:
+//   Import this file alongside diagram-specific grammars:
+//
+//     #[grammar = "../grammar/common.pest"]
+//     #[grammar = "../grammar/<diagram>.pest"]
+//
+// Maintenance Notes:
+//   - Do not add diagram-specific rules here
+//   - Prefer extending in child grammars
+//
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// Basic Elements
+////////////////////////////////////////////////////////////////////////////////
+WHITESPACE = _{ " " | "\t" }
+
+NUMBER = @{ ASCII_DIGIT+ }
+NEWLINE = _{ "\n" | "\r\n" }
+
+HEX       = _{ ASCII_HEX_DIGIT }
+INLINE_WS = _{ " " | "\t" }
+LINE_REST = { (!EOL ~ ANY)* }
+STRING    = @{ "\"" ~ ( "\\\"" | !"\"" ~ ANY )* ~ "\"" }
+EOL       = _{ "\r\n" | "\n" | "\r" }
+
+NAME_ATOM   = @{ (ASCII_ALPHANUMERIC | "_" | "." | "@")+ }
+COMPOUND_NAME = @{ NAME_ATOM ~ ("-" ~ NAME_ATOM)* }
+LOOSE_NAME  = @{ (ASCII_ALPHANUMERIC | "_") ~ (ASCII_ALPHANUMERIC | "_" | "-")* }
+NAME        = { COMPOUND_NAME | LOOSE_NAME }
+
+CNAME = @{ quoted_string | NAME }
+quoted_string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "«" ~ (!"»" ~ ANY)* ~ "»" }
+
+diagram_id = @{ (ASCII_ALPHANUMERIC | "_" | "-" | "." | "@")+ }
+puml_name  = { STRING | diagram_id }
+
+identifier = @{ (ASCII_ALPHANUMERIC | "_")+ }
+empty_line = { WHITESPACE* ~ EOL }
+
+////////////////////////////////////////////////////////////////////////////////
+// @startuml / @enduml
+////////////////////////////////////////////////////////////////////////////////
+startuml = { "@startuml" ~ puml_name? ~ EOL }
+enduml   = { "@enduml" ~ EOL? }
+
+////////////////////////////////////////////////////////////////////////////////
+// Comments
+////////////////////////////////////////////////////////////////////////////////
+COMMENT = _{
+      "//" ~ (!EOL ~ ANY)*
+    | "'"  ~ (!EOL ~ ANY)*
+    | "/'" ~ (!"'/" ~ ANY)* ~ "'/"
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Ignored Statements
+//
+// Non-structural PlantUML directives such as title, style, layout, and scaling.
+// Parsed for completeness but generally skipped in AST construction.
+//
+// Examples:
+//   title System Overview
+//   skinparam shadowing false
+//   left to right direction
+//   scale 1.2
+////////////////////////////////////////////////////////////////////////////////
+ignored_stmt = _{
+      direction_stmt
+    | skinparam_stmt
+    | title_stmt
+    | scale_stmt
+}
+
+skinparam_stmt = @{ ^"skinparam" ~ LINE_REST }
+title_stmt     = @{ ^"title" ~ LINE_REST }
+direction_stmt = @{
+    ("left" | "right" | "top" | "bottom")
+    ~ " to "
+    ~ ("left" | "right" | "top" | "bottom")
+    ~ " direction"
+}
+scale_stmt = _{
+    ^"scale" ~ (
+        (^"max" ~ NUMBER ~ ("width" | "height")) |
+        (^"max" ~ NUMBER ~ ("*" | "x") ~ NUMBER) |
+        (NUMBER ~ ("*" | "x") ~ NUMBER) |
+        (NUMBER ~ ("/" ~ NUMBER)?) |
+        (NUMBER ~ ("width" | "height"))
+    )
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Stereotype
+////////////////////////////////////////////////////////////////////////////////
+STEREOTYPE_LEFT = @{ "<<" }
+STEREOTYPE_RIGHT = @{ ">>" }
+STEREOTYPE_NAME = @{ (!">>" ~ ANY)+ }
+stereotype = { STEREOTYPE_LEFT ~ STEREOTYPE_NAME ~ STEREOTYPE_RIGHT }
+
+////////////////////////////////////////////////////////////////////////////////
+// Note
+////////////////////////////////////////////////////////////////////////////////
+note_declaration = {
+    note_single_line
+  | note_multiline
+}
+
+// Single-line note: "note" with any content on same line
+// Just consume the entire line as-is, don't parse its content
+note_single_line = @{
+    ^"note" ~
+    INLINE_WS+ ~  // must have at least one space
+    (!("\n" | "\r") ~ ANY)*  // rest of line
+}
+// Multiline note: "note" followed by newline, then content, then "end note"
+// Just consume everything between note and end note, don't parse content
+note_multiline = @{
+    ^"note" ~
+    (!NEWLINE ~ ANY)* ~  // rest of header line
+    NEWLINE ~
+    (
+        !(WHITESPACE* ~ (^"endnote" | (^"end" ~ WHITESPACE ~ ^"note"))) ~
+        (!NEWLINE ~ ANY)* ~
+        NEWLINE
+    )* ~
+    WHITESPACE* ~ (^"endnote" | (^"end" ~ WHITESPACE ~ ^"note")) ~
+    EOL?
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Alias
+// Unified Modeling: <name> ("as" <alias_id>)?
+////////////////////////////////////////////////////////////////////////////////
+ALIAS_ID = @{ (ASCII_ALPHANUMERIC | "_")+ }
+
+alias_clause = { "as" ~ (ALIAS_ID | quoted_string) }
+
+////////////////////////////////////////////////////////////////////////////////
+// Color
+////////////////////////////////////////////////////////////////////////////////
+// Basic Color
+COLOR_NAME = @{ ASCII_ALPHANUMERIC+ }
+BASIC_COLOR = { "#" ~ (HEX{3,6} | COLOR_NAME) }
+
+// Gradient Color
+COLOR_GRAD = @{ BASIC_COLOR ~ ("|" | "-" | "/" | "\\") ~ BASIC_COLOR }
+
+// Color for Arrow
+COLOR_ARROW_COMMON = @{ HEX{3} | HEX{6} | HEX{8} | COLOR_NAME }
+COLOR_ARROW_GRAD = @{ COLOR_ARROW_COMMON ~ ("|" | "-" | "/" | "\\") ~ COLOR_ARROW_COMMON }
+
+// Component Color
+COLOR_COMPONENT_COMMON = @{ HEX{3} | HEX{6} | HEX{8} | COLOR_NAME }
+COLOR_COMPONENT_GRAD = @{ COLOR_COMPONENT_COMMON ~ ("|" | "-" | "/" | "\\") ~ COLOR_COMPONENT_COMMON }
+
+////////////////////////////////////////////////////////////////////////////////
+// Line Style (Shared by Class / Component / Sequence)
+// Example:
+//   [#red,dashed,thickness=2]
+//   [bold]
+//   [dotted]
+//   [thickness=3]
+//   [#blue|#green,bold]
+////////////////////////////////////////////////////////////////////////////////
+line_style_block = { "[" ~ line_style_list ~ "]" }
+
+line_style_list = { line_style_item ~ (("," | ";") ~ line_style_item)* }
+
+line_style_item = {
+      line_color
+    | line_pattern
+    | line_thickness
+    | line_extra_attr
+}
+
+// -------------------- color --------------------
+line_color = {
+    "#" ~ arrow_color
+  | arrow_color
+}
+
+arrow_color = {
+    COLOR_ARROW_GRAD
+  | COLOR_ARROW_COMMON
+}
+
+// -------------------- pattern --------------------
+line_pattern = {
+      "bold"
+    | "dashed"
+    | "dotted"
+    | "hidden"
+    | "plain"
+}
+
+// -------------------- thickness --------------------
+line_thickness = { "thickness=" ~ NUMBER }
+
+// -------------------- sequence extensions --------------------
+line_extra_attr = {
+      "norank"
+    | "single"
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Arrow
+////////////////////////////////////////////////////////////////////////////////
+// ---------- Characters ----------
+ARROW_PREFIX_CHAR = _{ "<" | "/" | "\\" | "|" | "*" | "o" | "0" | "(" | ")" | "#" | "^" | "@" }
+
+ARROW_SUFFIX_CHAR = _{ ">" | "/" | "\\" | "|" | "*" | "o" | "0" | "(" | ")" | "#" | "^" | "@" }
+
+ARROW_SEGMENT_CHAR = _{ "-" | "." | "=" | "~" }
+
+// ---------- Arrow Core ----------
+connection_arrow = {
+    arrow_prefix?
+    ~ arrow_segment
+    ~ arrow_middle?
+    ~ arrow_segment?
+    ~ arrow_suffix?
+}
+
+arrow_prefix = @{ ARROW_PREFIX_CHAR+ }
+arrow_suffix = @{ ARROW_SUFFIX_CHAR+ }
+arrow_segment = @{ ARROW_SEGMENT_CHAR+ }
+
+// ---------- Middle Block ----------
+arrow_middle = {
+      (line_style_block ~ arrow_direction? ~ arrow_mid_decor?)
+    | (arrow_direction ~ line_style_block)
+    | (arrow_direction ~ arrow_mid_decor?)
+    | arrow_mid_decor
+}
+
+arrow_mid_decor = @{ "0" | "(0" | "0)" | "(0)" }
+
+// ---------- Direction ----------
+arrow_direction = @{
+      "up" | "u"
+    | "right" | "ri" | "r"
+    | "down" | "do" | "d"
+    | "left" | "le" | "l"
+}

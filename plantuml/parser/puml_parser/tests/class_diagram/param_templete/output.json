@@ -1,0 +1,36 @@
+{"param_templete.puml":
+  {
+    "name": "param_templete",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "Factory",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "Create",
+                "generic_params": ["T"],
+                "params": [
+                  {
+                    "name": "id",
+                    "param_type": "int",
+                    "varargs": false
+                  }
+                ],
+                "type": null
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

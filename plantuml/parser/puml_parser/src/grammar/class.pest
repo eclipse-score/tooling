@@ -1,0 +1,156 @@
+// *******************************************************************************
+// Copyright (c) 2026 Contributors to the Eclipse Foundation
+//
+// See the NOTICE file(s) distributed with this work for additional
+// information regarding copyright ownership.
+//
+// This program and the accompanying materials are made available under the
+// terms of the Apache License Version 2.0 which is available at
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// SPDX-License-Identifier: Apache-2.0
+// *******************************************************************************
+
+///////////////////////////////////////////////////////////////
+// BASE
+///////////////////////////////////////////////////////////////
+color      = _{ BASIC_COLOR }
+
+raw_label = @{ (!("\n" | "\r") ~ ANY)+ }
+label = { STRING | raw_label }
+
+class_visibility = { "+" | "-" | "#" | "~" }
+
+///////////////////////////////////////////////////////////////
+// Name & Alias
+///////////////////////////////////////////////////////////////
+type_name  = @{ (ASCII_ALPHANUMERIC | "_")+ }
+
+class_qualified_name = @{ ("::")? ~ identifier ~ ("::" ~ identifier)* }
+
+// reference
+name_ref = @{ identifier }
+
+// definition
+internal_name = { STRING | class_qualified_name }
+
+// name_decl = { internal_name ~ ("as" ~ display_name)? }
+name_decl = { internal_name ~ alias_clause? }
+name_with_color = { name_decl ~ color? }
+
+named = { name_with_color }
+
+///////////////////////////////////////////////////////////////
+// File-level structure
+///////////////////////////////////////////////////////////////
+class_start = {
+    SOI
+    ~ empty_line*
+    ~ startuml
+    ~ EOL*
+    ~ ((ignored_stmt | top_level) ~ EOL+)*
+    ~ EOL*
+    ~ enduml
+    ~ EOI
+}
+
+top_level = {
+      namespace_def
+    | type_def
+    | enum_def
+    | relationship
+    | package_def
+}
+
+///////////////////////////////////////////////////////////////
+// namespace / package
+///////////////////////////////////////////////////////////////
+
+// namespace_def = { "namespace" ~ named ~ stereotype? ~ "{" ~ EOL* ~ top_level* ~ EOL* ~ "}" }
+namespace_def = {
+    "namespace"
+    ~ named
+    ~ stereotype?
+    ~ "{"
+    ~ EOL*
+    ~ (top_level ~ EOL+)*
+    ~ EOL*
+    ~ "}"
+}
+
+package_def = {
+    "package"
+    ~ named
+    ~ stereotype?
+    ~ "{"
+    ~ EOL*
+    ~ (top_level ~ EOL+)*
+    ~ EOL*
+    ~ "}"
+}
+
+///////////////////////////////////////////////////////////////
+// type definition
+///////////////////////////////////////////////////////////////
+type_def = { type_kind ~ named ~ stereotype? ~ class_body? }
+type_kind = {
+      "class"
+    | "struct"
+    | "interface"
+}
+
+class_body = { "{" ~ EOL* ~ class_member* ~ EOL* ~ "}" }
+
+class_member = { (method | attribute) ~ EOL+ }
+
+method = { class_visibility? ~ identifier ~ generic_param_list? ~ "(" ~ param_list? ~ ")" ~ return_type? }
+return_type = { ":" ~ type_name }
+
+attribute = { class_visibility? ~ identifier ~ (":" ~ type_name)? }
+
+param = {
+    param_named
+  | param_unnamed
+}
+
+param_named = {
+    identifier
+    ~ ":"
+    ~ type_name
+    ~ varargs?
+}
+
+param_unnamed = {
+    type_name
+    ~ varargs?
+}
+param_list  = { param ~ ("," ~ param)* }
+
+generic_param_list = { "<" ~ identifier ~ ("," ~ identifier)* ~ ">" }
+varargs = { "..." }
+
+///////////////////////////////////////////////////////////////
+// type definition
+///////////////////////////////////////////////////////////////
+enum_def = { "enum" ~ named ~ stereotype? ~ enum_body?}
+
+enum_body = { "{" ~ EOL* ~ enum_item* ~ EOL* ~ "}" }
+
+enum_item = { class_visibility? ~ identifier ~ enum_value? ~ EOL+ }
+
+enum_value = { ( "=" | ":" ) ~ enum_value_literal }
+
+enum_value_literal = @{ (!("\n" | "}") ~ ANY)+ }
+
+///////////////////////////////////////////////////////////////
+// Relationship
+///////////////////////////////////////////////////////////////
+
+qualified_identifier = @{ name_ref ~ ("." ~ name_ref)+ }
+
+relationship = {
+    (qualified_identifier | name_ref)
+    ~ connection_arrow
+    ~ (qualified_identifier | name_ref)
+    ~ (":" ~ label)?
+}

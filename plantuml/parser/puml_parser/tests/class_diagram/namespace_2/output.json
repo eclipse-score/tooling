@@ -1,0 +1,40 @@
+{"namespace_2.puml":
+  {
+    "name": "namespace_2",
+    "elements": [
+      {
+        "Namespace": {
+          "name": {
+            "internal": "App",
+            "display": null
+          },
+          "types": [],
+          "namespaces": [
+            {
+              "name": {
+                "internal": "UI",
+                "display": null
+              },
+              "types": [
+                {
+                  "ClassDef": {
+                    "name": {
+                      "internal": "Button",
+                      "display": null
+                    },
+                    "namespace": "UI",
+                    "package": "",
+                    "attributes": [],
+                    "methods": []
+                  }
+                }
+              ],
+              "namespaces": []
+            }
+          ]
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

@@ -1,0 +1,111 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml
+title Main Preprocessing Loop
+
+participant "CLI" as Cli
+participant "Preprocessor" as Prep
+participant "IncludeContext" as Ctx
+participant "IncludeParser" as Parser
+database "AstCache\n(HashMap)" as Cache
+database "SubRegistry\n(HashMap)" as SubReg
+
+Cli -> Prep: preprocess(&file_list)
+activate Prep
+
+loop for each file in file_list
+    Prep -> Ctx **: default()
+    Prep -> Prep: expand_file(file, ctx, file_list)
+    activate Prep #LightBlue
+    Prep -> Ctx: push_stack(file)
+    activate Ctx
+    alt cycle detected
+        Ctx --> Prep: Error(CycleInclude)
+    else no cycle
+        Ctx --> Prep: Ok()
+    end
+    deactivate Ctx
+
+== Parse AST ==
+
+    Prep -> Prep: stmts_ast = load_ast(file) : <PreprocessStmt>
+    activate Prep #LightPink
+
+    Prep -> Cache: get(file)
+    activate Cache
+    note right: First Check if File already\nparsed an stored in Cache
+
+    alt File cached
+        Cache --> Prep: Some(Rc<Vec<PreprocessStmt>>)
+        deactivate Cache
+        Prep -> Prep: Rc::clone(ast)
+        note right: Increment reference count (no copy)
+        return Ok(Rc<Vec<PreprocessStmt>>)
+    else not cached
+        activate Cache
+        Cache --> Prep ++: None
+        deactivate Cache
+
+        activate Prep #LightPink
+        Prep -> Parser: parse_file(file)
+        activate Parser
+        note right: Parse PlantUML file into\nVec<PreprocessStmt> AST\n(expensive operation)
+        Parser --> Prep -- : Result<Vec<PreprocessStmt>>
+        Prep --> Cache : insert(file, &rc_ast);
+
+        Prep --> SubReg ++ : collect_from_file()
+        return
+    end
+
+    Prep --> Prep -- : Ok(Rc<Vec<PreprocessStmt>>)
+
+== Expand Statements ==
+
+    Prep -> Prep : expanded_ast = expand_stmts(...) : Vec<PreprocessStmt>
+    activate Prep #LightGreen
+    alt Include
+        Prep -> Prep : expand_include(...) : String
+        activate Prep #LightYellow
+        alt Include
+            Prep -> Ctx ++: check_and_mark_include(...)
+            return bool
+            Prep -> Prep : recusively call expand_file(...)
+            ...
+        else IncludeSub
+            Prep -> Parser ++ : load_ast(file)
+            return <PreprocessStmt>
+            Prep -> Prep : recursively call expand_stmts(...)
+            ...
+        end
+    else SubBlock
+            Prep -> Prep : recursively call expand_stmts(...)
+    else Text only
+        return PreprocessStmt::Text(text.clone())
+    end
+
+    return expanded_ast : Vec<PreprocessStmt>
+
+== Render to Text ==
+    Prep -> Prep ++ : text = render_stmts(expanded_ast)
+    return expanded text
+
+    return expanded text
+
+    Prep -> Prep: store result in map
+end
+
+return HashMap<PathBuf, String>
+deactivate Prep
+
+@enduml

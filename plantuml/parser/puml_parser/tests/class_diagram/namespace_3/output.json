@@ -1,0 +1,45 @@
+{"namespace_3.puml":
+  {
+    "name": "namespace_3",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "GlobalClass",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": []
+          }
+        }
+      },
+      {
+        "Namespace": {
+          "name": {
+            "internal": "Data",
+            "display": null
+          },
+          "types": [
+            {
+              "ClassDef": {
+                "name": {
+                  "internal": "DB",
+                  "display": null
+                },
+                "namespace": "Data",
+                "package": "",
+                "attributes": [],
+                "methods": []
+              }
+            }
+          ],
+          "namespaces": []
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

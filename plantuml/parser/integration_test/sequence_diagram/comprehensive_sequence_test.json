@@ -1,0 +1,2289 @@
+[
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "Id": "Actor1"
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "Id": "Actor2"
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "core::runtime",
+          "id": "runtime"
+        }
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "core::service::ResourceBuilder",
+          "id": "Builder"
+        }
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "core::messaging",
+          "id": "messaging"
+        }
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "<<Task>>\\nTaskHandler",
+          "id": "TaskHandler"
+        }
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "core::service::ProxyHandle<>",
+          "id": "ProxyHandle"
+        }
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "platform::ServiceHost",
+          "id": "ServiceHost"
+        }
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Arrow Types"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Standard message"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Return message"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": {
+              "raw": "<"
+            },
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": null
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Reverse message"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": {
+              "raw": "<"
+            },
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": null
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Reverse return"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Incoming request"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": {
+              "raw": "<"
+            },
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": null
+          },
+          "right": ""
+        }
+      },
+      "description": "Outgoing response"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Activation Patterns"
+    }
+  },
+  {
+    "ActivateCmd": {
+      "participant": "Actor1"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Activate target"
+    }
+  },
+  {
+    "ActivateCmd": {
+      "participant": "Actor2"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Builder"
+        }
+      },
+      "description": "Nested call"
+    }
+  },
+  {
+    "ActivateCmd": {
+      "participant": "Builder"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Builder",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": null
+    }
+  },
+  {
+    "DeactivateCmd": {
+      "participant": "Builder"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": null
+    }
+  },
+  {
+    "DeactivateCmd": {
+      "participant": "Actor2"
+    }
+  },
+  {
+    "DeactivateCmd": {
+      "participant": "Actor1"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Lifecycle Events"
+    }
+  },
+  {
+    "CreateCmd": {
+      "participant": "TaskHandler"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "TaskHandler"
+        }
+      },
+      "description": "create"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "TaskHandler",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Self Messages"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Internal operation"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+        "description": "runtime::wait_for_shutdown()"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Message with inline note"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "configuration is cached"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Cached result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Else",
+      "text": "configuration needs to be fetched"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "messaging"
+        }
+      },
+      "description": "Fetch from service"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "messaging",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "system is in restricted mode and the access token is invalid\\n or it does not match the request"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "TaskHandler",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Error response"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Else",
+      "text": "access token is valid"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "TaskHandler",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Success response"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Loop",
+      "text": "For each item"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Process item"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "loop"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Loop",
+      "text": "(item_list) [Call FetchValue for each item]"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Builder"
+        }
+      },
+        "description": "FetchValue(item)"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Loop",
+      "text": "0..2 {0..3000ms}"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "timeout not reached"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Retry"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Loop",
+      "text": "For Segment in Segments"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+        "description": "Process segment"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Loop",
+      "text": "Until success"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "condition met"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Break",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Continue processing"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Complex Messages"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Builder"
+        }
+      },
+        "description": "Run(config_collection, callback, stop_token, error_reporter)"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Builder",
+          "arrow": {
+            "left": {
+              "raw": "<"
+            },
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": null
+          },
+          "right": "TaskHandler"
+        }
+      },
+      "description": "StartResponse::ValidationResult::kAccepted (0x00)"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ProxyHandle"
+        }
+      },
+      "description": "std::unique_ptr<IServiceProxy>>"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "PerformQualification() [[https:"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Complex Flow with All Elements"
+    }
+  },
+  {
+    "ActivateCmd": {
+      "participant": "runtime"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "runtime",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "messaging"
+        }
+      },
+      "description": "Initialize(context)"
+    }
+  },
+  {
+    "ActivateCmd": {
+      "participant": "messaging"
+    }
+  },
+  {
+    "CreateCmd": {
+      "participant": "Builder"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "messaging",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Builder"
+        }
+      },
+      "description": "create"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Builder",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "messaging"
+        }
+      },
+      "description": null
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "messaging",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Builder"
+        }
+      },
+      "description": "Configure(params)"
+    }
+  },
+  {
+    "ActivateCmd": {
+      "participant": "Builder"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Builder",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Builder"
+        }
+      },
+      "description": "ValidateConfiguration()"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "configuration is valid"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Builder",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "messaging"
+        }
+      },
+      "description": "Success"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Loop",
+      "text": "For each service"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "messaging",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ServiceHost"
+        }
+      },
+      "description": "StartService()"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ServiceHost",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "messaging"
+        }
+      },
+      "description": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Else",
+      "text": "configuration invalid"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Builder",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "messaging"
+        }
+      },
+      "description": "Error"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "DeactivateCmd": {
+      "participant": "Builder"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "messaging",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "runtime"
+        }
+      },
+      "description": "ExitCodeOk"
+    }
+  },
+  {
+    "DeactivateCmd": {
+      "participant": "messaging"
+    }
+  },
+  {
+    "DeactivateCmd": {
+      "participant": "runtime"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Construction stage"
+    }
+  },
+  {
+    "CreateCmd": {
+      "participant": "Actor1"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "runtime",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "create"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Initialization stage"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "runtime",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Initialize()"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "system ready"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "StartServices()"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Run stage"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "runtime",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Run(stop_token)"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Loop",
+      "text": "Until stop requested"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "ProcessEvents()"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Edge Cases"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": null
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "condition"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Else",
+      "text": null
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Default action"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "ActivateCmd": {
+      "participant": "Actor1"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Call1"
+    }
+  },
+  {
+    "ActivateCmd": {
+      "participant": "Actor2"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Builder"
+        }
+      },
+      "description": "Call2"
+    }
+  },
+  {
+    "ActivateCmd": {
+      "participant": "Builder"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Builder",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "TaskHandler"
+        }
+      },
+      "description": "Call3"
+    }
+  },
+  {
+    "ActivateCmd": {
+      "participant": "TaskHandler"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "TaskHandler",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Builder"
+        }
+      },
+      "description": null
+    }
+  },
+  {
+    "DeactivateCmd": {
+      "participant": "TaskHandler"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Builder",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": null
+    }
+  },
+  {
+    "DeactivateCmd": {
+      "participant": "Builder"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": null
+    }
+  },
+  {
+    "DeactivateCmd": {
+      "participant": "Actor2"
+    }
+  },
+  {
+    "DeactivateCmd": {
+      "participant": "Actor1"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Extended Patterns: Preprocessor Functions"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "$redtext(\"Error message\")"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "$greentext(\"Success message\")"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Extended Patterns: Participants with Colors"
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "Id": "ColoredActor1"
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "Id": "ColoredActor2"
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "Id": "ColoredActor3"
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ColoredActor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ColoredActor2"
+        }
+      },
+      "description": "Message"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ColoredActor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ColoredActor3"
+        }
+      },
+      "description": "Another message"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Extended Patterns: Boxes with Colors"
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "Id": "BoxedActor1"
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "Id": "BoxedActor2"
+      },
+      "stereotype": null
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "BoxedActor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "BoxedActor2"
+        }
+      },
+      "description": "Message inside box"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Extended Patterns: Lost and Found Messages"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "[o",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Incoming request"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "[",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Another incoming"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "[x",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Builder"
+        }
+      },
+      "description": "Third variant"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "o]"
+        }
+      },
+      "description": "Outgoing response"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "]"
+        }
+      },
+      "description": "Another outgoing"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "x]"
+        }
+      },
+      "description": "Third variant"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "[o",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Right bracket on left"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "o["
+        }
+      },
+      "description": "Left bracket on right"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Extended Patterns: Activation Markers"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "activation_marker": "++",
+      "description": "Activate with message"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Builder"
+        }
+      },
+      "activation_marker": "++",
+      "description": "Nested activation"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Builder",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "activation_marker": "--",
+      "description": "Deactivate with response"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "activation_marker": "--",
+      "description": "Deactivate outer"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "TaskHandler"
+        }
+      },
+      "activation_marker": "**",
+      "description": "Create and activate"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "activation_marker": "!!",
+      "description": "Destroy marker"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Extended Patterns: Ref Blocks"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Extended Patterns: Dividers with URLs"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Initialize"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Builder"
+        }
+      },
+      "description": "Process"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Builder",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Verify"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Group",
+      "text": "Extended Patterns: Standalone Ellipsis"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor1",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor2"
+        }
+      },
+      "description": "Start process"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "Actor2",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "Actor1"
+        }
+      },
+      "description": "Complete"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": "group"
+    }
+  }
+]

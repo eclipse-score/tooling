@@ -1,0 +1,70 @@
+// *******************************************************************************
+// Copyright (c) 2026 Contributors to the Eclipse Foundation
+//
+// See the NOTICE file(s) distributed with this work for additional
+// information regarding copyright ownership.
+//
+// This program and the accompanying materials are made available under the
+// terms of the Apache License Version 2.0 which is available at
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// SPDX-License-Identifier: Apache-2.0
+// *******************************************************************************
+
+// ---------------------------
+// Common
+// ---------------------------
+WHITESPACE  = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" }
+COMMENT = _{ "'" ~ (!NEWLINE ~ ANY)* | "//" ~ (!NEWLINE ~ ANY)* }
+
+// ---------------------------
+// Entry Rule
+// ---------------------------
+file = { SOI ~ line* ~ EOI }
+line = _{
+      procedure_line
+    | macro_call_line
+    | text_line
+    | NEWLINE
+}
+
+// ---------------------------
+// Procedure
+// ---------------------------
+procedure_line = {
+    "!procedure" ~ WHITESPACE* ~ proc_name ~ "(" ~ param_list? ~ ")" ~ NEWLINE
+    ~ procedure_body
+    ~ "!endprocedure"
+}
+
+proc_name = { macro_identifier | identifier }
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+macro_identifier = @{ "$" ~ identifier }
+
+param_list = { macro_identifier ~ ("," ~ macro_identifier)* }
+
+procedure_body = { body_element* }
+body_element = _{
+      macro_call_line
+    | text_line
+    | NEWLINE
+}
+
+// ---------------------------
+// Macro Call
+// ---------------------------
+macro_call_line = { (macro_identifier | identifier) ~ "(" ~ arg_list? ~ ")" }
+arg_list = { arg ~ ("," ~ arg)* }
+arg = { macro_identifier | string | number | identifier }
+string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+number = @{ "-"? ~ ASCII_DIGIT+ }
+
+// ---------------------------
+// Raw Text
+// ---------------------------
+text_line = {
+    !procedure_keyword
+    ~ (!NEWLINE ~ ANY)+
+}
+procedure_keyword = { "!procedure" | "!endprocedure" }

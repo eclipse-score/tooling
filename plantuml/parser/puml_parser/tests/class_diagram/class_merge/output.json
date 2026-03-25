@@ -1,0 +1,48 @@
+{"class_merge.puml":
+  {
+    "name": "class_merge",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "A",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [
+              {
+                "visibility": "Public",
+                "name": "attr_1",
+                "type": "int"
+              }
+            ],
+            "methods": []
+          }
+        }
+      },
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "A",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [
+              {
+                "visibility": "Private",
+                "name": "attr_2",
+                "type": "int"
+              }
+            ],
+            "methods": []
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

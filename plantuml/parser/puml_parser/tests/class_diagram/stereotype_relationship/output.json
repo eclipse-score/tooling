@@ -1,0 +1,52 @@
+{
+  "stereotype_relationship.puml": {
+    "name": "stereotype_relationship",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "User",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": []
+          }
+        }
+      },
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "UserService",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": []
+          }
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "left": "UserService",
+        "right": "User",
+        "arrow": {
+          "left": null,
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": {
+            "raw": ">"
+          }
+        },
+        "label": "<<DependsOn>>"
+      }
+    ]
+  }
+}

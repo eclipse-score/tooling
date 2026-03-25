@@ -1,0 +1,50 @@
+{"cpp_style.puml":
+  {
+    "name": "cpp_style",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "::app::core::Controller",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": []
+          }
+        }
+      },
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "Dispatcher",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "attributes": [],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "Dispatch",
+                "generic_params": [],
+                "params": [
+                  {
+                    "name": null,
+                    "param_type": "Event",
+                    "varargs": true
+                  }
+                ],
+                "type": null
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

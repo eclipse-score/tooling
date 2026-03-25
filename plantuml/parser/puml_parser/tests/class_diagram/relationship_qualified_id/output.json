@@ -1,0 +1,23 @@
+{
+  "relationship_qualified_id.puml": {
+    "name": "relationship_qualified_id",
+    "elements": [],
+    "relationships": [
+      {
+        "left": "App.UI.Button",
+        "right": "App.Feat.TextButton",
+        "arrow": {
+          "left": {
+            "raw": "<|"
+          },
+          "line": {
+            "raw": "--"
+          },
+          "middle": null,
+          "right": null
+        },
+        "label": null
+      }
+    ]
+  }
+}
