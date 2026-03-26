@@ -151,6 +151,122 @@ class InteractiveRunnerUiTest(unittest.TestCase):
             initial_text="prefill",
         )
 
+    def test_split_pane_prompt_justification_delegates_to_prompt_text(self) -> None:
+        ui = _SplitPaneUI()
+
+        with mock.patch.object(
+            ui, "_prompt_text", return_value="checked manually"
+        ) as prompt_text:
+            value = ui.prompt_justification(
+                "Why this answer?",
+                default_text="previous reason",
+            )
+
+        self.assertEqual(value, "checked manually")
+        prompt_text.assert_called_once_with(
+            title="Justification",
+            instructions=(
+                "Why this answer?\n\n"
+                "Provide a short rationale for your selected answer. "
+                "Leave empty if no justification is needed."
+            ),
+            multiline=True,
+            initial_text="previous reason",
+        )
+
+    def test_split_pane_choice_with_justification_returns_both_values(self) -> None:
+        ui = _SplitPaneUI()
+
+        class FakeTextArea:
+            def __init__(self, **kwargs) -> None:
+                self.text = kwargs.get("text", "")
+                self.read_only = kwargs.get("read_only", False)
+                self.focusable = kwargs.get("focusable", True)
+                self.scrollbar = kwargs.get("scrollbar", False)
+                self.wrap_lines = kwargs.get("wrap_lines", True)
+                self.multiline = kwargs.get("multiline", True)
+                self.buffer = SimpleNamespace(cursor_position=0)
+                self.window = SimpleNamespace(vertical_scroll=0, render_info=None)
+
+        class FakeFrame:
+            def __init__(self, body, title=None, height=None) -> None:
+                self.body = body
+                self.title = title
+                self.height = height
+
+        class FakeVSplit:
+            def __init__(self, children, height=None) -> None:
+                self.children = children
+                self.height = height
+
+        class FakeHSplit:
+            def __init__(self, children, height=None) -> None:
+                self.children = children
+                self.height = height
+
+        class FakeDimension:
+            def __init__(self, **kwargs) -> None:
+                self.kwargs = kwargs
+
+        class FakeLayout:
+            def __init__(self, container, focused_element=None) -> None:
+                self.container = container
+                self.focused_element = focused_element
+                self.current_control = focused_element
+
+            def has_focus(self, element) -> bool:
+                return self.current_control is element
+
+            def focus(self, element) -> None:
+                self.current_control = element
+
+        class FakeKeyBindings:
+            def __init__(self) -> None:
+                self.handlers = {}
+
+            def add(self, key):
+                def decorator(func):
+                    self.handlers[key] = func
+                    return func
+
+                return decorator
+
+        class FakeApplication:
+            def __init__(self, layout, key_bindings, full_screen) -> None:
+                self.layout = layout
+                self.key_bindings = key_bindings
+                self.full_screen = full_screen
+                self.pre_run_callables = []
+
+            def run(self):
+                for callback in self.pre_run_callables:
+                    callback()
+                return {"answer": "Yes", "justification": "verified in code"}
+
+        fake_modules = {
+            "prompt_toolkit.application": mock.Mock(Application=FakeApplication),
+            "prompt_toolkit.key_binding": mock.Mock(KeyBindings=FakeKeyBindings),
+            "prompt_toolkit.layout": mock.Mock(
+                HSplit=FakeHSplit, Layout=FakeLayout, VSplit=FakeVSplit
+            ),
+            "prompt_toolkit.layout.dimension": mock.Mock(Dimension=FakeDimension),
+            "prompt_toolkit.shortcuts": mock.Mock(message_dialog=mock.Mock()),
+            "prompt_toolkit.widgets": mock.Mock(Frame=FakeFrame, TextArea=FakeTextArea),
+        }
+
+        with mock.patch(
+            "manual_analysis.interactive_runner_ui_split.importlib.import_module",
+            side_effect=lambda name: fake_modules[name],
+        ):
+            answer, justification = ui.prompt_choice_with_justification(
+                "Proceed?",
+                ["Yes", "No"],
+                default_option="No",
+            )
+
+        self.assertEqual(answer, "Yes")
+        self.assertEqual(justification, "verified in code")
+
     def test_split_pane_prompt_args_form_returns_submitted_values(self) -> None:
         ui = _SplitPaneUI()
 

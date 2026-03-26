@@ -22,7 +22,9 @@ class _PrefillState:
     def __init__(self) -> None:
         self._action_by_description: dict[str, list[str]] = {}
         self._assertion_by_description: dict[str, list[str]] = {}
+        self._assertion_justification_by_description: dict[str, list[str]] = {}
         self._decision_by_description: dict[str, list[str]] = {}
+        self._decision_justification_by_description: dict[str, list[str]] = {}
         self._automated_args_by_template: dict[str, list[dict[str, str]]] = {}
         self._repeat_until_by_description: dict[str, list[list[str]]] = {}
         self._repeat_iteration_count_by_description: dict[str, list[int]] = {}
@@ -81,6 +83,13 @@ class _PrefillState:
             answer = entry.get("answer")
             if isinstance(description, str) and isinstance(answer, str):
                 self._push(self._assertion_by_description, description, answer)
+            justification = entry.get("justification")
+            if isinstance(description, str) and isinstance(justification, str):
+                self._push(
+                    self._assertion_justification_by_description,
+                    description,
+                    justification,
+                )
             return
 
         if entry_type == "decision":
@@ -88,6 +97,13 @@ class _PrefillState:
             answer = entry.get("answer")
             if isinstance(description, str) and isinstance(answer, str):
                 self._push(self._decision_by_description, description, answer)
+            justification = entry.get("justification")
+            if isinstance(description, str) and isinstance(justification, str):
+                self._push(
+                    self._decision_justification_by_description,
+                    description,
+                    justification,
+                )
             nested_steps = entry.get("steps")
             if isinstance(nested_steps, list):
                 for nested in nested_steps:
@@ -130,9 +146,17 @@ class _PrefillState:
         value = self._pop(self._assertion_by_description, description)
         return value if isinstance(value, str) and value in options else None
 
+    def next_assertion_justification(self, description: str) -> str | None:
+        value = self._pop(self._assertion_justification_by_description, description)
+        return value if isinstance(value, str) else None
+
     def next_decision(self, description: str, options: list[str]) -> str | None:
         value = self._pop(self._decision_by_description, description)
         return value if isinstance(value, str) and value in options else None
+
+    def next_decision_justification(self, description: str) -> str | None:
+        value = self._pop(self._decision_justification_by_description, description)
+        return value if isinstance(value, str) else None
 
     def next_automated_args(
         self,

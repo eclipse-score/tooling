@@ -20,8 +20,11 @@ from manual_analysis.interactive_runner_steps import (
 )
 from manual_analysis.yaml_schema import (
     ActionStep,
+    AssertionStep,
     AutomatedActionArg,
     AutomatedActionStep,
+    DecisionBranch,
+    DecisionStep,
     RepeatStep,
     RepeatUntil,
 )
@@ -155,6 +158,52 @@ class InteractiveRunnerStepsTest(unittest.TestCase):
             mock.call.prompt_multiline("Run one iteration", initial_text="")
         )
         self.assertGreater(repeat_instruction_index, action_prompt_index)
+
+    def test_execute_assertion_persists_justification_when_provided(self) -> None:
+        ui = mock.Mock()
+        ui.prompt_choice_with_justification.return_value = (
+            "No",
+            "checked manually",
+        )
+        results: list[dict] = []
+
+        _execute_step(
+            AssertionStep(description="Any errors?", positive="No", negative="Yes"),
+            ui,
+            results,
+        )
+
+        self.assertEqual(results[0]["type"], "assertion")
+        self.assertEqual(results[0]["justification"], "checked manually")
+        self.assertTrue(results[0]["passed"])
+
+    def test_execute_decision_persists_justification_when_provided(self) -> None:
+        ui = mock.Mock()
+        ui.prompt_choice_with_justification.return_value = (
+            "A",
+            "branch A applies",
+        )
+        ui.prompt_multiline.return_value = "nested result"
+        results: list[dict] = []
+
+        _execute_step(
+            DecisionStep(
+                description="Select branch",
+                branches=[
+                    DecisionBranch(
+                        answer="A",
+                        steps=[ActionStep(description="Capture nested")],
+                    ),
+                    DecisionBranch(answer="B", steps=[]),
+                ],
+            ),
+            ui,
+            results,
+        )
+
+        self.assertEqual(results[0]["type"], "decision")
+        self.assertEqual(results[0]["answer"], "A")
+        self.assertEqual(results[0]["justification"], "branch A applies")
 
 
 if __name__ == "__main__":

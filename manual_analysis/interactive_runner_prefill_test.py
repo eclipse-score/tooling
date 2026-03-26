@@ -34,11 +34,17 @@ class InteractiveRunnerPrefillTest(unittest.TestCase):
                     "command_template": "echo {name}",
                     "args": {"name": "workspace", "count": 7},
                 },
-                {"type": "assertion", "description": "ok?", "answer": "No"},
+                {
+                    "type": "assertion",
+                    "description": "ok?",
+                    "answer": "No",
+                    "justification": "validated by check",
+                },
                 {
                     "type": "decision",
                     "description": "branch?",
                     "answer": "A",
+                    "justification": "matches scenario",
                     "steps": [
                         {"type": "action", "description": "nested", "result": "inside"}
                     ],
@@ -54,6 +60,7 @@ class InteractiveRunnerPrefillTest(unittest.TestCase):
                         "type": "assertion",
                         "description": "final",
                         "answer": "No",
+                        "justification": "final check is clean",
                     },
                 },
             ]
@@ -71,7 +78,13 @@ class InteractiveRunnerPrefillTest(unittest.TestCase):
             {"name": "workspace", "count": "7"},
         )
         self.assertEqual(state.next_assertion("ok?", ["Yes", "No"]), "No")
+        self.assertEqual(
+            state.next_assertion_justification("ok?"), "validated by check"
+        )
         self.assertEqual(state.next_decision("branch?", ["A", "B"]), "A")
+        self.assertEqual(
+            state.next_decision_justification("branch?"), "matches scenario"
+        )
         self.assertEqual(state.next_action("nested"), "inside")
         self.assertEqual(
             state.next_repeat_until_answers("again?", "Continue", "Stop"),
@@ -79,6 +92,9 @@ class InteractiveRunnerPrefillTest(unittest.TestCase):
         )
         self.assertEqual(state.next_action("iter"), "i1")
         self.assertEqual(state.next_assertion("final", ["No", "Yes"]), "No")
+        self.assertEqual(
+            state.next_assertion_justification("final"), "final check is clean"
+        )
 
     def test_repeat_until_falls_back_to_iteration_count(self) -> None:
         payload = {

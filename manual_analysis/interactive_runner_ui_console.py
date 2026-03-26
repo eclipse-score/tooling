@@ -54,6 +54,33 @@ class _ConsoleUI:
                 return selected
             print(f"Invalid answer '{answer}'. Expected one of: {', '.join(options)}")
 
+    def prompt_justification(
+        self,
+        prompt: str,
+        default_text: str | None = None,
+    ) -> str:
+        suffix = ""
+        if default_text:
+            suffix = f" [{default_text}]"
+        answer = self._input_fn(f"{prompt}{suffix} (optional): ").strip()
+        if answer == "" and default_text is not None:
+            return default_text
+        return answer
+
+    def prompt_choice_with_justification(
+        self,
+        description: str,
+        options: list[str],
+        default_option: str | None = None,
+        default_justification: str | None = None,
+    ) -> tuple[str, str]:
+        answer = self.prompt_choice(description, options, default_option=default_option)
+        justification = self.prompt_justification(
+            "Justification",
+            default_text=default_justification,
+        )
+        return answer, justification
+
     def prompt_multiline(self, prompt: str, initial_text: str = "") -> str:
         print(prompt)
         print("Enter result text. Finish input with Ctrl+A (ASCII 0x01) on a new line.")

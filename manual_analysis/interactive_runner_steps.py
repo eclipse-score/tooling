@@ -106,7 +106,7 @@ def _execute_step(
             "Instructions",
             f"{step.description}\n\nAllowed answers: {step.positive}, {step.negative}",
         )
-        answer = ui.prompt_choice(
+        answer, justification = ui.prompt_choice_with_justification(
             step.description,
             [step.positive, step.negative],
             default_option=(
@@ -114,17 +114,23 @@ def _execute_step(
                 if prefill is not None
                 else None
             ),
+            default_justification=(
+                prefill.next_assertion_justification(step.description)
+                if prefill is not None
+                else None
+            ),
         )
         passed = answer == step.positive
         ui.show_text("Result", f"Answer: {answer}")
-        results.append(
-            {
-                "type": "assertion",
-                "description": step.description,
-                "answer": answer,
-                "passed": passed,
-            }
-        )
+        assertion_result = {
+            "type": "assertion",
+            "description": step.description,
+            "answer": answer,
+            "passed": passed,
+        }
+        if justification:
+            assertion_result["justification"] = justification
+        results.append(assertion_result)
         if not passed:
             raise AnalysisFailedError(f"Assertion failed: {step.description}")
         return
@@ -133,11 +139,16 @@ def _execute_step(
         ui.print_header("Decision")
         ui.show_text("Instructions", step.description)
         options = [branch.answer for branch in step.branches]
-        selected_answer = ui.prompt_choice(
+        selected_answer, justification = ui.prompt_choice_with_justification(
             step.description,
             options,
             default_option=(
                 prefill.next_decision(step.description, options)
+                if prefill is not None
+                else None
+            ),
+            default_justification=(
+                prefill.next_decision_justification(step.description)
                 if prefill is not None
                 else None
             ),
@@ -151,14 +162,15 @@ def _execute_step(
         for nested_step in selected_branch.steps:
             _execute_step(nested_step, ui, branch_result, prefill=prefill)
 
-        results.append(
-            {
-                "type": "decision",
-                "description": step.description,
-                "answer": selected_answer,
-                "steps": branch_result,
-            }
-        )
+        decision_result = {
+            "type": "decision",
+            "description": step.description,
+            "answer": selected_answer,
+            "steps": branch_result,
+        }
+        if justification:
+            decision_result["justification"] = justification
+        results.append(decision_result)
         return
 
     if isinstance(step, RepeatStep):

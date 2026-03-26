@@ -68,6 +68,25 @@ class InteractiveRunnerUiConsoleTest(unittest.TestCase):
 
         self.assertEqual(values, {"subject": "new-subject", "mode": ""})
 
+    def test_prompt_justification_uses_default_on_empty_answer(self) -> None:
+        ui = _ConsoleUI(lambda _: "")
+
+        value = ui.prompt_justification("Why?", default_text="previous reason")
+
+        self.assertEqual(value, "previous reason")
+
+    def test_prompt_choice_with_justification_returns_both_values(self) -> None:
+        answers = iter(["Yes", "based on trace"])
+        ui = _ConsoleUI(lambda _: next(answers))
+
+        answer, justification = ui.prompt_choice_with_justification(
+            "Proceed?",
+            ["Yes", "No"],
+        )
+
+        self.assertEqual(answer, "Yes")
+        self.assertEqual(justification, "based on trace")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -75,6 +75,7 @@ steps:
                                 "description": "Any errors?",
                                 "answer": "No",
                                 "passed": True,
+                                "justification": "no problematic paths found",
                             },
                         ],
                     },
@@ -86,7 +87,7 @@ steps:
 
             steps, _ = load_analysis(analysis_path)
             prefill = _PrefillState.load(results_path)
-            answers = iter(["\x01", ""])
+            answers = iter(["\x01", "", ""])
             results = run_analysis(
                 steps,
                 input_fn=lambda _: next(answers),
@@ -98,6 +99,9 @@ steps:
             self.assertEqual(results[0]["result"], "previous finding")
             self.assertEqual(results[1]["answer"], "No")
             self.assertEqual(results[1]["passed"], True)
+            self.assertEqual(
+                results[1]["justification"], "no problematic paths found"
+            )
 
     def test_run_analysis_prefills_repeat_until_from_legacy_iterations(self) -> None:
         analysis_yaml = """
@@ -196,7 +200,9 @@ steps:
             results_path = Path(tmpdir) / "results.json"
             analysis_path.write_text(analysis_yaml.strip() + "\n", encoding="utf-8")
 
-            answers = iter(["note line 1", "note line 2", "\x01", "No"])
+            answers = iter(
+                ["note line 1", "note line 2", "\x01", "No", "checked logs"]
+            )
             with mock.patch("builtins.input", side_effect=lambda _: next(answers)):
                 interactive_runner_cli.main(
                     [
@@ -210,6 +216,7 @@ steps:
             payload = json.loads(results_path.read_text(encoding="utf-8"))
             self.assertEqual(payload["results"][0]["type"], "action")
             self.assertEqual(payload["results"][1]["passed"], True)
+            self.assertEqual(payload["results"][1]["justification"], "checked logs")
 
     def test_run_analysis_writes_partial_results_with_failed_final_assertion(
         self,
@@ -271,7 +278,7 @@ steps:
             results_path = Path(tmpdir) / "results.json"
             analysis_path.write_text(analysis_yaml.strip() + "\n", encoding="utf-8")
 
-            answers = iter(["Yes"])
+            answers = iter(["Yes", "observed terminate call"])
             with mock.patch("builtins.input", side_effect=lambda _: next(answers)):
                 with self.assertRaises(SystemExit):
                     interactive_runner_cli.main(
@@ -286,6 +293,10 @@ steps:
             payload = json.loads(results_path.read_text(encoding="utf-8"))
             self.assertEqual(payload["results"][-1]["type"], "assertion")
             self.assertEqual(payload["results"][-1]["passed"], False)
+            self.assertEqual(
+                payload["results"][-1]["justification"],
+                "observed terminate call",
+            )
 
     def test_main_exits_on_failed_assertion(self) -> None:
         analysis_yaml = """
@@ -304,7 +315,7 @@ steps:
             results_path = Path(tmpdir) / "results.json"
             analysis_path.write_text(analysis_yaml.strip() + "\n", encoding="utf-8")
 
-            answers = iter(["Yes"])
+            answers = iter(["Yes", "observed terminate call"])
             with mock.patch("builtins.input", side_effect=lambda _: next(answers)):
                 with self.assertRaises(SystemExit) as cm:
                     interactive_runner_cli.main(

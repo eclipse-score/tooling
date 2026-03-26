@@ -362,6 +362,229 @@ class _SplitPaneUI:
         )
         return selected
 
+    def prompt_justification(
+        self,
+        prompt: str,
+        default_text: str | None = None,
+    ) -> str:
+        justification = self._prompt_text(
+            title="Justification",
+            instructions=(
+                f"{prompt}\n\n"
+                "Provide a short rationale for your selected answer. "
+                "Leave empty if no justification is needed."
+            ),
+            multiline=True,
+            initial_text=default_text or "",
+        )
+        if justification:
+            self._append_history("Justification", justification, "=" * 78)
+        return justification
+
+    def prompt_choice_with_justification(
+        self,
+        description: str,
+        options: list[str],
+        default_option: str | None = None,
+        default_justification: str | None = None,
+    ) -> tuple[str, str]:
+        application_module = importlib.import_module("prompt_toolkit.application")
+        key_binding_module = importlib.import_module("prompt_toolkit.key_binding")
+        layout_module = importlib.import_module("prompt_toolkit.layout")
+        dimension_module = importlib.import_module("prompt_toolkit.layout.dimension")
+        shortcuts_module = importlib.import_module("prompt_toolkit.shortcuts")
+        widgets_module = importlib.import_module("prompt_toolkit.widgets")
+
+        Application = getattr(application_module, "Application")
+        KeyBindings = getattr(key_binding_module, "KeyBindings")
+        HSplit = getattr(layout_module, "HSplit")
+        Layout = getattr(layout_module, "Layout")
+        VSplit = getattr(layout_module, "VSplit")
+        Dimension = getattr(dimension_module, "Dimension")
+        message_dialog = getattr(shortcuts_module, "message_dialog")
+        Frame = getattr(widgets_module, "Frame")
+        TextArea = getattr(widgets_module, "TextArea")
+
+        answer_text = default_option or ""
+        justification_text = default_justification or ""
+        while True:
+            left_area = TextArea(
+                text=self._history_text(),
+                read_only=True,
+                focusable=True,
+                scrollbar=True,
+                wrap_lines=False,
+            )
+            instructions_area = TextArea(
+                text=(
+                    f"{description}\n\n"
+                    f"Allowed answers: {', '.join(options)}\n"
+                    "Provide an optional justification in the field below."
+                ),
+                read_only=True,
+                focusable=True,
+                scrollbar=True,
+                wrap_lines=True,
+            )
+            answer_area = TextArea(
+                text=answer_text,
+                multiline=False,
+                focusable=True,
+                scrollbar=False,
+                wrap_lines=False,
+            )
+            justification_area = TextArea(
+                text=justification_text,
+                multiline=True,
+                focusable=True,
+                scrollbar=True,
+                wrap_lines=True,
+            )
+            status_area = TextArea(
+                text="",
+                read_only=True,
+                focusable=False,
+                wrap_lines=True,
+            )
+            key_bindings = KeyBindings()
+
+            focus_order = [left_area, instructions_area, answer_area, justification_area]
+
+            def _focused_index() -> int:
+                for index, field in enumerate(focus_order):
+                    if layout.has_focus(field):
+                        return index
+                return 0
+
+            def _status_text() -> str:
+                index = _focused_index()
+                if focus_order[index] is answer_area:
+                    return "Tab/Shift-Tab: switch focus | Ctrl-S/F2: submit | Answer field"
+                if focus_order[index] is justification_area:
+                    return (
+                        "Tab/Shift-Tab: switch focus | Ctrl-S/F2: submit | "
+                        "Justification field"
+                    )
+                if focus_order[index] is left_area:
+                    return (
+                        "Tab/Shift-Tab: switch focus | Up/Down/PgUp/PgDn: "
+                        "scroll history"
+                    )
+                return "Tab/Shift-Tab: switch focus | Ctrl-S/F2: submit"
+
+            @key_bindings.add("tab")
+            def _focus_next(event) -> None:  # type: ignore[no-untyped-def]
+                index = _focused_index()
+                event.app.layout.focus(focus_order[(index + 1) % len(focus_order)])
+                status_area.text = _status_text()
+
+            @key_bindings.add("s-tab")
+            def _focus_previous(event) -> None:  # type: ignore[no-untyped-def]
+                index = _focused_index()
+                event.app.layout.focus(focus_order[(index - 1) % len(focus_order)])
+                status_area.text = _status_text()
+
+            @key_bindings.add("c-s")
+            @key_bindings.add("f2")
+            def _submit(event) -> None:  # type: ignore[no-untyped-def]
+                event.app.exit(
+                    result={
+                        "answer": answer_area.text,
+                        "justification": justification_area.text,
+                    }
+                )
+
+            @key_bindings.add("c-c")
+            def _abort(_event) -> None:  # type: ignore[no-untyped-def]
+                raise KeyboardInterrupt
+
+            layout = Layout(
+                HSplit(
+                    [
+                        VSplit(
+                            [
+                                Frame(left_area, title="Analysis Progress"),
+                                HSplit(
+                                    [
+                                        Frame(
+                                            instructions_area,
+                                            title="Instructions",
+                                            height=Dimension(min=4, max=7),
+                                        ),
+                                        Frame(
+                                            answer_area,
+                                            title="Selected Answer",
+                                            height=Dimension(min=3, max=3),
+                                        ),
+                                        Frame(
+                                            justification_area,
+                                            title="Justification (Optional)",
+                                            height=Dimension(weight=1),
+                                        ),
+                                    ],
+                                    height=Dimension(weight=1),
+                                ),
+                            ],
+                            height=Dimension(weight=1),
+                        ),
+                        Frame(
+                            status_area,
+                            title="Keys",
+                            height=Dimension(min=3, max=3),
+                        ),
+                    ],
+                    height=Dimension(weight=1),
+                ),
+                focused_element=answer_area,
+            )
+
+            app = Application(
+                layout=layout,
+                key_bindings=key_bindings,
+                full_screen=True,
+            )
+            pre_run_callables = getattr(app, "pre_run_callables", None)
+            if isinstance(pre_run_callables, list):
+                pre_run_callables.append(lambda: self._set_left_panel_scroll(left_area))
+                pre_run_callables.append(lambda: setattr(status_area, "text", _status_text()))
+            else:
+                self._set_left_panel_scroll(left_area)
+                status_area.text = _status_text()
+
+            submitted = app.run()
+            self._store_left_panel_scroll_state(left_area)
+            if not isinstance(submitted, dict):
+                raise KeyboardInterrupt
+
+            submitted_answer = str(submitted.get("answer", "")).strip()
+            submitted_justification = str(submitted.get("justification", "")).strip()
+            if submitted_answer == "" and default_option is not None:
+                selected = default_option
+            else:
+                allowed = {value.lower(): value for value in options}
+                selected = allowed.get(submitted_answer.lower())
+                if selected is None:
+                    message_dialog(
+                        title="Invalid input",
+                        text=f"Expected one of: {', '.join(options)}",
+                    ).run()
+                    answer_text = submitted_answer
+                    justification_text = submitted_justification
+                    continue
+
+            self._append_history(
+                "Decision Answer",
+                f"{description}\nAnswer: {selected}",
+                "=" * 78,
+            )
+            if submitted_justification:
+                self._append_history(
+                    "Justification",
+                    submitted_justification,
+                    "=" * 78,
+                )
+            return selected, submitted_justification
+
     def prompt_multiline(self, prompt: str, initial_text: str = "") -> str:
         instructions = (
             f"{prompt}\n\n"
