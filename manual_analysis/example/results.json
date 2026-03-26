@@ -3,12 +3,24 @@
   "results": [
     {
       "type": "action",
-      "description": "Determine the targets that might kill cats when they fail to build",
-      "result": "//manual_analysis/example:ma_cc_root"
+      "description": "Determine cat termination logic",
+      "result": "Cat termination logic found in //manual_analysis/example:ma_cc_dep.cc\nFunction name: kill_a_cat"
+    },
+    {
+      "type": "automated_action",
+      "command_template": "{bazel} cquery \"rdeps(//manual_analysis/example:ma_cc_root, {target})\" --notool_deps",
+      "command": "bazel cquery \"rdeps(//manual_analysis/example:ma_cc_root, //manual_analysis/example:ma_cc_dep)\" --notool_deps",
+      "args": {
+        "bazel": "bazel",
+        "target": "//manual_analysis/example:ma_cc_dep"
+      },
+      "expected_return_code": 0,
+      "return_code": 0,
+      "status": "passed"
     },
     {
       "type": "decision",
-      "description": "Did you find matching targets?",
+      "description": "Is there a dependency path from the handling logic to the termination logic?",
       "answer": "Yes",
       "steps": [
         {
@@ -20,25 +32,22 @@
           "iterations": [
             [
               {
-                "type": "automated_action",
-                "command_template": "bazel build {target}",
-                "command": "bazel build //manual_analysis/example:ma_cc_root",
-                "args": {
-                  "target": "//manual_analysis/example:ma_cc_root"
-                },
-                "expected_return_code": 0,
-                "return_code": 0,
-                "status": "passed"
+                "type": "assertion",
+                "description": "Take a target from the list of risky targets.\nDoes it contain a code path that could kill a cat?",
+                "answer": "No",
+                "passed": true,
+                "justification": "kill_a_cat() is only called when the number_of_cats does not fit into the return value.\nThe return value is of type std::int32_t.\nnumber_of_cats is assigned by a random number generator.\nThe random numbers are distributed between 0 and the maximum allowed number of std::int32_t.\nThus, all possible assigned numbers fit into the return type."
               }
             ]
           ]
         }
-      ]
+      ],
+      "justification": "Cat handling logic is stored in //manual_analysis/example:ma_cc_root function awful_cat_counter().\nTarget directly depends on //manual_analysis/example:ma_cc_dep and calls kill_a_cat()."
     },
     {
       "type": "assertion",
-      "description": "Did you just kill a cat?",
-      "answer": "No",
+      "description": "Do we keep all our cats save?",
+      "answer": "Yes",
       "passed": true
     }
   ]

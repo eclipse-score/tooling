@@ -13,6 +13,8 @@
 
 #include "manual_analysis/example/ma_cc_dep.h"
 
-int dep_value() {
-    return 1;
+#include <exception>
+
+void kill_a_cat() {
+    std::terminate();
 }

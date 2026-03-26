@@ -13,6 +13,6 @@
 #ifndef TOOLS_MANUAL_ANALYSIS_EXAMPLE_MA_CC_ROOT_H
 #define TOOLS_MANUAL_ANALYSIS_EXAMPLE_MA_CC_ROOT_H
 
-int root_value();
+int awful_cat_counter();
 
 #endif // TOOLS_MANUAL_ANALYSIS_EXAMPLE_MA_CC_ROOT_H

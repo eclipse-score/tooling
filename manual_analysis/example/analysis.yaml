@@ -1,8 +1,18 @@
+requirements:
+  - "CAT-SAFETY"
+
 steps:
   - action:
-    description: Determine the targets that might kill cats when they fail to build
+    description: Determine cat termination logic
+  - automated_action:
+    description: Determine targets that might kill cats during handling
+    command: "{bazel} cquery \"rdeps(//manual_analysis/example:ma_cc_root, {target})\" --notool_deps"
+    args:
+      - name: bazel
+        default: bazel
+      - name: target
   - decision:
-    description: Did you find matching targets?
+    description: Is there a dependency path from the handling logic to the termination logic?
     branches:
       - answer: Yes
         steps:
@@ -12,15 +22,15 @@ steps:
               continue: No
               break: Yes
             steps:
-              - automated_action:
-                description: Does their code compile?
-                command: bazel build {target}
-                args:
-                  - name: target
-                    default: //manual_analysis/example:ma_cc_root
+              - assertion:
+                description: |
+                  Take a target from the list of risky targets.
+                  Does it contain a code path that could kill a cat?
+                positive: No
+                negative: Yes
       - answer: No
         steps: []
   - assertion:
-    description: Did you just kill a cat?
-    positive: No
-    negative: Yes
+    description: Do we keep all our cats save?
+    positive: Yes
+    negative: No
