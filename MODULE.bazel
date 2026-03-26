@@ -35,6 +35,35 @@ bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2")
 bazel_dep(name = "flatbuffers", version = "25.9.23")
 
 ###############################################################################
+# CC Toolchain
+###############################################################################
+
+bazel_dep(name = "score_bazel_cpp_toolchains", version = "0.3.1", dev_dependency = True)
+
+score_gcc = use_extension("@score_bazel_cpp_toolchains//extensions:gcc.bzl", "gcc", dev_dependency = True)
+score_gcc.toolchain(
+    name = "score_gcc_x86_64_toolchain",
+    target_cpu = "x86_64",
+    target_os = "linux",
+    use_base_constraints_only = True,
+    use_default_package = True,
+    version = "12.2.0",
+)
+score_gcc.toolchain(
+    name = "score_qcc_x86_64_toolchain",
+    sdp_version = "8.0.0",
+    target_cpu = "x86_64",
+    target_os = "qnx",
+    use_default_package = True,
+    version = "12.2.0",
+)
+use_repo(
+    score_gcc,
+    "score_gcc_x86_64_toolchain",
+    "score_qcc_x86_64_toolchain",
+)
+
+###############################################################################
 # Rust Toolchain
 ###############################################################################
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
