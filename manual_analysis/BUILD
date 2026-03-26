@@ -63,6 +63,13 @@ py_library(
 )
 
 py_library(
+    name = "lobster_generator",
+    srcs = ["lobster_generator.py"],
+    imports = ["."],
+    visibility = ["//visibility:public"],
+)
+
+py_library(
     name = "interactive_runner_runtime_lib",
     srcs = ["interactive_runner_runtime.py"],
     imports = ["."],
@@ -187,6 +194,28 @@ py_binary(
 )
 
 py_library(
+    name = "manual_analysis_test_runner_lib",
+    srcs = ["manual_analysis_test_runner.py"],
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":check_lock_lib",
+        ":check_results_lib",
+        ":common",
+        ":lobster_generator",
+        ":yaml_schema",
+    ],
+)
+
+py_binary(
+    name = "manual_analysis_test_runner",
+    srcs = ["manual_analysis_test_runner.py"],
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [":manual_analysis_test_runner_lib"],
+)
+
+py_library(
     name = "update_lock_lib",
     srcs = ["update_lock.py"],
     imports = ["."],
@@ -194,20 +223,11 @@ py_library(
     deps = [":common"],
 )
 
-py_binary(
-    name = "check_lock",
-    srcs = ["check_lock.py"],
-    imports = ["."],
-    visibility = ["//visibility:public"],
-    deps = [":check_lock_lib"],
-)
-
 py_library(
     name = "check_lock_lib",
     srcs = ["check_lock.py"],
     imports = ["."],
     visibility = ["//visibility:public"],
-    deps = [":common"],
 )
 
 py_library(
@@ -215,15 +235,6 @@ py_library(
     srcs = ["check_results.py"],
     imports = ["."],
     visibility = ["//visibility:public"],
-    deps = [":common"],
-)
-
-py_binary(
-    name = "check_results",
-    srcs = ["check_results.py"],
-    imports = ["."],
-    visibility = ["//visibility:public"],
-    deps = [":check_results_lib"],
 )
 
 py_test(
@@ -339,6 +350,20 @@ py_test(
         ":interactive_runner_ui_console_lib",
         ":yaml_schema",
     ],
+)
+
+py_test(
+    name = "lobster_generator_test",
+    srcs = ["lobster_generator_test.py"],
+    main = "lobster_generator_test.py",
+    deps = [":lobster_generator"],
+)
+
+py_test(
+    name = "manual_analysis_test_runner_test",
+    srcs = ["manual_analysis_test_runner_test.py"],
+    main = "manual_analysis_test_runner_test.py",
+    deps = [":manual_analysis_test_runner_lib"],
 )
 
 # Run: bazel run //manual_analysis:requirements.update

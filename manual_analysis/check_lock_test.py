@@ -11,17 +11,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 import manual_analysis.check_lock as check_lock
 
 
 class CheckLockTest(unittest.TestCase):
-    def test_main_succeeds_when_locks_match(self) -> None:
+    def test_evaluate_succeeds_when_locks_match(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             computed = Path(tmpdir) / "computed.lock"
             committed = Path(tmpdir) / "committed.lock"
@@ -29,54 +27,30 @@ class CheckLockTest(unittest.TestCase):
             computed.write_text(content, encoding="utf-8")
             committed.write_text(content, encoding="utf-8")
 
-            check_lock.main(
-                ["--computed", str(computed), "--committed", str(committed)]
-            )
+            is_ok, error = check_lock.evaluate_lock_files(computed, committed)
+            self.assertTrue(is_ok)
+            self.assertIsNone(error)
 
-    def test_main_fails_when_computed_missing(self) -> None:
+    def test_evaluate_fails_when_computed_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             computed = Path(tmpdir) / "missing.lock"
             committed = Path(tmpdir) / "committed.lock"
             committed.write_text("x\n", encoding="utf-8")
 
-            with self.assertRaises(SystemExit) as cm:
-                check_lock.main(
-                    ["--computed", str(computed), "--committed", str(committed)]
-                )
+            is_ok, error = check_lock.evaluate_lock_files(computed, committed)
+            self.assertFalse(is_ok)
+            self.assertIn("computed lock file not found", error or "")
 
-            self.assertEqual(getattr(cm.exception, "code", None), 1)
-
-    def test_main_fails_when_contents_differ(self) -> None:
+    def test_evaluate_fails_when_contents_differ(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             computed = Path(tmpdir) / "computed.lock"
             committed = Path(tmpdir) / "committed.lock"
             computed.write_text("a path\n", encoding="utf-8")
             committed.write_text("b path\n", encoding="utf-8")
 
-            with self.assertRaises(SystemExit) as cm:
-                check_lock.main(
-                    ["--computed", str(computed), "--committed", str(committed)]
-                )
-
-            self.assertEqual(getattr(cm.exception, "code", None), 1)
-
-    def test_main_uses_environment_defaults(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            computed = Path(tmpdir) / "computed.lock"
-            committed = Path(tmpdir) / "committed.lock"
-            content = "same lock\n"
-            computed.write_text(content, encoding="utf-8")
-            committed.write_text(content, encoding="utf-8")
-
-            with mock.patch.dict(
-                os.environ,
-                {
-                    "MANUAL_ANALYSIS_COMPUTED_LOCK": str(computed),
-                    "MANUAL_ANALYSIS_COMMITTED_LOCK": str(committed),
-                },
-                clear=False,
-            ):
-                check_lock.main([])
+            is_ok, error = check_lock.evaluate_lock_files(computed, committed)
+            self.assertFalse(is_ok)
+            self.assertEqual(error, "Manual analysis lock file is out of date.")
 
 
 if __name__ == "__main__":

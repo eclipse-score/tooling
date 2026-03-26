@@ -64,7 +64,7 @@ def main(argv: list[str] | None = None) -> None:
         parser.error(f"Analysis file does not exist: {analysis_path}")
 
     results_path = resolve_path(args.results_file)
-    steps = load_analysis(analysis_path)
+    steps, _ = load_analysis(analysis_path)
     prefill = (
         _PrefillState.load(results_path) if not args.no_prefill_from_last_run else None
     )

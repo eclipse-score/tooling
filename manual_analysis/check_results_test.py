@@ -12,11 +12,9 @@
 # *******************************************************************************
 
 import json
-import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from manual_analysis import check_results
 
@@ -29,7 +27,7 @@ class CheckResultsTest(unittest.TestCase):
         }
         path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
-    def test_accepts_positive_final_assertion(self) -> None:
+    def test_evaluate_accepts_positive_final_assertion(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             results_path = Path(tmpdir) / "results.json"
             self._write_results(
@@ -45,14 +43,11 @@ class CheckResultsTest(unittest.TestCase):
                 ],
             )
 
-            with mock.patch.dict(
-                os.environ,
-                {"MANUAL_ANALYSIS_RESULTS_FILE": str(results_path)},
-                clear=False,
-            ):
-                check_results.main([])
+            is_ok, error = check_results.evaluate_results_file(results_path)
+            self.assertTrue(is_ok)
+            self.assertIsNone(error)
 
-    def test_rejects_failed_final_assertion(self) -> None:
+    def test_evaluate_rejects_failed_final_assertion(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             results_path = Path(tmpdir) / "results.json"
             self._write_results(
@@ -67,17 +62,14 @@ class CheckResultsTest(unittest.TestCase):
                 ],
             )
 
-            with mock.patch.dict(
-                os.environ,
-                {"MANUAL_ANALYSIS_RESULTS_FILE": str(results_path)},
-                clear=False,
-            ):
-                with self.assertRaises(SystemExit) as cm:
-                    check_results.main([])
+            is_ok, error = check_results.evaluate_results_file(results_path)
+            self.assertFalse(is_ok)
+            self.assertEqual(
+                error,
+                "Final manual analysis assertion is not positive.",
+            )
 
-            self.assertEqual(getattr(cm.exception, "code", None), 1)
-
-    def test_rejects_partial_run_marker(self) -> None:
+    def test_evaluate_rejects_partial_run_marker(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             results_path = Path(tmpdir) / "results.json"
             self._write_results(
@@ -94,17 +86,14 @@ class CheckResultsTest(unittest.TestCase):
                 ],
             )
 
-            with mock.patch.dict(
-                os.environ,
-                {"MANUAL_ANALYSIS_RESULTS_FILE": str(results_path)},
-                clear=False,
-            ):
-                with self.assertRaises(SystemExit) as cm:
-                    check_results.main([])
+            is_ok, error = check_results.evaluate_results_file(results_path)
+            self.assertFalse(is_ok)
+            self.assertEqual(
+                error,
+                "Final manual analysis assertion is not positive.",
+            )
 
-            self.assertEqual(getattr(cm.exception, "code", None), 1)
-
-    def test_rejects_when_last_result_is_not_assertion(self) -> None:
+    def test_evaluate_rejects_when_last_result_is_not_assertion(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             results_path = Path(tmpdir) / "results.json"
             self._write_results(
@@ -112,15 +101,12 @@ class CheckResultsTest(unittest.TestCase):
                 [{"type": "action", "description": "step", "result": "ok"}],
             )
 
-            with mock.patch.dict(
-                os.environ,
-                {"MANUAL_ANALYSIS_RESULTS_FILE": str(results_path)},
-                clear=False,
-            ):
-                with self.assertRaises(SystemExit) as cm:
-                    check_results.main([])
-
-            self.assertEqual(getattr(cm.exception, "code", None), 1)
+            is_ok, error = check_results.evaluate_results_file(results_path)
+            self.assertFalse(is_ok)
+            self.assertEqual(
+                error,
+                "Manual analysis does not end with an assertion.",
+            )
 
 
 if __name__ == "__main__":

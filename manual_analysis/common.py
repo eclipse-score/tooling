@@ -28,4 +28,26 @@ def resolve_path(raw_path: str) -> Path:
         if resolved.exists():
             return resolved
 
+    runfiles_dir = os.environ.get("RUNFILES_DIR")
+    if runfiles_dir:
+        for prefix in ("_main", ""):
+            parts = [runfiles_dir]
+            if prefix:
+                parts.append(prefix)
+            parts.append(str(candidate))
+            resolved = Path(*parts)
+            if resolved.exists():
+                return resolved
+
+    test_srcdir = os.environ.get("TEST_SRCDIR")
+    if test_srcdir:
+        for prefix in ("_main", ""):
+            parts = [test_srcdir]
+            if prefix:
+                parts.append(prefix)
+            parts.append(str(candidate))
+            resolved = Path(*parts)
+            if resolved.exists():
+                return resolved
+
     return candidate

@@ -241,16 +241,51 @@ def _parse_steps(
     return [_parse_step(raw_step, index) for index, raw_step in enumerate(raw_steps)]
 
 
-def parse_analysis(data: Any) -> list[Step]:
+def _parse_requirements(raw_requirements: Any) -> list[str]:
+    """Parse and validate the requirements list.
+    
+    Requirements must be a non-empty list of non-empty strings.
+    """
+    if raw_requirements is None:
+        raise ValueError("requirements field is mandatory")
+    if not isinstance(raw_requirements, list):
+        raise ValueError("requirements must be a list")
+    if not raw_requirements:
+        raise ValueError("requirements must be a non-empty list")
+    
+    requirements = []
+    for idx, req in enumerate(raw_requirements):
+        if not isinstance(req, str) or not req.strip():
+            raise ValueError(
+                f"requirements[{idx}] must be a non-empty string, got: {req!r}"
+            )
+        requirements.append(req.strip())
+    
+    return requirements
+
+
+def parse_analysis(data: Any) -> tuple[list[Step], list[str]]:
+    """Parse analysis configuration and return steps and requirements.
+    
+    Returns:
+        A tuple of (steps, requirements) where steps is a list of Step objects
+        and requirements is a list of requirement identifier strings.
+    """
     root = _expect_dict(data, "analysis")
     steps = _parse_steps(root.get("steps"), "steps")
+    requirements = _parse_requirements(root.get("requirements"))
 
     if not isinstance(steps[-1], AssertionStep):
         raise ValueError("A manual analysis must end with an assertion step")
 
-    return steps
+    return steps, requirements
 
 
-def load_analysis(path: Path) -> list[Step]:
+def load_analysis(path: Path) -> tuple[list[Step], list[str]]:
+    """Load and parse analysis YAML file.
+    
+    Returns:
+        A tuple of (steps, requirements).
+    """
     parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
     return parse_analysis(parsed)

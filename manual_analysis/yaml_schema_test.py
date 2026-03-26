@@ -25,8 +25,9 @@ from manual_analysis.yaml_schema import (
 
 class YamlSchemaTest(unittest.TestCase):
     def test_parse_supported_steps(self) -> None:
-        steps = parse_analysis(
+        steps, requirements = parse_analysis(
             {
+                "requirements": ["REQ-001", "REQ-002"],
                 "steps": [
                     {"action": None, "description": "Collect findings"},
                     {
@@ -96,6 +97,7 @@ class YamlSchemaTest(unittest.TestCase):
         self.assertIsInstance(steps[2], RepeatStep)
         self.assertIsInstance(steps[2].steps[0], DecisionStep)
         self.assertIsInstance(steps[3], AssertionStep)
+        self.assertEqual(requirements, ["REQ-001", "REQ-002"])
 
     def test_repeat_rejects_removed_assertion_keys(self) -> None:
         with self.assertRaisesRegex(
@@ -104,6 +106,7 @@ class YamlSchemaTest(unittest.TestCase):
         ):
             parse_analysis(
                 {
+                    "requirements": ["REQ-001"],
                     "steps": [
                         {
                             "repeat": None,
@@ -131,8 +134,9 @@ class YamlSchemaTest(unittest.TestCase):
             )
 
     def test_automated_action_defaults_expected_return_code(self) -> None:
-        steps = parse_analysis(
+        steps, _ = parse_analysis(
             {
+                "requirements": ["REQ-001"],
                 "steps": [
                     {"automated_action": None, "command": "true", "args": []},
                     {
@@ -150,6 +154,7 @@ class YamlSchemaTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "target is no longer supported"):
             parse_analysis(
                 {
+                    "requirements": ["REQ-001"],
                     "steps": [
                         {"automated_action": None, "target": "//demo:auto"},
                         {
@@ -163,8 +168,9 @@ class YamlSchemaTest(unittest.TestCase):
             )
 
     def test_decision_branch_allows_empty_or_missing_steps(self) -> None:
-        steps = parse_analysis(
+        steps, _ = parse_analysis(
             {
+                "requirements": ["REQ-001"],
                 "steps": [
                     {
                         "decision": None,
@@ -194,6 +200,7 @@ class YamlSchemaTest(unittest.TestCase):
         ):
             parse_analysis(
                 {
+                    "requirements": ["REQ-001"],
                     "steps": [
                         {
                             "decision": None,
@@ -214,7 +221,27 @@ class YamlSchemaTest(unittest.TestCase):
 
     def test_requires_final_assertion(self) -> None:
         with self.assertRaisesRegex(ValueError, "must end with an assertion"):
-            parse_analysis({"steps": [{"action": None, "description": "Only action"}]})
+            parse_analysis({
+                "requirements": ["REQ-001"],
+                "steps": [{"action": None, "description": "Only action"}]
+            })
+
+    def test_requires_requirements_field(self) -> None:
+        with self.assertRaisesRegex(ValueError, "requirements field is mandatory"):
+            parse_analysis({"steps": [
+                {"action": None, "description": "Action"},
+                {"assertion": None, "description": "Test", "positive": "Yes", "negative": "No"}
+            ]})
+
+    def test_requires_non_empty_requirements(self) -> None:
+        with self.assertRaisesRegex(ValueError, "requirements must be a non-empty list"):
+            parse_analysis({
+                "requirements": [],
+                "steps": [
+                    {"action": None, "description": "Action"},
+                    {"assertion": None, "description": "Test", "positive": "Yes", "negative": "No"}
+                ]
+            })
 
 
 if __name__ == "__main__":

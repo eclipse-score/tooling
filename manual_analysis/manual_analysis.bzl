@@ -10,11 +10,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""Bazel rule to create a manual analysis
-A manual analysis always consists of a context on which the analysis applies and
-the steps of the analysis.
-This rule adds a lockfile that makes sure that a manual analysis is redone when
-the context changes.
+
+load("@lobster//:lobster.bzl", "LobsterProvider")
+
+"""Bazel rule to create a manual verification analysis.
+
+A manual analysis consists of context (the implementation under review) and
+verification steps. It is verification evidence that checks whether the
+implementation gathered by the context satisfies the referenced requirements.
+This rule adds a lockfile that ensures manual verification is redone when the
+context changes.
 """
 
 # =============================================================================
@@ -83,19 +88,10 @@ _INTERACTIVE_RUNNER_ATTR = {
     ),
 }
 
-_CHECK_LOCK_ATTR = {
-    "_check_lock": attr.label(
-        doc = "Standalone check_lock executable.",
-        default = "//manual_analysis:check_lock",
-        executable = True,
-        cfg = "exec",
-    ),
-}
-
-_CHECK_RESULTS_ATTR = {
-    "_check_results": attr.label(
-        doc = "Standalone check_results executable.",
-        default = "//manual_analysis:check_results",
+_TEST_RUNNER_ATTR = {
+    "_manual_analysis_test_runner": attr.label(
+        doc = "Unified test executable for lock/results checks and LOBSTER generation.",
+        default = "//manual_analysis:manual_analysis_test_runner",
         executable = True,
         cfg = "exec",
     ),
@@ -197,6 +193,7 @@ def _manual_analysis_test_impl(ctx):
     input_files, input_rules = _collect_inputs(ctx)
     lock_file = ctx.attr.lock_file[DefaultInfo].files.to_list()[0]
     results_file = ctx.attr.results_file[DefaultInfo].files.to_list()[0]
+    analysis_file = ctx.attr.analysis[DefaultInfo].files.to_list()[0]
     manifests = _make_manifests(ctx, input_files, input_rules)
 
     computed_lock = ctx.actions.declare_file("{}_computed_lock.txt".format(ctx.label.name))
@@ -213,34 +210,64 @@ def _manual_analysis_test_impl(ctx):
         progress_message = "Computing analysis digest for {}".format(ctx.label),
     )
 
-    test_exe = ctx.actions.declare_file("{}_check_manual_analysis".format(ctx.label.name))
-    ctx.actions.write(
-        output = test_exe,
-        is_executable = True,
-        content = "\n".join([
-            "#!/usr/bin/env bash",
-            "set -euo pipefail",
-            'RUNFILES_DIR="${RUNFILES_DIR:-$0.runfiles}"',
-            '"${{RUNFILES_DIR}}/_main/{}"'.format(ctx.executable._check_lock.short_path),
-            '"${{RUNFILES_DIR}}/_main/{}"'.format(ctx.executable._check_results.short_path),
-            "",
-        ]),
+    lobster_file = ctx.actions.declare_file("{}.lobster".format(ctx.label.name))
+
+    action_environment = {
+        "MANUAL_ANALYSIS_COMPUTED_LOCK": computed_lock.path,
+        "MANUAL_ANALYSIS_COMMITTED_LOCK": lock_file.path,
+        "MANUAL_ANALYSIS_YAML": analysis_file.path,
+        "MANUAL_ANALYSIS_RESULTS_FILE": results_file.path,
+        "MANUAL_ANALYSIS_LOBSTER_OUTPUT": lobster_file.path,
+        "MANUAL_ANALYSIS_LABEL": str(ctx.label),
+    }
+
+    test_environment = {
+        "MANUAL_ANALYSIS_COMPUTED_LOCK": computed_lock.short_path,
+        "MANUAL_ANALYSIS_COMMITTED_LOCK": lock_file.short_path,
+        "MANUAL_ANALYSIS_YAML": analysis_file.short_path,
+        "MANUAL_ANALYSIS_RESULTS_FILE": results_file.short_path,
+        "MANUAL_ANALYSIS_LOBSTER_OUTPUT": "{}.lobster".format(ctx.label.name),
+        "MANUAL_ANALYSIS_LABEL": str(ctx.label),
+    }
+
+    ctx.actions.run(
+        executable = ctx.executable._manual_analysis_test_runner,
+        inputs = [
+            computed_lock,
+            lock_file,
+            analysis_file,
+            results_file,
+        ],
+        arguments = ["--allow-check-failures"],
+        outputs = [lobster_file],
+        env = action_environment,
+        mnemonic = "ManualAnalysisTestRunner",
+        progress_message = "Checking manual analysis and generating LOBSTER for {}".format(ctx.label),
     )
 
-    runfiles = ctx.runfiles(files = [computed_lock, lock_file, results_file])
-    runfiles = runfiles.merge(ctx.attr._check_lock[DefaultInfo].default_runfiles)
-    runfiles = runfiles.merge(ctx.attr._check_results[DefaultInfo].default_runfiles)
+    # Rule executables must be artifacts created by the same rule.
+    test_executable = ctx.actions.declare_file(
+        "{}_manual_analysis_test_runner".format(ctx.label.name),
+    )
+    ctx.actions.symlink(
+        output = test_executable,
+        target_file = ctx.executable._manual_analysis_test_runner,
+        is_executable = True,
+    )
+
+    runfiles = ctx.runfiles(files = [computed_lock, lock_file, analysis_file, results_file])
+    runfiles = runfiles.merge(ctx.attr._manual_analysis_test_runner[DefaultInfo].default_runfiles)
 
     return [
         DefaultInfo(
-            executable = test_exe,
+            executable = test_executable,
             runfiles = runfiles,
+            files = depset([lobster_file, test_executable]),
         ),
-        RunEnvironmentInfo(environment = {
-            "MANUAL_ANALYSIS_COMPUTED_LOCK": computed_lock.short_path,
-            "MANUAL_ANALYSIS_COMMITTED_LOCK": lock_file.short_path,
-            "MANUAL_ANALYSIS_RESULTS_FILE": results_file.short_path,
-        }),
+        RunEnvironmentInfo(environment = test_environment),
+        LobsterProvider(
+            lobster_input = depset([lobster_file]),
+        ),
     ]
 
 manual_analysis_test = rule(
@@ -248,13 +275,7 @@ manual_analysis_test = rule(
     Tests that a manual analysis is up-to-date with the context.
     """,
     implementation = _manual_analysis_test_impl,
-    attrs = dict(
-        _COMMON_ATTRS,
-        **dict(
-            _UPDATE_LOCK_ATTR,
-            **dict(_CHECK_LOCK_ATTR, **_CHECK_RESULTS_ATTR)
-        )
-    ),
+    attrs = dict(_COMMON_ATTRS, **dict(_UPDATE_LOCK_ATTR, **_TEST_RUNNER_ATTR)),
     test = True,
 )
 

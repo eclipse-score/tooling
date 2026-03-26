@@ -44,6 +44,8 @@ class InteractiveRunnerFlowCliTest(unittest.TestCase):
 
     def test_run_analysis_prefills_from_previous_results_file(self) -> None:
         analysis_yaml = """
+requirements:
+  - REQ-TEST-001
 steps:
   - action:
     description: Collect notes
@@ -82,7 +84,7 @@ steps:
                 encoding="utf-8",
             )
 
-            steps = load_analysis(analysis_path)
+            steps, _ = load_analysis(analysis_path)
             prefill = _PrefillState.load(results_path)
             answers = iter(["\x01", ""])
             results = run_analysis(
@@ -99,6 +101,8 @@ steps:
 
     def test_run_analysis_prefills_repeat_until_from_legacy_iterations(self) -> None:
         analysis_yaml = """
+requirements:
+  - REQ-TEST-001
 steps:
   - repeat:
     until:
@@ -158,7 +162,7 @@ steps:
                 encoding="utf-8",
             )
 
-            steps = load_analysis(analysis_path)
+            steps, _ = load_analysis(analysis_path)
             prefill = _PrefillState.load(results_path)
             answers = iter(["\x01", "", "\x01", "", "", ""])
             results = run_analysis(
@@ -175,6 +179,8 @@ steps:
 
     def test_main_writes_results(self) -> None:
         analysis_yaml = """
+requirements:
+  - REQ-TEST-001
 steps:
   - action:
     description: Collect notes
@@ -209,6 +215,8 @@ steps:
         self,
     ) -> None:
         analysis_yaml = """
+requirements:
+  - REQ-TEST-001
 steps:
   - action:
     description: Collect notes
@@ -234,7 +242,7 @@ steps:
 
             with self.assertRaises(KeyboardInterrupt):
                 run_analysis(
-                    load_analysis(analysis_path),
+                    load_analysis(analysis_path)[0],
                     input_fn=input_fn,
                     analysis_path=analysis_path,
                     results_path=results_path,
@@ -248,6 +256,8 @@ steps:
 
     def test_main_persists_failed_assertion_result(self) -> None:
         analysis_yaml = """
+requirements:
+  - REQ-TEST-001
 steps:
   - assertion:
     description: Any errors?
@@ -279,6 +289,8 @@ steps:
 
     def test_main_exits_on_failed_assertion(self) -> None:
         analysis_yaml = """
+requirements:
+  - REQ-TEST-001
 steps:
   - assertion:
     description: Any errors?
@@ -308,6 +320,8 @@ steps:
 
     def test_main_exits_gracefully_on_interrupt(self) -> None:
         analysis_yaml = """
+requirements:
+  - REQ-TEST-001
 steps:
   - assertion:
     description: Any errors?
@@ -340,6 +354,8 @@ steps:
 
     def test_main_exits_gracefully_on_eof(self) -> None:
         analysis_yaml = """
+requirements:
+  - REQ-TEST-001
 steps:
   - assertion:
     description: Any errors?

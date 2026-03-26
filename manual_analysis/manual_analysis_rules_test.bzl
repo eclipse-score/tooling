@@ -183,7 +183,9 @@ def _manual_analysis_test_env_test_impl(ctx):
     run_env = target_under_test[RunEnvironmentInfo].environment
     asserts.true(env, "MANUAL_ANALYSIS_COMPUTED_LOCK" in run_env, "Missing computed lock env")
     asserts.true(env, "MANUAL_ANALYSIS_COMMITTED_LOCK" in run_env, "Missing committed lock env")
+    asserts.true(env, "MANUAL_ANALYSIS_YAML" in run_env, "Missing analysis yaml env")
     asserts.true(env, "MANUAL_ANALYSIS_RESULTS_FILE" in run_env, "Missing results file env")
+    asserts.true(env, "MANUAL_ANALYSIS_LABEL" in run_env, "Missing analysis label env")
 
     default_info = target_under_test[DefaultInfo]
     executable = default_info.files_to_run.executable
@@ -194,8 +196,8 @@ def _manual_analysis_test_env_test_impl(ctx):
     )
     asserts.true(
         env,
-        executable.basename.endswith("_check_manual_analysis"),
-        "manual_analysis_test should create check launcher",
+        executable.basename.endswith("manual_analysis_test_runner"),
+        "manual_analysis_test should execute the unified Python test runner",
     )
 
     return analysistest.end(env)
