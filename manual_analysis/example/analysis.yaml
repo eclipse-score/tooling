@@ -1,0 +1,26 @@
+steps:
+  - action:
+    description: Determine the targets that might kill cats when they fail to build
+  - decision:
+    description: Did you find matching targets?
+    branches:
+      - answer: Yes
+        steps:
+          - repeat:
+            until:
+              description: All targets were checked?
+              continue: No
+              break: Yes
+            steps:
+              - automated_action:
+                description: Does their code compile?
+                command: bazel build {target}
+                args:
+                  - name: target
+                    default: //manual_analysis/example:ma_cc_root
+      - answer: No
+        steps: []
+  - assertion:
+    description: Did you just kill a cat?
+    positive: No
+    negative: Yes

@@ -196,3 +196,13 @@ register_toolchains(
 # Dev Dependencies (for testing)
 ###############################################################################
 bazel_dep(name = "score_docs_as_code", version = "3.0.1", dev_dependency = True)
+
+###############################################################################
+# Python Dependencies for Manual Analysis
+###############################################################################
+pip.parse(
+    hub_name = "manual_analysis_deps",
+    python_version = PYTHON_VERSION,
+    requirements_lock = "//manual_analysis:requirements.txt",
+)
+use_repo(pip, "manual_analysis_deps")

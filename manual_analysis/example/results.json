@@ -1,0 +1,45 @@
+{
+  "analysis": "manual_analysis/example/analysis.yaml",
+  "results": [
+    {
+      "type": "action",
+      "description": "Determine the targets that might kill cats when they fail to build",
+      "result": "//manual_analysis/example:ma_cc_root"
+    },
+    {
+      "type": "decision",
+      "description": "Did you find matching targets?",
+      "answer": "Yes",
+      "steps": [
+        {
+          "type": "repeat",
+          "until": "All targets were checked?",
+          "until_answers": [
+            "Yes"
+          ],
+          "iterations": [
+            [
+              {
+                "type": "automated_action",
+                "command_template": "bazel build {target}",
+                "command": "bazel build //manual_analysis/example:ma_cc_root",
+                "args": {
+                  "target": "//manual_analysis/example:ma_cc_root"
+                },
+                "expected_return_code": 0,
+                "return_code": 0,
+                "status": "passed"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "assertion",
+      "description": "Did you just kill a cat?",
+      "answer": "No",
+      "passed": true
+    }
+  ]
+}
