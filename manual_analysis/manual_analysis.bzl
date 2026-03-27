@@ -281,6 +281,7 @@ def _manual_analysis_impl(name, visibility, contexts, analysis, lock_file, resul
         lock_file = lock_file,
         results_file = results_file,
         visibility = visibility,
+        **kwargs,
     )
 
     manual_analysis_test(
@@ -290,6 +291,7 @@ def _manual_analysis_impl(name, visibility, contexts, analysis, lock_file, resul
         lock_file = lock_file,
         results_file = results_file,
         visibility = visibility,
+        **kwargs,
     )
 
 manual_analysis = macro(
