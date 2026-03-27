@@ -33,7 +33,7 @@ import os
 import sys
 from pathlib import Path
 
-from common import resolve_path
+from manual_analysis.common import resolve_path
 
 
 def _sha256(path: Path) -> str:
