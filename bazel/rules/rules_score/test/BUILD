@@ -448,3 +448,4 @@ toolchain(
     toolchain_type = "@score_tooling//bazel/rules/rules_score:toolchain_type",
     visibility = ["//visibility:public"],
 )
+
