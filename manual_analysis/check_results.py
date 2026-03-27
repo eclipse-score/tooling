@@ -24,8 +24,17 @@ def evaluate_results_file(results_path: Path) -> tuple[bool, str | None]:
     if not results_path.exists():
         return False, f"results file not found: {results_path}"
 
-    payload = _load(results_path)
-    results = payload.get("results") if isinstance(payload, dict) else None
+    try:
+        payload = _load(results_path)
+    except OSError as exc:
+        return False, f"Could not read results file: {exc}"
+    except json.JSONDecodeError as exc:
+        return False, f"Results file is not valid JSON: {exc}"
+
+    if not isinstance(payload, dict):
+        return False, "Manual analysis results are missing or empty."
+
+    results = payload.get("results")
     if not isinstance(results, list) or not results:
         return False, "Manual analysis results are missing or empty."
 
