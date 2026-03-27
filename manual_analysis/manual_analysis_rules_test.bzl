@@ -200,6 +200,13 @@ def _manual_analysis_test_env_test_impl(ctx):
         "manual_analysis_test should execute the unified Python test runner",
     )
 
+    default_runfiles = default_info.default_runfiles.files.to_list()
+    asserts.true(
+        env,
+        _has_short_path(default_runfiles, "manual_analysis/example/manual_analysis.lobster"),
+        "manual_analysis_test should include the generated lobster artifact in runfiles",
+    )
+
     return analysistest.end(env)
 
 manual_analysis_test_env_test = analysistest.make(_manual_analysis_test_env_test_impl)

@@ -255,7 +255,7 @@ def _manual_analysis_test_impl(ctx):
         is_executable = True,
     )
 
-    runfiles = ctx.runfiles(files = [computed_lock, lock_file, analysis_file, results_file])
+    runfiles = ctx.runfiles(files = [computed_lock, lock_file, analysis_file, results_file, lobster_file])
     runfiles = runfiles.merge(ctx.attr._manual_analysis_test_runner[DefaultInfo].default_runfiles)
 
     return [
