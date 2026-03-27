@@ -46,7 +46,7 @@
     },
     {
       "type": "assertion",
-      "description": "Do we keep all our cats save?",
+      "description": "Do we keep all our cats safe?",
       "answer": "Yes",
       "passed": true
     }

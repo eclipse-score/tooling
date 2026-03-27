@@ -31,6 +31,6 @@ steps:
       - answer: No
         steps: []
   - assertion:
-    description: Do we keep all our cats save?
+    description: Do we keep all our cats safe?
     positive: Yes
     negative: No

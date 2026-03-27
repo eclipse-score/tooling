@@ -13,6 +13,8 @@
 #ifndef TOOLS_MANUAL_ANALYSIS_EXAMPLE_MA_CC_ROOT_H
 #define TOOLS_MANUAL_ANALYSIS_EXAMPLE_MA_CC_ROOT_H
 
-int awful_cat_counter();
+#include <cstdint>
+
+std::int32_t awful_cat_counter();
 
 #endif // TOOLS_MANUAL_ANALYSIS_EXAMPLE_MA_CC_ROOT_H
