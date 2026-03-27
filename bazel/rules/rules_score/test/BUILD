@@ -12,6 +12,7 @@
 # *******************************************************************************
 load("@aspect_rules_py//py:defs.bzl", "py_binary")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 load(
     "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
@@ -447,4 +448,13 @@ toolchain(
     toolchain = ":score_sphinx_toolchain",
     toolchain_type = "@score_tooling//bazel/rules/rules_score:toolchain_type",
     visibility = ["//visibility:public"],
+)
+
+compile_pip_requirements(
+    name = "requirements",
+    src = "//:requirements.in",
+    requirements_txt = "//:requirements.txt",
+    tags = [
+        "manual",
+    ],
 )
