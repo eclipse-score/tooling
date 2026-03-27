@@ -49,13 +49,6 @@ class CommonTest(unittest.TestCase):
 
         self.assertEqual(resolved, Path("missing/in/runfiles.txt"))
 
-    def test_resolve_path_returns_unmodified_candidate_when_not_found(self) -> None:
-        with (
-            mock.patch.dict(os.environ, {}, clear=True),
-            mock.patch("manual_analysis.common._create_runfiles", return_value=None),
-        ):
-            self.assertEqual(resolve_path("missing/file.txt"), Path("missing/file.txt"))
-
 
 if __name__ == "__main__":
     unittest.main()

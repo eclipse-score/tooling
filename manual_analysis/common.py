@@ -10,30 +10,23 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-import os
-from importlib import import_module
 from pathlib import Path
+from runfiles import Runfiles
 
 
-def _create_runfiles():  # type: ignore[no-untyped-def]
-    runfiles_module = import_module("runfiles")
-    runfiles_class = getattr(runfiles_module, "Runfiles")
-    return runfiles_class.Create()
+def _create_runfiles() -> Runfiles:
+    return Runfiles.Create()
 
 
 def resolve_path(raw_path: str) -> Path:
     """Resolve path from Bazel env/execpath style values."""
     candidate = Path(raw_path)
 
-    try:
-        runfiles = _create_runfiles()
-    except (ImportError, AttributeError):
-        runfiles = None
-    if runfiles is not None:
-        resolved_path = runfiles.Rlocation(str(candidate))
-        if resolved_path:
-            resolved = Path(resolved_path)
-            if resolved.exists():
-                return resolved
+    runfiles = _create_runfiles()
+    resolved_path = runfiles.Rlocation(str(candidate))
+    if resolved_path:
+        resolved = Path(resolved_path)
+        if resolved.exists():
+            return resolved
 
     return candidate
