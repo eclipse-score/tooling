@@ -14,9 +14,9 @@
 
 from __future__ import annotations
 
+from typing import Protocol
+
 from manual_analysis.interactive_runner_prefill import _PrefillState
-from manual_analysis.interactive_runner_ui_console import _ConsoleUI
-from manual_analysis.interactive_runner_ui_split import _SplitPaneUI
 from manual_analysis.yaml_schema import (
     ActionStep,
     AssertionStep,
@@ -31,9 +31,40 @@ class AnalysisFailedError(RuntimeError):
     """Raised when an assertion result marks the analysis as failed."""
 
 
+class _RunnerUI(Protocol):
+    def print_header(self, title: str) -> None: ...
+
+    def show_text(self, title: str, content: str) -> None: ...
+
+    def prompt_choice(
+        self,
+        description: str,
+        options: list[str],
+        default_option: str | None = None,
+    ) -> str: ...
+
+    def prompt_choice_with_justification(
+        self,
+        description: str,
+        options: list[str],
+        default_option: str | None = None,
+        default_justification: str | None = None,
+    ) -> tuple[str, str]: ...
+
+    def prompt_multiline(self, prompt: str, initial_text: str = "") -> str: ...
+
+    def prompt_args_form(
+        self,
+        args,
+        initial_values: dict[str, str] | None = None,
+    ) -> dict[str, str]: ...
+
+    def run_command(self, command: str) -> int: ...
+
+
 def _execute_step(
     step: Step,
-    ui: _ConsoleUI | _SplitPaneUI,
+    ui: _RunnerUI,
     results: list[dict],
     prefill: _PrefillState | None = None,
 ) -> None:

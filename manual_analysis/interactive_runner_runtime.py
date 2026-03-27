@@ -14,12 +14,10 @@
 
 from __future__ import annotations
 
-import importlib.util
 import os
 import signal
 from pathlib import Path
 
-_HAS_PROMPT_TOOLKIT = importlib.util.find_spec("prompt_toolkit") is not None
 _LAST_SIGNAL: int | None = None
 
 

@@ -1,5 +1,4 @@
 bazel-runfiles
 pyyaml
 prompt-toolkit
-wcwidth
 

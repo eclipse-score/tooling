@@ -26,6 +26,7 @@ from manual_analysis.interactive_runner_runtime import (
     _interrupt_exit_code,
 )
 from manual_analysis.interactive_runner_steps import AnalysisFailedError
+from manual_analysis.interactive_runner_ui_split import _SplitPaneUI
 from manual_analysis.yaml_schema import load_analysis
 
 
@@ -68,10 +69,12 @@ def main(argv: list[str] | None = None) -> None:
     prefill = (
         _PrefillState.load(results_path) if not args.no_prefill_from_last_run else None
     )
+    ui = _SplitPaneUI()
 
     try:
         run_analysis(
             steps,
+            ui,
             analysis_path=analysis_path,
             results_path=results_path,
             prefill=prefill,

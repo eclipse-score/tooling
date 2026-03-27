@@ -16,13 +16,79 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from typing import TYPE_CHECKING, cast
 from unittest import mock
 
 from manual_analysis import interactive_runner_cli
 from manual_analysis.interactive_runner_flow import run_analysis
 from manual_analysis.interactive_runner_prefill import _PrefillState
 from manual_analysis.interactive_runner_runtime import _workspace_root
+from manual_analysis.yaml_schema import AutomatedActionArg
 from manual_analysis.yaml_schema import load_analysis
+
+if TYPE_CHECKING:
+    from manual_analysis.interactive_runner_steps import _RunnerUI
+
+
+class _FakeUi:
+    def __init__(self, answers: list[str]) -> None:
+        self._answers = iter(answers)
+
+    def _next(self) -> str:
+        try:
+            return next(self._answers)
+        except StopIteration as err:
+            raise KeyboardInterrupt from err
+
+    def print_header(self, _title: str) -> None:
+        return
+
+    def show_text(self, _title: str, _content: str) -> None:
+        return
+
+    def prompt_multiline(self, _prompt: str, initial_text: str = "") -> str:
+        value = self._next()
+        if value == "\x01":
+            return initial_text.strip()
+        return value
+
+    def prompt_choice(
+        self,
+        _description: str,
+        options: list[str],
+        default_option: str | None = None,
+    ) -> str:
+        value = self._next().strip()
+        if value == "" and default_option is not None:
+            return default_option
+        allowed = {option.lower(): option for option in options}
+        selected = allowed.get(value.lower())
+        if selected is None:
+            raise AssertionError(f"Invalid test answer: {value}")
+        return selected
+
+    def prompt_choice_with_justification(
+        self,
+        description: str,
+        options: list[str],
+        default_option: str | None = None,
+        default_justification: str | None = None,
+    ) -> tuple[str, str]:
+        answer = self.prompt_choice(description, options, default_option=default_option)
+        justification = self._next().strip()
+        if justification == "" and default_justification is not None:
+            return answer, default_justification
+        return answer, justification
+
+    def prompt_args_form(
+        self,
+        _args: list[AutomatedActionArg],
+        initial_values: dict[str, str] | None = None,
+    ) -> dict[str, str]:
+        return {} if initial_values is None else cast(dict[str, str], dict(initial_values))
+
+    def run_command(self, _command: str) -> int:
+        return 0
 
 
 class InteractiveRunnerFlowCliTest(unittest.TestCase):
@@ -87,10 +153,10 @@ steps:
 
             steps, _ = load_analysis(analysis_path)
             prefill = _PrefillState.load(results_path)
-            answers = iter(["\x01", "", ""])
+            ui = _FakeUi(["\x01", "", ""])
             results = run_analysis(
                 steps,
-                input_fn=lambda _: next(answers),
+                cast("_RunnerUI", cast(object, ui)),
                 analysis_path=analysis_path,
                 results_path=results_path,
                 prefill=prefill,
@@ -168,10 +234,10 @@ steps:
 
             steps, _ = load_analysis(analysis_path)
             prefill = _PrefillState.load(results_path)
-            answers = iter(["\x01", "", "\x01", "", "", ""])
+            ui = _FakeUi(["\x01", "", "\x01", "", "", ""])
             results = run_analysis(
                 steps,
-                input_fn=lambda _: next(answers),
+                cast("_RunnerUI", cast(object, ui)),
                 analysis_path=analysis_path,
                 results_path=results_path,
                 prefill=prefill,
@@ -200,10 +266,11 @@ steps:
             results_path = Path(tmpdir) / "results.json"
             analysis_path.write_text(analysis_yaml.strip() + "\n", encoding="utf-8")
 
-            answers = iter(
-                ["note line 1", "note line 2", "\x01", "No", "checked logs"]
-            )
-            with mock.patch("builtins.input", side_effect=lambda _: next(answers)):
+            with mock.patch.object(
+                interactive_runner_cli,
+                "_SplitPaneUI",
+                return_value=_FakeUi(["note line 1", "No", "checked logs"]),
+            ):
                 interactive_runner_cli.main(
                     [
                         "--analysis",
@@ -239,18 +306,10 @@ steps:
             results_path = Path(tmpdir) / "results.json"
             analysis_path.write_text(analysis_yaml.strip() + "\n", encoding="utf-8")
 
-            answers = iter(["note line", "\x01"])
-
-            def input_fn(_prompt: str) -> str:
-                try:
-                    return next(answers)
-                except StopIteration as err:
-                    raise KeyboardInterrupt from err
-
             with self.assertRaises(KeyboardInterrupt):
                 run_analysis(
                     load_analysis(analysis_path)[0],
-                    input_fn=input_fn,
+                    cast("_RunnerUI", cast(object, _FakeUi(["note line"]))),
                     analysis_path=analysis_path,
                     results_path=results_path,
                 )
@@ -278,8 +337,11 @@ steps:
             results_path = Path(tmpdir) / "results.json"
             analysis_path.write_text(analysis_yaml.strip() + "\n", encoding="utf-8")
 
-            answers = iter(["Yes", "observed terminate call"])
-            with mock.patch("builtins.input", side_effect=lambda _: next(answers)):
+            with mock.patch.object(
+                interactive_runner_cli,
+                "_SplitPaneUI",
+                return_value=_FakeUi(["Yes", "observed terminate call"]),
+            ):
                 with self.assertRaises(SystemExit):
                     interactive_runner_cli.main(
                         [
@@ -315,8 +377,11 @@ steps:
             results_path = Path(tmpdir) / "results.json"
             analysis_path.write_text(analysis_yaml.strip() + "\n", encoding="utf-8")
 
-            answers = iter(["Yes", "observed terminate call"])
-            with mock.patch("builtins.input", side_effect=lambda _: next(answers)):
+            with mock.patch.object(
+                interactive_runner_cli,
+                "_SplitPaneUI",
+                return_value=_FakeUi(["Yes", "observed terminate call"]),
+            ):
                 with self.assertRaises(SystemExit) as cm:
                     interactive_runner_cli.main(
                         [

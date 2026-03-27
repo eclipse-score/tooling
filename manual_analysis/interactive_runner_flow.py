@@ -16,21 +16,20 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Callable
 
 from manual_analysis.interactive_runner_prefill import _PrefillState
 from manual_analysis.interactive_runner_runtime import _workspace_root
 from manual_analysis.interactive_runner_steps import (
     AnalysisFailedError,
+    _RunnerUI,
     _execute_step,
 )
-from manual_analysis.interactive_runner_ui import _make_ui
 from manual_analysis.yaml_schema import Step
 
 
 def run_analysis(
     steps: list[Step],
-    input_fn: Callable[[str], str] | None = None,
+    ui: _RunnerUI,
     *,
     analysis_path: Path,
     results_path: Path,
@@ -46,7 +45,6 @@ def run_analysis(
         results_path.parent.mkdir(parents=True, exist_ok=True)
         results_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
-    ui = _make_ui(input_fn)
     results: list[dict] = []
     try:
         for step in steps:

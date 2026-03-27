@@ -23,7 +23,6 @@ try:
     from manual_analysis.interactive_runner_flow import run_analysis
     from manual_analysis.interactive_runner_prefill import _PrefillState
     from manual_analysis.interactive_runner_runtime import (
-        _HAS_PROMPT_TOOLKIT,
         _install_signal_handlers,
         _interrupt_exit_code,
         _signal_handler,
@@ -33,8 +32,6 @@ try:
         AnalysisFailedError,
         _execute_step,
     )
-    from manual_analysis.interactive_runner_ui import _make_ui
-    from manual_analysis.interactive_runner_ui_console import _ConsoleUI
     from manual_analysis.interactive_runner_ui_split import _SplitPaneUI
     from manual_analysis.yaml_schema import (
         ActionStep,
@@ -51,15 +48,12 @@ except ModuleNotFoundError:
     from interactive_runner_flow import run_analysis
     from interactive_runner_prefill import _PrefillState
     from interactive_runner_runtime import (
-        _HAS_PROMPT_TOOLKIT,
         _install_signal_handlers,
         _interrupt_exit_code,
         _signal_handler,
         _workspace_root,
     )
     from interactive_runner_steps import AnalysisFailedError, _execute_step
-    from interactive_runner_ui import _make_ui
-    from interactive_runner_ui_console import _ConsoleUI
     from interactive_runner_ui_split import _SplitPaneUI
     from yaml_schema import (
         ActionStep,

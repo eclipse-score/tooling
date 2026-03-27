@@ -11,46 +11,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-import subprocess
 import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-from manual_analysis.interactive_runner_ui_console import _ConsoleUI
 from manual_analysis.interactive_runner_ui_split import _SplitPaneUI
 from manual_analysis.yaml_schema import AutomatedActionArg
 
 
 class InteractiveRunnerUiTest(unittest.TestCase):
-    def test_console_run_command_uses_workspace_root_as_cwd(self) -> None:
-        ui = _ConsoleUI(lambda _: "")
-        process = mock.Mock()
-        process.stdout = iter(["line one\n", "line two\n"])
-        process.wait.return_value = 0
-
-        with (
-            mock.patch(
-                "manual_analysis.interactive_runner_ui_console._workspace_root",
-                return_value="/workspace/root",
-            ),
-            mock.patch(
-                "manual_analysis.interactive_runner_ui_console.subprocess.Popen",
-                return_value=process,
-            ) as popen,
-            mock.patch("builtins.print"),
-        ):
-            return_code = ui.run_command("bazel test //manual_analysis/...")
-
-        self.assertEqual(return_code, 0)
-        popen.assert_called_once_with(
-            "bazel test //manual_analysis/...",
-            shell=True,
-            cwd="/workspace/root",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-        )
 
     def test_history_text_and_separators(self) -> None:
         ui = _SplitPaneUI()

@@ -85,17 +85,6 @@ py_library(
 )
 
 py_library(
-    name = "interactive_runner_ui_console_lib",
-    srcs = ["interactive_runner_ui_console.py"],
-    imports = ["."],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":interactive_runner_runtime_lib",
-        ":yaml_schema",
-    ],
-)
-
-py_library(
     name = "interactive_runner_ui_split_lib",
     srcs = ["interactive_runner_ui_split.py"],
     imports = ["."],
@@ -108,26 +97,12 @@ py_library(
 )
 
 py_library(
-    name = "interactive_runner_ui_lib",
-    srcs = ["interactive_runner_ui.py"],
-    imports = ["."],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":interactive_runner_runtime_lib",
-        ":interactive_runner_ui_console_lib",
-        ":interactive_runner_ui_split_lib",
-    ],
-)
-
-py_library(
     name = "interactive_runner_steps_lib",
     srcs = ["interactive_runner_steps.py"],
     imports = ["."],
     visibility = ["//visibility:public"],
     deps = [
         ":interactive_runner_prefill_lib",
-        ":interactive_runner_ui_console_lib",
-        ":interactive_runner_ui_split_lib",
         ":yaml_schema",
     ],
 )
@@ -140,7 +115,6 @@ py_library(
     deps = [
         ":interactive_runner_prefill_lib",
         ":interactive_runner_steps_lib",
-        ":interactive_runner_ui_lib",
         ":yaml_schema",
     ],
 )
@@ -156,6 +130,7 @@ py_library(
         ":interactive_runner_prefill_lib",
         ":interactive_runner_runtime_lib",
         ":interactive_runner_steps_lib",
+        ":interactive_runner_ui_split_lib",
         ":yaml_schema",
     ],
 )
@@ -171,8 +146,6 @@ py_library(
         ":interactive_runner_prefill_lib",
         ":interactive_runner_runtime_lib",
         ":interactive_runner_steps_lib",
-        ":interactive_runner_ui_console_lib",
-        ":interactive_runner_ui_lib",
         ":interactive_runner_ui_split_lib",
         ":yaml_schema",
     ],
@@ -257,7 +230,6 @@ py_test(
     srcs = ["interactive_runner_ui_test.py"],
     main = "interactive_runner_ui_test.py",
     deps = [
-        ":interactive_runner_ui_console_lib",
         ":interactive_runner_ui_split_lib",
         ":yaml_schema",
     ],
@@ -301,17 +273,6 @@ py_test(
 )
 
 py_test(
-    name = "interactive_runner_ui_factory_test",
-    srcs = ["interactive_runner_ui_factory_test.py"],
-    main = "interactive_runner_ui_factory_test.py",
-    deps = [
-        ":interactive_runner_ui_console_lib",
-        ":interactive_runner_ui_lib",
-        ":interactive_runner_ui_split_lib",
-    ],
-)
-
-py_test(
     name = "interactive_runner_facade_test",
     srcs = ["interactive_runner_facade_test.py"],
     main = "interactive_runner_facade_test.py",
@@ -343,15 +304,6 @@ py_test(
     deps = [":update_lock_lib"],
 )
 
-py_test(
-    name = "interactive_runner_ui_console_test",
-    srcs = ["interactive_runner_ui_console_test.py"],
-    main = "interactive_runner_ui_console_test.py",
-    deps = [
-        ":interactive_runner_ui_console_lib",
-        ":yaml_schema",
-    ],
-)
 
 py_test(
     name = "lobster_generator_test",
