@@ -14,6 +14,8 @@
 load("//manual_analysis:context_from_cc_library.bzl", "manual_analysis_context_from_cc_library")
 load("//manual_analysis:context_from_filegroup.bzl", "manual_analysis_context_from_filegroup")
 load("//manual_analysis:manual_analysis.bzl", "manual_analysis")
+load("@lobster//:lobster.bzl", "lobster_trlc", "lobster_test")
+load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_specification")
 
 filegroup(
     name = "manual_analysis_context_filegroup",
@@ -58,4 +60,30 @@ manual_analysis(
     lock_file = "manual.lock",
     results_file = "results.json",
     visibility = ["//manual_analysis:__pkg__"],
+)
+
+trlc_specification(
+    name = "requirements_spec",
+    srcs = ["requirements.rsl"],
+)
+
+trlc_requirements(
+    name = "requirements",
+    srcs = ["requirements.trlc"],
+    spec = [":requirements_spec"],
+)
+
+lobster_trlc(
+    name = "manual_analysis_requirements",
+    config = "lobster-trlc.yaml",
+    requirements = [":requirements"],
+)
+
+lobster_test(
+    name = "manual_analysis_report",
+    config = "lobster-report.conf",
+    inputs = [
+        ":manual_analysis",
+        ":manual_analysis_requirements",
+    ],
 )

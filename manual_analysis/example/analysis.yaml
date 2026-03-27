@@ -1,5 +1,5 @@
 requirements:
-  - "CAT-SAFETY"
+  - "manual_analysis_example.no_cat_killing"
 
 steps:
   - action:

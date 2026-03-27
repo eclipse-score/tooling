@@ -1,0 +1,10 @@
+inputs:
+  - "."
+
+conversion-rules:
+  - package: manual_analysis_example
+    record-type: Requirement
+    namespace: req
+    description-fields:
+      - text
+

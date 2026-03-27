@@ -266,7 +266,7 @@ def _manual_analysis_test_impl(ctx):
         ),
         RunEnvironmentInfo(environment = test_environment),
         LobsterProvider(
-            lobster_input = depset([lobster_file]),
+            lobster_input = {lobster_file.basename: lobster_file.path},
         ),
     ]
 
