@@ -52,6 +52,7 @@ py_library(
     name = "common",
     srcs = ["common.py"],
     visibility = ["//visibility:public"],
+    deps = [requirement("bazel-runfiles")],
 )
 
 py_library(

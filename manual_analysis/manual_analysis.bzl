@@ -168,11 +168,11 @@ def _manual_analysis_update_impl(ctx):
             runfiles = runfiles,
         ),
         RunEnvironmentInfo(environment = {
-            "MANUAL_ANALYSIS_FILES_MANIFEST": manifests[0].path,
-            "MANUAL_ANALYSIS_RULES_MANIFEST": manifests[1].path,
+            "MANUAL_ANALYSIS_FILES_MANIFEST": manifests[0].short_path,
+            "MANUAL_ANALYSIS_RULES_MANIFEST": manifests[1].short_path,
             "MANUAL_ANALYSIS_LOCK_FILE": lock_file.short_path,
-            "MANUAL_ANALYSIS_YAML": analysis_file.path,
-            "MANUAL_ANALYSIS_RESULTS_FILE": results_file.path,
+            "MANUAL_ANALYSIS_YAML": analysis_file.short_path,
+            "MANUAL_ANALYSIS_RESULTS_FILE": results_file.short_path,
         }),
     ]
 

@@ -17,7 +17,6 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-
 from manual_analysis.common import resolve_path
 
 
@@ -28,37 +27,33 @@ class CommonTest(unittest.TestCase):
             file_path.write_text("x", encoding="utf-8")
             self.assertEqual(resolve_path(str(file_path)), file_path)
 
-    def test_resolve_path_resolves_existing_relative_path(self) -> None:
+    def test_resolve_path_uses_bazel_runfiles_when_available(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
-            cwd = Path(tmpdir)
-            file_path = cwd / "local.txt"
-            file_path.write_text("x", encoding="utf-8")
+            runfile = Path(tmpdir) / "tool.txt"
+            runfile.write_text("x", encoding="utf-8")
+            runfiles = mock.Mock()
+            runfiles.Rlocation.return_value = str(runfile)
 
-            previous_cwd = Path.cwd()
-            os.chdir(cwd)
-            try:
-                resolved = resolve_path("local.txt")
-            finally:
-                os.chdir(previous_cwd)
+            with mock.patch("manual_analysis.common._create_runfiles", return_value=runfiles):
+                resolved = resolve_path("_main/manual_analysis/tool.txt")
 
-            self.assertEqual(resolved, file_path.resolve())
+            self.assertEqual(resolved, runfile)
+            runfiles.Rlocation.assert_called_once_with("_main/manual_analysis/tool.txt")
 
-    def test_resolve_path_uses_build_working_directory_when_available(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            base = Path(tmpdir)
-            nested = base / "sub" / "entry.txt"
-            nested.parent.mkdir(parents=True, exist_ok=True)
-            nested.write_text("x", encoding="utf-8")
+    def test_resolve_path_falls_back_when_runfiles_lookup_fails(self) -> None:
+        runfiles = mock.Mock()
+        runfiles.Rlocation.return_value = None
 
-            with mock.patch.dict(
-                os.environ, {"BUILD_WORKING_DIRECTORY": str(base)}, clear=False
-            ):
-                resolved = resolve_path("sub/entry.txt")
+        with mock.patch("manual_analysis.common._create_runfiles", return_value=runfiles):
+            resolved = resolve_path("missing/in/runfiles.txt")
 
-            self.assertEqual(resolved, nested)
+        self.assertEqual(resolved, Path("missing/in/runfiles.txt"))
 
     def test_resolve_path_returns_unmodified_candidate_when_not_found(self) -> None:
-        with mock.patch.dict(os.environ, {}, clear=True):
+        with (
+            mock.patch.dict(os.environ, {}, clear=True),
+            mock.patch("manual_analysis.common._create_runfiles", return_value=None),
+        ):
             self.assertEqual(resolve_path("missing/file.txt"), Path("missing/file.txt"))
 
 

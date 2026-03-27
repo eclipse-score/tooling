@@ -11,42 +11,28 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 import os
+from importlib import import_module
 from pathlib import Path
+
+
+def _create_runfiles():  # type: ignore[no-untyped-def]
+    runfiles_module = import_module("runfiles")
+    runfiles_class = getattr(runfiles_module, "Runfiles")
+    return runfiles_class.Create()
 
 
 def resolve_path(raw_path: str) -> Path:
     """Resolve path from Bazel env/execpath style values."""
     candidate = Path(raw_path)
-    if candidate.is_absolute() and candidate.exists():
-        return candidate
-    if candidate.exists():
-        return candidate.resolve()
 
-    base = os.environ.get("BUILD_WORKING_DIRECTORY")
-    if base:
-        resolved = Path(base) / candidate
-        if resolved.exists():
-            return resolved
-
-    runfiles_dir = os.environ.get("RUNFILES_DIR")
-    if runfiles_dir:
-        for prefix in ("_main", ""):
-            parts = [runfiles_dir]
-            if prefix:
-                parts.append(prefix)
-            parts.append(str(candidate))
-            resolved = Path(*parts)
-            if resolved.exists():
-                return resolved
-
-    test_srcdir = os.environ.get("TEST_SRCDIR")
-    if test_srcdir:
-        for prefix in ("_main", ""):
-            parts = [test_srcdir]
-            if prefix:
-                parts.append(prefix)
-            parts.append(str(candidate))
-            resolved = Path(*parts)
+    try:
+        runfiles = _create_runfiles()
+    except (ImportError, AttributeError):
+        runfiles = None
+    if runfiles is not None:
+        resolved_path = runfiles.Rlocation(str(candidate))
+        if resolved_path:
+            resolved = Path(resolved_path)
             if resolved.exists():
                 return resolved
 

@@ -4,6 +4,9 @@
 #
 #    bazel run //manual_analysis:requirements.update
 #
+bazel-runfiles==1.9.0 \
+    --hash=sha256:66fb0f221e72ad904086eda6b208e873c76a2f5511ea308e7eae449534abc202
+    # via -r manual_analysis/requirements.txt.in
 prompt-toolkit==3.0.52 \
     --hash=sha256:28cde192929c8e7321de85de1ddbe736f1375148b02f2e17edd840042b1be855 \
     --hash=sha256:9aac639a3bbd33284347de5ad8d68ecc044b91a762dc39b7c21095fcd6a19955
