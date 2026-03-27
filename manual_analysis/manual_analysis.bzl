@@ -79,10 +79,10 @@ _UPDATE_LOCK_ATTR = {
     ),
 }
 
-_INTERACTIVE_RUNNER_ATTR = {
-    "_interactive_runner": attr.label(
-        doc = "Standalone interactive manual analysis runner executable.",
-        default = "//manual_analysis:interactive_runner",
+_UPDATE_RUNNER_ATTR = {
+    "_manual_analysis_update_runner": attr.label(
+        doc = "Unified update executable for interactive run and lock refresh.",
+        default = "//manual_analysis:manual_analysis_update_runner",
         executable = True,
         cfg = "exec",
     ),
@@ -144,26 +144,20 @@ def _manual_analysis_update_impl(ctx):
     )
 
     runfiles = ctx.runfiles(files = input_files + manifests + [lock_file, results_file])
-    runfiles = runfiles.merge(ctx.attr._interactive_runner[DefaultInfo].default_runfiles)
-    runfiles = runfiles.merge(ctx.attr._update_lock[DefaultInfo].default_runfiles)
+    runfiles = runfiles.merge(ctx.attr._manual_analysis_update_runner[DefaultInfo].default_runfiles)
 
-    launcher = ctx.actions.declare_file("{}.sh".format(ctx.label.name))
-    ctx.actions.write(
-        output = launcher,
+    executable = ctx.actions.declare_file(
+        "{}_manual_analysis_update_runner".format(ctx.label.name),
+    )
+    ctx.actions.symlink(
+        output = executable,
+        target_file = ctx.executable._manual_analysis_update_runner,
         is_executable = True,
-        content = "\n".join([
-            "#!/usr/bin/env bash",
-            "set -euo pipefail",
-            'RUNFILES_DIR="${RUNFILES_DIR:-$0.runfiles}"',
-            '"${{RUNFILES_DIR}}/_main/{}" "$@"'.format(ctx.executable._interactive_runner.short_path),
-            '"${{RUNFILES_DIR}}/_main/{}"'.format(ctx.executable._update_lock.short_path),
-            "",
-        ]),
     )
 
     return [
         DefaultInfo(
-            executable = launcher,
+            executable = executable,
             files = depset([lock_file]),
             runfiles = runfiles,
         ),
@@ -181,7 +175,7 @@ manual_analysis_update = rule(
     Updates the lockfile to signify that the manual analysis is not up-to-date with the context
     """,
     implementation = _manual_analysis_update_impl,
-    attrs = dict(_COMMON_ATTRS, **dict(_UPDATE_LOCK_ATTR, **_INTERACTIVE_RUNNER_ATTR)),
+    attrs = dict(_COMMON_ATTRS, **_UPDATE_RUNNER_ATTR),
     executable = True,
 )
 

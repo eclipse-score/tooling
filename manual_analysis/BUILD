@@ -168,6 +168,25 @@ py_binary(
 )
 
 py_library(
+    name = "manual_analysis_update_runner_lib",
+    srcs = ["manual_analysis_update_runner.py"],
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":interactive_runner_cli_lib",
+        ":update_lock_lib",
+    ],
+)
+
+py_binary(
+    name = "manual_analysis_update_runner",
+    srcs = ["manual_analysis_update_runner.py"],
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [":manual_analysis_update_runner_lib"],
+)
+
+py_library(
     name = "manual_analysis_test_runner_lib",
     srcs = ["manual_analysis_test_runner.py"],
     imports = ["."],
