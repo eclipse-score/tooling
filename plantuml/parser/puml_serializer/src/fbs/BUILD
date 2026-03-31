@@ -40,6 +40,7 @@ rust_library(
     ],
     visibility = [
         "//plantuml/parser:__subpackages__",
+        "//validation/archver:__pkg__",
     ],
     deps = [
         "@crates//:flatbuffers",
