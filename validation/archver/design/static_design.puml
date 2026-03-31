@@ -1,0 +1,64 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml
+
+package "archver" as archver {
+
+    component "main" as main <<component>> {
+        component "Args" as args <<unit>>
+    }
+
+    component "models" as models <<component>> {
+        component "BazelInput" as bazel_input <<unit>>
+        component "BazelArchitecture" as bazel_architecture <<unit>>
+        component "DiagramInputs" as diagram_inputs_model <<unit>>
+        component "DiagramInput" as diagram_input_model <<unit>>
+        component "DiagramArchitecture" as diagram_architecture <<unit>>
+    }
+
+    component "bazel_reader" as bazel_reader <<component>> {
+        component "BazelReader" as bazel_reader_cls <<unit>>
+    }
+
+    component "diagram_reader" as reader <<component>> {
+        component "DiagramReader" as diagram_reader_cls <<unit>>
+    }
+
+    component "validation" as validation <<component>> {
+        component "Validator" as validator <<unit>>
+    }
+
+}
+
+file "architecture.json\n(from dependable_element rule)" as arch_json_file
+file "*.fbs.bin\n(from architectural_design rule)" as fbs_files
+
+main --> bazel_reader_cls   : reads JSON
+main --> diagram_reader_cls : reads FBS files
+main --> validator          : runs validation
+
+bazel_reader_cls   --> bazel_input         : produces
+diagram_reader_cls --> diagram_inputs_model : produces
+
+bazel_input --> bazel_architecture         : to_bazel_architecture()
+diagram_inputs_model --> diagram_architecture : to_diagram_architecture()
+validator --> bazel_architecture : compares
+validator --> diagram_architecture  : compares
+
+arch_json_file ..> bazel_reader_cls   : --architecture-json
+fbs_files      ..> diagram_reader_cls : --static-fbs
+
+bazel_architecture -[hidden]r-> diagram_architecture
+
+@enduml
