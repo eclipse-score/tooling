@@ -28,7 +28,7 @@ jobs:
           path: ~/.cache/bazel
           key: ${{ runner.os }}-format-${{ hashFiles('**/*.bazel', '**/BUILD', '**/*.bzl') }}
       - name: Setup Bazel with cache
-        uses: bazel-contrib/setup-bazel@0.15.0
+        uses: bazel-contrib/setup-bazel@0.19.0
         with:
           disk-cache: true
           repository-cache: true
