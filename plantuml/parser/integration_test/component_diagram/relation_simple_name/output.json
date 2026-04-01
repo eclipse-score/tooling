@@ -27,6 +27,11 @@
       "stereotype": "component",
       "relations": [
         {
+          "target": "SampleSEooC.ComponentA.UnitA",
+          "annotation": "uses",
+          "relation_type": "None"
+        },
+        {
           "target": "SampleSEooC.ComponentB",
           "annotation": "uses",
           "relation_type": "None"

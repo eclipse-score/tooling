@@ -23,6 +23,7 @@ rust_binary(
         "//plantuml/parser/puml_resolver",
         "//plantuml/parser/puml_serializer",
         "//plantuml/parser/puml_utils",
+        "//tools/metamodel:class_diagram",
         "@crates//:clap",
         "@crates//:env_logger",
         "@crates//:log",

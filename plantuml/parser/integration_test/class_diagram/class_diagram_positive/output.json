@@ -1,6 +1,5 @@
 {"class_diagram_positive.puml":
   {
-    "class_positive_test": {
       "name": "class_positive_test",
       "entities": [
         {
@@ -619,6 +618,5 @@
         "class_positive_test"
       ],
       "version": null
-    }
   }
 }

@@ -15,6 +15,11 @@
 namespace Core {
     class A
     class B
+
+    enum C {
+        a
+        b
+    }
 }
 
 @enduml

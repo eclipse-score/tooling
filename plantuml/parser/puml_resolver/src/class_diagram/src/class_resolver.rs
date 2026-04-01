@@ -471,13 +471,11 @@ impl ClassResolver {
 impl DiagramResolver for ClassResolver {
     type Document = ClassUmlFile;
     type Statement = ();
-    type Output = HashMap<String, ClassDiagram>;
+    type Output = ClassDiagram;
     type Error = ClassResolverError;
 
     fn visit_document(&mut self, document: &Self::Document) -> Result<Self::Output, Self::Error> {
         self.name_map.clear();
-
-        let mut result = HashMap::new();
 
         self.logic.name = document.name.clone();
         self.logic.source_files.push(document.name.clone());
@@ -496,9 +494,7 @@ impl DiagramResolver for ClassResolver {
             },
         );
 
-        result.insert(logic_class.name.clone(), logic_class);
-
-        Ok(result)
+        Ok(logic_class)
     }
 }
 
@@ -629,33 +625,89 @@ mod tests {
     // convert_arrow
     // ----------------------------
     #[test]
-    fn test_arrow_inheritance_reversed() {
+    fn test_convert_arrow_cases() {
         let resolver = ClassResolver::new();
-        let arrow = make_arrow(Some("<|"), "--", None);
 
-        let (ty, reversed) = resolver.convert_arrow(&arrow).unwrap();
-        assert_eq!(ty, RelationType::Inheritance);
-        assert!(reversed);
+        struct Case {
+            arrow: Arrow,
+            expected_ty: RelationType,
+            expected_reversed: bool,
+        }
+
+        let cases = vec![
+            Case {
+                arrow: make_arrow(Some("<|"), "--", None),
+                expected_ty: RelationType::Inheritance,
+                expected_reversed: true,
+            },
+            Case {
+                arrow: make_arrow(None, "--", Some("|>")),
+                expected_ty: RelationType::Inheritance,
+                expected_reversed: false,
+            },
+            Case {
+                arrow: make_arrow(None, "--", Some(">")),
+                expected_ty: RelationType::Association,
+                expected_reversed: false,
+            },
+            Case {
+                arrow: make_arrow(None, "..", Some("|>")),
+                expected_ty: RelationType::Implementation,
+                expected_reversed: false,
+            },
+            Case {
+                arrow: make_arrow(None, "--", Some("*")),
+                expected_ty: RelationType::Composition,
+                expected_reversed: false,
+            },
+            Case {
+                arrow: make_arrow(None, "--", Some("o")),
+                expected_ty: RelationType::Aggregation,
+                expected_reversed: false,
+            },
+            Case {
+                arrow: make_arrow(Some("<"), "--", None),
+                expected_ty: RelationType::Association,
+                expected_reversed: true,
+            },
+            Case {
+                arrow: make_arrow(Some("<"), "..", None),
+                expected_ty: RelationType::Dependency,
+                expected_reversed: true,
+            },
+            Case {
+                arrow: make_arrow(None, "--", None),
+                expected_ty: RelationType::Link,
+                expected_reversed: false,
+            },
+            Case {
+                arrow: make_arrow(None, "..", None),
+                expected_ty: RelationType::DashedLink,
+                expected_reversed: false,
+            },
+        ];
+
+        for (i, case) in cases.into_iter().enumerate() {
+            let (ty, reversed) = resolver.convert_arrow(&case.arrow).unwrap();
+
+            assert_eq!(ty, case.expected_ty, "case {} failed: type mismatch", i);
+            assert_eq!(
+                reversed, case.expected_reversed,
+                "case {} failed: reversed mismatch",
+                i
+            );
+        }
     }
 
     #[test]
-    fn test_arrow_inheritance_normal() {
+    fn test_convert_arrow_invalid() {
         let resolver = ClassResolver::new();
-        let arrow = make_arrow(None, "--", Some("|>"));
 
-        let (ty, reversed) = resolver.convert_arrow(&arrow).unwrap();
-        assert_eq!(ty, RelationType::Inheritance);
-        assert!(!reversed);
-    }
+        let arrow = make_arrow(Some("?"), "~~", Some("?"));
 
-    #[test]
-    fn test_arrow_association() {
-        let resolver = ClassResolver::new();
-        let arrow = make_arrow(None, "--", Some(">"));
+        let result = resolver.convert_arrow(&arrow);
 
-        let (ty, reversed) = resolver.convert_arrow(&arrow).unwrap();
-        assert_eq!(ty, RelationType::Association);
-        assert!(!reversed);
+        assert!(result.is_err());
     }
 
     // ----------------------------
@@ -685,6 +737,25 @@ mod tests {
         assert_eq!(r.relation_type, RelationType::Inheritance);
         assert_eq!(r.label, None);
         assert_eq!(r.stereotype, Some("label".to_string()));
+    }
+
+    #[test]
+    fn test_process_relationship_unresolved_left() {
+        let mut resolver = ClassResolver::new();
+
+        let rel = Relationship {
+            left: "UnknownA".to_string(),
+            right: "KnownB".to_string(),
+            arrow: make_arrow(None, "--", Some(">")),
+            label: None,
+        };
+
+        let result = resolver.process_relationship(&rel, None);
+
+        assert!(matches!(
+            result,
+            Err(ClassResolverError::UnresolvedReference { ref reference }) if reference == "UnknownA"
+        ));
     }
 
     // ----------------------------
@@ -722,11 +793,35 @@ mod tests {
             relationships: vec![],
         };
 
-        let result = resolver.visit_document(&file).unwrap();
-        assert!(result.contains_key("test"));
-
-        let logic = result.get("test").unwrap();
+        let logic = resolver.visit_document(&file).unwrap();
+        assert_eq!(logic.name, "test");
         assert_eq!(logic.entities.len(), 1);
         assert_eq!(logic.entities[0].id, "User");
+    }
+
+    // ----------------------------
+    // top_level
+    // ----------------------------
+    #[test]
+    fn test_process_top_level_enum_and_namespace() {
+        let cases = vec![
+            ClassUmlTopLevel::Enum(EnumDef {
+                name: make_name("MyEnum"),
+                namespace: "".to_string(),
+                package: "".to_string(),
+                items: vec![],
+                stereotypes: vec![],
+            }),
+            ClassUmlTopLevel::Namespace(Namespace {
+                name: make_name("ns"),
+                types: vec![],
+                namespaces: vec![],
+            }),
+        ];
+
+        for case in cases {
+            let mut resolver = ClassResolver::new();
+            assert!(resolver.process_top_level(&case, None).is_ok());
+        }
     }
 }

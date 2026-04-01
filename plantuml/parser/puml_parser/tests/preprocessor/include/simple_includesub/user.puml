@@ -14,5 +14,6 @@
 
 !includesub common.puml!CommonClass
 class User {}
+!includesub common.puml!1
 
 @enduml

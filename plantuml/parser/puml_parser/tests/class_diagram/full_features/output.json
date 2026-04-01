@@ -1,0 +1,173 @@
+{
+  "full_features.puml": {
+    "name": "full_features",
+    "elements": [
+      {
+        "Package": {
+          "name": {
+            "internal": "pkg1",
+            "display": null
+          },
+          "types": [
+            {
+              "ClassDef": {
+                "name": {
+                  "internal": "AInternal",
+                  "display": "A"
+                },
+                "namespace": "",
+                "package": "pkg1",
+                "attributes": [
+                  {
+                    "visibility": "Public",
+                    "name": "id",
+                    "type": "int"
+                  },
+                  {
+                    "visibility": "Private",
+                    "name": "name",
+                    "type": "String"
+                  },
+                  {
+                    "visibility": "Protected",
+                    "name": "flag",
+                    "type": "bool"
+                  },
+                  {
+                    "visibility": "Package",
+                    "name": "pkgField",
+                    "type": "float"
+                  }
+                ],
+                "methods": [
+                  {
+                    "visibility": "Public",
+                    "name": "foo",
+                    "generic_params": ["T", "U"],
+                    "params": [
+                      {
+                        "name": "a",
+                        "param_type": "int",
+                        "varargs": false
+                      },
+                      {
+                        "name": "b",
+                        "param_type": "String",
+                        "varargs": true
+                      }
+                    ],
+                    "type": "bool"
+                  }
+                ]
+              }
+            },
+            {
+              "StructDef": {
+                "name": {
+                  "internal": "B",
+                  "display": null
+                },
+                "namespace": "",
+                "package": "pkg1",
+                "attributes": [
+                  {
+                    "visibility": "Public",
+                    "name": "value",
+                    "type": "int"
+                  }
+                ],
+                "methods": []
+              }
+            },
+            {
+              "InterfaceDef": {
+                "name": {
+                  "internal": "I",
+                  "display": null
+                },
+                "namespace": "",
+                "package": "pkg1",
+                "attributes": [],
+                "methods": [
+                  {
+                    "visibility": "Public",
+                    "name": "bar",
+                    "generic_params": [],
+                    "params": [],
+                    "type": "void"
+                  }
+                ]
+              }
+            },
+            {
+              "EnumDef": {
+                "name": {
+                  "internal": "E",
+                  "display": null
+                },
+                "namespace": "",
+                "package": "pkg1",
+                "stereotypes": [],
+                "items": [
+                  {
+                    "visibility": "Public",
+                    "name": "A",
+                    "value": {
+                      "Literal": "1"
+                    }
+                  },
+                  {
+                    "visibility": null,
+                    "name": "B",
+                    "value": {
+                      "Description": "desc"
+                    }
+                  },
+                  {
+                    "visibility": null,
+                    "name": "C",
+                    "value": null
+                  }
+                ]
+              }
+            }
+          ],
+          "relationships": [
+            {
+              "left": "A",
+              "right": "B",
+              "arrow": {
+                "left": null,
+                "line": {
+                  "raw": "--"
+                },
+                "middle": null,
+                "right": {
+                  "raw": ">"
+                }
+              },
+              "label": "uses"
+            },
+            {
+              "left": "B",
+              "right": "I",
+              "arrow": {
+                "left": null,
+                "line": {
+                  "raw": "--"
+                },
+                "middle": null,
+                "right": {
+                  "raw": ">"
+                }
+              },
+              "label": null
+            }
+          ],
+          "packages": []
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

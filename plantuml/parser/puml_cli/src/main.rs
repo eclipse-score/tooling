@@ -21,12 +21,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use puml_lobster::write_lobster_to_file;
+use puml_lobster::{write_lobster_to_file, LobsterModel};
 use puml_parser::{
     DiagramParser, Preprocessor, PumlClassParser, PumlComponentParser, PumlSequenceParser,
 };
-use puml_resolver::{ComponentResolver, DiagramResolver};
-use puml_serializer::ComponentSerializer;
+use puml_resolver::{ClassResolver, ComponentResolver, DiagramResolver};
+use puml_serializer::{ClassSerializer, ComponentSerializer};
 use puml_utils::{write_fbs_to_file, write_json_to_file, write_placeholder_file, LogLevel};
 
 /// CLI wrapper for LogLevel that implements ValueEnum
@@ -86,9 +86,9 @@ struct Args {
 
     /// Output directory for generated lobster files (optional).
     /// When set, a <stem>.lobster is written for each diagram that resolves
-    /// to a Component model (independent of --fbs-output-dir). On resolve
-    /// errors a placeholder empty .lobster is written so the build output
-    /// set is always complete.
+    /// to a Component or Class model (independent of --fbs-output-dir).
+    /// On resolve errors a placeholder empty .lobster is written so the
+    /// build output set is always complete.
     #[arg(long)]
     lobster_output_dir: Option<String>,
 }
@@ -181,10 +181,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     write_fbs_to_file(&fbs_buffer, path, dir)?;
                 }
 
-                if let (ResolvedDiagram::Component(ref model), Some(ldir)) =
-                    (&logic_result, &lobster_output_dir)
-                {
-                    write_lobster_to_file(model, path, ldir)?;
+                if let Some(ldir) = &lobster_output_dir {
+                    let lobster_model = match &logic_result {
+                        ResolvedDiagram::Component(model) => LobsterModel::Component(model),
+                        ResolvedDiagram::Class(model) => LobsterModel::Class(model),
+                    };
+                    write_lobster_to_file(lobster_model, path, ldir)?;
                 }
             }
             Err(e) => {
@@ -198,7 +200,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     write_placeholder_file(path, dir)?;
                 }
                 if let Some(ref ldir) = lobster_output_dir {
-                    write_lobster_to_file(&HashMap::new(), path, ldir)?;
+                    write_lobster_to_file(LobsterModel::Empty, path, ldir)?;
                 }
             }
         }
@@ -212,10 +214,10 @@ fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram, source_file: &
     match resolved_content {
         ResolvedDiagram::Component(resolved_content) => {
             ComponentSerializer::serialize(resolved_content, source_file)
-        } // ResolvedDiagram::Class(_) => {     // placeholder
-          //     /* class serializer */
-          // }
-          // ResolvedDiagram::Sequence(_) => {    // placeholder
+        }
+        ResolvedDiagram::Class(resolved_content) => {
+            ClassSerializer::serialize(resolved_content, source_file)
+        } // ResolvedDiagram::Sequence(_) => {    // placeholder
           //     /* sequence serializer */
           // }
     }
@@ -224,7 +226,7 @@ fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram, source_file: &
 #[derive(Debug, Serialize)]
 pub enum ResolvedDiagram {
     Component(HashMap<String, puml_resolver::LogicComponent>),
-    // Class(ClassLogic),       // placeholder
+    Class(class_diagram::ClassDiagram),
     // Sequence(SequenceLogic), // placeholder
 }
 
@@ -236,9 +238,9 @@ fn resolve_parsed_diagram(
             let mut resolver = ComponentResolver::new();
             puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Component)
         }
-        ParsedDiagram::Class(_) => {
-            /* class resolver */
-            Err("Class diagrams not implemented".into())
+        ParsedDiagram::Class(parsed_content) => {
+            let mut resolver = ClassResolver::new();
+            puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Class)
         }
         ParsedDiagram::Sequence(_) => {
             /* sequence resolver */

@@ -35,7 +35,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use thiserror::Error;
 
-use crate::include_ast::{IncludeKind, IncludeStmt, IncludeSuffix, PreprocessStmt, SubBlock};
+use crate::include_ast::{IncludeFile, IncludeKind, IncludeStmt, IncludeSuffix, SubBlock};
 use crate::include_parser::{IncludeParseError, IncludeParserService};
 use crate::utils::{normalize_path, strip_start_end};
 
@@ -43,7 +43,7 @@ use crate::utils::{normalize_path, strip_start_end};
 // Type Aliases
 // ----------------------
 type GlobalSubRegistry = HashMap<Rc<PathBuf>, FileSubRegistry>;
-type AstCache = HashMap<Rc<PathBuf>, Rc<Vec<PreprocessStmt>>>;
+type AstCache = HashMap<Rc<PathBuf>, Rc<Vec<IncludeFile>>>;
 type FileList = HashSet<Rc<PathBuf>>;
 
 /// Stores all subblocks in a file, indexed by label or numeric index.
@@ -54,9 +54,9 @@ pub struct FileSubRegistry {
 }
 
 impl FileSubRegistry {
-    fn collect_from_file(&mut self, stmts: &[PreprocessStmt]) {
+    fn collect_from_file(&mut self, stmts: &[IncludeFile]) {
         for stmt in stmts {
-            if let PreprocessStmt::SubBlock(sub) = stmt {
+            if let IncludeFile::SubBlock(sub) = stmt {
                 let rc_sub = Rc::new(sub.clone());
                 match &sub.name {
                     IncludeSuffix::Label(name) => {
@@ -243,10 +243,7 @@ impl IncludeExpander {
     ///
     /// # Errors
     /// - `IncludeExpandError::ParseFailed`: read or parse errors
-    fn load_ast(
-        &mut self,
-        file: &Rc<PathBuf>,
-    ) -> Result<Rc<Vec<PreprocessStmt>>, IncludeExpandError> {
+    fn load_ast(&mut self, file: &Rc<PathBuf>) -> Result<Rc<Vec<IncludeFile>>, IncludeExpandError> {
         if let Some(ast) = self.ast_cache.get(file) {
             return Ok(Rc::clone(ast));
         }
@@ -279,26 +276,26 @@ impl IncludeExpander {
     /// - Propagates errors from include expansion
     fn expand_stmts(
         &mut self,
-        stmts: &[PreprocessStmt],
+        stmts: &[IncludeFile],
         current_file: &Rc<PathBuf>,
         ctx: &mut IncludeContext,
         file_list: &FileList,
-    ) -> Result<Vec<PreprocessStmt>, IncludeExpandError> {
+    ) -> Result<Vec<IncludeFile>, IncludeExpandError> {
         let mut result = Vec::new();
 
         for stmt in stmts {
             match stmt {
-                PreprocessStmt::Text(text) => {
-                    result.push(PreprocessStmt::Text(text.clone()));
+                IncludeFile::Text(text) => {
+                    result.push(IncludeFile::Text(text.clone()));
                 }
-                PreprocessStmt::Include(inc) => {
+                IncludeFile::Include(inc) => {
                     let expanded = self.expand_include(inc, current_file, ctx, file_list)?;
-                    result.push(PreprocessStmt::Text(expanded));
+                    result.push(IncludeFile::Text(expanded));
                 }
-                PreprocessStmt::SubBlock(sub) => {
+                IncludeFile::SubBlock(sub) => {
                     let expanded_content =
                         self.expand_stmts(&sub.content, current_file, ctx, file_list)?;
-                    result.push(PreprocessStmt::SubBlock(SubBlock {
+                    result.push(IncludeFile::SubBlock(SubBlock {
                         name: sub.name.clone(),
                         content: expanded_content,
                     }));
@@ -376,7 +373,7 @@ impl IncludeExpander {
 ///
 /// # Returns
 /// - `String` containing PlantUML text
-pub fn render_stmts(stmts: Vec<PreprocessStmt>) -> String {
+pub fn render_stmts(stmts: Vec<IncludeFile>) -> String {
     let mut out = String::new();
 
     for stmt in stmts {

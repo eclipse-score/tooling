@@ -32,6 +32,29 @@
                 "attributes": [],
                 "methods": []
               }
+            },
+            {
+              "EnumDef": {
+                "name": {
+                  "internal": "C",
+                  "display": null
+                },
+                "namespace": "Core",
+                "package": "",
+                "stereotypes": [],
+                "items": [
+                  {
+                    "visibility": null,
+                    "name": "a",
+                    "value": null
+                  },
+                  {
+                    "visibility": null,
+                    "name": "b",
+                    "value": null
+                  }
+                ]
+              }
             }
           ],
           "namespaces": []

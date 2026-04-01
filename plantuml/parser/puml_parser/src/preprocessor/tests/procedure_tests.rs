@@ -67,6 +67,16 @@ fn test_recursive_macro() {
 }
 
 #[test]
+fn test_macro_nested_args() {
+    run_procedure_preprocess_case("macro_nested_args");
+}
+
+#[test]
+fn test_max_depth_exceeded() {
+    run_procedure_preprocess_case("max_depth_exceeded");
+}
+
+#[test]
 fn test_noise_item() {
     run_procedure_preprocess_case("noise_item");
 }
@@ -74,4 +84,14 @@ fn test_noise_item() {
 #[test]
 fn test_empty() {
     run_procedure_preprocess_case("empty");
+}
+
+#[test]
+fn test_unknown_var_in_args() {
+    run_procedure_preprocess_case("unknown_var_in_args");
+}
+
+#[test]
+fn test_unknown_variable() {
+    run_procedure_preprocess_case("unknown_variable");
 }

@@ -16,14 +16,14 @@ use pest_derive::Parser;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::include_ast::{IncludeKind, IncludeStmt, IncludeSuffix, PreprocessStmt, SubBlock};
+use crate::include_ast::{IncludeFile, IncludeKind, IncludeStmt, IncludeSuffix, SubBlock};
 use parser_core::{pest_to_syntax_error, BaseParseError};
 
 #[derive(Parser)]
 #[grammar = "../../../grammar/include.pest"]
 pub struct IncludeParser;
 
-const PREPROCESS_KW: &[&str] = &["!include", "!include_once", "!include_many", "!includesub"];
+const INCLUDE_KW: &[&str] = &["!include", "!include_once", "!include_many", "!includesub"];
 
 #[derive(Debug, thiserror::Error)]
 pub enum IncludeParseError {
@@ -39,7 +39,7 @@ pub struct IncludeParserService;
 
 impl IncludeParserService {
     // -------------------- Parser Entry --------------------
-    pub fn parse_file(&mut self, file: &Path) -> Result<Vec<PreprocessStmt>, IncludeParseError> {
+    pub fn parse_file(&mut self, file: &Path) -> Result<Vec<IncludeFile>, IncludeParseError> {
         let content = fs::read_to_string(file).map_err(|e| {
             IncludeParseError::Base(BaseParseError::IoError {
                 path: file.to_path_buf(),
@@ -56,27 +56,27 @@ impl IncludeParserService {
                 match line.as_rule() {
                     Rule::include_line => {
                         let include = self.parse_include_line(line);
-                        stmts.push(PreprocessStmt::Include(include));
+                        stmts.push(IncludeFile::Include(include));
                     }
                     Rule::includesub_line => {
                         let include_sub = self.parse_includesub_line(line);
-                        stmts.push(PreprocessStmt::Include(include_sub));
+                        stmts.push(IncludeFile::Include(include_sub));
                     }
                     Rule::sub_block => {
                         let sub_block = self.parse_sub_block(line);
-                        stmts.push(PreprocessStmt::SubBlock(sub_block));
+                        stmts.push(IncludeFile::SubBlock(sub_block));
                     }
                     Rule::text_line => {
                         let text = line.as_str().to_string();
                         let trimmed = text.trim_start();
-                        if PREPROCESS_KW.iter().any(|kw| trimmed.starts_with(kw)) {
+                        if INCLUDE_KW.iter().any(|kw| trimmed.starts_with(kw)) {
                             return Err(IncludeParseError::InvalidTextLine {
                                 line: text,
                                 file: file.to_path_buf(),
                             });
                         }
                         if !text.trim().is_empty() {
-                            stmts.push(PreprocessStmt::Text(text));
+                            stmts.push(IncludeFile::Text(text));
                         }
                     }
                     _ => {}
@@ -171,21 +171,21 @@ impl IncludeParserService {
         let startsub_directive = inner.next().unwrap();
         let name = self.extract_suffix(startsub_directive);
 
-        let mut content: Vec<PreprocessStmt> = Vec::new();
+        let mut content: Vec<IncludeFile> = Vec::new();
         for line in inner {
             match line.as_rule() {
                 Rule::include_line => {
                     let include = self.parse_include_line(line);
-                    content.push(PreprocessStmt::Include(include));
+                    content.push(IncludeFile::Include(include));
                 }
                 Rule::includesub_line => {
                     let include_sub = self.parse_includesub_line(line);
-                    content.push(PreprocessStmt::Include(include_sub));
+                    content.push(IncludeFile::Include(include_sub));
                 }
                 Rule::text_line => {
                     let text = line.as_str().to_string();
                     if !text.trim().is_empty() {
-                        content.push(PreprocessStmt::Text(text));
+                        content.push(IncludeFile::Text(text));
                     }
                 }
                 _ => {}
@@ -255,5 +255,16 @@ mod tests {
         let (path, suffix) = INCLUDE_PARSER_SERVICE.parse_includesub_directive(pair);
         assert_eq!(path, "path/to/file");
         assert!(matches!(suffix, IncludeSuffix::Index(2)));
+    }
+
+    #[test]
+    fn test_parse_file_io_error() {
+        let mut service = IncludeParserService;
+        let missing = PathBuf::from("does-not-exist-include-test.puml");
+        let result = service.parse_file(&missing);
+        assert!(matches!(
+            result,
+            Err(IncludeParseError::Base(BaseParseError::IoError { .. }))
+        ));
     }
 }
