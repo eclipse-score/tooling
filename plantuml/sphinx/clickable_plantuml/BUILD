@@ -1,5 +1,5 @@
 # *******************************************************************************
-# Copyright (c) 2025 Contributors to the Eclipse Foundation
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -10,14 +10,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-alias(
-    name = "parser",
-    actual = "//plantuml/parser/puml_cli:puml_cli",
-    visibility = ["//visibility:public"],
-)
-
-alias(
-    name = "linker",
-    actual = "//plantuml/linker:linker",
+py_library(
+    name = "clickable_plantuml",
+    srcs = ["clickable_plantuml.py"],
+    imports = ["."],
     visibility = ["//visibility:public"],
 )

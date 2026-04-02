@@ -1,5 +1,5 @@
 # *******************************************************************************
-# Copyright (c) 2025 Contributors to the Eclipse Foundation
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -10,14 +10,23 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-alias(
-    name = "parser",
-    actual = "//plantuml/parser/puml_cli:puml_cli",
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+
+rust_binary(
+    name = "linker",
+    srcs = ["src/main.rs"],
+    crate_root = "src/main.rs",
     visibility = ["//visibility:public"],
+    deps = [
+        "//plantuml/parser/puml_serializer/src/fbs:component_fbs",
+        "@crates//:clap",
+        "@crates//:flatbuffers",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
 )
 
-alias(
-    name = "linker",
-    actual = "//plantuml/linker:linker",
-    visibility = ["//visibility:public"],
+rust_test(
+    name = "linker_test",
+    crate = ":linker",
 )
