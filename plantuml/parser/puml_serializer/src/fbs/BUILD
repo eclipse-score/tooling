@@ -39,8 +39,7 @@ rust_library(
         "--allow=clippy::needless-lifetimes",
     ],
     visibility = [
-        "//plantuml/parser:__subpackages__",
-        "//validation/archver:__pkg__",
+        "//visibility:public",
     ],
     deps = [
         "@crates//:flatbuffers",
