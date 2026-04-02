@@ -18,8 +18,8 @@
 
 !procedure init_class($name)
   class $name {
-  $addCommonMethod()
-}
+    $addCommonMethod()
+  }
 !endprocedure
 
 !procedure $addCommonMethod()

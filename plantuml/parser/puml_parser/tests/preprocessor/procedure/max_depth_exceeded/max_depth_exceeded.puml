@@ -1,0 +1,54 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+@startuml max_depth_exceeded
+
+!procedure $M1()
+  $M2()
+!endprocedure
+!procedure $M2()
+  $M3()
+!endprocedure
+!procedure $M3()
+  $M4()
+!endprocedure
+!procedure $M4()
+  $M5()
+!endprocedure
+!procedure $M5()
+  $M6()
+!endprocedure
+!procedure $M6()
+  $M7()
+!endprocedure
+!procedure $M7()
+  $M8()
+!endprocedure
+!procedure $M8()
+  $M9()
+!endprocedure
+!procedure $M9()
+  $M10()
+!endprocedure
+!procedure $M10()
+  $M11()
+!endprocedure
+!procedure $M11()
+  $M12()
+!endprocedure
+!procedure $M12()
+  rectangle "Done" as Done
+!endprocedure
+
+$M1()
+
+@enduml

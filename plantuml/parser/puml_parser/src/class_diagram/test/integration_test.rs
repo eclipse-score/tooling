@@ -199,3 +199,8 @@ fn test_stereotype_relationship() {
 fn test_struct() {
     run_class_diagram_parser_case("struct");
 }
+
+#[test]
+fn test_full_features() {
+    run_class_diagram_parser_case("full_features");
+}

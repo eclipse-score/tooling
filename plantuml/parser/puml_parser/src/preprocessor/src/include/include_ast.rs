@@ -32,21 +32,21 @@ pub enum IncludeStmt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SubBlock {
     pub name: IncludeSuffix,
-    pub content: Vec<PreprocessStmt>,
+    pub content: Vec<IncludeFile>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum PreprocessStmt {
+pub enum IncludeFile {
     Include(IncludeStmt),
     Text(String),
     SubBlock(SubBlock),
 }
 
-impl PreprocessStmt {
+impl IncludeFile {
     pub fn render(&self, out: &mut String) {
         match self {
-            PreprocessStmt::Text(text) => out.push_str(text),
-            PreprocessStmt::SubBlock(sub) => {
+            IncludeFile::Text(text) => out.push_str(text),
+            IncludeFile::SubBlock(sub) => {
                 for stmt in &sub.content {
                     stmt.render(out);
                 }
@@ -62,7 +62,7 @@ mod tests {
 
     #[test]
     fn render_text_node_outputs_text() {
-        let stmt = PreprocessStmt::Text("hello".into());
+        let stmt = IncludeFile::Text("hello".into());
         let mut out = String::new();
         stmt.render(&mut out);
         assert_eq!(out, "hello");
@@ -73,11 +73,11 @@ mod tests {
         let sub = SubBlock {
             name: IncludeSuffix::Label("sub".into()),
             content: vec![
-                PreprocessStmt::Text("a\n".into()),
-                PreprocessStmt::Text("b\n".into()),
+                IncludeFile::Text("a\n".into()),
+                IncludeFile::Text("b\n".into()),
             ],
         };
-        let stmt = PreprocessStmt::SubBlock(sub);
+        let stmt = IncludeFile::SubBlock(sub);
         let mut out = String::new();
         stmt.render(&mut out);
         assert_eq!(out, "a\nb\n");
@@ -89,7 +89,7 @@ mod tests {
             name: IncludeSuffix::Label("empty".into()),
             content: vec![],
         };
-        let stmt = PreprocessStmt::SubBlock(sub);
+        let stmt = IncludeFile::SubBlock(sub);
         let mut out = String::new();
         stmt.render(&mut out);
         assert_eq!(out, "");
@@ -99,17 +99,17 @@ mod tests {
     fn render_nested_subblocks() {
         let inner_sub = SubBlock {
             name: IncludeSuffix::Label("inner".into()),
-            content: vec![PreprocessStmt::Text("inner\n".into())],
+            content: vec![IncludeFile::Text("inner\n".into())],
         };
         let outer_sub = SubBlock {
             name: IncludeSuffix::Label("outer".into()),
             content: vec![
-                PreprocessStmt::Text("start\n".into()),
-                PreprocessStmt::SubBlock(inner_sub),
-                PreprocessStmt::Text("end\n".into()),
+                IncludeFile::Text("start\n".into()),
+                IncludeFile::SubBlock(inner_sub),
+                IncludeFile::Text("end\n".into()),
             ],
         };
-        let stmt = PreprocessStmt::SubBlock(outer_sub);
+        let stmt = IncludeFile::SubBlock(outer_sub);
         let mut out = String::new();
         stmt.render(&mut out);
         assert_eq!(out, "start\ninner\nend\n");
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn render_include_stmt_does_not_panic() {
-        let include = PreprocessStmt::Include(IncludeStmt::Include {
+        let include = IncludeFile::Include(IncludeStmt::Include {
             kind: IncludeKind::Include,
             path: "file.puml".into(),
         });
@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn render_include_sub_stmt_does_not_panic() {
-        let include_sub = PreprocessStmt::Include(IncludeStmt::IncludeSub {
+        let include_sub = IncludeFile::Include(IncludeStmt::IncludeSub {
             path: "file.puml".into(),
             suffix: IncludeSuffix::Label("sub".into()),
         });

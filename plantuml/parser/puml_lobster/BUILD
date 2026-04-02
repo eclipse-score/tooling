@@ -19,6 +19,7 @@ rust_library(
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
         "//plantuml/parser/puml_resolver",
+        "//tools/metamodel:class_diagram",
         "@crates//:serde_json",
     ],
 )

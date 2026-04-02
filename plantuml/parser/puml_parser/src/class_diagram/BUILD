@@ -45,6 +45,11 @@ rust_library(
 )
 
 rust_test(
+    name = "puml_parser_class_unit_test",
+    crate = ":puml_parser_class",
+)
+
+rust_test(
     name = "puml_parser_class_integration_test",
     srcs = ["test/integration_test.rs"],
     args = [

@@ -16,6 +16,8 @@ common.puml: |
       +id: int
       +login()
   }
+  class A {
+  }
   class Student {
       +name: String
   }
@@ -27,4 +29,6 @@ user.puml: |
       +login()
   }
   class User {}
+  class A {
+  }
   @enduml

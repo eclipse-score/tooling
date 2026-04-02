@@ -1,0 +1,46 @@
+{
+  "relation_simple_name_alias.puml": {
+    "PkgA": {
+      "id": "PkgA",
+      "name": "Pkg A",
+      "alias": "PkgA",
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": []
+    },
+    "PkgA.AliasA": {
+      "id": "PkgA.AliasA",
+      "name": "Component A",
+      "alias": "AliasA",
+      "parent_id": "PkgA",
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": [
+        {
+          "target": "PkgB.AliasB",
+          "annotation": "uses",
+          "relation_type": "None"
+        }
+      ]
+    },
+    "PkgB": {
+      "id": "PkgB",
+      "name": "Pkg B",
+      "alias": "PkgB",
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": []
+    },
+    "PkgB.AliasB": {
+      "id": "PkgB.AliasB",
+      "name": "Component B",
+      "alias": "AliasB",
+      "parent_id": "PkgB",
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": []
+    }
+  }
+}

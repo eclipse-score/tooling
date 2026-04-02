@@ -26,3 +26,18 @@ rust_library(
         "@crates//:flatbuffers",
     ],
 )
+
+rust_library(
+    name = "puml_serialize_class",
+    srcs = [
+        "class_serializer.rs",
+    ],
+    crate_name = "class_serializer",
+    crate_root = "class_serializer.rs",
+    visibility = ["//plantuml/parser:__subpackages__"],
+    deps = [
+        "//plantuml/parser/puml_serializer/src/fbs:class_fbs",
+        "//tools/metamodel:class_diagram",
+        "@crates//:flatbuffers",
+    ],
+)

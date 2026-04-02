@@ -17,6 +17,7 @@ rust_library(
     srcs = ["src/lib.rs"],
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
+        ":class_serializer",
         ":component_serializer",
     ],
 )
@@ -24,5 +25,11 @@ rust_library(
 alias(
     name = "component_serializer",
     actual = "//plantuml/parser/puml_serializer/src/serialize:puml_serialize_component",
+    visibility = ["//plantuml/parser:__subpackages__"],
+)
+
+alias(
+    name = "class_serializer",
+    actual = "//plantuml/parser/puml_serializer/src/serialize:puml_serialize_class",
     visibility = ["//plantuml/parser:__subpackages__"],
 )

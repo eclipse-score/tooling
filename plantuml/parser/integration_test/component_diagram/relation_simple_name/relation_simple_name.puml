@@ -10,7 +10,7 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-@startuml
+@startuml "Relation with Simple Name"
 
 package "Sample SEooC" as SampleSEooC #LightBlue {
     component "Component A" as ComponentA <<component>> {
@@ -21,7 +21,7 @@ package "Sample SEooC" as SampleSEooC #LightBlue {
         component "Unit B" as UnitB <<unit>> {
         }
     }
-
+    ComponentA --> UnitA : uses
     ComponentA --> ComponentB : uses
 }
 
