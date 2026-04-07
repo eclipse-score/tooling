@@ -27,4 +27,5 @@ def score_virtualenv(name = "ide_support", venv_name = ".venv", reqs = [], tags 
         deps = all_requirements + reqs + ["@rules_python//python/runfiles"],
         data = ["@score_tooling//python_basics:pyproject.toml"] + data,
         tags = tags,
+        package_collisions = "warning",
     )
