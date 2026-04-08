@@ -1,0 +1,85 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml
+title Manual Analysis Tooling - Deployment / Runtime Diagram
+
+node "Workspace Package" {
+    artifact "analysis.yaml" as AnalysisYaml
+    artifact "manual.lock" as CommittedLock
+    artifact "results.json" as ResultsJson
+
+    node "Context Providers" {
+        artifact "filegroup inputs" as FilegroupInputs
+        artifact "cc_library transitive\nsources + attrs" as CcInputs
+    }
+
+    component "manual_analysis\n(macro)" as Macro
+    component "manual_analysis.update\n(executable target)" as UpdateTarget
+    component "manual_analysis\n(test target)" as TestTarget
+}
+
+node "Bazel Action / Runfiles Layer" {
+    artifact "file manifest TSV" as FileManifest
+    artifact "rule manifest TSV" as RuleManifest
+    artifact "computed_lock.txt" as ComputedLock
+
+    component "manual_analysis_update_runner" as UpdateRunner
+    component "interactive_runner_cli" as InteractiveRunner
+    component "update_lock" as UpdateLock
+    component "manual_analysis_test_runner" as TestRunner
+}
+
+node "User / Terminal Runtime" {
+    component "_SplitPaneUI\n(prompt_toolkit)" as UI
+}
+
+node "Traceability Outputs" {
+    artifact "name.lobster" as LobsterOutput
+    component "LOBSTER tools" as LobsterTools
+}
+
+FilegroupInputs --> Macro : contexts
+CcInputs --> Macro : contexts
+AnalysisYaml --> Macro : analysis
+CommittedLock --> Macro : lock_file
+ResultsJson --> Macro : results_file
+
+Macro --> UpdateTarget : expands to
+Macro --> TestTarget : expands to
+
+UpdateTarget --> FileManifest : create
+UpdateTarget --> RuleManifest : create
+UpdateTarget --> UpdateRunner : executable
+UpdateRunner --> InteractiveRunner : run analysis
+InteractiveRunner --> UI : render prompts
+UpdateRunner --> UpdateLock : refresh lock
+UpdateLock --> CommittedLock : rewrite
+
+TestTarget --> FileManifest : create
+TestTarget --> RuleManifest : create
+FileManifest --> UpdateRunner : read
+RuleManifest --> UpdateRunner : read
+FileManifest --> TestRunner : read
+RuleManifest --> TestRunner : read
+TestTarget --> UpdateLock : compute sandbox lock
+UpdateLock --> ComputedLock : write
+TestTarget --> TestRunner : execute checks
+TestRunner --> CommittedLock : compare
+TestRunner --> ResultsJson : validate
+TestRunner --> AnalysisYaml : load requirements
+TestRunner --> LobsterOutput : emit
+LobsterOutput --> LobsterTools : downstream input
+
+@enduml
+

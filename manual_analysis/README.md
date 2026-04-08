@@ -30,6 +30,9 @@ A manual analysis consists of:
 The tooling also produces a **LOBSTER traceability artifact** (`.lobster` file)
 so that coverage of requirements can be tracked across the project.
 
+For the Bazel-focused architectural design and runtime views of this tooling,
+see [`docs/README.md`](docs/README.md).
+
 ## Bazel Rules
 
 ### `manual_analysis` (macro)
@@ -268,7 +271,8 @@ lobster_test(
 
 ## Example
 
-A fully working example is available in [`example/`](example/). It
+A fully working example is available in the [`example/BUILD`](example/BUILD)
+package alongside the accompanying sample inputs and generated artifacts. It
 demonstrates:
 
 - Context from a `filegroup` (`context_a.txt`, `context_b.txt`)
