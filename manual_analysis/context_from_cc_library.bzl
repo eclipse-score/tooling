@@ -17,7 +17,7 @@ load(":manual_analysis.bzl", "ManualAnalysisContextInfo")
 _CollectedCcLibrarySourcesInfo = provider(
     doc = "Internal provider with transitive cc_library context files.",
     fields = {
-        "files": "depset of source/header files and compiled outputs from a cc_library dependency graph",
+        "files": "depset of source/header files from a cc_library dependency graph",
         "rules": "depset of serialized <label>\\t<canonical_form> entries for relevant attributes",
     },
 )
