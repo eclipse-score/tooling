@@ -29,7 +29,6 @@ See the individual README files for detailed usage instructions and configuratio
 | **format_checker** | Code formatting validation | [README](format_checker/README.md) |
 | **python_basics** | Python development utilities and testing | [README](python_basics/README.md) |
 | **starpls** | Starlark language server support | [README](starpls/README.md) |
-| **tools** | Formatters & Linters | [README](tools/README.md) |
 | **coverage** | Ferrocene Rust coverage workflow | [README](coverage/README.md) |
 
 ## Usage Examples

@@ -11,11 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-module(
-    name = "score_tooling",
-    version = "0.0.0",
-    compatibility_level = 1,
-)
+module(name = "score_tooling")
 
 ###############################################################################
 # Core Dependencies
@@ -28,7 +24,7 @@ bazel_dep(name = "aspect_rules_lint", version = "1.5.3")
 bazel_dep(name = "rules_shell", version = "0.5.0")
 bazel_dep(name = "rules_java", version = "8.15.1")
 bazel_dep(name = "rules_rust", version = "0.61.0")
-bazel_dep(name = "rules_multitool", version = "1.9.0")
+bazel_dep(name = "rules_multitool", version = "1.9.0", dev_dependency = True)
 bazel_dep(name = "score_rust_policies", version = "0.0.2")
 bazel_dep(name = "bazel_skylib", version = "1.7.1")
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2")
@@ -151,43 +147,6 @@ pip.parse(
 )
 use_repo(pip, "pip_tooling")
 
-###############################################################################
-# Multitool Hub (for ruff, pyright, actionlint, etc.)
-###############################################################################
-multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
-
-#python_basics
-multitool.hub(lockfile = "python_basics/multitool.lock.json")
-use_repo(multitool, "multitool")
-
-# Ruff Hub
-multitool.hub(
-    hub_name = "ruff_hub",
-    lockfile = "tools/ruff.lock.json",
-)
-use_repo(multitool, "ruff_hub")
-
-# Actionlint Hub
-multitool.hub(
-    hub_name = "actionlint_hub",
-    lockfile = "tools/actionlint.lock.json",
-)
-use_repo(multitool, "actionlint_hub")
-
-# Shellcheck Hub
-multitool.hub(
-    hub_name = "shellcheck_hub",
-    lockfile = "tools/shellcheck.lock.json",
-)
-use_repo(multitool, "shellcheck_hub")
-
-# YAMLfmt Hub
-multitool.hub(
-    hub_name = "yamlfmt_hub",
-    lockfile = "tools/yamlfmt.lock.json",
-)
-use_repo(multitool, "yamlfmt_hub")
-
 register_toolchains(
     "//bazel/rules/rules_score:sphinx_default_toolchain",
 )
@@ -195,7 +154,12 @@ register_toolchains(
 ###############################################################################
 # Dev Dependencies (for testing)
 ###############################################################################
-bazel_dep(name = "score_docs_as_code", version = "3.0.1", dev_dependency = True)
+bazel_dep(name = "score_docs_as_code", dev_dependency = True)
+git_override(
+    module_name = "score_docs_as_code",
+    remote = "https://github.com/eclipse-score/docs-as-code.git",
+    commit = "4a05a739e56fbc8bf41b8445f3ac2b84db85bdd8",
+)
 
 ###############################################################################
 # Dependencies for Manual Analysis
