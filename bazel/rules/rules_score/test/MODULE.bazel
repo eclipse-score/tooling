@@ -67,3 +67,17 @@ local_path_override(
 register_toolchains(
     "//:score_toolchain",
 )
+
+bazel_dep(name = "trlc", version = "0.0.0")
+git_override(
+    module_name = "trlc",
+    commit = "c7750ebd0520996e05b9a9bc91eb6a4f62030f22",
+    remote = "https://github.com/bmw-software-engineering/trlc.git",
+)
+
+bazel_dep(name = "lobster", version = "0.0.0")
+git_override(
+    module_name = "lobster",
+    commit = "56881461f9d3fde2918d1731aa5937aaf64cd67c",
+    remote = "https://github.com/bmw-software-engineering/lobster.git",
+)

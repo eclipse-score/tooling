@@ -1,0 +1,120 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml
+skinparam componentStyle rectangle
+skinparam shadowing false
+title Manual Analysis Tooling - Class Diagram
+
+package "Bazel Rule Composition" {
+    interface ManualAnalysisContextInfo {
+        + files : depset<File>
+        + rules : depset<String>
+    }
+
+    class "manual_analysis" as ManualAnalysisMacro <<macro>> {
+        + implementation(name, contexts, analysis, lock_file, results_file)
+    }
+
+    class "manual_analysis_update" as ManualAnalysisUpdateRule <<rule>> {
+        + _collect_inputs(ctx)
+        + _make_manifests(ctx, input_files, input_rules)
+    }
+
+    class "manual_analysis_test" as ManualAnalysisTestRule <<rule>> {
+        + _collect_inputs(ctx)
+        + _make_manifests(ctx, input_files, input_rules)
+    }
+
+    class "manual_analysis_context_from_filegroup" as FilegroupContextRule <<rule>>
+    class "manual_analysis_context_from_cc_library" as CcContextRule <<rule>>
+
+    ManualAnalysisMacro --> ManualAnalysisUpdateRule : expands to
+    ManualAnalysisMacro --> ManualAnalysisTestRule : expands to
+    FilegroupContextRule ..> ManualAnalysisContextInfo : provides
+    CcContextRule ..> ManualAnalysisContextInfo : provides
+    ManualAnalysisUpdateRule --> ManualAnalysisContextInfo : consumes
+    ManualAnalysisTestRule --> ManualAnalysisContextInfo : consumes
+}
+
+package "Interactive Update Runtime" {
+    class "interactive_runner_cli" as InteractiveRunnerCLI {
+        + main(argv) : void
+        - _create_parser() : ArgumentParser
+    }
+
+    class "yaml_schema" as YamlSchema {
+        + load_analysis(path) : (steps, requirements)
+    }
+
+    class "run_analysis" as AnalysisFlow {
+        + run_analysis(steps, ui, analysis_path, results_path, prefill) : list<dict>
+    }
+
+    class "_execute_step" as StepExecutor {
+        + _execute_step(step, ui, results, prefill) : void
+    }
+
+    class "_PrefillState" as PrefillState {
+        + load(results_path) : _PrefillState
+    }
+
+    class "_SplitPaneUI" as SplitPaneUI {
+        + prompt_multiline(...) : str
+        + prompt_choice(...) : str
+        + prompt_choice_with_justification(...) : (str, str)
+        + prompt_args_form(...) : dict
+        + run_command(command) : int
+    }
+
+    class "update_lock" as UpdateLock {
+        + main(argv) : void
+    }
+
+    InteractiveRunnerCLI --> YamlSchema : load_analysis
+    InteractiveRunnerCLI --> PrefillState : optional prefill
+    InteractiveRunnerCLI --> SplitPaneUI : creates
+    InteractiveRunnerCLI --> AnalysisFlow : run_analysis
+    AnalysisFlow --> StepExecutor : iterates steps
+    StepExecutor --> SplitPaneUI : renders prompts
+}
+
+package "Verification Runtime" {
+    class "manual_analysis_test_runner" as TestRunner {
+        + main(argv) : void
+    }
+
+    class "check_lock" as CheckLock {
+        + evaluate_lock_files(computed, committed) : (bool, error)
+    }
+
+    class "check_results" as CheckResults {
+        + evaluate_results_file(results_path) : (bool, error)
+    }
+
+    class "lobster_generator" as LobsterGenerator {
+        + write_lobster_file(requirements, analysis_passed, results_file_path, analysis_label, output_path)
+    }
+
+    TestRunner --> CheckLock : validate lock
+    TestRunner --> CheckResults : validate results
+    TestRunner --> YamlSchema : load requirements
+    TestRunner --> LobsterGenerator : write lobster
+}
+
+ManualAnalysisUpdateRule --> InteractiveRunnerCLI : executable
+ManualAnalysisUpdateRule --> UpdateLock : executable
+ManualAnalysisTestRule --> UpdateLock : action
+ManualAnalysisTestRule --> TestRunner : test executable
+
+@enduml

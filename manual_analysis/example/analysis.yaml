@@ -1,0 +1,47 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+requirements:
+  - "manual_analysis_example.no_cat_killing"
+steps:
+  - action:
+    description: Determine cat termination logic
+  - automated_action:
+    description: Determine targets that might kill cats during handling
+    command: "{bazel} cquery \"rdeps(//manual_analysis/example:ma_cc_root, {target})\" --notool_deps"
+    args:
+      - name: bazel
+        default: bazel
+      - name: target
+  - decision:
+    description: Is there a dependency path from the handling logic to the termination logic?
+    branches:
+      - answer: Yes
+        steps:
+          - repeat:
+            until:
+              description: All targets were checked?
+              continue: No
+              break: Yes
+            steps:
+              - assertion:
+                description: |
+                  Take a target from the list of risky targets.
+                  Does it contain a code path that could kill a cat?
+                positive: No
+                negative: Yes
+      - answer: No
+        steps: []
+  - assertion:
+    description: Do we keep all our cats safe?
+    positive: Yes
+    negative: No

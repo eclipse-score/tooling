@@ -1,0 +1,628 @@
+<?plantuml 1.2026.2?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css"
+     data-diagram-type="DESCRIPTION" height="1113px" preserveAspectRatio="none"
+     style="width:1674px;height:1113px;background:#FFFFFF;" version="1.1" viewBox="0 0 1674 1113" width="1674px"
+     zoomAndPan="magnify">
+    <title>Manual Analysis Tooling - Deployment / Runtime Diagram</title>
+    <defs/>
+    <g>
+        <g class="title" data-source-line="1">
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="404.5285" x="627.7357" y="24.9659">Manual Analysis Tooling - Deployment / Runtime Diagram
+            </text>
+        </g><!--cluster Workspace Package-->
+        <g class="cluster" data-qualified-name="Workspace Package" data-source-line="3" id="ent0002">
+            <polygon fill="none"
+                     points="834,56.0679,844,46.0679,1657,46.0679,1657,573.0679,1647,583.0679,834,583.0679,834,56.0679"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1647" x2="1657" y1="56.0679" y2="46.0679"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="834" x2="1647" y1="56.0679" y2="56.0679"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1647" x2="1647" y1="56.0679" y2="583.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="139.3414" x="1171.8293" y="74.0339">Workspace Package
+            </text>
+        </g><!--cluster Context Providers-->
+        <g class="cluster" data-qualified-name="Workspace Package.Context Providers" data-source-line="8" id="ent0006">
+            <polygon fill="none"
+                     points="1273,107.0679,1283,97.0679,1633,97.0679,1633,234.0679,1623,244.0679,1273,244.0679,1273,107.0679"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1623" x2="1633" y1="107.0679" y2="97.0679"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1273" x2="1623" y1="107.0679" y2="107.0679"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1623" x2="1623" y1="107.0679" y2="244.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="125.4395" x="1386.2802" y="125.0339">Context Providers
+            </text>
+        </g><!--cluster Bazel Action / Runfiles Layer-->
+        <g class="cluster" data-qualified-name="Bazel Action . Runfiles Layer" data-source-line="18" id="ent0012">
+            <polygon fill="none"
+                     points="259,452.0679,269,442.0679,810,442.0679,810,1073.5679,800,1083.5679,259,1083.5679,259,452.0679"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="800" x2="810" y1="452.0679" y2="442.0679"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="259" x2="800" y1="452.0679" y2="452.0679"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="800" x2="800" y1="452.0679" y2="1083.5679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="198.4353" x="431.2824" y="470.0339">Bazel Action / Runfiles Layer
+            </text>
+        </g><!--cluster User / Terminal Runtime-->
+        <g class="cluster" data-qualified-name="User . Terminal Runtime" data-source-line="29" id="ent0020">
+            <polygon fill="none"
+                     points="834,952.5679,844,942.5679,1081,942.5679,1081,1086.5679,1071,1096.5679,834,1096.5679,834,952.5679"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1071" x2="1081" y1="952.5679" y2="942.5679"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="834" x2="1071" y1="952.5679" y2="952.5679"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1071" x2="1071" y1="952.5679" y2="1096.5679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="171.5553" x="867.7223" y="970.5339">User / Terminal Runtime
+            </text>
+        </g><!--cluster Traceability Outputs-->
+        <g class="cluster" data-qualified-name="Traceability Outputs" data-source-line="33" id="ent0022">
+            <polygon fill="none"
+                     points="16,772.0679,26,762.0679,235,762.0679,235,1077.0679,225,1087.0679,16,1087.0679,16,772.0679"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="225" x2="235" y1="772.0679" y2="762.0679"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="16" x2="225" y1="772.0679" y2="772.0679"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="225" x2="225" y1="772.0679" y2="1087.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="143.7095" x="49.6453" y="790.0339">Traceability Outputs
+            </text>
+        </g><!--entity AnalysisYaml-->
+        <g class="entity" data-qualified-name="Workspace Package.AnalysisYaml" data-source-line="4" id="ent0003">
+            <rect fill="#F1F1F1" height="42.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="117.5837" x="850" y="176.5679"/>
+            <polygon fill="#F1F1F1"
+                     points="950.5837,181.5679,950.5837,195.5679,962.5837,195.5679,962.5837,187.5679,956.5837,181.5679,950.5837,181.5679"
+                     style="stroke:#181818;stroke-width:0.5;"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="956.5837" x2="956.5837" y1="181.5679" y2="187.5679"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="962.5837" x2="956.5837" y1="187.5679" y2="187.5679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="87.5837"
+                  x="860" y="204.5339">analysis.yaml
+            </text>
+        </g><!--entity CommittedLock-->
+        <g class="entity" data-qualified-name="Workspace Package.CommittedLock" data-source-line="5" id="ent0004">
+            <rect fill="#F1F1F1" height="42.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="109.7437" x="1144" y="176.5679"/>
+            <polygon fill="#F1F1F1"
+                     points="1236.7437,181.5679,1236.7437,195.5679,1248.7437,195.5679,1248.7437,187.5679,1242.7437,181.5679,1236.7437,181.5679"
+                     style="stroke:#181818;stroke-width:0.5;"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1242.7437" x2="1242.7437" y1="181.5679" y2="187.5679"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1248.7437" x2="1242.7437" y1="187.5679" y2="187.5679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.7437"
+                  x="1154" y="204.5339">manual.lock
+            </text>
+        </g><!--entity ResultsJson-->
+        <g class="entity" data-qualified-name="Workspace Package.ResultsJson" data-source-line="6" id="ent0005">
+            <rect fill="#F1F1F1" height="42.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="105.5997" x="1003" y="176.5679"/>
+            <polygon fill="#F1F1F1"
+                     points="1091.5997,181.5679,1091.5997,195.5679,1103.5997,195.5679,1103.5997,187.5679,1097.5997,181.5679,1091.5997,181.5679"
+                     style="stroke:#181818;stroke-width:0.5;"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1097.5997" x2="1097.5997" y1="181.5679" y2="187.5679"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1103.5997" x2="1097.5997" y1="187.5679" y2="187.5679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="75.5997"
+                  x="1013" y="204.5339">results.json
+            </text>
+        </g><!--entity Macro-->
+        <g class="entity" data-qualified-name="Workspace Package.Macro" data-source-line="13" id="ent0009">
+            <rect fill="#F1F1F1" height="68.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="148.0656" x="1089" y="309.0679"/>
+            <rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="1217.0656"
+                  y="314.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="1215.0656"
+                  y="316.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="1215.0656"
+                  y="320.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="108.0656"
+                  x="1104" y="344.0339">manual_analysis
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="50.3158"
+                  x="1104" y="363.1018">(macro)
+            </text>
+        </g><!--entity UpdateTarget-->
+        <g class="entity" data-qualified-name="Workspace Package.UpdateTarget" data-source-line="14" id="ent0010">
+            <rect fill="#F1F1F1" height="68.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="198.4934" x="917" y="499.0679"/>
+            <rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="1095.4934"
+                  y="504.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="1093.4934"
+                  y="506.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="1093.4934"
+                  y="510.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="158.4934"
+                  x="932" y="534.0339">manual_analysis.update
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="123.8855"
+                  x="932" y="553.1018">(executable target)
+            </text>
+        </g><!--entity TestTarget-->
+        <g class="entity" data-qualified-name="Workspace Package.TestTarget" data-source-line="15" id="ent0011">
+            <rect fill="#F1F1F1" height="68.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="148.0656" x="1150" y="499.0679"/>
+            <rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="1278.0656"
+                  y="504.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="1276.0656"
+                  y="506.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="1276.0656"
+                  y="510.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="108.0656"
+                  x="1165" y="534.0339">manual_analysis
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="76.9997"
+                  x="1165" y="553.1018">(test target)
+            </text>
+        </g><!--entity FilegroupInputs-->
+        <g class="entity" data-qualified-name="Workspace Package.Context Providers.FilegroupInputs" data-source-line="9"
+           id="ent0007">
+            <rect fill="#F1F1F1" height="42.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="134.9856" x="1481.5" y="176.5679"/>
+            <polygon fill="#F1F1F1"
+                     points="1599.4856,181.5679,1599.4856,195.5679,1611.4856,195.5679,1611.4856,187.5679,1605.4856,181.5679,1599.4856,181.5679"
+                     style="stroke:#181818;stroke-width:0.5;"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1605.4856" x2="1605.4856" y1="181.5679" y2="187.5679"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1611.4856" x2="1605.4856" y1="187.5679" y2="187.5679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="104.9856"
+                  x="1491.5" y="204.5339">filegroup inputs
+            </text>
+        </g><!--entity CcInputs-->
+        <g class="entity" data-qualified-name="Workspace Package.Context Providers.CcInputs" data-source-line="10"
+           id="ent0008">
+            <rect fill="#F1F1F1" height="61.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="157.0215" x="1289.5" y="167.0679"/>
+            <polygon fill="#F1F1F1"
+                     points="1429.5215,172.0679,1429.5215,186.0679,1441.5215,186.0679,1441.5215,178.0679,1435.5215,172.0679,1429.5215,172.0679"
+                     style="stroke:#181818;stroke-width:0.5;"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1435.5215" x2="1435.5215" y1="172.0679" y2="178.0679"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1441.5215" x2="1435.5215" y1="178.0679" y2="178.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="127.0215"
+                  x="1299.5" y="195.0339">cc_library transitive
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="96.6696"
+                  x="1299.5" y="214.1018">sources + attrs
+            </text>
+        </g><!--entity FileManifest-->
+        <g class="entity" data-qualified-name="Bazel Action . Runfiles Layer.FileManifest" data-source-line="19"
+           id="ent0013">
+            <rect fill="#F1F1F1" height="42.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="138.7656" x="623.5" y="512.0679"/>
+            <polygon fill="#F1F1F1"
+                     points="745.2656,517.0679,745.2656,531.0679,757.2656,531.0679,757.2656,523.0679,751.2656,517.0679,745.2656,517.0679"
+                     style="stroke:#181818;stroke-width:0.5;"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="751.2656" x2="751.2656" y1="517.0679" y2="523.0679"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="757.2656" x2="751.2656" y1="523.0679" y2="523.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="108.7656"
+                  x="633.5" y="540.0339">file manifest TSV
+            </text>
+        </g><!--entity RuleManifest-->
+        <g class="entity" data-qualified-name="Bazel Action . Runfiles Layer.RuleManifest" data-source-line="20"
+           id="ent0014">
+            <rect fill="#F1F1F1" height="42.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="144.7715" x="443.5" y="512.0679"/>
+            <polygon fill="#F1F1F1"
+                     points="571.2715,517.0679,571.2715,531.0679,583.2715,531.0679,583.2715,523.0679,577.2715,517.0679,571.2715,517.0679"
+                     style="stroke:#181818;stroke-width:0.5;"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="577.2715" x2="577.2715" y1="517.0679" y2="523.0679"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="583.2715" x2="577.2715" y1="523.0679" y2="523.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="114.7715"
+                  x="453.5" y="540.0339">rule manifest TSV
+            </text>
+        </g><!--entity ComputedLock-->
+        <g class="entity" data-qualified-name="Bazel Action . Runfiles Layer.ComputedLock" data-source-line="21"
+           id="ent0015">
+            <rect fill="#F1F1F1" height="42.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="150.8615" x="642.5" y="1025.5679"/>
+            <polygon fill="#F1F1F1"
+                     points="776.3615,1030.5679,776.3615,1044.5679,788.3615,1044.5679,788.3615,1036.5679,782.3615,1030.5679,776.3615,1030.5679"
+                     style="stroke:#181818;stroke-width:0.5;"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="782.3615" x2="782.3615" y1="1030.5679" y2="1036.5679"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="788.3615" x2="782.3615" y1="1036.5679" y2="1036.5679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="120.8615"
+                  x="652.5" y="1053.5339">computed_lock.txt
+            </text>
+        </g><!--entity UpdateRunner-->
+        <g class="entity" data-qualified-name="Bazel Action . Runfiles Layer.UpdateRunner" data-source-line="23"
+           id="ent0016">
+            <rect fill="#F1F1F1" height="49.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="252.5892" x="540.5" y="648.0679"/>
+            <rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="773.0892"
+                  y="653.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="771.0892"
+                  y="655.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="771.0892"
+                  y="659.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="212.5892"
+                  x="555.5" y="683.0339">manual_analysis_update_runner
+            </text>
+        </g><!--entity InteractiveRunner-->
+        <g class="entity" data-qualified-name="Bazel Action . Runfiles Layer.InteractiveRunner" data-source-line="24"
+           id="ent0017">
+            <rect fill="#F1F1F1" height="49.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="181.0354" x="458.5" y="828.5679"/>
+            <rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="619.5354"
+                  y="833.5679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="617.5354"
+                  y="835.5679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="617.5354"
+                  y="839.5679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="141.0354"
+                  x="473.5" y="863.5339">interactive_runner_cli
+            </text>
+        </g><!--entity UpdateLock-->
+        <g class="entity" data-qualified-name="Bazel Action . Runfiles Layer.UpdateLock" data-source-line="25"
+           id="ent0018">
+            <rect fill="#F1F1F1" height="49.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="119.1697" x="674.5" y="828.5679"/>
+            <rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="773.6697"
+                  y="833.5679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="771.6697"
+                  y="835.5679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="771.6697"
+                  y="839.5679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.1697"
+                  x="689.5" y="863.5339">update_lock
+            </text>
+        </g><!--entity TestRunner-->
+        <g class="entity" data-qualified-name="Bazel Action . Runfiles Layer.TestRunner" data-source-line="26"
+           id="ent0019">
+            <rect fill="#F1F1F1" height="49.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="230.6233" x="274.5" y="648.0679"/>
+            <rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="485.1233"
+                  y="653.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="483.1233"
+                  y="655.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="483.1233"
+                  y="659.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="190.6233"
+                  x="289.5" y="683.0339">manual_analysis_test_runner
+            </text>
+        </g><!--entity UI-->
+        <g class="entity" data-qualified-name="User . Terminal Runtime.UI" data-source-line="30" id="ent0021">
+            <rect fill="#F1F1F1" height="68.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="145.9796" x="850" y="1012.5679"/>
+            <rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="975.9796"
+                  y="1017.5679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="973.9796"
+                  y="1019.5679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="973.9796"
+                  y="1023.5679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="82.6417"
+                  x="865" y="1047.5339">_SplitPaneUI
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="105.9796"
+                  x="865" y="1066.6018">(prompt_toolkit)
+            </text>
+        </g><!--entity LobsterOutput-->
+        <g class="entity" data-qualified-name="Traceability Outputs.LobsterOutput" data-source-line="34" id="ent0023">
+            <rect fill="#F1F1F1" height="42.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="117.3737" x="85.5" y="832.0679"/>
+            <polygon fill="#F1F1F1"
+                     points="185.8737,837.0679,185.8737,851.0679,197.8737,851.0679,197.8737,843.0679,191.8737,837.0679,185.8737,837.0679"
+                     style="stroke:#181818;stroke-width:0.5;"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="191.8737" x2="191.8737" y1="837.0679" y2="843.0679"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="197.8737" x2="191.8737" y1="843.0679" y2="843.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="87.3737"
+                  x="95.5" y="860.0339">name.lobster
+            </text>
+        </g><!--entity LobsterTools-->
+        <g class="entity" data-qualified-name="Traceability Outputs.LobsterTools" data-source-line="35" id="ent0024">
+            <rect fill="#F1F1F1" height="49.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="135.2836" x="70.5" y="1022.0679"/>
+            <rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="185.7836"
+                  y="1027.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="183.7836"
+                  y="1029.0679"/>
+            <rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="183.7836"
+                  y="1033.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="95.2836"
+                  x="85.5" y="1057.0339">LOBSTER tools
+            </text>
+        </g><!--link FilegroupInputs to Macro-->
+        <g class="link" data-entity-1="ent0007" data-entity-2="ent0009" data-link-type="dependency"
+           data-source-line="38" id="lnk25">
+            <path d="M1521.36,218.6579 C1505.24,229.6779 1484.16,242.9179 1464,252.0679 C1389.63,285.8279 1305.103,309.482 1242.913,324.472"
+                  fill="none" id="FilegroupInputs-to-Macro" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1237.08,325.8779,1246.7667,327.6576,1241.9408,324.7063,1244.8921,319.8804,1237.08,325.8779"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="51.961"
+                  x="1441" y="274.9649">contexts
+            </text>
+        </g><!--link CcInputs to Macro-->
+        <g class="link" data-entity-1="ent0008" data-entity-2="ent0009" data-link-type="dependency"
+           data-source-line="39" id="lnk26">
+            <path d="M1328.74,228.2779 C1315.69,237.0079 1300.73,245.8679 1286,252.0679 C1270.89,258.4279 1264.48,252.3979 1250,260.0679 C1227.26,272.1179 1210.2138,287.3329 1194.4738,304.3529"
+                  fill="none" id="CcInputs-to-Macro" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1190.4,308.7579,1199.4473,304.8662,1193.7948,305.087,1193.5739,299.4345,1190.4,308.7579"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="51.961"
+                  x="1251" y="274.9649">contexts
+            </text>
+        </g><!--link AnalysisYaml to Macro-->
+        <g class="link" data-entity-1="ent0003" data-entity-2="ent0009" data-link-type="dependency"
+           data-source-line="40" id="lnk27">
+            <path d="M931.31,218.6279 C951.57,236.1479 982.83,261.4679 1013,279.0679 C1036.66,292.8779 1058.3719,303.0078 1083.1119,313.0678"
+                  fill="none" id="AnalysisYaml-to-Macro" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1088.67,315.3279,1081.8396,308.2324,1084.0383,313.4445,1078.8262,315.6432,1088.67,315.3279"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48.412"
+                  x="1014" y="274.9649">analysis
+            </text>
+        </g><!--link CommittedLock to Macro-->
+        <g class="link" data-entity-1="ent0004" data-entity-2="ent0009" data-link-type="dependency"
+           data-source-line="41" id="lnk28">
+            <path d="M1182.07,218.7479 C1173.66,230.1079 1164.37,245.0079 1160,260.0679 C1155.47,275.6679 1154.9745,287.6575 1156.4845,302.7975"
+                  fill="none" id="CommittedLock-to-Macro" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1157.08,308.7679,1160.1671,299.4154,1156.5838,303.7926,1152.2066,300.2093,1157.08,308.7679"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48.685"
+                  x="1161" y="274.9649">lock_file
+            </text>
+        </g><!--link ResultsJson to Macro-->
+        <g class="link" data-entity-1="ent0005" data-entity-2="ent0009" data-link-type="dependency"
+           data-source-line="42" id="lnk29">
+            <path d="M1058.73,218.5979 C1061.86,235.8579 1068.29,260.8179 1081,279.0679 C1088.8,290.2679 1094.5162,296.6055 1105.2862,305.2755"
+                  fill="none" id="ResultsJson-to-Macro" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1109.96,309.0379,1105.4577,300.2784,1106.0652,305.9025,1100.4411,306.5101,1109.96,309.0379"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="65.5201"
+                  x="1082" y="274.9649">results_file
+            </text>
+        </g><!--link Macro to UpdateTarget-->
+        <g class="link" data-entity-1="ent0009" data-entity-2="ent0010" data-link-type="dependency"
+           data-source-line="44" id="lnk30">
+            <path d="M1132.45,377.2179 C1124.01,386.6979 1114.99,397.1479 1107,407.0679 C1082.59,437.3779 1060.0817,468.5432 1042.1617,494.1332"
+                  fill="none" id="Macro-to-UpdateTarget" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1038.72,499.0479,1047.159,493.9702,1041.5881,494.9523,1040.606,489.3813,1038.72,499.0479"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="67.6911"
+                  x="1108" y="421.9649">expands to
+            </text>
+        </g><!--link Macro to TestTarget-->
+        <g class="link" data-entity-1="ent0009" data-entity-2="ent0011" data-link-type="dependency"
+           data-source-line="45" id="lnk31">
+            <path d="M1173.77,377.2479 C1184.88,411.5079 1200.2787,458.9507 1211.3887,493.2007" fill="none"
+                  id="Macro-to-TestTarget" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1213.24,498.9079,1214.2679,489.1128,1211.6972,494.1519,1206.6582,491.5813,1213.24,498.9079"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="67.6911"
+                  x="1189" y="421.9649">expands to
+            </text>
+        </g><!--link UpdateTarget to FileManifest-->
+        <g class="link" data-entity-1="ent0010" data-entity-2="ent0013" data-link-type="dependency"
+           data-source-line="47" id="lnk32">
+            <path d="M916.72,533.0679 C866.86,533.0679 813.66,533.0679 768.69,533.0679" fill="none"
+                  id="UpdateTarget-to-FileManifest" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="762.69,533.0679,771.69,537.0679,767.69,533.0679,771.69,529.0679,762.69,533.0679"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="38.259"
+                  x="820.75" y="525.9649">create
+            </text>
+        </g><!--link UpdateTarget to RuleManifest-->
+        <g class="link" data-entity-1="ent0010" data-entity-2="ent0014" data-link-type="dependency"
+           data-source-line="48" id="lnk33">
+            <path d="M983.22,498.9679 C958.07,475.4079 921.12,446.0579 882,433.0679 C823.79,413.7379 662.04,409.1379 606,434.0679 C570.13,450.0279 545.5345,482.9418 530.8245,506.9518"
+                  fill="none" id="UpdateTarget-to-RuleManifest" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="527.69,512.0679,535.8025,506.4833,530.3021,507.8045,528.9809,502.304,527.69,512.0679"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="38.259"
+                  x="843" y="421.9649">create
+            </text>
+        </g><!--link UpdateTarget to UpdateRunner-->
+        <g class="link" data-entity-1="ent0010" data-entity-2="ent0016" data-link-type="dependency"
+           data-source-line="49" id="lnk34">
+            <path d="M931.96,567.1779 C868.63,592.1279 788.9025,623.5389 732.3925,645.7989" fill="none"
+                  id="UpdateTarget-to-UpdateRunner" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="726.81,647.9979,736.6498,648.4211,731.4621,646.1654,733.7177,640.9777,726.81,647.9979"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="66.482"
+                  x="842" y="613.9649">executable
+            </text>
+        </g><!--link UpdateRunner to InteractiveRunner-->
+        <g class="link" data-entity-1="ent0016" data-entity-2="ent0017" data-link-type="dependency"
+           data-source-line="50" id="lnk35">
+            <path d="M634.17,697.3079 C623.91,705.8579 613.15,716.1179 605,727.0679 C581.43,758.7279 566.7599,796.19 558.0399,822.62"
+                  fill="none" id="UpdateRunner-to-InteractiveRunner" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="556.16,828.3179,562.7784,821.0243,557.7266,823.5697,555.1812,818.5178,556.16,828.3179"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="73.2291"
+                  x="606" y="741.9649">run analysis
+            </text>
+        </g><!--link InteractiveRunner to UI-->
+        <g class="link" data-entity-1="ent0017" data-entity-2="ent0021" data-link-type="dependency"
+           data-source-line="51" id="lnk36">
+            <path d="M639.72,874.5879 C694.74,887.3079 756.68,902.2079 769,907.5679 C789.01,916.2779 793.03,920.8579 810,934.5679 C839.74,958.5879 866.3635,984.9017 888.2635,1007.9117"
+                  fill="none" id="InteractiveRunner-to-UI" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="892.4,1012.2579,889.0927,1002.981,888.9529,1008.6361,883.2978,1008.4963,892.4,1012.2579"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="97.1101"
+                  x="800" y="922.4649">render prompts
+            </text>
+        </g><!--link UpdateRunner to UpdateLock-->
+        <g class="link" data-entity-1="ent0016" data-entity-2="ent0018" data-link-type="dependency"
+           data-source-line="52" id="lnk37">
+            <path d="M675.9,697.2679 C688.75,731.5079 710.2516,788.8006 723.0616,822.9306" fill="none"
+                  id="UpdateRunner-to-UpdateLock" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="725.17,828.5479,725.7524,818.7163,723.413,823.8668,718.2625,821.5274,725.17,828.5479"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="71.916"
+                  x="693" y="741.9649">refresh lock
+            </text>
+        </g><!--link UpdateLock to CommittedLock-->
+        <g class="link" data-entity-1="ent0018" data-entity-2="ent0004" data-link-type="dependency"
+           data-source-line="53" id="lnk38">
+            <path d="M793.55,849.3479 C960.69,840.1179 1422,802.9079 1422,673.5679 C1422,342.0679 1422,342.0679 1422,342.0679 C1422,304.3379 1429.2,283.9679 1400,260.0679 C1378.12,242.1579 1299.62,261.6179 1273,252.0679 C1253.15,244.9479 1238.5023,234.708 1224.6323,222.738"
+                  fill="none" id="UpdateLock-to-CommittedLock" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1220.09,218.8179,1224.2901,227.7263,1223.8753,222.0847,1229.5169,221.6698,1220.09,218.8179"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="43.667"
+                  x="1423" y="538.4649">rewrite
+            </text>
+        </g><!--link TestTarget to FileManifest-->
+        <g class="link" data-entity-1="ent0011" data-entity-2="ent0013" data-link-type="dependency"
+           data-source-line="55" id="lnk39">
+            <path d="M1203.3,498.6379 C1187.32,475.6279 1162.9,447.2579 1133,434.0679 C1019.37,383.9479 813.93,426.2479 797,433.0679 C757.73,448.8879 728.5205,482.5465 710.8005,506.8965"
+                  fill="none" id="TestTarget-to-FileManifest" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="707.27,511.7479,715.7999,506.8245,710.212,507.7051,709.3314,502.1172,707.27,511.7479"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="38.259"
+                  x="798" y="421.9649">create
+            </text>
+        </g><!--link TestTarget to RuleManifest-->
+        <g class="link" data-entity-1="ent0011" data-entity-2="ent0014" data-link-type="dependency"
+           data-source-line="56" id="lnk40">
+            <path d="M1203.29,498.6579 C1187.3,475.6679 1162.89,447.2979 1133,434.0679 C1079.46,410.3679 659.51,410.2979 606,434.0679 C570.12,450.0079 545.5229,482.9308 530.8229,506.9408"
+                  fill="none" id="TestTarget-to-RuleManifest" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="527.69,512.0579,535.8008,506.4709,530.3008,507.7937,528.978,502.2936,527.69,512.0579"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="38.259"
+                  x="930" y="421.9649">create
+            </text>
+        </g><!--link FileManifest to UpdateRunner-->
+        <g class="link" data-entity-1="ent0013" data-entity-2="ent0016" data-link-type="dependency"
+           data-source-line="57" id="lnk41">
+            <path d="M689.16,554.3579 C684.45,579.3079 677.5652,615.6925 672.5752,642.0725" fill="none"
+                  id="FileManifest-to-UpdateRunner" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="671.46,647.9679,677.0631,639.8682,672.3893,643.055,669.2025,638.3813,671.46,647.9679"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="27.989"
+                  x="681" y="613.9649">read
+            </text>
+        </g><!--link RuleManifest to UpdateRunner-->
+        <g class="link" data-entity-1="ent0014" data-entity-2="ent0016" data-link-type="dependency"
+           data-source-line="58" id="lnk42">
+            <path d="M514.95,554.3479 C515.07,572.9479 518.13,600.2479 533,618.0679 C543.67,630.8579 552.4544,637.9731 567.5844,645.4031"
+                  fill="none" id="RuleManifest-to-UpdateRunner" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="572.97,648.0479,566.6547,640.4903,568.482,645.8439,563.1283,647.6712,572.97,648.0479"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="27.989"
+                  x="534" y="613.9649">read
+            </text>
+        </g><!--link FileManifest to TestRunner-->
+        <g class="link" data-entity-1="ent0013" data-entity-2="ent0019" data-link-type="dependency"
+           data-source-line="59" id="lnk43">
+            <path d="M667.56,554.1079 C642.81,572.8079 603.55,600.3979 566,618.0679 C540.71,629.9679 517.8947,638.2463 491.2547,646.2763"
+                  fill="none" id="FileManifest-to-TestRunner" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="485.51,648.0079,495.2814,649.2403,490.2972,646.5649,492.9726,641.5807,485.51,648.0079"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="27.989"
+                  x="600" y="613.9649">read
+            </text>
+        </g><!--link RuleManifest to TestRunner-->
+        <g class="link" data-entity-1="ent0014" data-entity-2="ent0019" data-link-type="dependency"
+           data-source-line="60" id="lnk44">
+            <path d="M495.45,554.2079 C482.71,566.8679 466.14,583.6679 452,599.0679 C437.33,615.0479 425.2896,629.0557 413.2696,643.4257"
+                  fill="none" id="RuleManifest-to-TestRunner" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="409.42,648.0279,418.2626,643.691,412.628,644.1927,412.1263,638.5582,409.42,648.0279"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="27.989"
+                  x="453" y="613.9649">read
+            </text>
+        </g><!--link TestTarget to UpdateLock-->
+        <g class="link" data-entity-1="ent0011" data-entity-2="ent0018" data-link-type="dependency"
+           data-source-line="61" id="lnk45">
+            <path d="M1207.87,567.2179 C1198.53,583.9579 1185.53,603.7079 1170,618.0679 C1055.33,724.0379 889.3384,795.3824 799.4384,829.0724"
+                  fill="none" id="TestTarget-to-UpdateLock" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="793.82,831.1779,803.6513,831.7653,798.502,829.4233,800.844,824.274,793.82,831.1779"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="137.7611"
+                  x="1131" y="677.9649">compute sandbox lock
+            </text>
+        </g><!--link UpdateLock to ComputedLock-->
+        <g class="link" data-entity-1="ent0018" data-entity-2="ent0015" data-link-type="dependency"
+           data-source-line="62" id="lnk46">
+            <path d="M732.01,877.9379 C728.82,916.0379 723.1492,983.9387 720.1792,1019.5087" fill="none"
+                  id="UpdateLock-to-ComputedLock" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="719.68,1025.4879,724.415,1016.852,720.096,1020.5053,716.4427,1016.1863,719.68,1025.4879"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="30.966"
+                  x="730" y="922.4649">write
+            </text>
+        </g><!--link TestTarget to TestRunner-->
+        <g class="link" data-entity-1="ent0011" data-entity-2="ent0019" data-link-type="dependency"
+           data-source-line="63" id="lnk47">
+            <path d="M1179.7,567.1979 C1165.45,576.3379 1149.16,585.3179 1133,591.0679 C1130.15,592.0779 920.01,617.7679 917,618.0679 C742.26,635.6279 697.24,626.0979 523,648.0679 C517.3,648.7879 517.4081,648.7281 511.5381,649.5781"
+                  fill="none" id="TestTarget-to-TestRunner" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="505.6,650.4379,515.0803,653.1068,510.5484,649.7214,513.9339,645.1894,505.6,650.4379"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92.2351"
+                  x="1069" y="613.9649">execute checks
+            </text>
+        </g><!--link TestRunner to CommittedLock-->
+        <g class="link" data-entity-1="ent0019" data-entity-2="ent0004" data-link-type="dependency"
+           data-source-line="64" id="lnk48">
+            <path d="M386.15,648.0679 C379.92,601.3179 373.14,495.8579 426,434.0679 C592.94,238.9279 724.32,305.9379 977,260.0679 C1009.84,254.1079 1095.6,263.3979 1127,252.0679 C1146.63,244.9879 1160.968,234.6581 1174.428,222.6181"
+                  fill="none" id="TestRunner-to-CommittedLock" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1178.9,218.6179,1169.5253,221.6369,1175.1734,221.9514,1174.8588,227.5995,1178.9,218.6179"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="54.249"
+                  x="449" y="421.9649">compare
+            </text>
+        </g><!--link TestRunner to ResultsJson-->
+        <g class="link" data-entity-1="ent0019" data-entity-2="ent0005" data-link-type="dependency"
+           data-source-line="65" id="lnk49">
+            <path d="M377.27,648.0579 C372.65,638.8879 367.67,628.1579 364,618.0679 C333.95,535.3979 326.75,513.3679 316,426.0679 C306.3,347.2679 315.63,303.6479 382,260.0679 C410.05,241.6479 954.28,263.0379 986,252.0679 C1005.52,245.3179 1019.5286,234.9071 1032.5686,222.7071"
+                  fill="none" id="TestRunner-to-ResultsJson" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1036.95,218.6079,1027.6451,221.8357,1033.2988,222.0239,1033.1107,227.6776,1036.95,218.6079"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="47.918"
+                  x="317" y="421.9649">validate
+            </text>
+        </g><!--link TestRunner to AnalysisYaml-->
+        <g class="link" data-entity-1="ent0019" data-entity-2="ent0003" data-link-type="dependency"
+           data-source-line="66" id="lnk50">
+            <path d="M336.97,648.0579 C321.8,639.8679 305.9,629.7579 293,618.0679 C216.27,548.5279 191.72,524.9579 161,426.0679 C133.04,336.0479 208.93,302.6979 293,260.0679 C389.46,211.1579 708.9507,201.2291 843.7607,199.1791"
+                  fill="none" id="TestRunner-to-AnalysisYaml" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="849.76,199.0879,840.7002,195.2252,844.7606,199.1639,840.8219,203.2243,849.76,199.0879"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="113.1131"
+                  x="162" y="421.9649">load requirements
+            </text>
+        </g><!--link TestRunner to LobsterOutput-->
+        <g class="link" data-entity-1="ent0019" data-entity-2="ent0023" data-link-type="dependency"
+           data-source-line="67" id="lnk51">
+            <path d="M347.93,697.1779 C321.7,712.4379 287.61,733.2779 259,754.0679 C224.83,778.8979 192.5872,807.2082 170.0672,827.8082"
+                  fill="none" id="TestRunner-to-LobsterOutput" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="165.64,831.8579,174.9806,828.7348,169.3293,828.4832,169.5809,822.8319,165.64,831.8579"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="27.534"
+                  x="298" y="741.9649">emit
+            </text>
+        </g><!--link LobsterOutput to LobsterTools-->
+        <g class="link" data-entity-1="ent0023" data-entity-2="ent0024" data-link-type="dependency"
+           data-source-line="68" id="lnk52">
+            <path d="M143.37,874.1979 C142.25,909.8279 140.1292,977.8009 138.9292,1015.8409" fill="none"
+                  id="LobsterOutput-to-LobsterTools" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="138.74,1021.8379,143.0218,1012.9685,138.8977,1016.8404,135.0258,1012.7163,138.74,1021.8379"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="112.6711"
+                  x="143" y="922.4649">downstream input
+            </text>
+        </g>
+        <?plantuml-src XLRVJzim47xtNs7rYMcYU-TXqe1DwbG4AcNJ9AJ8JQx5Qs9dzWNQJVplEzj9QYSjzAazV_Vhk-yEK689_4QeHfJyYnBbtahBbrgNKctuER-6kjJx2XJoJtpHA9GLy6ifDaPKZ2bT09_yr6PhQv43lnFvLcnWmlynJXzXKAv5ZdmYsiZJlQZA2HUsp_MB30DmvQkPbZhVUkYLhYg92CMSB0Ei0TkKQAU_hLOUl0Y6x_IRUMoeyKehX1toEwEVPG76TZMcuTQoX8tHJSsbgXkqFkItpZZpjYDkUPwLScM4sNCqGbc9yXaUbTMDoS7oZrmWcX3iAe-Yl8OISrtLMZcEszwpZgz7TLQ9tEWFtlV6VNt7OzhKXK1AVWOxo1iKAvel2hC1344U_FlIMzxFZc0nSL-IeNL-xGHmAVu2gIT7gLMGYUFHyhdOWncBmJroIYNNBlZo_aVFyarh70wvEUQmQ4uwk9OQ4apcD3J57NOwybOletTQpmADcMcKSZtqn2syOUWjILs6KjFOMvSiBwLtcnsUZlkscNgvXpozrj-eqGqdhj3DfitHp-R1Wg6PBC5Kalow7Uwc4aNFxkjIufrGy32ZoTU6dZ13EWLRsMbdTWYyfAP0h2JvxFbjWs5TXhDMeWBQv9N5jiPv-1uSXYNCRo_lbryNt2MrCTmT9Ejo3tQHdvz_3cl1BoYGtt7BkXqx_XfVdWJHySgIWvD0t90ofryMtPa4qHwa06B1wjxZjICOx6gX2akTHfZ3RgK8bZWxPBmihZS3z3w6nIlo1YnMji_S7GwMl3ZeICskvKOTk1i3V8QPfqRHvUL1M7OS-o1y3ruJbK-USHQzE60w7uTzCP8QOn61fraQW8vpbBWUuOXG1KjSJu56aGvRUZBE638eEg6glNRSabvMUdUAilxsaKlWQn0qoHf403n_WdnhMVHsR0Ak165W28kNv88_Yr8MtGGYLBAGRiT4GKt_QQG1zu_7A7boGbofL0fBZH7Cdmv25Vf5MIGog_2tdVq7?>
+    </g>
+</svg>

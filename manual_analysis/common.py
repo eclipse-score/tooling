@@ -10,13 +10,23 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+from pathlib import Path
+from runfiles import Runfiles
 
-# GitHub CODEOWNERS file is a simple way to automate review system on github,
-# by automatically assigning owners to a pull request based on which files
-# were modified. All directories should have a proper codeowner
-# Syntax: https://help.github.com/articles/about-codeowners/
 
-/bazel/rules/rules_score/ @castler @hoe-jo @LittleHuba @limdor @ramceb
-/manual_analysis/ @castler @hoe-jo @LittleHuba @limdor @ramceb
-/plantuml/ @castler @hoe-jo @LittleHuba @limdor @ramceb
-/validation/ @castler @hoe-jo @LittleHuba @limdor @ramceb
+def _create_runfiles() -> Runfiles:
+    return Runfiles.Create()
+
+
+def resolve_path(raw_path: str) -> Path:
+    """Resolve path from Bazel env/execpath style values."""
+    candidate = Path(raw_path)
+
+    runfiles = _create_runfiles()
+    resolved_path = runfiles.Rlocation(str(candidate))
+    if resolved_path:
+        resolved = Path(resolved_path)
+        if resolved.exists():
+            return resolved
+
+    return candidate

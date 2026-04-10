@@ -6,5 +6,6 @@ bazel-*
 MODULE.bazel.lock
 external
 .vscode/
+.clwb/
 
 __pycache__
