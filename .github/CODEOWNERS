@@ -17,5 +17,6 @@
 # Syntax: https://help.github.com/articles/about-codeowners/
 
 /bazel/rules/rules_score/ @castler @hoe-jo @LittleHuba @limdor @ramceb
+/manual_analysis/ @castler @hoe-jo @LittleHuba @limdor @ramceb
 /plantuml/ @castler @hoe-jo @LittleHuba @limdor @ramceb
 /validation/ @castler @hoe-jo @LittleHuba @limdor @ramceb
