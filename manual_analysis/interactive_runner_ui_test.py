@@ -20,7 +20,6 @@ from manual_analysis.yaml_schema import AutomatedActionArg
 
 
 class InteractiveRunnerUiTest(unittest.TestCase):
-
     def test_history_text_and_separators(self) -> None:
         ui = _SplitPaneUI()
         ui.print_header("Manual Action")

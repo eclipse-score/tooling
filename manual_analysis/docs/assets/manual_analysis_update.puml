@@ -66,4 +66,3 @@ UpdateRunner --> Bazel -- : done
 
 deactivate UpdateRule
 @enduml
-

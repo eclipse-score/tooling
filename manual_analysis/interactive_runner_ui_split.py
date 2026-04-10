@@ -448,7 +448,12 @@ class _SplitPaneUI:
             )
             key_bindings = KeyBindings()
 
-            focus_order = [left_area, instructions_area, answer_area, justification_area]
+            focus_order = [
+                left_area,
+                instructions_area,
+                answer_area,
+                justification_area,
+            ]
 
             def _focused_index() -> int:
                 for index, field in enumerate(focus_order):
@@ -459,7 +464,9 @@ class _SplitPaneUI:
             def _status_text() -> str:
                 index = _focused_index()
                 if focus_order[index] is answer_area:
-                    return "Tab/Shift-Tab: switch focus | Ctrl-S/F2: submit | Answer field"
+                    return (
+                        "Tab/Shift-Tab: switch focus | Ctrl-S/F2: submit | Answer field"
+                    )
                 if focus_order[index] is justification_area:
                     return (
                         "Tab/Shift-Tab: switch focus | Ctrl-S/F2: submit | "
@@ -546,7 +553,9 @@ class _SplitPaneUI:
             pre_run_callables = getattr(app, "pre_run_callables", None)
             if isinstance(pre_run_callables, list):
                 pre_run_callables.append(lambda: self._set_left_panel_scroll(left_area))
-                pre_run_callables.append(lambda: setattr(status_area, "text", _status_text()))
+                pre_run_callables.append(
+                    lambda: setattr(status_area, "text", _status_text())
+                )
             else:
                 self._set_left_panel_scroll(left_area)
                 status_area.text = _status_text()

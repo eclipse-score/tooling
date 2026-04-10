@@ -243,7 +243,7 @@ def _parse_steps(
 
 def _parse_requirements(raw_requirements: Any) -> list[str]:
     """Parse and validate the requirements list.
-    
+
     Requirements must be a non-empty list of non-empty strings.
     """
     if raw_requirements is None:
@@ -252,7 +252,7 @@ def _parse_requirements(raw_requirements: Any) -> list[str]:
         raise ValueError("requirements must be a list")
     if not raw_requirements:
         raise ValueError("requirements must be a non-empty list")
-    
+
     requirements = []
     for idx, req in enumerate(raw_requirements):
         if not isinstance(req, str) or not req.strip():
@@ -260,13 +260,13 @@ def _parse_requirements(raw_requirements: Any) -> list[str]:
                 f"requirements[{idx}] must be a non-empty string, got: {req!r}"
             )
         requirements.append(req.strip())
-    
+
     return requirements
 
 
 def parse_analysis(data: Any) -> tuple[list[Step], list[str]]:
     """Parse analysis configuration and return steps and requirements.
-    
+
     Returns:
         A tuple of (steps, requirements) where steps is a list of Step objects
         and requirements is a list of requirement identifier strings.
@@ -283,7 +283,7 @@ def parse_analysis(data: Any) -> tuple[list[Step], list[str]]:
 
 def load_analysis(path: Path) -> tuple[list[Step], list[str]]:
     """Load and parse analysis YAML file.
-    
+
     Returns:
         A tuple of (steps, requirements).
     """

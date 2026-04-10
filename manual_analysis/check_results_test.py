@@ -108,14 +108,15 @@ class CheckResultsTest(unittest.TestCase):
                 "Manual analysis does not end with an assertion.",
             )
 
-
     def test_evaluate_returns_error_on_unreadable_file(self) -> None:
         from unittest import mock
 
         with tempfile.TemporaryDirectory() as tmpdir:
             results_path = Path(tmpdir) / "results.json"
             results_path.write_text("{}", encoding="utf-8")
-            with mock.patch.object(Path, "read_text", side_effect=OSError("permission denied")):
+            with mock.patch.object(
+                Path, "read_text", side_effect=OSError("permission denied")
+            ):
                 is_ok, error = check_results.evaluate_results_file(results_path)
             self.assertFalse(is_ok)
             self.assertIn("Could not read results file", error)

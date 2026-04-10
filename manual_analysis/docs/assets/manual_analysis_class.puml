@@ -118,4 +118,3 @@ ManualAnalysisTestRule --> UpdateLock : action
 ManualAnalysisTestRule --> TestRunner : test executable
 
 @enduml
-

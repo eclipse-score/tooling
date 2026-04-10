@@ -26,4 +26,3 @@ std::int32_t awful_cat_counter() {
     }
     return static_cast<std::int32_t>(number_of_cats);
 }
-

@@ -82,4 +82,3 @@ TestRunner --> LobsterOutput : emit
 LobsterOutput --> LobsterTools : downstream input
 
 @enduml
-

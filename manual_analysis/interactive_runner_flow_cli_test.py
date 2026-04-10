@@ -85,7 +85,9 @@ class _FakeUi:
         _args: list[AutomatedActionArg],
         initial_values: dict[str, str] | None = None,
     ) -> dict[str, str]:
-        return {} if initial_values is None else cast(dict[str, str], dict(initial_values))
+        return (
+            {} if initial_values is None else cast(dict[str, str], dict(initial_values))
+        )
 
     def run_command(self, _command: str) -> int:
         return 0
@@ -120,8 +122,9 @@ steps:
     positive: No
     negative: Yes
 """
-        with tempfile.TemporaryDirectory() as tmpdir, mock.patch.dict(
-            os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            mock.patch.dict(os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}),
         ):
             analysis_path = Path(tmpdir) / "analysis.yaml"
             results_path = Path(tmpdir) / "results.json"
@@ -165,9 +168,7 @@ steps:
             self.assertEqual(results[0]["result"], "previous finding")
             self.assertEqual(results[1]["answer"], "No")
             self.assertEqual(results[1]["passed"], True)
-            self.assertEqual(
-                results[1]["justification"], "no problematic paths found"
-            )
+            self.assertEqual(results[1]["justification"], "no problematic paths found")
 
     def test_run_analysis_prefills_repeat_until_from_legacy_iterations(self) -> None:
         analysis_yaml = """
@@ -187,8 +188,9 @@ steps:
     positive: No
     negative: Yes
 """
-        with tempfile.TemporaryDirectory() as tmpdir, mock.patch.dict(
-            os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            mock.patch.dict(os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}),
         ):
             analysis_path = Path(tmpdir) / "analysis.yaml"
             results_path = Path(tmpdir) / "results.json"
@@ -259,8 +261,9 @@ steps:
     positive: No
     negative: Yes
 """
-        with tempfile.TemporaryDirectory() as tmpdir, mock.patch.dict(
-            os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            mock.patch.dict(os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}),
         ):
             analysis_path = Path(tmpdir) / "analysis.yaml"
             results_path = Path(tmpdir) / "results.json"
@@ -299,8 +302,9 @@ steps:
     positive: No
     negative: Yes
 """
-        with tempfile.TemporaryDirectory() as tmpdir, mock.patch.dict(
-            os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            mock.patch.dict(os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}),
         ):
             analysis_path = Path(tmpdir) / "analysis.yaml"
             results_path = Path(tmpdir) / "results.json"
@@ -330,8 +334,9 @@ steps:
     positive: No
     negative: Yes
 """
-        with tempfile.TemporaryDirectory() as tmpdir, mock.patch.dict(
-            os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            mock.patch.dict(os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}),
         ):
             analysis_path = Path(tmpdir) / "analysis.yaml"
             results_path = Path(tmpdir) / "results.json"
@@ -370,8 +375,9 @@ steps:
     positive: No
     negative: Yes
 """
-        with tempfile.TemporaryDirectory() as tmpdir, mock.patch.dict(
-            os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            mock.patch.dict(os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}),
         ):
             analysis_path = Path(tmpdir) / "analysis.yaml"
             results_path = Path(tmpdir) / "results.json"
@@ -404,8 +410,9 @@ steps:
     positive: No
     negative: Yes
 """
-        with tempfile.TemporaryDirectory() as tmpdir, mock.patch.dict(
-            os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            mock.patch.dict(os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}),
         ):
             analysis_path = Path(tmpdir) / "analysis.yaml"
             results_path = Path(tmpdir) / "results.json"
@@ -438,8 +445,9 @@ steps:
     positive: No
     negative: Yes
 """
-        with tempfile.TemporaryDirectory() as tmpdir, mock.patch.dict(
-            os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            mock.patch.dict(os.environ, {"BUILD_WORKSPACE_DIRECTORY": tmpdir}),
         ):
             analysis_path = Path(tmpdir) / "analysis.yaml"
             results_path = Path(tmpdir) / "results.json"

@@ -1,1 +1,673 @@
-<?plantuml 1.2026.2?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" data-diagram-type="SEQUENCE" height="1072px" preserveAspectRatio="none" style="width:2040px;height:1072px;background:#FFFFFF;" version="1.1" viewBox="0 0 2040 1072" width="2040px" zoomAndPan="magnify"><title>Manual Analysis Update Flow</title><defs/><g><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="205.1552" x="916.908" y="29.9659">Manual Analysis Update Flow</text><g><title>bazel run ..pkg.name.update</title><rect fill="#FFFFFF" height="897.7002" style="stroke:#181818;stroke-width:1;" width="10" x="102.8506" y="108.2038"/></g><g><title>manual_analysis_update</title><rect fill="#FFFFFF" height="864.9942" style="stroke:#181818;stroke-width:1;" width="10" x="321.9368" y="131.9098"/></g><g><title>manual_analysis_update_runner</title><rect fill="#FFFFFF" height="712.1701" style="stroke:#181818;stroke-width:1;" width="10" x="532.7101" y="284.7338"/></g><g><title>interactive_runner_cli</title><rect fill="#FFFFFF" height="508.934" style="stroke:#181818;stroke-width:1;" width="10" x="733.5224" y="316.4398"/></g><g><title>yaml_schema</title><rect fill="#FFFFFF" height="31.706" style="stroke:#181818;stroke-width:1;" width="10" x="943.7775" y="348.1459"/></g><g><title>_PrefillState</title><rect fill="#FFFFFF" height="31.706" style="stroke:#181818;stroke-width:1;" width="10" x="1050.9722" y="411.5579"/></g><g><title>run_analysis</title><rect fill="#FFFFFF" height="274.63" style="stroke:#181818;stroke-width:1;" width="10" x="1261.1126" y="519.0378"/></g><g><title>_execute_step</title><rect fill="#FFFFFF" height="145.806" style="stroke:#181818;stroke-width:1;" width="10" x="1529.6728" y="577.4499"/></g><g><title>update_lock</title><rect fill="#FFFFFF" height="108.118" style="stroke:#181818;stroke-width:1;" width="10" x="1738.9662" y="857.0799"/></g><rect fill="none" height="228.924" style="stroke:#000000;stroke-width:1.5;" width="605.6293" x="1091.752" y="534.0378"/><rect fill="none" height="100.0999" style="stroke:#000000;stroke-width:1.5;" width="496.0296" x="1101.752" y="592.4499"/><g class="participant-lifeline" data-entity-uid="part1" data-qualified-name="Bazel" id="part1-lifeline"><g><title>bazel run ..pkg.name.update</title><rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="103.8506" y="98.2038"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="107" x2="107" y1="98.2038" y2="1014.904"/></g></g><g class="participant-lifeline" data-entity-uid="part2" data-qualified-name="UpdateRule" id="part2-lifeline"><g><title>manual_analysis_update</title><rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="322.9368" y="98.2038"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="326.4581" x2="326.4581" y1="98.2038" y2="1014.904"/></g></g><g class="participant-lifeline" data-entity-uid="part3" data-qualified-name="UpdateRunner" id="part3-lifeline"><g><title>manual_analysis_update_runner</title><rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="533.7101" y="98.2038"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="537.4155" x2="537.4155" y1="98.2038" y2="1014.904"/></g></g><g class="participant-lifeline" data-entity-uid="part4" data-qualified-name="CLI" id="part4-lifeline"><g><title>interactive_runner_cli</title><rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="734.5224" y="98.2038"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="738.0047" x2="738.0047" y1="98.2038" y2="1014.904"/></g></g><g class="participant-lifeline" data-entity-uid="part5" data-qualified-name="Schema" id="part5-lifeline"><g><title>yaml_schema</title><rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="944.7775" y="98.2038"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="948.3627" x2="948.3627" y1="98.2038" y2="1014.904"/></g></g><g class="participant-lifeline" data-entity-uid="part6" data-qualified-name="Prefill" id="part6-lifeline"><g><title>_PrefillState</title><rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1051.9722" y="98.2038"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1055.1923" x2="1055.1923" y1="98.2038" y2="1014.904"/></g></g><g class="participant-lifeline" data-entity-uid="part7" data-qualified-name="UI" id="part7-lifeline"><g><title>_SplitPaneUI</title><rect fill="#000000" fill-opacity="0.00000" height="531.6061" width="8" x="1156.0729" y="483.2979"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1159.752" x2="1159.752" y1="483.2979" y2="1014.904"/></g></g><g class="participant-lifeline" data-entity-uid="part8" data-qualified-name="Flow" id="part8-lifeline"><g><title>run_analysis</title><rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1262.1126" y="98.2038"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1265.3937" x2="1265.3937" y1="98.2038" y2="1014.904"/></g></g><g class="participant-lifeline" data-entity-uid="part9" data-qualified-name="Steps" id="part9-lifeline"><g><title>_execute_step</title><rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1530.6728" y="98.2038"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1534.564" x2="1534.564" y1="98.2038" y2="1014.904"/></g></g><g class="participant-lifeline" data-entity-uid="part10" data-qualified-name="Results" id="part10-lifeline"><g><title>results.json</title><rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1638.5815" y="98.2038"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1641.7816" x2="1641.7816" y1="98.2038" y2="1014.904"/></g></g><g class="participant-lifeline" data-entity-uid="part11" data-qualified-name="UpdateLock" id="part11-lifeline"><g><title>update_lock</title><rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1739.9662" y="98.2038"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1743.3813" x2="1743.3813" y1="98.2038" y2="1014.904"/></g></g><g class="participant-lifeline" data-entity-uid="part12" data-qualified-name="Lock" id="part12-lifeline"><g><title>manual.lock</title><rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1984.0994" y="98.2038"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1987.2275" x2="1987.2275" y1="98.2038" y2="1014.904"/></g></g><g class="participant participant-head" data-entity-uid="part1" data-qualified-name="Bazel" id="part1-head"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="205.7012" x="5" y="64.1358"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="191.7012" x="12" y="86.1018">bazel run //pkg:name.update</text></g><g class="participant participant-tail" data-entity-uid="part1" data-qualified-name="Bazel" id="part1-tail"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="205.7012" x="5" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="191.7012" x="12" y="1035.8699">bazel run //pkg:name.update</text></g><g class="participant participant-head" data-entity-uid="part2" data-qualified-name="UpdateRule" id="part2-head"><rect fill="#E2E2F0" height="52.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="174.9574" x="239.4581" y="45.0679"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="160.9574" x="246.4581" y="67.0339">manual_analysis_update</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="93.5196" x="280.177" y="86.1018">(rule wrapper)</text></g><g class="participant participant-tail" data-entity-uid="part2" data-qualified-name="UpdateRule" id="part2-tail"><rect fill="#E2E2F0" height="52.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="174.9574" x="239.4581" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="160.9574" x="246.4581" y="1035.8699">manual_analysis_update</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="93.5196" x="280.177" y="1054.9378">(rule wrapper)</text></g><g class="participant participant-head" data-entity-uid="part3" data-qualified-name="UpdateRunner" id="part3-head"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="226.5892" x="424.4155" y="64.1358"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="212.5892" x="431.4155" y="86.1018">manual_analysis_update_runner</text></g><g class="participant participant-tail" data-entity-uid="part3" data-qualified-name="UpdateRunner" id="part3-tail"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="226.5892" x="424.4155" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="212.5892" x="431.4155" y="1035.8699">manual_analysis_update_runner</text></g><g class="participant participant-head" data-entity-uid="part4" data-qualified-name="CLI" id="part4-head"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="155.0354" x="661.0047" y="64.1358"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="141.0354" x="668.0047" y="86.1018">interactive_runner_cli</text></g><g class="participant participant-tail" data-entity-uid="part4" data-qualified-name="CLI" id="part4-tail"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="155.0354" x="661.0047" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="141.0354" x="668.0047" y="1035.8699">interactive_runner_cli</text></g><g class="participant participant-head" data-entity-uid="part5" data-qualified-name="Schema" id="part5-head"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="102.8297" x="897.3627" y="64.1358"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88.8297" x="904.3627" y="86.1018">yaml_schema</text></g><g class="participant participant-tail" data-entity-uid="part5" data-qualified-name="Schema" id="part5-tail"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="102.8297" x="897.3627" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88.8297" x="904.3627" y="1035.8699">yaml_schema</text></g><g class="participant participant-head" data-entity-uid="part6" data-qualified-name="Prefill" id="part6-head"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="91.5597" x="1010.1923" y="64.1358"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="77.5597" x="1017.1923" y="86.1018">_PrefillState</text></g><g class="participant participant-tail" data-entity-uid="part6" data-qualified-name="Prefill" id="part6-tail"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="91.5597" x="1010.1923" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="77.5597" x="1017.1923" y="1035.8699">_PrefillState</text></g><g class="participant participant-tail" data-entity-uid="part7" data-qualified-name="UI" id="part7-tail"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="96.6417" x="1111.752" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="82.6417" x="1118.752" y="1035.8699">_SplitPaneUI</text></g><g class="participant participant-head" data-entity-uid="part8" data-qualified-name="Flow" id="part8-head"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="95.4377" x="1218.3937" y="64.1358"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="81.4377" x="1225.3937" y="86.1018">run_analysis</text></g><g class="participant participant-tail" data-entity-uid="part8" data-qualified-name="Flow" id="part8-tail"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="95.4377" x="1218.3937" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="81.4377" x="1225.3937" y="1035.8699">run_analysis</text></g><g class="participant participant-head" data-entity-uid="part9" data-qualified-name="Steps" id="part9-head"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="106.2176" x="1481.564" y="64.1358"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="92.2176" x="1488.564" y="86.1018">_execute_step</text></g><g class="participant participant-tail" data-entity-uid="part9" data-qualified-name="Steps" id="part9-tail"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="106.2176" x="1481.564" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="92.2176" x="1488.564" y="1035.8699">_execute_step</text></g><g class="participant participant-head" data-entity-uid="part10" data-qualified-name="Results" id="part10-head"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="89.5997" x="1597.7816" y="64.1358"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="75.5997" x="1604.7816" y="86.1018">results.json</text></g><g class="participant participant-tail" data-entity-uid="part10" data-qualified-name="Results" id="part10-tail"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="89.5997" x="1597.7816" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="75.5997" x="1604.7816" y="1035.8699">results.json</text></g><g class="participant participant-head" data-entity-uid="part11" data-qualified-name="UpdateLock" id="part11-head"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="93.1697" x="1697.3813" y="64.1358"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.1697" x="1704.3813" y="86.1018">update_lock</text></g><g class="participant participant-tail" data-entity-uid="part11" data-qualified-name="UpdateLock" id="part11-tail"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="93.1697" x="1697.3813" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.1697" x="1704.3813" y="1035.8699">update_lock</text></g><g class="participant participant-head" data-entity-uid="part12" data-qualified-name="Lock" id="part12-head"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="93.7437" x="1941.2275" y="64.1358"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.7437" x="1948.2275" y="86.1018">manual.lock</text></g><g class="participant participant-tail" data-entity-uid="part12" data-qualified-name="Lock" id="part12-tail"><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="93.7437" x="1941.2275" y="1013.904"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.7437" x="1948.2275" y="1035.8699">manual.lock</text></g><g><title>bazel run ..pkg.name.update</title><rect fill="#FFFFFF" height="897.7002" style="stroke:#181818;stroke-width:1;" width="10" x="102.8506" y="108.2038"/></g><g><title>manual_analysis_update</title><rect fill="#FFFFFF" height="864.9942" style="stroke:#181818;stroke-width:1;" width="10" x="321.9368" y="131.9098"/></g><g><title>manual_analysis_update_runner</title><rect fill="#FFFFFF" height="712.1701" style="stroke:#181818;stroke-width:1;" width="10" x="532.7101" y="284.7338"/></g><g><title>interactive_runner_cli</title><rect fill="#FFFFFF" height="508.934" style="stroke:#181818;stroke-width:1;" width="10" x="733.5224" y="316.4398"/></g><g><title>yaml_schema</title><rect fill="#FFFFFF" height="31.706" style="stroke:#181818;stroke-width:1;" width="10" x="943.7775" y="348.1459"/></g><g><title>_PrefillState</title><rect fill="#FFFFFF" height="31.706" style="stroke:#181818;stroke-width:1;" width="10" x="1050.9722" y="411.5579"/></g><g><title>run_analysis</title><rect fill="#FFFFFF" height="274.63" style="stroke:#181818;stroke-width:1;" width="10" x="1261.1126" y="519.0378"/></g><g><title>_execute_step</title><rect fill="#FFFFFF" height="145.806" style="stroke:#181818;stroke-width:1;" width="10" x="1529.6728" y="577.4499"/></g><g><title>update_lock</title><rect fill="#FFFFFF" height="108.118" style="stroke:#181818;stroke-width:1;" width="10" x="1738.9662" y="857.0799"/></g><g class="message" data-entity-1="part1" data-entity-2="part2" id="msg1"><polygon fill="#181818" points="309.9368,127.9098,319.9368,131.9098,309.9368,135.9098,313.9368,131.9098" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="112.8506" x2="315.9368" y1="131.9098" y2="131.9098"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="190.0862" x="119.8506" y="126.1008">launch executable with runfiles</text></g><g class="message" data-entity-1="part2" data-entity-2="part2" id="msg2"><line style="stroke:#181818;stroke-width:1;" x1="331.9368" x2="373.9368" y1="163.6158" y2="163.6158"/><line style="stroke:#181818;stroke-width:1;" x1="373.9368" x2="373.9368" y1="163.6158" y2="176.6158"/><line style="stroke:#181818;stroke-width:1;" x1="332.9368" x2="373.9368" y1="176.6158" y2="176.6158"/><polygon fill="#181818" points="342.9368,172.6158,332.9368,176.6158,342.9368,180.6158,338.9368,176.6158" style="stroke:#181818;stroke-width:1;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="96.7591" x="338.9368" y="157.8068">_collect_inputs()</text></g><g class="message" data-entity-1="part2" data-entity-2="part2" id="msg3"><line style="stroke:#181818;stroke-width:1;" x1="331.9368" x2="373.9368" y1="208.3218" y2="208.3218"/><line style="stroke:#181818;stroke-width:1;" x1="373.9368" x2="373.9368" y1="208.3218" y2="221.3218"/><line style="stroke:#181818;stroke-width:1;" x1="332.9368" x2="373.9368" y1="221.3218" y2="221.3218"/><polygon fill="#181818" points="342.9368,217.3218,332.9368,221.3218,342.9368,225.3218,338.9368,221.3218" style="stroke:#181818;stroke-width:1;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="112.8531" x="338.9368" y="202.5128">_make_manifests()</text></g><g class="message" data-entity-1="part2" data-entity-2="part1" id="msg4"><polygon fill="#181818" points="123.8506,249.0278,113.8506,253.0278,123.8506,257.0278,119.8506,253.0278" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="117.8506" x2="320.9368" y1="253.0278" y2="253.0278"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="172.0421" x="129.8506" y="247.2188">env + symlinked lock/results</text></g><g class="message" data-entity-1="part1" data-entity-2="part3" id="msg5"><polygon fill="#181818" points="520.7101,280.7338,530.7101,284.7338,520.7101,288.7338,524.7101,284.7338" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="112.8506" x2="526.7101" y1="284.7338" y2="284.7338"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="7.436" x="119.8506" y="278.9248">1</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="65.8971" x="131.2866" y="278.9248">main(argv)</text></g><g class="message" data-entity-1="part3" data-entity-2="part4" id="msg6"><polygon fill="#181818" points="721.5224,312.4398,731.5224,316.4398,721.5224,320.4398,725.5224,316.4398" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="542.7101" x2="727.5224" y1="316.4398" y2="316.4398"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="7.436" x="549.7101" y="310.6308">2</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="65.8971" x="561.1461" y="310.6308">main(argv)</text></g><g class="message" data-entity-1="part4" data-entity-2="part5" id="msg7"><polygon fill="#181818" points="931.7775,344.1459,941.7775,348.1459,931.7775,352.1459,935.7775,348.1459" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="743.5224" x2="937.7775" y1="348.1459" y2="348.1459"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="7.436" x="750.5224" y="342.3369">3</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="169.8191" x="761.9584" y="342.3369">load_analysis(analysis.yaml)</text></g><g class="message" data-entity-1="part5" data-entity-2="part4" id="msg8"><polygon fill="#181818" points="754.5224,375.8519,744.5224,379.8519,754.5224,383.8519,750.5224,379.8519" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="748.5224" x2="947.7775" y1="379.8519" y2="379.8519"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="7.436" x="760.5224" y="374.0429">4</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="122.5641" x="771.9584" y="374.0429">steps, requirements</text></g><g class="message" data-entity-1="part4" data-entity-2="part6" id="msg9"><polygon fill="#181818" points="1038.9722,407.5579,1048.9722,411.5579,1038.9722,415.5579,1042.9722,411.5579" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="743.5224" x2="1044.9722" y1="411.5579" y2="411.5579"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="7.436" x="750.5224" y="405.7489">5</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="104.5071" x="761.9584" y="405.7489">load(results.json)</text></g><g class="message" data-entity-1="part6" data-entity-2="part4" id="msg10"><polygon fill="#181818" points="754.5224,439.2639,744.5224,443.2639,754.5224,447.2639,750.5224,443.2639" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="748.5224" x2="1054.9722" y1="443.2639" y2="443.2639"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="7.436" x="760.5224" y="437.4549">6</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="84.0321" x="771.9584" y="437.4549">prior answers</text></g><g class="message" data-entity-1="part4" data-entity-2="part7" id="msg11"><polygon fill="#181818" points="1099.752,470.9699,1109.752,474.9699,1099.752,478.9699,1103.752,474.9699" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="743.5224" x2="1105.752" y1="474.9699" y2="474.9699"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="7.436" x="750.5224" y="469.1609">7</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="33.384" x="761.9584" y="469.1609">new()</text></g><rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="96.6417" x="1111.752" y="451.2639"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="82.6417" x="1118.752" y="473.2299">_SplitPaneUI</text><g class="message" data-entity-1="part4" data-entity-2="part8" id="msg13"><polygon fill="#181818" points="1249.1126,515.0378,1259.1126,519.0378,1249.1126,523.0378,1253.1126,519.0378" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="743.5224" x2="1255.1126" y1="519.0378" y2="519.0378"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="7.436" x="750.5224" y="513.2288">8</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="347.1913" x="761.9584" y="513.2288">run_analysis(steps, ui, analysis_path, results_path, prefill)</text></g><path d="M1091.752,534.0378 L1165.0401,534.0378 L1165.0401,543.7439 L1155.0401,553.7439 L1091.752,553.7439 L1091.752,534.0378" fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/><rect fill="none" height="228.924" style="stroke:#000000;stroke-width:1.5;" width="605.6293" x="1091.752" y="534.0378"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="28.288" x="1106.752" y="548.9349">loop</text><text fill="#000000" font-family="sans-serif" font-size="11" font-weight="bold" lengthAdjust="spacing" textLength="139.512" x="1180.0401" y="547.7968">[for each step in analysis]</text><g class="message" data-entity-1="part8" data-entity-2="part9" id="msg14"><polygon fill="#181818" points="1517.6728,573.4499,1527.6728,577.4499,1517.6728,581.4499,1521.6728,577.4499" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="1271.1126" x2="1523.6728" y1="577.4499" y2="577.4499"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="7.436" x="1278.1126" y="571.6409">9</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="228.1242" x="1289.5486" y="571.6409">_execute_step(step, ui, results, prefill)</text></g><path d="M1101.752,592.4499 L1164.211,592.4499 L1164.211,602.1559 L1154.211,612.1559 L1101.752,612.1559 L1101.752,592.4499" fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/><rect fill="none" height="100.0999" style="stroke:#000000;stroke-width:1.5;" width="496.0296" x="1101.752" y="592.4499"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="17.459" x="1116.752" y="607.3469">alt</text><text fill="#000000" font-family="sans-serif" font-size="11" font-weight="bold" lengthAdjust="spacing" textLength="205.4785" x="1179.211" y="606.2088">[action / decision / assertion / repeat]</text><g class="message" data-entity-1="part9" data-entity-2="part7" id="msg15"><polygon fill="#181818" points="1171.0729,631.8619,1161.0729,635.8619,1171.0729,639.8619,1167.0729,635.8619" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="1165.0729" x2="1528.6728" y1="635.8619" y2="635.8619"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="14.872" x="1177.0729" y="630.0529">10</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="111.9041" x="1195.9449" y="630.0529">prompt user input</text></g><line style="stroke:#000000;stroke-width:1;stroke-dasharray:2,2;" x1="1101.752" x2="1597.7816" y1="644.8619" y2="644.8619"/><text fill="#000000" font-family="sans-serif" font-size="11" font-weight="bold" lengthAdjust="spacing" textLength="107.4032" x="1106.752" y="656.6208">[automated_action]</text><g class="message" data-entity-1="part9" data-entity-2="part7" id="msg16"><polygon fill="#181818" points="1171.0729,680.5498,1161.0729,684.5498,1171.0729,688.5498,1167.0729,684.5498" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="1165.0729" x2="1528.6728" y1="684.5498" y2="684.5498"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="14.872" x="1177.0729" y="678.7408">11</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="187.2782" x="1195.9449" y="678.7408">prompt args + run_command()</text></g><g class="message" data-entity-1="part9" data-entity-2="part8" id="msg17"><polygon fill="#181818" points="1282.1126,719.2558,1272.1126,723.2558,1282.1126,727.2558,1278.1126,723.2558" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="1276.1126" x2="1533.6728" y1="723.2558" y2="723.2558"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="14.872" x="1288.1126" y="717.4468">12</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="114.6601" x="1306.9846" y="717.4468">append step result</text></g><g class="message" data-entity-1="part8" data-entity-2="part10" id="msg18"><polygon fill="#181818" points="1630.5815,750.9619,1640.5815,754.9619,1630.5815,758.9619,1634.5815,754.9619" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="1271.1126" x2="1636.5815" y1="754.9619" y2="754.9619"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="14.872" x="1278.1126" y="749.1528">13</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="154.3361" x="1296.9846" y="749.1528">rewrite incremental JSON</text></g><g class="message" data-entity-1="part8" data-entity-2="part4" id="msg19"><polygon fill="#181818" points="754.5224,789.6679,744.5224,793.6679,754.5224,797.6679,750.5224,793.6679" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="748.5224" x2="1265.1126" y1="793.6679" y2="793.6679"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="14.872" x="760.5224" y="787.8589">14</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="109.5771" x="779.3944" y="787.8589">completed results</text></g><g class="message" data-entity-1="part4" data-entity-2="part3" id="msg20"><polygon fill="#181818" points="553.7101,821.3739,543.7101,825.3739,553.7101,829.3739,549.7101,825.3739" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="547.7101" x2="737.5224" y1="825.3739" y2="825.3739"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="14.872" x="559.7101" y="819.5649">15</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="46.527" x="578.5821" y="819.5649">success</text></g><g class="message" data-entity-1="part3" data-entity-2="part11" id="msg21"><polygon fill="#181818" points="1726.9662,853.0799,1736.9662,857.0799,1726.9662,861.0799,1730.9662,857.0799" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="542.7101" x2="1732.9662" y1="857.0799" y2="857.0799"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="14.872" x="549.7101" y="851.2709">16</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="47.1901" x="568.5821" y="851.2709">main([])</text></g><g class="message" data-entity-1="part11" data-entity-2="part11" id="msg22"><line style="stroke:#181818;stroke-width:1;" x1="1748.9662" x2="1790.9662" y1="888.7859" y2="888.7859"/><line style="stroke:#181818;stroke-width:1;" x1="1790.9662" x2="1790.9662" y1="888.7859" y2="901.7859"/><line style="stroke:#181818;stroke-width:1;" x1="1749.9662" x2="1790.9662" y1="901.7859" y2="901.7859"/><polygon fill="#181818" points="1759.9662,897.7859,1749.9662,901.7859,1759.9662,905.7859,1755.9662,901.7859" style="stroke:#181818;stroke-width:1;"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="14.872" x="1755.9662" y="882.9769">17</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="151.3331" x="1774.8382" y="882.9769">read file + rule manifests</text></g><g class="message" data-entity-1="part11" data-entity-2="part12" id="msg23"><polygon fill="#181818" points="1976.0994,929.4919,1986.0994,933.4919,1976.0994,937.4919,1980.0994,933.4919" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;" x1="1748.9662" x2="1982.0994" y1="933.4919" y2="933.4919"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="14.872" x="1755.9662" y="927.6829">18</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="196.2612" x="1774.8382" y="927.6829">rewrite committed SHA-256 lock</text></g><g class="message" data-entity-1="part11" data-entity-2="part3" id="msg24"><polygon fill="#181818" points="553.7101,961.198,543.7101,965.198,553.7101,969.198,549.7101,965.198" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="547.7101" x2="1742.9662" y1="965.198" y2="965.198"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="14.872" x="559.7101" y="959.3889">19</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="46.527" x="578.5821" y="959.3889">success</text></g><g class="message" data-entity-1="part3" data-entity-2="part1" id="msg25"><polygon fill="#181818" points="123.8506,992.904,113.8506,996.904,123.8506,1000.904,119.8506,996.904" style="stroke:#181818;stroke-width:1;"/><line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="117.8506" x2="536.7101" y1="996.904" y2="996.904"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="14.872" x="129.8506" y="991.095">20</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="31.226" x="148.7226" y="991.095">done</text></g><?plantuml-src bLHDRzD04BtxLumuEMsJ2YGuz81Ka1151Qf6FG6ofkjfisIzNlQZeVnwPZ_Ys4bLWG-9lVlcpSoRj-kbLmIVKGTKSAvHFJhfuCQqw0a-g7vJLGQjbq8Qr1vUtE8VKc23XjDJixu_qzZH8YJu2q07x-B-DAHBv0qMyYQZl-lQ1awziMWCsLcApdclUVrVA1ekGvETHCQ5QQpKdYmABn-s0OrGCWMzlxoOOX-nKuqJA-em0PRfTOffhYpTIQMMVjjpMTY3BOsI_WertLpa2lToSIr3GmcGr9voq6yIWHjrdamkY5_S7W-veBnR_7IzJfZhl3155SLKBzOZlIxvyocb5mCk8QeaNtH47c-L_c3-TZGmE0E5GOiLvABnDWvN-bKq2yj3RiSo6lE8O9-k4RrI97mZjGdUrRDdmHskYN-ql2Dt06PqBlaCI3_0CRZ7JaczfXPYfwT5Gsuq-5w7xfOil3piCfe7Ze-PfKEfQxJt3xiyQPF1RAe3J5pZhModlAjwR8VvrzkNHNJWh2h0UQ6RppaWUi2TWALVGLhgI7EzXRSOS4TSZqqngxRx4pvZPMy1jTkG7PXkBk3eY3SrRUgXx6ZCp3tsR5qA2l84XeDfqAzYZIbx-J8v-wogLDyRkEEiXEoJ60zI3y4Ly9DoHQaYUKuwEGKfQqvQiemIH09K7gBHUhwXe2KXNNv5vyYMPKk6q2TuV7Akt7tKfU-CXy1mICvBE5AE8BgZus7pu5A6vnbuzDn1qapq7LkphNE9fDjg5BLLE4qbNeQwpTha1YUobBCTHq4RA_aiIIso6_Z-_hJy-gMAx5KX78sRIp2AkFQjRdcw--xELWj2a7C7rjvT6YE7V_knFGDfOmgBTM8ByVmdAVXlEADxKGC-znKbapxMk_nuFd_r-aqwgPEO_wXzk00IfkqrLLLBJrn8Vm40?></g></svg>
+<?plantuml 1.2026.2?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css"
+     data-diagram-type="SEQUENCE" height="1072px" preserveAspectRatio="none"
+     style="width:2040px;height:1072px;background:#FFFFFF;" version="1.1" viewBox="0 0 2040 1072" width="2040px"
+     zoomAndPan="magnify">
+    <title>Manual Analysis Update Flow</title>
+    <defs/>
+    <g>
+        <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+              textLength="205.1552" x="916.908" y="29.9659">Manual Analysis Update Flow
+        </text>
+        <g>
+            <title>bazel run ..pkg.name.update</title>
+            <rect fill="#FFFFFF" height="897.7002" style="stroke:#181818;stroke-width:1;" width="10" x="102.8506"
+                  y="108.2038"/>
+        </g>
+        <g>
+            <title>manual_analysis_update</title>
+            <rect fill="#FFFFFF" height="864.9942" style="stroke:#181818;stroke-width:1;" width="10" x="321.9368"
+                  y="131.9098"/>
+        </g>
+        <g>
+            <title>manual_analysis_update_runner</title>
+            <rect fill="#FFFFFF" height="712.1701" style="stroke:#181818;stroke-width:1;" width="10" x="532.7101"
+                  y="284.7338"/>
+        </g>
+        <g>
+            <title>interactive_runner_cli</title>
+            <rect fill="#FFFFFF" height="508.934" style="stroke:#181818;stroke-width:1;" width="10" x="733.5224"
+                  y="316.4398"/>
+        </g>
+        <g>
+            <title>yaml_schema</title>
+            <rect fill="#FFFFFF" height="31.706" style="stroke:#181818;stroke-width:1;" width="10" x="943.7775"
+                  y="348.1459"/>
+        </g>
+        <g>
+            <title>_PrefillState</title>
+            <rect fill="#FFFFFF" height="31.706" style="stroke:#181818;stroke-width:1;" width="10" x="1050.9722"
+                  y="411.5579"/>
+        </g>
+        <g>
+            <title>run_analysis</title>
+            <rect fill="#FFFFFF" height="274.63" style="stroke:#181818;stroke-width:1;" width="10" x="1261.1126"
+                  y="519.0378"/>
+        </g>
+        <g>
+            <title>_execute_step</title>
+            <rect fill="#FFFFFF" height="145.806" style="stroke:#181818;stroke-width:1;" width="10" x="1529.6728"
+                  y="577.4499"/>
+        </g>
+        <g>
+            <title>update_lock</title>
+            <rect fill="#FFFFFF" height="108.118" style="stroke:#181818;stroke-width:1;" width="10" x="1738.9662"
+                  y="857.0799"/>
+        </g>
+        <rect fill="none" height="228.924" style="stroke:#000000;stroke-width:1.5;" width="605.6293" x="1091.752"
+              y="534.0378"/>
+        <rect fill="none" height="100.0999" style="stroke:#000000;stroke-width:1.5;" width="496.0296" x="1101.752"
+              y="592.4499"/>
+        <g class="participant-lifeline" data-entity-uid="part1" data-qualified-name="Bazel" id="part1-lifeline">
+            <g>
+                <title>bazel run ..pkg.name.update</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="103.8506" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="107" x2="107" y1="98.2038"
+                      y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part2" data-qualified-name="UpdateRule" id="part2-lifeline">
+            <g>
+                <title>manual_analysis_update</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="322.9368" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="326.4581" x2="326.4581"
+                      y1="98.2038" y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part3" data-qualified-name="UpdateRunner" id="part3-lifeline">
+            <g>
+                <title>manual_analysis_update_runner</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="533.7101" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="537.4155" x2="537.4155"
+                      y1="98.2038" y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part4" data-qualified-name="CLI" id="part4-lifeline">
+            <g>
+                <title>interactive_runner_cli</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="734.5224" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="738.0047" x2="738.0047"
+                      y1="98.2038" y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part5" data-qualified-name="Schema" id="part5-lifeline">
+            <g>
+                <title>yaml_schema</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="944.7775" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="948.3627" x2="948.3627"
+                      y1="98.2038" y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part6" data-qualified-name="Prefill" id="part6-lifeline">
+            <g>
+                <title>_PrefillState</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1051.9722" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1055.1923" x2="1055.1923"
+                      y1="98.2038" y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part7" data-qualified-name="UI" id="part7-lifeline">
+            <g>
+                <title>_SplitPaneUI</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="531.6061" width="8" x="1156.0729" y="483.2979"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1159.752" x2="1159.752"
+                      y1="483.2979" y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part8" data-qualified-name="Flow" id="part8-lifeline">
+            <g>
+                <title>run_analysis</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1262.1126" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1265.3937" x2="1265.3937"
+                      y1="98.2038" y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part9" data-qualified-name="Steps" id="part9-lifeline">
+            <g>
+                <title>_execute_step</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1530.6728" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1534.564" x2="1534.564"
+                      y1="98.2038" y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part10" data-qualified-name="Results" id="part10-lifeline">
+            <g>
+                <title>results.json</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1638.5815" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1641.7816" x2="1641.7816"
+                      y1="98.2038" y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part11" data-qualified-name="UpdateLock" id="part11-lifeline">
+            <g>
+                <title>update_lock</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1739.9662" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1743.3813" x2="1743.3813"
+                      y1="98.2038" y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part12" data-qualified-name="Lock" id="part12-lifeline">
+            <g>
+                <title>manual.lock</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="916.7002" width="8" x="1984.0994" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1987.2275" x2="1987.2275"
+                      y1="98.2038" y2="1014.904"/>
+            </g>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part1" data-qualified-name="Bazel" id="part1-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="205.7012" x="5" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="191.7012"
+                  x="12" y="86.1018">bazel run //pkg:name.update
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part1" data-qualified-name="Bazel" id="part1-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="205.7012" x="5" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="191.7012"
+                  x="12" y="1035.8699">bazel run //pkg:name.update
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part2" data-qualified-name="UpdateRule"
+           id="part2-head">
+            <rect fill="#E2E2F0" height="52.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="174.9574" x="239.4581" y="45.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="160.9574"
+                  x="246.4581" y="67.0339">manual_analysis_update
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="93.5196"
+                  x="280.177" y="86.1018">(rule wrapper)
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part2" data-qualified-name="UpdateRule"
+           id="part2-tail">
+            <rect fill="#E2E2F0" height="52.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="174.9574" x="239.4581" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="160.9574"
+                  x="246.4581" y="1035.8699">manual_analysis_update
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="93.5196"
+                  x="280.177" y="1054.9378">(rule wrapper)
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part3" data-qualified-name="UpdateRunner"
+           id="part3-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="226.5892" x="424.4155" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="212.5892"
+                  x="431.4155" y="86.1018">manual_analysis_update_runner
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part3" data-qualified-name="UpdateRunner"
+           id="part3-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="226.5892" x="424.4155" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="212.5892"
+                  x="431.4155" y="1035.8699">manual_analysis_update_runner
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part4" data-qualified-name="CLI" id="part4-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="155.0354" x="661.0047" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="141.0354"
+                  x="668.0047" y="86.1018">interactive_runner_cli
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part4" data-qualified-name="CLI" id="part4-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="155.0354" x="661.0047" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="141.0354"
+                  x="668.0047" y="1035.8699">interactive_runner_cli
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part5" data-qualified-name="Schema" id="part5-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="102.8297" x="897.3627" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88.8297"
+                  x="904.3627" y="86.1018">yaml_schema
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part5" data-qualified-name="Schema" id="part5-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="102.8297" x="897.3627" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88.8297"
+                  x="904.3627" y="1035.8699">yaml_schema
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part6" data-qualified-name="Prefill" id="part6-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="91.5597" x="1010.1923" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="77.5597"
+                  x="1017.1923" y="86.1018">_PrefillState
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part6" data-qualified-name="Prefill" id="part6-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="91.5597" x="1010.1923" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="77.5597"
+                  x="1017.1923" y="1035.8699">_PrefillState
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part7" data-qualified-name="UI" id="part7-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="96.6417" x="1111.752" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="82.6417"
+                  x="1118.752" y="1035.8699">_SplitPaneUI
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part8" data-qualified-name="Flow" id="part8-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="95.4377" x="1218.3937" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="81.4377"
+                  x="1225.3937" y="86.1018">run_analysis
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part8" data-qualified-name="Flow" id="part8-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="95.4377" x="1218.3937" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="81.4377"
+                  x="1225.3937" y="1035.8699">run_analysis
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part9" data-qualified-name="Steps" id="part9-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="106.2176" x="1481.564" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="92.2176"
+                  x="1488.564" y="86.1018">_execute_step
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part9" data-qualified-name="Steps" id="part9-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="106.2176" x="1481.564" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="92.2176"
+                  x="1488.564" y="1035.8699">_execute_step
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part10" data-qualified-name="Results" id="part10-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="89.5997" x="1597.7816" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="75.5997"
+                  x="1604.7816" y="86.1018">results.json
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part10" data-qualified-name="Results" id="part10-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="89.5997" x="1597.7816" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="75.5997"
+                  x="1604.7816" y="1035.8699">results.json
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part11" data-qualified-name="UpdateLock"
+           id="part11-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="93.1697" x="1697.3813" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.1697"
+                  x="1704.3813" y="86.1018">update_lock
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part11" data-qualified-name="UpdateLock"
+           id="part11-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="93.1697" x="1697.3813" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.1697"
+                  x="1704.3813" y="1035.8699">update_lock
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part12" data-qualified-name="Lock" id="part12-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="93.7437" x="1941.2275" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.7437"
+                  x="1948.2275" y="86.1018">manual.lock
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part12" data-qualified-name="Lock" id="part12-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="93.7437" x="1941.2275" y="1013.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.7437"
+                  x="1948.2275" y="1035.8699">manual.lock
+            </text>
+        </g>
+        <g>
+            <title>bazel run ..pkg.name.update</title>
+            <rect fill="#FFFFFF" height="897.7002" style="stroke:#181818;stroke-width:1;" width="10" x="102.8506"
+                  y="108.2038"/>
+        </g>
+        <g>
+            <title>manual_analysis_update</title>
+            <rect fill="#FFFFFF" height="864.9942" style="stroke:#181818;stroke-width:1;" width="10" x="321.9368"
+                  y="131.9098"/>
+        </g>
+        <g>
+            <title>manual_analysis_update_runner</title>
+            <rect fill="#FFFFFF" height="712.1701" style="stroke:#181818;stroke-width:1;" width="10" x="532.7101"
+                  y="284.7338"/>
+        </g>
+        <g>
+            <title>interactive_runner_cli</title>
+            <rect fill="#FFFFFF" height="508.934" style="stroke:#181818;stroke-width:1;" width="10" x="733.5224"
+                  y="316.4398"/>
+        </g>
+        <g>
+            <title>yaml_schema</title>
+            <rect fill="#FFFFFF" height="31.706" style="stroke:#181818;stroke-width:1;" width="10" x="943.7775"
+                  y="348.1459"/>
+        </g>
+        <g>
+            <title>_PrefillState</title>
+            <rect fill="#FFFFFF" height="31.706" style="stroke:#181818;stroke-width:1;" width="10" x="1050.9722"
+                  y="411.5579"/>
+        </g>
+        <g>
+            <title>run_analysis</title>
+            <rect fill="#FFFFFF" height="274.63" style="stroke:#181818;stroke-width:1;" width="10" x="1261.1126"
+                  y="519.0378"/>
+        </g>
+        <g>
+            <title>_execute_step</title>
+            <rect fill="#FFFFFF" height="145.806" style="stroke:#181818;stroke-width:1;" width="10" x="1529.6728"
+                  y="577.4499"/>
+        </g>
+        <g>
+            <title>update_lock</title>
+            <rect fill="#FFFFFF" height="108.118" style="stroke:#181818;stroke-width:1;" width="10" x="1738.9662"
+                  y="857.0799"/>
+        </g>
+        <g class="message" data-entity-1="part1" data-entity-2="part2" id="msg1">
+            <polygon fill="#181818" points="309.9368,127.9098,319.9368,131.9098,309.9368,135.9098,313.9368,131.9098"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="112.8506" x2="315.9368" y1="131.9098" y2="131.9098"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="190.0862"
+                  x="119.8506" y="126.1008">launch executable with runfiles
+            </text>
+        </g>
+        <g class="message" data-entity-1="part2" data-entity-2="part2" id="msg2">
+            <line style="stroke:#181818;stroke-width:1;" x1="331.9368" x2="373.9368" y1="163.6158" y2="163.6158"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="373.9368" x2="373.9368" y1="163.6158" y2="176.6158"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="332.9368" x2="373.9368" y1="176.6158" y2="176.6158"/>
+            <polygon fill="#181818" points="342.9368,172.6158,332.9368,176.6158,342.9368,180.6158,338.9368,176.6158"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="96.7591"
+                  x="338.9368" y="157.8068">_collect_inputs()
+            </text>
+        </g>
+        <g class="message" data-entity-1="part2" data-entity-2="part2" id="msg3">
+            <line style="stroke:#181818;stroke-width:1;" x1="331.9368" x2="373.9368" y1="208.3218" y2="208.3218"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="373.9368" x2="373.9368" y1="208.3218" y2="221.3218"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="332.9368" x2="373.9368" y1="221.3218" y2="221.3218"/>
+            <polygon fill="#181818" points="342.9368,217.3218,332.9368,221.3218,342.9368,225.3218,338.9368,221.3218"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="112.8531"
+                  x="338.9368" y="202.5128">_make_manifests()
+            </text>
+        </g>
+        <g class="message" data-entity-1="part2" data-entity-2="part1" id="msg4">
+            <polygon fill="#181818" points="123.8506,249.0278,113.8506,253.0278,123.8506,257.0278,119.8506,253.0278"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="117.8506" x2="320.9368" y1="253.0278"
+                  y2="253.0278"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="172.0421"
+                  x="129.8506" y="247.2188">env + symlinked lock/results
+            </text>
+        </g>
+        <g class="message" data-entity-1="part1" data-entity-2="part3" id="msg5">
+            <polygon fill="#181818" points="520.7101,280.7338,530.7101,284.7338,520.7101,288.7338,524.7101,284.7338"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="112.8506" x2="526.7101" y1="284.7338" y2="284.7338"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="7.436" x="119.8506" y="278.9248">1
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="65.8971"
+                  x="131.2866" y="278.9248">main(argv)
+            </text>
+        </g>
+        <g class="message" data-entity-1="part3" data-entity-2="part4" id="msg6">
+            <polygon fill="#181818" points="721.5224,312.4398,731.5224,316.4398,721.5224,320.4398,725.5224,316.4398"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="542.7101" x2="727.5224" y1="316.4398" y2="316.4398"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="7.436" x="549.7101" y="310.6308">2
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="65.8971"
+                  x="561.1461" y="310.6308">main(argv)
+            </text>
+        </g>
+        <g class="message" data-entity-1="part4" data-entity-2="part5" id="msg7">
+            <polygon fill="#181818" points="931.7775,344.1459,941.7775,348.1459,931.7775,352.1459,935.7775,348.1459"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="743.5224" x2="937.7775" y1="348.1459" y2="348.1459"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="7.436" x="750.5224" y="342.3369">3
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="169.8191"
+                  x="761.9584" y="342.3369">load_analysis(analysis.yaml)
+            </text>
+        </g>
+        <g class="message" data-entity-1="part5" data-entity-2="part4" id="msg8">
+            <polygon fill="#181818" points="754.5224,375.8519,744.5224,379.8519,754.5224,383.8519,750.5224,379.8519"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="748.5224" x2="947.7775" y1="379.8519"
+                  y2="379.8519"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="7.436" x="760.5224" y="374.0429">4
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="122.5641"
+                  x="771.9584" y="374.0429">steps, requirements
+            </text>
+        </g>
+        <g class="message" data-entity-1="part4" data-entity-2="part6" id="msg9">
+            <polygon fill="#181818" points="1038.9722,407.5579,1048.9722,411.5579,1038.9722,415.5579,1042.9722,411.5579"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="743.5224" x2="1044.9722" y1="411.5579" y2="411.5579"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="7.436" x="750.5224" y="405.7489">5
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="104.5071"
+                  x="761.9584" y="405.7489">load(results.json)
+            </text>
+        </g>
+        <g class="message" data-entity-1="part6" data-entity-2="part4" id="msg10">
+            <polygon fill="#181818" points="754.5224,439.2639,744.5224,443.2639,754.5224,447.2639,750.5224,443.2639"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="748.5224" x2="1054.9722" y1="443.2639"
+                  y2="443.2639"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="7.436" x="760.5224" y="437.4549">6
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="84.0321"
+                  x="771.9584" y="437.4549">prior answers
+            </text>
+        </g>
+        <g class="message" data-entity-1="part4" data-entity-2="part7" id="msg11">
+            <polygon fill="#181818" points="1099.752,470.9699,1109.752,474.9699,1099.752,478.9699,1103.752,474.9699"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="743.5224" x2="1105.752" y1="474.9699" y2="474.9699"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="7.436" x="750.5224" y="469.1609">7
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="33.384"
+                  x="761.9584" y="469.1609">new()
+            </text>
+        </g>
+        <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="96.6417"
+              x="1111.752" y="451.2639"/>
+        <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="82.6417"
+              x="1118.752" y="473.2299">_SplitPaneUI
+        </text>
+        <g class="message" data-entity-1="part4" data-entity-2="part8" id="msg13">
+            <polygon fill="#181818" points="1249.1126,515.0378,1259.1126,519.0378,1249.1126,523.0378,1253.1126,519.0378"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="743.5224" x2="1255.1126" y1="519.0378" y2="519.0378"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="7.436" x="750.5224" y="513.2288">8
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="347.1913"
+                  x="761.9584" y="513.2288">run_analysis(steps, ui, analysis_path, results_path, prefill)
+            </text>
+        </g>
+        <path d="M1091.752,534.0378 L1165.0401,534.0378 L1165.0401,543.7439 L1155.0401,553.7439 L1091.752,553.7439 L1091.752,534.0378"
+              fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/>
+        <rect fill="none" height="228.924" style="stroke:#000000;stroke-width:1.5;" width="605.6293" x="1091.752"
+              y="534.0378"/>
+        <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+              textLength="28.288" x="1106.752" y="548.9349">loop
+        </text>
+        <text fill="#000000" font-family="sans-serif" font-size="11" font-weight="bold" lengthAdjust="spacing"
+              textLength="139.512" x="1180.0401" y="547.7968">[for each step in analysis]
+        </text>
+        <g class="message" data-entity-1="part8" data-entity-2="part9" id="msg14">
+            <polygon fill="#181818" points="1517.6728,573.4499,1527.6728,577.4499,1517.6728,581.4499,1521.6728,577.4499"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1271.1126" x2="1523.6728" y1="577.4499" y2="577.4499"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="7.436" x="1278.1126" y="571.6409">9
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="228.1242"
+                  x="1289.5486" y="571.6409">_execute_step(step, ui, results, prefill)
+            </text>
+        </g>
+        <path d="M1101.752,592.4499 L1164.211,592.4499 L1164.211,602.1559 L1154.211,612.1559 L1101.752,612.1559 L1101.752,592.4499"
+              fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/>
+        <rect fill="none" height="100.0999" style="stroke:#000000;stroke-width:1.5;" width="496.0296" x="1101.752"
+              y="592.4499"/>
+        <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+              textLength="17.459" x="1116.752" y="607.3469">alt
+        </text>
+        <text fill="#000000" font-family="sans-serif" font-size="11" font-weight="bold" lengthAdjust="spacing"
+              textLength="205.4785" x="1179.211" y="606.2088">[action / decision / assertion / repeat]
+        </text>
+        <g class="message" data-entity-1="part9" data-entity-2="part7" id="msg15">
+            <polygon fill="#181818" points="1171.0729,631.8619,1161.0729,635.8619,1171.0729,639.8619,1167.0729,635.8619"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1165.0729" x2="1528.6728" y1="635.8619" y2="635.8619"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="14.872" x="1177.0729" y="630.0529">10
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="111.9041"
+                  x="1195.9449" y="630.0529">prompt user input
+            </text>
+        </g>
+        <line style="stroke:#000000;stroke-width:1;stroke-dasharray:2,2;" x1="1101.752" x2="1597.7816" y1="644.8619"
+              y2="644.8619"/>
+        <text fill="#000000" font-family="sans-serif" font-size="11" font-weight="bold" lengthAdjust="spacing"
+              textLength="107.4032" x="1106.752" y="656.6208">[automated_action]
+        </text>
+        <g class="message" data-entity-1="part9" data-entity-2="part7" id="msg16">
+            <polygon fill="#181818" points="1171.0729,680.5498,1161.0729,684.5498,1171.0729,688.5498,1167.0729,684.5498"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1165.0729" x2="1528.6728" y1="684.5498" y2="684.5498"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="14.872" x="1177.0729" y="678.7408">11
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="187.2782"
+                  x="1195.9449" y="678.7408">prompt args + run_command()
+            </text>
+        </g>
+        <g class="message" data-entity-1="part9" data-entity-2="part8" id="msg17">
+            <polygon fill="#181818" points="1282.1126,719.2558,1272.1126,723.2558,1282.1126,727.2558,1278.1126,723.2558"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="1276.1126" x2="1533.6728"
+                  y1="723.2558" y2="723.2558"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="14.872" x="1288.1126" y="717.4468">12
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="114.6601"
+                  x="1306.9846" y="717.4468">append step result
+            </text>
+        </g>
+        <g class="message" data-entity-1="part8" data-entity-2="part10" id="msg18">
+            <polygon fill="#181818" points="1630.5815,750.9619,1640.5815,754.9619,1630.5815,758.9619,1634.5815,754.9619"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1271.1126" x2="1636.5815" y1="754.9619" y2="754.9619"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="14.872" x="1278.1126" y="749.1528">13
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="154.3361"
+                  x="1296.9846" y="749.1528">rewrite incremental JSON
+            </text>
+        </g>
+        <g class="message" data-entity-1="part8" data-entity-2="part4" id="msg19">
+            <polygon fill="#181818" points="754.5224,789.6679,744.5224,793.6679,754.5224,797.6679,750.5224,793.6679"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="748.5224" x2="1265.1126" y1="793.6679"
+                  y2="793.6679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="14.872" x="760.5224" y="787.8589">14
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="109.5771"
+                  x="779.3944" y="787.8589">completed results
+            </text>
+        </g>
+        <g class="message" data-entity-1="part4" data-entity-2="part3" id="msg20">
+            <polygon fill="#181818" points="553.7101,821.3739,543.7101,825.3739,553.7101,829.3739,549.7101,825.3739"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="547.7101" x2="737.5224" y1="825.3739"
+                  y2="825.3739"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="14.872" x="559.7101" y="819.5649">15
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="46.527"
+                  x="578.5821" y="819.5649">success
+            </text>
+        </g>
+        <g class="message" data-entity-1="part3" data-entity-2="part11" id="msg21">
+            <polygon fill="#181818" points="1726.9662,853.0799,1736.9662,857.0799,1726.9662,861.0799,1730.9662,857.0799"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="542.7101" x2="1732.9662" y1="857.0799" y2="857.0799"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="14.872" x="549.7101" y="851.2709">16
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="47.1901"
+                  x="568.5821" y="851.2709">main([])
+            </text>
+        </g>
+        <g class="message" data-entity-1="part11" data-entity-2="part11" id="msg22">
+            <line style="stroke:#181818;stroke-width:1;" x1="1748.9662" x2="1790.9662" y1="888.7859" y2="888.7859"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1790.9662" x2="1790.9662" y1="888.7859" y2="901.7859"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1749.9662" x2="1790.9662" y1="901.7859" y2="901.7859"/>
+            <polygon fill="#181818" points="1759.9662,897.7859,1749.9662,901.7859,1759.9662,905.7859,1755.9662,901.7859"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="14.872" x="1755.9662" y="882.9769">17
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="151.3331"
+                  x="1774.8382" y="882.9769">read file + rule manifests
+            </text>
+        </g>
+        <g class="message" data-entity-1="part11" data-entity-2="part12" id="msg23">
+            <polygon fill="#181818" points="1976.0994,929.4919,1986.0994,933.4919,1976.0994,937.4919,1980.0994,933.4919"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1748.9662" x2="1982.0994" y1="933.4919" y2="933.4919"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="14.872" x="1755.9662" y="927.6829">18
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="196.2612"
+                  x="1774.8382" y="927.6829">rewrite committed SHA-256 lock
+            </text>
+        </g>
+        <g class="message" data-entity-1="part11" data-entity-2="part3" id="msg24">
+            <polygon fill="#181818" points="553.7101,961.198,543.7101,965.198,553.7101,969.198,549.7101,965.198"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="547.7101" x2="1742.9662" y1="965.198"
+                  y2="965.198"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="14.872" x="559.7101" y="959.3889">19
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="46.527"
+                  x="578.5821" y="959.3889">success
+            </text>
+        </g>
+        <g class="message" data-entity-1="part3" data-entity-2="part1" id="msg25">
+            <polygon fill="#181818" points="123.8506,992.904,113.8506,996.904,123.8506,1000.904,119.8506,996.904"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="117.8506" x2="536.7101" y1="996.904"
+                  y2="996.904"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+                  textLength="14.872" x="129.8506" y="991.095">20
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="31.226"
+                  x="148.7226" y="991.095">done
+            </text>
+        </g>
+        <?plantuml-src bLHDRzD04BtxLumuEMsJ2YGuz81Ka1151Qf6FG6ofkjfisIzNlQZeVnwPZ_Ys4bLWG-9lVlcpSoRj-kbLmIVKGTKSAvHFJhfuCQqw0a-g7vJLGQjbq8Qr1vUtE8VKc23XjDJixu_qzZH8YJu2q07x-B-DAHBv0qMyYQZl-lQ1awziMWCsLcApdclUVrVA1ekGvETHCQ5QQpKdYmABn-s0OrGCWMzlxoOOX-nKuqJA-em0PRfTOffhYpTIQMMVjjpMTY3BOsI_WertLpa2lToSIr3GmcGr9voq6yIWHjrdamkY5_S7W-veBnR_7IzJfZhl3155SLKBzOZlIxvyocb5mCk8QeaNtH47c-L_c3-TZGmE0E5GOiLvABnDWvN-bKq2yj3RiSo6lE8O9-k4RrI97mZjGdUrRDdmHskYN-ql2Dt06PqBlaCI3_0CRZ7JaczfXPYfwT5Gsuq-5w7xfOil3piCfe7Ze-PfKEfQxJt3xiyQPF1RAe3J5pZhModlAjwR8VvrzkNHNJWh2h0UQ6RppaWUi2TWALVGLhgI7EzXRSOS4TSZqqngxRx4pvZPMy1jTkG7PXkBk3eY3SrRUgXx6ZCp3tsR5qA2l84XeDfqAzYZIbx-J8v-wogLDyRkEEiXEoJ60zI3y4Ly9DoHQaYUKuwEGKfQqvQiemIH09K7gBHUhwXe2KXNNv5vyYMPKk6q2TuV7Akt7tKfU-CXy1mICvBE5AE8BgZus7pu5A6vnbuzDn1qapq7LkphNE9fDjg5BLLE4qbNeQwpTha1YUobBCTHq4RA_aiIIso6_Z-_hJy-gMAx5KX78sRIp2AkFQjRdcw--xELWj2a7C7rjvT6YE7V_knFGDfOmgBTM8ByVmdAVXlEADxKGC-znKbapxMk_nuFd_r-aqwgPEO_wXzk00IfkqrLLLBJrn8Vm40?>
+    </g>
+</svg>

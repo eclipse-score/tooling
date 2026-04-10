@@ -114,12 +114,12 @@ The `manual_analysis_test` rule separates **computation** from **verification**:
 1. A Bazel action runs `update_lock` to generate a sandbox-local
    `computed_lock.txt` from the manifests.
 2. A second Bazel action runs `manual_analysis_test_runner` with:
-   - the computed lock
-   - the committed lock
-   - the analysis YAML
-   - the committed results file
-   - the Bazel label of the analysis target
-   - the declared `.lobster` output path
+    - the computed lock
+    - the committed lock
+    - the analysis YAML
+    - the committed results file
+    - the Bazel label of the analysis target
+    - the declared `.lobster` output path
 
 `manual_analysis_test_runner` then:
 
@@ -152,22 +152,22 @@ The most relevant runtime artifacts are:
 
 ### Module Structure
 
-| Module / Rule | Responsibility |
-|---|---|
-| `manual_analysis` macro | Expands one logical analysis into update and test targets |
-| `manual_analysis_update` rule | Prepares runfiles and environment for interactive execution plus lock refresh |
-| `manual_analysis_test` rule | Computes a sandbox lock, validates committed artifacts, and produces `.lobster` |
-| `ManualAnalysisContextInfo` | Provider contract for all context sources |
-| `yaml_schema.py` | Parses the analysis YAML into typed step objects and requirement lists |
-| `interactive_runner_cli.py` | CLI entry point for interactive execution |
-| `interactive_runner_flow.py` | Orchestrates step execution and incremental `results.json` writes |
-| `interactive_runner_steps.py` | Executes `action`, `automated_action`, `decision`, `assertion`, and `repeat` steps |
-| `interactive_runner_ui_split.py` | Split-pane `prompt_toolkit` UI used during update runs |
-| `update_lock.py` | Computes deterministic SHA-256 lock content from manifests |
-| `check_lock.py` | Compares computed and committed lock files |
-| `check_results.py` | Validates that the final assertion in `results.json` passed |
-| `manual_analysis_test_runner.py` | Unified verification runner and LOBSTER emission entry point |
-| `lobster_generator.py` | Serializes the verification outcome to LOBSTER JSON |
+| Module / Rule                    | Responsibility                                                                     |
+|----------------------------------|------------------------------------------------------------------------------------|
+| `manual_analysis` macro          | Expands one logical analysis into update and test targets                          |
+| `manual_analysis_update` rule    | Prepares runfiles and environment for interactive execution plus lock refresh      |
+| `manual_analysis_test` rule      | Computes a sandbox lock, validates committed artifacts, and produces `.lobster`    |
+| `ManualAnalysisContextInfo`      | Provider contract for all context sources                                          |
+| `yaml_schema.py`                 | Parses the analysis YAML into typed step objects and requirement lists             |
+| `interactive_runner_cli.py`      | CLI entry point for interactive execution                                          |
+| `interactive_runner_flow.py`     | Orchestrates step execution and incremental `results.json` writes                  |
+| `interactive_runner_steps.py`    | Executes `action`, `automated_action`, `decision`, `assertion`, and `repeat` steps |
+| `interactive_runner_ui_split.py` | Split-pane `prompt_toolkit` UI used during update runs                             |
+| `update_lock.py`                 | Computes deterministic SHA-256 lock content from manifests                         |
+| `check_lock.py`                  | Compares computed and committed lock files                                         |
+| `check_results.py`               | Validates that the final assertion in `results.json` passed                        |
+| `manual_analysis_test_runner.py` | Unified verification runner and LOBSTER emission entry point                       |
+| `lobster_generator.py`           | Serializes the verification outcome to LOBSTER JSON                                |
 
 ### Architecture Diagrams
 
@@ -271,5 +271,3 @@ complete composition:
 
 That example is the best reference when adding a new manual analysis to another
 package.
-
-

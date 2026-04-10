@@ -4,4 +4,3 @@ type Requirement
 {
   text String
 }
-

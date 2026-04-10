@@ -41,7 +41,9 @@ class LobsterGeneratorTest(unittest.TestCase):
         self.assertEqual(first["status"], "ok")
         self.assertEqual(first["framework"], "manual_analysis")
         self.assertEqual(first["kind"], "Manual Analysis Run")
-        self.assertEqual(first["location"]["file"], "manual_analysis/example/results.json")
+        self.assertEqual(
+            first["location"]["file"], "manual_analysis/example/results.json"
+        )
         self.assertIsNone(first["location"]["line"])
         self.assertIsNone(first["location"]["column"])
         self.assertEqual(first["refs"], ["req REQ-1", "req REQ-2"])
@@ -64,4 +66,3 @@ class LobsterGeneratorTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

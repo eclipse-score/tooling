@@ -79,7 +79,7 @@ class YamlSchemaTest(unittest.TestCase):
                         "positive": "No",
                         "negative": "Yes",
                     },
-                ]
+                ],
             }
         )
 
@@ -129,7 +129,7 @@ class YamlSchemaTest(unittest.TestCase):
                             "positive": "No",
                             "negative": "Yes",
                         },
-                    ]
+                    ],
                 }
             )
 
@@ -145,7 +145,7 @@ class YamlSchemaTest(unittest.TestCase):
                         "positive": "No",
                         "negative": "Yes",
                     },
-                ]
+                ],
             }
         )
         self.assertEqual(steps[0].expected_return_code, 0)
@@ -163,7 +163,7 @@ class YamlSchemaTest(unittest.TestCase):
                             "positive": "No",
                             "negative": "Yes",
                         },
-                    ]
+                    ],
                 }
             )
 
@@ -186,7 +186,7 @@ class YamlSchemaTest(unittest.TestCase):
                         "positive": "No",
                         "negative": "Yes",
                     },
-                ]
+                ],
             }
         )
 
@@ -215,33 +215,53 @@ class YamlSchemaTest(unittest.TestCase):
                             "positive": "No",
                             "negative": "Yes",
                         },
-                    ]
+                    ],
                 }
             )
 
     def test_requires_final_assertion(self) -> None:
         with self.assertRaisesRegex(ValueError, "must end with an assertion"):
-            parse_analysis({
-                "requirements": ["REQ-001"],
-                "steps": [{"action": None, "description": "Only action"}]
-            })
+            parse_analysis(
+                {
+                    "requirements": ["REQ-001"],
+                    "steps": [{"action": None, "description": "Only action"}],
+                }
+            )
 
     def test_requires_requirements_field(self) -> None:
         with self.assertRaisesRegex(ValueError, "requirements field is mandatory"):
-            parse_analysis({"steps": [
-                {"action": None, "description": "Action"},
-                {"assertion": None, "description": "Test", "positive": "Yes", "negative": "No"}
-            ]})
+            parse_analysis(
+                {
+                    "steps": [
+                        {"action": None, "description": "Action"},
+                        {
+                            "assertion": None,
+                            "description": "Test",
+                            "positive": "Yes",
+                            "negative": "No",
+                        },
+                    ]
+                }
+            )
 
     def test_requires_non_empty_requirements(self) -> None:
-        with self.assertRaisesRegex(ValueError, "requirements must be a non-empty list"):
-            parse_analysis({
-                "requirements": [],
-                "steps": [
-                    {"action": None, "description": "Action"},
-                    {"assertion": None, "description": "Test", "positive": "Yes", "negative": "No"}
-                ]
-            })
+        with self.assertRaisesRegex(
+            ValueError, "requirements must be a non-empty list"
+        ):
+            parse_analysis(
+                {
+                    "requirements": [],
+                    "steps": [
+                        {"action": None, "description": "Action"},
+                        {
+                            "assertion": None,
+                            "description": "Test",
+                            "positive": "Yes",
+                            "negative": "No",
+                        },
+                    ],
+                }
+            )
 
 
 if __name__ == "__main__":

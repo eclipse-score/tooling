@@ -39,19 +39,19 @@ see [`docs/README.md`](docs/README.md).
 
 The primary entry point. It instantiates two targets:
 
-| Target | Kind | Purpose |
-|---|---|---|
-| `{name}` | `test` | Checks that the lock file is current and generates the `.lobster` output |
-| `{name}.update` | `run` | Runs the interactive analysis and refreshes the lock file |
+| Target          | Kind   | Purpose                                                                  |
+|-----------------|--------|--------------------------------------------------------------------------|
+| `{name}`        | `test` | Checks that the lock file is current and generates the `.lobster` output |
+| `{name}.update` | `run`  | Runs the interactive analysis and refreshes the lock file                |
 
 **Attributes**
 
-| Attribute | Required | Description |
-|---|---|---|
-| `contexts` | ✓ | List of context-provider targets (`ManualAnalysisContextInfo`) |
-| `analysis` | ✓ | Label of the analysis YAML file |
-| `lock_file` | ✓ | Label of the lock file (workspace-relative, committed to VCS) |
-| `results_file` | ✓ | Label of the results JSON file (workspace-relative, committed to VCS) |
+| Attribute      | Required | Description                                                           |
+|----------------|----------|-----------------------------------------------------------------------|
+| `contexts`     | ✓        | List of context-provider targets (`ManualAnalysisContextInfo`)        |
+| `analysis`     | ✓        | Label of the analysis YAML file                                       |
+| `lock_file`    | ✓        | Label of the lock file (workspace-relative, committed to VCS)         |
+| `results_file` | ✓        | Label of the results JSON file (workspace-relative, committed to VCS) |
 
 The `contexts` attribute accepts **any** target that provides
 `ManualAnalysisContextInfo`. The two rules below are convenience examples.
@@ -77,7 +77,7 @@ The rule traverses a `cc_library` and all its transitive dependencies. It
 collects source and header files as well as selected build attributes
 (`copts`, `defines`, etc.) so that any change to the compilation units is
 reflected in the lock file. The compiled output is explicitly not captured
-to avoid lock file invalidation when the toolchain is modified. 
+to avoid lock file invalidation when the toolchain is modified.
 
 ```starlark
 load("//manual_analysis:context_from_cc_library.bzl", "manual_analysis_context_from_cc_library")
@@ -123,13 +123,13 @@ built-in helper rules.
 
 The analysis YAML describes the verification procedure. Supported step types:
 
-| Step type | Key fields | Description |
-|---|---|---|
-| `action` | `description` | A manual action the reviewer performs |
+| Step type          | Key fields                                | Description                                                       |
+|--------------------|-------------------------------------------|-------------------------------------------------------------------|
+| `action`           | `description`                             | A manual action the reviewer performs                             |
 | `automated_action` | `command`, `args`, `expected_return_code` | A shell command run by the tool; result is captured automatically |
-| `decision` | `description`, `branches` | A branching point; the reviewer picks one branch |
-| `assertion` | `description`, `positive`, `negative` | A yes/no question; `positive` is the passing answer |
-| `repeat` | `until`, `steps` | A loop that repeats its steps until the `break` answer is chosen |
+| `decision`         | `description`, `branches`                 | A branching point; the reviewer picks one branch                  |
+| `assertion`        | `description`, `positive`, `negative`     | A yes/no question; `positive` is the passing answer               |
+| `repeat`           | `until`, `steps`                          | A loop that repeats its steps until the `break` answer is chosen  |
 
 **Example:**
 
@@ -158,7 +158,7 @@ steps:
             positive: Yes
             negative: No
       - answer: No
-        steps: []
+        steps: [ ]
   - assertion:
     description: Is the component safe with respect to REQ_001?
     positive: Yes
@@ -280,4 +280,3 @@ demonstrates:
 - A complete analysis YAML with `action`, `automated_action`, `decision`,
   `repeat`, and `assertion` steps
 - Integration with `lobster_trlc` and TRLC requirements
-

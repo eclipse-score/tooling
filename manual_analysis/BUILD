@@ -323,7 +323,6 @@ py_test(
     deps = [":update_lock_lib"],
 )
 
-
 py_test(
     name = "lobster_generator_test",
     srcs = ["lobster_generator_test.py"],

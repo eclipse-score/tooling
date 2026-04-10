@@ -11,11 +11,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
+load("@lobster//:lobster.bzl", "lobster_test", "lobster_trlc")
+load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_specification")
 load("//manual_analysis:context_from_cc_library.bzl", "manual_analysis_context_from_cc_library")
 load("//manual_analysis:context_from_filegroup.bzl", "manual_analysis_context_from_filegroup")
 load("//manual_analysis:manual_analysis.bzl", "manual_analysis")
-load("@lobster//:lobster.bzl", "lobster_trlc", "lobster_test")
-load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_specification")
 
 filegroup(
     name = "manual_analysis_context_filegroup",

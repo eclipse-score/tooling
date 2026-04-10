@@ -70,7 +70,7 @@ def generate_lobster_json(
         "generator": "manual_analysis",
         "data": items,
     }
-    
+
     return json.dumps(lobster_doc, indent=2) + "\n"
 
 
@@ -98,4 +98,3 @@ def write_lobster_file(
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json_content, encoding="utf-8")
-

@@ -4,4 +4,3 @@ Requirement no_cat_killing
 {
   text = "The implementation shall not kill cats."
 }
-

@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 """Checks whether committed and computed manual-analysis lock files match."""
+
 from pathlib import Path
 
 

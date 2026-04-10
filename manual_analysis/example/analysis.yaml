@@ -10,10 +10,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-
 requirements:
   - "manual_analysis_example.no_cat_killing"
-
 steps:
   - action:
     description: Determine cat termination logic

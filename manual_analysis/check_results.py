@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 """Checks whether the final manual-analysis assertion is positive."""
+
 import json
 from pathlib import Path
 from typing import Any
