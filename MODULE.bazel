@@ -192,6 +192,7 @@ register_toolchains(
 # Dev Dependencies (for testing)
 ###############################################################################
 bazel_dep(name = "score_docs_as_code", version = "4.0.0", dev_dependency = True)
+bazel_dep(name = "score_process", version = "1.5.3", dev_dependency = True)
 
 ###############################################################################
 # Dependencies for Manual Analysis
