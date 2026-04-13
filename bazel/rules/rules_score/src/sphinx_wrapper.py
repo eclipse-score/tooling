@@ -257,10 +257,9 @@ def main() -> int:
         stdout_processor = StdoutProcessor()
         stderr_processor = StderrProcessor()
         # Redirect stdout and stderr
-        with redirect_stderr(stdout_processor), redirect_stdout(stderr_processor):
+        with redirect_stderr(stderr_processor), redirect_stdout(stdout_processor):
             sphinx_args = build_sphinx_arguments(args)
             exit_code = run_sphinx_build(sphinx_args, args.builder)
-            exit_code = 0
         return exit_code
     except ValueError as e:
         logger.error(f"Validation error: {e}")
