@@ -160,6 +160,15 @@ pip.parse(
 )
 use_repo(pip, "pip_lobster_bazel")
 
+pip.parse(
+    envsubst = ["PIP_INDEX_URL"],
+    extra_pip_args = ["--index-url=${PIP_INDEX_URL:-https://pypi.org/simple/}"],
+    hub_name = "pip_rules_score",
+    python_version = PYTHON_VERSION,
+    requirements_lock = "//bazel/rules/rules_score:requirements.txt",
+)
+use_repo(pip, "pip_rules_score")
+
 ###############################################################################
 # Multitool Hub (for ruff, pyright, actionlint, etc.)
 ###############################################################################
