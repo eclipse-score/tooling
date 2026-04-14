@@ -176,7 +176,6 @@ lobster_linker(
     srcs = [
         ":bzl_srcs",
         "//bazel/rules/rules_score/private:bzl_srcs",
-        "//bazel/rules/rules_score/test:bzl_srcs",
     ],
     visibility = ["//docs/processes:__pkg__"],
 )
