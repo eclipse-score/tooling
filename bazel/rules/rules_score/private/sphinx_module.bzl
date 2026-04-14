@@ -1,22 +1,4 @@
-# *******************************************************************************
-# Copyright (c) 2026 Contributors to the Eclipse Foundation
-#
-# See the NOTICE file(s) distributed with this work for additional
-# information regarding copyright ownership.
-#
-# This program and the accompanying materials are made available under the
-# terms of the Apache License Version 2.0 which is available at
-# https://www.apache.org/licenses/LICENSE-2.0
-#
-# SPDX-License-Identifier: Apache-2.0
-# *******************************************************************************
-# ======================================================================================
-# Providers
-# ======================================================================================
-
 load("//bazel/rules/rules_score:providers.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
-
-# SphinxModuleInfo and SphinxNeedsInfo are re-exported from providers.bzl for backward compatibility.
 
 # ======================================================================================
 # Helpers
@@ -125,7 +107,6 @@ def _score_html_impl(ctx):
             needs_external_needs[dep.label.name] = {
                 "base_url": dep_name,  # Relative path to the subdirectory where dep HTML is copied
                 "json_path": dep[SphinxNeedsInfo].needs_json_file.path,  # Use direct file
-                "version": "1.0",
                 "id_prefix": "",
                 "css_class": "",
             }
@@ -141,7 +122,17 @@ def _score_html_impl(ctx):
         content = json.encode_indent(needs_external_needs, indent = "  "),
     )
 
-    config_file = _create_config_py(ctx)
+    # Read template and substitute PROJECT_NAME
+    config_file = ctx.actions.declare_file(ctx.label.name + "/conf.py")
+    template = sphinx_toolchain.conf_template.files.to_list()[0]
+
+    ctx.actions.expand_template(
+        template = template,
+        output = config_file,
+        substitutions = {
+            "{PROJECT_NAME}": ctx.label.name.replace("_", " ").title(),
+        },
+    )
 
     # Build HTML with external needs
     html_inputs = ctx.files.srcs + ctx.files.needs + [config_file, needs_external_needs_json]
@@ -243,13 +234,11 @@ def sphinx_module(
     transitive dependency collection. All dependencies are automatically
     included in a modules/ subdirectory for intersphinx cross-referencing.
 
-    The Sphinx binary and conf.py template are provided by the registered
-    sphinx_toolchain. See sphinx_toolchain.bzl for configuration details.
-
     Args:
         name: Name of the target
         srcs: List of source files (.rst, .md) with index file first
         index: Label to index.rst file
+        config: Label to conf.py configuration file (optional, will be auto-generated if not provided)
         deps: List of other sphinx_module targets this module depends on
         sphinx: Label to sphinx build binary (default: :sphinx_build)
         visibility: Bazel visibility

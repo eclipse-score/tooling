@@ -1,16 +1,3 @@
-# *******************************************************************************
-# Copyright (c) 2025 Contributors to the Eclipse Foundation
-#
-# See the NOTICE file(s) distributed with this work for additional
-# information regarding copyright ownership.
-#
-# This program and the accompanying materials are made available under the
-# terms of the Apache License Version 2.0 which is available at
-# https://www.apache.org/licenses/LICENSE-2.0
-#
-# SPDX-License-Identifier: Apache-2.0
-# *******************************************************************************
-
 SphinxInfo = provider(
     doc = "Provider for Sphinx Toolchain",
     fields = {
@@ -34,14 +21,14 @@ sphinx_toolchain = rule(
     implementation = _sphinx_toolchain_impl,
     attrs = {
         "sphinx": attr.label(
-            default = "@score_tooling//bazel/rules/rules_score:raw_build",
+            default = Label("//bazel/rules/rules_score:raw_build"),
         ),
         "conf_template": attr.label(
             allow_single_file = True,
-            default = "@score_tooling//bazel/rules/rules_score:templates/conf.template.py",
+            default = Label("//bazel/rules/rules_score:templates/conf.template.py"),
         ),
         "html_merge_tool": attr.label(
-            default = "@score_tooling//bazel/rules/rules_score:sphinx_html_merge",
+            default = Label("//bazel/rules/rules_score:sphinx_html_merge"),
         ),
     },
 )

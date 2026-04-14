@@ -18,14 +18,14 @@ load(
     "sphinx_module",
 )
 load("//bazel/rules/rules_score:sphinx_toolchain.bzl", "sphinx_toolchain")
+load("//lobster_bazel:lobster_bazel.bzl", "lobster_linker")
 
 exports_files([
     "templates/conf.template.py",
-    "templates/seooc_index.template.rst",
+    "templates/dependable_element_index.template.rst",
     "templates/unit.template.rst",
     "templates/component.template.rst",
-    "src/sphinx_wrapper.py",
-    "src/bazel_sphinx_needs.py",
+    "templates/fmea.template.rst",
 ])
 
 compile_pip_requirements(
@@ -34,6 +34,75 @@ compile_pip_requirements(
     requirements_txt = "requirements.txt",
     tags = [
         "manual",
+    ],
+)
+
+# Arch-to-reqs-from-lobster tool: extracts requirements from component requirement .lobster files
+# and generates an architecture.lobster item representing the component's allocation
+py_binary(
+    name = "arch_to_reqs_from_lobster",
+    srcs = ["src/arch_to_reqs_from_lobster.py"],
+    main = "src/arch_to_reqs_from_lobster.py",
+    visibility = ["//visibility:public"],
+)
+
+# Safety analysis tools (preprocess FTA PlantUML + extract lobster traceability items)
+py_binary(
+    name = "safety_analysis_tools",
+    srcs = ["src/safety_analysis_tools.py"],
+    imports = ["src"],
+    main = "src/safety_analysis_tools.py",
+    visibility = ["//visibility:public"],
+)
+
+# HTML merge tool
+py_binary(
+    name = "sphinx_html_merge",
+    srcs = ["src/sphinx_html_merge.py"],
+    main = "src/sphinx_html_merge.py",
+    visibility = ["//visibility:public"],
+)
+
+py_library(
+    name = "sphinx_module_ext",
+    srcs = ["src/sphinx_module_ext.py"],
+    imports = ["src"],
+    deps = [
+        requirement("sphinx"),
+    ],
+)
+
+# Sphinx build binary with all required dependencies
+py_binary(
+    name = "score_build",
+    srcs = ["src/sphinx_wrapper.py"],
+    data = [
+        "//tools/sphinx:plantuml",
+    ],
+    env = {
+        "SOURCE_DIRECTORY": "",
+        "DATA": "",
+        "ACTION": "check",
+    },
+    main = "src/sphinx_wrapper.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":sphinx_module_ext",
+        "//tools/sphinx/extensions/lobster",
+        "@score_docs_as_code//src/extensions/score_metamodel",
+        "@score_tooling//plantuml/sphinx/clickable_plantuml",
+        "@trlc//tools/sphinx/extensions/trlc",
+        requirement("sphinx"),
+        requirement("sphinx_rtd_theme"),
+        requirement("sphinx_needs"),
+        requirement("sphinx_design"),
+        requirement("myst_parser"),
+        requirement("readthedocs_sphinx_ext"),
+        requirement("rst2pdf"),
+        requirement("sphinxcontrib-umlet"),
+        requirement("svglib"),
+        requirement("sphinxcontrib-plantuml"),
+        "@rules_python//python/runfiles",
     ],
 )
 
@@ -48,65 +117,66 @@ sphinx_module(
     ),
     index = "docs/index.rst",
     visibility = ["//visibility:public"],
-    deps = [
-        # "@score_process//:score_process_module",
-    ],
 )
 
 # HTML merge tool
-py_binary(
-    name = "sphinx_html_merge",
-    srcs = ["src/sphinx_html_merge.py"],
-    main = "src/sphinx_html_merge.py",
-    visibility = ["//visibility:public"],
-)
 
-py_library(
-    name = "sphinx_module_ext",
-    srcs = ["src/bazel_sphinx_needs.py"],
-    imports = ["src"],
-    visibility = ["//visibility:public"],
-)
-
-# Sphinx build binary with all required dependencies
 py_binary(
-    name = "sphinx_build",
+    name = "raw_build",
     srcs = ["src/sphinx_wrapper.py"],
+    env = {
+        "SOURCE_DIRECTORY": "",
+        "DATA": "",
+        "ACTION": "check",
+    },
     main = "src/sphinx_wrapper.py",
     visibility = ["//visibility:public"],
     deps = [
-        ":sphinx_module_ext",
-        "@pip_tooling//myst_parser",
-        "@pip_tooling//sphinx",
-        "@pip_tooling//sphinx_design",
-        "@pip_tooling//sphinx_needs",
-        "@pip_tooling//sphinx_rtd_theme",
-        "@pip_tooling//sphinxcontrib_plantuml",
+        "//tools/sphinx/extensions/lobster",
+        "@score_docs_as_code//src/extensions/score_metamodel",
+        "@score_tooling//plantuml/sphinx/clickable_plantuml",
+        "@trlc//tools/sphinx/extensions/trlc",
+        requirement("sphinx"),
+        requirement("sphinx_rtd_theme"),
+        requirement("sphinx_needs"),
+        requirement("sphinx_design"),
+        requirement("myst_parser"),
+        requirement("readthedocs_sphinx_ext"),
+        requirement("rst2pdf"),
+        requirement("sphinxcontrib-umlet"),
+        requirement("svglib"),
+        requirement("sphinxcontrib-plantuml"),
     ],
 )
 
 sphinx_toolchain(
     name = "default_toolchain",
-    conf_template = "@score_tooling//bazel/rules/rules_score:templates/conf.template.py",
-    html_merge_tool = ":sphinx_html_merge",
-    sphinx = ":sphinx_build",
+    sphinx = ":score_build",
 )
 
-toolchain_type(
-    name = "toolchain_type",
-    visibility = ["//visibility:public"],
-)
+toolchain_type(name = "toolchain_type")
 
 toolchain(
     name = "sphinx_default_toolchain",
-    exec_compatible_with = [
-        "@platforms//os:linux",
-        "@platforms//cpu:x86_64",
-    ],
-    target_compatible_with = [
-        "@platforms//os:linux",
-        "@platforms//cpu:x86_64",
-    ],
     toolchain = ":default_toolchain",
     toolchain_type = ":toolchain_type",
+)
+
+# ---------------------------------------------------------------------------
+# Lobster traceability – rules_score Bazel implementation
+# ---------------------------------------------------------------------------
+
+filegroup(
+    name = "bzl_srcs",
+    srcs = glob(["*.bzl"]),
+)
+
+lobster_linker(
+    name = "rules_score_impl",
+    srcs = [
+        ":bzl_srcs",
+        "//bazel/rules/rules_score/private:bzl_srcs",
+        "//bazel/rules/rules_score/test:bzl_srcs",
+    ],
+    visibility = ["//docs/processes:__pkg__"],
 )

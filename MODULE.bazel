@@ -216,6 +216,25 @@ register_toolchains(
 bazel_dep(name = "score_docs_as_code", version = "3.0.1", dev_dependency = True)
 
 ###############################################################################
+# Setup Googletest
+###############################################################################
+bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
+
+###############################################################################
+# Blueprint Maven
+###############################################################################
+bazel_dep(name = "rules_jvm_external", version = "6.10")
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "blueprint_maven_dependencies",
+    artifacts = [
+        "net.sourceforge.plantuml:plantuml:1.2025.9",
+    ],
+    repositories = ["https://repo1.maven.org/maven2"],
+)
+use_repo(maven, "blueprint_maven_dependencies")
+
+###############################################################################
 # Dependencies for Manual Analysis
 ###############################################################################
 pip.parse(
