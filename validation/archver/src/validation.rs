@@ -286,13 +286,13 @@ mod tests {
             (
                 "safety_software_seooc_example",
                 vec![],
-                vec!["@//examples/seooc:component_example"],
+                vec!["@//bazel/rules/rules_score/examples/seooc:component_example"],
             ),
             (
-                "@//examples/seooc:component_example",
+                "@//bazel/rules/rules_score/examples/seooc:component_example",
                 vec![
-                    "@//examples/seooc/unit_1:unit_1",
-                    "@//examples/seooc/unit_2:unit_2",
+                    "@//bazel/rules/rules_score/examples/seooc/unit_1:unit_1",
+                    "@//bazel/rules/rules_score/examples/seooc/unit_2:unit_2",
                 ],
                 vec![],
             ),

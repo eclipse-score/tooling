@@ -1,0 +1,34 @@
+/********************************************************************************
+ * Copyright (c) 2025 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package SampleSEooC
+
+import ScoreReq
+
+///////////////////////////////
+// Assumed System Requirements
+// System level requirements for SEooC
+///////////////////////////////
+
+ScoreReq.AssumedSystemReq ASR_SAMPLE_001 {
+    description = "The system shall provide safe and reliable numeric value management through encapsulated classes"
+    safety = ScoreReq.Asil.B
+    version = 1
+    rationale = "System-level requirement for managing numeric values in a safety-critical context"
+}
+
+ScoreReq.AssumedSystemReq ASR_SAMPLE_002 {
+    description = "The system shall ensure proper lifecycle management of dependencies through well-defined interfaces"
+    safety = ScoreReq.Asil.B
+    version = 1
+    rationale = "System-level requirement for dependency injection and memory safety"
+}
