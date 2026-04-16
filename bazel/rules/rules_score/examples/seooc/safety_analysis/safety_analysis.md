@@ -89,6 +89,8 @@ $BasicEvent("No More Coffee", "SampleLibrary.NoMoreCoffee", "AG2")
 
 ```
 
+![FTA Example](assets/fta_example.svg)
+
 ## Control Measures
 For each BasicEvent a Control Measure shall be derived. This will be performed again in TRLC. The Mapping between PlantUML and TRLC will be done again based on the ID. So for our case we will define a Control Measure for NoMoreCookies:
 
