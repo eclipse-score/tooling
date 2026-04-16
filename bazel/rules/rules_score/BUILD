@@ -10,12 +10,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+
 load("@pip_rules_score//:requirements.bzl", "requirement")
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 load(
     "//bazel/rules/rules_score:rules_score.bzl",
     "sphinx_module",
 )
+load("//bazel/rules/rules_score:sphinx_toolchain.bzl", "sphinx_toolchain")
 
 exports_files([
     "templates/conf.template.py",
