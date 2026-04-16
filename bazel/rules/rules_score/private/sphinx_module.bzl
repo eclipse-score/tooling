@@ -11,12 +11,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("//bazel/rules/rules_score:providers.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
-
 # ======================================================================================
 # Helpers
 # ======================================================================================
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
+load("@rules_python//sphinxdocs/private:sphinx_docs_library_info.bzl", "SphinxDocsLibraryInfo")
+load("//bazel/rules/rules_score:providers.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
 
 def _create_config_py(ctx):
     """Get or generate the conf.py configuration file.
@@ -149,16 +150,12 @@ def _score_html_impl(ctx):
         },
     )
 
-    for input_file in ctx.files.srcs:
-        print("=> Input File: ", input_file.path)
-
     source_prefix = ctx.label.name
     sphinx_source_files = []
 
-     # Materialize a file under the `_sources` dir
+    # Materialize a file under the `_sources` dir
     def _relocate(source_file, dest_path = None):
         if not dest_path:
-            print("$$ Short path of source file: ", source_file.short_path)
             dest_path = source_file.short_path.removeprefix(ctx.attr.strip_prefix)
 
         dest_path = paths.join(source_prefix, dest_path)
@@ -174,6 +171,25 @@ def _score_html_impl(ctx):
         sphinx_source_files.append(dest_file)
         return dest_file
 
+    for dep in ctx.attr.deps:
+        if SphinxModuleInfo in dep:
+            modules.extend([dep[SphinxModuleInfo].html_dir])
+
+    for t in ctx.attr.docs_library_deps:
+        info = t[SphinxDocsLibraryInfo]
+        for entry in info.transitive.to_list():
+            for original in entry.files:
+                new_path = entry.prefix + original.short_path.removeprefix(entry.strip_prefix)
+                _relocate(original, new_path)
+
+    needs_external_needs_json = ctx.actions.declare_file(ctx.label.name + "/needs_external_needs.json")
+
+    ctx.actions.write(
+        output = needs_external_needs_json,
+        content = json.encode_indent(needs_external_needs, indent = "  "),
+    )
+
+    config_file = _create_config_py(ctx)
 
     # Sphinx only accepts a single directory to read its doc sources from.
     # Because plain files and generated files are in different directories,
@@ -181,22 +197,17 @@ def _score_html_impl(ctx):
     for orig_file in ctx.files.srcs:
         _relocate(orig_file)
 
-    relocated_index_file = "" #_relocate(ctx.attr.index.files.to_list()[0])
+    relocated_index_file = ""
     for input_file in sphinx_source_files:
         if input_file.path.endswith("/index.rst"):
             relocated_index_file = input_file.path
-            print("???? Relocated index file: ", relocated_index_file)
-        print("!! Relocated File: ", input_file.path)
-
-
-    print("Debug, index file path: ", ctx.attr.index.files.to_list()[0].path)
 
     # Build HTML with external needs
     html_inputs = sphinx_source_files + ctx.files.needs + [config_file, needs_external_needs_json]
     sphinx_html_output = ctx.actions.declare_directory(ctx.label.name + "/_html")
     html_args = [
         "--index_file",
-        relocated_index_file, #ctx.attr.index.files.to_list()[0].path.removeprefix("docs/sphinx/"),
+        relocated_index_file,
         "--output_dir",
         sphinx_html_output.path,
         "--config",
@@ -266,12 +277,17 @@ _score_needs = rule(
 
 _score_html = rule(
     implementation = _score_html_impl,
-    attrs = dict(sphinx_rule_attrs,
-                 strip_prefix = attr.string(doc = "Prefix to remove from input file paths."),
-                 needs = attr.label_list(
-                    allow_files = True,
-                    doc = "Submodule symbols.needs targets for this module.",
-    )),
+    attrs = dict(
+        sphinx_rule_attrs,
+        strip_prefix = attr.string(doc = "Prefix to remove from input file paths."),
+        docs_library_deps = attr.label_list(
+            doc = "List of sphinx_docs_library targets to include as source files with prefix/strip_prefix handling.",
+        ),
+        needs = attr.label_list(
+            allow_files = True,
+            doc = "Submodule symbols.needs targets for this module.",
+        ),
+    ),
     toolchains = ["//bazel/rules/rules_score:toolchain_type"],
 )
 
@@ -284,6 +300,7 @@ def sphinx_module(
         srcs,
         index,
         deps = [],
+        docs_library_deps = [],
         sphinx = Label("//bazel/rules/rules_score:score_build"),
         strip_prefix = "",
         testonly = False,
@@ -300,6 +317,7 @@ def sphinx_module(
         index: Label to index.rst file
         config: Label to conf.py configuration file (optional, will be auto-generated if not provided)
         deps: List of other sphinx_module targets this module depends on
+        docs_library_deps: {type}`list[label]` of {obj}`sphinx_docs_library` targets.
         sphinx: Label to sphinx build binary (default: :sphinx_build)
         strip_prefix: {type}`str` A prefix to remove from the file paths of the
                     source files. e.g., given `//sphinxdocs/docs:foo.md`, stripping `docs/` makes
@@ -321,6 +339,7 @@ def sphinx_module(
         srcs = srcs,
         index = index,
         deps = deps,
+        docs_library_deps = docs_library_deps,
         needs = [d + "_needs" for d in deps],
         testonly = testonly,
         visibility = visibility,
