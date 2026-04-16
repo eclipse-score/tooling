@@ -37,10 +37,10 @@ trlc_requirements(
     spec = [
         "@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         ":sample_fmea_failure_modes",
     ],
-    visibility = ["//visibility:public"],
 )
 
 trlc_requirements_test(
