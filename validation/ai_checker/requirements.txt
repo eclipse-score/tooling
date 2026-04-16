@@ -173,9 +173,9 @@ jsonpointer==3.0.0 \
     --hash=sha256:13e088adc14fca8b6aa8177c044e12701e6ad4b28ff10e65f2267a90109c9942 \
     --hash=sha256:2b2d729f2091522d61c3b31f82e11870f60b68f43fbc705cb76bf4b832af59ef
     # via jsonpatch
-langchain-core==1.2.13 \
-    --hash=sha256:b31823e28d3eff1e237096d0bd3bf80c6f9624eb471a9496dbfbd427779f8d82 \
-    --hash=sha256:d2773d0d0130a356378db9a858cfeef64c3d64bc03722f1d4d6c40eb46fdf01b
+langchain-core==1.2.28 \
+    --hash=sha256:271a3d8bd618f795fdeba112b0753980457fc90537c46a0c11998516a74dc2cb \
+    --hash=sha256:80764232581eaf8057bcefa71dbf8adc1f6a28d257ebd8b95ba9b8b452e8c6ac
     # via -r validation/ai_checker/requirements.txt.in
 langsmith==0.6.3 \
     --hash=sha256:33246769c0bb24e2c17e0c34bb21931084437613cd37faf83bd0978a297b826f \
