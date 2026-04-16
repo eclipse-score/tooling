@@ -1,5 +1,5 @@
 # *******************************************************************************
-# Copyright (c) 2026 Contributors to the Eclipse Foundation
+# Copyright (c) 2025 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -10,11 +10,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-- id: copyright
-  name: Check and fix copyright headers with cr_checker
-  entry: cr_checker/tool/pre-commit_wrapper --extensions h hpp c cpp rs rst py sh bzl ini yml yaml BUILD bazel --fix
-  # this would be the better language implementation, but struggle with python tooling
-  # language: python
-  language: script
-  minimum_pre_commit_version: 3.2.0
-  types_or: [python, yaml, ini, rst, sh, shell, bash, bazel, c, c++, rust]
+filegroup(
+    name = "fta_metamodel",
+    srcs = [
+        "fta_metamodel.puml",
+    ],
+    visibility = ["//visibility:public"],
+)
