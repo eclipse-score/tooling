@@ -38,6 +38,13 @@ load(
 # --- starpls ---
 load("//starpls:starpls.bzl", _setup_starpls = "setup_starpls")
 
+# --- ai_checker ---
+load(
+    "//validation/ai_checker:ai_checker.bzl",
+    _architecture_ai_test = "architecture_ai_test",
+    _trlc_requirements_ai_test = "trlc_requirements_ai_test",
+)
+
 score_virtualenv = _score_virtualenv
 score_py_pytest = _score_py_pytest
 dash_license_checker = _dash_license_checker
@@ -46,3 +53,5 @@ cli_helper = _cli_helper
 use_format_targets = _use_format_targets
 setup_starpls = _setup_starpls
 rust_coverage_report = _rust_coverage_report
+trlc_requirements_ai_test = _trlc_requirements_ai_test
+architecture_ai_test = _architecture_ai_test

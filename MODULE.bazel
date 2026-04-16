@@ -229,3 +229,26 @@ git_override(
     commit = "56881461f9d3fde2918d1731aa5937aaf64cd67c",
     remote = "https://github.com/bmw-software-engineering/lobster.git",
 )
+
+###############################################################################
+# Dependencies for AI Checker
+###############################################################################
+
+# Make the copilot CLI binary executable (rules_python strips +x from wheels)
+pip.whl_mods(
+    copy_executables = {"site-packages/copilot/bin/copilot": "copilot_cli"},
+    hub_name = "ai_checker_whl_mods",
+    whl_name = "github_copilot_sdk",
+)
+use_repo(pip, "ai_checker_whl_mods")
+
+# Core + LangChain + GitHub Copilot SDK dependencies
+pip.parse(
+    hub_name = "pip_ai_checker",
+    python_version = PYTHON_VERSION,
+    requirements_lock = "//validation/ai_checker:requirements.txt",
+    whl_modifications = {
+        "@ai_checker_whl_mods//:github_copilot_sdk.json": "github-copilot-sdk",
+    },
+)
+use_repo(pip, "pip_ai_checker")
