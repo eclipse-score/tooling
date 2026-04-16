@@ -11,15 +11,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_library")
-load(
-    "@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl",
-    "sphinx_toolchain",
-)
+load("@pip_rules_score//:requirements.bzl", "requirement")
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 load(
     "//bazel/rules/rules_score:rules_score.bzl",
     "sphinx_module",
 )
+load("//bazel/rules/rules_score:sphinx_toolchain.bzl", "sphinx_toolchain")
 
 exports_files([
     "templates/conf.template.py",
@@ -29,6 +27,15 @@ exports_files([
     "src/sphinx_wrapper.py",
     "src/bazel_sphinx_needs.py",
 ])
+
+compile_pip_requirements(
+    name = "requirements",
+    src = "requirements.in",
+    requirements_txt = "requirements.txt",
+    tags = [
+        "manual",
+    ],
+)
 
 sphinx_module(
     name = "rules_score_doc",
