@@ -27,13 +27,13 @@ use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor};
 // ===== Class Resolver adapter DiagramProcessor =====
 struct ClassResolverRunner;
 impl DiagramProcessor for ClassResolverRunner {
-    type Output = HashMap<String, ClassDiagram>;
+    type Output = ClassDiagram;
     type Error = ClassResolverError;
 
     fn run(
         &self,
         files: &HashSet<Rc<PathBuf>>,
-    ) -> Result<HashMap<Rc<PathBuf>, HashMap<String, ClassDiagram>>, ClassResolverError> {
+    ) -> Result<HashMap<Rc<PathBuf>, ClassDiagram>, ClassResolverError> {
         let mut results = HashMap::new();
         let mut parser = PumlClassParser;
         let mut resolver = ClassResolver::new();
