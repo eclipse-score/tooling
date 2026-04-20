@@ -28,4 +28,5 @@ $BasicEvent("Just bad luck", "SampleLibrary.JustBadLuck", "OG1")
 $AndGate("AG2", "IEF")
 $BasicEvent("No More Cookies", "SampleLibrary.NoMoreCookies", "AG2")
 $BasicEvent("No More Coffee", "SampleLibrary.NoMoreCoffee", "AG2")
+
 @enduml

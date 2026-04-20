@@ -22,12 +22,3 @@ ScoreReq.FailureMode SampleFailureMode{
     safety = ScoreReq.Asil.B
     interface = "SampleLibraryAPI.GetNumber"
 }
-
-ScoreReq.FailureMode SampleFailureModeSetNumber{
-    guideword = ScoreReq.GuideWord.LossOfFunction
-    description = "SampleFailureModeSetNumber takes over the world"
-    failureeffect = "The world as we know it will end"
-    version = 1
-    safety = ScoreReq.Asil.B
-    interface = "SampleLibraryAPI.SetNumber"
-}

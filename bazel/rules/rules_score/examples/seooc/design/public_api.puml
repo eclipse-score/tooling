@@ -15,7 +15,7 @@
 
 package "SampleLibraryAPI" as SampleLibraryAPI {
     interface "GetNumber" as GetNumber
-    interface "SetNumber" as SetNumber
+    ' interface "SetNumber" as SetNumber
 }
 
 @enduml

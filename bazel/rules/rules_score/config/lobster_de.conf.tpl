@@ -19,7 +19,6 @@ implementation "Architecture" {
 
 implementation "Public API" {
 {PUBLIC_API_SOURCES}
-  trace to: "Component Requirements";
 }
 
 requirements "Failure Modes" {
