@@ -1,8 +1,0 @@
-pytest
-basedpyright
-sphinx
-sphinx-needs
-sphinx-design
-myst-parser
-sphinxcontrib-plantuml
-sphinx-rtd-theme

@@ -22,4 +22,5 @@ conversion-rules:
   - package: ScoreReq
     record-type: FeatReq
     namespace: req
+    version-field: version
     description-fields: description

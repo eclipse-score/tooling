@@ -1,0 +1,36 @@
+/********************************************************************************
+ * Copyright (c) 2025 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package SampleLibrary
+
+import ScoreReq
+
+ScoreReq.ControlMeasure JustBadLuck{
+    safety = ScoreReq.Asil.B
+    description = "Sometimes, the dark side wins. We shall be prepared for that."
+    version = 1
+    mitigates = "SampleLibrary.JustBadLuck"
+}
+
+ScoreReq.ControlMeasure NoMoreCookies{
+    safety = ScoreReq.Asil.B
+    description = "We shall only order family size cookie jars"
+    version = 1
+    mitigates = "SampleLibrary.NoMoreCookies"
+}
+
+ScoreReq.ControlMeasure NoMoreCoffee{
+    safety = ScoreReq.Asil.B
+    description = "We shall keep a coffee reserve for emergencies"
+    version = 1
+    mitigates = "SampleLibrary.NoMoreCoffee"
+}

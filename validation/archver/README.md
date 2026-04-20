@@ -67,9 +67,9 @@ is emitted.
 ### Example
 If Bazel build graph has:
 - Dependable element: `safety_software_seooc_example` → key: `safety_software_seooc_example`
-- Component: `@//examples/seooc:component_example` → key: `component_example` (parent: `safety_software_seooc_example`)
-- Unit: `@//examples/seooc/unit_1:unit_1` → key: `unit_1` (parent: `component_example`)
-- Unit: `@//examples/seooc/unit_2:unit_2` → key: `unit_2` (parent: `component_example`)
+- Component: `@//bazel/rules/rules_score/examples/seooc:component_example` → key: `component_example` (parent: `safety_software_seooc_example`)
+- Unit: `@//bazel/rules/rules_score/examples/seooc/unit_1:unit_1` → key: `unit_1` (parent: `component_example`)
+- Unit: `@//bazel/rules/rules_score/examples/seooc/unit_2:unit_2` → key: `unit_2` (parent: `component_example`)
 
 PlantUML must have:
 ```plantuml

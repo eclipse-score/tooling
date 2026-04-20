@@ -1,0 +1,18 @@
+@startuml
+
+!include ../../../../../../../plantuml/fta_metamodel.puml
+
+' Top level (skeleton)
+$TopEvent("SampleFailureMode takes over the world", "SampleLibrary.SampleFailureMode")
+
+' 2nd level gates and events
+$OrGate("OG1", "SampleLibrary.SampleFailureMode")
+
+$IntermediateEvent("SampleFailureMode is Angry", "IEF", "OG1")
+$BasicEvent("Just bad luck", "SampleLibrary.JustBadLuck", "OG1")
+
+' 3rd level cascades from AGF
+$AndGate("AG2", "IEF")
+$BasicEvent("No More Cookies", "SampleLibrary.NoMoreCookies", "AG2")
+$BasicEvent("No More Coffee", "SampleLibrary.NoMoreCoffee", "AG2")
+@enduml

@@ -1,0 +1,30 @@
+/********************************************************************************
+ * Copyright (c) 2025 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package SampleComponentExtra
+
+import ScoreReq
+import SampleSEooC
+
+ScoreReq.CompReq REQ_COMP_EXTRA_001 {
+    description = "The numeric value management interface shall initialize its internal value to zero upon construction"
+    safety = ScoreReq.Asil.B
+    derived_from = [SampleSEooC.FEAT_001@1]
+    version = 1
+}
+
+ScoreReq.CompReq REQ_COMP_EXTRA_002 {
+    description = "The numeric value management interface shall guarantee that the stored value is never modified after construction"
+    safety = ScoreReq.Asil.B
+    derived_from = [SampleSEooC.FEAT_002@1]
+    version = 1
+}

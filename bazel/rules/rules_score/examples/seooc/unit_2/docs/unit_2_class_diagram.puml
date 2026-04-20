@@ -1,0 +1,18 @@
+@startuml unit_2_class_diagram
+
+namespace unit_1 {
+    class Foo {
+        + GetNumber() : uint8_t
+        + SetNumber(value : uint8_t) : void
+    }
+}
+
+namespace unit_2 {
+    class Bar {
+        + AssertNumber() : bool
+    }
+}
+
+Bar --> Foo : uses
+
+@enduml

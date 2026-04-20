@@ -21,8 +21,6 @@ operating conditions and constraints for a Safety Element out of Context (SEooC)
 
 load("//bazel/rules/rules_score:providers.bzl", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
 
-# AssumptionsOfUseInfo is re-exported from providers.bzl for backward compatibility.
-
 # ============================================================================
 # Private Rule Implementation
 # ============================================================================
@@ -41,28 +39,34 @@ def _assumptions_of_use_impl(ctx):
     """
     srcs = depset(ctx.files.srcs)
 
-    # Collect feature requirements providers
-    feature_reqs = []
-    for feat_req in ctx.attr.feature_requirements:
-        if FeatureRequirementsInfo in feat_req:
-            feature_reqs.append(feat_req[FeatureRequirementsInfo])
+    # Collect requirements providers and lobster files
+    reqs = []
+    lobster_files = []
+    for req in ctx.attr.requirements:
+        if FeatureRequirementsInfo in req:
+            info = req[FeatureRequirementsInfo]
+            reqs.append(info)
+            lobster_files.append(info.srcs)
+        elif ComponentRequirementsInfo in req:
+            info = req[ComponentRequirementsInfo]
+            reqs.append(info)
+            lobster_files.append(info.srcs)
 
-    # Collect transitive sphinx sources from feature requirements
+    # Collect transitive sphinx sources from requirements
     transitive = [srcs]
-    for feat_req in ctx.attr.feature_requirements:
-        if SphinxSourcesInfo in feat_req:
-            transitive.append(feat_req[SphinxSourcesInfo].transitive_srcs)
+    for req in ctx.attr.requirements:
+        if SphinxSourcesInfo in req:
+            transitive.append(req[SphinxSourcesInfo].deps)
 
     return [
         DefaultInfo(files = srcs),
         AssumptionsOfUseInfo(
-            srcs = srcs,
-            feature_requirements = feature_reqs,
+            srcs = depset(transitive = lobster_files),
             name = ctx.label.name,
         ),
         SphinxSourcesInfo(
             srcs = srcs,
-            transitive_srcs = depset(transitive = transitive),
+            deps = depset(transitive = transitive),
         ),
     ]
 
@@ -79,15 +83,10 @@ _assumptions_of_use = rule(
             mandatory = True,
             doc = "Source files containing Assumptions of Use specifications",
         ),
-        "feature_requirements": attr.label_list(
-            providers = [FeatureRequirementsInfo],
+        "requirements": attr.label_list(
+            providers = [[FeatureRequirementsInfo], [ComponentRequirementsInfo]],
             mandatory = False,
-            doc = "List of feature_requirements targets that these Assumptions of Use trace to",
-        ),
-        "component_requirements": attr.label_list(
-            providers = [ComponentRequirementsInfo],
-            mandatory = False,
-            doc = "List of feature_requirements targets that these Assumptions of Use trace to",
+            doc = "List of feature or component requirements targets that these Assumptions of Use trace to",
         ),
     },
 )
@@ -99,8 +98,7 @@ _assumptions_of_use = rule(
 def assumptions_of_use(
         name,
         srcs,
-        feature_requirement = [],
-        component_requirements = [],
+        requirements = [],
         visibility = None):
     """Define Assumptions of Use following S-CORE process guidelines.
 
@@ -115,8 +113,8 @@ def assumptions_of_use(
         srcs: List of labels to .rst, .md, or .trlc files containing the
             Assumptions of Use specifications as defined in the S-CORE
             process.
-        feature_requirement: Optional list of labels to feature_requirements
-            targets that these Assumptions of Use relate to. Establishes
+        requirements: Optional list of labels to feature or component requirements
+            targets that these Assumptions of Use trace to. Establishes
             traceability as defined in the S-CORE process.
         visibility: Bazel visibility specification for the generated targets.
 
@@ -128,14 +126,13 @@ def assumptions_of_use(
         assumptions_of_use(
             name = "my_assumptions_of_use",
             srcs = ["assumptions_of_use.rst"],
-            feature_requirement = [":my_feature_requirements"],
+            requirements = [":my_feature_requirements"],
         )
         ```
     """
     _assumptions_of_use(
         name = name,
         srcs = srcs,
-        feature_requirements = feature_requirement,
-        component_requirements = component_requirements,
+        requirements = requirements,
         visibility = visibility,
     )
