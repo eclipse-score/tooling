@@ -72,6 +72,7 @@ rust_library(
     ],
     visibility = [
         "//plantuml/parser:__subpackages__",
+        "//validation/core:__subpackages__",
     ],
     deps = [
         "@crates//:flatbuffers",

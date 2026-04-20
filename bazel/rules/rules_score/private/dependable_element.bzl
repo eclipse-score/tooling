@@ -622,7 +622,7 @@ def _collect_architecture_components(ctx):
 
     return all_components
 
-def _run_archver_validation(ctx, arch_json, static_fbs_files):
+def _run_validation(ctx, arch_json, static_fbs_files):
     """Run the architecture verifier tool against a pre-built JSON file.
 
     Args:
@@ -631,27 +631,27 @@ def _run_archver_validation(ctx, arch_json, static_fbs_files):
         static_fbs_files: List of static FlatBuffer files to verify against
 
     Returns:
-        archver_log File object
+        validation_log File object
     """
 
-    archver_log = ctx.actions.declare_file(ctx.label.name + "/archver.log")
+    validation_log = ctx.actions.declare_file(ctx.label.name + "/validation.log")
 
-    archver_args = ctx.actions.args()
-    archver_args.add("--architecture-json", arch_json)
-    archver_args.add_all("--static-fbs", static_fbs_files)
-    archver_args.add("--output", archver_log)
+    validation_args = ctx.actions.args()
+    validation_args.add("--architecture-json", arch_json)
+    validation_args.add_all("--component-fbs", static_fbs_files)
+    validation_args.add("--output", validation_log)
 
-    # ctx.actions.run will fail the build if archver returns non-zero exit code
+    # ctx.actions.run will fail the build if validation_cli returns non-zero exit code
     ctx.actions.run(
         inputs = [arch_json] + static_fbs_files,
-        outputs = [archver_log],
-        executable = ctx.executable._archver,
-        arguments = [archver_args],
-        progress_message = "Verifying architecture: %s" % ctx.label.name,
-        mnemonic = "ArchVerify",
+        outputs = [validation_log],
+        executable = ctx.executable._validation_cli,
+        arguments = [validation_args],
+        progress_message = "Running validation: %s" % ctx.label.name,
+        mnemonic = "ArchitectureValidate",
     )
 
-    return archver_log
+    return validation_log
 
 # ============================================================================
 # Index Generation Rule Implementation
@@ -780,7 +780,7 @@ def _dependable_element_index_impl(ctx):
     )
 
     # =========================================================================
-    # Architecture Verification: build current-architecture JSON and run archver
+    # Architecture Verification: build current-architecture JSON and run validation
     # =========================================================================
 
     # Collect the current architecture from all components (via aspect) and
@@ -800,13 +800,13 @@ def _dependable_element_index_impl(ctx):
         if ArchitecturalDesignInfo in ad:
             static_fbs_files.extend(ad[ArchitecturalDesignInfo].static.to_list())
 
-    # Run architecture verifier; build fails automatically on non-zero exit
-    archver_log = _run_archver_validation(ctx, arch_json, static_fbs_files)
+    # Run validation; build fails automatically on non-zero exit
+    validation_log = _run_validation(ctx, arch_json, static_fbs_files)
 
-    # Both outputs are included so archver always runs in a default build.
-    # archver_log is also exposed in the debug output group for explicit access.
+    # Both outputs are included so validation always runs in a default build.
+    # validation_log is also exposed in the debug output group for explicit access.
     output_files.append(arch_json)
-    output_files.append(archver_log)
+    output_files.append(validation_log)
 
     # =========================================================================
     # Safety Certification Validation: certified scope and integrity level checks
@@ -961,7 +961,7 @@ def _dependable_element_index_impl(ctx):
             lobster_report = lobster_report_file,
             lobster_html_report = lobster_html_report,
         ),
-        OutputGroupInfo(debug = depset([archver_log])),
+        OutputGroupInfo(debug = depset([validation_log])),
     ]
 
 _dependable_element_index = rule(
@@ -1024,11 +1024,11 @@ _dependable_element_index = rule(
             values = _INTEGRITY_LEVELS,
             doc = "Integrity level of the dependable element. Allowed values: 'A', 'B', 'C', 'D' (D > C > B > A).",
         ),
-        "_archver": attr.label(
-            default = Label("//validation/archver"),
+        "_validation_cli": attr.label(
+            default = Label("//validation/core:validation_cli"),
             executable = True,
             cfg = "exec",
-            doc = "Architecture verifier tool",
+            doc = "Validation CLI tool",
         ),
         "_lobster_de_template": attr.label(
             default = Label("//bazel/rules/rules_score/lobster/config:lobster_de_template"),
@@ -1201,7 +1201,7 @@ def dependable_element(
         processed_deps.append("{}_index".format(dep))
 
     # Step 1: Generate index.rst and collect all artifacts
-    # Note: archver validation runs as a subrule within the index generation
+    # Note: validation runs as a subrule within the index generation
     _dependable_element_index(
         name = name + "_index",
         module_name = name,

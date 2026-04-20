@@ -11,29 +11,39 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-//! Validation: compare the indexed Bazel build graph against the indexed PlantUML diagram.
+//! Validation: compare the indexed Bazel build graph against the indexed
+//! PlantUML component diagram.
 //!
-//! [`Validator`] performs a two-way set-difference between a [`BazelArchitecture`]
-//! and a [`DiagramArchitecture`]
+//! [`BazelComponentValidator`] performs a two-way set-difference between a
+//! [`BazelArchitecture`] and a [`ComponentDiagramArchitecture`].
 
-use crate::models::{BazelArchitecture, BazelInput, DiagramArchitecture, DiagramInputs, Errors};
+use crate::models::{BazelArchitecture, ComponentDiagramArchitecture, Errors};
 
-// ---------------------------------------------------------------------------
-// Validator
-// ---------------------------------------------------------------------------
+/// Run bazel-vs-component architecture validation using indexed inputs.
+pub fn validate_bazel_component(
+    bazel: &BazelArchitecture,
+    diagram: &ComponentDiagramArchitecture,
+    errors: Errors,
+) -> Errors {
+    BazelComponentValidator::new(bazel, diagram, errors).run()
+}
 
-/// Compares a [`BazelArchitecture`] and a [`DiagramArchitecture`], accumulating mismatches into
-/// [`Errors`].
-pub struct Validator {
-    bazel: BazelArchitecture,
-    diagram: DiagramArchitecture,
+/// Compares a [`BazelArchitecture`] and a [`ComponentDiagramArchitecture`],
+/// accumulating mismatches into [`Errors`].
+pub struct BazelComponentValidator<'a> {
+    bazel: &'a BazelArchitecture,
+    diagram: &'a ComponentDiagramArchitecture,
     errors: Errors,
 }
 
-impl Validator {
-    /// Create a new `Validator` from pre-built sets and already-accumulated
-    /// errors (which may include duplicates detected during set construction).
-    pub fn new(bazel: BazelArchitecture, diagram: DiagramArchitecture, errors: Errors) -> Self {
+impl<'a> BazelComponentValidator<'a> {
+    /// Create a new [`BazelComponentValidator`] from pre-built sets and already
+    /// accumulated indexing errors.
+    pub fn new(
+        bazel: &'a BazelArchitecture,
+        diagram: &'a ComponentDiagramArchitecture,
+        errors: Errors,
+    ) -> Self {
         Self {
             bazel,
             diagram,
@@ -41,7 +51,8 @@ impl Validator {
         }
     }
 
-    /// Run the two-way set-difference comparison and return all accumulated errors.
+    /// Run the two-way set-difference comparison and return all accumulated
+    /// errors.
     ///
     /// The debug log is always built and stored in `errors.debug_output`.
     pub fn run(mut self) -> Errors {
@@ -59,10 +70,10 @@ impl Validator {
             "DEBUG: Found {} total diagram entities\n",
             self.diagram.entities.len()
         ));
-        for e in &self.diagram.entities {
+        for entity in &self.diagram.entities {
             log.push_str(&format!(
                 "  Entity: id={:?}, alias={:?}, stereotype={:?}\n",
-                e.id, e.alias, e.stereotype
+                entity.id, entity.alias, entity.stereotype
             ));
         }
         log.push_str(&format!(
@@ -99,7 +110,7 @@ impl Validator {
     }
 
     fn check_seooc(&mut self) {
-        // In Bazel but not in PlantUML → MISSING
+        // In Bazel but not in PlantUML -> MISSING.
         for (key, label) in &self.bazel.seooc_set {
             if !self.diagram.seooc_set.contains_key(key) {
                 let (name, _) = key;
@@ -112,7 +123,8 @@ impl Validator {
                 ));
             }
         }
-        // In PlantUML but not in Bazel → EXTRA
+
+        // In PlantUML but not in Bazel -> EXTRA.
         for (key, _) in &self.diagram.seooc_set {
             if !self.bazel.seooc_set.contains_key(key) {
                 let (name, _) = key;
@@ -123,13 +135,13 @@ impl Validator {
     }
 
     fn check_components(&mut self) {
-        // In Bazel but not in PlantUML → MISSING
+        // In Bazel but not in PlantUML -> MISSING.
         for (key, label) in &self.bazel.comp_set {
             if !self.diagram.comp_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = parent
                     .as_ref()
-                    .map_or("(top-level)".to_string(), |s| s.clone());
+                    .map_or("(top-level)".to_string(), |value| value.clone());
                 self.errors.push(Self::format_missing(
                     "component",
                     "component",
@@ -139,13 +151,14 @@ impl Validator {
                 ));
             }
         }
-        // In PlantUML but not in Bazel → EXTRA
+
+        // In PlantUML but not in Bazel -> EXTRA.
         for (key, _) in &self.diagram.comp_set {
             if !self.bazel.comp_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = parent
                     .as_ref()
-                    .map_or("(top-level)".to_string(), |s| s.clone());
+                    .map_or("(top-level)".to_string(), |value| value.clone());
                 self.errors
                     .push(Self::format_extra("component", name, &parent_str));
             }
@@ -153,13 +166,13 @@ impl Validator {
     }
 
     fn check_units(&mut self) {
-        // In Bazel but not in PlantUML → MISSING
+        // In Bazel but not in PlantUML -> MISSING.
         for (key, label) in &self.bazel.unit_set {
             if !self.diagram.unit_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = parent
                     .as_ref()
-                    .map_or("(no parent?)".to_string(), |s| s.clone());
+                    .map_or("(no parent?)".to_string(), |value| value.clone());
                 self.errors.push(Self::format_missing(
                     "unit",
                     "unit",
@@ -169,13 +182,14 @@ impl Validator {
                 ));
             }
         }
-        // In PlantUML but not in Bazel → EXTRA
+
+        // In PlantUML but not in Bazel -> EXTRA.
         for (key, _) in &self.diagram.unit_set {
             if !self.bazel.unit_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = parent
                     .as_ref()
-                    .map_or("(no parent?)".to_string(), |s| s.clone());
+                    .map_or("(no parent?)".to_string(), |value| value.clone());
                 self.errors
                     .push(Self::format_extra("unit", name, &parent_str));
             }
@@ -208,29 +222,12 @@ impl Validator {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Public entry point
-// ---------------------------------------------------------------------------
-
-/// Index both sources and run the comparison.
-///
-/// Errors from index construction (duplicates) and from comparison (mismatches)
-/// are all collected into a single [`Errors`] value.
-pub fn validate(arch: &BazelInput, diagram: &DiagramInputs) -> Errors {
-    let mut errors = Errors::default();
-    let bazel = arch.to_bazel_architecture(&mut errors);
-    let diag = diagram.to_diagram_architecture(&mut errors);
-    Validator::new(bazel, diag, errors).run()
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{BazelInput, BazelInputEntry, DiagramInput, DiagramInputs};
+    use crate::models::{
+        BazelInput, BazelInputEntry, ComponentDiagramInput, ComponentDiagramInputs,
+    };
     use std::collections::BTreeMap;
 
     fn make_arch(entries: Vec<(&str, Vec<&str>, Vec<&str>)>) -> BazelInput {
@@ -252,8 +249,8 @@ mod tests {
         alias: Option<&str>,
         parent_id: Option<&str>,
         stereotype: Option<&str>,
-    ) -> DiagramInput {
-        DiagramInput {
+    ) -> ComponentDiagramInput {
+        ComponentDiagramInput {
             id: id.to_string(),
             alias: alias.map(|s| s.to_string()),
             parent_id: parent_id.map(|s| s.to_string()),
@@ -261,8 +258,15 @@ mod tests {
         }
     }
 
-    fn diagram(entities: Vec<DiagramInput>) -> DiagramInputs {
-        DiagramInputs { entities }
+    fn diagram(entities: Vec<ComponentDiagramInput>) -> ComponentDiagramInputs {
+        ComponentDiagramInputs { entities }
+    }
+
+    fn run_arch_validation(arch: &BazelInput, diagram: &ComponentDiagramInputs) -> Errors {
+        let mut errors = Errors::default();
+        let bazel = arch.to_bazel_architecture(&mut errors);
+        let diag = diagram.to_diagram_architecture(&mut errors);
+        validate_bazel_component(&bazel, &diag, errors)
     }
 
     #[test]
@@ -276,7 +280,7 @@ mod tests {
             entity("CompA", Some("comp_a"), Some("MyDE"), Some("component")),
             entity("CompA.Unit1", Some("unit_1"), Some("CompA"), Some("unit")),
         ]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.messages);
     }
 
@@ -323,7 +327,7 @@ mod tests {
                 Some("unit"),
             ),
         ]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.messages);
     }
 
@@ -343,7 +347,7 @@ mod tests {
             entity("CompA.Unit1", Some("unit_1"), Some("CompA"), Some("unit")),
             entity("CompA.Unit2", Some("unit_2"), Some("CompA"), Some("unit")),
         ]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.messages);
     }
 
@@ -362,7 +366,7 @@ mod tests {
             entity("CompA", Some("comp_a"), Some("MyDE"), Some("component")),
             entity("CompA.Unit1", Some("unit_1"), Some("CompA"), Some("unit")),
         ]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
         assert!(errs.messages.iter().any(|m| m.contains("Missing unit")));
     }
@@ -374,7 +378,7 @@ mod tests {
             ("@//pkg2:comp_a", vec![], vec![]),
         ]);
         let diagram = diagram(vec![entity("CompA", Some("comp_a"), None, Some("SEooC"))]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
         assert!(
             errs.messages.iter().any(|m| m.contains("Duplicate")),
@@ -385,24 +389,19 @@ mod tests {
 
     #[test]
     fn test_same_short_name_different_packages_one_child() {
-        // pkg1:comp_a is nested under de; pkg2:comp_a is a separate top-level element.
-        // Full-label matching in child_labels ensures pkg2:comp_a is never silently
-        // suppressed from the top-level (None-parent) slot.
         let arch = make_arch(vec![
             ("de", vec![], vec!["@//pkg1:comp_a"]),
             ("@//pkg1:comp_a", vec![], vec![]),
             ("@//pkg2:comp_a", vec![], vec![]),
         ]);
-        // An empty diagram is sufficient to exercise the Bazel-side set building.
-        let errs = validate(&arch, &diagram(vec![]));
-        // No panic. Both labels are considered; a duplicate or mismatch error is expected.
+        let errs = run_arch_validation(&arch, &diagram(vec![]));
         let _ = errs;
     }
 
     #[test]
     fn test_missing_seooc_error_mentions_seooc_stereotype() {
         let arch = make_arch(vec![("my_de", vec![], vec![])]);
-        let errs = validate(&arch, &diagram(vec![]));
+        let errs = run_arch_validation(&arch, &diagram(vec![]));
         assert!(!errs.is_empty());
         let msg = &errs.messages[0];
         assert!(
@@ -423,7 +422,7 @@ mod tests {
                 Some("component"),
             ),
         ]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
         assert!(
             errs.messages.iter().any(|m| m.contains("Extra component")),
@@ -443,7 +442,7 @@ mod tests {
             entity("CompA", Some("comp_a"), Some("MyDE"), Some("component")),
             entity("ExtraUnit", Some("extra_unit"), Some("CompA"), Some("unit")),
         ]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
         assert!(
             errs.messages.iter().any(|m| m.contains("Extra unit")),
@@ -454,10 +453,9 @@ mod tests {
 
     #[test]
     fn test_component_with_wrong_stereotype_rejected() {
-        // A <<component>> where <<SEooC>> is expected must not pass.
         let arch = make_arch(vec![("my_de", vec![], vec![])]);
         let diagram = diagram(vec![entity("MyDE", Some("my_de"), None, Some("component"))]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(
             !errs.is_empty(),
             "<<component>> should not satisfy <<SEooC>> requirement"
@@ -471,7 +469,6 @@ mod tests {
 
     #[test]
     fn test_seooc_where_component_expected_rejected() {
-        // A <<SEooC>> where <<component>> is expected must not pass.
         let arch = make_arch(vec![
             ("my_de", vec![], vec!["@//pkg:comp_a"]),
             ("@//pkg:comp_a", vec![], vec![]),
@@ -480,7 +477,7 @@ mod tests {
             entity("MyDE", Some("my_de"), None, Some("SEooC")),
             entity("CompA", Some("comp_a"), Some("MyDE"), Some("SEooC")),
         ]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(
             !errs.is_empty(),
             "<<SEooC>> should not satisfy <<component>> requirement"
@@ -500,7 +497,7 @@ mod tests {
             ("my_de", vec![], vec!["@//pkg:comp_a"]),
             ("@//pkg:comp_a", vec!["@//pkg/u1:unit_1"], vec![]),
         ]);
-        let errs = validate(&arch, &diagram(vec![]));
+        let errs = run_arch_validation(&arch, &diagram(vec![]));
         assert_eq!(
             errs.messages.len(),
             3,
@@ -520,7 +517,7 @@ mod tests {
             entity("CompA", Some("COMP_A"), Some("MyDE"), Some("component")),
             entity("Unit1", Some("UNIT_1"), Some("CompA"), Some("unit")),
         ]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.messages);
     }
 
@@ -530,24 +527,22 @@ mod tests {
             ("my_de", vec![], vec!["@//pkg:comp_a"]),
             ("@//pkg:comp_a", vec![], vec![]),
         ]);
-        // No alias set — match_key() should fall back to id (lowercased).
         let diagram = diagram(vec![
             entity("my_de", None, None, Some("SEooC")),
             entity("comp_a", None, Some("my_de"), Some("component")),
         ]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.messages);
     }
 
     #[test]
     fn test_duplicate_diagram_id_detected() {
         let arch = make_arch(vec![("my_de", vec![], vec![])]);
-        // Two entities with the same id (case-insensitive).
         let diagram = diagram(vec![
             entity("MyDE", Some("my_de"), None, Some("SEooC")),
             entity("myDE", Some("other_alias"), None, Some("component")),
         ]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(
             errs.messages
                 .iter()
@@ -560,7 +555,6 @@ mod tests {
     #[test]
     fn test_orphaned_parent_id_detected() {
         let arch = make_arch(vec![("my_de", vec![], vec![])]);
-        // Entity references a parent_id that doesn't exist in the diagram.
         let diagram = diagram(vec![
             entity("MyDE", Some("my_de"), None, Some("SEooC")),
             entity(
@@ -570,7 +564,7 @@ mod tests {
                 Some("component"),
             ),
         ]);
-        let errs = validate(&arch, &diagram);
+        let errs = run_arch_validation(&arch, &diagram);
         assert!(
             errs.messages
                 .iter()
