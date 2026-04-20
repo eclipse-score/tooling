@@ -55,6 +55,10 @@ impl ClassResolver {
             self.process_top_level(elem, None)?;
         }
 
+        for elem in &file.elements {
+            self.process_declared_relations_top_level(elem, None)?;
+        }
+
         for rel in &file.relationships {
             self.process_relationship(rel, None)?;
         }
@@ -75,17 +79,33 @@ impl ClassResolver {
         }
     }
 
+    fn normalize_fqn(raw: &str) -> String {
+        raw.replace("::", ".").trim_matches('.').to_string()
+    }
+
     fn build_fqn(&self, name: &str, parent: &Option<String>) -> String {
+        let normalized_name = Self::normalize_fqn(name);
+
         match parent {
-            Some(p) => format!("{}.{}", p, name),
-            None => name.to_string(),
+            Some(p) => {
+                let normalized_parent = Self::normalize_fqn(p);
+
+                if normalized_parent.is_empty() {
+                    normalized_name
+                } else if normalized_name.is_empty() {
+                    normalized_parent
+                } else {
+                    format!("{}.{}", normalized_parent, normalized_name)
+                }
+            }
+            None => normalized_name,
         }
     }
 
     fn resolve_name(&self, name: &str, parent: &Option<String>) -> Option<String> {
         // 1. FQN
         if name.contains('.') || name.contains("::") {
-            return Some(name.to_string());
+            return Some(Self::normalize_fqn(name));
         }
 
         // 2. Current Namespace
@@ -152,15 +172,33 @@ impl ClassResolver {
         Ok(())
     }
 
+    fn process_declared_relations_top_level(
+        &mut self,
+        elem: &ClassUmlTopLevel,
+        parent: Option<String>,
+    ) -> Result<(), ClassResolverError> {
+        match elem {
+            ClassUmlTopLevel::Types(element) => {
+                self.process_declared_relations_element(element, parent)?;
+            }
+            ClassUmlTopLevel::Enum(_) => {}
+            ClassUmlTopLevel::Namespace(ns) => {
+                self.process_namespace_declared_relations(ns, parent)?;
+            }
+            ClassUmlTopLevel::Package(pkg) => {
+                self.process_package_declared_relations(pkg, parent)?;
+            }
+        }
+
+        Ok(())
+    }
+
     fn process_package(
         &mut self,
         pkg: &Package,
         parent: Option<String>,
     ) -> Result<(), ClassResolverError> {
-        let fqn = match &parent {
-            Some(p) => format!("{}.{}", p, pkg.name.internal),
-            None => pkg.name.internal.clone(),
-        };
+        let fqn = self.build_fqn(&pkg.name.internal, &parent);
 
         self.logic.containers.push(LogicContainer {
             id: fqn.clone(),
@@ -189,10 +227,7 @@ impl ClassResolver {
         ns: &Namespace,
         parent: Option<String>,
     ) -> Result<(), ClassResolverError> {
-        let fqn = match &parent {
-            Some(p) => format!("{}.{}", p, ns.name.internal),
-            None => ns.name.internal.clone(),
-        };
+        let fqn = self.build_fqn(&ns.name.internal, &parent);
 
         self.logic.containers.push(LogicContainer {
             id: fqn.clone(),
@@ -212,6 +247,126 @@ impl ClassResolver {
         Ok(())
     }
 
+    fn process_package_declared_relations(
+        &mut self,
+        pkg: &Package,
+        parent: Option<String>,
+    ) -> Result<(), ClassResolverError> {
+        let fqn = self.build_fqn(&pkg.name.internal, &parent);
+
+        for t in &pkg.types {
+            self.process_declared_relations_element(t, Some(fqn.clone()))?;
+        }
+
+        for sub in &pkg.packages {
+            self.process_package_declared_relations(sub, Some(fqn.clone()))?;
+        }
+
+        Ok(())
+    }
+
+    fn process_namespace_declared_relations(
+        &mut self,
+        ns: &Namespace,
+        parent: Option<String>,
+    ) -> Result<(), ClassResolverError> {
+        let fqn = self.build_fqn(&ns.name.internal, &parent);
+
+        for t in &ns.types {
+            self.process_declared_relations_element(t, Some(fqn.clone()))?;
+        }
+
+        for sub in &ns.namespaces {
+            self.process_namespace_declared_relations(sub, Some(fqn.clone()))?;
+        }
+
+        Ok(())
+    }
+
+    fn process_declared_relations_element(
+        &mut self,
+        element: &Element,
+        parent: Option<String>,
+    ) -> Result<(), ClassResolverError> {
+        match element {
+            Element::ClassDef(def) => {
+                self.process_extends_relationships(&def.name.internal, &def.extends, parent.clone())?;
+                self.process_implements_relationships(&def.name.internal, &def.implements, parent)?;
+            }
+            Element::InterfaceDef(def) => {
+                self.process_extends_relationships(&def.name.internal, &def.extends, parent)?;
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    fn process_extends_relationships(
+        &mut self,
+        child_name: &str,
+        bases: &[String],
+        parent: Option<String>,
+    ) -> Result<(), ClassResolverError> {
+        self.process_declared_relationships(
+            child_name,
+            bases,
+            parent,
+            RelationType::Inheritance
+        )
+    }
+
+    fn process_implements_relationships(
+        &mut self,
+        class_name: &str,
+        interfaces: &[String],
+        parent: Option<String>,
+    ) -> Result<(), ClassResolverError> {
+        self.process_declared_relationships(
+            class_name,
+            interfaces,
+            parent,
+            RelationType::Implementation,
+        )
+    }
+
+    fn process_declared_relationships(
+        &mut self,
+        source_name: &str,
+        targets: &[String],
+        parent: Option<String>,
+        relation_type: RelationType,
+    ) -> Result<(), ClassResolverError> {
+        if targets.is_empty() {
+            return Ok(());
+        }
+
+        let source = self.build_fqn(source_name, &parent);
+
+        for declared_target in targets {
+            let target = self.resolve_name(declared_target, &parent).ok_or_else(|| {
+                ClassResolverError::UnresolvedReference {
+                    reference: declared_target.clone(),
+                }
+            })?;
+
+            self.logic.relationships.push(LogicRelationship {
+                source: source.clone(),
+                target,
+                relation_type,
+                label: None,
+                stereotype: None,
+                // SEARCH_TAG[plantuml-class-gap]: relationship multiplicity/role not exposed by AST.
+                source_multiplicity: None,
+                target_multiplicity: None,
+                source_role: None,
+                target_role: None,
+            });
+        }
+
+        Ok(())
+    }
+
     fn process_element(&mut self, element: &Element, parent: Option<String>) {
         match element {
             Element::EnumDef(def) => self.process_enum(def, parent),
@@ -219,6 +374,7 @@ impl ClassResolver {
                 let entity_type = match element {
                     Element::ClassDef(_) => EntityType::Class,
                     Element::StructDef(_) => EntityType::Struct,
+                    Element::ObjectDef(_) => EntityType::Object,
                     Element::InterfaceDef(_) => EntityType::Interface,
                     _ => unreachable!(),
                 };
@@ -228,10 +384,11 @@ impl ClassResolver {
     }
 
     fn process_class(&mut self, def: &Element, parent: Option<String>, entity_type: EntityType) {
-        let (name, attributes, methods) = match def {
-            Element::ClassDef(c) => (&c.name, &c.attributes, &c.methods),
-            Element::StructDef(s) => (&s.name, &s.attributes, &s.methods),
-            Element::InterfaceDef(i) => (&i.name, &i.attributes, &i.methods),
+        let (name, attributes, methods, template_params) = match def {
+            Element::ClassDef(c) => (&c.name, &c.attributes, &c.methods, &c.template_params),
+            Element::StructDef(s) => (&s.name, &s.attributes, &s.methods, &s.template_params),
+            Element::ObjectDef(o) => (&o.name, &o.attributes, &o.methods, &o.template_params),
+            Element::InterfaceDef(i) => (&i.name, &i.attributes, &i.methods, &i.template_params),
             Element::EnumDef(_) => unreachable!("EnumDef should not be passed to process_class"),
         };
 
@@ -243,12 +400,17 @@ impl ClassResolver {
             alias: name.display.clone(),
             parent_id: parent.clone(),
             entity_type,
+            // SEARCH_TAG[plantuml-class-gap]: type stereotypes accepted by grammar but not carried by AST.
             stereotypes: vec![],
             attributes: attributes.iter().map(Self::convert_attr).collect(),
-            methods: methods.iter().map(Self::convert_method).collect(),
-            template_params: vec![],
+            methods: methods
+                .iter()
+                .map(|method| Self::convert_method(method, &name.internal))
+                .collect(),
+            template_params: template_params.clone(),
             enum_literals: vec![],
             source_file: None,
+            // SEARCH_TAG[plantuml-class-gap]: per-entity source locations not retained by AST.
             source_line: None,
         };
 
@@ -257,41 +419,83 @@ impl ClassResolver {
     }
 
     fn convert_attr(attr: &Attribute) -> LogicAttribute {
+        fn has_modifier(modifiers: &[String], expected: &str) -> bool {
+            modifiers
+                .iter()
+                .any(|modifier| ClassResolver::normalize_modifier(modifier) == expected)
+        }
+
         LogicAttribute {
             name: attr.name.clone(),
             data_type: attr.r#type.clone(),
             visibility: Self::map_visibility(attr.visibility.clone()),
+            // SEARCH_TAG[plantuml-class-gap]: attribute initializer not represented by AST.
             default_value: None,
-            is_static: false,
-            is_const: false,
+            is_static: has_modifier(&attr.modifiers, "static"),
+            is_const: has_modifier(&attr.modifiers, "const"),
+            // SEARCH_TAG[plantuml-class-gap]: attribute description/doc not represented by AST.
             description: None,
         }
     }
 
-    fn convert_method(m: &Method) -> LogicMethod {
+    fn convert_method(m: &Method, owner_name: &str) -> LogicMethod {
+        fn has_modifier(modifiers: &[String], expected: &str) -> bool {
+            modifiers
+                .iter()
+                .any(|modifier| ClassResolver::normalize_modifier(modifier) == expected)
+        }
+
+        let is_constructor = m.name == owner_name;
+        let is_destructor = m.name == format!("~{}", owner_name);
+
         LogicMethod {
             name: m.name.clone(),
             return_type: m.r#type.clone(),
             visibility: Self::map_visibility(m.visibility.clone()),
             parameters: m.params.iter().map(Self::convert_param).collect(),
             template_params: m.generic_params.clone(),
-            is_static: false,
-            is_const: false,
+            is_static: has_modifier(&m.modifiers, "static"),
+            is_const: has_modifier(&m.modifiers, "const"),
+            // SEARCH_TAG[plantuml-class-gap]: virtual modifier not represented by grammar/AST.
             is_virtual: false,
-            is_abstract: false,
+            is_abstract: has_modifier(&m.modifiers, "abstract"),
+            // SEARCH_TAG[plantuml-class-gap]: override modifier not represented by grammar/AST.
             is_override: false,
-            is_constructor: false,
-            is_destructor: false,
+            is_constructor,
+            is_destructor,
         }
     }
 
+    fn normalize_modifier(raw: &str) -> &str {
+        raw.trim()
+            .trim_start_matches("<<")
+            .trim_end_matches(">>")
+            .trim_start_matches('{')
+            .trim_end_matches('}')
+            .trim()
+    }
+
+    fn is_reference_type(raw_type: &str) -> bool {
+        let trimmed = raw_type.trim();
+        trimmed.ends_with("&&") || trimmed.ends_with('&')
+    }
+
+    fn is_const_type(raw_type: &str) -> bool {
+        raw_type.trim_start().starts_with("const ")
+    }
+
     fn convert_param(param: &Param) -> LogicParameter {
+        let param_type = param.param_type.clone();
+
         LogicParameter {
-            name: param.name.clone().unwrap(),
-            param_type: Some(param.param_type.clone()),
+            name: param.name.clone().unwrap_or_default(),
+            param_type: param_type.clone(),
+            // SEARCH_TAG[plantuml-class-gap]: parameter default value not represented by AST.
             default_value: None,
-            is_reference: false,
-            is_const: false,
+            is_reference: param_type
+                .as_deref()
+                .is_some_and(Self::is_reference_type),
+            is_const: param_type.as_deref().is_some_and(Self::is_const_type),
             is_variadic: param.varargs,
         }
     }
@@ -311,9 +515,11 @@ impl ClassResolver {
                     .unwrap_or(ResolverVisibility::Public),
                 value: match &item.value {
                     Some(EnumValue::Literal(v)) => Some(v.clone()),
+                    // SEARCH_TAG[plantuml-class-gap]: enum description payload folded into value.
                     Some(EnumValue::Description(d)) => Some(d.clone()),
                     None => None,
                 },
+                // SEARCH_TAG[plantuml-class-gap]: enum literal description not emitted separately.
                 description: None,
             })
             .collect();
@@ -330,6 +536,7 @@ impl ClassResolver {
             template_params: vec![],
             enum_literals: literals,
             source_file: None,
+            // SEARCH_TAG[plantuml-class-gap]: per-entity source locations not retained by AST.
             source_line: None,
         });
 
@@ -378,7 +585,18 @@ impl ClassResolver {
             return Ok((RelationType::Aggregation, false));
         }
 
+        // ---------------- Decorated undirected link ----------------
+        if left == "+" || right == "+" {
+            return Ok((RelationType::Link, false));
+        }
+
         // ---------------- Association ----------------
+        if line == "-" && right == ">" {
+            return Ok((RelationType::Association, false));
+        }
+        if left == "<" && line == "-" {
+            return Ok((RelationType::Association, true));
+        }
         if line == "--" && right == ">" {
             return Ok((RelationType::Association, false));
         }
@@ -395,6 +613,9 @@ impl ClassResolver {
         }
 
         // ---------------- Undirected ----------------
+        if line == "-" {
+            return Ok((RelationType::Link, false));
+        }
         if line == "--" {
             return Ok((RelationType::Link, false));
         }
@@ -458,6 +679,7 @@ impl ClassResolver {
             relation_type,
             label,
             stereotype,
+            // SEARCH_TAG[plantuml-class-gap]: relationship multiplicity/role not exposed by AST.
             source_multiplicity: None,
             target_multiplicity: None,
             source_role: None,
@@ -501,7 +723,7 @@ impl DiagramResolver for ClassResolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use class_parser::{ClassDef, EnumItem, Name};
+    use class_parser::{ClassDef, EnumItem, InterfaceDef, Name, ObjectDef, StructDef};
     use parser_core::common_ast::{ArrowDecor, ArrowLine};
 
     // ----------------------------
@@ -519,6 +741,9 @@ mod tests {
             name: make_name(name),
             namespace: "".to_string(),
             package: "".to_string(),
+            template_params: vec![],
+            extends: vec![],
+            implements: vec![],
             attributes: vec![],
             methods: vec![],
         })
@@ -567,6 +792,17 @@ mod tests {
         let resolver = ClassResolver::new();
         let fqn = resolver.build_fqn("User", &Some("core".to_string()));
         assert_eq!(fqn, "core.User");
+    }
+
+    #[test]
+    fn test_build_fqn_normalizes_namespace_separator() {
+        let resolver = ClassResolver::new();
+
+        let root_fqn = resolver.build_fqn("core::geometry", &None);
+        let nested_fqn = resolver.build_fqn("User", &Some("core::geometry".to_string()));
+
+        assert_eq!(root_fqn, "core.geometry");
+        assert_eq!(nested_fqn, "core.geometry.User");
     }
 
     // ----------------------------
@@ -619,6 +855,15 @@ mod tests {
 
         let resolved = resolver.resolve_name("User", &Some("core".to_string()));
         assert_eq!(resolved, Some("core.User".to_string()));
+    }
+
+    #[test]
+    fn test_resolve_name_normalizes_namespace_separator() {
+        let resolver = ClassResolver::new();
+
+        let resolved = resolver.resolve_name("core::geometry::User", &None);
+
+        assert_eq!(resolved, Some("core.geometry.User".to_string()));
     }
 
     // ----------------------------
@@ -766,7 +1011,7 @@ mod tests {
         let mut resolver = ClassResolver::new();
 
         let ns = Namespace {
-            name: make_name("core"),
+            name: make_name("core::geometry"),
             types: vec![make_class("User")],
             namespaces: vec![],
         };
@@ -776,8 +1021,11 @@ mod tests {
         assert_eq!(resolver.logic.containers.len(), 1);
         assert_eq!(resolver.logic.entities.len(), 1);
 
+        let container = &resolver.logic.containers[0];
         let entity = &resolver.logic.entities[0];
-        assert_eq!(entity.id, "core.User");
+        assert_eq!(container.id, "core.geometry");
+        assert_eq!(container.name, "core::geometry");
+        assert_eq!(entity.id, "core.geometry.User");
     }
 
     // ----------------------------

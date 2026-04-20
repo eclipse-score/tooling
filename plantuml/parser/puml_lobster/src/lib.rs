@@ -121,6 +121,7 @@ fn map_entity_type_to_kind(entity_type: EntityType) -> &'static str {
     match entity_type {
         EntityType::Class => "Class",
         EntityType::Struct => "Struct",
+        EntityType::Object => "Object",
         EntityType::Interface => "Interface",
         EntityType::Enum => "Enum",
         EntityType::AbstractClass => "AbstractClass",

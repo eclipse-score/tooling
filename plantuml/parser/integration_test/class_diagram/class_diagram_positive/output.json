@@ -236,10 +236,10 @@
           "source_line": null
         },
         {
-          "id": "core::geometry.Circle",
+          "id": "core.geometry.Circle",
           "name": "Circle",
           "alias": null,
-          "parent_id": "core::geometry",
+          "parent_id": "core.geometry",
           "entity_type": "Class",
           "stereotypes": [],
           "attributes": [
@@ -284,10 +284,10 @@
           "source_line": null
         },
         {
-          "id": "core::geometry.Rectangle",
+          "id": "core.geometry.Rectangle",
           "name": "Rectangle",
           "alias": null,
-          "parent_id": "core::geometry",
+          "parent_id": "core.geometry",
           "entity_type": "Class",
           "stereotypes": [],
           "attributes": [
@@ -332,10 +332,10 @@
           "source_line": null
         },
         {
-          "id": "core::geometry::advanced.RoundedRectangle",
+          "id": "core.geometry.advanced.RoundedRectangle",
           "name": "RoundedRectangle",
           "alias": null,
-          "parent_id": "core::geometry::advanced",
+          "parent_id": "core.geometry.advanced",
           "entity_type": "Class",
           "stereotypes": [],
           "attributes": [
@@ -475,16 +475,16 @@
           "id": "core",
           "name": "core",
           "parent_id": null,
-          "container_type": "Package"
+          "container_type": "Namespace"
         },
         {
-          "id": "core::geometry",
+          "id": "core.geometry",
           "name": "core::geometry",
           "parent_id": null,
           "container_type": "Package"
         },
         {
-          "id": "core::geometry::advanced",
+          "id": "core.geometry.advanced",
           "name": "core::geometry::advanced",
           "parent_id": null,
           "container_type": "Package"
@@ -504,7 +504,7 @@
       ],
       "relationships": [
         {
-          "source": "core::geometry.Circle",
+          "source": "core.geometry.Circle",
           "target": "core.Shape",
           "relation_type": "Inheritance",
           "label": "inherit",
@@ -515,7 +515,7 @@
           "target_role": null
         },
         {
-          "source": "core::geometry.Rectangle",
+          "source": "core.geometry.Rectangle",
           "target": "core.Shape",
           "relation_type": "Inheritance",
           "label": null,
@@ -526,8 +526,8 @@
           "target_role": null
         },
         {
-          "source": "core::geometry::advanced.RoundedRectangle",
-          "target": "core::geometry.Rectangle",
+          "source": "core.geometry.advanced.RoundedRectangle",
+          "target": "core.geometry.Rectangle",
           "relation_type": "Inheritance",
           "label": null,
           "stereotype": "extend",
@@ -560,7 +560,7 @@
         },
         {
           "source": "core.Color",
-          "target": "core::geometry.Circle",
+          "target": "core.geometry.Circle",
           "relation_type": "Aggregation",
           "label": null,
           "stereotype": null,
@@ -570,7 +570,7 @@
           "target_role": null
         },
         {
-          "source": "core::geometry.Rectangle",
+          "source": "core.geometry.Rectangle",
           "target": "core.Color",
           "relation_type": "Association",
           "label": null,
@@ -603,8 +603,8 @@
           "target_role": null
         },
         {
-          "source": "core::geometry.Circle",
-          "target": "core::geometry.Rectangle",
+          "source": "core.geometry.Circle",
+          "target": "core.geometry.Rectangle",
           "relation_type": "Association",
           "label": null,
           "stereotype": "bidirectional",

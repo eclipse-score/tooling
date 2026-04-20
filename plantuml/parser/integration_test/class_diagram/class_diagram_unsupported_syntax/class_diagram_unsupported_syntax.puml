@@ -1,0 +1,135 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+@startuml class_diagram_unsupported_syntax
+
+title Unsupported Class Diagram Syntax Coverage
+
+' Priority group 1: file-level constructs
+set namespaceSeparator ::
+
+together {
+    class GroupedA
+    class GroupedB
+}
+
+legend top left
+|= Color |= Meaning |
+| <#Lavender> | Internal |
+end legend
+
+note top of GroupedA : top-level note coverage
+
+package sample::newline #Lavender
+{
+    ' Priority group 2: declaration headers
+    object "FactoryFunctor" as FactoryFunctor {
+        + operator()()
+    }
+
+    interface IActivateTask [[cd_activate_task.puml]] {
+        + Execute(amp::stop_token) : ResultBlank
+    }
+
+    interface BaseInterface
+
+    interface ChildInterface extends BaseInterface {
+    }
+
+    interface ServiceContract
+
+    interface CheckProgrammingDependenciesFlag {
+        + GetCPDFlag() : CheckProgrammingDependenciesFlagState
+    }
+
+    enum CheckProgrammingDependenciesFlagState
+
+    enum ErrorInfo {
+        kUnspecified
+    }
+
+    struct StartResponsePayload {
+        + ErrorInfo
+    }
+
+    class GenericClass<T> {
+    }
+
+    class DiagnosticJobCollectionBuilder {
+        + With<DiagnosticJobType>(::ara::core::InstanceSpecifier, DiagnosticJobConstructorArgumentTypes...)
+    }
+
+    class SoftwareEntityTable {
+        + SetFingerprint(year : uint8, month : uint8, day : uint8, len_and_tester_id : uint8, reserved : array<uint8, 9>)
+    }
+
+    class ServiceImpl implements ServiceContract {
+        ' Priority group 3: member-level syntax
+        {abstract} + Run() : ResultBlank
+        {static} + Finalize()
+        + Submit(callable) : auto <<const>>
+        + Build()
+        --
+        - config_ : Config
+
+        ' Priority group 4: C++ member names and method templates
+        + ~ServiceImpl()
+        + operator()(amp::stop_token) : ResultBlank
+        + Submit<CallableType, ArgumentTypes...>(callable, arguments)
+        + Submit(CallableType&&, ArgumentTypes&&)<T> : auto
+
+        ' Priority group 5: C++ type expressions
+        + GetActiveSWEs() : SoftwareEntityTable&
+        + TakeOwnership() : Artifact&&
+        + operator->() : Result<Artifact>*
+        + run_application(argv : []test::StringLiteral) : std::int32_t
+        + non_fatal_errors : {test::result::Error}
+        + Visit(visitor : amp::callback<void(Flashing&)>)
+        + VisitUnnamed(amp::callback<void(FlashingMinion&)>)
+
+        ' Priority group 6: multiline signatures
+        + CreateJobs(const amp::stop_token&,\n InfrastructureContext, Context)
+        + ChangeHandler(amp::pmr::unique_ptr<ExecutorFactory>,\
+                               \n  std::shared_ptr<mw::diag::IConversations>)
+    }
+
+    note right of ServiceImpl : inline note coverage
+
+    class "<<template>>\nTest<T>" as TestTemplate <<service>> #Khaki {
+        + Bind()
+    }
+}
+
+class TestMethod #Lavender{
+    + Test(\n    callable,\n    on_success,\n    timeout,\n    stop_token,\n    minion_id,\n    retries)
+    - std::mutex
+}
+
+object "runTest" as runTestType {
+    + run<Param1, Args...>(
+        argc : std::int32_t,
+        argv : []std::uint8_t,
+        args : Args&&...) : std::int32_t
+}
+
+class AllowModeChangeService {
+    using AllowOpModeChangeOutput = std::uint8_t
+}
+
+ServiceImpl ..|> ServiceContract
+ChildInterface -up-|> BaseInterface
+StartResponsePayload +- ErrorInfo
+StartResponsePayload o- ErrorInfo
+CheckProgrammingDependenciesFlag -> CheckProgrammingDependenciesFlagState : uses
+FactoryFunctor --> ServiceImpl : creates
+
+@enduml

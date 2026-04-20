@@ -45,7 +45,6 @@ impl DiagramProcessor for ClassResolverRunner {
                 .parse_file(path, &puml_file, LogLevel::Error)
                 .expect("Class Resolver: Failed to parse test file");
             let logic_ast = resolver.visit_document(&parsed_ast)?;
-
             results.insert(Rc::clone(path), logic_ast);
         }
 
@@ -71,4 +70,9 @@ fn test_class_positive() {
 #[test]
 fn test_class_negative() {
     run_class_resolver_case("class_diagram_negative");
+}
+
+#[test]
+fn test_unsupported_syntax() {
+    run_class_resolver_case("class_diagram_unsupported_syntax");
 }

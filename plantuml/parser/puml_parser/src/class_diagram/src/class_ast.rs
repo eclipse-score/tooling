@@ -30,6 +30,7 @@ pub enum Element {
     StructDef(StructDef),
     EnumDef(EnumDef),
     InterfaceDef(InterfaceDef),
+    ObjectDef(ObjectDef),
 }
 impl Element {
     pub fn set_namespace(&mut self, ns: String) {
@@ -38,6 +39,7 @@ impl Element {
             Element::StructDef(def) => def.namespace = ns,
             Element::EnumDef(def) => def.namespace = ns,
             Element::InterfaceDef(def) => def.namespace = ns,
+            Element::ObjectDef(def) => def.namespace = ns,
         }
     }
     pub fn set_package(&mut self, ns: String) {
@@ -46,6 +48,7 @@ impl Element {
             Element::StructDef(def) => def.package = ns,
             Element::EnumDef(def) => def.package = ns,
             Element::InterfaceDef(def) => def.package = ns,
+            Element::ObjectDef(def) => def.package = ns,
         }
     }
 }
@@ -87,7 +90,7 @@ pub struct Relationship {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Param {
     pub name: Option<String>,
-    pub param_type: String,
+    pub param_type: Option<String>,
     pub varargs: bool,
 }
 
@@ -96,6 +99,8 @@ pub struct Attribute {
     pub visibility: Visibility,
     pub name: String,
     pub r#type: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifiers: Vec<String>,
 }
 impl Default for Attribute {
     fn default() -> Self {
@@ -103,6 +108,7 @@ impl Default for Attribute {
             visibility: Visibility::Public,
             name: String::new(),
             r#type: None,
+            modifiers: Vec::new(),
         }
     }
 }
@@ -114,6 +120,8 @@ pub struct Method {
     pub generic_params: Vec<String>,
     pub params: Vec<Param>,
     pub r#type: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifiers: Vec<String>,
 }
 impl Default for Method {
     fn default() -> Self {
@@ -123,6 +131,7 @@ impl Default for Method {
             generic_params: Vec::new(),
             params: Vec::new(),
             r#type: None,
+            modifiers: Vec::new(),
         }
     }
 }
@@ -132,6 +141,12 @@ pub struct ClassDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub template_params: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extends: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub implements: Vec<String>,
     pub attributes: Vec<Attribute>,
     pub methods: Vec<Method>,
 }
@@ -154,6 +169,8 @@ pub struct StructDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub template_params: Vec<String>,
     pub attributes: Vec<Attribute>,
     pub methods: Vec<Method>,
 }
@@ -176,10 +193,38 @@ pub struct InterfaceDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub template_params: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extends: Vec<String>,
     pub attributes: Vec<Attribute>,
     pub methods: Vec<Method>,
 }
 impl TypeDef for InterfaceDef {
+    fn name_mut(&mut self) -> &mut Name {
+        &mut self.name
+    }
+
+    fn attributes_mut(&mut self) -> &mut Vec<Attribute> {
+        &mut self.attributes
+    }
+
+    fn methods_mut(&mut self) -> &mut Vec<Method> {
+        &mut self.methods
+    }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+pub struct ObjectDef {
+    pub name: Name,
+    pub namespace: String,
+    pub package: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub template_params: Vec<String>,
+    pub attributes: Vec<Attribute>,
+    pub methods: Vec<Method>,
+}
+impl TypeDef for ObjectDef {
     fn name_mut(&mut self) -> &mut Name {
         &mut self.name
     }
@@ -290,6 +335,7 @@ mod tests {
         assert_eq!(attr.visibility, Visibility::Public);
         assert_eq!(attr.name, "");
         assert_eq!(attr.r#type, None);
+        assert!(attr.modifiers.is_empty());
     }
 
     #[test]
@@ -301,6 +347,7 @@ mod tests {
         assert!(method.generic_params.is_empty());
         assert!(method.params.is_empty());
         assert_eq!(method.r#type, None);
+        assert!(method.modifiers.is_empty());
     }
 
     #[test]
@@ -393,6 +440,7 @@ mod tests {
             Element::StructDef(StructDef::default()),
             Element::EnumDef(EnumDef::default()),
             Element::InterfaceDef(InterfaceDef::default()),
+            Element::ObjectDef(ObjectDef::default()),
         ];
 
         for el in elements.iter_mut() {
@@ -405,6 +453,7 @@ mod tests {
                 Element::StructDef(d) => assert_eq!(d.namespace, "test_ns"),
                 Element::EnumDef(d) => assert_eq!(d.namespace, "test_ns"),
                 Element::InterfaceDef(d) => assert_eq!(d.namespace, "test_ns"),
+                Element::ObjectDef(d) => assert_eq!(d.namespace, "test_ns"),
             }
         }
     }
@@ -471,6 +520,15 @@ mod tests {
         i.methods_mut().push(Method::default());
 
         assert_eq!(i.methods.len(), 1);
+    }
+
+    #[test]
+    fn test_object_methods_mut() {
+        let mut object = ObjectDef::default();
+
+        object.methods_mut().push(Method::default());
+
+        assert_eq!(object.methods.len(), 1);
     }
 
     #[test]
@@ -552,6 +610,33 @@ mod tests {
         assert_eq!(i.attributes[0].name, "field");
         assert_eq!(i.methods.len(), 1);
         assert_eq!(i.methods[0].name, "method");
+    }
+
+    #[test]
+    fn test_typedef_trait_object_calls_for_object_def() {
+        use crate::class_traits::TypeDef;
+
+        let mut object = ObjectDef::default();
+
+        {
+            let obj: &mut dyn TypeDef = &mut object;
+
+            obj.name_mut().internal = "ObjectViaTrait".into();
+            obj.attributes_mut().push(Attribute {
+                name: "field".into(),
+                ..Default::default()
+            });
+            obj.methods_mut().push(Method {
+                name: "method".into(),
+                ..Default::default()
+            });
+        }
+
+        assert_eq!(object.name.internal, "ObjectViaTrait");
+        assert_eq!(object.attributes.len(), 1);
+        assert_eq!(object.attributes[0].name, "field");
+        assert_eq!(object.methods.len(), 1);
+        assert_eq!(object.methods[0].name, "method");
     }
 
     #[test]

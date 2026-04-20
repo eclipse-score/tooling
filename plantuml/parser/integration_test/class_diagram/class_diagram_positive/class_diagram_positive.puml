@@ -20,7 +20,7 @@ skinparam shadowing false
 left to right direction
 top to bottom direction
 
-package core <<domain>> {
+namespace core <<domain>> {
 
     struct Point <<value_object>> {
         x: f32

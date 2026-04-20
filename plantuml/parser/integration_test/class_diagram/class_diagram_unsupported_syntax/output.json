@@ -1,0 +1,1052 @@
+{
+  "class_diagram_unsupported_syntax.puml": {
+    "name": "class_diagram_unsupported_syntax",
+    "entities": [
+      {
+        "id": "GroupedA",
+        "name": "GroupedA",
+        "alias": null,
+        "parent_id": null,
+        "entity_type": "Class",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "GroupedB",
+        "name": "GroupedB",
+        "alias": null,
+        "parent_id": null,
+        "entity_type": "Class",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.FactoryFunctor",
+        "name": "FactoryFunctor",
+        "alias": "FactoryFunctor",
+        "parent_id": "sample.newline",
+        "entity_type": "Object",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [
+          {
+            "name": "operator()",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          }
+        ],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.IActivateTask",
+        "name": "IActivateTask",
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Interface",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [
+          {
+            "name": "Execute",
+            "return_type": "ResultBlank",
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "amp::stop_token",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          }
+        ],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.BaseInterface",
+        "name": "BaseInterface",
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Interface",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.ChildInterface",
+        "name": "ChildInterface",
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Interface",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.ServiceContract",
+        "name": "ServiceContract",
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Interface",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.CheckProgrammingDependenciesFlag",
+        "name": "CheckProgrammingDependenciesFlag",
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Interface",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [
+          {
+            "name": "GetCPDFlag",
+            "return_type": "CheckProgrammingDependenciesFlagState",
+            "visibility": "public",
+            "parameters": [],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          }
+        ],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.CheckProgrammingDependenciesFlagState",
+        "name": null,
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Enum",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.ErrorInfo",
+        "name": null,
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Enum",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [],
+        "template_params": [],
+        "enum_literals": [
+          {
+            "name": "kUnspecified",
+            "visibility": "public",
+            "value": null,
+            "description": null
+          }
+        ],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.StartResponsePayload",
+        "name": "StartResponsePayload",
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Struct",
+        "stereotypes": [],
+        "attributes": [
+          {
+            "name": "ErrorInfo",
+            "data_type": null,
+            "visibility": "public",
+            "default_value": null,
+            "is_static": false,
+            "is_const": false,
+            "description": null
+          }
+        ],
+        "methods": [],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.GenericClass",
+        "name": "GenericClass",
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Class",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [],
+        "template_params": [
+          "T"
+        ],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.DiagnosticJobCollectionBuilder",
+        "name": "DiagnosticJobCollectionBuilder",
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Class",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [
+          {
+            "name": "With",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "::ara::core::InstanceSpecifier",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "",
+                "param_type": "DiagnosticJobConstructorArgumentTypes",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": true
+              }
+            ],
+            "template_params": [
+              "DiagnosticJobType"
+            ],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          }
+        ],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.SoftwareEntityTable",
+        "name": "SoftwareEntityTable",
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Class",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [
+          {
+            "name": "SetFingerprint",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "year",
+                "param_type": "uint8",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "month",
+                "param_type": "uint8",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "day",
+                "param_type": "uint8",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "len_and_tester_id",
+                "param_type": "uint8",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "reserved",
+                "param_type": "array<uint8, 9>",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          }
+        ],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.ServiceImpl",
+        "name": "ServiceImpl",
+        "alias": null,
+        "parent_id": "sample.newline",
+        "entity_type": "Class",
+        "stereotypes": [],
+        "attributes": [
+          {
+            "name": "config_",
+            "data_type": "Config",
+            "visibility": "private",
+            "default_value": null,
+            "is_static": false,
+            "is_const": false,
+            "description": null
+          },
+          {
+            "name": "non_fatal_errors",
+            "data_type": "{test::result::Error}",
+            "visibility": "public",
+            "default_value": null,
+            "is_static": false,
+            "is_const": false,
+            "description": null
+          }
+        ],
+        "methods": [
+          {
+            "name": "Run",
+            "return_type": "ResultBlank",
+            "visibility": "public",
+            "parameters": [],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": true,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "Finalize",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_params": [],
+            "is_static": true,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "Submit",
+            "return_type": "auto",
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "callable",
+                "param_type": null,
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [],
+            "is_static": false,
+            "is_const": true,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "Build",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "~ServiceImpl",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": true
+          },
+          {
+            "name": "operator()",
+            "return_type": "ResultBlank",
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "amp::stop_token",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "Submit",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "callable",
+                "param_type": null,
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "arguments",
+                "param_type": null,
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [
+              "CallableType",
+              "ArgumentTypes..."
+            ],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "Submit",
+            "return_type": "auto",
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "CallableType&&",
+                "default_value": null,
+                "is_reference": true,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "",
+                "param_type": "ArgumentTypes&&",
+                "default_value": null,
+                "is_reference": true,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [
+              "T"
+            ],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "GetActiveSWEs",
+            "return_type": "SoftwareEntityTable&",
+            "visibility": "public",
+            "parameters": [],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "TakeOwnership",
+            "return_type": "Artifact&&",
+            "visibility": "public",
+            "parameters": [],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "operator->",
+            "return_type": "Result<Artifact>*",
+            "visibility": "public",
+            "parameters": [],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "run_application",
+            "return_type": "std::int32_t",
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "argv",
+                "param_type": "[]test::StringLiteral",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "Visit",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "visitor",
+                "param_type": "amp::callback<void(Flashing&)>",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "VisitUnnamed",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "amp::callback<void(FlashingMinion&)>",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "CreateJobs",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "const amp::stop_token&",
+                "default_value": null,
+                "is_reference": true,
+                "is_const": true,
+                "is_variadic": false
+              },
+              {
+                "name": "",
+                "param_type": "InfrastructureContext",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "",
+                "param_type": "Context",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          },
+          {
+            "name": "ChangeHandler",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "amp::pmr::unique_ptr<ExecutorFactory>",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "",
+                "param_type": "std::shared_ptr<mw::diag::IConversations>",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          }
+        ],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "sample.newline.<<template>>\\nTest<T>",
+        "name": "<<template>>\\nTest<T>",
+        "alias": "TestTemplate",
+        "parent_id": "sample.newline",
+        "entity_type": "Class",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [
+          {
+            "name": "Bind",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          }
+        ],
+        "template_params": [
+          "T"
+        ],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "TestMethod",
+        "name": "TestMethod",
+        "alias": null,
+        "parent_id": null,
+        "entity_type": "Class",
+        "stereotypes": [],
+        "attributes": [
+          {
+            "name": "",
+            "data_type": "std::mutex",
+            "visibility": "private",
+            "default_value": null,
+            "is_static": false,
+            "is_const": false,
+            "description": null
+          }
+        ],
+        "methods": [
+          {
+            "name": "Test",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "callable",
+                "param_type": null,
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "on_success",
+                "param_type": null,
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "timeout",
+                "param_type": null,
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "stop_token",
+                "param_type": null,
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "minion_id",
+                "param_type": null,
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "retries",
+                "param_type": null,
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              }
+            ],
+            "template_params": [],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          }
+        ],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "runTest",
+        "name": "runTest",
+        "alias": "runTestType",
+        "parent_id": null,
+        "entity_type": "Object",
+        "stereotypes": [],
+        "attributes": [],
+        "methods": [
+          {
+            "name": "run",
+            "return_type": "std::int32_t",
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "argc",
+                "param_type": "std::int32_t",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "argv",
+                "param_type": "[]std::uint8_t",
+                "default_value": null,
+                "is_reference": false,
+                "is_const": false,
+                "is_variadic": false
+              },
+              {
+                "name": "args",
+                "param_type": "Args&&",
+                "default_value": null,
+                "is_reference": true,
+                "is_const": false,
+                "is_variadic": true
+              }
+            ],
+            "template_params": [
+              "Param1",
+              "Args..."
+            ],
+            "is_static": false,
+            "is_const": false,
+            "is_virtual": false,
+            "is_abstract": false,
+            "is_override": false,
+            "is_constructor": false,
+            "is_destructor": false
+          }
+        ],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      },
+      {
+        "id": "AllowModeChangeService",
+        "name": "AllowModeChangeService",
+        "alias": null,
+        "parent_id": null,
+        "entity_type": "Class",
+        "stereotypes": [],
+        "attributes": [
+          {
+            "name": "AllowOpModeChangeOutput",
+            "data_type": "std::uint8_t",
+            "visibility": "public",
+            "default_value": null,
+            "is_static": false,
+            "is_const": false,
+            "description": null
+          }
+        ],
+        "methods": [],
+        "template_params": [],
+        "enum_literals": [],
+        "source_file": null,
+        "source_line": null
+      }
+    ],
+    "containers": [
+      {
+        "id": "sample.newline",
+        "name": "sample::newline",
+        "parent_id": null,
+        "container_type": "Package"
+      }
+    ],
+    "relationships": [
+      {
+        "source": "sample.newline.ChildInterface",
+        "target": "sample.newline.BaseInterface",
+        "relation_type": "Inheritance",
+        "label": null,
+        "stereotype": null,
+        "source_multiplicity": null,
+        "target_multiplicity": null,
+        "source_role": null,
+        "target_role": null
+      },
+      {
+        "source": "sample.newline.ServiceImpl",
+        "target": "sample.newline.ServiceContract",
+        "relation_type": "Implementation",
+        "label": null,
+        "stereotype": null,
+        "source_multiplicity": null,
+        "target_multiplicity": null,
+        "source_role": null,
+        "target_role": null
+      },
+      {
+        "source": "sample.newline.ServiceImpl",
+        "target": "sample.newline.ServiceContract",
+        "relation_type": "Implementation",
+        "label": null,
+        "stereotype": null,
+        "source_multiplicity": null,
+        "target_multiplicity": null,
+        "source_role": null,
+        "target_role": null
+      },
+      {
+        "source": "sample.newline.ChildInterface",
+        "target": "sample.newline.BaseInterface",
+        "relation_type": "Inheritance",
+        "label": null,
+        "stereotype": null,
+        "source_multiplicity": null,
+        "target_multiplicity": null,
+        "source_role": null,
+        "target_role": null
+      },
+      {
+        "source": "sample.newline.StartResponsePayload",
+        "target": "sample.newline.ErrorInfo",
+        "relation_type": "Link",
+        "label": null,
+        "stereotype": null,
+        "source_multiplicity": null,
+        "target_multiplicity": null,
+        "source_role": null,
+        "target_role": null
+      },
+      {
+        "source": "sample.newline.ErrorInfo",
+        "target": "sample.newline.StartResponsePayload",
+        "relation_type": "Aggregation",
+        "label": null,
+        "stereotype": null,
+        "source_multiplicity": null,
+        "target_multiplicity": null,
+        "source_role": null,
+        "target_role": null
+      },
+      {
+        "source": "sample.newline.CheckProgrammingDependenciesFlag",
+        "target": "sample.newline.CheckProgrammingDependenciesFlagState",
+        "relation_type": "Association",
+        "label": "uses",
+        "stereotype": null,
+        "source_multiplicity": null,
+        "target_multiplicity": null,
+        "source_role": null,
+        "target_role": null
+      },
+      {
+        "source": "sample.newline.FactoryFunctor",
+        "target": "sample.newline.ServiceImpl",
+        "relation_type": "Association",
+        "label": "creates",
+        "stereotype": null,
+        "source_multiplicity": null,
+        "target_multiplicity": null,
+        "source_role": null,
+        "target_role": null
+      }
+    ],
+    "source_files": [
+      "class_diagram_unsupported_syntax"
+    ],
+    "version": null
+  }
+}
