@@ -221,7 +221,7 @@ _dependability_analysis_test = rule(
             doc = "lobster-ci-report executable for test execution.",
         ),
         "_lobster_sa_template": attr.label(
-            default = Label("//bazel/rules/rules_score/config:lobster_sa_template"),
+            default = Label("//bazel/rules/rules_score/lobster/config:lobster_sa_template"),
             allow_single_file = True,
             doc = "Lobster config template for safety analysis traceability.",
         ),

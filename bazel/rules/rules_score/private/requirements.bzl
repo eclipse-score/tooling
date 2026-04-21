@@ -134,7 +134,7 @@ def feature_requirements(
     _requirements(
         name = name,
         srcs = srcs,
-        lobster_config = "//bazel/rules/rules_score/config:feature_requirement",
+        lobster_config = Label("//bazel/rules/rules_score/lobster/config:feature_requirement"),
         req_kind = "feature",
         visibility = visibility,
     )
@@ -159,7 +159,7 @@ def component_requirements(
     _requirements(
         name = name,
         srcs = srcs,
-        lobster_config = "//bazel/rules/rules_score/config:component_requirement",
+        lobster_config = Label("//bazel/rules/rules_score/lobster/config:component_requirement"),
         req_kind = "component",
         visibility = visibility,
     )

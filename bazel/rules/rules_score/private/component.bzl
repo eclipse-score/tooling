@@ -234,7 +234,7 @@ _component_test = rule(
             doc = "Tool to extract component requirements and generate architecture .lobster items for component traceability",
         ),
         "_lobster_comp_template": attr.label(
-            default = Label("//bazel/rules/rules_score/config:lobster_component_template"),
+            default = Label("//bazel/rules/rules_score/lobster/config:lobster_component_template"),
             allow_single_file = True,
             doc = "Lobster config template for component traceability.",
         ),
