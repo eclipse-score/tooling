@@ -347,12 +347,12 @@ _fmea = rule(
             doc = "lobster-trlc executable used to generate FM and CM lobster files.",
         ),
         "_fm_lobster_config": attr.label(
-            default = Label("//bazel/rules/rules_score/config:failuremodes_config"),
+            default = Label("//bazel/rules/rules_score/lobster/config:failuremodes_config"),
             allow_single_file = True,
             doc = "lobster-trlc YAML config for FailureMode records.",
         ),
         "_cm_lobster_config": attr.label(
-            default = Label("//bazel/rules/rules_score/config:controlmeasures_config"),
+            default = Label("//bazel/rules/rules_score/lobster/config:controlmeasures_config"),
             allow_single_file = True,
             doc = "lobster-trlc YAML config for ControlMeasure records.",
         ),

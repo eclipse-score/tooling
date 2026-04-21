@@ -1031,7 +1031,7 @@ _dependable_element_index = rule(
             doc = "Architecture verifier tool",
         ),
         "_lobster_de_template": attr.label(
-            default = Label("//bazel/rules/rules_score/config:lobster_de_template"),
+            default = Label("//bazel/rules/rules_score/lobster/config:lobster_de_template"),
             allow_single_file = True,
             doc = "Lobster config template for dependable element traceability.",
         ),
