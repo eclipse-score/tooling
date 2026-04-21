@@ -14,7 +14,10 @@ load("@pip_ai_checker//:requirements.bzl", "requirement")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 
 exports_files(
-    ["src/ai_checker/orchestrator.py"],
+    [
+        "ai_checker.bzl",
+        "src/ai_checker/orchestrator.py",
+    ],
     visibility = ["//visibility:public"],
 )
 

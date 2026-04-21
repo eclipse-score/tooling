@@ -72,40 +72,6 @@ py_library(
     ],
 )
 
-# Sphinx build binary with all required dependencies
-py_binary(
-    name = "score_build",
-    srcs = ["src/sphinx_wrapper.py"],
-    data = [
-        "//tools/sphinx:plantuml",
-    ],
-    env = {
-        "SOURCE_DIRECTORY": "",
-        "DATA": "",
-        "ACTION": "check",
-    },
-    main = "src/sphinx_wrapper.py",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":sphinx_module_ext",
-        "@lobster//sphinx_lobster:sphinx_lobster_builder",
-        "@score_docs_as_code//src/extensions/score_metamodel",
-        "@score_tooling//plantuml/sphinx/clickable_plantuml",
-        "@trlc//tools/sphinx/extensions/trlc",
-        requirement("sphinx"),
-        requirement("sphinx_rtd_theme"),
-        requirement("sphinx_needs"),
-        requirement("sphinx_design"),
-        requirement("myst_parser"),
-        requirement("readthedocs_sphinx_ext"),
-        requirement("rst2pdf"),
-        requirement("sphinxcontrib-umlet"),
-        requirement("svglib"),
-        requirement("sphinxcontrib-plantuml"),
-        "@rules_python//python/runfiles",
-    ],
-)
-
 sphinx_module(
     name = "rules_score_doc",
     srcs = glob(
@@ -124,6 +90,9 @@ sphinx_module(
 py_binary(
     name = "raw_build",
     srcs = ["src/sphinx_wrapper.py"],
+    data = [
+        "//tools/sphinx:plantuml",
+    ],
     env = {
         "SOURCE_DIRECTORY": "",
         "DATA": "",
@@ -132,8 +101,9 @@ py_binary(
     main = "src/sphinx_wrapper.py",
     visibility = ["//visibility:public"],
     deps = [
+        ":sphinx_module_ext",
         "@lobster//sphinx_lobster:sphinx_lobster_builder",
-        "@score_docs_as_code//src/extensions/score_metamodel",
+        "@rules_python//python/runfiles",
         "@score_tooling//plantuml/sphinx/clickable_plantuml",
         "@trlc//tools/sphinx/extensions/trlc",
         requirement("sphinx"),
@@ -151,7 +121,7 @@ py_binary(
 
 sphinx_toolchain(
     name = "default_toolchain",
-    sphinx = ":score_build",
+    sphinx = ":raw_build",
 )
 
 toolchain_type(name = "toolchain_type")
