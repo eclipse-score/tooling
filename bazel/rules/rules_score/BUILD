@@ -88,7 +88,7 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":sphinx_module_ext",
-        "//tools/sphinx/extensions/lobster",
+        "@lobster//sphinx_lobster:sphinx_lobster_builder",
         "@score_docs_as_code//src/extensions/score_metamodel",
         "@score_tooling//plantuml/sphinx/clickable_plantuml",
         "@trlc//tools/sphinx/extensions/trlc",
@@ -132,7 +132,7 @@ py_binary(
     main = "src/sphinx_wrapper.py",
     visibility = ["//visibility:public"],
     deps = [
-        "//tools/sphinx/extensions/lobster",
+        "@lobster//sphinx_lobster:sphinx_lobster_builder",
         "@score_docs_as_code//src/extensions/score_metamodel",
         "@score_tooling//plantuml/sphinx/clickable_plantuml",
         "@trlc//tools/sphinx/extensions/trlc",
