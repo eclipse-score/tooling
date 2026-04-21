@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 filegroup(
     name = "puml_parser_component_files",
@@ -40,5 +40,22 @@ rust_library(
         "@crates//:log",
         "@crates//:pest",
         "@crates//:serde",
+    ],
+)
+
+rust_test(
+    name = "component_integration_test",
+    srcs = ["test/component_integration_test.rs"],
+    args = [
+        "--nocapture",
+    ],
+    data = ["//plantuml/parser/integration_test/component_diagram:component_integration_test_files"],
+    proc_macro_deps = [
+    ],
+    deps = [
+        ":puml_parser_component",
+        "//plantuml/parser/integration_test:test_framework",
+        "//plantuml/parser/puml_parser:parser_core",
+        "//plantuml/parser/puml_utils",
     ],
 )

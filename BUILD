@@ -29,6 +29,7 @@ copyright_checker(
         "starpls",
         "tools",
         "plantuml",
+        "lobster_bazel",
 
         # Add other directories/files you want to check
     ],

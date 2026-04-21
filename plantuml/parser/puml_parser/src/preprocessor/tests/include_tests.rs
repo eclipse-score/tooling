@@ -63,6 +63,11 @@ fn test_includesub_with_serveral_subblock() {
 }
 
 #[test]
+fn test_includesub_in_subblock() {
+    run_include_preprocess_case("includesub_in_subblock");
+}
+
+#[test]
 fn test_includesub_with_invalid_suffix() {
     run_include_preprocess_case("invalid_suffix_for_includesub");
 }
@@ -73,8 +78,13 @@ fn test_invalid_nested_subblock() {
 }
 
 #[test]
-fn test_invalid_include_unknow_sub() {
-    run_include_preprocess_case("invalid_include_unknow_sub");
+fn test_invalid_include_label_sub() {
+    run_include_preprocess_case("invalid_include_label_sub");
+}
+
+#[test]
+fn test_invalid_include_number_sub() {
+    run_include_preprocess_case("invalid_include_number_sub");
 }
 
 // --------- test for include_once ---------

@@ -39,6 +39,38 @@ rust_library(
         "--allow=clippy::needless-lifetimes",
     ],
     visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        "@crates//:flatbuffers",
+    ],
+)
+
+flatbuffer_library_public(
+    name = "class_fbs_codegen",
+    srcs = [
+        "//tools/metamodel:schemas",
+    ],
+    outs = [
+        "class_diagram_generated.rs",
+    ],
+    flatc_args = [],
+    language_flag = "--rust",
+    visibility = ["//plantuml/parser:__subpackages__"],
+)
+
+rust_library(
+    name = "class_fbs",
+    srcs = [
+        ":class_fbs_codegen",
+    ],
+    rustc_flags = [
+        "--allow=unused_imports",
+        "--allow=clippy::extra-unused-lifetimes",
+        "--allow=clippy::missing-safety-doc",
+        "--allow=clippy::needless-lifetimes",
+    ],
+    visibility = [
         "//plantuml/parser:__subpackages__",
     ],
     deps = [

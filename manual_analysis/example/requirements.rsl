@@ -1,0 +1,6 @@
+package manual_analysis_example
+
+type Requirement
+{
+  text String
+}

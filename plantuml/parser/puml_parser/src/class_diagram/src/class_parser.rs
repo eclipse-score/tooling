@@ -491,3 +491,111 @@ impl DiagramParser for PumlClassParser {
         Ok(uml_file)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_visibility_none() {
+        let vis = super::parse_visibility(None);
+        assert_eq!(vis, Visibility::Public);
+    }
+
+    #[test]
+    fn test_parse_visibility_unknown_symbol() {
+        let pair = PlantUmlCommonParser::parse(Rule::identifier, "abc")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let vis = super::parse_visibility(Some(pair));
+
+        assert_eq!(vis, Visibility::Public);
+    }
+
+    #[test]
+    fn test_parse_param_unnamed_varargs() {
+        let input = "int...";
+        let pair = PlantUmlCommonParser::parse(Rule::param, input)
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let param = super::parse_param(pair);
+
+        assert_eq!(param.name, None);
+        assert_eq!(param.param_type, "int");
+        assert!(param.varargs);
+    }
+
+    #[test]
+    fn test_parse_file_error() {
+        let mut parser = PumlClassParser;
+
+        let result = parser.parse_file(
+            &std::rc::Rc::new(std::path::PathBuf::from("test.puml")),
+            "invalid syntax !!!",
+            LogLevel::Info,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_attribute_without_name() {
+        let input = r#"@startuml
+            class A {
+                +a
+            }
+            @enduml
+        "#;
+
+        let mut parser = PumlClassParser;
+        let result = parser
+            .parse_file(
+                &std::rc::Rc::new(std::path::PathBuf::from("test.puml")),
+                input,
+                LogLevel::Info,
+            )
+            .unwrap();
+
+        assert!(!result.elements.is_empty());
+    }
+
+    #[test]
+    fn test_parse_relationship_minimal() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "A --> B")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair);
+
+        assert_eq!(rel.left, "A");
+        assert_eq!(rel.right, "B");
+    }
+
+    #[test]
+    fn test_enum_value_all_cases() {
+        // literal
+        let pair = PlantUmlCommonParser::parse(Rule::enum_value, "= 1")
+            .unwrap()
+            .next()
+            .unwrap();
+        match super::parse_enum_value(pair) {
+            EnumValue::Literal(v) => assert_eq!(v, "1"),
+            _ => panic!(),
+        }
+
+        // description
+        let pair = PlantUmlCommonParser::parse(Rule::enum_value, ": ok")
+            .unwrap()
+            .next()
+            .unwrap();
+        match super::parse_enum_value(pair) {
+            EnumValue::Description(v) => assert_eq!(v, "ok"),
+            _ => panic!(),
+        }
+    }
+}

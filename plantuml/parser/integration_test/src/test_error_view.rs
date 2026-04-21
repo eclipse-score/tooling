@@ -157,6 +157,10 @@ impl ErrorView for ProcedureExpandError {
                 .with_field("expected", expected.to_string())
                 .with_field("actual", actual.to_string()),
 
+            ProcedureExpandError::UnknownVariable { name } => {
+                ProjectedError::new("UnknownVariable").with_field("name", name.clone())
+            }
+
             ProcedureExpandError::RecursiveMacro { chain, name } => {
                 let chain_str = chain.join(" -> ");
                 ProjectedError::new("RecursiveMacro")

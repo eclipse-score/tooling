@@ -1,0 +1,11 @@
+@startuml unit_1_class_diagram
+
+namespace unit_1 {
+    class Foo {
+
+        + GetNumber() : uint8_t
+        + SetNumber(value : uint8_t) : void
+    }
+}
+
+@enduml

@@ -32,6 +32,8 @@ pub struct PumlComponentParser;
 // lobster-trace: Tools.ArchitectureModelingComponentHierarchyComponent
 // lobster-trace: Tools.ArchitectureModelingComponentInteract
 impl PumlComponentParser {
+    // Debug-only, excluded to keep coverage focused on parser logic.
+    #[cfg(not(coverage))]
     fn format_parse_tree(pairs: pest::iterators::Pairs<Rule>, indent: usize, output: &mut String) {
         for pair in pairs {
             let indent_str = "  ".repeat(indent);
@@ -107,16 +109,6 @@ impl PumlComponentParser {
                     component.name = Some(Self::extract_interface_name(inner));
                     component.component_type = "interface".to_string();
                 }
-                Rule::default_component => {
-                    let (ctype, name_opt) = Self::parse_default_component(inner)?;
-                    component.component_type = ctype;
-                    component.name = name_opt;
-                }
-                Rule::bracket_component => {
-                    let name_opt = Self::parse_bracket_component(inner)?;
-                    component.component_type = "component".to_string();
-                    component.name = name_opt;
-                }
                 Rule::alias_clause => {
                     component.alias = Self::extract_alias(inner);
                 }
@@ -189,39 +181,29 @@ impl PumlComponentParser {
 
     // Helper methods
     fn extract_component_name(pair: pest::iterators::Pair<Rule>) -> String {
-        for inner in pair.into_inner() {
-            if let Rule::component_old_name = inner.as_rule() {
-                return inner.as_str().to_string();
-            }
-        }
-        String::new()
+        pair.into_inner()
+            .find(|inner| inner.as_rule() == Rule::component_old_name)
+            .map(|inner| inner.as_str().to_string())
+            .unwrap_or_default()
     }
 
     fn extract_interface_name(pair: pest::iterators::Pair<Rule>) -> String {
-        for inner in pair.into_inner() {
-            if let Rule::interface_old_name = inner.as_rule() {
-                return inner.as_str().to_string();
-            }
-        }
-        String::new()
+        pair.into_inner()
+            .find(|inner| inner.as_rule() == Rule::interface_old_name)
+            .map(|inner| inner.as_str().to_string())
+            .unwrap_or_default()
     }
 
     fn extract_alias(pair: pest::iterators::Pair<Rule>) -> Option<String> {
-        for inner in pair.into_inner() {
-            if let Rule::ALIAS_ID = inner.as_rule() {
-                return Some(inner.as_str().to_string());
-            }
-        }
-        None
+        pair.into_inner()
+            .find(|inner| inner.as_rule() == Rule::ALIAS_ID)
+            .map(|inner| inner.as_str().to_string())
     }
 
     fn extract_stereotype(pair: pest::iterators::Pair<Rule>) -> Option<String> {
-        for inner in pair.into_inner() {
-            if let Rule::STEREOTYPE_NAME = inner.as_rule() {
-                return Some(inner.as_str().to_string());
-            }
-        }
-        None
+        pair.into_inner()
+            .find(|inner| inner.as_rule() == Rule::STEREOTYPE_NAME)
+            .map(|inner| inner.as_str().to_string())
     }
 
     fn parse_default_component(
@@ -288,11 +270,8 @@ impl PumlComponentParser {
                         statements.push(stmt);
                     }
                 }
-                Rule::EOL => {
-                    // Skip empty lines
-                }
                 _ => {
-                    // Skip other rules like braces
+                    // Skip empty lines and other rules like braces
                 }
             }
         }
@@ -316,7 +295,8 @@ impl DiagramParser for PumlComponentParser {
         let pairs = PlantUmlCommonParser::parse(Rule::component_start, content)
             .map_err(|e| pest_to_syntax_error(e, path.as_ref().clone(), content))?;
 
-        // Show raw parse tree at debug level
+        // Debug-only, excluded to keep coverage focused on parser logic.
+        #[cfg(not(coverage))]
         if matches!(log_level, LogLevel::Debug | LogLevel::Trace) {
             let mut tree_output = String::new();
 
@@ -335,25 +315,23 @@ impl DiagramParser for PumlComponentParser {
         };
 
         for pair in pairs {
-            if pair.as_rule() == Rule::component_start {
-                for inner_pair in pair.into_inner() {
-                    match inner_pair.as_rule() {
-                        Rule::startuml => {
-                            for start_inner in inner_pair.into_inner() {
-                                if let Rule::puml_name = start_inner.as_rule() {
-                                    document.name = Some(start_inner.as_str().to_string());
-                                }
-                            }
+            for inner_pair in pair.into_inner() {
+                match inner_pair.as_rule() {
+                    Rule::startuml => {
+                        if let Some(start_inner) = inner_pair
+                            .into_inner()
+                            .find(|p| p.as_rule() == Rule::puml_name)
+                        {
+                            document.name = Some(start_inner.as_str().to_string());
                         }
-                        Rule::component_statement => {
-                            if let Ok(stmt) = Self::parse_statement(inner_pair) {
-                                document.statements.push(stmt);
-                            }
+                    }
+                    Rule::component_statement => {
+                        if let Ok(stmt) = Self::parse_statement(inner_pair) {
+                            document.statements.push(stmt);
                         }
-                        Rule::empty_line => {
-                            // Skip empty lines
-                        }
-                        _ => {}
+                    }
+                    _ => {
+                        // Skip empty lines and other rules like enduml
                     }
                 }
             }

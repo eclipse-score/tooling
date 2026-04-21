@@ -1,0 +1,68 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml
+title Manual Analysis Update Flow
+
+participant "bazel run //pkg:name.update" as Bazel
+participant "manual_analysis_update\n(rule wrapper)" as UpdateRule
+participant "manual_analysis_update_runner" as UpdateRunner
+participant "interactive_runner_cli" as CLI
+participant "yaml_schema" as Schema
+participant "_PrefillState" as Prefill
+participant "_SplitPaneUI" as UI
+participant "run_analysis" as Flow
+participant "_execute_step" as Steps
+participant "results.json" as Results
+participant "update_lock" as UpdateLock
+participant "manual.lock" as Lock
+
+activate Bazel
+
+Bazel -> UpdateRule : launch executable with runfiles
+activate UpdateRule
+UpdateRule -> UpdateRule : _collect_inputs()
+UpdateRule -> UpdateRule : _make_manifests()
+UpdateRule --> Bazel : env + symlinked lock/results
+
+autonumber 1
+Bazel -> UpdateRunner ++ : main(argv)
+UpdateRunner -> CLI ++ : main(argv)
+CLI -> Schema ++ : load_analysis(analysis.yaml)
+Schema --> CLI -- : steps, requirements
+CLI -> Prefill ++ : load(results.json)
+Prefill --> CLI -- : prior answers
+CLI -> UI ** : new()
+CLI -> Flow ++ : run_analysis(steps, ui, analysis_path, results_path, prefill)
+
+loop for each step in analysis
+    Flow -> Steps ++ : _execute_step(step, ui, results, prefill)
+    alt action / decision / assertion / repeat
+        Steps -> UI : prompt user input
+    else automated_action
+        Steps -> UI : prompt args + run_command()
+    end
+    Steps --> Flow -- : append step result
+    Flow -> Results : rewrite incremental JSON
+end
+
+Flow --> CLI -- : completed results
+CLI --> UpdateRunner -- : success
+UpdateRunner -> UpdateLock ++ : main([])
+UpdateLock -> UpdateLock : read file + rule manifests
+UpdateLock -> Lock : rewrite committed SHA-256 lock
+UpdateLock --> UpdateRunner -- : success
+UpdateRunner --> Bazel -- : done
+
+deactivate UpdateRule
+@enduml

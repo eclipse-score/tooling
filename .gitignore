@@ -5,5 +5,6 @@
 bazel-*
 external
 .vscode/
+.clwb/
 
 __pycache__

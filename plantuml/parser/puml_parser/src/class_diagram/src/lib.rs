@@ -19,18 +19,3 @@ pub use class_ast::{
     Method, Name, Namespace, Package, Param, Relationship, Visibility,
 };
 pub use class_parser::{ClassError, PumlClassParser};
-
-/// Parse a PlantUML class diagram and return the parsed structure
-/// This is a convenience function for backwards compatibility with tests
-pub fn parse_class_diagram(input: &str) -> Result<ClassUmlFile, Box<dyn std::error::Error>> {
-    use parser_core::DiagramParser;
-    use puml_utils::LogLevel;
-    use std::path::PathBuf;
-    use std::rc::Rc;
-
-    let mut parser = PumlClassParser;
-    let dummy_path = Rc::new(PathBuf::from("<input>"));
-    let document = parser.parse_file(&dummy_path, input, LogLevel::Error)?;
-
-    Ok(document)
-}

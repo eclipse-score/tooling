@@ -1,0 +1,46 @@
+{
+  "relation_absolute_fqn.puml": {
+    "PkgA": {
+      "id": "PkgA",
+      "name": "Package A",
+      "alias": "PkgA",
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": []
+    },
+    "PkgA.ComponentA": {
+      "id": "PkgA.ComponentA",
+      "name": "Component A",
+      "alias": "ComponentA",
+      "parent_id": "PkgA",
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": []
+    },
+    "PkgB": {
+      "id": "PkgB",
+      "name": "Package B",
+      "alias": "PkgB",
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": []
+    },
+    "PkgB.ComponentB": {
+      "id": "PkgB.ComponentB",
+      "name": "Component B",
+      "alias": "ComponentB",
+      "parent_id": "PkgB",
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": [
+        {
+          "target": "PkgA.ComponentA",
+          "annotation": "uses",
+          "relation_type": "None"
+        }
+      ]
+    }
+  }
+}

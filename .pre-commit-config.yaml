@@ -38,6 +38,6 @@ repos:
         entry: cr_checker/tool/pre-commit_wrapper --extensions h hpp c cpp rs rst py sh bzl ini yml yaml BUILD bazel --fix
         # this would be the better language implementation, but struggle with python tooling
         # language: python
-        language: unsupported_script
+        language: script
         minimum_pre_commit_version: 3.2.0
         types_or: [python, yaml, ini, rst, sh, shell, bash, bazel, c, c++, rust]

@@ -1,0 +1,596 @@
+<?plantuml 1.2026.2?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css"
+     data-diagram-type="SEQUENCE" height="904px" preserveAspectRatio="none"
+     style="width:1894px;height:904px;background:#FFFFFF;" version="1.1" viewBox="0 0 1894 904" width="1894px"
+     zoomAndPan="magnify">
+    <title>Manual Analysis Test Flow</title>
+    <defs/>
+    <g>
+        <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+              textLength="183.4553" x="854.4356" y="29.9659">Manual Analysis Test Flow
+        </text>
+        <g>
+            <title>bazel test ..pkg.name</title>
+            <rect fill="#FFFFFF" height="730.5143" style="stroke:#181818;stroke-width:1;" width="10" x="93.4487"
+                  y="108.2038"/>
+        </g>
+        <g>
+            <title>manual_analysis_test</title>
+            <rect fill="#FFFFFF" height="705.8082" style="stroke:#181818;stroke-width:1;" width="10" x="260.4652"
+                  y="131.9098"/>
+        </g>
+        <g>
+            <title>update_lock</title>
+            <rect fill="#FFFFFF" height="108.118" style="stroke:#181818;stroke-width:1;" width="10" x="397.6383"
+                  y="163.6158"/>
+        </g>
+        <g>
+            <title>manual_analysis_test_runner</title>
+            <rect fill="#FFFFFF" height="535.2782" style="stroke:#181818;stroke-width:1;" width="10" x="762.7138"
+                  y="303.4398"/>
+        </g>
+        <g>
+            <title>check_lock</title>
+            <rect fill="#FFFFFF" height="95.118" style="stroke:#181818;stroke-width:1;" width="10" x="1047.788"
+                  y="335.1459"/>
+        </g>
+        <g>
+            <title>check_results</title>
+            <rect fill="#FFFFFF" height="63.412" style="stroke:#181818;stroke-width:1;" width="10" x="1150.8107"
+                  y="461.9699"/>
+        </g>
+        <g>
+            <title>yaml_schema</title>
+            <rect fill="#FFFFFF" height="63.412" style="stroke:#181818;stroke-width:1;" width="10" x="1263.2694"
+                  y="557.088"/>
+        </g>
+        <g>
+            <title>lobster_generator</title>
+            <rect fill="#FFFFFF" height="63.412" style="stroke:#181818;stroke-width:1;" width="10" x="1390.855"
+                  y="652.206"/>
+        </g>
+        <rect fill="none" height="100.0999" style="stroke:#000000;stroke-width:1.5;" width="870.0255" x="10"
+              y="730.6181"/>
+        <g class="participant-lifeline" data-entity-uid="part1" data-qualified-name="Bazel" id="part1-lifeline">
+            <g>
+                <title>bazel test ..pkg.name</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="94.4487" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="98" x2="98" y1="98.2038"
+                      y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part2" data-qualified-name="TestRule" id="part2-lifeline">
+            <g>
+                <title>manual_analysis_test</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="261.4652" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="264.8974" x2="264.8974"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part3" data-qualified-name="UpdateLock" id="part3-lifeline">
+            <g>
+                <title>update_lock</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="398.6383" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="402.0535" x2="402.0535"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part4" data-qualified-name="ComputedLock" id="part4-lifeline">
+            <g>
+                <title>computed_lock.txt</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="583.9714" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="587.5406" x2="587.5406"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part5" data-qualified-name="TestRunner" id="part5-lifeline">
+            <g>
+                <title>manual_analysis_test_runner</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="763.7138" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="767.4022" x2="767.4022"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part6" data-qualified-name="CheckLock" id="part6-lifeline">
+            <g>
+                <title>check_lock</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="1048.788" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1051.8092" x2="1051.8092"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part7" data-qualified-name="CheckResults" id="part7-lifeline">
+            <g>
+                <title>check_results</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="1151.8107" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1155.7669" x2="1155.7669"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part8" data-qualified-name="Schema" id="part8-lifeline">
+            <g>
+                <title>yaml_schema</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="1264.2694" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1267.8545" x2="1267.8545"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part9" data-qualified-name="Lobster" id="part9-lifeline">
+            <g>
+                <title>lobster_generator</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="1391.855" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1395.6842" x2="1395.6842"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part10" data-qualified-name="Lock" id="part10-lifeline">
+            <g>
+                <title>manual.lock</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="1514.8976" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1518.0258" x2="1518.0258"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part11" data-qualified-name="Results" id="part11-lifeline">
+            <g>
+                <title>results.json</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="1616.5693" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1619.7694" x2="1619.7694"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part12" data-qualified-name="Analysis" id="part12-lifeline">
+            <g>
+                <title>analysis.yaml</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="1722.161" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1725.3692" x2="1725.3692"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant-lifeline" data-entity-uid="part13" data-qualified-name="Output" id="part13-lifeline">
+            <g>
+                <title>name.lobster</title>
+                <rect fill="#000000" fill-opacity="0.00000" height="749.5143" width="8" x="1833.6397" y="98.2038"/>
+                <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5,5;" x1="1836.9528" x2="1836.9528"
+                      y1="98.2038" y2="847.718"/>
+            </g>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part1" data-qualified-name="Bazel" id="part1-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="156.8974" x="20" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="142.8974"
+                  x="27" y="86.1018">bazel test //pkg:name
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part1" data-qualified-name="Bazel" id="part1-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="156.8974" x="20" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="142.8974"
+                  x="27" y="868.6839">bazel test //pkg:name
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part2" data-qualified-name="TestRule" id="part2-head">
+            <rect fill="#E2E2F0" height="52.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="157.1354" x="186.8974" y="45.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="138.9915"
+                  x="195.9694" y="67.0339">manual_analysis_test
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="143.1354"
+                  x="193.8974" y="86.1018">(rule implementation)
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part2" data-qualified-name="TestRule" id="part2-tail">
+            <rect fill="#E2E2F0" height="52.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="157.1354" x="186.8974" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="138.9915"
+                  x="195.9694" y="868.6839">manual_analysis_test
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="143.1354"
+                  x="193.8974" y="887.7519">(rule implementation)
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part3" data-qualified-name="UpdateLock"
+           id="part3-head">
+            <rect fill="#E2E2F0" height="52.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="93.1697" x="356.0535" y="45.0679"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.1697"
+                  x="363.0535" y="67.0339">update_lock
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="48.7618"
+                  x="378.2574" y="86.1018">(action)
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part3" data-qualified-name="UpdateLock"
+           id="part3-tail">
+            <rect fill="#E2E2F0" height="52.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="93.1697" x="356.0535" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.1697"
+                  x="363.0535" y="868.6839">update_lock
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="48.7618"
+                  x="378.2574" y="887.7519">(action)
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part4" data-qualified-name="ComputedLock"
+           id="part4-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="134.8615" x="520.5406" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="120.8615"
+                  x="527.5406" y="86.1018">computed_lock.txt
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part4" data-qualified-name="ComputedLock"
+           id="part4-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="134.8615" x="520.5406" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="120.8615"
+                  x="527.5406" y="868.6839">computed_lock.txt
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part5" data-qualified-name="TestRunner"
+           id="part5-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="204.6233" x="665.4022" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="190.6233"
+                  x="672.4022" y="86.1018">manual_analysis_test_runner
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part5" data-qualified-name="TestRunner"
+           id="part5-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="204.6233" x="665.4022" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="190.6233"
+                  x="672.4022" y="868.6839">manual_analysis_test_runner
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part6" data-qualified-name="CheckLock" id="part6-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="83.9577" x="1010.8092" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69.9577"
+                  x="1017.8092" y="86.1018">check_lock
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part6" data-qualified-name="CheckLock" id="part6-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="83.9577" x="1010.8092" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69.9577"
+                  x="1017.8092" y="868.6839">check_lock
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part7" data-qualified-name="CheckResults"
+           id="part7-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="102.0876" x="1104.7669" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88.0876"
+                  x="1111.7669" y="86.1018">check_results
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part7" data-qualified-name="CheckResults"
+           id="part7-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="102.0876" x="1104.7669" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88.0876"
+                  x="1111.7669" y="868.6839">check_results
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part8" data-qualified-name="Schema" id="part8-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="102.8297" x="1216.8545" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88.8297"
+                  x="1223.8545" y="86.1018">yaml_schema
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part8" data-qualified-name="Schema" id="part8-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="102.8297" x="1216.8545" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88.8297"
+                  x="1223.8545" y="868.6839">yaml_schema
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part9" data-qualified-name="Lobster" id="part9-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="132.3416" x="1329.6842" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118.3416"
+                  x="1336.6842" y="86.1018">lobster_generator
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part9" data-qualified-name="Lobster" id="part9-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="132.3416" x="1329.6842" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118.3416"
+                  x="1336.6842" y="868.6839">lobster_generator
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part10" data-qualified-name="Lock" id="part10-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="93.7437" x="1472.0258" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.7437"
+                  x="1479.0258" y="86.1018">manual.lock
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part10" data-qualified-name="Lock" id="part10-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="93.7437" x="1472.0258" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.7437"
+                  x="1479.0258" y="868.6839">manual.lock
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part11" data-qualified-name="Results" id="part11-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="89.5997" x="1575.7694" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="75.5997"
+                  x="1582.7694" y="86.1018">results.json
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part11" data-qualified-name="Results" id="part11-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="89.5997" x="1575.7694" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="75.5997"
+                  x="1582.7694" y="868.6839">results.json
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part12" data-qualified-name="Analysis"
+           id="part12-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="101.5837" x="1675.3692" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="87.5837"
+                  x="1682.3692" y="86.1018">analysis.yaml
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part12" data-qualified-name="Analysis"
+           id="part12-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="101.5837" x="1675.3692" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="87.5837"
+                  x="1682.3692" y="868.6839">analysis.yaml
+            </text>
+        </g>
+        <g class="participant participant-head" data-entity-uid="part13" data-qualified-name="Output" id="part13-head">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="101.3737" x="1786.9528" y="64.1358"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="87.3737"
+                  x="1793.9528" y="86.1018">name.lobster
+            </text>
+        </g>
+        <g class="participant participant-tail" data-entity-uid="part13" data-qualified-name="Output" id="part13-tail">
+            <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="101.3737" x="1786.9528" y="846.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="87.3737"
+                  x="1793.9528" y="868.6839">name.lobster
+            </text>
+        </g>
+        <g>
+            <title>bazel test ..pkg.name</title>
+            <rect fill="#FFFFFF" height="730.5143" style="stroke:#181818;stroke-width:1;" width="10" x="93.4487"
+                  y="108.2038"/>
+        </g>
+        <g>
+            <title>manual_analysis_test</title>
+            <rect fill="#FFFFFF" height="705.8082" style="stroke:#181818;stroke-width:1;" width="10" x="260.4652"
+                  y="131.9098"/>
+        </g>
+        <g>
+            <title>update_lock</title>
+            <rect fill="#FFFFFF" height="108.118" style="stroke:#181818;stroke-width:1;" width="10" x="397.6383"
+                  y="163.6158"/>
+        </g>
+        <g>
+            <title>manual_analysis_test_runner</title>
+            <rect fill="#FFFFFF" height="535.2782" style="stroke:#181818;stroke-width:1;" width="10" x="762.7138"
+                  y="303.4398"/>
+        </g>
+        <g>
+            <title>check_lock</title>
+            <rect fill="#FFFFFF" height="95.118" style="stroke:#181818;stroke-width:1;" width="10" x="1047.788"
+                  y="335.1459"/>
+        </g>
+        <g>
+            <title>check_results</title>
+            <rect fill="#FFFFFF" height="63.412" style="stroke:#181818;stroke-width:1;" width="10" x="1150.8107"
+                  y="461.9699"/>
+        </g>
+        <g>
+            <title>yaml_schema</title>
+            <rect fill="#FFFFFF" height="63.412" style="stroke:#181818;stroke-width:1;" width="10" x="1263.2694"
+                  y="557.088"/>
+        </g>
+        <g>
+            <title>lobster_generator</title>
+            <rect fill="#FFFFFF" height="63.412" style="stroke:#181818;stroke-width:1;" width="10" x="1390.855"
+                  y="652.206"/>
+        </g>
+        <g class="message" data-entity-1="part1" data-entity-2="part2" id="msg1">
+            <polygon fill="#181818" points="248.4652,127.9098,258.4652,131.9098,248.4652,135.9098,252.4652,131.9098"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="103.4487" x2="254.4652" y1="131.9098" y2="131.9098"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="114.9201"
+                  x="110.4487" y="126.1008">execute test target
+            </text>
+        </g>
+        <g class="message" data-entity-1="part2" data-entity-2="part3" id="msg2">
+            <polygon fill="#181818" points="385.6383,159.6158,395.6383,163.6158,385.6383,167.6158,389.6383,163.6158"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="270.4652" x2="391.6383" y1="163.6158" y2="163.6158"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="108.1731"
+                  x="277.4652" y="157.8068">ctx.actions.run(...)
+            </text>
+        </g>
+        <g class="message" data-entity-1="part3" data-entity-2="part3" id="msg3">
+            <line style="stroke:#181818;stroke-width:1;" x1="407.6383" x2="449.6383" y1="195.3218" y2="195.3218"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="449.6383" x2="449.6383" y1="195.3218" y2="208.3218"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="408.6383" x2="449.6383" y1="208.3218" y2="208.3218"/>
+            <polygon fill="#181818" points="418.6383,204.3218,408.6383,208.3218,418.6383,212.3218,414.6383,208.3218"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="151.3331"
+                  x="414.6383" y="189.5128">read file + rule manifests
+            </text>
+        </g>
+        <g class="message" data-entity-1="part3" data-entity-2="part4" id="msg4">
+            <polygon fill="#181818" points="575.9714,236.0278,585.9714,240.0278,575.9714,244.0278,579.9714,240.0278"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="407.6383" x2="581.9714" y1="240.0278" y2="240.0278"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="114.4131"
+                  x="414.6383" y="234.2188">write sandbox lock
+            </text>
+        </g>
+        <g class="message" data-entity-1="part3" data-entity-2="part2" id="msg5">
+            <polygon fill="#181818" points="281.4652,267.7338,271.4652,271.7338,281.4652,275.7338,277.4652,271.7338"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="275.4652" x2="401.6383" y1="271.7338"
+                  y2="271.7338"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="46.527"
+                  x="287.4652" y="265.9248">success
+            </text>
+        </g>
+        <g class="message" data-entity-1="part2" data-entity-2="part5" id="msg6">
+            <polygon fill="#181818" points="750.7138,299.4398,760.7138,303.4398,750.7138,307.4398,754.7138,303.4398"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="270.4652" x2="756.7138" y1="303.4398" y2="303.4398"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="194.3242"
+                  x="277.4652" y="297.6308">ctx.actions.run / test executable
+            </text>
+        </g>
+        <g class="message" data-entity-1="part5" data-entity-2="part6" id="msg7">
+            <polygon fill="#181818" points="1035.788,331.1459,1045.788,335.1459,1035.788,339.1459,1039.788,335.1459"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="772.7138" x2="1041.788" y1="335.1459" y2="335.1459"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="256.0742"
+                  x="779.7138" y="329.3369">evaluate_lock_files(computed, committed)
+            </text>
+        </g>
+        <g class="message" data-entity-1="part6" data-entity-2="part4" id="msg8">
+            <polygon fill="#181818" points="598.9714,362.8519,588.9714,366.8519,598.9714,370.8519,594.9714,366.8519"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="592.9714" x2="1046.788" y1="366.8519" y2="366.8519"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="27.989"
+                  x="604.9714" y="361.0429">read
+            </text>
+        </g>
+        <g class="message" data-entity-1="part6" data-entity-2="part10" id="msg9">
+            <polygon fill="#181818" points="1506.8976,394.5579,1516.8976,398.5579,1506.8976,402.5579,1510.8976,398.5579"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1057.788" x2="1512.8976" y1="398.5579" y2="398.5579"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="27.989"
+                  x="1064.788" y="392.7489">read
+            </text>
+        </g>
+        <g class="message" data-entity-1="part6" data-entity-2="part5" id="msg10">
+            <polygon fill="#181818" points="783.7138,426.2639,773.7138,430.2639,783.7138,434.2639,779.7138,430.2639"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="777.7138" x2="1051.788" y1="430.2639"
+                  y2="430.2639"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="113.3211"
+                  x="789.7138" y="424.4549">lock_ok, lock_error
+            </text>
+        </g>
+        <g class="message" data-entity-1="part5" data-entity-2="part7" id="msg11">
+            <polygon fill="#181818" points="1138.8107,457.9699,1148.8107,461.9699,1138.8107,465.9699,1142.8107,461.9699"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="772.7138" x2="1144.8107" y1="461.9699" y2="461.9699"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="201.2272"
+                  x="779.7138" y="456.1609">evaluate_results_file(results.json)
+            </text>
+        </g>
+        <g class="message" data-entity-1="part7" data-entity-2="part11" id="msg12">
+            <polygon fill="#181818" points="1608.5693,489.6759,1618.5693,493.6759,1608.5693,497.6759,1612.5693,493.6759"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1160.8107" x2="1614.5693" y1="493.6759" y2="493.6759"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="117.6501"
+                  x="1167.8107" y="487.8669">read final assertion
+            </text>
+        </g>
+        <g class="message" data-entity-1="part7" data-entity-2="part5" id="msg13">
+            <polygon fill="#181818" points="783.7138,521.382,773.7138,525.382,783.7138,529.382,779.7138,525.382"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="777.7138" x2="1154.8107" y1="525.382"
+                  y2="525.382"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="146.9911"
+                  x="789.7138" y="519.573">results_ok, results_error
+            </text>
+        </g>
+        <g class="message" data-entity-1="part5" data-entity-2="part8" id="msg14">
+            <polygon fill="#181818" points="1251.2694,553.088,1261.2694,557.088,1251.2694,561.088,1255.2694,557.088"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="772.7138" x2="1257.2694" y1="557.088" y2="557.088"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="169.8191"
+                  x="779.7138" y="551.279">load_analysis(analysis.yaml)
+            </text>
+        </g>
+        <g class="message" data-entity-1="part8" data-entity-2="part12" id="msg15">
+            <polygon fill="#181818" points="1714.161,584.794,1724.161,588.794,1714.161,592.794,1718.161,588.794"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1273.2694" x2="1720.161" y1="588.794" y2="588.794"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="167.4921"
+                  x="1280.2694" y="582.985">parse steps + requirements
+            </text>
+        </g>
+        <g class="message" data-entity-1="part8" data-entity-2="part5" id="msg16">
+            <polygon fill="#181818" points="783.7138,616.5,773.7138,620.5,783.7138,624.5,779.7138,620.5"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="777.7138" x2="1267.2694" y1="620.5"
+                  y2="620.5"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="122.5641"
+                  x="789.7138" y="614.691">steps, requirements
+            </text>
+        </g>
+        <g class="message" data-entity-1="part5" data-entity-2="part9" id="msg17">
+            <polygon fill="#181818" points="1378.855,648.206,1388.855,652.206,1378.855,656.206,1382.855,652.206"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="772.7138" x2="1384.855" y1="652.206" y2="652.206"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="122.1091"
+                  x="779.7138" y="646.397">write_lobster_file(...)
+            </text>
+        </g>
+        <g class="message" data-entity-1="part9" data-entity-2="part13" id="msg18">
+            <polygon fill="#181818" points="1825.6397,679.912,1835.6397,683.912,1825.6397,687.912,1829.6397,683.912"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;" x1="1400.855" x2="1831.6397" y1="683.912" y2="683.912"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="120.1071"
+                  x="1407.855" y="678.103">emit LOBSTER JSON
+            </text>
+        </g>
+        <g class="message" data-entity-1="part9" data-entity-2="part5" id="msg19">
+            <polygon fill="#181818" points="783.7138,711.6181,773.7138,715.6181,783.7138,719.6181,779.7138,715.6181"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="777.7138" x2="1394.855" y1="715.6181"
+                  y2="715.6181"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="46.527"
+                  x="789.7138" y="709.8091">success
+            </text>
+        </g>
+        <path d="M10,730.6181 L72.459,730.6181 L72.459,740.3241 L62.459,750.3241 L10,750.3241 L10,730.6181"
+              fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/>
+        <rect fill="none" height="100.0999" style="stroke:#000000;stroke-width:1.5;" width="870.0255" x="10"
+              y="730.6181"/>
+        <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing"
+              textLength="17.459" x="25" y="745.5151">alt
+        </text>
+        <text fill="#000000" font-family="sans-serif" font-size="11" font-weight="bold" lengthAdjust="spacing"
+              textLength="153.8779" x="87.459" y="744.377">[lock or results check failed]
+        </text>
+        <g class="message" data-entity-1="part5" data-entity-2="part1" id="msg20">
+            <polygon fill="#181818" points="114.4487,770.0301,104.4487,774.0301,114.4487,778.0301,110.4487,774.0301"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="108.4487" x2="761.7138" y1="774.0301"
+                  y2="774.0301"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="80.4311"
+                  x="120.4487" y="768.2211">exit non-zero
+            </text>
+        </g>
+        <line style="stroke:#000000;stroke-width:1;stroke-dasharray:2,2;" x1="10" x2="880.0255" y1="783.0301"
+              y2="783.0301"/>
+        <text fill="#000000" font-family="sans-serif" font-size="11" font-weight="bold" lengthAdjust="spacing"
+              textLength="85.4694" x="15" y="794.789">[checks passed]
+        </text>
+        <g class="message" data-entity-1="part5" data-entity-2="part1" id="msg21">
+            <polygon fill="#181818" points="114.4487,818.718,104.4487,822.718,114.4487,826.718,110.4487,822.718"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <line style="stroke:#181818;stroke-width:1;stroke-dasharray:2,2;" x1="108.4487" x2="761.7138" y1="822.718"
+                  y2="822.718"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="52.312"
+                  x="120.4487" y="816.909">exit zero
+            </text>
+        </g>
+        <?plantuml-src XLJ1Rjim3BthAuYU4hHnxpaKM8VkC7GBa7Qt0OPYivaNMV8akKtxzQCeouuI3yiXaANto2VoKRxn2k6RrBrKy4bBzUuQ1y_eF7nHvas8JbhVL4qdjOUhdVn01JwStjvsX_rQonQlG3gu3oSvkEMWfHo2be7sKoziJmcRjbFOelRIDqOlEKH8kgN3F4hVrT9ZgKnr8BAi9lmFFdcaWvnHcRRhFTRCAVpHC_hpi7k9dzDPsbvhj2UwmkTPdbzO7JX9J10-PzGmogBhbNSJS1itSkoxR5NfYD5AHZxnCiSeitCURRb74YIzYHeVu-xSnOfHuQMuGLRnsndDa5bPgJ95qCUmP9GS5ynG3FeOjkazrLo8qBLNwjNW4lw7rTtOSLW37h6YzaHlUMdtw2VQw0mnCeWzzH-khob4vOz5z8Shg7sBeYYMuWIKKzPWKTRmqb2mQs1JKhsQ5qhWpbYdrY7Ucsr8avEwtfaZXEfc-DDxhLQ4TtrLeNEv-CbKi-BXDbOYbaNkwEudZA0fkItIyLMgFir96Ixb5caERe1MRUDfkHGJx_9YeI0vu1y7kNw-9ESrXvkuG6kD5NEI1uETgHvyoC8NfwOS12SMHKdBiNzaHVAQGnkATmQV4PfI1QrfFIit3byKgeoinmTYaSt3KWn0eeplvnfeC1oPn6FdWhtmJzzOVl3SY9yHn_YR77ucQvZqg8kjMAOdWQl7hayWmiSP3CKc2y3Zvlxf-M4BNvystoVKd99aMgayznICJVK2VjFWHLA-MW3zClPT77CUQagfZLvze3K25LM4gOxAGntxFpVoT2r4ZHUlmLy0?>
+    </g>
+</svg>

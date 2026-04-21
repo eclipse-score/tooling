@@ -73,3 +73,23 @@ fn test_relation_fqn() {
 fn test_relation_relative_name() {
     run_component_resolver_case("relation_relative_name");
 }
+
+#[test]
+fn test_relation_simple_name_alias() {
+    run_component_resolver_case("relation_simple_name_alias");
+}
+
+#[test]
+fn test_relation_absolute_fqn() {
+    run_component_resolver_case("relation_absolute_fqn");
+}
+
+#[test]
+fn test_invalid_unresolved_reference() {
+    run_component_resolver_case("invalid_unresolved_reference");
+}
+
+#[test]
+fn test_invalid_duplicate_component() {
+    run_component_resolver_case("invalid_duplicate_component");
+}

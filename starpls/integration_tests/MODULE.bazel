@@ -46,4 +46,18 @@ local_path_override(
     path = "../../",
 )
 
+bazel_dep(name = "trlc", version = "0.0.0")
+git_override(
+    module_name = "trlc",
+    commit = "1872957ae981ae632a0ec6eafb5b8d3aa44bdb86",
+    remote = "https://github.com/bmw-software-engineering/trlc.git",
+)
+
+bazel_dep(name = "lobster", version = "0.0.0")
+git_override(
+    module_name = "lobster",
+    commit = "94ed5961ca28ee1b840cd8a938138c17ae4da671",
+    remote = "https://github.com/bmw-software-engineering/lobster.git",
+)
+
 # end Integration Tests

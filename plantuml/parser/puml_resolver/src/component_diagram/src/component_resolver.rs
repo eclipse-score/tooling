@@ -20,15 +20,10 @@ use crate::component_logic::{
 use component_parser::{CompPumlDocument, Component, Statement};
 use resolver_traits::DiagramResolver;
 
+#[derive(Default)]
 pub struct ComponentResolver {
     pub scope: Vec<String>,                          // component id stack
     pub components: HashMap<String, LogicComponent>, // FQN -> LogicComponent
-}
-
-impl Default for ComponentResolver {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl ComponentResolver {

@@ -43,6 +43,9 @@ pub enum ProcedureExpandError {
         actual: usize,
     },
 
+    #[error("variable not defined: {name}")]
+    UnknownVariable { name: String },
+
     #[error("recursive macro detected: {chain:?} -> {name}")]
     RecursiveMacro { chain: Vec<String>, name: String },
 
@@ -136,27 +139,12 @@ impl ProcedureExpander {
             });
         }
 
-        let proc_opt = self.procedures.get(&call.name);
-        let proc = if call.name.starts_with('$') {
-            proc_opt.ok_or_else(|| ProcedureExpandError::MacroNotDefined(call.name.clone()))?
-        } else if stack.is_empty() {
-            proc_opt.ok_or_else(|| ProcedureExpandError::MacroNotDefined(call.name.clone()))?
-        } else if let Some(p) = proc_opt {
-            p
-        } else {
-            // Not found, Keep the original text, including parameters
-            let args_text = call
-                .args
-                .iter()
-                .map(|arg| match arg {
-                    Arg::Variable(v) => format!("${}", v),
-                    Arg::String(s) => format!("\"{}\"", s),
-                    Arg::Number(n) => n.to_string(),
-                    Arg::Identifier(id) => id.clone(),
-                })
-                .collect::<Vec<_>>()
-                .join(", ");
-            return Ok(format!("{}({})\n", call.name, args_text));
+        let proc = match self.resolve_proc(call, stack)? {
+            Some(proc) => proc,
+            None => {
+                // Not found: keep the call text, but substitute any known $variables in arguments.
+                return Ok(self.render_unknown_call(call, parent_params));
+            }
         };
 
         if proc.params.len() != call.args.len() {
@@ -166,12 +154,81 @@ impl ProcedureExpander {
                 actual: call.args.len(),
             });
         }
-        stack.push(call.name.clone());
 
+        stack.push(call.name.clone());
+        let mut new_params = self.build_params(proc, call, parent_params)?;
+        let result = self.expand_body(&proc.body, &mut new_params, stack, depth + 1)?;
+        stack.pop();
+
+        Ok(result)
+    }
+
+    fn resolve_proc(
+        &self,
+        call: &MacroCallDef,
+        stack: &[String],
+    ) -> Result<Option<&ProcedureDef>, ProcedureExpandError> {
+        let proc_opt = self.procedures.get(&call.name);
+        if call.name.starts_with('$') {
+            return proc_opt
+                .ok_or_else(|| ProcedureExpandError::MacroNotDefined(call.name.clone()))
+                .map(Some);
+        }
+
+        if stack.is_empty() {
+            return proc_opt
+                .ok_or_else(|| ProcedureExpandError::MacroNotDefined(call.name.clone()))
+                .map(Some);
+        }
+
+        Ok(proc_opt)
+    }
+
+    // Literal render for unresolved non-$ calls inside a macro body (stack non-empty).
+    fn render_unknown_call(
+        &self,
+        call: &MacroCallDef,
+        parent_params: &HashMap<String, String>,
+    ) -> String {
+        let args_text = call
+            .args
+            .iter()
+            .map(|arg| match arg {
+                Arg::Variable(v) => parent_params
+                    .get(v)
+                    .cloned()
+                    .unwrap_or_else(|| v.to_string()),
+                Arg::String(s) => {
+                    if s.starts_with('$') {
+                        parent_params
+                            .get(s)
+                            .map(|value| format!("\"{}\"", value))
+                            .unwrap_or_else(|| format!("\"{}\"", s))
+                    } else {
+                        format!("\"{}\"", s)
+                    }
+                }
+                Arg::Number(n) => n.to_string(),
+                Arg::Identifier(id) => id.clone(),
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("{}({})\n", call.name, args_text)
+    }
+
+    fn build_params(
+        &self,
+        proc: &ProcedureDef,
+        call: &MacroCallDef,
+        parent_params: &HashMap<String, String>,
+    ) -> Result<HashMap<String, String>, ProcedureExpandError> {
         let mut new_params = HashMap::new();
         for (param, arg) in proc.params.iter().zip(&call.args) {
             let value = match arg {
-                Arg::Variable(v) => parent_params.get(v).cloned().unwrap_or(v.clone()),
+                Arg::Variable(v) => parent_params
+                    .get(v)
+                    .cloned()
+                    .ok_or_else(|| ProcedureExpandError::UnknownVariable { name: v.clone() })?,
                 Arg::String(s) => s.clone(),
                 Arg::Number(n) => n.to_string(),
                 Arg::Identifier(id) => id.clone(),
@@ -179,10 +236,7 @@ impl ProcedureExpander {
             new_params.insert(param.clone(), value);
         }
 
-        let result = self.expand_body(&proc.body, &mut new_params, stack, depth + 1)?;
-        stack.pop();
-
-        Ok(result)
+        Ok(new_params)
     }
 
     fn expand_body(

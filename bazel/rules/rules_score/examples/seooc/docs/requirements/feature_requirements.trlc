@@ -1,0 +1,48 @@
+/********************************************************************************
+ * Copyright (c) 2025 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package SampleSEooC
+
+import ScoreReq
+
+///////////////////////////////
+// Feature Requirements
+// Integration level requirements derived from Assumed System Requirements
+///////////////////////////////
+
+ScoreReq.FeatReq FEAT_001 {
+    description = "The component shall provide a numeric value management interface that returns a `uint8_t` value on every read access"
+    safety = ScoreReq.Asil.B
+    derived_from = [SampleSEooC.ASR_SAMPLE_001@1]
+    version = 1
+}
+
+ScoreReq.FeatReq FEAT_002 {
+    description = "The component shall ensure that the numeric value management interface is not extensible by code outside the component boundary"
+    safety = ScoreReq.Asil.B
+    derived_from = [SampleSEooC.ASR_SAMPLE_001@1]
+    version = 1
+}
+
+ScoreReq.FeatReq FEAT_003 {
+    description = "The component shall provide a validation interface that accepts a numeric value manager as its input and returns a boolean result"
+    safety = ScoreReq.Asil.B
+    derived_from = [SampleSEooC.ASR_SAMPLE_002@1]
+    version = 1
+}
+
+ScoreReq.FeatReq FEAT_004 {
+    description = "The component shall ensure that the validation interface takes exclusive ownership of the provided numeric value manager for the duration of its lifetime"
+    safety = ScoreReq.Asil.B
+    derived_from = [SampleSEooC.ASR_SAMPLE_002@1]
+    version = 1
+}

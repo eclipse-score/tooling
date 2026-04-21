@@ -1,0 +1,140 @@
+@startuml
+
+class RequirementAnalysis <<BaseModel>> {
+  +requirement_id: str
+  +description: str
+  +findings: List[str]
+  +suggestions: List[str]
+  +score: float
+}
+
+class AnalysisResults <<BaseModel>> {
+  +analyses: List[RequirementAnalysis]
+}
+
+class AnalysisCache {
+  -_cache_dir: Path
+  +__init__(cache_dir)
+  +get(cache_hash): Optional[AnalysisResults]
+  +set(cache_hash, results): None
+  +is_enabled(): bool
+}
+
+class AIChecker {
+  -_model_name: str
+  -_cache: AnalysisCache
+  -_batch_size: int
+  -_max_concurrent_requests: int
+  -_max_batch_chars: int
+  -_semaphore: asyncio.Semaphore
+  +__init__(model_name, cache_dir, debug_log, batch_size, max_concurrent_requests, max_batch_chars)
+  +<<async>> analyze(artefacts, guidelines_content, chat_model): AnalysisResults
+  -_generate_cache_key(artefacts, guidelines_content): str
+  -_format_artefacts_for_analysis(artefacts): str
+  -_create_batches(artefacts): List[Dict]
+  -<<async>> _analyze_batch_async(batch_number, artefacts, guidelines_content, chat_model): List[RequirementAnalysis]
+}
+
+class ChatCopilot <<BaseChatModel>> {
+  +model: str
+  +timeout: float
+  -_bound_tools: list
+  -_tool_choice: Optional[str]
+  +_generate(messages, stop, run_manager, **kwargs): ChatResult
+  +_agenerate(messages, stop, run_manager, **kwargs): ChatResult
+  +bind_tools(tools, **kwargs): Runnable
+  +with_structured_output(schema, **kwargs): Runnable
+}
+
+interface ArtefactExtractor <<interface>> {
+  {abstract} +extract(): Dict[str, Dict[str, Any]]
+}
+
+class RequirementExtractor {
+  -input_directory: str
+  -dependency_directories: Optional[List[str]]
+  -symbols: Optional[Symbol_Table]
+  +__init__(input_directory, dependency_directories)
+  +extract(): Dict[str, Dict[str, Any]]
+  +parse_trlc_files(): Symbol_Table
+  +extract_requirements_data(): List[Dict[str, Any]]
+  +extract_field_value(obj, field_name): Optional[Any]
+}
+
+class AnalysisOrchestrator {
+  -ai_checker: AIChecker
+  -artefact_extractor: ArtefactExtractor
+  -guidelines_reader: GuidelinesReader
+  -_chat_model: BaseChatModel
+  -model_name: str
+  -guidelines_path: str
+  -guidelines_content: str
+  -_custom_ai_model: Optional[str]
+  +__init__(model_name, guidelines_path, cache_dir, debug_log, batch_size, custom_ai_model)
+  +analyze_directory(input_dir, dependency_dirs): AnalysisResults
+  +format_and_output(analysis_results, output_file, html_file, guidelines_output_dir): None
+}
+
+class GuidelinesReader {
+  -guidelines_dir: str
+  -guidelines: Dict[str, str]
+  +__init__(guidelines_dir)
+  +get_guideline(name): str
+  +get_all_guidelines(): Dict[str, str]
+  -_load_all_guidelines(): None
+  -_read_file(file_path): str
+}
+
+class ResultFormatter {
+  -results: AnalysisResults
+  -model_name: str
+  -guidelines_reader: Optional[GuidelinesReader]
+  -guidelines_output_dir: Optional[str]
+  -original_requirements: Optional[Dict]
+  -git_hash: str
+  -timestamp: str
+  +__init__(analysis_results, model_name, guidelines_reader, guidelines_output_dir, original_requirements)
+  +output(file_path): None
+  -_print_to_stdout(): None
+  -_write_json(path): None
+  -_write_html(path): None
+  -_generate_html_report(): str
+  -_generate_guideline_pages(main_report_path): None
+  {static} -_get_git_hash(): str
+  {static} -_get_timestamp(): str
+}
+
+AnalysisResults o-- RequirementAnalysis
+AnalysisCache ..> AnalysisResults
+AIChecker o-- AnalysisCache
+AIChecker ..> AnalysisResults
+ArtefactExtractor <|.. RequirementExtractor
+AnalysisOrchestrator o-- AIChecker
+AnalysisOrchestrator o-- GuidelinesReader
+AnalysisOrchestrator o-- ArtefactExtractor
+AnalysisOrchestrator --> ChatCopilot: creates (default)
+AnalysisOrchestrator ..> AnalysisResults
+ResultFormatter ..> AnalysisResults
+ResultFormatter o-- "optional" GuidelinesReader
+
+note right of AnalysisOrchestrator
+  Default: creates ChatCopilot.
+  Custom: loads ai_model.py
+  at runtime for alternative
+  AI model implementations.
+end note
+
+note right of ChatCopilot
+  LangChain BaseChatModel wrapper
+  for the GitHub Copilot SDK.
+  Uses Copilot CLI (Node.js binary)
+  for API communication.
+end note
+
+note right of ArtefactExtractor
+  Interface allows plugging
+  different extractors
+  (TRLC, code, etc.)
+end note
+
+@enduml

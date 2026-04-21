@@ -35,6 +35,35 @@ bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2")
 bazel_dep(name = "flatbuffers", version = "25.9.23")
 
 ###############################################################################
+# CC Toolchain
+###############################################################################
+
+bazel_dep(name = "score_bazel_cpp_toolchains", version = "0.3.1", dev_dependency = True)
+
+score_gcc = use_extension("@score_bazel_cpp_toolchains//extensions:gcc.bzl", "gcc", dev_dependency = True)
+score_gcc.toolchain(
+    name = "score_gcc_x86_64_toolchain",
+    target_cpu = "x86_64",
+    target_os = "linux",
+    use_base_constraints_only = True,
+    use_default_package = True,
+    version = "12.2.0",
+)
+score_gcc.toolchain(
+    name = "score_qcc_x86_64_toolchain",
+    sdp_version = "8.0.0",
+    target_cpu = "x86_64",
+    target_os = "qnx",
+    use_default_package = True,
+    version = "12.2.0",
+)
+use_repo(
+    score_gcc,
+    "score_gcc_x86_64_toolchain",
+    "score_qcc_x86_64_toolchain",
+)
+
+###############################################################################
 # Rust Toolchain
 ###############################################################################
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
@@ -122,6 +151,24 @@ pip.parse(
 )
 use_repo(pip, "pip_tooling")
 
+pip.parse(
+    envsubst = ["PIP_INDEX_URL"],
+    extra_pip_args = ["--index-url=${PIP_INDEX_URL:-https://pypi.org/simple/}"],
+    hub_name = "pip_lobster_bazel",
+    python_version = PYTHON_VERSION,
+    requirements_lock = "//lobster_bazel:requirements.txt",
+)
+use_repo(pip, "pip_lobster_bazel")
+
+pip.parse(
+    envsubst = ["PIP_INDEX_URL"],
+    extra_pip_args = ["--index-url=${PIP_INDEX_URL:-https://pypi.org/simple/}"],
+    hub_name = "pip_rules_score",
+    python_version = PYTHON_VERSION,
+    requirements_lock = "//bazel/rules/rules_score:requirements.txt",
+)
+use_repo(pip, "pip_rules_score")
+
 ###############################################################################
 # Multitool Hub (for ruff, pyright, actionlint, etc.)
 ###############################################################################
@@ -167,3 +214,70 @@ register_toolchains(
 # Dev Dependencies (for testing)
 ###############################################################################
 bazel_dep(name = "score_docs_as_code", version = "3.0.1", dev_dependency = True)
+
+###############################################################################
+# Setup Googletest
+###############################################################################
+bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
+
+###############################################################################
+# Blueprint Maven
+###############################################################################
+bazel_dep(name = "rules_jvm_external", version = "6.10")
+
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "blueprint_maven_dependencies",
+    artifacts = [
+        "net.sourceforge.plantuml:plantuml:1.2025.9",
+    ],
+    repositories = ["https://repo1.maven.org/maven2"],
+)
+use_repo(maven, "blueprint_maven_dependencies")
+
+###############################################################################
+# Dependencies for Manual Analysis
+###############################################################################
+pip.parse(
+    hub_name = "manual_analysis_deps",
+    python_version = PYTHON_VERSION,
+    requirements_lock = "//manual_analysis:requirements.txt",
+)
+use_repo(pip, "manual_analysis_deps")
+
+bazel_dep(name = "trlc", version = "0.0.0")
+git_override(
+    module_name = "trlc",
+    commit = "1872957ae981ae632a0ec6eafb5b8d3aa44bdb86",
+    remote = "https://github.com/bmw-software-engineering/trlc.git",
+)
+
+bazel_dep(name = "lobster", version = "0.0.0")
+git_override(
+    module_name = "lobster",
+    commit = "94ed5961ca28ee1b840cd8a938138c17ae4da671",
+    remote = "https://github.com/bmw-software-engineering/lobster.git",
+)
+
+###############################################################################
+# Dependencies for AI Checker
+###############################################################################
+
+# Make the copilot CLI binary executable (rules_python strips +x from wheels)
+pip.whl_mods(
+    copy_executables = {"site-packages/copilot/bin/copilot": "copilot_cli"},
+    hub_name = "ai_checker_whl_mods",
+    whl_name = "github_copilot_sdk",
+)
+use_repo(pip, "ai_checker_whl_mods")
+
+# Core + LangChain + GitHub Copilot SDK dependencies
+pip.parse(
+    hub_name = "pip_ai_checker",
+    python_version = PYTHON_VERSION,
+    requirements_lock = "//validation/ai_checker:requirements.txt",
+    whl_modifications = {
+        "@ai_checker_whl_mods//:github_copilot_sdk.json": "github-copilot-sdk",
+    },
+)
+use_repo(pip, "pip_ai_checker")

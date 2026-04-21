@@ -21,6 +21,10 @@
   $alias -u-> $connection
 !endprocedure
 
-BasicEvent("No More Cookies", "SampleLibrary.NoMoreCookies", "AG2")
+!procedure $Outer()
+  BasicEvent("No More Cookies", "SampleLibrary.NoMoreCookies", "AG2")
+!endprocedure
+
+$Outer()
 
 @enduml

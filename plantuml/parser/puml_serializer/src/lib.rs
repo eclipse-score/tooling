@@ -11,4 +11,5 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
+pub use class_serializer::ClassSerializer;
 pub use component_serializer::ComponentSerializer;

@@ -156,14 +156,27 @@ fn parse_text_line(pair: Pair<Rule>) -> Vec<TextPart> {
     let mut current = String::new();
     let mut chars = text.chars().peekable();
 
+    // Walk the raw text to split it into literal spans and $variable tokens.
     while let Some(c) = chars.next() {
         if c == '$' {
+            // Treat '$' as literal when it appears inside an identifier (e.g., "123$val").
+            let prev_is_ident = current
+                .chars()
+                .last()
+                .is_some_and(|ch| ch.is_alphanumeric() || ch == '_');
+            if prev_is_ident {
+                current.push(c);
+                continue;
+            }
+
             if !current.is_empty() {
+                // Flush the accumulated literal text before starting a $variable token.
                 parts.push(TextPart::Literal(current.clone()));
                 current.clear();
             }
 
             let mut var = String::from("$");
+            // Collect the variable name following '$' to build the full $variable token.
             while let Some(&ch) = chars.peek() {
                 if ch.is_alphanumeric() || ch == '_' {
                     var.push(ch);

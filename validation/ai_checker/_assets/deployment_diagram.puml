@@ -1,0 +1,87 @@
+@startuml
+
+skinparam packageStyle rectangle
+
+interface "TRLC Python API" as TRLCAPI
+interface "LangChain\nBaseChatModel" as LangChain
+
+package "Input Artifacts" {
+    artifact "TRLC\nRequirements" as ReqFile
+    artifact "Guidelines\n(Markdown)" as GuideFile
+}
+
+package "src/ai_checker/ (Core Framework)" as CorePkg {
+    component "Orchestrator\n(py_binary)" as Orchestrator
+    component "AIChecker\n(Async)" as AIChecker
+    component "Requirement\nExtractor" as Extractor
+    component "Result\nFormatter" as Formatter
+    component "Guidelines\nReader" as GReader
+    component "Analysis\nCache" as Cache
+}
+
+package "src/copilot_adapter/ (LangChain Integration)" as LangChainPkg {
+    component "ChatCopilot\n(BaseChatModel)" as ChatCopilot
+}
+
+
+
+package "Output Artifacts" {
+    artifact "HTML\nReport" as HtmlReport
+    artifact "JSON\nResults" as JsonResults
+}
+
+package "AI Services" {
+    cloud "GitHub Copilot API\n(default)" as CopilotAPI
+    cloud "Custom AI Service\n(via ai_model.py)" as CustomCloud
+}
+
+package "Bazel Configuration" {
+    component "--config=copilot\n(.bazelrc.ai_checker)" as CopilotConfig
+}
+
+ReqFile --> TRLCAPI: parsed via
+TRLCAPI --> Extractor: symbol table
+Extractor --> Orchestrator: artefacts\n(Dict format)
+GuideFile --> GReader: loads
+GReader --> Orchestrator: guidelines content
+
+Orchestrator --> AIChecker: async analyze\nwith batches
+AIChecker --> Cache: optional\n(CLI only)
+
+AIChecker --> LangChain: async ainvoke\n(concurrent)
+ChatCopilot ..|> LangChain: implements
+ChatCopilot --> CopilotAPI: Copilot SDK\n(Node.js CLI)
+
+LangChain --> CustomCloud: custom provider
+
+LangChain ..> AIChecker: structured output\n(AnalysisResults)
+AIChecker ..> Orchestrator: AnalysisResults
+
+Orchestrator --> Formatter: pass results
+Formatter --> HtmlReport: generates
+Formatter --> JsonResults: generates
+
+CopilotConfig ..> ChatCopilot: env vars\n(auth + proxy)
+
+note right of ChatCopilot
+  LangChain BaseChatModel wrapper for
+  the GitHub Copilot SDK.
+  Supports: messages, tool calling,
+  structured output, async/sync.
+end note
+
+note as N1
+  **AIChecker - Async Features:**
+  - Concurrent batch processing
+  - Rate limiting (Semaphore)
+  - Smart batching (count + size)
+end note
+
+note as N2
+  **Cache:**
+  Intentionally disabled for Bazel builds
+  (Bazel has its own action cache).
+  Only available via CLI: --cache <dir>
+end note
+
+@enduml

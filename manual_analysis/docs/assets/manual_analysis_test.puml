@@ -1,0 +1,65 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml
+title Manual Analysis Test Flow
+
+participant "bazel test //pkg:name" as Bazel
+participant "manual_analysis_test\n(rule implementation)" as TestRule
+participant "update_lock\n(action)" as UpdateLock
+participant "computed_lock.txt" as ComputedLock
+participant "manual_analysis_test_runner" as TestRunner
+participant "check_lock" as CheckLock
+participant "check_results" as CheckResults
+participant "yaml_schema" as Schema
+participant "lobster_generator" as Lobster
+participant "manual.lock" as Lock
+participant "results.json" as Results
+participant "analysis.yaml" as Analysis
+participant "name.lobster" as Output
+
+activate Bazel
+Bazel -> TestRule : execute test target
+activate TestRule
+
+TestRule -> UpdateLock ++ : ctx.actions.run(...)
+UpdateLock -> UpdateLock : read file + rule manifests
+UpdateLock -> ComputedLock : write sandbox lock
+UpdateLock --> TestRule -- : success
+
+TestRule -> TestRunner ++ : ctx.actions.run / test executable
+TestRunner -> CheckLock ++ : evaluate_lock_files(computed, committed)
+CheckLock -> ComputedLock : read
+CheckLock -> Lock : read
+CheckLock --> TestRunner -- : lock_ok, lock_error
+
+TestRunner -> CheckResults ++ : evaluate_results_file(results.json)
+CheckResults -> Results : read final assertion
+CheckResults --> TestRunner -- : results_ok, results_error
+
+TestRunner -> Schema ++ : load_analysis(analysis.yaml)
+Schema -> Analysis : parse steps + requirements
+Schema --> TestRunner -- : steps, requirements
+
+TestRunner -> Lobster ++ : write_lobster_file(...)
+Lobster -> Output : emit LOBSTER JSON
+Lobster --> TestRunner -- : success
+
+alt lock or results check failed
+    TestRunner --> Bazel : exit non-zero
+else checks passed
+    TestRunner --> Bazel : exit zero
+end
+
+deactivate TestRule
+@enduml

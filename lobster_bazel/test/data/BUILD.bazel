@@ -1,0 +1,59 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+filegroup(
+    name = "bazel_data_system",
+    srcs = glob(
+        [
+            "*.py",
+            "*.lobster",
+            "*.txt",
+        ],
+        allow_empty = True,
+    ),
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "cpp_source_with_tags",
+    srcs = ["source_with_tags.cpp"],
+    hdrs = ["source_with_tags.h"],
+    visibility = [
+        "//lobster_bazel/test:__pkg__",
+    ],
+)
+
+py_binary(
+    name = "py_source_with_tags",
+    srcs = [
+        "dependency_with_tags.py",
+        "source_with_tags.py",
+    ],
+    main = "source_with_tags.py",
+    visibility = [
+        "//lobster_bazel/test:__pkg__",
+    ],
+    deps = [
+        ":source_with_tags_lib",
+    ],
+)
+
+py_library(
+    name = "source_with_tags_lib",
+    srcs = [
+        "transitive_dependency_with_tags.py",
+    ],
+    imports = ["."],
+    visibility = [
+        "//lobster_bazel/test:__pkg__",
+    ],
+)

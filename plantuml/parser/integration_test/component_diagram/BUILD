@@ -14,8 +14,14 @@ filegroup(
     name = "component_diagram_files",
     srcs = glob([
         "**/*.puml",
-        # "**/*.yaml",
+        "**/*.yaml",
         "**/*.json",
     ]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "component_integration_test_files",
+    srcs = glob(["plantuml/*.puml"]),
     visibility = ["//visibility:public"],
 )

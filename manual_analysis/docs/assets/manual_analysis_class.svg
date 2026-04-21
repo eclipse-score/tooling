@@ -1,0 +1,659 @@
+<?plantuml 1.2026.2?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css"
+     data-diagram-type="CLASS" height="1073px" preserveAspectRatio="none"
+     style="width:4069px;height:1073px;background:#FFFFFF;" version="1.1" viewBox="0 0 4069 1073" width="4069px"
+     zoomAndPan="magnify">
+    <title>Manual Analysis Tooling - Class Diagram</title>
+    <defs/>
+    <g>
+        <g class="title" data-source-line="3">
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="281.329" x="1886.8355" y="24.9659">Manual Analysis Tooling - Class Diagram
+            </text>
+        </g><!--cluster Bazel Rule Composition-->
+        <g class="cluster" data-qualified-name="Bazel Rule Composition" data-source-line="5" id="ent0002">
+            <path d="M8.5,46.6699 L173.2994,46.6699 A3.75,3.75 0 0 1 175.7994,49.1699 L182.7994,71.7378 L1386.5,71.7378 A2.5,2.5 0 0 1 1389,74.2378 L1389,546.1699 A2.5,2.5 0 0 1 1386.5,548.6699 L8.5,548.6699 A2.5,2.5 0 0 1 6,546.1699 L6,49.1699 A2.5,2.5 0 0 1 8.5,46.6699"
+                  fill="none" style="stroke:#000000;stroke-width:1.5;"/>
+            <line style="stroke:#000000;stroke-width:1.5;" x1="6" x2="182.7994" y1="71.7378" y2="71.7378"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="163.7994" x="10" y="63.6358">Bazel Rule Composition
+            </text>
+        </g><!--cluster Interactive Update Runtime-->
+        <g class="cluster" data-qualified-name="Interactive Update Runtime" data-source-line="36" id="ent0015">
+            <path d="M1415.5,408.6699 L1612.4852,408.6699 A3.75,3.75 0 0 1 1614.9852,411.1699 L1621.9852,433.7378 L2555.5,433.7378 A2.5,2.5 0 0 1 2558,436.2378 L2558,1064.1699 A2.5,2.5 0 0 1 2555.5,1066.6699 L1415.5,1066.6699 A2.5,2.5 0 0 1 1413,1064.1699 L1413,411.1699 A2.5,2.5 0 0 1 1415.5,408.6699"
+                  fill="none" style="stroke:#000000;stroke-width:1.5;"/>
+            <line style="stroke:#000000;stroke-width:1.5;" x1="1413" x2="1621.9852" y1="433.7378" y2="433.7378"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="195.9852" x="1417" y="425.6358">Interactive Update Runtime
+            </text>
+        </g><!--cluster Verification Runtime-->
+        <g class="cluster" data-qualified-name="Verification Runtime" data-source-line="78" id="ent0029">
+            <path d="M2584.5,418.1699 L2730.6935,418.1699 A3.75,3.75 0 0 1 2733.1935,420.6699 L2740.1935,443.2378 L4059.5,443.2378 A2.5,2.5 0 0 1 4062,445.7378 L4062,694.1699 A2.5,2.5 0 0 1 4059.5,696.6699 L2584.5,696.6699 A2.5,2.5 0 0 1 2582,694.1699 L2582,420.6699 A2.5,2.5 0 0 1 2584.5,418.1699"
+                  fill="none" style="stroke:#000000;stroke-width:1.5;"/>
+            <line style="stroke:#000000;stroke-width:1.5;" x1="2582" x2="2740.1935" y1="443.2378" y2="443.2378"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="145.1935" x="2586" y="435.1358">Verification Runtime
+            </text>
+        </g><!--class ManualAnalysisContextInfo-->
+        <g class="entity" data-qualified-name="Bazel Rule Composition.ManualAnalysisContextInfo" data-source-line="6"
+           id="ent0003">
+            <rect fill="#F1F1F1" height="86.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="201.5114" x="525" y="446.6699"/>
+            <ellipse cx="540" cy="462.6699" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1;"/>
+            <path d="M535.9219,458.4355 L535.9219,456.2793 L543.3125,456.2793 L543.3125,458.4355 L540.8438,458.4355 L540.8438,466.5136 L543.3125,466.5136 L543.3125,468.6699 L535.9219,468.6699 L535.9219,466.5136 L538.3906,466.5136 L538.3906,458.4355 L535.9219,458.4355 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing"
+                  textLength="169.5114" x="554" y="468.1019">ManualAnalysisContextInfo
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="526" x2="725.5114" y1="478.6699" y2="478.6699"/>
+            <g data-visibility-modifier="PUBLIC_FIELD">
+                <ellipse cx="536" cy="493.7039" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="120.8475"
+                  x="545" y="497.6358">files : depset&lt;File&gt;
+            </text>
+            <g data-visibility-modifier="PUBLIC_FIELD">
+                <ellipse cx="536" cy="512.7718" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="143.8634"
+                  x="545" y="516.7038">rules : depset&lt;String&gt;
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="526" x2="725.5114" y1="524.8057" y2="524.8057"/>
+        </g><!--class ManualAnalysisMacro-->
+        <g class="entity" data-qualified-name="Bazel Rule Composition.ManualAnalysisMacro" data-source-line="11"
+           id="ent0004">
+            <rect fill="#F1F1F1" height="80.4799" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="437.6964" x="785" y="84.6699"/>
+            <ellipse cx="945.5654" cy="107.3759" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1;"/>
+            <path d="M948.5342,113.0165 Q947.956,113.3134 947.3154,113.454 Q946.6748,113.6103 945.9717,113.6103 Q943.4717,113.6103 942.1435,111.9697 Q940.831,110.3134 940.831,107.1884 Q940.831,104.0634 942.1435,102.4072 Q943.4717,100.7509 945.9717,100.7509 Q946.6748,100.7509 947.3154,100.9072 Q947.9717,101.0634 948.5342,101.3603 L948.5342,104.079 Q947.9092,103.5009 947.3154,103.2353 Q946.7217,102.954 946.0967,102.954 Q944.7529,102.954 944.0654,104.0322 Q943.3779,105.0947 943.3779,107.1884 Q943.3779,109.2822 944.0654,110.3603 Q944.7529,111.4228 946.0967,111.4228 Q946.7217,111.4228 947.3154,111.1572 Q947.9092,110.8759 948.5342,110.2978 L948.5342,113.0165 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing"
+                  textLength="45.7323" x="997.232" y="102.498">&#171;macro&#187;
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="108.0656"
+                  x="966.0654" y="120.9799">manual_analysis
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="786" x2="1221.6964" y1="130.0819" y2="130.0819"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="786" x2="1221.6964" y1="138.0819" y2="138.0819"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="796" cy="153.1159" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="411.6964"
+                  x="805" y="157.0479">implementation(name, contexts, analysis, lock_file, results_file)
+            </text>
+        </g><!--class ManualAnalysisUpdateRule-->
+        <g class="entity" data-qualified-name="Bazel Rule Composition.ManualAnalysisUpdateRule" data-source-line="15"
+           id="ent0005">
+            <rect fill="#F1F1F1" height="99.5479" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="322.3788" x="694" y="243.6699"/>
+            <ellipse cx="770.4607" cy="266.3759" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1;"/>
+            <path d="M773.4295,272.0165 Q772.8513,272.3134 772.2107,272.454 Q771.5701,272.6103 770.867,272.6103 Q768.367,272.6103 767.0388,270.9697 Q765.7263,269.3134 765.7263,266.1884 Q765.7263,263.0634 767.0388,261.4072 Q768.367,259.7509 770.867,259.7509 Q771.5701,259.7509 772.2107,259.9072 Q772.867,260.0634 773.4295,260.3603 L773.4295,263.079 Q772.8045,262.5009 772.2107,262.2353 Q771.617,261.954 770.992,261.954 Q769.6482,261.954 768.9607,263.0322 Q768.2732,264.0947 768.2732,266.1884 Q768.2732,268.2822 768.9607,269.3603 Q769.6482,270.4228 770.992,270.4228 Q771.617,270.4228 772.2107,270.1572 Q772.8045,269.8759 773.4295,269.2978 L773.4295,272.0165 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing"
+                  textLength="32.2562" x="855.3113" y="261.498">&#171;rule&#187;
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="160.9574"
+                  x="790.9607" y="279.9799">manual_analysis_update
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="695" x2="1015.3788" y1="289.0819" y2="289.0819"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="695" x2="1015.3788" y1="297.0819" y2="297.0819"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="705" cy="312.1159" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="123.3815"
+                  x="714" y="316.0479">_collect_inputs(ctx)
+            </text>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="705" cy="331.1838" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="296.3788"
+                  x="714" y="335.1158">_make_manifests(ctx, input_files, input_rules)
+            </text>
+        </g><!--class ManualAnalysisTestRule-->
+        <g class="entity" data-qualified-name="Bazel Rule Composition.ManualAnalysisTestRule" data-source-line="20"
+           id="ent0006">
+            <rect fill="#F1F1F1" height="99.5479" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="322.3788" x="1051" y="243.6699"/>
+            <ellipse cx="1138.4437" cy="266.3759" fill="#ADD1B2" rx="11" ry="11"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <path d="M1141.4124,272.0165 Q1140.8343,272.3134 1140.1937,272.454 Q1139.553,272.6103 1138.8499,272.6103 Q1136.3499,272.6103 1135.0218,270.9697 Q1133.7093,269.3134 1133.7093,266.1884 Q1133.7093,263.0634 1135.0218,261.4072 Q1136.3499,259.7509 1138.8499,259.7509 Q1139.553,259.7509 1140.1937,259.9072 Q1140.8499,260.0634 1141.4124,260.3603 L1141.4124,263.079 Q1140.7874,262.5009 1140.1937,262.2353 Q1139.5999,261.954 1138.9749,261.954 Q1137.6312,261.954 1136.9437,263.0322 Q1136.2562,264.0947 1136.2562,266.1884 Q1136.2562,268.2822 1136.9437,269.3603 Q1137.6312,270.4228 1138.9749,270.4228 Q1139.5999,270.4228 1140.1937,270.1572 Q1140.7874,269.8759 1141.4124,269.2978 L1141.4124,272.0165 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing"
+                  textLength="32.2562" x="1212.3113" y="261.498">&#171;rule&#187;
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="138.9915"
+                  x="1158.9437" y="279.9799">manual_analysis_test
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1052" x2="1372.3788" y1="289.0819" y2="289.0819"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1052" x2="1372.3788" y1="297.0819" y2="297.0819"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1062" cy="312.1159" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="123.3815"
+                  x="1071" y="316.0479">_collect_inputs(ctx)
+            </text>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1062" cy="331.1838" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="296.3788"
+                  x="1071" y="335.1158">_make_manifests(ctx, input_files, input_rules)
+            </text>
+        </g><!--class FilegroupContextRule-->
+        <g class="entity" data-qualified-name="Bazel Rule Composition.FilegroupContextRule" data-source-line="25"
+           id="ent0007">
+            <rect fill="#F1F1F1" height="61.412" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="300.183" x="359" y="263.1699"/>
+            <ellipse cx="374" cy="285.8759" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1;"/>
+            <path d="M376.9688,291.5165 Q376.3906,291.8134 375.75,291.954 Q375.1094,292.1103 374.4063,292.1103 Q371.9063,292.1103 370.5781,290.4697 Q369.2656,288.8134 369.2656,285.6884 Q369.2656,282.5634 370.5781,280.9072 Q371.9063,279.2509 374.4063,279.2509 Q375.1094,279.2509 375.75,279.4072 Q376.4063,279.5634 376.9688,279.8603 L376.9688,282.579 Q376.3438,282.0009 375.75,281.7353 Q375.1563,281.454 374.5313,281.454 Q373.1875,281.454 372.5,282.5322 Q371.8125,283.5947 371.8125,285.6884 Q371.8125,287.7822 372.5,288.8603 Q373.1875,289.9228 374.5313,289.9228 Q375.1563,289.9228 375.75,289.6572 Q376.3438,289.3759 376.9688,288.7978 L376.9688,291.5165 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing"
+                  textLength="32.2562" x="505.9634" y="280.998">&#171;rule&#187;
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="268.183"
+                  x="388" y="299.4799">manual_analysis_context_from_filegroup
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="360" x2="658.183" y1="308.5819" y2="308.5819"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="360" x2="658.183" y1="316.5819" y2="316.5819"/>
+        </g><!--class CcContextRule-->
+        <g class="entity" data-qualified-name="Bazel Rule Composition.CcContextRule" data-source-line="26" id="ent0008">
+            <rect fill="#F1F1F1" height="61.412" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="302.171" x="22" y="263.1699"/>
+            <ellipse cx="37" cy="285.8759" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1;"/>
+            <path d="M39.9688,291.5165 Q39.3906,291.8134 38.75,291.954 Q38.1094,292.1103 37.4063,292.1103 Q34.9063,292.1103 33.5781,290.4697 Q32.2656,288.8134 32.2656,285.6884 Q32.2656,282.5634 33.5781,280.9072 Q34.9063,279.2509 37.4063,279.2509 Q38.1094,279.2509 38.75,279.4072 Q39.4063,279.5634 39.9688,279.8603 L39.9688,282.579 Q39.3438,282.0009 38.75,281.7353 Q38.1563,281.454 37.5313,281.454 Q36.1875,281.454 35.5,282.5322 Q34.8125,283.5947 34.8125,285.6884 Q34.8125,287.7822 35.5,288.8603 Q36.1875,289.9228 37.5313,289.9228 Q38.1563,289.9228 38.75,289.6572 Q39.3438,289.3759 39.9688,288.7978 L39.9688,291.5165 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing"
+                  textLength="32.2562" x="169.9574" y="280.998">&#171;rule&#187;
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="270.171"
+                  x="51" y="299.4799">manual_analysis_context_from_cc_library
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="23" x2="323.171" y1="308.5819" y2="308.5819"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="23" x2="323.171" y1="316.5819" y2="316.5819"/>
+        </g><!--class InteractiveRunnerCLI-->
+        <g class="entity" data-qualified-name="Interactive Update Runtime.InteractiveRunnerCLI" data-source-line="37"
+           id="ent0016">
+            <rect fill="#F1F1F1" height="86.1358" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="250.8672" x="1538.5" y="446.6699"/>
+            <ellipse cx="1589.1659" cy="462.6699" fill="#ADD1B2" rx="11" ry="11"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <path d="M1592.1346,468.3105 Q1591.5565,468.6074 1590.9159,468.748 Q1590.2752,468.9043 1589.5721,468.9043 Q1587.0721,468.9043 1585.744,467.2636 Q1584.4315,465.6074 1584.4315,462.4824 Q1584.4315,459.3574 1585.744,457.7011 Q1587.0721,456.0449 1589.5721,456.0449 Q1590.2752,456.0449 1590.9159,456.2011 Q1591.5721,456.3574 1592.1346,456.6543 L1592.1346,459.373 Q1591.5096,458.7949 1590.9159,458.5293 Q1590.3221,458.248 1589.6971,458.248 Q1588.3534,458.248 1587.6659,459.3261 Q1586.9784,460.3886 1586.9784,462.4824 Q1586.9784,464.5761 1587.6659,465.6543 Q1588.3534,466.7168 1589.6971,466.7168 Q1590.3221,466.7168 1590.9159,466.4511 Q1591.5096,466.1699 1592.1346,465.5918 L1592.1346,468.3105 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="141.0354"
+                  x="1609.6659" y="468.1019">interactive_runner_cli
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1539.5" x2="1788.3672" y1="478.6699" y2="478.6699"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1539.5" x2="1788.3672" y1="486.6699" y2="486.6699"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1549.5" cy="501.7039" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="109.8016"
+                  x="1558.5" y="505.6358">main(argv) : void
+            </text>
+            <g data-visibility-modifier="PRIVATE_METHOD">
+                <rect fill="#F24D5C" height="6" style="stroke:#C82930;stroke-width:1;" width="6" x="1546.5"
+                      y="517.7718"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="224.8672"
+                  x="1558.5" y="524.7038">_create_parser() : ArgumentParser
+            </text>
+        </g><!--class YamlSchema-->
+        <g class="entity" data-qualified-name="Interactive Update Runtime.YamlSchema" data-source-line="42"
+           id="ent0017">
+            <rect fill="#F1F1F1" height="67.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="302.891" x="2238.5" y="613.6699"/>
+            <ellipse cx="2341.2807" cy="629.6699" fill="#ADD1B2" rx="11" ry="11"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <path d="M2344.2494,635.3105 Q2343.6713,635.6074 2343.0307,635.748 Q2342.39,635.9043 2341.6869,635.9043 Q2339.1869,635.9043 2337.8588,634.2636 Q2336.5463,632.6074 2336.5463,629.4824 Q2336.5463,626.3574 2337.8588,624.7011 Q2339.1869,623.0449 2341.6869,623.0449 Q2342.39,623.0449 2343.0307,623.2011 Q2343.6869,623.3574 2344.2494,623.6543 L2344.2494,626.373 Q2343.6244,625.7949 2343.0307,625.5293 Q2342.4369,625.248 2341.8119,625.248 Q2340.4682,625.248 2339.7807,626.3261 Q2339.0932,627.3886 2339.0932,629.4824 Q2339.0932,631.5761 2339.7807,632.6543 Q2340.4682,633.7168 2341.8119,633.7168 Q2342.4369,633.7168 2343.0307,633.4511 Q2343.6244,633.1699 2344.2494,632.5918 L2344.2494,635.3105 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88.8297"
+                  x="2361.7807" y="635.1019">yaml_schema
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="2239.5" x2="2540.391" y1="645.6699" y2="645.6699"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="2239.5" x2="2540.391" y1="653.6699" y2="653.6699"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="2249.5" cy="668.7039" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="276.891"
+                  x="2258.5" y="672.6358">load_analysis(path) : (steps, requirements)
+            </text>
+        </g><!--class AnalysisFlow-->
+        <g class="entity" data-qualified-name="Interactive Update Runtime.AnalysisFlow" data-source-line="46"
+           id="ent0018">
+            <rect fill="#F1F1F1" height="67.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="469.9244" x="1429" y="613.6699"/>
+            <ellipse cx="1618.9934" cy="629.6699" fill="#ADD1B2" rx="11" ry="11"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <path d="M1621.9621,635.3105 Q1621.384,635.6074 1620.7434,635.748 Q1620.1028,635.9043 1619.3996,635.9043 Q1616.8996,635.9043 1615.5715,634.2636 Q1614.259,632.6074 1614.259,629.4824 Q1614.259,626.3574 1615.5715,624.7011 Q1616.8996,623.0449 1619.3996,623.0449 Q1620.1028,623.0449 1620.7434,623.2011 Q1621.3996,623.3574 1621.9621,623.6543 L1621.9621,626.373 Q1621.3371,625.7949 1620.7434,625.5293 Q1620.1496,625.248 1619.5246,625.248 Q1618.1809,625.248 1617.4934,626.3261 Q1616.8059,627.3886 1616.8059,629.4824 Q1616.8059,631.5761 1617.4934,632.6543 Q1618.1809,633.7168 1619.5246,633.7168 Q1620.1496,633.7168 1620.7434,633.4511 Q1621.3371,633.1699 1621.9621,632.5918 L1621.9621,635.3105 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="81.4377"
+                  x="1639.4934" y="635.1019">run_analysis
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1430" x2="1897.9244" y1="645.6699" y2="645.6699"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1430" x2="1897.9244" y1="653.6699" y2="653.6699"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1440" cy="668.7039" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="443.9244"
+                  x="1449" y="672.6358">run_analysis(steps, ui, analysis_path, results_path, prefill) : list&lt;dict&gt;
+            </text>
+        </g><!--class StepExecutor-->
+        <g class="entity" data-qualified-name="Interactive Update Runtime.StepExecutor" data-source-line="50"
+           id="ent0019">
+            <rect fill="#F1F1F1" height="67.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="310.5069" x="1681.5" y="761.6699"/>
+            <ellipse cx="1786.3946" cy="777.6699" fill="#ADD1B2" rx="11" ry="11"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <path d="M1789.3634,783.3105 Q1788.7853,783.6074 1788.1446,783.748 Q1787.504,783.9043 1786.8009,783.9043 Q1784.3009,783.9043 1782.9728,782.2636 Q1781.6603,780.6074 1781.6603,777.4824 Q1781.6603,774.3574 1782.9728,772.7011 Q1784.3009,771.0449 1786.8009,771.0449 Q1787.504,771.0449 1788.1446,771.2011 Q1788.8009,771.3574 1789.3634,771.6543 L1789.3634,774.373 Q1788.7384,773.7949 1788.1446,773.5293 Q1787.5509,773.248 1786.9259,773.248 Q1785.5821,773.248 1784.8946,774.3261 Q1784.2071,775.3886 1784.2071,777.4824 Q1784.2071,779.5761 1784.8946,780.6543 Q1785.5821,781.7168 1786.9259,781.7168 Q1787.5509,781.7168 1788.1446,781.4511 Q1788.7384,781.1699 1789.3634,780.5918 L1789.3634,783.3105 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="92.2176"
+                  x="1806.8946" y="783.1019">_execute_step
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1682.5" x2="1991.0069" y1="793.6699" y2="793.6699"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1682.5" x2="1991.0069" y1="801.6699" y2="801.6699"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1692.5" cy="816.7039" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="284.5069"
+                  x="1701.5" y="820.6358">_execute_step(step, ui, results, prefill) : void
+            </text>
+        </g><!--class PrefillState-->
+        <g class="entity" data-qualified-name="Interactive Update Runtime.PrefillState" data-source-line="54"
+           id="ent0020">
+            <rect fill="#F1F1F1" height="67.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="232.3312" x="1934" y="613.6699"/>
+            <ellipse cx="2007.1358" cy="629.6699" fill="#ADD1B2" rx="11" ry="11"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <path d="M2010.1045,635.3105 Q2009.5264,635.6074 2008.8858,635.748 Q2008.2451,635.9043 2007.542,635.9043 Q2005.042,635.9043 2003.7139,634.2636 Q2002.4014,632.6074 2002.4014,629.4824 Q2002.4014,626.3574 2003.7139,624.7011 Q2005.042,623.0449 2007.542,623.0449 Q2008.2451,623.0449 2008.8858,623.2011 Q2009.542,623.3574 2010.1045,623.6543 L2010.1045,626.373 Q2009.4795,625.7949 2008.8858,625.5293 Q2008.292,625.248 2007.667,625.248 Q2006.3233,625.248 2005.6358,626.3261 Q2004.9483,627.3886 2004.9483,629.4824 Q2004.9483,631.5761 2005.6358,632.6543 Q2006.3233,633.7168 2007.667,633.7168 Q2008.292,633.7168 2008.8858,633.4511 Q2009.4795,633.1699 2010.1045,632.5918 L2010.1045,635.3105 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="77.5597"
+                  x="2027.6358" y="635.1019">_PrefillState
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1935" x2="2165.3312" y1="645.6699" y2="645.6699"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1935" x2="2165.3312" y1="653.6699" y2="653.6699"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1945" cy="668.7039" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="206.3312"
+                  x="1954" y="672.6358">load(results_path) : _PrefillState
+            </text>
+        </g><!--class SplitPaneUI-->
+        <g class="entity" data-qualified-name="Interactive Update Runtime.SplitPaneUI" data-source-line="58"
+           id="ent0021">
+            <rect fill="#F1F1F1" height="143.3396" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="322.6448" x="1858.5" y="907.6699"/>
+            <ellipse cx="1974.2516" cy="923.6699" fill="#ADD1B2" rx="11" ry="11"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <path d="M1977.2203,929.3105 Q1976.6422,929.6074 1976.0016,929.748 Q1975.3609,929.9043 1974.6578,929.9043 Q1972.1578,929.9043 1970.8297,928.2636 Q1969.5172,926.6074 1969.5172,923.4824 Q1969.5172,920.3574 1970.8297,918.7011 Q1972.1578,917.0449 1974.6578,917.0449 Q1975.3609,917.0449 1976.0016,917.2011 Q1976.6578,917.3574 1977.2203,917.6543 L1977.2203,920.373 Q1976.5953,919.7949 1976.0016,919.5293 Q1975.4078,919.248 1974.7828,919.248 Q1973.4391,919.248 1972.7516,920.3261 Q1972.0641,921.3886 1972.0641,923.4824 Q1972.0641,925.5761 1972.7516,926.6543 Q1973.4391,927.7168 1974.7828,927.7168 Q1975.4078,927.7168 1976.0016,927.4511 Q1976.5953,927.1699 1977.2203,926.5918 L1977.2203,929.3105 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="82.6417"
+                  x="1994.7516" y="929.1019">_SplitPaneUI
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1859.5" x2="2180.1448" y1="939.6699" y2="939.6699"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1859.5" x2="2180.1448" y1="947.6699" y2="947.6699"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1869.5" cy="962.7039" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="161.8534"
+                  x="1878.5" y="966.6358">prompt_multiline(...) : str
+            </text>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1869.5" cy="981.7718" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="146.1314"
+                  x="1878.5" y="985.7038">prompt_choice(...) : str
+            </text>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1869.5" cy="1000.8397" fill="#84BE84" rx="3" ry="3"
+                         style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="296.6448"
+                  x="1878.5" y="1004.7717">prompt_choice_with_justification(...) : (str, str)
+            </text>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1869.5" cy="1019.9076" fill="#84BE84" rx="3" ry="3"
+                         style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="177.8413"
+                  x="1878.5" y="1023.8396">prompt_args_form(...) : dict
+            </text>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1869.5" cy="1038.9755" fill="#84BE84" rx="3" ry="3"
+                         style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="199.0232"
+                  x="1878.5" y="1042.9075">run_command(command) : int
+            </text>
+        </g><!--class UpdateLock-->
+        <g class="entity" data-qualified-name="Interactive Update Runtime.UpdateLock" data-source-line="66"
+           id="ent0022">
+            <rect fill="#F1F1F1" height="67.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="135.8016" x="1825" y="456.1699"/>
+            <ellipse cx="1851.0843" cy="472.1699" fill="#ADD1B2" rx="11" ry="11"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <path d="M1854.0531,477.8105 Q1853.475,478.1074 1852.8343,478.248 Q1852.1937,478.4043 1851.4906,478.4043 Q1848.9906,478.4043 1847.6625,476.7636 Q1846.35,475.1074 1846.35,471.9824 Q1846.35,468.8574 1847.6625,467.2011 Q1848.9906,465.5449 1851.4906,465.5449 Q1852.1937,465.5449 1852.8343,465.7011 Q1853.4906,465.8574 1854.0531,466.1543 L1854.0531,468.873 Q1853.4281,468.2949 1852.8343,468.0293 Q1852.2406,467.748 1851.6156,467.748 Q1850.2718,467.748 1849.5843,468.8261 Q1848.8968,469.8886 1848.8968,471.9824 Q1848.8968,474.0761 1849.5843,475.1543 Q1850.2718,476.2168 1851.6156,476.2168 Q1852.2406,476.2168 1852.8343,475.9511 Q1853.4281,475.6699 1854.0531,475.0918 L1854.0531,477.8105 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.1697"
+                  x="1867.5475" y="477.6019">update_lock
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1826" x2="1959.8016" y1="488.1699" y2="488.1699"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="1826" x2="1959.8016" y1="496.1699" y2="496.1699"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="1836" cy="511.2039" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="109.8016"
+                  x="1845" y="515.1358">main(argv) : void
+            </text>
+        </g><!--class TestRunner-->
+        <g class="entity" data-qualified-name="Verification Runtime.TestRunner" data-source-line="79" id="ent0030">
+            <rect fill="#F1F1F1" height="67.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="222.6233" x="2655.5" y="456.1699"/>
+            <ellipse cx="2670.5" cy="472.1699" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1;"/>
+            <path d="M2673.4688,477.8105 Q2672.8906,478.1074 2672.25,478.248 Q2671.6094,478.4043 2670.9063,478.4043 Q2668.4063,478.4043 2667.0781,476.7636 Q2665.7656,475.1074 2665.7656,471.9824 Q2665.7656,468.8574 2667.0781,467.2011 Q2668.4063,465.5449 2670.9063,465.5449 Q2671.6094,465.5449 2672.25,465.7011 Q2672.9063,465.8574 2673.4688,466.1543 L2673.4688,468.873 Q2672.8438,468.2949 2672.25,468.0293 Q2671.6563,467.748 2671.0313,467.748 Q2669.6875,467.748 2669,468.8261 Q2668.3125,469.8886 2668.3125,471.9824 Q2668.3125,474.0761 2669,475.1543 Q2669.6875,476.2168 2671.0313,476.2168 Q2671.6563,476.2168 2672.25,475.9511 Q2672.8438,475.6699 2673.4688,475.0918 L2673.4688,477.8105 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="190.6233"
+                  x="2684.5" y="477.6019">manual_analysis_test_runner
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="2656.5" x2="2877.1233" y1="488.1699" y2="488.1699"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="2656.5" x2="2877.1233" y1="496.1699" y2="496.1699"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="2666.5" cy="511.2039" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="109.8016"
+                  x="2675.5" y="515.1358">main(argv) : void
+            </text>
+        </g><!--class CheckLock-->
+        <g class="entity" data-qualified-name="Verification Runtime.CheckLock" data-source-line="83" id="ent0031">
+            <rect fill="#F1F1F1" height="67.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="391.4686" x="3654.5" y="613.6699"/>
+            <ellipse cx="3811.0054" cy="629.6699" fill="#ADD1B2" rx="11" ry="11"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <path d="M3813.9742,635.3105 Q3813.3961,635.6074 3812.7554,635.748 Q3812.1148,635.9043 3811.4117,635.9043 Q3808.9117,635.9043 3807.5836,634.2636 Q3806.2711,632.6074 3806.2711,629.4824 Q3806.2711,626.3574 3807.5836,624.7011 Q3808.9117,623.0449 3811.4117,623.0449 Q3812.1148,623.0449 3812.7554,623.2011 Q3813.4117,623.3574 3813.9742,623.6543 L3813.9742,626.373 Q3813.3492,625.7949 3812.7554,625.5293 Q3812.1617,625.248 3811.5367,625.248 Q3810.1929,625.248 3809.5054,626.3261 Q3808.8179,627.3886 3808.8179,629.4824 Q3808.8179,631.5761 3809.5054,632.6543 Q3810.1929,633.7168 3811.5367,633.7168 Q3812.1617,633.7168 3812.7554,633.4511 Q3813.3492,633.1699 3813.9742,632.5918 L3813.9742,635.3105 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69.9577"
+                  x="3831.5054" y="635.1019">check_lock
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="3655.5" x2="4044.9686" y1="645.6699" y2="645.6699"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="3655.5" x2="4044.9686" y1="653.6699" y2="653.6699"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="3665.5" cy="668.7039" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="365.4686"
+                  x="3674.5" y="672.6358">evaluate_lock_files(computed, committed) : (bool, error)
+            </text>
+        </g><!--class CheckResults-->
+        <g class="entity" data-qualified-name="Verification Runtime.CheckResults" data-source-line="87" id="ent0032">
+            <rect fill="#F1F1F1" height="67.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="337.5968" x="2598" y="613.6699"/>
+            <ellipse cx="2718.5046" cy="629.6699" fill="#ADD1B2" rx="11" ry="11"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <path d="M2721.4733,635.3105 Q2720.8952,635.6074 2720.2546,635.748 Q2719.614,635.9043 2718.9108,635.9043 Q2716.4108,635.9043 2715.0827,634.2636 Q2713.7702,632.6074 2713.7702,629.4824 Q2713.7702,626.3574 2715.0827,624.7011 Q2716.4108,623.0449 2718.9108,623.0449 Q2719.614,623.0449 2720.2546,623.2011 Q2720.9108,623.3574 2721.4733,623.6543 L2721.4733,626.373 Q2720.8483,625.7949 2720.2546,625.5293 Q2719.6608,625.248 2719.0358,625.248 Q2717.6921,625.248 2717.0046,626.3261 Q2716.3171,627.3886 2716.3171,629.4824 Q2716.3171,631.5761 2717.0046,632.6543 Q2717.6921,633.7168 2719.0358,633.7168 Q2719.6608,633.7168 2720.2546,633.4511 Q2720.8483,633.1699 2721.4733,632.5918 L2721.4733,635.3105 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88.0876"
+                  x="2739.0046" y="635.1019">check_results
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="2599" x2="2934.5968" y1="645.6699" y2="645.6699"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="2599" x2="2934.5968" y1="653.6699" y2="653.6699"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="2609" cy="668.7039" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="311.5968"
+                  x="2618" y="672.6358">evaluate_results_file(results_path) : (bool, error)
+            </text>
+        </g><!--class LobsterGenerator-->
+        <g class="entity" data-qualified-name="Verification Runtime.LobsterGenerator" data-source-line="91"
+           id="ent0033">
+            <rect fill="#F1F1F1" height="67.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="647.9336" x="2971" y="613.6699"/>
+            <ellipse cx="3231.546" cy="629.6699" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1;"/>
+            <path d="M3234.5148,635.3105 Q3233.9366,635.6074 3233.296,635.748 Q3232.6554,635.9043 3231.9523,635.9043 Q3229.4523,635.9043 3228.1241,634.2636 Q3226.8116,632.6074 3226.8116,629.4824 Q3226.8116,626.3574 3228.1241,624.7011 Q3229.4523,623.0449 3231.9523,623.0449 Q3232.6554,623.0449 3233.296,623.2011 Q3233.9523,623.3574 3234.5148,623.6543 L3234.5148,626.373 Q3233.8898,625.7949 3233.296,625.5293 Q3232.7023,625.248 3232.0773,625.248 Q3230.7335,625.248 3230.046,626.3261 Q3229.3585,627.3886 3229.3585,629.4824 Q3229.3585,631.5761 3230.046,632.6543 Q3230.7335,633.7168 3232.0773,633.7168 Q3232.7023,633.7168 3233.296,633.4511 Q3233.8898,633.1699 3234.5148,632.5918 L3234.5148,635.3105 Z "
+                  fill="#000000"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118.3416"
+                  x="3252.046" y="635.1019">lobster_generator
+            </text>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="2972" x2="3617.9336" y1="645.6699" y2="645.6699"/>
+            <line style="stroke:#181818;stroke-width:0.5;" x1="2972" x2="3617.9336" y1="653.6699" y2="653.6699"/>
+            <g data-visibility-modifier="PUBLIC_METHOD">
+                <ellipse cx="2982" cy="668.7039" fill="#84BE84" rx="3" ry="3" style="stroke:#038048;stroke-width:1;"/>
+            </g>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="621.9336"
+                  x="2991" y="672.6358">write_lobster_file(requirements, analysis_passed, results_file_path,
+                analysis_label, output_path)
+            </text>
+        </g><!--link ManualAnalysisMacro to ManualAnalysisUpdateRule-->
+        <g class="link" data-entity-1="ent0004" data-entity-2="ent0005" data-link-type="dependency"
+           data-source-line="28" id="lnk9">
+            <path codeLine="28" d="M969.07,164.8199 C948.08,188.3499 925.185,214.0133 902.785,239.1133" fill="none"
+                  id="ManualAnalysisMacro-to-ManualAnalysisUpdateRule" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="898.79,243.5899,907.7669,239.5384,902.1192,239.8594,901.7982,234.2117,898.79,243.5899"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="67.6911"
+                  x="939" y="209.5669">expands to
+            </text>
+        </g><!--link ManualAnalysisMacro to ManualAnalysisTestRule-->
+        <g class="link" data-entity-1="ent0004" data-entity-2="ent0006" data-link-type="dependency"
+           data-source-line="29" id="lnk10">
+            <path codeLine="29" d="M1052.77,164.8199 C1082.07,188.3499 1114.9209,214.7341 1146.1909,239.8341"
+                  fill="none" id="ManualAnalysisMacro-to-ManualAnalysisTestRule"
+                  style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1150.87,243.5899,1146.3553,234.8368,1146.9708,240.46,1141.3475,241.0755,1150.87,243.5899"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="67.6911"
+                  x="1109" y="209.5669">expands to
+            </text>
+        </g><!--link FilegroupContextRule to ManualAnalysisContextInfo-->
+        <g class="link" data-entity-1="ent0007" data-entity-2="ent0003" data-link-type="dependency"
+           data-source-line="30" id="lnk11">
+            <path codeLine="30" d="M527.02,324.5599 C546.7,357.1899 575.2713,404.552 597.4713,441.362" fill="none"
+                  id="FilegroupContextRule-to-ManualAnalysisContextInfo"
+                  style="stroke:#181818;stroke-width:1;stroke-dasharray:7,7;"/>
+            <polygon fill="#181818"
+                     points="600.57,446.4999,599.3473,436.7272,597.9878,442.2183,592.4967,440.8588,600.57,446.4999"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="52.741"
+                  x="569" y="388.5669">provides
+            </text>
+        </g><!--link CcContextRule to ManualAnalysisContextInfo-->
+        <g class="link" data-entity-1="ent0008" data-entity-2="ent0003" data-link-type="dependency"
+           data-source-line="31" id="lnk12">
+            <path codeLine="31" d="M242.29,324.3499 C318.51,356.9799 436.0646,407.3275 522.2146,444.2275" fill="none"
+                  id="CcContextRule-to-ManualAnalysisContextInfo"
+                  style="stroke:#181818;stroke-width:1;stroke-dasharray:7,7;"/>
+            <polygon fill="#181818"
+                     points="527.73,446.5899,521.0319,439.3695,523.1339,444.6213,517.882,446.7233,527.73,446.5899"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="52.741"
+                  x="401" y="388.5669">provides
+            </text>
+        </g><!--link ManualAnalysisUpdateRule to ManualAnalysisContextInfo-->
+        <g class="link" data-entity-1="ent0005" data-entity-2="ent0003" data-link-type="dependency"
+           data-source-line="32" id="lnk13">
+            <path codeLine="32"
+                  d="M789.93,343.8699 C777.53,353.5799 764.76,363.8199 753,373.6699 C725.07,397.0699 699.1983,420.3397 675.2083,442.4897"
+                  fill="none" id="ManualAnalysisUpdateRule-to-ManualAnalysisContextInfo"
+                  style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="670.8,446.5599,680.126,443.3935,674.4736,443.1681,674.699,437.5157,670.8,446.5599"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="62.1141"
+                  x="754" y="388.5669">consumes
+            </text>
+        </g><!--link ManualAnalysisTestRule to ManualAnalysisContextInfo-->
+        <g class="link" data-entity-1="ent0006" data-entity-2="ent0003" data-link-type="dependency"
+           data-source-line="33" id="lnk14">
+            <path codeLine="33"
+                  d="M1050.62,339.7699 C1045.02,341.1199 1039.47,342.4299 1034,343.6699 C960.9,360.2999 939.37,350.7099 868,373.6699 C836.56,383.7799 770.9062,415.3759 713.8862,443.8959"
+                  fill="none" id="ManualAnalysisTestRule-to-ManualAnalysisContextInfo"
+                  style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="708.52,446.5799,718.3586,446.1313,712.9918,444.3432,714.7799,438.9764,708.52,446.5799"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="62.1141"
+                  x="869" y="388.5669">consumes
+            </text>
+        </g><!--link InteractiveRunnerCLI to YamlSchema-->
+        <g class="link" data-entity-1="ent0016" data-entity-2="ent0017" data-link-type="dependency"
+           data-source-line="70" id="lnk23">
+            <path codeLine="70"
+                  d="M1740.41,532.6999 C1761.68,542.4299 1785.21,551.4599 1808,556.6699 C1895.32,576.6399 2123.66,544.8099 2211,564.6699 C2254.29,574.5099 2294.468,592.5612 2328.748,610.7212"
+                  fill="none" id="InteractiveRunnerCLI-to-YamlSchema" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="2334.05,613.5299,2327.9695,605.7821,2329.6317,611.1893,2324.2245,612.8514,2334.05,613.5299"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="80.6911"
+                  x="2268" y="579.5669">load_analysis
+            </text>
+        </g><!--link InteractiveRunnerCLI to PrefillState-->
+        <g class="link" data-entity-1="ent0016" data-entity-2="ent0020" data-link-type="dependency"
+           data-source-line="71" id="lnk24">
+            <path codeLine="71"
+                  d="M1753.03,532.7399 C1771.11,540.9299 1790.08,549.2599 1808,556.6699 C1856.64,576.7799 1905.9651,595.2465 1951.2151,611.5465"
+                  fill="none" id="InteractiveRunnerCLI-to-PrefillState" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1956.86,613.5799,1949.7482,606.7665,1952.1559,611.8854,1947.037,614.2931,1956.86,613.5799"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="89.0631"
+                  x="1874" y="579.5669">optional prefill
+            </text>
+        </g><!--link InteractiveRunnerCLI to SplitPaneUI-->
+        <g class="link" data-entity-1="ent0016" data-entity-2="ent0021" data-link-type="dependency"
+           data-source-line="72" id="lnk25">
+            <path codeLine="72"
+                  d="M1741.65,532.7699 C1762.62,542.3099 1785.69,551.2299 1808,556.6699 C1878.9,573.9599 1899.72,554.6399 1972,564.6699 C2067.79,577.9699 2123.81,537.9799 2184,613.6699 C2255.48,703.5599 2170.0797,825.1604 2097.8797,903.0204"
+                  fill="none" id="InteractiveRunnerCLI-to-SplitPaneUI" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="2093.8,907.4199,2102.8526,903.5404,2097.1998,903.7536,2096.9865,898.1008,2093.8,907.4199"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="44.486"
+                  x="2208" y="727.5669">creates
+            </text>
+        </g><!--link InteractiveRunnerCLI to AnalysisFlow-->
+        <g class="link" data-entity-1="ent0016" data-entity-2="ent0018" data-link-type="dependency"
+           data-source-line="73" id="lnk26">
+            <path codeLine="73" d="M1664,532.7499 C1664,558.1199 1664,583.9499 1664,607.4299" fill="none"
+                  id="InteractiveRunnerCLI-to-AnalysisFlow" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818" points="1664,613.4299,1668,604.4299,1664,608.4299,1660,604.4299,1664,613.4299"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="75.6211"
+                  x="1665" y="579.5669">run_analysis
+            </text>
+        </g><!--link AnalysisFlow to StepExecutor-->
+        <g class="link" data-entity-1="ent0018" data-entity-2="ent0019" data-link-type="dependency"
+           data-source-line="74" id="lnk27">
+            <path codeLine="74" d="M1702.82,680.9399 C1731.32,704.9799 1765.2541,733.6208 1793.7241,757.6408"
+                  fill="none" id="AnalysisFlow-to-StepExecutor" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1798.31,761.5099,1794.0106,752.649,1794.4884,758.2857,1788.8518,758.7635,1798.31,761.5099"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82.1471"
+                  x="1761" y="727.5669">iterates steps
+            </text>
+        </g><!--link StepExecutor to SplitPaneUI-->
+        <g class="link" data-entity-1="ent0019" data-entity-2="ent0021" data-link-type="dependency"
+           data-source-line="75" id="lnk28">
+            <path codeLine="75" d="M1869.72,828.7099 C1891.72,850.5899 1917.3257,876.059 1944.6357,903.219" fill="none"
+                  id="StepExecutor-to-SplitPaneUI" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1948.89,907.4499,1945.3292,898.2673,1945.3447,903.9241,1939.6879,903.9397,1948.89,907.4499"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="103.3371"
+                  x="1918" y="873.5669">renders prompts
+            </text>
+        </g><!--link TestRunner to CheckLock-->
+        <g class="link" data-entity-1="ent0030" data-entity-2="ent0031" data-link-type="dependency"
+           data-source-line="95" id="lnk34">
+            <path codeLine="95"
+                  d="M2878.64,506.0499 C3044.25,528.9699 3364.77,573.6599 3637,613.6699 C3642.74,614.5099 3642.6261,614.4818 3648.5061,615.3618"
+                  fill="none" id="TestRunner-to-CheckLock" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="3654.44,616.2499,3646.1312,610.9619,3649.4951,615.5098,3644.9471,618.8737,3654.44,616.2499"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="75.6991"
+                  x="3423" y="579.5669">validate lock
+            </text>
+        </g><!--link TestRunner to CheckResults-->
+        <g class="link" data-entity-1="ent0030" data-entity-2="ent0032" data-link-type="dependency"
+           data-source-line="96" id="lnk35">
+            <path codeLine="96" d="M2767,523.2699 C2767,549.8099 2767,581.0899 2767,607.6199" fill="none"
+                  id="TestRunner-to-CheckResults" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818" points="2767,613.6199,2771,604.6199,2767,608.6199,2763,604.6199,2767,613.6199"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92.5341"
+                  x="2768" y="579.5669">validate results
+            </text>
+        </g><!--link TestRunner to YamlSchema-->
+        <g class="link" data-entity-1="ent0030" data-entity-2="ent0017" data-link-type="dependency"
+           data-source-line="97" id="lnk36">
+            <path codeLine="97" d="M2687.97,523.2699 C2623.63,549.8099 2538.7866,584.8018 2474.4766,611.3318"
+                  fill="none" id="TestRunner-to-YamlSchema" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="2468.93,613.6199,2478.7753,613.8854,2473.5521,611.7131,2475.7244,606.49,2468.93,613.6199"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="113.1131"
+                  x="2579" y="579.5669">load requirements
+            </text>
+        </g><!--link TestRunner to LobsterGenerator-->
+        <g class="link" data-entity-1="ent0030" data-entity-2="ent0033" data-link-type="dependency"
+           data-source-line="98" id="lnk37">
+            <path codeLine="98" d="M2877.36,523.1699 C2967.45,549.7099 3088.3944,585.3248 3178.5744,611.8848"
+                  fill="none" id="TestRunner-to-LobsterGenerator" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="3184.33,613.5799,3176.8267,607.2001,3179.5337,612.1673,3174.5666,614.8742,3184.33,613.5799"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="77.1811"
+                  x="3079" y="579.5669">write lobster
+            </text>
+        </g><!--link ManualAnalysisUpdateRule to InteractiveRunnerCLI-->
+        <g class="link" data-entity-1="ent0005" data-entity-2="ent0016" data-link-type="dependency"
+           data-source-line="101" id="lnk38">
+            <path codeLine="101"
+                  d="M1016.38,339.2999 C1022.32,340.7999 1028.21,342.2599 1034,343.6699 C1135.12,368.3099 1159.9,378.4399 1263,392.6699 C1318.59,400.3399 1333.86,390.2599 1389,400.6699 C1444.42,411.1299 1498.5602,427.4269 1548.2102,444.6169"
+                  fill="none" id="ManualAnalysisUpdateRule-to-InteractiveRunnerCLI"
+                  style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1553.88,446.5799,1546.684,439.8555,1549.1552,444.9441,1544.0666,447.4152,1553.88,446.5799"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="66.482"
+                  x="1264" y="388.5669">executable
+            </text>
+        </g><!--link ManualAnalysisUpdateRule to UpdateLock-->
+        <g class="link" data-entity-1="ent0005" data-entity-2="ent0022" data-link-type="dependency"
+           data-source-line="102" id="lnk39">
+            <path codeLine="102"
+                  d="M1016.17,340.2999 C1022.17,341.5199 1028.13,342.6499 1034,343.6699 C1171.9,367.6999 1522.33,383.3699 1662,392.6699 C1678.1,393.7399 1792.31,393.9999 1807,400.6699 C1833.07,412.4999 1851.7262,431.3239 1867.0962,451.0839"
+                  fill="none" id="ManualAnalysisUpdateRule-to-UpdateLock" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1870.78,455.8199,1868.4116,446.26,1867.7102,451.8732,1862.097,451.1718,1870.78,455.8199"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="66.482"
+                  x="1663" y="388.5669">executable
+            </text>
+        </g><!--link ManualAnalysisTestRule to UpdateLock-->
+        <g class="link" data-entity-1="ent0006" data-entity-2="ent0022" data-link-type="dependency"
+           data-source-line="103" id="lnk40">
+            <path codeLine="103"
+                  d="M1373.19,312.1599 C1522.93,330.4199 1733.5,361.7899 1807,400.6699 C1831.92,413.8599 1850.2302,432.1802 1865.7802,451.3502"
+                  fill="none" id="ManualAnalysisTestRule-to-UpdateLock" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1869.56,456.0099,1866.9968,446.5004,1866.4102,452.1268,1860.7838,451.5402,1869.56,456.0099"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="37.479"
+                  x="1782" y="388.5669">action
+            </text>
+        </g><!--link ManualAnalysisTestRule to TestRunner-->
+        <g class="link" data-entity-1="ent0006" data-entity-2="ent0030" data-link-type="dependency"
+           data-source-line="104" id="lnk41">
+            <path codeLine="104"
+                  d="M1373.21,300.9199 C1680.13,313.8799 2337.42,347.0299 2558,400.6699 C2609.07,413.0899 2658.3041,433.8868 2698.9041,453.4368"
+                  fill="none" id="ManualAnalysisTestRule-to-TestRunner" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="2704.31,456.0399,2697.9365,448.5313,2699.8051,453.8707,2694.4657,455.7392,2704.31,456.0399"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92.8071"
+                  x="2520" y="388.5669">test executable
+            </text>
+        </g>
+        <?plantuml-src pLVDRY8v4Bxp55PEe2Ky0498Cyna5IaZZSBCIdDg6NS1tlYdrtQJP5VpxblbxWOxtH3cDXm2jgk--bn_hlWdQIhkk6R2wieQC64TNXKm1o9mirCmyaSHl-UbVPPcnxPSUHW56L3o2pSrL-o3uUhLIy--MQj8vfQj5FUUVP9yXzgZKSN54zy1k_d8_mN57cjKNf5LBuEqveRzDsBuaIQ0stBH8NV0Aui7B-7UR6qhIPy_s5Ogy6pEIgWyXCKTBfV9iQkputLmIAuH-3cANoBIlD7HMi5RSpUC-pSCld3XB5iiD7qlbnaBgIi56jt7wIvZmpLCqQUHif-o3dNAb1LF1N6UeezzhOAFgydxZ8gwAdc00MBVuq5qw6915tv3hX1MAGneWP6iWn-By399ZpL_0lnZv1PySpnbKJHIyzqYkl8QeW5X1cX-m-tVXsGRd6Bhh8uGEsVhAjA-wrPjpcMahyOKeb1ouxXxZQ0hCOWMuORoxFPsUJxCSmOl5JUbPy7-0i8n0ZtzmIlFPiiBHJXdbRC7MOAF2FdzVadrx3NxDyXHqD--reCenwjUZV4pQL7tr8Iu2F80hE63_Se4gQ5hKsq6o9CWffunu0gXP0nuWl4OJrOFzrd6QoxDcBlTOO8q3bQMnxDRh0O7QBN0pkl1ZKdYWzlLr66-ngs137_bMXLUx47pIE07hjTncPbLbfV7b1rNFEm9VUm3TaXgIl_KqiLMDbX6UCcyHtPUlLFsEREJIdRejJprme9CdxfWiweSO2qgOgIa3ujIYZ3KhGju0L6ZWmWuybZZZyznqxgyiQIYaKZ3epMSsJn6uOsrhut8EdGDEDteUNUStebWC_qX_7Mb90RMmFVxvZAdTOQEPQEhK6X4b_ZAmdWscv417rnVIkoj5DU85Cyox8k_Qn_aLehc1Mkrq5zkIhgJlZAcBZvUrkbEc8Br9W5mhC0cMOxRRvB2aXbmGVEu5VGyHWyqLVU0oojgfeKQh3Yg_wGIvdd-NzRBeZndjYBNuB3JPinbvJI6s6PYFRzZBwkbULP1KJ4xZpRIf4VN4YvQOR7SeaecqQVbm9JWV1lIl0d-1UwO3sVQtz3Bt_R16CMc2zFo-YYsq1Wkd9IE-R2YPIyTuC1LtULDCmXGgk4W02NDNrhBW3zZ9czmC9qoSCwwoLbxRUMUJ3us6yDMqmckL_Jl6LHsWs5onGuCHSqs7djeTl_iDZF3pqx6kpQAhTLJlyvwg_VaWfHXssAFCefl00dQEj3W56cdD9FOKTwS0e0Xuqh6Hv7SVbQuSrqYtz8PKkdLQFOK3MdqN3Ll7CHQ1r4oNnmj1kkGHYCg5xx1VtukgYSjwe9IDeXaAcJPcalYoONdZ6ehDVC_?>
+    </g>
+</svg>

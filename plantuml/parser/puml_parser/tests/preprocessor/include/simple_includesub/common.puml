@@ -19,6 +19,11 @@ class Common {
 }
 !endsub
 
+!startsub 1
+class A {
+}
+!endsub
+
 class Student {
     +name: String
 }

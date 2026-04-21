@@ -1,0 +1,9 @@
+# Core dependencies for AI checker framework
+bigtree
+pydot
+pydantic
+pyyaml
+
+# LangChain + GitHub Copilot SDK
+github-copilot-sdk>=0.1.23
+langchain-core>=1.2.9
