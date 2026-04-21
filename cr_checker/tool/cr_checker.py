@@ -29,6 +29,9 @@ from pathlib import Path
 BYTES_TO_READ = 4 * 1024
 DEFAULT_AUTHOR = "Contributors to the Eclipse Foundation"
 
+BORDER_FILL_PATTERN = re.compile(r"([/*#'\-=+])\1{4,}")
+FILL_CHARS_REGEX = r"[/*#'\-=+]+"
+
 LOGGER = logging.getLogger()
 
 COLORS = {
@@ -139,6 +142,28 @@ def convert_bre_to_regex(template: str) -> str:
     return escaped
 
 
+def line_to_flexible_regex(line: str) -> str:
+    """
+    Convert a border line to a regex that accepts any fill characters.
+
+    Runs of 5+ identical fill characters (e.g. ``****``) are replaced with
+    ``[/*#'\\-=+]+`` so that alternative styles (e.g. ``////``) are also
+    accepted.
+    """
+    stripped = line.rstrip("\n")
+    has_newline = line.endswith("\n")
+    result = []
+    last_end = 0
+    for m in BORDER_FILL_PATTERN.finditer(stripped):
+        result.append(re.escape(stripped[last_end : m.start()]))
+        result.append(FILL_CHARS_REGEX)
+        last_end = m.end()
+    result.append(re.escape(stripped[last_end:]))
+    if has_newline:
+        result.append("\n")
+    return "".join(result)
+
+
 def load_templates(path):
     """
     Loads the copyright templates from a configuration file.
@@ -196,7 +221,7 @@ def load_exclusion(path):
         path (str): Path to the exclusion file.
 
     Returns:
-        tuple(list, bool): a list of files that are excluded from the coypright check and a boolean indicating whether
+        tuple(list, bool): a list of files that are excluded from the copyright check and a boolean indicating whether
                            all paths listed in the exclusion file exist and are files.
     """
 
@@ -362,19 +387,59 @@ def has_copyright(path, template, use_mmap, encoding, offset, config=None):
         IOError: If there is an error opening or reading the file.
     """
 
-    load_text = load_text_from_file
-    if use_mmap:
-        load_text = load_text_from_file_with_mmap
+    load_text = load_text_from_file_with_mmap if use_mmap else load_text_from_file
 
-    template_regex = convert_bre_to_regex(
-        template.format(year=r"\\d\{4\}", author=r"\.\*")
-    )
+    lines = template.splitlines(keepends=True)
+    regex_parts = []
+    for line in lines:
+        stripped_line = line.rstrip("\n")
+        if BORDER_FILL_PATTERN.search(stripped_line):
+            regex_parts.append(line_to_flexible_regex(line))
+        else:
+            formatted = line.format(year=r"\\d\{4\}", author=r"\.\*")
+            regex_parts.append(convert_bre_to_regex(formatted))
+    template_regex = "".join(regex_parts) + "\n?"
 
     if re.match(template_regex, load_text(path, BYTES_TO_READ, encoding, offset)):
         LOGGER.debug("File %s has copyright.", path)
         return True
 
     LOGGER.debug("File %s doesn't have copyright.", path)
+    return False
+
+
+def has_duplicate_copyright(path, template, use_mmap, encoding, offset):
+    """
+    Checks if the copyright header appears more than once in the file.
+
+    Args:
+        path (Path): A `pathlib.Path` object pointing to the file to check.
+        template (str): The copyright template to search for.
+        use_mmap (bool): If True, uses memory-mapped file reading.
+        encoding (str): Encoding type to use when reading the file.
+        offset (int): Byte offset to skip (e.g. shebang line).
+
+    Returns:
+        bool: True if the copyright header appears more than once, False otherwise.
+    """
+    load_text = load_text_from_file_with_mmap if use_mmap else load_text_from_file
+
+    lines = template.splitlines(keepends=True)
+    regex_parts = []
+    for line in lines:
+        stripped_line = line.rstrip("\n")
+        if BORDER_FILL_PATTERN.search(stripped_line):
+            regex_parts.append(line_to_flexible_regex(line))
+        else:
+            formatted = line.format(year=r"\\d\{4\}", author=r"\.\*")
+            regex_parts.append(convert_bre_to_regex(formatted))
+    template_regex = "\n?".join(regex_parts)
+
+    content = load_text(path, 2 * BYTES_TO_READ, encoding, offset)
+    matches = list(re.finditer(template_regex, content))
+    if len(matches) > 1:
+        LOGGER.debug("File %s has %d copyright headers.", path, len(matches))
+        return True
     return False
 
 
@@ -520,6 +585,7 @@ def fix_copyright(path, copyright_text, encoding, offset, config=None) -> bool:
                 copyright_text.format(
                     year=datetime.now().year, author=get_author_from_config(config)
                 )
+                + "\n"
             )
             for chunk in iter(lambda: temp.read(4096), ""):
                 handle.write(chunk)
@@ -562,7 +628,7 @@ def process_files(
     Returns:
         int: The number of files that do not contain the required copyright text.
     """
-    results = {"no_copyright": 0, "fixed": 0}
+    results = {"no_copyright": 0, "fixed": 0, "duplicate_copyright": 0}
     for item in files:
         name = Path(item).name
         key = name if name == "BUILD" else Path(item).suffix[1:]
@@ -584,7 +650,12 @@ def process_files(
         shebang_offset = detect_shebang_offset(item, encoding)
         effective_offset = offset + shebang_offset if offset == 0 else offset
 
-        if not has_copyright(
+        if has_duplicate_copyright(
+            item, templates[key], use_mmap, encoding, effective_offset
+        ):
+            LOGGER.error("Duplicate copyright header in: %s", item)
+            results["duplicate_copyright"] += 1
+        elif not has_copyright(
             item, templates[key], use_mmap, encoding, effective_offset, config
         ):
             if fix:
@@ -771,6 +842,7 @@ def main(argv=None):
     )
     total_no = results["no_copyright"]
     total_fixes = results["fixed"]
+    total_duplicates = results["duplicate_copyright"]
 
     LOGGER.info("=" * 64)
     LOGGER.info("Process completed.")
@@ -778,6 +850,12 @@ def main(argv=None):
         "Total files without copyright: %s%d%s",
         COLORS["RED"] if total_no > 0 else COLORS["GREEN"],
         total_no,
+        COLORS["ENDC"],
+    )
+    LOGGER.info(
+        "Total files with duplicate copyright: %s%d%s",
+        COLORS["RED"] if total_duplicates > 0 else COLORS["GREEN"],
+        total_duplicates,
         COLORS["ENDC"],
     )
     if not exclusion_valid:
@@ -798,7 +876,7 @@ def main(argv=None):
         )
     LOGGER.info("=" * 64)
 
-    return 0 if (total_no == 0 and exclusion_valid) else 1
+    return 0 if (total_no == 0 and total_duplicates == 0 and exclusion_valid) else 1
 
 
 if __name__ == "__main__":
