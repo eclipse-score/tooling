@@ -21,7 +21,7 @@ repos:
       - id: check-shebang-scripts-are-executable
       - id: check-executables-have-shebangs
       - id: check-added-large-files
-        args: [--maxkb=50, --enforce-all] # increase or add git lfs if too strict
+        args: [--maxkb=100, --enforce-all] # increase or add git lfs if too strict
         exclude: org.eclipse.dash.licenses-1.1.0.jar|blanket_index.html
   - repo: https://github.com/google/yamlfmt
     rev: 21ca5323a9c87ee37a434e0ca908efc0a89daa07 # v0.21.0
