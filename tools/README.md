@@ -1,20 +1,16 @@
-<!--
-Copyright (c) 2026 Contributors to the Eclipse Foundation
+<!-- ----------------------------------------------------------------------------
+  Copyright (c) 2026 Contributors to the Eclipse Foundation
 
-SPDX-License-Identifier: Apache-2.0
--->
+  See the NOTICE file(s) distributed with this work for additional
+  information regarding copyright ownership.
 
-# S-CORE tooling binaries
+  This program and the accompanying materials are made available under the
+  terms of the Apache License Version 2.0 which is available at
+  https://www.apache.org/licenses/LICENSE-2.0
 
-This bazel module provides centrally managed binaries for developer tools used in S-CORE, including linters
-and formatters.
+  SPDX-License-Identifier: Apache-2.0
+----------------------------------------------------------------------------- -->
 
-For Rust coverage reporting, see [coverage/README.md](../coverage/README.md).
-
-It provides a template script `sample.sh` that can be adapted to run the tools you need.
-
-## Current tools:
-Currently binaries / executables for the following tools are provided
 -  **Ruff**: A super-fast Python linter.
 -  **basedpyright**: A type checker for Python.
 -  **Actionlint**: A linter for your GitHub Actions workflows.

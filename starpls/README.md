@@ -1,14 +1,15 @@
-<!--
-Copyright (c) 2026 Contributors to the Eclipse Foundation
+<!-- ----------------------------------------------------------------------------
+  Copyright (c) 2026 Contributors to the Eclipse Foundation
 
-SPDX-License-Identifier: Apache-2.0
--->
+  See the NOTICE file(s) distributed with this work for additional
+  information regarding copyright ownership.
 
-# StarPLS Bazel Module
+  This program and the accompanying materials are made available under the
+  terms of the Apache License Version 2.0 which is available at
+  https://www.apache.org/licenses/LICENSE-2.0
 
-This Bazel module provides a convenient way to integrate the pre-built `starpls` Starlark language server into your Bazel workspace.
-
-## Features
+  SPDX-License-Identifier: Apache-2.0
+----------------------------------------------------------------------------- -->
 
 *   Downloads a specific version of the `starpls` binary.
 *   Provides a simple Bazel macro (`setup_starpls`) to create a `genrule` target that downloads and makes the language server executable.

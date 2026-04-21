@@ -1,14 +1,16 @@
-# Tracing to Source Files (Bazel / Source Code Linker)
+<!-- ----------------------------------------------------------------------------
+  Copyright (c) 2026 Contributors to the Eclipse Foundation
 
-## Overview
+  See the NOTICE file(s) distributed with this work for additional
+  information regarding copyright ownership.
 
-`lobster-bazel` scans source files for inline tracing tags and produces a
-`.lobster` file in the `lobster-imp-trace` format. It is designed for use in
-Bazel-based projects where the build system can provide lists of source files to
-scan, but the tool itself is not Bazel-specific and can be used with any build
-system that can produce file-list inputs.
+  This program and the accompanying materials are made available under the
+  terms of the Apache License Version 2.0 which is available at
+  https://www.apache.org/licenses/LICENSE-2.0
 
-Supported file types (automatically detected by extension):
+  SPDX-License-Identifier: Apache-2.0
+----------------------------------------------------------------------------- -->
+
 
 | Extension            | Language  | Comment sign |
 |----------------------|-----------|--------------|
