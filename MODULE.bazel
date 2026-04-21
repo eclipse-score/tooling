@@ -11,11 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-module(
-    name = "score_tooling",
-    version = "0.0.0",
-    compatibility_level = 1,
-)
+module(name = "score_tooling")
 
 ###############################################################################
 # Core Dependencies
@@ -213,7 +209,8 @@ register_toolchains(
 ###############################################################################
 # Dev Dependencies (for testing)
 ###############################################################################
-bazel_dep(name = "score_docs_as_code", version = "3.0.1", dev_dependency = True)
+bazel_dep(name = "score_docs_as_code", version = "4.0.0", dev_dependency = True)
+bazel_dep(name = "score_process", version = "1.5.3", dev_dependency = True)
 
 ###############################################################################
 # Setup Googletest
