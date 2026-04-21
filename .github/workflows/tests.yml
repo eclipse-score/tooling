@@ -20,6 +20,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6.0.2
+      - name: Install Missing Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev
       - name: Run python_basics integration tests
         run: |
           cd python_basics/integration_tests
@@ -38,3 +42,9 @@ jobs:
       - name: Run rules_score tests
         run: |
           bazel test //bazel/rules/rules_score/...
+      - name: Run Plantuml Tooling tests
+        run: |
+          bazel test //plantuml/...
+      - name: Run Validation Tooling tests
+        run: |
+          bazel test //validation/...
