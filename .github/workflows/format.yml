@@ -35,4 +35,4 @@ jobs:
           bazelisk-cache: true
       - name: Run formatting checks
         run: |
-          bazel test //:format.check
+          bazel test --lockfile_mode=error //:format.check
