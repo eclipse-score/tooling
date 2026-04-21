@@ -124,7 +124,10 @@ sphinx_toolchain(
     sphinx = ":raw_build",
 )
 
-toolchain_type(name = "toolchain_type")
+toolchain_type(
+    name = "toolchain_type",
+    visibility = ["//visibility:public"],
+)
 
 toolchain(
     name = "sphinx_default_toolchain",
