@@ -104,11 +104,20 @@ type FailureMode extends ScoreReq.RequirementSafety {
     interface optional      String
 }
 
-type ControlMeasure extends ScoreReq.RequirementSafety {
-    mitigates optional               String
+abstract type Measure extends ScoreReq.RequirementSafety {
+}
+
+type ControlMeasure extends Measure {
+}
+
+type PreventiveMeasure extends Measure {
+}
+
+type Mitigation extends Measure {
 }
 
 type AoU extends ControlMeasure {
+    mitigates optional               String
 }
 
 ///////////////////////////////

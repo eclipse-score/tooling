@@ -105,17 +105,25 @@ $BasicEvent("No More Coffee", "SampleLibrary.NoMoreCoffee", "AG2")
 ![FTA Example](assets/fta_example.svg)
 
 ## Control Measures
-For each BasicEvent a Control Measure shall be derived. This will be performed again in TRLC. The Mapping between PlantUML and TRLC will be done again based on the ID. So for our case we will define a Control Measure for NoMoreCookies:
+For each BasicEvent a Control Measure shall be derived. This will be performed again in TRLC. The mapping between the FTA BasicEvent and the ControlMeasure is established by **using the same TRLC ID**: the `ControlMeasure` record name (combined with its package) must match the alias of the `$BasicEvent` in the FTA diagram.
+
+For our case the BasicEvent is defined as:
+
+```plantuml
+$BasicEvent("No More Cookies", "SampleLibrary.NoMoreCookies", "AG2")
+```
+
+The corresponding ControlMeasure must therefore be named `NoMoreCookies` in package `SampleLibrary`:
 
 ```trlc
-ScoreReq.ControlMeasure SampleAoU{
+ScoreReq.ControlMeasure NoMoreCookies{
     safety = ScoreReq.Asil.B
     description = "We shall only order family size cookie jars"
     version = 1
-    mitigates = "SampleLibrary.NoMoreCookies"
 }
-
 ```
+
+The traceability link is established automatically via matching of the fully-qualified name `SampleLibrary.NoMoreCookies`.
 
 ## Traceability Report
 

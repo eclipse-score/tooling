@@ -10,6 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+
 # unit tests for the shebang handling in the cr_checker module
 from __future__ import annotations
 

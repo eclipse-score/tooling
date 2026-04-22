@@ -18,19 +18,16 @@ ScoreReq.ControlMeasure JustBadLuck{
     safety = ScoreReq.Asil.B
     description = "Sometimes, the dark side wins. We shall be prepared for that."
     version = 1
-    mitigates = "SampleLibrary.JustBadLuck"
 }
 
 ScoreReq.ControlMeasure NoMoreCookies{
     safety = ScoreReq.Asil.B
     description = "We shall only order family size cookie jars"
     version = 1
-    mitigates = "SampleLibrary.NoMoreCookies"
 }
 
 ScoreReq.ControlMeasure NoMoreCoffee{
     safety = ScoreReq.Asil.B
     description = "We shall keep a coffee reserve for emergencies"
     version = 1
-    mitigates = "SampleLibrary.NoMoreCoffee"
 }
