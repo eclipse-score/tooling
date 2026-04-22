@@ -1,43 +1,15 @@
-<!--
-Copyright (c) 2026 Contributors to the Eclipse Foundation
+<!-- ----------------------------------------------------------------------------
+  Copyright (c) 2026 Contributors to the Eclipse Foundation
 
-SPDX-License-Identifier: Apache-2.0
--->
+  See the NOTICE file(s) distributed with this work for additional
+  information regarding copyright ownership.
 
-# Manual Analysis
+  This program and the accompanying materials are made available under the
+  terms of the Apache License Version 2.0 which is available at
+  https://www.apache.org/licenses/LICENSE-2.0
 
-This directory provides Bazel rules and tooling for defining and executing
-**manual verification analyses**. A manual analysis captures a structured,
-interactive review of a piece of implementation (the *context*) against a set
-of requirements. A lock file ensures the analysis is re-done whenever the
-context changes.
-
-## Overview
-
-A manual analysis consists of:
-
-- **Context** – the implementation under review (source files, headers, or
-  entire `cc_library` dependency graphs).
-- **Analysis YAML** – a structured, step-by-step description of the
-  verification procedure (`action`, `automated_action`, `decision`,
-  `assertion`, `repeat`).
-- **Results file** – a JSON file capturing the outcomes recorded during an
-  interactive run.
-- **Lock file** – a SHA-256 digest file that ties the results to a specific
-  snapshot of the context. If the context changes, the test fails and the
-  analysis must be re-executed.
-
-The tooling also produces a **LOBSTER traceability artifact** (`.lobster` file)
-so that coverage of requirements can be tracked across the project.
-
-For the Bazel-focused architectural design and runtime views of this tooling,
-see [`docs/README.md`](docs/README.md).
-
-## Bazel Rules
-
-### `manual_analysis` (macro)
-
-The primary entry point. It instantiates two targets:
+  SPDX-License-Identifier: Apache-2.0
+----------------------------------------------------------------------------- -->
 
 | Target          | Kind   | Purpose                                                                  |
 |-----------------|--------|--------------------------------------------------------------------------|

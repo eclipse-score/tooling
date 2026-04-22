@@ -28,8 +28,11 @@ copyright_checker(
         "python_basics",
         "starpls",
         "tools",
-        "plantuml",
         "lobster_bazel",
+        "bazel",
+        "manual_analysis",
+        "plantuml",
+        "validation",
 
         # Add other directories/files you want to check
     ],

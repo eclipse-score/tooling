@@ -1,4 +1,4 @@
-<!--
+<!-- ----------------------------------------------------------------------------
   Copyright (c) 2026 Contributors to the Eclipse Foundation
 
   See the NOTICE file(s) distributed with this work for additional
@@ -9,18 +9,7 @@
   https://www.apache.org/licenses/LICENSE-2.0
 
   SPDX-License-Identifier: Apache-2.0
--->
-
-# Manual Analysis Tooling
-
-### Processing Phases
-
-The manual-analysis tooling is organized around two Bazel-driven runtime flows:
-
-- **Update flow** — re-run the interactive analysis and refresh the committed
-  lock file.
-- **Test flow** — recompute the lock in the Bazel action sandbox, validate the
-  committed artifacts, and emit a `.lobster` traceability artifact.
+----------------------------------------------------------------------------- -->
 
 The following sequence diagrams show both flows separately so the Bazel rule
 composition stays visible.
