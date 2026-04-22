@@ -34,6 +34,7 @@ object "Failure Mode" as FailureMode
 object "Root Cause" as RootCause
 object "Safety Goal" as SafetyGoal
 object "Measure" as Measure
+object "Control Measure" as ControlMeasure
 object "Assumption of Use\n(AoU)" as AoU
 
 SafetyAnalysis <|-l- FMEA
@@ -49,8 +50,10 @@ SEooC "1" o-- "n" AoU
 FMEA ..> FailureMode : determine
 FTA ..> RootCause : determine
 
-Measure <|-u- AoU
-RootCause <-l- Measure : mitigates
+Measure <|-- ControlMeasure
+Measure <|-- AoU
+RootCause <-l- ControlMeasure : same ID
+RootCause <-l- AoU : mitigates
 
 
 
