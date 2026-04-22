@@ -21,6 +21,8 @@ load("//bazel/rules/rules_score:sphinx_toolchain.bzl", "sphinx_toolchain")
 load("//lobster_bazel:lobster_bazel.bzl", "lobster_linker")
 
 exports_files([
+    "src/bazel_sphinx_needs.py",
+    "src/sphinx_wrapper.py",
     "templates/conf.template.py",
     "templates/dependable_element_index.template.rst",
     "templates/unit.template.rst",
@@ -67,6 +69,17 @@ py_library(
     name = "sphinx_module_ext",
     srcs = ["src/sphinx_module_ext.py"],
     imports = ["src"],
+    visibility = ["//visibility:public"],
+    deps = [
+        requirement("sphinx"),
+    ],
+)
+
+py_library(
+    name = "bazel_sphinx_needs",
+    srcs = ["src/bazel_sphinx_needs.py"],
+    imports = ["src"],
+    visibility = ["//visibility:public"],
     deps = [
         requirement("sphinx"),
     ],
