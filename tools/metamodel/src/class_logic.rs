@@ -10,47 +10,65 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
-
 use serde::{Deserialize, Serialize};
 
 /// Represents a complete class diagram model containing all resolved entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ClassDiagram {
     pub name: String,
-    pub entities: Vec<LogicEntity>,
-    pub containers: Vec<LogicContainer>,
-    pub relationships: Vec<LogicRelationship>,
+    pub entities: Vec<SimpleEntity>,
+    // all relationships in the entire diagram
+    pub relationships: Vec<Relationship>, // would make sense inside entities
+
     pub source_files: Vec<String>,
     pub version: Option<String>,
 }
 
 /// Represents a class, struct, interface, enum, or other type entity
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct LogicEntity {
+pub struct SimpleEntity {
     /// Fully Qualified Name (FQN) - unique identifier including namespace path
+    // mw::com::test{
+    //     int bla
+    // } -> mw.com.test.bla
+    //
+    //package core::geometry <<subdomain>> {
+    // class Circle <<entity>> {
+    // "id": "core.geometry.Circle",
     pub id: String,
     /// Display name (may differ from id when alias is used)
-    pub name: Option<String>,
-    /// Short alias for referencing (e.g., `class "LongName" as Alias`)
-    pub alias: Option<String>,
+    /// just variable name in c++ and alias in plantuml (if alias does not exist label name is the
+    /// fallback)
+    pub name: String,
+
     /// FQN of parent namespace/package
-    pub parent_id: Option<String>,
+    /// enclosing namespace name
+    pub enclosing_namespace_id: Option<String>,
     /// Type of entity (class, struct, interface, enum, etc.)
     pub entity_type: EntityType,
-    /// Stereotypes applied to this entity (e.g., <<Model>>, <<Singleton>>)
-    pub stereotypes: Vec<String>,
-    /// Attributes (member variables)
-    pub attributes: Vec<LogicAttribute>,
+
+    // aliased type with using keyword also called annotaion in plantuml
+    pub type_aliases: Vec<TypeAlias>,
+    pub variables: Vec<MemberVariable>,
     /// Methods (member functions)
-    pub methods: Vec<LogicMethod>,
-    /// Template parameters for generic types
-    pub template_params: Vec<String>,
+    pub methods: Vec<Method>,
+    /// Template parameters for generic types (empty option means not templated) empty vector means
+    /// template is an ampty bracket like template<> which can be encountered during explicit template specialization
+    pub template_parameters: Option<Vec<String>>,
+
     /// Enum literals (only for Enum entity_type)
-    pub enum_literals: Vec<LogicEnumLiteral>,
+    pub enum_literals: Vec<EnumLiteral>,
+
+    // all relationships for current entity
+    pub relationships: Vec<Relationship>,
+
+    /// Debug info for display in case of missmatch
+    ///
     /// Source file location
     pub source_file: Option<String>,
-    /// Line number in source
+    /// 1-based line number in source; `None` means the source line is unknown
     pub source_line: Option<u32>,
+    // pub relstionships: Vec<LogicRelationship>, // relationships where this entity is the source
 }
 
 /// The type of entity in a class diagram
@@ -62,38 +80,14 @@ pub enum EntityType {
     Class,
     /// Data structure (typically POD in C++)
     Struct,
+
     /// Abstract interface
     Interface,
-    /// Enumeration
-    Enum,
     /// Abstract class
     AbstractClass,
-    /// Annotation type
-    Annotation,
-}
 
-/// The type of container/grouping in a class diagram
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "PascalCase")]
-pub enum ContainerType {
-    /// C++ namespace
-    #[default]
-    Namespace,
-    /// Logical package grouping
-    Package,
-}
-
-/// Represents a namespace or package container
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct LogicContainer {
-    /// Fully Qualified Name (FQN)
-    pub id: String,
-    /// Display name
-    pub name: String,
-    /// FQN of parent container
-    pub parent_id: Option<String>,
-    /// Type of container
-    pub container_type: ContainerType,
+    /// Enumeration
+    Enum,
 }
 
 /// Visibility modifier for members
@@ -107,49 +101,132 @@ pub enum Visibility {
     Private,
     /// Protected visibility (#)
     Protected,
-    /// Package-private visibility (~)
-    Package,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct TypeAlias {
+    /// example: using Number = double;
+    /// alias = "Number"
+    /// original_type = "double"
+    pub alias: String,
+    pub original_type: String,
 }
 
 /// Represents a class attribute (member variable)
+/// renamed from LogicAttribute
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct LogicAttribute {
+pub struct MemberVariable {
     /// Attribute name
     pub name: String,
     /// Data type (e.g., "int", "string", "std::vector<int>")
     pub data_type: Option<String>,
     /// Visibility modifier
     pub visibility: Visibility,
-    /// Default/initial value
-    pub default_value: Option<String>,
     /// Whether this is a static member
     pub is_static: bool,
     /// Whether this is a const member
     pub is_const: bool,
-    /// Description or documentation
-    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ArgumentModifier {
+    Const,
+    Pointer,
+    LValueReference,
+    RValueReference,
+    Variadic,
+}
+
+impl ArgumentModifier {
+    pub fn make_modifier_vec(
+        is_const: bool,
+        is_pointer: bool,
+        is_lvalue_reference: bool,
+        is_rvalue_reference: bool,
+        is_variadic: bool,
+    ) -> Vec<ArgumentModifier> {
+        let mut modifiers = Vec::new();
+        if is_const {
+            modifiers.push(ArgumentModifier::Const);
+        }
+        if is_pointer {
+            modifiers.push(ArgumentModifier::Pointer);
+        }
+        if is_lvalue_reference {
+            modifiers.push(ArgumentModifier::LValueReference);
+        }
+        if is_rvalue_reference {
+            modifiers.push(ArgumentModifier::RValueReference);
+        }
+        if is_variadic {
+            modifiers.push(ArgumentModifier::Variadic);
+        }
+        modifiers
+    }
 }
 
 /// Represents a method parameter
+/// renamed from LogicParameter
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct LogicParameter {
+pub struct FunctionArgument {
     /// Parameter name
     pub name: String,
     /// Parameter type
     pub param_type: Option<String>,
-    /// Default value if any
-    pub default_value: Option<String>,
-    /// Whether passed by reference
-    pub is_reference: bool,
-    /// Whether the parameter is const
-    pub is_const: bool,
-    /// Whether this is a variadic parameter (...)
-    pub is_variadic: bool,
+    pub modifiers: Vec<ArgumentModifier>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum MethodModifier {
+    Static,
+    Const,
+    Virtual,
+    Abstract,
+    Override,
+    Constructor,
+    Destructor,
+    Noexcept,
+}
+
+impl MethodModifier {
+    pub fn make_modifier_vec(
+        is_static: bool,
+        is_const: bool,
+        is_virtual: bool,
+        is_abstract: bool,
+        is_override: bool,
+        is_constructor: bool,
+        is_destructor: bool,
+    ) -> Vec<MethodModifier> {
+        let mut modifiers = Vec::new();
+        if is_static {
+            modifiers.push(MethodModifier::Static);
+        }
+        if is_const {
+            modifiers.push(MethodModifier::Const);
+        }
+        if is_virtual {
+            modifiers.push(MethodModifier::Virtual);
+        }
+        if is_abstract {
+            modifiers.push(MethodModifier::Abstract);
+        }
+        if is_override {
+            modifiers.push(MethodModifier::Override);
+        }
+        if is_constructor {
+            modifiers.push(MethodModifier::Constructor);
+        }
+        if is_destructor {
+            modifiers.push(MethodModifier::Destructor);
+        }
+        modifiers
+    }
 }
 
 /// Represents a class method (member function)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct LogicMethod {
+pub struct Method {
     /// Method name
     pub name: String,
     /// Return type
@@ -157,46 +234,28 @@ pub struct LogicMethod {
     /// Visibility modifier
     pub visibility: Visibility,
     /// Method parameters
-    pub parameters: Vec<LogicParameter>,
+    pub parameters: Vec<FunctionArgument>,
     /// Template parameters for generic methods
-    pub template_params: Vec<String>,
-    /// Whether this is a static method
-    pub is_static: bool,
-    /// Whether this is a const method
-    pub is_const: bool,
-    /// Whether this is a virtual method
-    pub is_virtual: bool,
-    /// Whether this is a pure virtual (abstract) method
-    pub is_abstract: bool,
-    /// Whether this is an override
-    pub is_override: bool,
-    /// Whether this is a constructor
-    pub is_constructor: bool,
-    /// Whether this is a destructor
-    pub is_destructor: bool,
+    pub template_parameters: Option<Vec<String>>,
+    pub modifiers: Vec<MethodModifier>,
 }
 
 /// Represents a relationship between two entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct LogicRelationship {
+pub struct Relationship {
     /// FQN of the source entity
     pub source: String,
     /// FQN of the target entity
     pub target: String,
     /// Type of relationship
     pub relation_type: RelationType,
-    /// Label/annotation on the relationship
-    pub label: Option<String>,
-    /// Stereotype on the relationship (e.g., <<DependsOn>>)
-    pub stereotype: Option<String>,
+
+    // NOTE:  these might not be used for validation
+    //
     /// Source multiplicity (e.g., "1", "0..*", "1..n")
     pub source_multiplicity: Option<String>,
     /// Target multiplicity
     pub target_multiplicity: Option<String>,
-    /// Source role name
-    pub source_role: Option<String>,
-    /// Target role name
-    pub target_role: Option<String>,
 }
 
 /// Types of relationships in class diagrams
@@ -212,56 +271,19 @@ pub enum RelationType {
     Composition,
     /// Aggregation (weak ownership) - `o--`
     Aggregation,
-    /// Directed association - `-->`
+    /// Directed association - `-->` (depends on  A --> B means A depends on B)
     Association,
     /// Dependency (uses) - `..>`
     Dependency,
-    /// Simple link - `--`
-    Link,
-    /// Dashed link - `..`
-    DashedLink,
 }
 
 /// Represents an enum literal/value
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct LogicEnumLiteral {
+pub struct EnumLiteral {
     /// Literal name
     pub name: String,
-    /// Visibility (if specified)
-    pub visibility: Visibility,
     /// Explicit value (e.g., `HIGH = 0`)
     pub value: Option<String>,
-    /// Description/documentation
-    pub description: Option<String>,
-}
-
-/// Error types for class diagram resolution
-#[derive(Debug, thiserror::Error)]
-pub enum ClassResolverError {
-    #[error("Class Resolver: Unresolved reference: {reference}")]
-    UnresolvedReference { reference: String },
-
-    #[error("Duplicate entity id: {entity_id}")]
-    DuplicateEntity { entity_id: String },
-
-    #[error("Unknown entity type: {entity_type}")]
-    UnknownEntityType { entity_type: String },
-
-    #[error("Invalid relationship: {from} -> {to}: {reason}")]
-    InvalidRelationship {
-        from: String,
-        to: String,
-        reason: String,
-    },
-
-    #[error("Circular inheritance detected: {cycle}")]
-    CircularInheritance { cycle: String },
-
-    #[error("Invalid visibility modifier: {modifier}")]
-    InvalidVisibility { modifier: String },
-
-    #[error("Parse error: {message}")]
-    ParseError { message: String },
 }
 
 #[cfg(test)]
@@ -270,59 +292,47 @@ mod tests {
 
     #[test]
     fn test_entity_serialization() {
-        let entity = LogicEntity {
+        let entity = SimpleEntity {
             id: "Core::User".to_string(),
-            name: Some("User".to_string()),
-            alias: None,
-            parent_id: Some("Core".to_string()),
+            name: "User".to_string(),
+            enclosing_namespace_id: Some("Core".to_string()),
             entity_type: EntityType::Class,
-            stereotypes: vec!["Model".to_string()],
-            attributes: vec![LogicAttribute {
+            variables: vec![MemberVariable {
                 name: "name".to_string(),
                 data_type: Some("string".to_string()),
                 visibility: Visibility::Public,
-                default_value: None,
                 is_static: false,
                 is_const: false,
-                description: None,
             }],
-            methods: vec![LogicMethod {
+            methods: vec![Method {
                 name: "getName".to_string(),
                 return_type: Some("string".to_string()),
                 visibility: Visibility::Public,
                 parameters: vec![],
-                template_params: vec![],
-                is_static: false,
-                is_const: true,
-                is_virtual: false,
-                is_abstract: false,
-                is_override: false,
-                is_constructor: false,
-                is_destructor: false,
+                template_parameters: None,
+                modifiers: vec![MethodModifier::Const],
             }],
-            template_params: vec![],
+            template_parameters: None,
             enum_literals: vec![],
             source_file: None,
             source_line: None,
+            type_aliases: vec![],
+            relationships: vec![],
         };
 
         let json = serde_json::to_string_pretty(&entity).unwrap();
-        let deserialized: LogicEntity = serde_json::from_str(&json).unwrap();
+        let deserialized: SimpleEntity = serde_json::from_str(&json).unwrap();
         assert_eq!(entity, deserialized);
     }
 
     #[test]
     fn test_relationship_types() {
-        let inheritance = LogicRelationship {
+        let inheritance = Relationship {
             source: "Derived".to_string(),
             target: "Base".to_string(),
             relation_type: RelationType::Inheritance,
-            label: None,
-            stereotype: None,
             source_multiplicity: None,
             target_multiplicity: None,
-            source_role: None,
-            target_role: None,
         };
 
         assert_eq!(inheritance.relation_type, RelationType::Inheritance);
@@ -331,33 +341,25 @@ mod tests {
     #[test]
     fn test_partial_plantuml_entity() {
         // PlantUML often has incomplete information - this should still work
-        let entity = LogicEntity {
+        let entity = SimpleEntity {
             id: "UserService".to_string(),
-            name: Some("UserService".to_string()),
+            name: "UserService".to_string(),
             entity_type: EntityType::Class,
-            stereotypes: vec!["service".to_string()],
             // No attributes specified (common in high-level diagrams)
-            attributes: vec![],
             // Method with no return type (PlantUML allows this)
-            methods: vec![LogicMethod {
+            methods: vec![Method {
                 name: "getUser".to_string(),
                 return_type: None, // <-- Often omitted in PlantUML
                 visibility: Visibility::Public,
                 parameters: vec![],
-                template_params: vec![],
-                is_static: false,
-                is_const: false,
-                is_virtual: false,
-                is_abstract: false,
-                is_override: false,
-                is_constructor: false,
-                is_destructor: false,
+                template_parameters: None,
+                modifiers: vec![],
             }],
             ..Default::default()
         };
 
         let json = serde_json::to_string(&entity).unwrap();
-        let deserialized: LogicEntity = serde_json::from_str(&json).unwrap();
+        let deserialized: SimpleEntity = serde_json::from_str(&json).unwrap();
         assert_eq!(entity, deserialized);
         assert!(entity.methods[0].return_type.is_none());
     }
