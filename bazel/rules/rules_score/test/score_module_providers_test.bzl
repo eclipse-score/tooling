@@ -13,7 +13,7 @@
 """Tests for sphinx_module providers and two-phase build system."""
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//bazel/rules/rules_score:providers.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
+load("@score_tooling//bazel/rules/rules_score:providers.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
 
 # ============================================================================
 # SphinxModuleInfo Provider Tests
@@ -313,8 +313,21 @@ def sphinx_module_providers_test_suite(name):
     native.test_suite(
         name = name,
         tests = [
+            # Provider field tests
+            ":sphinx_module_info_fields_test",
+            ":score_needs_info_fields_test",
+            ":score_needs_transitive_collection_test",
+
             # Provider tests
             ":score_needs_with_deps_test",
+
+            # Two-phase build tests
+            ":two_phase_needs_first_test",
+            ":two_phase_html_second_test",
+
+            # Config tests
+            ":config_auto_generation_test",
+            ":config_explicit_usage_test",
 
             # Dependency tests
             ":deps_html_merging_test",

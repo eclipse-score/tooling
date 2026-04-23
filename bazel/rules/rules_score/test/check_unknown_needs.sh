@@ -13,7 +13,9 @@
 # *******************************************************************************
 set -euo pipefail
 
-# Test if the html output contains unknown needs
+# Test if the html output contains unknown needs.
+# TODO: pass the HTML dir via args instead of using a hardcoded relative path,
+# e.g. args = ["$(rootpath :module_a_lib)"] in the sh_test and read as "$1/index.html".
 html_file="./module_a_lib/html/index.html"
 
 if [[ ! -f "$html_file" ]]; then

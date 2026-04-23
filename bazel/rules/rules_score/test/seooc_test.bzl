@@ -61,7 +61,7 @@ def _seooc_artifacts_copied_test_impl(ctx):
     # Expected artifact basenames - these come from the SphinxSourcesInfo providers
     # and are filtered to only include .rst/.md files for the index
     expected_artifacts = [
-        "component_requirements.rst",  # from requirements
+        "feat_req_feat_req_trlc.rst",  # from feature requirements
         "dfa.rst",  # from :dependability_analysis_target
     ]
 

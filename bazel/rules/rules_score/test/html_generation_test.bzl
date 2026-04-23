@@ -213,11 +213,20 @@ def sphinx_module_test_suite(name):
     native.test_suite(
         name = name,
         tests = [
+            # Provider validation
+            ":providers_test",
+            ":basic_html_generation_test",
+
             # Needs generation
+            ":needs_generation_test",
             ":needs_transitive_test",
 
             # Dependencies and integration
             ":module_dependencies_test",
             ":html_merging_test",
+
+            # Config generation
+            ":auto_config_generation_test",
+            ":explicit_config_test",
         ],
     )

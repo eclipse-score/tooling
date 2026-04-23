@@ -28,7 +28,7 @@ cascading failures, and dependent failures that could affect the safety of the c
    :id: comp_saf_dfa__seooc_test__common_cause_analysis
    :status: valid
    :tags: dfa, safety, seooc_test
-   :violates: comp_arc_sta__seooc_test__data_processing_engine
+   :violates: comp_arc_sta__seooc_test__data_processor
    :failure_id: ccf_root
    :failure_effect: Common cause failures affecting multiple safety mechanisms simultaneously
    :mitigated_by: aou_req__seooc_test__controlled_environment
@@ -49,7 +49,7 @@ cascading failures, and dependent failures that could affect the safety of the c
    :id: comp_saf_dfa__seooc_test__power_dependency
    :status: valid
    :tags: dfa, safety, seooc_test
-   :violates: comp_arc_sta__seooc_test__data_processing_engine
+   :violates: comp_arc_sta__seooc_test__data_processor
    :failure_id: power_ccf
    :failure_effect: Power supply failure affecting both main and redundant processing paths
    :mitigated_by: aou_req__seooc_test__supply_voltage
@@ -75,7 +75,7 @@ cascading failures, and dependent failures that could affect the safety of the c
    :id: comp_saf_dfa__seooc_test__clock_dependency
    :status: valid
    :tags: dfa, safety, seooc_test
-   :violates: comp_arc_sta__seooc_test__data_processing_engine
+   :violates: comp_arc_sta__seooc_test__data_processor
    :failure_id: clock_ccf
    :failure_effect: Clock failure causing simultaneous malfunction of timing-dependent safety mechanisms
    :mitigated_by: comp_req__seooc_test__fault_detection
@@ -101,7 +101,7 @@ cascading failures, and dependent failures that could affect the safety of the c
    :id: comp_saf_dfa__seooc_test__sw_design_dependency
    :status: valid
    :tags: dfa, safety, seooc_test
-   :violates: comp_arc_sta__seooc_test__data_processing_engine
+   :violates: comp_arc_sta__seooc_test__data_processor
    :failure_id: sw_ccf
    :failure_effect: Systematic software defect in common code base affecting both calculation paths
    :mitigated_by: comp_req__seooc_test__redundant_calculation
@@ -130,7 +130,7 @@ DFA Summary
    :id: comp_saf_dfa__seooc_test__dfa_summary
    :status: valid
    :tags: dfa, safety, seooc_test, summary
-   :violates: comp_arc_sta__seooc_test__data_processing_engine
+   :violates: comp_arc_sta__seooc_test__data_processor
    :failure_id: dfa_summary
    :failure_effect: Combined dependent failure probability assessment
    :mitigated_by: aou_req__seooc_test__controlled_environment

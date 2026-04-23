@@ -52,7 +52,7 @@ pip.parse(
     python_version = PYTHON_VERSION,
     requirements_lock = "//:requirements.txt",
 )
-use_repo(pip, "pip_tooling")
+use_repo(pip, "pip_tooling_test")
 
 bazel_dep(name = "score_docs_as_code", version = "3.0.1", dev_dependency = True)
 # bazel_dep(name = "score_platform", version = "0.5.0")

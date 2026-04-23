@@ -11,16 +11,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-// Main implementation for test_component
-#include <iostream>
+// Unit tests for test_binary_unit fixture
+#include <gtest/gtest.h>
 
 // Declarations from mock libraries
 extern int mock_function_1();
 extern int mock_function_2();
 
-int main(int argc, char** argv) {
-    std::cout << "Test Component Implementation" << std::endl;
-    std::cout << "Mock function 1 returns: " << mock_function_1() << std::endl;
-    std::cout << "Mock function 2 returns: " << mock_function_2() << std::endl;
-    return 0;
+TEST(BinaryUnitTest, MockFunction1ReturnsExpectedValue) {
+    ::testing::Test::RecordProperty("lobster-tracing", "TestComponent.REQ_COMP_TEST_001");
+    EXPECT_EQ(mock_function_1(), 42);
+}
+
+TEST(BinaryUnitTest, MockFunction2ReturnsExpectedValue) {
+    ::testing::Test::RecordProperty("lobster-tracing", "TestComponent.REQ_COMP_TEST_001");
+    EXPECT_EQ(mock_function_2(), 84);
 }

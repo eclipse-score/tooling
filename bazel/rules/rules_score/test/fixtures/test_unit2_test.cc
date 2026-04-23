@@ -11,16 +11,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-// Main implementation for test_component
-#include <iostream>
+#include <gtest/gtest.h>
 
-// Declarations from mock libraries
 extern int mock_function_1();
 extern int mock_function_2();
 
-int main(int argc, char** argv) {
-    std::cout << "Test Component Implementation" << std::endl;
-    std::cout << "Mock function 1 returns: " << mock_function_1() << std::endl;
-    std::cout << "Mock function 2 returns: " << mock_function_2() << std::endl;
-    return 0;
+TEST(MockLib2Test, MockFunction1Returns42) {
+  ::testing::Test::RecordProperty("lobster-tracing",
+                                  "TestComponent.REQ_COMP_TEST_001");
+  EXPECT_EQ(mock_function_1(), 42);
+}
+
+TEST(MockLib2Test, MockFunction2Returns84) {
+  ::testing::Test::RecordProperty("lobster-tracing",
+                                  "TestComponent.REQ_COMP_TEST_001");
+  EXPECT_EQ(mock_function_2(), 84);
 }
