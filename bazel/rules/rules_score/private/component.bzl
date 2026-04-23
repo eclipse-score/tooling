@@ -20,7 +20,7 @@ with associated requirements and tests.
 """
 
 load("@lobster//:lobster.bzl", "subrule_lobster_gtest", "subrule_lobster_html_report", "subrule_lobster_report")
-load("//bazel/rules/rules_score:providers.bzl", "CertifiedScope", "ComponentInfo", "ComponentRequirementsInfo", "SphinxSourcesInfo", "UnitInfo")
+load("//bazel/rules/rules_score:providers.bzl", "CertifiedScope", "ComponentInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo", "UnitInfo")
 load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_sources")
 
 # ============================================================================
@@ -59,13 +59,18 @@ def _component_impl(ctx):
 
     # -------------------------------------------------------------------------
     # Lobster Tracing: collect .lobster files from component_requirements targets
+    # and feature_requirements targets (needed to resolve derived_from references)
     # -------------------------------------------------------------------------
     req_lobster_files = []
+    feat_req_lobster_files = []
     for req_target in ctx.attr.requirements:
         if ComponentRequirementsInfo in req_target:
             req_lobster_files.append(req_target[ComponentRequirementsInfo].srcs)
+        if FeatureRequirementsInfo in req_target:
+            feat_req_lobster_files.append(req_target[FeatureRequirementsInfo].srcs)
 
     req_lobster_depset = depset(transitive = req_lobster_files)
+    feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)
 
     # Collect nested components
     components_depset = depset(ctx.attr.components)
@@ -132,7 +137,8 @@ def _component_impl(ctx):
     # only the source file lists (the structure is fixed per variant).
     # -------------------------------------------------------------------------
     comp_req_lobster_files = req_lobster_depset.to_list()
-    all_lobster_inputs = list(comp_req_lobster_files)
+    feat_req_lobster_files_list = feat_req_lobster_depset.to_list()
+    all_lobster_inputs = list(comp_req_lobster_files) + feat_req_lobster_files_list
 
     if arch_lobster_file:
         all_lobster_inputs.append(arch_lobster_file)
@@ -144,6 +150,7 @@ def _component_impl(ctx):
         template = ctx.file._lobster_comp_template,
         output = lobster_config,
         substitutions = {
+            "{FEAT_REQ_SOURCES}": format_lobster_sources(feat_req_lobster_files_list),
             "{COMP_REQ_SOURCES}": format_lobster_sources(comp_req_lobster_files),
             "{ARCH_SOURCES}": format_lobster_sources([arch_lobster_file] if arch_lobster_file else []),
             "{UNIT_TEST_SOURCES}": format_lobster_sources([gtest_lobster_file]),
@@ -211,8 +218,8 @@ _component_test = rule(
     attrs = {
         "requirements": attr.label_list(
             mandatory = True,
-            providers = [ComponentRequirementsInfo],
-            doc = "Component requirements artifacts (component_requirements targets only)",
+            providers = [[ComponentRequirementsInfo], [FeatureRequirementsInfo]],
+            doc = "Component requirements artifacts (component_requirements or feature_requirements targets)",
         ),
         "components": attr.label_list(
             providers = [[ComponentInfo], [UnitInfo]],

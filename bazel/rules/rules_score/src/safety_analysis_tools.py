@@ -87,8 +87,7 @@ def _is_valid_trlc_fqn(alias: str) -> bool:
         return False
     return all(
         part
-        and part[0].isalpha()
-        or part[0] == "_"
+        and (part[0].isalpha() or part[0] == "_")
         and all(c.isalnum() or c == "_" for c in part)
         for part in parts
     )

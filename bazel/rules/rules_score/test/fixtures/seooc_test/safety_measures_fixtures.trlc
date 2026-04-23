@@ -1,0 +1,48 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+
+// Fixture exercising the updated Measure type hierarchy (commit bff44df3).
+// - ControlMeasure: no "mitigates" field; tracing is implicit via name-matching
+//   (record FQN must equal the $BasicEvent alias in the FTA diagram).
+// - PreventiveMeasure: new type, no mitigates field
+// - Mitigation: new type, no mitigates field
+// - AoU: still allows optional "mitigates" field (unchanged)
+
+package TestSafetyMeasures
+
+import ScoreReq
+
+ScoreReq.ControlMeasure SomeBasicEvent {
+    safety      = ScoreReq.Asil.B
+    description = "Control measure linked to FTA BasicEvent by name-matching (no mitigates field)"
+    version     = 1
+}
+
+ScoreReq.PreventiveMeasure SomePreventiveMeasure {
+    safety      = ScoreReq.Asil.QM
+    description = "A preventive measure that reduces the likelihood of a hazard"
+    version     = 1
+}
+
+ScoreReq.Mitigation SomeMitigation {
+    safety      = ScoreReq.Asil.B
+    description = "A mitigation that reduces the severity of a hazard"
+    version     = 1
+}
+
+ScoreReq.AoU SomeAoU {
+    safety      = ScoreReq.Asil.B
+    description = "An assumption of use with an explicit mitigates link"
+    version     = 1
+    mitigates   = "TestSafetyMeasures.SomeBasicEvent"
+}
