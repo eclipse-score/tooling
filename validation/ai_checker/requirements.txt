@@ -177,9 +177,9 @@ langchain-core==1.2.13 \
     --hash=sha256:b31823e28d3eff1e237096d0bd3bf80c6f9624eb471a9496dbfbd427779f8d82 \
     --hash=sha256:d2773d0d0130a356378db9a858cfeef64c3d64bc03722f1d4d6c40eb46fdf01b
     # via -r validation/ai_checker/requirements.txt.in
-langsmith==0.6.3 \
-    --hash=sha256:33246769c0bb24e2c17e0c34bb21931084437613cd37faf83bd0978a297b826f \
-    --hash=sha256:44fdf8084165513e6bede9dda715e7b460b1b3f57ac69f2ca3f03afa911233ec
+langsmith==0.7.31 \
+    --hash=sha256:0291d49203f6e80dda011af1afda61eb0595a4d697adb684590a8805e1d61fb6 \
+    --hash=sha256:331ee4f7c26bb5be4022b9859b7d7b122cbf8c9d01d9f530114c1914b0349ffb
     # via langchain-core
 orjson==3.11.5 \
     --hash=sha256:0522003e9f7fba91982e83a97fec0708f5a714c96c4209db7104e6b9d132f111 \
