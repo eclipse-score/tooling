@@ -290,7 +290,11 @@ impl ClassResolver {
     ) -> Result<(), ClassResolverError> {
         match element {
             Element::ClassDef(def) => {
-                self.process_extends_relationships(&def.name.internal, &def.extends, parent.clone())?;
+                self.process_extends_relationships(
+                    &def.name.internal,
+                    &def.extends,
+                    parent.clone(),
+                )?;
                 self.process_implements_relationships(&def.name.internal, &def.implements, parent)?;
             }
             Element::InterfaceDef(def) => {
@@ -308,12 +312,7 @@ impl ClassResolver {
         bases: &[String],
         parent: Option<String>,
     ) -> Result<(), ClassResolverError> {
-        self.process_declared_relationships(
-            child_name,
-            bases,
-            parent,
-            RelationType::Inheritance
-        )
+        self.process_declared_relationships(child_name, bases, parent, RelationType::Inheritance)
     }
 
     fn process_implements_relationships(
@@ -492,9 +491,7 @@ impl ClassResolver {
             param_type: param_type.clone(),
             // SEARCH_TAG[plantuml-class-gap]: parameter default value not represented by AST.
             default_value: None,
-            is_reference: param_type
-                .as_deref()
-                .is_some_and(Self::is_reference_type),
+            is_reference: param_type.as_deref().is_some_and(Self::is_reference_type),
             is_const: param_type.as_deref().is_some_and(Self::is_const_type),
             is_variadic: param.varargs,
         }

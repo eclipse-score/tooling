@@ -16,7 +16,9 @@ use crate::class_ast::{
     StructDef, Visibility,
 };
 use crate::class_traits::{TypeDef, WritableName};
-use crate::source_map::{normalize_multiline_member_signatures, remap_syntax_error_to_original_source};
+use crate::source_map::{
+    normalize_multiline_member_signatures, remap_syntax_error_to_original_source,
+};
 use parser_core::common_parser::{parse_arrow, PlantUmlCommonParser, Rule};
 use parser_core::{pest_to_syntax_error, BaseParseError, DiagramParser};
 use pest::Parser;
@@ -149,9 +151,8 @@ fn parse_attribute(pair: pest::iterators::Pair<Rule>) -> Attribute {
 fn parse_param(pair: pest::iterators::Pair<Rule>) -> Param {
     fn is_likely_type_only_param(raw: &str) -> bool {
         const PRIMITIVE_TYPES: &[&str] = &[
-            "bool", "char", "short", "int", "long", "float", "double", "void", "size_t",
-            "ssize_t", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32",
-            "int64", "auto",
+            "bool", "char", "short", "int", "long", "float", "double", "void", "size_t", "ssize_t",
+            "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64", "auto",
         ];
 
         let trimmed = raw.trim();
@@ -181,7 +182,10 @@ fn parse_param(pair: pest::iterators::Pair<Rule>) -> Param {
             return true;
         }
 
-        trimmed.chars().next().is_some_and(|ch| ch.is_ascii_uppercase())
+        trimmed
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_ascii_uppercase())
     }
 
     let mut name: Option<String> = None;
@@ -349,8 +353,10 @@ fn parse_type_def(pair: pest::iterators::Pair<Rule>) -> Element {
             match pair.as_rule() {
                 Rule::extends_clause => {
                     for inner in pair.into_inner() {
-                        if matches!(inner.as_rule(), Rule::extends_target | Rule::class_qualified_name)
-                        {
+                        if matches!(
+                            inner.as_rule(),
+                            Rule::extends_target | Rule::class_qualified_name
+                        ) {
                             targets.push(inner.as_str().to_string());
                         }
                     }
@@ -586,7 +592,9 @@ fn parse_namespace(pair: pest::iterators::Pair<Rule>) -> Namespace {
                 parse_named(inner, &mut namespace.name);
             }
             Rule::top_level => {
-                visit_top_level(inner, &mut |top_level_inner| match top_level_inner.as_rule() {
+                visit_top_level(
+                    inner,
+                    &mut |top_level_inner| match top_level_inner.as_rule() {
                         Rule::type_def => {
                             let mut type_def = parse_type_def(top_level_inner);
                             type_def.set_namespace(namespace.name.internal.clone());
@@ -601,7 +609,8 @@ fn parse_namespace(pair: pest::iterators::Pair<Rule>) -> Namespace {
                             namespace.namespaces.push(parse_namespace(top_level_inner));
                         }
                         _ => (),
-                    });
+                    },
+                );
             }
             _ => (),
         }
@@ -621,24 +630,24 @@ fn parse_package(pair: pest::iterators::Pair<Rule>) -> Package {
 
             Rule::top_level => {
                 visit_top_level(inner, &mut |t| match t.as_rule() {
-                        Rule::type_def => {
-                            let mut r#type = parse_type_def(t);
-                            r#type.set_package(package.name.internal.clone());
-                            package.types.push(r#type);
-                        }
-                        Rule::enum_def => {
-                            let mut enum_def = Element::EnumDef(parse_enum_def(t));
-                            enum_def.set_package(package.name.internal.clone());
-                            package.types.push(enum_def);
-                        }
-                        Rule::relationship => {
-                            package.relationships.push(parse_relationship(t));
-                        }
-                        Rule::package_def => {
-                            package.packages.push(parse_package(t));
-                        }
-                        _ => {}
-                    });
+                    Rule::type_def => {
+                        let mut r#type = parse_type_def(t);
+                        r#type.set_package(package.name.internal.clone());
+                        package.types.push(r#type);
+                    }
+                    Rule::enum_def => {
+                        let mut enum_def = Element::EnumDef(parse_enum_def(t));
+                        enum_def.set_package(package.name.internal.clone());
+                        package.types.push(enum_def);
+                    }
+                    Rule::relationship => {
+                        package.relationships.push(parse_relationship(t));
+                    }
+                    Rule::package_def => {
+                        package.packages.push(parse_package(t));
+                    }
+                    _ => {}
+                });
             }
             _ => {}
         }
@@ -713,30 +722,30 @@ impl DiagramParser for PumlClassParser {
                     match pair.as_rule() {
                         Rule::top_level => {
                             visit_top_level(pair, &mut |inner_pair| match inner_pair.as_rule() {
-                                    Rule::type_def => {
-                                        let type_def = parse_type_def(inner_pair);
-                                        uml_file.elements.push(ClassUmlTopLevel::Types(type_def));
-                                    }
-                                    Rule::enum_def => {
-                                        uml_file.elements.push(ClassUmlTopLevel::Enum(
-                                            parse_enum_def(inner_pair),
-                                        ));
-                                    }
-                                    Rule::namespace_def => {
-                                        uml_file.elements.push(ClassUmlTopLevel::Namespace(
-                                            parse_namespace(inner_pair),
-                                        ));
-                                    }
-                                    Rule::relationship => {
-                                        uml_file.relationships.push(parse_relationship(inner_pair));
-                                    }
-                                    Rule::package_def => {
-                                        uml_file.elements.push(ClassUmlTopLevel::Package(
-                                            parse_package(inner_pair),
-                                        ));
-                                    }
-                                    _ => (),
-                                });
+                                Rule::type_def => {
+                                    let type_def = parse_type_def(inner_pair);
+                                    uml_file.elements.push(ClassUmlTopLevel::Types(type_def));
+                                }
+                                Rule::enum_def => {
+                                    uml_file
+                                        .elements
+                                        .push(ClassUmlTopLevel::Enum(parse_enum_def(inner_pair)));
+                                }
+                                Rule::namespace_def => {
+                                    uml_file.elements.push(ClassUmlTopLevel::Namespace(
+                                        parse_namespace(inner_pair),
+                                    ));
+                                }
+                                Rule::relationship => {
+                                    uml_file.relationships.push(parse_relationship(inner_pair));
+                                }
+                                Rule::package_def => {
+                                    uml_file
+                                        .elements
+                                        .push(ClassUmlTopLevel::Package(parse_package(inner_pair)));
+                                }
+                                _ => (),
+                            });
                         }
                         Rule::startuml => {
                             let text = pair.as_str();
@@ -750,11 +759,7 @@ impl DiagramParser for PumlClassParser {
             }
             Err(e) => {
                 return Err(ClassError::Base(remap_syntax_error_to_original_source(
-                    pest_to_syntax_error(
-                        e,
-                        path.as_ref().clone(),
-                        normalized_content.as_str(),
-                    ),
+                    pest_to_syntax_error(e, path.as_ref().clone(), normalized_content.as_str()),
                     content,
                     &normalized_content,
                 )));
@@ -890,7 +895,10 @@ mod tests {
 
         assert_eq!(class_def.attributes.len(), 1);
         assert_eq!(class_def.attributes[0].name, "");
-        assert_eq!(class_def.attributes[0].r#type.as_deref(), Some("std::mutex"));
+        assert_eq!(
+            class_def.attributes[0].r#type.as_deref(),
+            Some("std::mutex")
+        );
     }
 
     #[test]

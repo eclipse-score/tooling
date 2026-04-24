@@ -50,7 +50,9 @@ struct NormalizedLine {
 impl NormalizedLine {
     fn from_raw_line(line: &str, line_number: usize) -> Self {
         let char_count = line.chars().count();
-        let column_map = (1..=char_count).map(|column| (line_number, column)).collect();
+        let column_map = (1..=char_count)
+            .map(|column| (line_number, column))
+            .collect();
 
         Self {
             text: line.to_string(),
@@ -89,7 +91,12 @@ impl NormalizedLine {
     }
 
     fn trim_end_whitespace(&mut self) {
-        while self.text.chars().next_back().is_some_and(char::is_whitespace) {
+        while self
+            .text
+            .chars()
+            .next_back()
+            .is_some_and(char::is_whitespace)
+        {
             self.text.pop();
             self.column_map.pop();
         }
@@ -98,7 +105,11 @@ impl NormalizedLine {
     fn trim_whitespace(&mut self) {
         let chars: Vec<char> = self.text.chars().collect();
         let start = chars.iter().take_while(|ch| ch.is_whitespace()).count();
-        let end_trim = chars.iter().rev().take_while(|ch| ch.is_whitespace()).count();
+        let end_trim = chars
+            .iter()
+            .rev()
+            .take_while(|ch| ch.is_whitespace())
+            .count();
         let end = chars.len().saturating_sub(end_trim);
 
         if start == 0 && end == chars.len() {
