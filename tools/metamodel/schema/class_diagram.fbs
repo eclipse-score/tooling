@@ -28,7 +28,8 @@ enum EntityType : byte {
     Interface = 2,
     Enum = 3,
     AbstractClass = 4,
-    Annotation = 5
+    Annotation = 5,
+    Object = 6
 }
 
 /// Type of container/grouping
@@ -147,7 +148,7 @@ table Entity {
     enum_literals: [EnumLiteral];
     /// Source file location
     source_file: string;
-    /// Line number in source
+    /// 1-based line number in source; 0 means the source line is unknown
     source_line: uint32;
 }
 

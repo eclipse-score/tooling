@@ -100,6 +100,7 @@ ignored_stmt = _{
     | skinparam_stmt
     | title_stmt
     | scale_stmt
+  | namespace_separator_stmt
 }
 
 skinparam_stmt = @{ ^"skinparam" ~ LINE_REST }
@@ -118,6 +119,12 @@ scale_stmt = _{
         (NUMBER ~ ("/" ~ NUMBER)?) |
         (NUMBER ~ ("width" | "height"))
     )
+}
+
+namespace_separator_stmt = @{
+  ^"set" ~ INLINE_WS+
+  ~ ^"namespaceSeparator" ~ INLINE_WS+
+  ~ (!EOL ~ ANY)+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -237,9 +244,9 @@ line_extra_attr = {
 // Arrow
 ////////////////////////////////////////////////////////////////////////////////
 // ---------- Characters ----------
-ARROW_PREFIX_CHAR = _{ "<" | "/" | "\\" | "|" | "*" | "o" | "0" | "(" | ")" | "#" | "^" | "@" }
+ARROW_PREFIX_CHAR = _{ "<" | "/" | "\\" | "|" | "*" | "o" | "0" | "(" | ")" | "#" | "^" | "@" | "+" }
 
-ARROW_SUFFIX_CHAR = _{ ">" | "/" | "\\" | "|" | "*" | "o" | "0" | "(" | ")" | "#" | "^" | "@" }
+ARROW_SUFFIX_CHAR = _{ ">" | "/" | "\\" | "|" | "*" | "o" | "0" | "(" | ")" | "#" | "^" | "@" | "+" }
 
 ARROW_SEGMENT_CHAR = _{ "-" | "." | "=" | "~" }
 

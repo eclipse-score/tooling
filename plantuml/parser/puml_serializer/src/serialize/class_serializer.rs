@@ -357,6 +357,7 @@ impl ClassSerializer {
         match t {
             EntityType::Class => fb::EntityType::Class,
             EntityType::Struct => fb::EntityType::Struct,
+            EntityType::Object => fb::EntityType::Object,
             EntityType::Interface => fb::EntityType::Interface,
             EntityType::Enum => fb::EntityType::Enum,
             EntityType::AbstractClass => fb::EntityType::AbstractClass,

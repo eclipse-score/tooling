@@ -24,7 +24,25 @@ class_visibility = { "+" | "-" | "#" | "~" }
 ///////////////////////////////////////////////////////////////
 // Name & Alias
 ///////////////////////////////////////////////////////////////
-type_name  = @{ (ASCII_ALPHANUMERIC | "_")+ }
+type_name = { type_expr }
+
+type_expr = { brace_enclosed_type | const_prefix* ~ prefix_array_prefix* ~ qualified_type ~ generic_type_args? ~ function_type_suffix? ~ type_suffix* }
+
+qualified_type = @{ ("::")? ~ identifier ~ (("::" | ".") ~ identifier)* }
+
+generic_type_args = { "<" ~ !"<" ~ type_arg ~ ("," ~ type_arg)* ~ ">" }
+
+type_arg = { type_expr | NUMBER }
+type_expr_list = { type_expr ~ ("," ~ type_expr)* }
+
+type_suffix = { array_suffix | reference_suffix | pointer_suffix }
+brace_enclosed_type = { "{" ~ type_expr ~ "}" }
+const_prefix = { "const" }
+function_type_suffix = { "(" ~ type_expr_list? ~ ")" }
+prefix_array_prefix = { "[" ~ "]" }
+array_suffix = { "[" ~ (NUMBER | identifier)? ~ "]" }
+reference_suffix = { "&&" | "&" }
+pointer_suffix = { "*" }
 
 class_qualified_name = @{ ("::")? ~ identifier ~ ("::" ~ identifier)* }
 
@@ -32,20 +50,22 @@ class_qualified_name = @{ ("::")? ~ identifier ~ ("::" ~ identifier)* }
 name_ref = @{ identifier }
 
 // definition
-internal_name = { STRING | class_qualified_name }
+internal_name = { STRING | generic_decl_name | class_qualified_name }
+generic_decl_name = { class_qualified_name ~ type_generic_param_list }
 
 // name_decl = { internal_name ~ ("as" ~ display_name)? }
 name_decl = { internal_name ~ alias_clause? }
 name_with_color = { name_decl ~ color? }
 
 named = { name_with_color }
+link_annotation = { "[[" ~ (!"]]" ~ ANY)+ ~ "]]" }
 
 ///////////////////////////////////////////////////////////////
 // File-level structure
 ///////////////////////////////////////////////////////////////
 class_start = {
     SOI
-    ~ empty_line*
+    ~ (COMMENT | empty_line)*
     ~ startuml
     ~ EOL*
     ~ ((ignored_stmt | top_level) ~ EOL+)*
@@ -58,8 +78,30 @@ top_level = {
       namespace_def
     | type_def
     | enum_def
-    | relationship
     | package_def
+    | together_def
+    | legend_block
+    | note_declaration
+    | relationship
+}
+
+together_def = {
+    "together"
+    ~ "{"
+    ~ EOL*
+    ~ (top_level ~ EOL+)*
+    ~ EOL*
+    ~ "}"
+}
+
+legend_block = @{
+    ^"legend"
+    ~ (
+        !(WHITESPACE* ~ (^"endlegend" | (^"end" ~ WHITESPACE+ ~ ^"legend")))
+        ~ ANY
+    )*
+    ~ WHITESPACE*
+    ~ (^"endlegend" | (^"end" ~ WHITESPACE+ ~ ^"legend"))
 }
 
 ///////////////////////////////////////////////////////////////
@@ -71,6 +113,7 @@ namespace_def = {
     "namespace"
     ~ named
     ~ stereotype?
+    ~ EOL*
     ~ "{"
     ~ EOL*
     ~ (top_level ~ EOL+)*
@@ -82,6 +125,7 @@ package_def = {
     "package"
     ~ named
     ~ stereotype?
+    ~ EOL*
     ~ "{"
     ~ EOL*
     ~ (top_level ~ EOL+)*
@@ -92,21 +136,101 @@ package_def = {
 ///////////////////////////////////////////////////////////////
 // type definition
 ///////////////////////////////////////////////////////////////
-type_def = { type_kind ~ named ~ stereotype? ~ class_body? }
+type_def = { type_def_with_body | type_def_decl }
+
+type_def_decl = { type_kind ~ named ~ type_decl_suffix* }
+type_decl_suffix = _{ extends_clause | implements_clause | link_annotation | stereotype | color }
+template_param = @{ identifier ~ varargs? }
+template_param_list = _{ "<" ~ template_param ~ ("," ~ template_param)* ~ ">" }
+type_generic_param_list = { template_param_list }
+
+extends_clause = { "extends" ~ extends_target ~ ("," ~ extends_target)* }
+extends_target = { class_qualified_name }
+implements_clause = { "implements" ~ implements_target ~ ("," ~ implements_target)* }
+implements_target = { class_qualified_name }
+
+type_def_with_body = { type_def_decl ~ &(EOL* ~ "{") ~ EOL* ~ class_body }
 type_kind = {
       "class"
     | "struct"
     | "interface"
+    | "object"
 }
 
-class_body = { "{" ~ EOL* ~ class_member* ~ EOL* ~ "}" }
+class_body = { "{" ~ EOL* ~ (class_member | class_body_separator)* ~ EOL* ~ "}" }
 
 class_member = { (method | attribute) ~ EOL+ }
+class_body_separator = { "--" ~ EOL+ }
 
-method = { class_visibility? ~ identifier ~ generic_param_list? ~ "(" ~ param_list? ~ ")" ~ return_type? }
+method = {
+    method_modifier*
+    ~ class_visibility?
+    ~ method_name
+    ~ generic_param_list?
+    ~ "("
+    ~ EOL*
+    ~ param_list?
+    ~ EOL*
+    ~ ")"
+    ~ generic_param_list?
+    ~ return_type?
+    ~ const_method_suffix?
+}
+method_modifier = _{ static_modifier | abstract_modifier }
+static_modifier = { "{" ~ "static" ~ "}" }
+abstract_modifier = { "{" ~ "abstract" ~ "}" }
+const_method_suffix = { "<<" ~ "const" ~ ">>" }
+method_name = { operator_overload_name | destructor_name | identifier }
+destructor_name = @{ "~" ~ identifier }
+operator_overload_name = @{
+        "operator"
+        ~ (
+                "->*"
+            | "->"
+            | "()"
+            | "[]"
+            | "<=>"
+            | "<<"
+            | ">>"
+            | "<="
+            | ">="
+            | "=="
+            | "!="
+            | "&&"
+            | "||"
+            | "+="
+            | "-="
+            | "*="
+            | "/="
+            | "%="
+            | "^="
+            | "&="
+            | "|="
+            | "++"
+            | "--"
+            | "+"
+            | "-"
+            | "*"
+            | "/"
+            | "%"
+            | "^"
+            | "&"
+            | "|"
+            | "~"
+            | "!"
+            | "="
+            | "<"
+            | ">"
+            | ","
+        )
+}
 return_type = { ":" ~ type_name }
 
-attribute = { class_visibility? ~ identifier ~ (":" ~ type_name)? }
+attribute = { static_modifier* ~ class_visibility? ~ (using_attribute | named_attribute | unnamed_attribute) }
+attribute_end = _{ &(WHITESPACE* ~ (EOL | "}")) }
+using_attribute = { "using" ~ identifier ~ "=" ~ type_name ~ attribute_end }
+named_attribute = { identifier ~ (":" ~ type_name)? ~ attribute_end }
+unnamed_attribute = { type_name ~ attribute_end }
 
 param = {
     param_named
@@ -124,9 +248,9 @@ param_unnamed = {
     type_name
     ~ varargs?
 }
-param_list  = { param ~ ("," ~ param)* }
+param_list  = { param ~ (EOL* ~ "," ~ EOL* ~ param)* }
 
-generic_param_list = { "<" ~ identifier ~ ("," ~ identifier)* ~ ">" }
+generic_param_list = { template_param_list }
 varargs = { "..." }
 
 ///////////////////////////////////////////////////////////////

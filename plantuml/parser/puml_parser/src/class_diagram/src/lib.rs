@@ -13,9 +13,11 @@
 pub mod class_ast;
 mod class_parser;
 mod class_traits;
+mod source_map;
 
 pub use class_ast::{
     Attribute, ClassDef, ClassUmlFile, ClassUmlTopLevel, Element, EnumDef, EnumItem, EnumValue,
-    Method, Name, Namespace, Package, Param, Relationship, Visibility,
+    InterfaceDef, Method, Name, Namespace, ObjectDef, Package, Param, Relationship, StructDef,
+    Visibility,
 };
 pub use class_parser::{ClassError, PumlClassParser};

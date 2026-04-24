@@ -49,7 +49,7 @@ pub struct LogicEntity {
     pub enum_literals: Vec<LogicEnumLiteral>,
     /// Source file location
     pub source_file: Option<String>,
-    /// Line number in source
+    /// 1-based line number in source; `None` means the source line is unknown
     pub source_line: Option<u32>,
 }
 
@@ -62,6 +62,8 @@ pub enum EntityType {
     Class,
     /// Data structure (typically POD in C++)
     Struct,
+    /// Object instance node
+    Object,
     /// Abstract interface
     Interface,
     /// Enumeration
