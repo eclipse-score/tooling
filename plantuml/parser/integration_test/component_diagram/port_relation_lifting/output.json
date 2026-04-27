@@ -1,0 +1,37 @@
+{
+    "port_relation_lifting.puml": {
+        "SampleSEooC": {
+            "id": "SampleSEooC",
+            "name": "SampleSEooC",
+            "alias": "SampleSEooC",
+            "parent_id": null,
+            "comp_type": "Package",
+            "stereotype": null,
+            "relations": []
+        },
+        "SampleSEooC.ClientComp": {
+            "id": "SampleSEooC.ClientComp",
+            "name": "ClientComp",
+            "alias": "ClientComp",
+            "parent_id": "SampleSEooC",
+            "comp_type": "Component",
+            "stereotype": "component",
+            "relations": [
+                {
+                    "target": "SampleSEooC.ServerComp",
+                    "annotation": "calls",
+                    "relation_type": "None"
+                }
+            ]
+        },
+        "SampleSEooC.ServerComp": {
+            "id": "SampleSEooC.ServerComp",
+            "name": "ServerComp",
+            "alias": "ServerComp",
+            "parent_id": "SampleSEooC",
+            "comp_type": "Component",
+            "stereotype": "component",
+            "relations": []
+        }
+    }
+}

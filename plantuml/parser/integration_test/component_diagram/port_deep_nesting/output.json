@@ -1,0 +1,46 @@
+{
+    "port_deep_nesting.puml": {
+        "Root": {
+            "id": "Root",
+            "name": "Root",
+            "alias": "Root",
+            "parent_id": null,
+            "comp_type": "Package",
+            "stereotype": null,
+            "relations": []
+        },
+        "Root.SampleSEooC": {
+            "id": "Root.SampleSEooC",
+            "name": "SampleSEooC",
+            "alias": "SampleSEooC",
+            "parent_id": "Root",
+            "comp_type": "Package",
+            "stereotype": null,
+            "relations": []
+        },
+        "Root.SampleSEooC.ClientComp": {
+            "id": "Root.SampleSEooC.ClientComp",
+            "name": "ClientComp",
+            "alias": "ClientComp",
+            "parent_id": "Root.SampleSEooC",
+            "comp_type": "Component",
+            "stereotype": "component",
+            "relations": [
+                {
+                    "target": "Root.SampleSEooC.ServerComp",
+                    "annotation": "calls",
+                    "relation_type": "None"
+                }
+            ]
+        },
+        "Root.SampleSEooC.ServerComp": {
+            "id": "Root.SampleSEooC.ServerComp",
+            "name": "ServerComp",
+            "alias": "ServerComp",
+            "parent_id": "Root.SampleSEooC",
+            "comp_type": "Component",
+            "stereotype": "component",
+            "relations": []
+        }
+    }
+}
