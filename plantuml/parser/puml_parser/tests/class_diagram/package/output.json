@@ -1,5 +1,5 @@
-{"package.puml":
-  {
+{
+  "package.puml": {
     "name": "package",
     "elements": [
       {
@@ -17,8 +17,14 @@
                 },
                 "namespace": "",
                 "package": "Core",
+                "source_line": 16,
+                "is_abstract": false,
+                "type_aliases": [],
                 "attributes": [],
-                "methods": []
+                "methods": [],
+                "template_parameters": null,
+                "extends": [],
+                "implements": []
               }
             },
             {
@@ -29,8 +35,14 @@
                 },
                 "namespace": "",
                 "package": "Core",
+                "source_line": 17,
+                "is_abstract": false,
+                "type_aliases": [],
                 "attributes": [],
-                "methods": []
+                "methods": [],
+                "template_parameters": null,
+                "extends": [],
+                "implements": []
               }
             }
           ],
@@ -61,8 +73,14 @@
                     },
                     "namespace": "",
                     "package": "UI",
+                    "source_line": 22,
+                    "is_abstract": false,
+                    "type_aliases": [],
                     "attributes": [],
-                    "methods": []
+                    "methods": [],
+                    "template_parameters": null,
+                    "extends": [],
+                    "implements": []
                   }
                 }
               ],

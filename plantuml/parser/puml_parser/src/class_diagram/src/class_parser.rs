@@ -12,17 +12,19 @@
 // *******************************************************************************
 use crate::class_ast::{
     Arrow, Attribute, ClassDef, ClassUmlFile, ClassUmlTopLevel, Element, EnumDef, EnumItem,
-    EnumValue, InterfaceDef, Method, Name, Namespace, ObjectDef, Package, Param, Relationship,
-    StructDef, Visibility,
+    EnumValue, InterfaceDef, Method, Name, Namespace, Package, Param, Relationship,
+    StructDef, TypeAlias, Visibility,
 };
 use crate::class_traits::{TypeDef, WritableName};
 use crate::source_map::{
     normalize_multiline_member_signatures, remap_syntax_error_to_original_source,
+    NormalizedContent,
 };
 use parser_core::common_parser::{parse_arrow, PlantUmlCommonParser, Rule};
 use parser_core::{pest_to_syntax_error, BaseParseError, DiagramParser};
 use pest::Parser;
 use puml_utils::LogLevel;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
 use thiserror::Error;
@@ -31,6 +33,66 @@ use thiserror::Error;
 pub enum ClassError {
     #[error(transparent)]
     Base(#[from] BaseParseError<Rule>),
+}
+
+// Object definitions are ignored by the class parser, but their names must be
+// tracked long enough to drop relationships that reference those ignored objects.
+#[derive(Debug, Default)]
+struct IgnoredObjectRegistry {
+    ids: HashSet<String>,
+    names: HashSet<String>,
+}
+
+impl IgnoredObjectRegistry {
+    fn normalize_fqn(raw: &str) -> String {
+        raw.replace("::", ".").trim_matches('.').to_string()
+    }
+
+    fn build_fqn(name: &str, parent: &Option<String>) -> String {
+        let normalized_name = Self::normalize_fqn(name);
+
+        match parent {
+            Some(p) => {
+                let normalized_parent = Self::normalize_fqn(p);
+
+                if normalized_parent.is_empty() {
+                    normalized_name
+                } else if normalized_name.is_empty() {
+                    normalized_parent
+                } else {
+                    format!("{}.{}", normalized_parent, normalized_name)
+                }
+            }
+            None => normalized_name,
+        }
+    }
+
+    fn register(&mut self, name: &Name, parent: &Option<String>) {
+        self.ids.insert(Self::build_fqn(&name.internal, parent));
+        self.names.insert(name.internal.clone());
+
+        if let Some(alias) = &name.display {
+            self.names.insert(alias.clone());
+        }
+    }
+
+    fn merge(&mut self, other: Self) {
+        self.ids.extend(other.ids);
+        self.names.extend(other.names);
+    }
+
+    fn contains_reference(&self, name: &str, parent: &Option<String>) -> bool {
+        let normalized = Self::normalize_fqn(name);
+
+        self.ids.contains(&normalized)
+            || self.ids.contains(&Self::build_fqn(name, parent))
+            || self.names.contains(name)
+    }
+
+    fn filters_relationship(&self, relationship: &Relationship, parent: &Option<String>) -> bool {
+        self.contains_reference(&relationship.left, parent)
+            || self.contains_reference(&relationship.right, parent)
+    }
 }
 
 fn parse_visibility(pair: Option<pest::iterators::Pair<Rule>>) -> Visibility {
@@ -113,15 +175,7 @@ fn parse_attribute(pair: pest::iterators::Pair<Rule>) -> Attribute {
         match p.as_rule() {
             Rule::static_modifier => attr.modifiers.push(p.as_str().to_string()),
             Rule::class_visibility => vis = Some(p),
-            Rule::using_attribute => {
-                for inner in p.into_inner() {
-                    match inner.as_rule() {
-                        Rule::identifier => name = Some(inner.as_str().to_string()),
-                        Rule::type_name => typ = Some(inner.as_str().trim().to_string()),
-                        _ => {}
-                    }
-                }
-            }
+            Rule::using_attribute => unreachable!("using_attribute should be parsed as TypeAlias"),
             Rule::named_attribute => {
                 for inner in p.into_inner() {
                     match inner.as_rule() {
@@ -146,6 +200,55 @@ fn parse_attribute(pair: pest::iterators::Pair<Rule>) -> Attribute {
     attr.name = name.unwrap_or_default();
     attr.r#type = typ;
     attr
+}
+
+fn parse_type_alias(pair: pest::iterators::Pair<Rule>) -> TypeAlias {
+    let mut alias = None;
+    let mut original_type = None;
+
+    for p in pair.into_inner() {
+        if p.as_rule() != Rule::using_attribute {
+            continue;
+        }
+
+        for inner in p.into_inner() {
+            match inner.as_rule() {
+                Rule::identifier => alias = Some(inner.as_str().to_string()),
+                Rule::type_name => original_type = Some(inner.as_str().trim().to_string()),
+                _ => {}
+            }
+        }
+    }
+
+    TypeAlias {
+        alias: alias.unwrap_or_default(),
+        original_type: original_type.unwrap_or_default(),
+    }
+}
+
+enum ParsedClassMember {
+    Attribute(Attribute),
+    TypeAlias(TypeAlias),
+    Method(Method),
+}
+
+fn parse_class_member(pair: pest::iterators::Pair<Rule>) -> ParsedClassMember {
+    match pair.as_rule() {
+        Rule::attribute => {
+            let is_type_alias = pair
+                .clone()
+                .into_inner()
+                .any(|inner| inner.as_rule() == Rule::using_attribute);
+
+            if is_type_alias {
+                ParsedClassMember::TypeAlias(parse_type_alias(pair))
+            } else {
+                ParsedClassMember::Attribute(parse_attribute(pair))
+            }
+        }
+        Rule::method => ParsedClassMember::Method(parse_method(pair)),
+        _ => unreachable!("unexpected class member"),
+    }
 }
 
 fn parse_param(pair: pest::iterators::Pair<Rule>) -> Param {
@@ -192,7 +295,7 @@ fn parse_param(pair: pest::iterators::Pair<Rule>) -> Param {
     let mut ty: Option<String> = None;
     let mut varargs = false;
 
-    // param -> param_named | param_unnamed
+    // param -> param_named | param_cpp_named | param_unnamed
     let inner = pair.into_inner().next().unwrap();
 
     match inner.as_rule() {
@@ -204,6 +307,23 @@ fn parse_param(pair: pest::iterators::Pair<Rule>) -> Param {
                     }
                     Rule::type_name => {
                         ty = Some(p.as_str().trim().to_string());
+                    }
+                    Rule::varargs => {
+                        varargs = true;
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        Rule::param_cpp_named => {
+            for p in inner.into_inner() {
+                match p.as_rule() {
+                    Rule::type_name => {
+                        ty = Some(p.as_str().trim().to_string());
+                    }
+                    Rule::identifier => {
+                        name = Some(p.as_str().to_string());
                     }
                     Rule::varargs => {
                         varargs = true;
@@ -251,15 +371,25 @@ fn parse_method(pair: pest::iterators::Pair<Rule>) -> Method {
             .collect()
     }
 
+    fn ensure_abstract_modifier(method: &mut Method) {
+        if !method.modifiers.iter().any(|modifier| modifier == "{abstract}") {
+            method.modifiers.push("{abstract}".to_string());
+        }
+    }
+
     let mut method = Method::default();
     let mut vis = None;
     let mut name = None;
 
     for p in pair.into_inner() {
         match p.as_rule() {
-            Rule::static_modifier | Rule::abstract_modifier | Rule::const_method_suffix => {
+            Rule::static_modifier
+            | Rule::abstract_modifier
+            | Rule::const_method_qualifier
+            | Rule::noexcept_method_qualifier => {
                 method.modifiers.push(p.as_str().to_string())
             }
+            Rule::pure_virtual_suffix => ensure_abstract_modifier(&mut method),
             Rule::class_visibility => vis = Some(p),
             Rule::method_name | Rule::identifier => name = Some(p.as_str().to_string()),
             Rule::param_list => {
@@ -272,13 +402,19 @@ fn parse_method(pair: pest::iterators::Pair<Rule>) -> Method {
             }
             Rule::return_type => {
                 for return_type_inner in p.into_inner() {
-                    if return_type_inner.as_rule() == Rule::type_name {
-                        method.r#type = Some(return_type_inner.as_str().trim().to_string());
+                    match return_type_inner.as_rule() {
+                        Rule::static_modifier => {
+                            method.modifiers.push(return_type_inner.as_str().to_string());
+                        }
+                        Rule::type_name => {
+                            method.r#type = Some(return_type_inner.as_str().trim().to_string());
+                        }
+                        _ => {}
                     }
                 }
             }
             Rule::generic_param_list => {
-                method.generic_params.extend(parse_generic_param_list(p));
+                method.template_parameters = Some(parse_generic_param_list(p));
             }
             _ => (),
         }
@@ -293,7 +429,9 @@ fn parse_type_def_into<T>(pair: pest::iterators::Pair<Rule>) -> T
 where
     T: TypeDef + Default,
 {
+    let source_line = pair.as_span().start_pos().line_col().0 as u32;
     let mut def = T::default();
+    *def.source_line_mut() = Some(source_line);
 
     fn walk<T>(pair: pest::iterators::Pair<Rule>, def: &mut T)
     where
@@ -307,12 +445,16 @@ where
                 for inner in pair.into_inner() {
                     if let Rule::class_member = inner.as_rule() {
                         for member in inner.into_inner() {
-                            match member.as_rule() {
-                                Rule::attribute => {
-                                    def.attributes_mut().push(parse_attribute(member))
+                            match parse_class_member(member) {
+                                ParsedClassMember::Attribute(attribute) => {
+                                    def.attributes_mut().push(attribute)
                                 }
-                                Rule::method => def.methods_mut().push(parse_method(member)),
-                                _ => (),
+                                ParsedClassMember::TypeAlias(type_alias) => {
+                                    def.type_aliases_mut().push(type_alias)
+                                }
+                                ParsedClassMember::Method(method) => {
+                                    def.methods_mut().push(method)
+                                }
                             }
                         }
                     }
@@ -331,7 +473,40 @@ where
     def
 }
 
-fn parse_type_def(pair: pest::iterators::Pair<Rule>) -> Element {
+fn parse_ignored_object_name(pair: pest::iterators::Pair<Rule>) -> Name {
+    fn walk(pair: pest::iterators::Pair<Rule>, name: &mut Name) {
+        match pair.as_rule() {
+            Rule::named => parse_named(pair, name),
+            _ => {
+                for inner in pair.into_inner() {
+                    walk(inner, name);
+                }
+            }
+        }
+    }
+
+    let mut name = Name::default();
+    walk(pair, &mut name);
+    name
+}
+
+fn filter_relationships(
+    relationships: Vec<Relationship>,
+    ignored_objects: &IgnoredObjectRegistry,
+    parent: &Option<String>,
+) -> Vec<Relationship> {
+    relationships
+        .into_iter()
+        .filter(|relationship| !ignored_objects.filters_relationship(relationship, parent))
+        .collect()
+}
+
+fn original_start_line(pair: &pest::iterators::Pair<Rule>, normalized_content: &NormalizedContent) -> u32 {
+    let (line, column) = pair.as_span().start_pos().line_col();
+    normalized_content.map_position(line, column).0 as u32
+}
+
+fn parse_type_def(pair: pest::iterators::Pair<Rule>, normalized_content: &NormalizedContent) -> Element {
     debug_assert_eq!(pair.as_rule(), Rule::type_def);
 
     fn find_type_kind(pair: pest::iterators::Pair<Rule>) -> Option<String> {
@@ -400,14 +575,15 @@ fn parse_type_def(pair: pest::iterators::Pair<Rule>) -> Element {
         targets
     }
 
-    fn collect_type_template_params(pair: pest::iterators::Pair<Rule>) -> Vec<String> {
-        fn walk(pair: pest::iterators::Pair<Rule>, params: &mut Vec<String>) {
+    fn collect_type_template_parameters(pair: pest::iterators::Pair<Rule>) -> Option<Vec<String>> {
+        fn walk(pair: pest::iterators::Pair<Rule>, params: &mut Option<Vec<String>>) {
             match pair.as_rule() {
                 Rule::type_generic_param_list => {
-                    params.extend(
+                    *params = Some(
                         pair.into_inner()
                             .filter(|inner| inner.as_rule() == Rule::template_param)
-                            .map(|inner| inner.as_str().to_string()),
+                            .map(|inner| inner.as_str().to_string())
+                            .collect(),
                     );
                 }
                 Rule::class_body => {}
@@ -419,12 +595,20 @@ fn parse_type_def(pair: pest::iterators::Pair<Rule>) -> Element {
             }
         }
 
-        let mut params = Vec::new();
+        let mut params = None;
         walk(pair, &mut params);
         params
     }
 
-    fn parse_template_param_list_text(text: &str) -> Vec<String> {
+    fn parse_template_parameter_list_text(text: &str) -> Option<Vec<String>> {
+        let trimmed = text.trim();
+        if trimmed.starts_with('<') && trimmed.ends_with('>') {
+            let inner = trimmed[1..trimmed.len() - 1].trim();
+            if inner.is_empty() {
+                return Some(vec![]);
+            }
+        }
+
         PlantUmlCommonParser::parse(Rule::type_generic_param_list, text)
             .ok()
             .and_then(|mut pairs| pairs.next())
@@ -434,12 +618,11 @@ fn parse_type_def(pair: pest::iterators::Pair<Rule>) -> Element {
                     .map(|inner| inner.as_str().to_string())
                     .collect()
             })
-            .unwrap_or_default()
     }
 
-    fn infer_template_params_from_template_string(name: &str) -> Vec<String> {
+    fn infer_template_parameters_from_template_string(name: &str) -> Option<Vec<String>> {
         if !name.contains("<<template>>") {
-            return Vec::new();
+            return None;
         }
 
         let candidate = name
@@ -452,66 +635,92 @@ fn parse_type_def(pair: pest::iterators::Pair<Rule>) -> Element {
             .trim();
 
         let Some(start) = candidate.find('<') else {
-            return Vec::new();
+            return None;
         };
         let Some(end) = candidate.rfind('>') else {
-            return Vec::new();
+            return None;
         };
 
         if end <= start {
-            return Vec::new();
+            return None;
         }
 
-        parse_template_param_list_text(&candidate[start..=end])
+        parse_template_parameter_list_text(&candidate[start..=end])
     }
 
-    fn resolve_type_template_params(explicit: Vec<String>, internal_name: &str) -> Vec<String> {
-        if !explicit.is_empty() {
-            explicit
-        } else {
-            infer_template_params_from_template_string(internal_name)
-        }
+    fn infer_template_parameters_from_type_def_text(raw_type_def: &str) -> Option<Vec<String>> {
+        let marker_index = raw_type_def.find("<<template>>")?;
+        let template_label = raw_type_def[marker_index..]
+            .split('"')
+            .next()
+            .unwrap_or_default();
+
+        infer_template_parameters_from_template_string(template_label)
     }
 
+    fn resolve_type_template_parameters(
+        explicit: Option<Vec<String>>,
+        name: &Name,
+        raw_type_def: &str,
+    ) -> Option<Vec<String>> {
+        explicit.or_else(|| {
+            name.display
+                .as_deref()
+                .and_then(infer_template_parameters_from_template_string)
+                .or_else(|| infer_template_parameters_from_template_string(&name.internal))
+                .or_else(|| infer_template_parameters_from_type_def_text(raw_type_def))
+        })
+    }
+
+    let raw_type_def = pair.as_str().to_string();
+    let source_line = original_start_line(&pair, normalized_content);
     let kind = find_type_kind(pair.clone()).expect("type_def must have type_kind");
-    let explicit_template_params = collect_type_template_params(pair.clone());
+    let explicit_template_parameters = collect_type_template_parameters(pair.clone());
     let extends_targets = collect_extends_targets(pair.clone());
     let implements_targets = collect_implements_targets(pair.clone());
 
     match kind.as_str() {
+        "abstract class" => {
+            let mut def = parse_type_def_into::<ClassDef>(pair);
+            def.source_line = Some(source_line);
+            def.is_abstract = true;
+            def.template_parameters =
+                resolve_type_template_parameters(explicit_template_parameters, &def.name, &raw_type_def);
+            def.extends = extends_targets;
+            def.implements = implements_targets;
+            Element::ClassDef(def)
+        }
         "class" => {
             let mut def = parse_type_def_into::<ClassDef>(pair);
-            def.template_params =
-                resolve_type_template_params(explicit_template_params, &def.name.internal);
+            def.source_line = Some(source_line);
+            def.template_parameters =
+                resolve_type_template_parameters(explicit_template_parameters, &def.name, &raw_type_def);
             def.extends = extends_targets;
             def.implements = implements_targets;
             Element::ClassDef(def)
         }
         "struct" => {
             let mut def = parse_type_def_into::<StructDef>(pair);
-            def.template_params =
-                resolve_type_template_params(explicit_template_params, &def.name.internal);
+            def.source_line = Some(source_line);
+            def.template_parameters =
+                resolve_type_template_parameters(explicit_template_parameters, &def.name, &raw_type_def);
             Element::StructDef(def)
         }
         "interface" => {
             let mut def = parse_type_def_into::<InterfaceDef>(pair);
-            def.template_params =
-                resolve_type_template_params(explicit_template_params, &def.name.internal);
+            def.source_line = Some(source_line);
+            def.template_parameters =
+                resolve_type_template_parameters(explicit_template_parameters, &def.name, &raw_type_def);
             def.extends = extends_targets;
             Element::InterfaceDef(def)
-        }
-        "object" => {
-            let mut def = parse_type_def_into::<ObjectDef>(pair);
-            def.template_params =
-                resolve_type_template_params(explicit_template_params, &def.name.internal);
-            Element::ObjectDef(def)
         }
         _ => unreachable!("unknown type_kind: {}", kind),
     }
 }
 
-fn parse_enum_def(pair: pest::iterators::Pair<Rule>) -> EnumDef {
+fn parse_enum_def(pair: pest::iterators::Pair<Rule>, normalized_content: &NormalizedContent) -> EnumDef {
     let mut enum_def = EnumDef::default();
+    enum_def.source_line = Some(original_start_line(&pair, normalized_content));
 
     for inner in pair.into_inner() {
         match inner.as_rule() {
@@ -541,9 +750,6 @@ fn parse_enum_item(pair: pest::iterators::Pair<Rule>) -> EnumItem {
 
     for inner in pair.into_inner() {
         match inner.as_rule() {
-            Rule::class_visibility => {
-                item.visibility = Some(parse_visibility(Some(inner)));
-            }
             Rule::identifier => {
                 item.name = inner.as_str().to_string();
             }
@@ -583,8 +789,12 @@ where
     }
 }
 
-fn parse_namespace(pair: pest::iterators::Pair<Rule>) -> Namespace {
+fn parse_namespace(
+    pair: pest::iterators::Pair<Rule>,
+    normalized_content: &NormalizedContent,
+) -> (Namespace, IgnoredObjectRegistry) {
     let mut namespace = Namespace::default();
+    let mut ignored_objects = IgnoredObjectRegistry::default();
 
     for inner in pair.into_inner() {
         match inner.as_rule() {
@@ -596,17 +806,27 @@ fn parse_namespace(pair: pest::iterators::Pair<Rule>) -> Namespace {
                     inner,
                     &mut |top_level_inner| match top_level_inner.as_rule() {
                         Rule::type_def => {
-                            let mut type_def = parse_type_def(top_level_inner);
+                            let mut type_def = parse_type_def(top_level_inner, normalized_content);
                             type_def.set_namespace(namespace.name.internal.clone());
                             namespace.types.push(type_def);
                         }
+                        Rule::unsupported_object_def => {
+                            let ignored = parse_ignored_object_name(top_level_inner);
+                            ignored_objects.register(
+                                &ignored,
+                                &Some(namespace.name.internal.clone()),
+                            );
+                        }
                         Rule::enum_def => {
-                            let mut enum_def = Element::EnumDef(parse_enum_def(top_level_inner));
+                            let mut enum_def = Element::EnumDef(parse_enum_def(top_level_inner, normalized_content));
                             enum_def.set_namespace(namespace.name.internal.clone());
                             namespace.types.push(enum_def);
                         }
                         Rule::namespace_def => {
-                            namespace.namespaces.push(parse_namespace(top_level_inner));
+                            let (nested_namespace, nested_ignored_objects) =
+                                parse_namespace(top_level_inner, normalized_content);
+                            ignored_objects.merge(nested_ignored_objects);
+                            namespace.namespaces.push(nested_namespace);
                         }
                         _ => (),
                     },
@@ -616,11 +836,16 @@ fn parse_namespace(pair: pest::iterators::Pair<Rule>) -> Namespace {
         }
     }
 
-    namespace
+    (namespace, ignored_objects)
 }
 
-fn parse_package(pair: pest::iterators::Pair<Rule>) -> Package {
+fn parse_package(
+    pair: pest::iterators::Pair<Rule>,
+    normalized_content: &NormalizedContent,
+) -> (Package, IgnoredObjectRegistry) {
     let mut package = Package::default();
+    let mut ignored_objects = IgnoredObjectRegistry::default();
+    let mut relationships = Vec::new();
 
     for inner in pair.into_inner() {
         match inner.as_rule() {
@@ -630,34 +855,54 @@ fn parse_package(pair: pest::iterators::Pair<Rule>) -> Package {
 
             Rule::top_level => {
                 visit_top_level(inner, &mut |t| match t.as_rule() {
-                    Rule::type_def => {
-                        let mut r#type = parse_type_def(t);
-                        r#type.set_package(package.name.internal.clone());
-                        package.types.push(r#type);
-                    }
-                    Rule::enum_def => {
-                        let mut enum_def = Element::EnumDef(parse_enum_def(t));
-                        enum_def.set_package(package.name.internal.clone());
-                        package.types.push(enum_def);
-                    }
-                    Rule::relationship => {
-                        package.relationships.push(parse_relationship(t));
-                    }
-                    Rule::package_def => {
-                        package.packages.push(parse_package(t));
-                    }
-                    _ => {}
-                });
+                        Rule::type_def => {
+                            let mut r#type = parse_type_def(t, normalized_content);
+                            r#type.set_package(package.name.internal.clone());
+                            package.types.push(r#type);
+                        }
+                        Rule::unsupported_object_def => {
+                            let ignored = parse_ignored_object_name(t);
+                            ignored_objects.register(&ignored, &Some(package.name.internal.clone()));
+                        }
+                        Rule::enum_def => {
+                            let mut enum_def = Element::EnumDef(parse_enum_def(t, normalized_content));
+                            enum_def.set_package(package.name.internal.clone());
+                            package.types.push(enum_def);
+                        }
+                        Rule::relationship => {
+                            relationships.push(parse_relationship(t));
+                        }
+                        Rule::package_def => {
+                            let (subpackage, nested_ignored_objects) = parse_package(t, normalized_content);
+                            ignored_objects.merge(nested_ignored_objects);
+                            package.packages.push(subpackage);
+                        }
+                        _ => {}
+                    });
             }
             _ => {}
         }
     }
 
-    package
+    package.relationships = filter_relationships(
+        relationships,
+        &ignored_objects,
+        &Some(package.name.internal.clone()),
+    );
+
+    (package, ignored_objects)
 }
 
 fn parse_label(pair: pest::iterators::Pair<Rule>) -> String {
     pair.as_str().trim().to_string()
+}
+
+fn strip_wrapping_quotes(text: &str) -> String {
+    if text.starts_with('"') && text.ends_with('"') && text.len() >= 2 {
+        text[1..text.len() - 1].to_string()
+    } else {
+        text.to_string()
+    }
 }
 
 fn parse_relationship(pair: pest::iterators::Pair<Rule>) -> Relationship {
@@ -665,10 +910,26 @@ fn parse_relationship(pair: pest::iterators::Pair<Rule>) -> Relationship {
 
     let left = inner.next().unwrap().as_str().trim().to_string();
 
-    let arrow_pair = inner.next().unwrap();
+    let next = inner.next().unwrap();
+    let (left_multiplicity, arrow_pair) = if next.as_rule() == Rule::relationship_multiplicity {
+        (Some(strip_wrapping_quotes(next.as_str().trim())), inner.next().unwrap())
+    } else {
+        (None, next)
+    };
+
     let arrow = parse_arrow(arrow_pair).unwrap_or_else(|_| Arrow::default());
 
-    let right = inner.next().unwrap().as_str().trim().to_string();
+    let next = inner.next().unwrap();
+    let (right_multiplicity, right_pair) = if next.as_rule() == Rule::relationship_multiplicity {
+        (
+            Some(strip_wrapping_quotes(next.as_str().trim())),
+            inner.next().unwrap(),
+        )
+    } else {
+        (None, next)
+    };
+
+    let right = right_pair.as_str().trim().to_string();
 
     let mut label: Option<String> = None;
     for p in inner {
@@ -681,6 +942,8 @@ fn parse_relationship(pair: pest::iterators::Pair<Rule>) -> Relationship {
         left,
         right,
         arrow,
+        left_multiplicity,
+        right_multiplicity,
         label,
     }
 }
@@ -711,6 +974,8 @@ impl DiagramParser for PumlClassParser {
         }
 
         let mut uml_file = ClassUmlFile::default();
+        let mut ignored_objects = IgnoredObjectRegistry::default();
+        let mut relationships = Vec::new();
 
         match PlantUmlCommonParser::parse(Rule::class_start, normalized_content.as_str()) {
             Ok(mut pairs) => {
@@ -722,30 +987,37 @@ impl DiagramParser for PumlClassParser {
                     match pair.as_rule() {
                         Rule::top_level => {
                             visit_top_level(pair, &mut |inner_pair| match inner_pair.as_rule() {
-                                Rule::type_def => {
-                                    let type_def = parse_type_def(inner_pair);
-                                    uml_file.elements.push(ClassUmlTopLevel::Types(type_def));
-                                }
-                                Rule::enum_def => {
-                                    uml_file
-                                        .elements
-                                        .push(ClassUmlTopLevel::Enum(parse_enum_def(inner_pair)));
-                                }
-                                Rule::namespace_def => {
-                                    uml_file.elements.push(ClassUmlTopLevel::Namespace(
-                                        parse_namespace(inner_pair),
-                                    ));
-                                }
-                                Rule::relationship => {
-                                    uml_file.relationships.push(parse_relationship(inner_pair));
-                                }
-                                Rule::package_def => {
-                                    uml_file
-                                        .elements
-                                        .push(ClassUmlTopLevel::Package(parse_package(inner_pair)));
-                                }
-                                _ => (),
-                            });
+                                    Rule::type_def => {
+                                        let type_def = parse_type_def(inner_pair, &normalized_content);
+                                        uml_file.elements.push(ClassUmlTopLevel::Types(type_def));
+                                    }
+                                    Rule::unsupported_object_def => {
+                                        let ignored = parse_ignored_object_name(inner_pair);
+                                        ignored_objects.register(&ignored, &None);
+                                    }
+                                    Rule::enum_def => {
+                                        uml_file.elements.push(ClassUmlTopLevel::Enum(
+                                            parse_enum_def(inner_pair, &normalized_content),
+                                        ));
+                                    }
+                                    Rule::namespace_def => {
+                                        let (namespace, nested_ignored_objects) =
+                                            parse_namespace(inner_pair, &normalized_content);
+                                        ignored_objects.merge(nested_ignored_objects);
+                                        uml_file
+                                            .elements
+                                            .push(ClassUmlTopLevel::Namespace(namespace));
+                                    }
+                                    Rule::relationship => {
+                                        relationships.push(parse_relationship(inner_pair));
+                                    }
+                                    Rule::package_def => {
+                                        let (package, nested_ignored_objects) = parse_package(inner_pair, &normalized_content);
+                                        ignored_objects.merge(nested_ignored_objects);
+                                        uml_file.elements.push(ClassUmlTopLevel::Package(package));
+                                    }
+                                    _ => (),
+                                });
                         }
                         Rule::startuml => {
                             let text = pair.as_str();
@@ -765,6 +1037,8 @@ impl DiagramParser for PumlClassParser {
                 )));
             }
         };
+
+        uml_file.relationships = filter_relationships(relationships, &ignored_objects, &None);
 
         Ok(uml_file)
     }
@@ -912,6 +1186,8 @@ mod tests {
 
         assert_eq!(rel.left, "A");
         assert_eq!(rel.right, "B");
+        assert_eq!(rel.left_multiplicity, None);
+        assert_eq!(rel.right_multiplicity, None);
     }
 
     #[test]

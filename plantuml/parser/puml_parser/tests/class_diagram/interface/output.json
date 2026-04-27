@@ -1,5 +1,5 @@
-{"interface.puml":
-  {
+{
+  "interface.puml": {
     "name": "",
     "elements": [
       {
@@ -11,14 +11,19 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 15,
+            "type_aliases": [],
             "attributes": [
               {
                 "visibility": "Public",
                 "name": "doSomething",
-                "type": null
+                "type": null,
+                "modifiers": []
               }
             ],
-            "methods": []
+            "methods": [],
+            "template_parameters": null,
+            "extends": []
           }
         }
       }

@@ -1,5 +1,5 @@
-{"param_templete.puml":
-  {
+{
+  "param_templete.puml": {
     "name": "param_templete",
     "elements": [
       {
@@ -11,12 +11,17 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 15,
+            "is_abstract": false,
+            "type_aliases": [],
             "attributes": [],
             "methods": [
               {
                 "visibility": "Public",
                 "name": "Create",
-                "generic_params": ["T"],
+                "template_parameters": [
+                  "T"
+                ],
                 "params": [
                   {
                     "name": "id",
@@ -24,9 +29,13 @@
                     "varargs": false
                   }
                 ],
-                "type": null
+                "type": null,
+                "modifiers": []
               }
-            ]
+            ],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
           }
         }
       }

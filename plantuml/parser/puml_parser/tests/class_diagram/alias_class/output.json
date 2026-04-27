@@ -11,8 +11,14 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 15,
+            "is_abstract": false,
+            "type_aliases": [],
             "attributes": [],
-            "methods": []
+            "methods": [],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
           }
         }
       },
@@ -25,8 +31,11 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 16,
+            "type_aliases": [],
             "attributes": [],
-            "methods": []
+            "methods": [],
+            "template_parameters": null
           }
         }
       },
@@ -38,6 +47,7 @@
           },
           "namespace": "",
           "package": "",
+          "source_line": 17,
           "stereotypes": [],
           "items": []
         }

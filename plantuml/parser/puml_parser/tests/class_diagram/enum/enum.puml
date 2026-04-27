@@ -15,9 +15,9 @@
 enum Status
 
 enum Response {
-    +OK
-    -ERROR
-    #UNKNOWN
+  OK
+  ERROR
+  UNKNOWN
 }
 
 enum State {

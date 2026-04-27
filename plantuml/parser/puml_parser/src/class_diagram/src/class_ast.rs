@@ -30,7 +30,6 @@ pub enum Element {
     StructDef(StructDef),
     EnumDef(EnumDef),
     InterfaceDef(InterfaceDef),
-    ObjectDef(ObjectDef),
 }
 impl Element {
     pub fn set_namespace(&mut self, ns: String) {
@@ -39,7 +38,6 @@ impl Element {
             Element::StructDef(def) => def.namespace = ns,
             Element::EnumDef(def) => def.namespace = ns,
             Element::InterfaceDef(def) => def.namespace = ns,
-            Element::ObjectDef(def) => def.namespace = ns,
         }
     }
     pub fn set_package(&mut self, ns: String) {
@@ -48,7 +46,6 @@ impl Element {
             Element::StructDef(def) => def.package = ns,
             Element::EnumDef(def) => def.package = ns,
             Element::InterfaceDef(def) => def.package = ns,
-            Element::ObjectDef(def) => def.package = ns,
         }
     }
 }
@@ -84,6 +81,8 @@ pub struct Relationship {
     pub left: String,
     pub right: String,
     pub arrow: Arrow,
+    pub left_multiplicity: Option<String>,
+    pub right_multiplicity: Option<String>,
     pub label: Option<String>,
 }
 
@@ -99,7 +98,6 @@ pub struct Attribute {
     pub visibility: Visibility,
     pub name: String,
     pub r#type: Option<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub modifiers: Vec<String>,
 }
 impl Default for Attribute {
@@ -113,14 +111,19 @@ impl Default for Attribute {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
+pub struct TypeAlias {
+    pub alias: String,
+    pub original_type: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Method {
     pub visibility: Visibility,
     pub name: String,
-    pub generic_params: Vec<String>,
+    pub template_parameters: Option<Vec<String>>,
     pub params: Vec<Param>,
     pub r#type: Option<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub modifiers: Vec<String>,
 }
 impl Default for Method {
@@ -128,7 +131,7 @@ impl Default for Method {
         Method {
             visibility: Visibility::Public,
             name: String::new(),
-            generic_params: Vec::new(),
+            template_parameters: None,
             params: Vec::new(),
             r#type: None,
             modifiers: Vec::new(),
@@ -141,13 +144,13 @@ pub struct ClassDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub template_params: Vec<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source_line: Option<u32>,
+    pub is_abstract: bool,
+    pub template_parameters: Option<Vec<String>>,
     pub extends: Vec<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub implements: Vec<String>,
     pub attributes: Vec<Attribute>,
+    pub type_aliases: Vec<TypeAlias>,
     pub methods: Vec<Method>,
 }
 impl TypeDef for ClassDef {
@@ -159,8 +162,16 @@ impl TypeDef for ClassDef {
         &mut self.attributes
     }
 
+    fn type_aliases_mut(&mut self) -> &mut Vec<TypeAlias> {
+        &mut self.type_aliases
+    }
+
     fn methods_mut(&mut self) -> &mut Vec<Method> {
         &mut self.methods
+    }
+
+    fn source_line_mut(&mut self) -> &mut Option<u32> {
+        &mut self.source_line
     }
 }
 
@@ -169,9 +180,10 @@ pub struct StructDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub template_params: Vec<String>,
+    pub source_line: Option<u32>,
+    pub template_parameters: Option<Vec<String>>,
     pub attributes: Vec<Attribute>,
+    pub type_aliases: Vec<TypeAlias>,
     pub methods: Vec<Method>,
 }
 impl TypeDef for StructDef {
@@ -183,8 +195,16 @@ impl TypeDef for StructDef {
         &mut self.attributes
     }
 
+    fn type_aliases_mut(&mut self) -> &mut Vec<TypeAlias> {
+        &mut self.type_aliases
+    }
+
     fn methods_mut(&mut self) -> &mut Vec<Method> {
         &mut self.methods
+    }
+
+    fn source_line_mut(&mut self) -> &mut Option<u32> {
+        &mut self.source_line
     }
 }
 
@@ -193,11 +213,11 @@ pub struct InterfaceDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub template_params: Vec<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source_line: Option<u32>,
+    pub template_parameters: Option<Vec<String>>,
     pub extends: Vec<String>,
     pub attributes: Vec<Attribute>,
+    pub type_aliases: Vec<TypeAlias>,
     pub methods: Vec<Method>,
 }
 impl TypeDef for InterfaceDef {
@@ -209,32 +229,16 @@ impl TypeDef for InterfaceDef {
         &mut self.attributes
     }
 
-    fn methods_mut(&mut self) -> &mut Vec<Method> {
-        &mut self.methods
-    }
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
-pub struct ObjectDef {
-    pub name: Name,
-    pub namespace: String,
-    pub package: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub template_params: Vec<String>,
-    pub attributes: Vec<Attribute>,
-    pub methods: Vec<Method>,
-}
-impl TypeDef for ObjectDef {
-    fn name_mut(&mut self) -> &mut Name {
-        &mut self.name
-    }
-
-    fn attributes_mut(&mut self) -> &mut Vec<Attribute> {
-        &mut self.attributes
+    fn type_aliases_mut(&mut self) -> &mut Vec<TypeAlias> {
+        &mut self.type_aliases
     }
 
     fn methods_mut(&mut self) -> &mut Vec<Method> {
         &mut self.methods
+    }
+
+    fn source_line_mut(&mut self) -> &mut Option<u32> {
+        &mut self.source_line
     }
 }
 
@@ -243,13 +247,13 @@ pub struct EnumDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
+    pub source_line: Option<u32>,
     pub stereotypes: Vec<String>,
     pub items: Vec<EnumItem>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct EnumItem {
-    pub visibility: Option<Visibility>,
     pub name: String,
     pub value: Option<EnumValue>,
 }
@@ -344,7 +348,7 @@ mod tests {
 
         assert_eq!(method.visibility, Visibility::Public);
         assert_eq!(method.name, "");
-        assert!(method.generic_params.is_empty());
+        assert_eq!(method.template_parameters, None);
         assert!(method.params.is_empty());
         assert_eq!(method.r#type, None);
         assert!(method.modifiers.is_empty());
@@ -379,6 +383,8 @@ mod tests {
                 middle: None,
                 right: None,
             },
+            left_multiplicity: None,
+            right_multiplicity: None,
             label: None,
         });
 
@@ -391,7 +397,6 @@ mod tests {
 
         enum_def.name.internal = "Color".into();
         enum_def.items.push(EnumItem {
-            visibility: Some(Visibility::Public),
             name: "RED".into(),
             value: Some(EnumValue::Literal("1".into())),
         });
@@ -427,6 +432,8 @@ mod tests {
                 middle: None,
                 right: None,
             },
+            left_multiplicity: None,
+            right_multiplicity: None,
             label: Some("uses".into()),
         });
 
@@ -440,7 +447,6 @@ mod tests {
             Element::StructDef(StructDef::default()),
             Element::EnumDef(EnumDef::default()),
             Element::InterfaceDef(InterfaceDef::default()),
-            Element::ObjectDef(ObjectDef::default()),
         ];
 
         for el in elements.iter_mut() {
@@ -453,7 +459,6 @@ mod tests {
                 Element::StructDef(d) => assert_eq!(d.namespace, "test_ns"),
                 Element::EnumDef(d) => assert_eq!(d.namespace, "test_ns"),
                 Element::InterfaceDef(d) => assert_eq!(d.namespace, "test_ns"),
-                Element::ObjectDef(d) => assert_eq!(d.namespace, "test_ns"),
             }
         }
     }
@@ -481,6 +486,19 @@ mod tests {
         });
 
         assert_eq!(class.attributes.len(), 1);
+    }
+
+    #[test]
+    fn test_type_aliases_mut() {
+        let mut class = ClassDef::default();
+
+        class.type_aliases_mut().push(TypeAlias {
+            alias: "Byte".into(),
+            original_type: "std::uint8_t".into(),
+        });
+
+        assert_eq!(class.type_aliases.len(), 1);
+        assert_eq!(class.type_aliases[0].alias, "Byte");
     }
 
     #[test]
@@ -523,15 +541,6 @@ mod tests {
     }
 
     #[test]
-    fn test_object_methods_mut() {
-        let mut object = ObjectDef::default();
-
-        object.methods_mut().push(Method::default());
-
-        assert_eq!(object.methods.len(), 1);
-    }
-
-    #[test]
     fn test_typedef_trait_object_calls_for_class_def() {
         use crate::class_traits::TypeDef;
 
@@ -545,6 +554,10 @@ mod tests {
                 name: "field".into(),
                 ..Default::default()
             });
+            obj.type_aliases_mut().push(TypeAlias {
+                alias: "Byte".into(),
+                original_type: "std::uint8_t".into(),
+            });
             obj.methods_mut().push(Method {
                 name: "method".into(),
                 ..Default::default()
@@ -554,6 +567,8 @@ mod tests {
         assert_eq!(c.name.internal, "ClassViaTrait");
         assert_eq!(c.attributes.len(), 1);
         assert_eq!(c.attributes[0].name, "field");
+        assert_eq!(c.type_aliases.len(), 1);
+        assert_eq!(c.type_aliases[0].alias, "Byte");
         assert_eq!(c.methods.len(), 1);
         assert_eq!(c.methods[0].name, "method");
     }
@@ -572,6 +587,10 @@ mod tests {
                 name: "field".into(),
                 ..Default::default()
             });
+            obj.type_aliases_mut().push(TypeAlias {
+                alias: "Byte".into(),
+                original_type: "std::uint8_t".into(),
+            });
             obj.methods_mut().push(Method {
                 name: "method".into(),
                 ..Default::default()
@@ -581,6 +600,8 @@ mod tests {
         assert_eq!(s.name.internal, "StructViaTrait");
         assert_eq!(s.attributes.len(), 1);
         assert_eq!(s.attributes[0].name, "field");
+        assert_eq!(s.type_aliases.len(), 1);
+        assert_eq!(s.type_aliases[0].alias, "Byte");
         assert_eq!(s.methods.len(), 1);
         assert_eq!(s.methods[0].name, "method");
     }
@@ -599,6 +620,10 @@ mod tests {
                 name: "field".into(),
                 ..Default::default()
             });
+            obj.type_aliases_mut().push(TypeAlias {
+                alias: "Byte".into(),
+                original_type: "std::uint8_t".into(),
+            });
             obj.methods_mut().push(Method {
                 name: "method".into(),
                 ..Default::default()
@@ -608,35 +633,10 @@ mod tests {
         assert_eq!(i.name.internal, "InterfaceViaTrait");
         assert_eq!(i.attributes.len(), 1);
         assert_eq!(i.attributes[0].name, "field");
+        assert_eq!(i.type_aliases.len(), 1);
+        assert_eq!(i.type_aliases[0].alias, "Byte");
         assert_eq!(i.methods.len(), 1);
         assert_eq!(i.methods[0].name, "method");
-    }
-
-    #[test]
-    fn test_typedef_trait_object_calls_for_object_def() {
-        use crate::class_traits::TypeDef;
-
-        let mut object = ObjectDef::default();
-
-        {
-            let obj: &mut dyn TypeDef = &mut object;
-
-            obj.name_mut().internal = "ObjectViaTrait".into();
-            obj.attributes_mut().push(Attribute {
-                name: "field".into(),
-                ..Default::default()
-            });
-            obj.methods_mut().push(Method {
-                name: "method".into(),
-                ..Default::default()
-            });
-        }
-
-        assert_eq!(object.name.internal, "ObjectViaTrait");
-        assert_eq!(object.attributes.len(), 1);
-        assert_eq!(object.attributes[0].name, "field");
-        assert_eq!(object.methods.len(), 1);
-        assert_eq!(object.methods[0].name, "method");
     }
 
     #[test]

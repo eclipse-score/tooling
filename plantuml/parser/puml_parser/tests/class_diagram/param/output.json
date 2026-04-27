@@ -1,5 +1,5 @@
-{"param.puml":
-  {
+{
+  "param.puml": {
     "name": "param",
     "elements": [
       {
@@ -11,12 +11,14 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 15,
+            "is_abstract": false,
+            "type_aliases": [],
             "attributes": [],
             "methods": [
               {
                 "visibility": "Public",
                 "name": "Add",
-                "generic_params": [],
                 "params": [
                   {
                     "name": "a",
@@ -29,9 +31,14 @@
                     "varargs": false
                   }
                 ],
-                "type": "int"
+                "type": "int",
+                "template_parameters": null,
+                "modifiers": []
               }
-            ]
+            ],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
           }
         }
       }

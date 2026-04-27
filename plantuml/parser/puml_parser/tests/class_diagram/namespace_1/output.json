@@ -1,5 +1,5 @@
-{"namespace_1.puml":
-  {
+{
+  "namespace_1.puml": {
     "name": "namespace_1",
     "elements": [
       {
@@ -17,8 +17,14 @@
                 },
                 "namespace": "Core",
                 "package": "",
+                "source_line": 16,
+                "is_abstract": false,
+                "type_aliases": [],
                 "attributes": [],
-                "methods": []
+                "methods": [],
+                "template_parameters": null,
+                "extends": [],
+                "implements": []
               }
             },
             {
@@ -29,8 +35,14 @@
                 },
                 "namespace": "Core",
                 "package": "",
+                "source_line": 17,
+                "is_abstract": false,
+                "type_aliases": [],
                 "attributes": [],
-                "methods": []
+                "methods": [],
+                "template_parameters": null,
+                "extends": [],
+                "implements": []
               }
             },
             {
@@ -41,15 +53,14 @@
                 },
                 "namespace": "Core",
                 "package": "",
+                "source_line": 19,
                 "stereotypes": [],
                 "items": [
                   {
-                    "visibility": null,
                     "name": "a",
                     "value": null
                   },
                   {
-                    "visibility": null,
                     "name": "b",
                     "value": null
                   }

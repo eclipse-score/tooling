@@ -1,5 +1,5 @@
-{"only_attribute.puml":
-  {
+{
+  "only_attribute.puml": {
     "name": "only_attribute",
     "elements": [
       {
@@ -11,14 +11,21 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 15,
+            "is_abstract": false,
+            "type_aliases": [],
             "attributes": [
               {
                 "visibility": "Public",
                 "name": "name",
-                "type": null
+                "type": null,
+                "modifiers": []
               }
             ],
-            "methods": []
+            "methods": [],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
           }
         }
       }

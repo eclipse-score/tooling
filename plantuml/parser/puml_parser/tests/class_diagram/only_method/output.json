@@ -1,5 +1,5 @@
-{"only_method.puml":
-  {
+{
+  "only_method.puml": {
     "name": "only_method",
     "elements": [
       {
@@ -11,16 +11,23 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 15,
+            "is_abstract": false,
+            "type_aliases": [],
             "attributes": [],
             "methods": [
               {
                 "visibility": "Public",
                 "name": "nodeMethod",
-                "generic_params": [],
                 "params": [],
-                "type": null
+                "type": null,
+                "template_parameters": null,
+                "modifiers": []
               }
-            ]
+            ],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
           }
         }
       }

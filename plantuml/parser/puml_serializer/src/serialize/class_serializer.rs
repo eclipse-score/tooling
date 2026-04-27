@@ -12,8 +12,9 @@
 // *******************************************************************************
 
 use class_diagram::{
-    ClassDiagram, ContainerType, EntityType, LogicAttribute, LogicContainer, LogicEntity,
-    LogicEnumLiteral, LogicMethod, LogicParameter, LogicRelationship, RelationType, Visibility,
+    ClassDiagram, EntityType, EnumLiteral, FunctionArgument, MemberVariable,
+    Method, MethodModifier, RelationType, Relationship, SimpleEntity, TypeAlias,
+    Visibility,
 };
 use class_fbs::class_metamodel as fb;
 use flatbuffers::FlatBufferBuilder;
@@ -35,13 +36,6 @@ impl ClassSerializer {
             .collect();
         let entities_offset = builder.create_vector(&entity_offsets);
 
-        let container_offsets: Vec<_> = diagram
-            .containers
-            .iter()
-            .map(|container| Self::serialize_container(&mut builder, container))
-            .collect();
-        let containers_offset = builder.create_vector(&container_offsets);
-
         let relationship_offsets: Vec<_> = diagram
             .relationships
             .iter()
@@ -56,14 +50,13 @@ impl ClassSerializer {
             .collect();
         let source_files_offset = builder.create_vector(&source_offsets);
 
-        let version_offset = diagram.version.as_ref().map(|v| builder.create_string(v));
+        let version_offset = diagram.version.as_ref().map(|version| builder.create_string(version));
 
         let root = fb::ClassDiagram::create(
             &mut builder,
             &fb::ClassDiagramArgs {
                 name: Some(name_offset),
                 entities: Some(entities_offset),
-                containers: Some(containers_offset),
                 relationships: Some(relationships_offset),
                 source_files: Some(source_files_offset),
                 version: version_offset,
@@ -76,32 +69,28 @@ impl ClassSerializer {
 
     fn serialize_entity<'a>(
         builder: &mut FlatBufferBuilder<'a>,
-        entity: &LogicEntity,
-    ) -> flatbuffers::WIPOffset<fb::Entity<'a>> {
+        entity: &SimpleEntity,
+    ) -> flatbuffers::WIPOffset<fb::SimpleEntity<'a>> {
         let id_offset = builder.create_string(&entity.id);
-        let name_offset = entity.name.as_ref().map(|name| builder.create_string(name));
-        let alias_offset = entity
-            .alias
+        let name_offset = builder.create_string(&entity.name);
+        let enclosing_namespace_id_offset = entity
+            .enclosing_namespace_id
             .as_ref()
-            .map(|alias| builder.create_string(alias));
-        let parent_offset = entity
-            .parent_id
-            .as_ref()
-            .map(|parent| builder.create_string(parent));
+            .map(|namespace| builder.create_string(namespace));
 
-        let stereotype_offsets: Vec<_> = entity
-            .stereotypes
+        let type_alias_offsets: Vec<_> = entity
+            .type_aliases
             .iter()
-            .map(|st| builder.create_string(st))
+            .map(|type_alias| Self::serialize_type_alias(builder, type_alias))
             .collect();
-        let stereotypes_offset = builder.create_vector(&stereotype_offsets);
+        let type_aliases_offset = builder.create_vector(&type_alias_offsets);
 
-        let attribute_offsets: Vec<_> = entity
-            .attributes
+        let variable_offsets: Vec<_> = entity
+            .variables
             .iter()
-            .map(|attr| Self::serialize_attribute(builder, attr))
+            .map(|variable| Self::serialize_variable(builder, variable))
             .collect();
-        let attributes_offset = builder.create_vector(&attribute_offsets);
+        let variables_offset = builder.create_vector(&variable_offsets);
 
         let method_offsets: Vec<_> = entity
             .methods
@@ -110,12 +99,13 @@ impl ClassSerializer {
             .collect();
         let methods_offset = builder.create_vector(&method_offsets);
 
-        let template_offsets: Vec<_> = entity
-            .template_params
-            .iter()
-            .map(|param| builder.create_string(param))
-            .collect();
-        let template_params_offset = builder.create_vector(&template_offsets);
+        let template_parameters_offset = entity.template_parameters.as_ref().map(|parameters| {
+            let template_offsets: Vec<_> = parameters
+                .iter()
+                .map(|parameter| builder.create_string(parameter))
+                .collect();
+            builder.create_vector(&template_offsets)
+        });
 
         let enum_literal_offsets: Vec<_> = entity
             .enum_literals
@@ -124,65 +114,78 @@ impl ClassSerializer {
             .collect();
         let enum_literals_offset = builder.create_vector(&enum_literal_offsets);
 
+        let entity_relationship_offsets: Vec<_> = entity
+            .relationships
+            .iter()
+            .map(|relationship| Self::serialize_relationship(builder, relationship))
+            .collect();
+        let entity_relationships_offset = builder.create_vector(&entity_relationship_offsets);
+
         let source_file_offset = entity
             .source_file
             .as_ref()
             .map(|source| builder.create_string(source));
 
-        fb::Entity::create(
+        fb::SimpleEntity::create(
             builder,
-            &fb::EntityArgs {
+            &fb::SimpleEntityArgs {
                 id: Some(id_offset),
-                name: name_offset,
-                alias: alias_offset,
-                parent_id: parent_offset,
+                name: Some(name_offset),
+                enclosing_namespace_id: enclosing_namespace_id_offset,
                 entity_type: Self::map_entity_type(entity.entity_type),
-                stereotypes: Some(stereotypes_offset),
-                attributes: Some(attributes_offset),
+                type_aliases: Some(type_aliases_offset),
+                variables: Some(variables_offset),
                 methods: Some(methods_offset),
-                template_params: Some(template_params_offset),
+                template_parameters: template_parameters_offset,
                 enum_literals: Some(enum_literals_offset),
+                relationships: Some(entity_relationships_offset),
                 source_file: source_file_offset,
                 source_line: entity.source_line.unwrap_or(UNKNOWN_SOURCE_LINE),
             },
         )
     }
 
-    fn serialize_attribute<'a>(
+    fn serialize_type_alias<'a>(
         builder: &mut FlatBufferBuilder<'a>,
-        attr: &LogicAttribute,
-    ) -> flatbuffers::WIPOffset<fb::Attribute<'a>> {
-        let name_offset = builder.create_string(&attr.name);
-        let data_type_offset = attr
+        type_alias: &TypeAlias,
+    ) -> flatbuffers::WIPOffset<fb::TypeAlias<'a>> {
+        let alias_offset = builder.create_string(&type_alias.alias);
+        let original_type_offset = builder.create_string(&type_alias.original_type);
+
+        fb::TypeAlias::create(
+            builder,
+            &fb::TypeAliasArgs {
+                alias: Some(alias_offset),
+                original_type: Some(original_type_offset),
+            },
+        )
+    }
+
+    fn serialize_variable<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        variable: &MemberVariable,
+    ) -> flatbuffers::WIPOffset<fb::MemberVariable<'a>> {
+        let name_offset = builder.create_string(&variable.name);
+        let data_type_offset = variable
             .data_type
             .as_ref()
             .map(|data_type| builder.create_string(data_type));
-        let default_value_offset = attr
-            .default_value
-            .as_ref()
-            .map(|value| builder.create_string(value));
-        let description_offset = attr
-            .description
-            .as_ref()
-            .map(|description| builder.create_string(description));
 
-        fb::Attribute::create(
+        fb::MemberVariable::create(
             builder,
-            &fb::AttributeArgs {
+            &fb::MemberVariableArgs {
                 name: Some(name_offset),
                 data_type: data_type_offset,
-                visibility: Self::map_visibility(attr.visibility),
-                default_value: default_value_offset,
-                is_static: attr.is_static,
-                is_const: attr.is_const,
-                description: description_offset,
+                visibility: Self::map_visibility(variable.visibility),
+                is_static: variable.is_static,
+                is_const: variable.is_const,
             },
         )
     }
 
     fn serialize_method<'a>(
         builder: &mut FlatBufferBuilder<'a>,
-        method: &LogicMethod,
+        method: &Method,
     ) -> flatbuffers::WIPOffset<fb::Method<'a>> {
         let name_offset = builder.create_string(&method.name);
         let return_type_offset = method
@@ -193,16 +196,24 @@ impl ClassSerializer {
         let parameter_offsets: Vec<_> = method
             .parameters
             .iter()
-            .map(|param| Self::serialize_parameter(builder, param))
+            .map(|parameter| Self::serialize_parameter(builder, parameter))
             .collect();
         let parameters_offset = builder.create_vector(&parameter_offsets);
 
-        let template_offsets: Vec<_> = method
-            .template_params
+        let template_parameters_offset = method.template_parameters.as_ref().map(|parameters| {
+            let template_offsets: Vec<_> = parameters
+                .iter()
+                .map(|parameter| builder.create_string(parameter))
+                .collect();
+            builder.create_vector(&template_offsets)
+        });
+
+        let modifier_values: Vec<_> = method
+            .modifiers
             .iter()
-            .map(|param| builder.create_string(param))
+            .map(Self::map_method_modifier)
             .collect();
-        let template_params_offset = builder.create_vector(&template_offsets);
+        let modifiers_offset = builder.create_vector(&modifier_values);
 
         fb::Method::create(
             builder,
@@ -211,40 +222,27 @@ impl ClassSerializer {
                 return_type: return_type_offset,
                 visibility: Self::map_visibility(method.visibility),
                 parameters: Some(parameters_offset),
-                template_params: Some(template_params_offset),
-                is_static: method.is_static,
-                is_const: method.is_const,
-                is_virtual: method.is_virtual,
-                is_abstract: method.is_abstract,
-                is_override: method.is_override,
-                is_constructor: method.is_constructor,
-                is_destructor: method.is_destructor,
+                template_parameters: template_parameters_offset,
+                modifiers: Some(modifiers_offset),
             },
         )
     }
 
     fn serialize_parameter<'a>(
         builder: &mut FlatBufferBuilder<'a>,
-        param: &LogicParameter,
-    ) -> flatbuffers::WIPOffset<fb::Parameter<'a>> {
+        param: &FunctionArgument,
+    ) -> flatbuffers::WIPOffset<fb::FunctionArgument<'a>> {
         let name_offset = builder.create_string(&param.name);
         let param_type_offset = param
             .param_type
             .as_ref()
             .map(|param_type| builder.create_string(param_type));
-        let default_value_offset = param
-            .default_value
-            .as_ref()
-            .map(|value| builder.create_string(value));
 
-        fb::Parameter::create(
+        fb::FunctionArgument::create(
             builder,
-            &fb::ParameterArgs {
+            &fb::FunctionArgumentArgs {
                 name: Some(name_offset),
                 param_type: param_type_offset,
-                default_value: default_value_offset,
-                is_reference: param.is_reference,
-                is_const: param.is_const,
                 is_variadic: param.is_variadic,
             },
         )
@@ -252,65 +250,29 @@ impl ClassSerializer {
 
     fn serialize_enum_literal<'a>(
         builder: &mut FlatBufferBuilder<'a>,
-        literal: &LogicEnumLiteral,
+        literal: &EnumLiteral,
     ) -> flatbuffers::WIPOffset<fb::EnumLiteral<'a>> {
         let name_offset = builder.create_string(&literal.name);
         let value_offset = literal
             .value
             .as_ref()
             .map(|value| builder.create_string(value));
-        let description_offset = literal
-            .description
-            .as_ref()
-            .map(|description| builder.create_string(description));
 
         fb::EnumLiteral::create(
             builder,
             &fb::EnumLiteralArgs {
                 name: Some(name_offset),
-                visibility: Self::map_visibility(literal.visibility),
                 value: value_offset,
-                description: description_offset,
-            },
-        )
-    }
-
-    fn serialize_container<'a>(
-        builder: &mut FlatBufferBuilder<'a>,
-        container: &LogicContainer,
-    ) -> flatbuffers::WIPOffset<fb::Container<'a>> {
-        let id_offset = builder.create_string(&container.id);
-        let name_offset = builder.create_string(&container.name);
-        let parent_offset = container
-            .parent_id
-            .as_ref()
-            .map(|parent| builder.create_string(parent));
-
-        fb::Container::create(
-            builder,
-            &fb::ContainerArgs {
-                id: Some(id_offset),
-                name: Some(name_offset),
-                parent_id: parent_offset,
-                container_type: Self::map_container_type(container.container_type),
             },
         )
     }
 
     fn serialize_relationship<'a>(
         builder: &mut FlatBufferBuilder<'a>,
-        relationship: &LogicRelationship,
+        relationship: &Relationship,
     ) -> flatbuffers::WIPOffset<fb::Relationship<'a>> {
         let source_offset = builder.create_string(&relationship.source);
         let target_offset = builder.create_string(&relationship.target);
-        let label_offset = relationship
-            .label
-            .as_ref()
-            .map(|label| builder.create_string(label));
-        let stereotype_offset = relationship
-            .stereotype
-            .as_ref()
-            .map(|stereotype| builder.create_string(stereotype));
         let source_multiplicity_offset = relationship
             .source_multiplicity
             .as_ref()
@@ -319,14 +281,6 @@ impl ClassSerializer {
             .target_multiplicity
             .as_ref()
             .map(|multiplicity| builder.create_string(multiplicity));
-        let source_role_offset = relationship
-            .source_role
-            .as_ref()
-            .map(|role| builder.create_string(role));
-        let target_role_offset = relationship
-            .target_role
-            .as_ref()
-            .map(|role| builder.create_string(role));
 
         fb::Relationship::create(
             builder,
@@ -334,12 +288,8 @@ impl ClassSerializer {
                 source: Some(source_offset),
                 target: Some(target_offset),
                 relation_type: Self::map_relation_type(relationship.relation_type),
-                label: label_offset,
-                stereotype: stereotype_offset,
                 source_multiplicity: source_multiplicity_offset,
                 target_multiplicity: target_multiplicity_offset,
-                source_role: source_role_offset,
-                target_role: target_role_offset,
             },
         )
     }
@@ -349,7 +299,6 @@ impl ClassSerializer {
             Visibility::Public => fb::Visibility::Public,
             Visibility::Private => fb::Visibility::Private,
             Visibility::Protected => fb::Visibility::Protected,
-            Visibility::Package => fb::Visibility::Package,
         }
     }
 
@@ -357,18 +306,21 @@ impl ClassSerializer {
         match t {
             EntityType::Class => fb::EntityType::Class,
             EntityType::Struct => fb::EntityType::Struct,
-            EntityType::Object => fb::EntityType::Object,
             EntityType::Interface => fb::EntityType::Interface,
-            EntityType::Enum => fb::EntityType::Enum,
             EntityType::AbstractClass => fb::EntityType::AbstractClass,
-            EntityType::Annotation => fb::EntityType::Annotation,
+            EntityType::Enum => fb::EntityType::Enum,
         }
     }
 
-    fn map_container_type(t: ContainerType) -> fb::ContainerType {
+    fn map_method_modifier(t: &MethodModifier) -> fb::MethodModifier {
         match t {
-            ContainerType::Namespace => fb::ContainerType::Namespace,
-            ContainerType::Package => fb::ContainerType::Package,
+            MethodModifier::Static => fb::MethodModifier::Static,
+            MethodModifier::Virtual => fb::MethodModifier::Virtual,
+            MethodModifier::Abstract => fb::MethodModifier::Abstract,
+            MethodModifier::Override => fb::MethodModifier::Override,
+            MethodModifier::Constructor => fb::MethodModifier::Constructor,
+            MethodModifier::Destructor => fb::MethodModifier::Destructor,
+            MethodModifier::Noexcept => fb::MethodModifier::Noexcept,
         }
     }
 
@@ -380,8 +332,6 @@ impl ClassSerializer {
             RelationType::Aggregation => fb::RelationType::Aggregation,
             RelationType::Association => fb::RelationType::Association,
             RelationType::Dependency => fb::RelationType::Dependency,
-            RelationType::Link => fb::RelationType::Link,
-            RelationType::DashedLink => fb::RelationType::DashedLink,
         }
     }
 }

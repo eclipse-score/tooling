@@ -12,4 +12,4 @@
 // *******************************************************************************
 mod class_resolver;
 
-pub use class_resolver::ClassResolver;
+pub use class_resolver::{ClassPumlResolverError, ClassResolver};

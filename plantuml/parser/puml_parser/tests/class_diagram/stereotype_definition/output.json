@@ -1,5 +1,5 @@
-{"stereotype_definition.puml":
-  {
+{
+  "stereotype_definition.puml": {
     "name": "stereotype_definition",
     "elements": [
       {
@@ -11,22 +11,30 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 15,
+            "is_abstract": false,
+            "type_aliases": [],
             "attributes": [
               {
                 "visibility": "Private",
                 "name": "id",
-                "type": "int"
+                "type": "int",
+                "modifiers": []
               }
             ],
             "methods": [
               {
                 "visibility": "Public",
                 "name": "getName",
-                "generic_params": [],
                 "params": [],
-                "type": "String"
+                "type": "String",
+                "template_parameters": null,
+                "modifiers": []
               }
-            ]
+            ],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
           }
         }
       },
@@ -39,14 +47,18 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 20,
+            "type_aliases": [],
             "attributes": [
               {
                 "visibility": "Private",
                 "name": "instance",
-                "type": "Config"
+                "type": "Config",
+                "modifiers": []
               }
             ],
-            "methods": []
+            "methods": [],
+            "template_parameters": null
           }
         }
       },
@@ -59,16 +71,21 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 24,
+            "type_aliases": [],
             "attributes": [],
             "methods": [
               {
                 "visibility": "Public",
                 "name": "doSomething",
-                "generic_params": [],
                 "params": [],
-                "type": "void"
+                "type": "void",
+                "template_parameters": null,
+                "modifiers": []
               }
-            ]
+            ],
+            "template_parameters": null,
+            "extends": []
           }
         }
       },
@@ -80,15 +97,14 @@
           },
           "namespace": "",
           "package": "",
+          "source_line": 28,
           "stereotypes": [],
           "items": [
             {
-              "visibility": null,
               "name": "MALE",
               "value": null
             },
             {
-              "visibility": null,
               "name": "FEMALE",
               "value": null
             }

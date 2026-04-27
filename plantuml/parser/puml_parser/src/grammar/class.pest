@@ -77,6 +77,7 @@ class_start = {
 top_level = {
       namespace_def
     | type_def
+    | unsupported_object_def
     | enum_def
     | package_def
     | together_def
@@ -137,8 +138,10 @@ package_def = {
 // type definition
 ///////////////////////////////////////////////////////////////
 type_def = { type_def_with_body | type_def_decl }
+unsupported_object_def = { object_def_with_body | object_def_decl }
 
 type_def_decl = { type_kind ~ named ~ type_decl_suffix* }
+object_def_decl = { "object" ~ named ~ type_decl_suffix* }
 type_decl_suffix = _{ extends_clause | implements_clause | link_annotation | stereotype | color }
 template_param = @{ identifier ~ varargs? }
 template_param_list = _{ "<" ~ template_param ~ ("," ~ template_param)* ~ ">" }
@@ -149,12 +152,13 @@ extends_target = { class_qualified_name }
 implements_clause = { "implements" ~ implements_target ~ ("," ~ implements_target)* }
 implements_target = { class_qualified_name }
 
-type_def_with_body = { type_def_decl ~ &(EOL* ~ "{") ~ EOL* ~ class_body }
+type_def_with_body = { type_def_decl ~ &(EOL* ~ "{") ~ EOL* ~ class_body ~ ";"? }
+object_def_with_body = { object_def_decl ~ &(EOL* ~ "{") ~ EOL* ~ class_body ~ ";"? }
 type_kind = {
-      "class"
+      "abstract" ~ "class"
+    | "class"
     | "struct"
     | "interface"
-    | "object"
 }
 
 class_body = { "{" ~ EOL* ~ (class_member | class_body_separator)* ~ EOL* ~ "}" }
@@ -173,13 +177,21 @@ method = {
     ~ EOL*
     ~ ")"
     ~ generic_param_list?
+    ~ method_qualifier*
     ~ return_type?
-    ~ const_method_suffix?
+    ~ method_qualifier*
+    ~ pure_virtual_suffix?
+    ~ ";"?
 }
 method_modifier = _{ static_modifier | abstract_modifier }
-static_modifier = { "{" ~ "static" ~ "}" }
+static_modifier = { "{" ~ static_keyword ~ "}" | static_keyword }
+static_keyword = { "static" }
 abstract_modifier = { "{" ~ "abstract" ~ "}" }
-const_method_suffix = { "<<" ~ "const" ~ ">>" }
+method_qualifier = _{ const_method_qualifier | noexcept_method_qualifier }
+const_method_qualifier = { ("<<" ~ "const" ~ ">>") | "const" }
+noexcept_method_qualifier = { "noexcept" }
+pure_virtual_suffix = { "=" ~ "0" }
+
 method_name = { operator_overload_name | destructor_name | identifier }
 destructor_name = @{ "~" ~ identifier }
 operator_overload_name = @{
@@ -224,16 +236,17 @@ operator_overload_name = @{
             | ","
         )
 }
-return_type = { ":" ~ type_name }
+return_type = { ":" ~ static_modifier* ~ type_name }
 
 attribute = { static_modifier* ~ class_visibility? ~ (using_attribute | named_attribute | unnamed_attribute) }
-attribute_end = _{ &(WHITESPACE* ~ (EOL | "}")) }
+attribute_end = _{ ";"? ~ &(WHITESPACE* ~ (EOL | "}")) }
 using_attribute = { "using" ~ identifier ~ "=" ~ type_name ~ attribute_end }
 named_attribute = { identifier ~ (":" ~ type_name)? ~ attribute_end }
 unnamed_attribute = { type_name ~ attribute_end }
 
 param = {
     param_named
+  | param_cpp_named
   | param_unnamed
 }
 
@@ -241,13 +254,23 @@ param_named = {
     identifier
     ~ ":"
     ~ type_name
+    ~ param_default_value?
+    ~ varargs?
+}
+
+param_cpp_named = {
+    type_name
+    ~ identifier
+    ~ param_default_value?
     ~ varargs?
 }
 
 param_unnamed = {
     type_name
+    ~ param_default_value?
     ~ varargs?
 }
+param_default_value = { "=" ~ (!("," | ")" | EOL) ~ ANY)* }
 param_list  = { param ~ (EOL* ~ "," ~ EOL* ~ param)* }
 
 generic_param_list = { template_param_list }
@@ -256,11 +279,11 @@ varargs = { "..." }
 ///////////////////////////////////////////////////////////////
 // type definition
 ///////////////////////////////////////////////////////////////
-enum_def = { "enum" ~ named ~ stereotype? ~ enum_body?}
+enum_def = { "enum" ~ named ~ stereotype? ~ enum_body? ~ ";"? }
 
 enum_body = { "{" ~ EOL* ~ enum_item* ~ EOL* ~ "}" }
 
-enum_item = { class_visibility? ~ identifier ~ enum_value? ~ EOL+ }
+enum_item = { identifier ~ enum_value? ~ EOL+ }
 
 enum_value = { ( "=" | ":" ) ~ enum_value_literal }
 
@@ -271,10 +294,13 @@ enum_value_literal = @{ (!("\n" | "}") ~ ANY)+ }
 ///////////////////////////////////////////////////////////////
 
 qualified_identifier = @{ name_ref ~ ("." ~ name_ref)+ }
+relationship_multiplicity = { STRING }
 
 relationship = {
     (qualified_identifier | name_ref)
+    ~ relationship_multiplicity?
     ~ connection_arrow
+    ~ relationship_multiplicity?
     ~ (qualified_identifier | name_ref)
     ~ (":" ~ label)?
 }

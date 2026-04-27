@@ -1,5 +1,5 @@
-{"enum.puml":
-  {
+{
+  "enum.puml": {
     "name": "enum",
     "elements": [
       {
@@ -10,6 +10,7 @@
           },
           "namespace": "",
           "package": "",
+          "source_line": 15,
           "stereotypes": [],
           "items": []
         }
@@ -22,20 +23,18 @@
           },
           "namespace": "",
           "package": "",
+          "source_line": 17,
           "stereotypes": [],
           "items": [
             {
-              "visibility": "Public",
               "name": "OK",
               "value": null
             },
             {
-              "visibility": "Private",
               "name": "ERROR",
               "value": null
             },
             {
-              "visibility": "Protected",
               "name": "UNKNOWN",
               "value": null
             }
@@ -50,24 +49,22 @@
           },
           "namespace": "",
           "package": "",
+          "source_line": 23,
           "stereotypes": [],
           "items": [
             {
-              "visibility": null,
               "name": "INIT",
               "value": {
                 "Description": "initialize"
               }
             },
             {
-              "visibility": null,
               "name": "RUNNING",
               "value": {
                 "Description": "running"
               }
             },
             {
-              "visibility": null,
               "name": "STOPPED",
               "value": {
                 "Description": "stoped"
@@ -84,17 +81,16 @@
           },
           "namespace": "",
           "package": "",
+          "source_line": 29,
           "stereotypes": [],
           "items": [
             {
-              "visibility": null,
               "name": "HIGH",
               "value": {
                 "Literal": "0"
               }
             },
             {
-              "visibility": null,
               "name": "LOW",
               "value": {
                 "Literal": "1"

@@ -1,5 +1,5 @@
-{"namespace_3.puml":
-  {
+{
+  "namespace_3.puml": {
     "name": "namespace_3",
     "elements": [
       {
@@ -11,8 +11,14 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 15,
+            "is_abstract": false,
+            "type_aliases": [],
             "attributes": [],
-            "methods": []
+            "methods": [],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
           }
         }
       },
@@ -31,8 +37,14 @@
                 },
                 "namespace": "Data",
                 "package": "",
+                "source_line": 18,
+                "is_abstract": false,
+                "type_aliases": [],
                 "attributes": [],
-                "methods": []
+                "methods": [],
+                "template_parameters": null,
+                "extends": [],
+                "implements": []
               }
             }
           ],

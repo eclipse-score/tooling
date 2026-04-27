@@ -81,10 +81,10 @@ package core::geometry::advanced <<experimental>> {
 package util <<infrastructure>> {
 
     enum LogLevel {
-        -De : Debug
-        +Info : Information
-        +Warn : Warnning
-        #Err : Error
+        De : Debug
+        Info : Information
+        Warn : Warnning
+        Err : Error
     }
 
     class Logger {

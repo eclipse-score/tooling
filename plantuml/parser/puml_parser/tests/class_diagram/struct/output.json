@@ -1,5 +1,5 @@
-{"struct.puml":
-  {
+{
+  "struct.puml": {
     "name": "struct",
     "elements": [
       {
@@ -17,8 +17,11 @@
                 },
                 "namespace": "aaa",
                 "package": "",
+                "source_line": 16,
+                "type_aliases": [],
                 "attributes": [],
-                "methods": []
+                "methods": [],
+                "template_parameters": null
               }
             }
           ],
@@ -34,19 +37,24 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 19,
+            "type_aliases": [],
             "attributes": [
               {
                 "visibility": "Public",
                 "name": "header",
-                "type": "int"
+                "type": "int",
+                "modifiers": []
               },
               {
                 "visibility": "Public",
                 "name": "payload",
-                "type": "string"
+                "type": "string",
+                "modifiers": []
               }
             ],
-            "methods": []
+            "methods": [],
+            "template_parameters": null
           }
         }
       },
@@ -59,19 +67,24 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 24,
+            "type_aliases": [],
             "attributes": [
               {
                 "visibility": "Public",
                 "name": "id",
-                "type": null
+                "type": null,
+                "modifiers": []
               },
               {
                 "visibility": "Private",
                 "name": "name",
-                "type": null
+                "type": null,
+                "modifiers": []
               }
             ],
-            "methods": []
+            "methods": [],
+            "template_parameters": null
           }
         }
       }

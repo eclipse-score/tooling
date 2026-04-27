@@ -1,622 +1,530 @@
-{"class_diagram_positive.puml":
-  {
-      "name": "class_positive_test",
-      "entities": [
-        {
-          "id": "core.Point",
-          "name": "Point",
-          "alias": null,
-          "parent_id": "core",
-          "entity_type": "Struct",
-          "stereotypes": [],
-          "attributes": [
-            {
-              "name": "x",
-              "data_type": "f32",
-              "visibility": "public",
-              "default_value": null,
-              "is_static": false,
-              "is_const": false,
-              "description": null
-            },
-            {
-              "name": "y",
-              "data_type": "f32",
-              "visibility": "public",
-              "default_value": null,
-              "is_static": false,
-              "is_const": false,
-              "description": null
-            }
-          ],
-          "methods": [],
-          "template_params": [],
-          "enum_literals": [],
-          "source_file": null,
-          "source_line": null
-        },
-        {
-          "id": "core.Size",
-          "name": "Size",
-          "alias": null,
-          "parent_id": "core",
-          "entity_type": "Struct",
-          "stereotypes": [],
-          "attributes": [
-            {
-              "name": "width",
-              "data_type": "f32",
-              "visibility": "public",
-              "default_value": null,
-              "is_static": false,
-              "is_const": false,
-              "description": null
-            },
-            {
-              "name": "height",
-              "data_type": "f32",
-              "visibility": "public",
-              "default_value": null,
-              "is_static": false,
-              "is_const": false,
-              "description": null
-            }
-          ],
-          "methods": [],
-          "template_params": [],
-          "enum_literals": [],
-          "source_file": null,
-          "source_line": null
-        },
-        {
-          "id": "core.Color",
-          "name": null,
-          "alias": null,
-          "parent_id": "core",
-          "entity_type": "Enum",
-          "stereotypes": [],
-          "attributes": [],
-          "methods": [],
-          "template_params": [],
-          "enum_literals": [
-            {
-              "name": "Red",
-              "visibility": "public",
-              "value": "0",
-              "description": null
-            },
-            {
-              "name": "Green",
-              "visibility": "public",
-              "value": "1",
-              "description": null
-            },
-            {
-              "name": "Blue",
-              "visibility": "public",
-              "value": "2",
-              "description": null
-            }
-          ],
-          "source_file": null,
-          "source_line": null
-        },
-        {
-          "id": "core.Shape",
-          "name": "Shape",
-          "alias": null,
-          "parent_id": "core",
-          "entity_type": "Class",
-          "stereotypes": [],
-          "attributes": [],
-          "methods": [
-            {
-              "name": "draw",
-              "return_type": null,
-              "visibility": "public",
-              "parameters": [],
-              "template_params": [],
-              "is_static": false,
-              "is_const": false,
-              "is_virtual": false,
-              "is_abstract": false,
-              "is_override": false,
-              "is_constructor": false,
-              "is_destructor": false
-            },
-            {
-              "name": "area",
-              "return_type": "f32",
-              "visibility": "public",
-              "parameters": [],
-              "template_params": [],
-              "is_static": false,
-              "is_const": false,
-              "is_virtual": false,
-              "is_abstract": false,
-              "is_override": false,
-              "is_constructor": false,
-              "is_destructor": false
-            }
-          ],
-          "template_params": [],
-          "enum_literals": [],
-          "source_file": null,
-          "source_line": null
-        },
-        {
-          "id": "core.Drawable",
-          "name": "Drawable",
-          "alias": null,
-          "parent_id": "core",
-          "entity_type": "Interface",
-          "stereotypes": [],
-          "attributes": [],
-          "methods": [
-            {
-              "name": "draw",
-              "return_type": null,
-              "visibility": "public",
-              "parameters": [],
-              "template_params": [],
-              "is_static": false,
-              "is_const": false,
-              "is_virtual": false,
-              "is_abstract": false,
-              "is_override": false,
-              "is_constructor": false,
-              "is_destructor": false
-            }
-          ],
-          "template_params": [],
-          "enum_literals": [],
-          "source_file": null,
-          "source_line": null
-        },
-        {
-          "id": "core.Canvas",
-          "name": "Canvas",
-          "alias": null,
-          "parent_id": "core",
-          "entity_type": "Class",
-          "stereotypes": [],
-          "attributes": [
-            {
-              "name": "shapes",
-              "data_type": "Shape",
-              "visibility": "private",
-              "default_value": null,
-              "is_static": false,
-              "is_const": false,
-              "description": null
-            }
-          ],
-          "methods": [
-            {
-              "name": "add_shape",
-              "return_type": null,
-              "visibility": "public",
-              "parameters": [
-                {
-                  "name": "s",
-                  "param_type": "Shape",
-                  "default_value": null,
-                  "is_reference": false,
-                  "is_const": false,
-                  "is_variadic": false
-                }
-              ],
-              "template_params": [],
-              "is_static": false,
-              "is_const": false,
-              "is_virtual": false,
-              "is_abstract": false,
-              "is_override": false,
-              "is_constructor": false,
-              "is_destructor": false
-            },
-            {
-              "name": "render",
-              "return_type": null,
-              "visibility": "public",
-              "parameters": [],
-              "template_params": [],
-              "is_static": false,
-              "is_const": false,
-              "is_virtual": false,
-              "is_abstract": false,
-              "is_override": false,
-              "is_constructor": false,
-              "is_destructor": false
-            }
-          ],
-          "template_params": [],
-          "enum_literals": [],
-          "source_file": null,
-          "source_line": null
-        },
-        {
-          "id": "core.geometry.Circle",
-          "name": "Circle",
-          "alias": null,
-          "parent_id": "core.geometry",
-          "entity_type": "Class",
-          "stereotypes": [],
-          "attributes": [
-            {
-              "name": "center",
-              "data_type": "Point",
-              "visibility": "private",
-              "default_value": null,
-              "is_static": false,
-              "is_const": false,
-              "description": null
-            },
-            {
-              "name": "radius",
-              "data_type": "f32",
-              "visibility": "private",
-              "default_value": null,
-              "is_static": false,
-              "is_const": false,
-              "description": null
-            }
-          ],
-          "methods": [
-            {
-              "name": "area",
-              "return_type": "f32",
-              "visibility": "public",
-              "parameters": [],
-              "template_params": [],
-              "is_static": false,
-              "is_const": false,
-              "is_virtual": false,
-              "is_abstract": false,
-              "is_override": false,
-              "is_constructor": false,
-              "is_destructor": false
-            }
-          ],
-          "template_params": [],
-          "enum_literals": [],
-          "source_file": null,
-          "source_line": null
-        },
-        {
-          "id": "core.geometry.Rectangle",
-          "name": "Rectangle",
-          "alias": null,
-          "parent_id": "core.geometry",
-          "entity_type": "Class",
-          "stereotypes": [],
-          "attributes": [
-            {
-              "name": "origin",
-              "data_type": "Point",
-              "visibility": "private",
-              "default_value": null,
-              "is_static": false,
-              "is_const": false,
-              "description": null
-            },
-            {
-              "name": "size",
-              "data_type": "Size",
-              "visibility": "private",
-              "default_value": null,
-              "is_static": false,
-              "is_const": false,
-              "description": null
-            }
-          ],
-          "methods": [
-            {
-              "name": "area",
-              "return_type": "f32",
-              "visibility": "public",
-              "parameters": [],
-              "template_params": [],
-              "is_static": false,
-              "is_const": false,
-              "is_virtual": false,
-              "is_abstract": false,
-              "is_override": false,
-              "is_constructor": false,
-              "is_destructor": false
-            }
-          ],
-          "template_params": [],
-          "enum_literals": [],
-          "source_file": null,
-          "source_line": null
-        },
-        {
-          "id": "core.geometry.advanced.RoundedRectangle",
-          "name": "RoundedRectangle",
-          "alias": null,
-          "parent_id": "core.geometry.advanced",
-          "entity_type": "Class",
-          "stereotypes": [],
-          "attributes": [
-            {
-              "name": "corner_radius",
-              "data_type": "f32",
-              "visibility": "private",
-              "default_value": null,
-              "is_static": false,
-              "is_const": false,
-              "description": null
-            }
-          ],
-          "methods": [],
-          "template_params": [],
-          "enum_literals": [],
-          "source_file": null,
-          "source_line": null
-        },
-        {
-          "id": "util.LogLevel",
-          "name": null,
-          "alias": null,
-          "parent_id": "util",
-          "entity_type": "Enum",
-          "stereotypes": [],
-          "attributes": [],
-          "methods": [],
-          "template_params": [],
-          "enum_literals": [
-            {
-              "name": "De",
-              "visibility": "private",
-              "value": "Debug",
-              "description": null
-            },
-            {
-              "name": "Info",
-              "visibility": "public",
-              "value": "Information",
-              "description": null
-            },
-            {
-              "name": "Warn",
-              "visibility": "public",
-              "value": "Warnning",
-              "description": null
-            },
-            {
-              "name": "Err",
-              "visibility": "protected",
-              "value": "Error",
-              "description": null
-            }
-          ],
-          "source_file": null,
-          "source_line": null
-        },
-        {
-          "id": "util.Logger",
-          "name": "Logger",
-          "alias": null,
-          "parent_id": "util",
-          "entity_type": "Class",
-          "stereotypes": [],
-          "attributes": [],
-          "methods": [
-            {
-              "name": "log",
-              "return_type": null,
-              "visibility": "public",
-              "parameters": [
-                {
-                  "name": "level",
-                  "param_type": "LogLevel",
-                  "default_value": null,
-                  "is_reference": false,
-                  "is_const": false,
-                  "is_variadic": false
-                },
-                {
-                  "name": "msg",
-                  "param_type": "String",
-                  "default_value": null,
-                  "is_reference": false,
-                  "is_const": false,
-                  "is_variadic": false
-                }
-              ],
-              "template_params": [],
-              "is_static": false,
-              "is_const": false,
-              "is_virtual": false,
-              "is_abstract": false,
-              "is_override": false,
-              "is_constructor": false,
-              "is_destructor": false
-            }
-          ],
-          "template_params": [],
-          "enum_literals": [],
-          "source_file": null,
-          "source_line": null
-        },
-        {
-          "id": "api.RestApi",
-          "name": "RestApi",
-          "alias": null,
-          "parent_id": "api",
-          "entity_type": "Class",
-          "stereotypes": [],
-          "attributes": [],
-          "methods": [
-            {
-              "name": "handle_request",
-              "return_type": null,
-              "visibility": "public",
-              "parameters": [],
-              "template_params": [],
-              "is_static": false,
-              "is_const": false,
-              "is_virtual": false,
-              "is_abstract": false,
-              "is_override": false,
-              "is_constructor": false,
-              "is_destructor": false
-            }
-          ],
-          "template_params": [],
-          "enum_literals": [],
-          "source_file": null,
-          "source_line": null
-        }
-      ],
-      "containers": [
-        {
-          "id": "core",
-          "name": "core",
-          "parent_id": null,
-          "container_type": "Namespace"
-        },
-        {
-          "id": "core.geometry",
-          "name": "core::geometry",
-          "parent_id": null,
-          "container_type": "Package"
-        },
-        {
-          "id": "core.geometry.advanced",
-          "name": "core::geometry::advanced",
-          "parent_id": null,
-          "container_type": "Package"
-        },
-        {
-          "id": "util",
-          "name": "util",
-          "parent_id": null,
-          "container_type": "Package"
-        },
-        {
-          "id": "api",
-          "name": "api",
-          "parent_id": null,
-          "container_type": "Package"
-        }
-      ],
-      "relationships": [
-        {
-          "source": "core.geometry.Circle",
-          "target": "core.Shape",
-          "relation_type": "Inheritance",
-          "label": "inherit",
-          "stereotype": null,
-          "source_multiplicity": null,
-          "target_multiplicity": null,
-          "source_role": null,
-          "target_role": null
-        },
-        {
-          "source": "core.geometry.Rectangle",
-          "target": "core.Shape",
-          "relation_type": "Inheritance",
-          "label": null,
-          "stereotype": null,
-          "source_multiplicity": null,
-          "target_multiplicity": null,
-          "source_role": null,
-          "target_role": null
-        },
-        {
-          "source": "core.geometry.advanced.RoundedRectangle",
-          "target": "core.geometry.Rectangle",
-          "relation_type": "Inheritance",
-          "label": null,
-          "stereotype": "extend",
-          "source_multiplicity": null,
-          "target_multiplicity": null,
-          "source_role": null,
-          "target_role": null
-        },
-        {
-          "source": "core.Shape",
-          "target": "core.Drawable",
-          "relation_type": "Implementation",
-          "label": null,
-          "stereotype": null,
-          "source_multiplicity": null,
-          "target_multiplicity": null,
-          "source_role": null,
-          "target_role": null
-        },
-        {
-          "source": "core.Shape",
-          "target": "core.Canvas",
-          "relation_type": "Composition",
-          "label": null,
-          "stereotype": null,
-          "source_multiplicity": null,
-          "target_multiplicity": null,
-          "source_role": null,
-          "target_role": null
-        },
-        {
-          "source": "core.Color",
-          "target": "core.geometry.Circle",
-          "relation_type": "Aggregation",
-          "label": null,
-          "stereotype": null,
-          "source_multiplicity": null,
-          "target_multiplicity": null,
-          "source_role": null,
-          "target_role": null
-        },
-        {
-          "source": "core.geometry.Rectangle",
-          "target": "core.Color",
-          "relation_type": "Association",
-          "label": null,
-          "stereotype": null,
-          "source_multiplicity": null,
-          "target_multiplicity": null,
-          "source_role": null,
-          "target_role": null
-        },
-        {
-          "source": "core.Canvas",
-          "target": "util.Logger",
-          "relation_type": "Dependency",
-          "label": null,
-          "stereotype": null,
-          "source_multiplicity": null,
-          "target_multiplicity": null,
-          "source_role": null,
-          "target_role": null
-        },
-        {
-          "source": "api.RestApi",
-          "target": "core.Canvas",
-          "relation_type": "Dependency",
-          "label": null,
-          "stereotype": "calls",
-          "source_multiplicity": null,
-          "target_multiplicity": null,
-          "source_role": null,
-          "target_role": null
-        },
-        {
-          "source": "core.geometry.Circle",
-          "target": "core.geometry.Rectangle",
-          "relation_type": "Association",
-          "label": null,
-          "stereotype": "bidirectional",
-          "source_multiplicity": null,
-          "target_multiplicity": null,
-          "source_role": null,
-          "target_role": null
-        }
-      ],
-      "source_files": [
-        "class_positive_test"
-      ],
-      "version": null
+{
+  "class_diagram_positive.puml": {
+    "name": "class_positive_test",
+    "entities": [
+      {
+        "id": "core.Point",
+        "name": "Point",
+        "enclosing_namespace_id": "core",
+        "entity_type": "Struct",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_positive_test",
+        "source_line": 25,
+        "variables": [
+          {
+            "name": "x",
+            "data_type": "f32",
+            "visibility": "public",
+            "is_static": false,
+            "is_const": false
+          },
+          {
+            "name": "y",
+            "data_type": "f32",
+            "visibility": "public",
+            "is_static": false,
+            "is_const": false
+          }
+        ],
+        "relationships": []
+      },
+      {
+        "id": "core.Size",
+        "name": "Size",
+        "enclosing_namespace_id": "core",
+        "entity_type": "Struct",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_positive_test",
+        "source_line": 30,
+        "variables": [
+          {
+            "name": "width",
+            "data_type": "f32",
+            "visibility": "public",
+            "is_static": false,
+            "is_const": false
+          },
+          {
+            "name": "height",
+            "data_type": "f32",
+            "visibility": "public",
+            "is_static": false,
+            "is_const": false
+          }
+        ],
+        "relationships": []
+      },
+      {
+        "id": "core.Color",
+        "name": "Color",
+        "enclosing_namespace_id": "core",
+        "entity_type": "Enum",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [
+          {
+            "name": "Red",
+            "value": "0"
+          },
+          {
+            "name": "Green",
+            "value": "1"
+          },
+          {
+            "name": "Blue",
+            "value": "2"
+          }
+        ],
+        "source_file": "class_positive_test",
+        "source_line": 35,
+        "variables": [],
+        "relationships": [
+          {
+            "source": "core.Color",
+            "target": "core.geometry.Circle",
+            "relation_type": "Aggregation",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          }
+        ]
+      },
+      {
+        "id": "core.Shape",
+        "name": "Shape",
+        "enclosing_namespace_id": "core",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "draw",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": []
+          },
+          {
+            "name": "area",
+            "return_type": "f32",
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_positive_test",
+        "source_line": 41,
+        "variables": [],
+        "relationships": [
+          {
+            "source": "core.Shape",
+            "target": "core.Drawable",
+            "relation_type": "Implementation",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          },
+          {
+            "source": "core.Shape",
+            "target": "core.Canvas",
+            "relation_type": "Composition",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          }
+        ]
+      },
+      {
+        "id": "core.Drawable",
+        "name": "Drawable",
+        "enclosing_namespace_id": "core",
+        "entity_type": "Interface",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "draw",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_positive_test",
+        "source_line": 46,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "core.Canvas",
+        "name": "Canvas",
+        "enclosing_namespace_id": "core",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "add_shape",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "s",
+                "param_type": "Shape",
+                "is_variadic": false
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          },
+          {
+            "name": "render",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_positive_test",
+        "source_line": 50,
+        "variables": [
+          {
+            "name": "shapes",
+            "data_type": "Shape",
+            "visibility": "private",
+            "is_static": false,
+            "is_const": false
+          }
+        ],
+        "relationships": [
+          {
+            "source": "core.Canvas",
+            "target": "util.Logger",
+            "relation_type": "Dependency",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          }
+        ]
+      },
+      {
+        "id": "core.geometry.Circle",
+        "name": "Circle",
+        "enclosing_namespace_id": "core.geometry",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "area",
+            "return_type": "f32",
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_positive_test",
+        "source_line": 59,
+        "variables": [
+          {
+            "name": "center",
+            "data_type": "Point",
+            "visibility": "private",
+            "is_static": false,
+            "is_const": false
+          },
+          {
+            "name": "radius",
+            "data_type": "f32",
+            "visibility": "private",
+            "is_static": false,
+            "is_const": false
+          }
+        ],
+        "relationships": [
+          {
+            "source": "core.geometry.Circle",
+            "target": "core.Shape",
+            "relation_type": "Inheritance",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          },
+          {
+            "source": "core.geometry.Circle",
+            "target": "core.geometry.Rectangle",
+            "relation_type": "Association",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          }
+        ]
+      },
+      {
+        "id": "core.geometry.Rectangle",
+        "name": "Rectangle",
+        "enclosing_namespace_id": "core.geometry",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "area",
+            "return_type": "f32",
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_positive_test",
+        "source_line": 65,
+        "variables": [
+          {
+            "name": "origin",
+            "data_type": "Point",
+            "visibility": "private",
+            "is_static": false,
+            "is_const": false
+          },
+          {
+            "name": "size",
+            "data_type": "Size",
+            "visibility": "private",
+            "is_static": false,
+            "is_const": false
+          }
+        ],
+        "relationships": [
+          {
+            "source": "core.geometry.Rectangle",
+            "target": "core.Shape",
+            "relation_type": "Inheritance",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          },
+          {
+            "source": "core.geometry.Rectangle",
+            "target": "core.Color",
+            "relation_type": "Association",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          }
+        ]
+      },
+      {
+        "id": "core.geometry.advanced.RoundedRectangle",
+        "name": "RoundedRectangle",
+        "enclosing_namespace_id": "core.geometry.advanced",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_positive_test",
+        "source_line": 75,
+        "variables": [
+          {
+            "name": "corner_radius",
+            "data_type": "f32",
+            "visibility": "private",
+            "is_static": false,
+            "is_const": false
+          }
+        ],
+        "relationships": [
+          {
+            "source": "core.geometry.advanced.RoundedRectangle",
+            "target": "core.geometry.Rectangle",
+            "relation_type": "Inheritance",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          }
+        ]
+      },
+      {
+        "id": "util.LogLevel",
+        "name": "LogLevel",
+        "enclosing_namespace_id": "util",
+        "entity_type": "Enum",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [
+          {
+            "name": "De",
+            "value": "Debug"
+          },
+          {
+            "name": "Info",
+            "value": "Information"
+          },
+          {
+            "name": "Warn",
+            "value": "Warnning"
+          },
+          {
+            "name": "Err",
+            "value": "Error"
+          }
+        ],
+        "source_file": "class_positive_test",
+        "source_line": 83,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "util.Logger",
+        "name": "Logger",
+        "enclosing_namespace_id": "util",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "log",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "level",
+                "param_type": "LogLevel",
+                "is_variadic": false
+              },
+              {
+                "name": "msg",
+                "param_type": "String",
+                "is_variadic": false
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_positive_test",
+        "source_line": 90,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "api.RestApi",
+        "name": "RestApi",
+        "enclosing_namespace_id": "api",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "handle_request",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_positive_test",
+        "source_line": 98,
+        "variables": [],
+        "relationships": [
+          {
+            "source": "api.RestApi",
+            "target": "core.Canvas",
+            "relation_type": "Dependency",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "source": "core.geometry.Circle",
+        "target": "core.Shape",
+        "relation_type": "Inheritance",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "core.geometry.Rectangle",
+        "target": "core.Shape",
+        "relation_type": "Inheritance",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "core.geometry.advanced.RoundedRectangle",
+        "target": "core.geometry.Rectangle",
+        "relation_type": "Inheritance",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "core.Shape",
+        "target": "core.Drawable",
+        "relation_type": "Implementation",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "core.Shape",
+        "target": "core.Canvas",
+        "relation_type": "Composition",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "core.Color",
+        "target": "core.geometry.Circle",
+        "relation_type": "Aggregation",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "core.geometry.Rectangle",
+        "target": "core.Color",
+        "relation_type": "Association",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "core.Canvas",
+        "target": "util.Logger",
+        "relation_type": "Dependency",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "api.RestApi",
+        "target": "core.Canvas",
+        "relation_type": "Dependency",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "core.geometry.Circle",
+        "target": "core.geometry.Rectangle",
+        "relation_type": "Association",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      }
+    ],
+    "source_files": [
+      "class_positive_test"
+    ],
+    "version": null
   }
 }

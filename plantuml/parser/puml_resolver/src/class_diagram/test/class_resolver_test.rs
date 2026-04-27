@@ -15,9 +15,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use class_diagram::{ClassDiagram, ClassResolverError};
+use class_diagram::ClassDiagram;
 use class_parser::PumlClassParser;
-use class_resolver::ClassResolver;
+use class_resolver::{ClassPumlResolverError, ClassResolver};
 
 use parser_core::DiagramParser;
 use puml_utils::LogLevel;
@@ -28,12 +28,12 @@ use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor};
 struct ClassResolverRunner;
 impl DiagramProcessor for ClassResolverRunner {
     type Output = ClassDiagram;
-    type Error = ClassResolverError;
+    type Error = ClassPumlResolverError;
 
     fn run(
         &self,
         files: &HashSet<Rc<PathBuf>>,
-    ) -> Result<HashMap<Rc<PathBuf>, ClassDiagram>, ClassResolverError> {
+    ) -> Result<HashMap<Rc<PathBuf>, ClassDiagram>, ClassPumlResolverError> {
         let mut results = HashMap::new();
         let mut parser = PumlClassParser;
         let mut resolver = ClassResolver::new();

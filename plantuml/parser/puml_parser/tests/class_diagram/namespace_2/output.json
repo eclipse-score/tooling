@@ -1,5 +1,5 @@
-{"namespace_2.puml":
-  {
+{
+  "namespace_2.puml": {
     "name": "namespace_2",
     "elements": [
       {
@@ -24,8 +24,14 @@
                     },
                     "namespace": "UI",
                     "package": "",
+                    "source_line": 17,
+                    "is_abstract": false,
+                    "type_aliases": [],
                     "attributes": [],
-                    "methods": []
+                    "methods": [],
+                    "template_parameters": null,
+                    "extends": [],
+                    "implements": []
                   }
                 }
               ],

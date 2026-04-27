@@ -31,7 +31,7 @@ package "pkg1" {
     }
 
     enum E {
-        +A = 1
+        A = 1
         B : desc
         C
     }

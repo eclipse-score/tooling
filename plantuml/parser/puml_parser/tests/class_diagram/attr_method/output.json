@@ -1,5 +1,5 @@
-{"attr_method.puml":
-  {
+{
+  "attr_method.puml": {
     "name": "attr_method",
     "elements": [
       {
@@ -11,27 +11,36 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 15,
+            "is_abstract": false,
+            "type_aliases": [],
             "attributes": [
               {
                 "visibility": "Public",
                 "name": "name",
-                "type": "string"
+                "type": "string",
+                "modifiers": []
               },
               {
                 "visibility": "Private",
                 "name": "id",
-                "type": "int"
+                "type": "int",
+                "modifiers": []
               }
             ],
             "methods": [
               {
                 "visibility": "Public",
                 "name": "getName",
-                "generic_params": [],
                 "params": [],
-                "type": "string"
+                "type": "string",
+                "template_parameters": null,
+                "modifiers": []
               }
-            ]
+            ],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
           }
         }
       }

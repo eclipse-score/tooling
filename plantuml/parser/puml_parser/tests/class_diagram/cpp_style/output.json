@@ -1,5 +1,5 @@
-{"cpp_style.puml":
-  {
+{
+  "cpp_style.puml": {
     "name": "cpp_style",
     "elements": [
       {
@@ -11,8 +11,14 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 15,
+            "is_abstract": false,
+            "type_aliases": [],
             "attributes": [],
-            "methods": []
+            "methods": [],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
           }
         }
       },
@@ -25,12 +31,14 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 17,
+            "is_abstract": false,
+            "type_aliases": [],
             "attributes": [],
             "methods": [
               {
                 "visibility": "Public",
                 "name": "Dispatch",
-                "generic_params": [],
                 "params": [
                   {
                     "name": null,
@@ -38,9 +46,14 @@
                     "varargs": true
                   }
                 ],
-                "type": null
+                "type": null,
+                "template_parameters": null,
+                "modifiers": []
               }
-            ]
+            ],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
           }
         }
       }

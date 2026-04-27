@@ -17,7 +17,7 @@ mod source_map;
 
 pub use class_ast::{
     Attribute, ClassDef, ClassUmlFile, ClassUmlTopLevel, Element, EnumDef, EnumItem, EnumValue,
-    InterfaceDef, Method, Name, Namespace, ObjectDef, Package, Param, Relationship, StructDef,
+    InterfaceDef, Method, Name, Namespace, Package, Param, Relationship, StructDef, TypeAlias,
     Visibility,
 };
 pub use class_parser::{ClassError, PumlClassParser};

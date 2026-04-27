@@ -1,5 +1,5 @@
-{"alias_package.puml":
-  {
+{
+  "alias_package.puml": {
     "name": "alias_package",
     "elements": [
       {
@@ -11,8 +11,11 @@
             },
             "namespace": "",
             "package": "",
+            "source_line": 15,
+            "type_aliases": [],
             "attributes": [],
-            "methods": []
+            "methods": [],
+            "template_parameters": null
           }
         }
       },
@@ -31,8 +34,14 @@
                 },
                 "namespace": "",
                 "package": "diag",
+                "source_line": 18,
+                "is_abstract": false,
+                "type_aliases": [],
                 "attributes": [],
-                "methods": []
+                "methods": [],
+                "template_parameters": null,
+                "extends": [],
+                "implements": []
               }
             },
             {
@@ -43,8 +52,14 @@
                 },
                 "namespace": "",
                 "package": "diag",
+                "source_line": 19,
+                "is_abstract": false,
+                "type_aliases": [],
                 "attributes": [],
-                "methods": []
+                "methods": [],
+                "template_parameters": null,
+                "extends": [],
+                "implements": []
               }
             }
           ],
@@ -67,8 +82,11 @@
                 },
                 "namespace": "",
                 "package": "activate",
+                "source_line": 23,
+                "type_aliases": [],
                 "attributes": [],
-                "methods": []
+                "methods": [],
+                "template_parameters": null
               }
             },
             {
@@ -79,6 +97,7 @@
                 },
                 "namespace": "",
                 "package": "activate",
+                "source_line": 24,
                 "stereotypes": [],
                 "items": []
               }
