@@ -629,13 +629,14 @@ def _collect_architecture_components(ctx):
 
     return all_components
 
-def _run_validation(ctx, arch_json, static_fbs_files):
+def _run_validation(ctx, arch_json, static_fbs_files, unit_static_fbs_files):
     """Run the architecture verifier tool against a pre-built JSON file.
 
     Args:
         ctx: Rule context
         arch_json: The architecture JSON File object (already declared and written)
-        static_fbs_files: List of static FlatBuffer files to verify against
+        static_fbs_files: List of static component-diagram FlatBuffer files
+        unit_static_fbs_files: List of static class-diagram FlatBuffer files
 
     Returns:
         validation_log File object
@@ -646,6 +647,7 @@ def _run_validation(ctx, arch_json, static_fbs_files):
     validation_args = ctx.actions.args()
     validation_args.add("--architecture-json", arch_json)
     validation_args.add_all("--component-fbs", static_fbs_files)
+    validation_args.add_all("--class-fbs", unit_static_fbs_files)
     validation_args.add("--output", validation_log)
     validation_args.add("--log-level", get_log_level(ctx))
     if ctx.attr.maturity == "development":
@@ -653,7 +655,7 @@ def _run_validation(ctx, arch_json, static_fbs_files):
 
     # ctx.actions.run will fail the build if validation_cli returns non-zero exit code
     ctx.actions.run(
-        inputs = [arch_json] + static_fbs_files,
+        inputs = [arch_json] + static_fbs_files + unit_static_fbs_files,
         outputs = [validation_log],
         executable = ctx.executable._validation_cli,
         arguments = [validation_args],
@@ -819,8 +821,14 @@ def _dependable_element_index_impl(ctx):
         if ArchitecturalDesignInfo in ad:
             static_fbs_files.extend(ad[ArchitecturalDesignInfo].static.to_list())
 
+    # Collect class-diagram FBS files produced by unit_design targets.
+    unit_static_fbs_files = []
+    for unit_target in all_units.values():
+        unit_info = unit_target[UnitInfo]
+        unit_static_fbs_files.extend(unit_info.unit_design_static_fbs.to_list())
+
     # Run validation; build fails automatically on non-zero exit
-    validation_log = _run_validation(ctx, arch_json, static_fbs_files)
+    validation_log = _run_validation(ctx, arch_json, static_fbs_files, unit_static_fbs_files)
 
     # Both outputs are included so validation always runs in a default build.
     # validation_log is also exposed in the debug output group for explicit access.

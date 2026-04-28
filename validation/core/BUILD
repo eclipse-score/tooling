@@ -36,6 +36,7 @@ rust_library(
     deps = [
         "//plantuml/parser/puml_serializer/src/fbs:class_fbs",
         "//plantuml/parser/puml_serializer/src/fbs:component_fbs",
+        "//tools/metamodel:class_diagram",
         "@crates//:flatbuffers",
         "@crates//:serde",
         "@crates//:serde_json",

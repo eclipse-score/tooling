@@ -13,9 +13,9 @@
 
 //! Validator entrypoints for architecture checks.
 
-pub mod bazel_component_validator;
-pub mod component_class_validator;
-pub mod component_sequence_validator;
+mod bazel_component_validator;
+mod component_class_validator;
+mod component_sequence_validator;
 
 /// Typed inputs that a validator may require to run.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -60,6 +60,6 @@ impl ValidatorSpec for SelectedValidator {
     }
 }
 
-pub use bazel_component_validator::{validate_bazel_component, BazelComponentValidator};
-pub use component_class_validator::{validate_component_class, ComponentClassValidator};
+pub use bazel_component_validator::validate_bazel_component;
+pub use component_class_validator::validate_component_class;
 pub use component_sequence_validator::validate_component_sequence;
