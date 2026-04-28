@@ -39,6 +39,22 @@ compile_pip_requirements(
     ],
 )
 
+# RST-to-TRLC converter: converts RST requirement directives to TRLC format
+py_library(
+    name = "rst_to_trlc_lib",
+    srcs = ["src/rst_to_trlc.py"],
+    imports = ["src"],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "rst_to_trlc",
+    srcs = ["src/rst_to_trlc.py"],
+    imports = ["src"],
+    main = "src/rst_to_trlc.py",
+    visibility = ["//visibility:public"],
+)
+
 # Arch-to-reqs-from-lobster tool: extracts requirements from component requirement .lobster files
 # and generates an architecture.lobster item representing the component's allocation
 py_binary(

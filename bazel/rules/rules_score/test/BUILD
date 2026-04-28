@@ -623,6 +623,14 @@ py_test(
     deps = ["//bazel/rules/rules_score:safety_analysis_tools"],
 )
 
+py_test(
+    name = "test_rst_to_trlc",
+    size = "small",
+    srcs = ["rst_to_trlc_test.py"],
+    main = "rst_to_trlc_test.py",
+    deps = ["//bazel/rules/rules_score:rst_to_trlc_lib"],
+)
+
 # Combined test suite for all tests
 test_suite(
     name = "all_tests",
