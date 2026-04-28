@@ -17,83 +17,209 @@ use std::fs;
 
 use class_fbs::class_metamodel as fb_class;
 
-use crate::models::{
-    ClassDiagramEntityInput, ClassDiagramInput, ClassDiagramInputs, ClassDiagramRelationshipInput,
-};
+use crate::models::ClassDiagramInputs;
 use crate::readers::Reader;
+use class_diagram::{
+    ClassDiagram, EntityType, EnumLiteral, FunctionArgument, MemberVariable, Method,
+    MethodModifier, RelationType, Relationship, SimpleEntity, TypeAlias, Visibility,
+};
 
 pub struct ClassDiagramReader;
 
-impl ClassDiagramReader {
-    /// Read all class-diagram files and convert them into validation-friendly
-    /// Rust models.
-    pub fn read(paths: &[String]) -> Result<ClassDiagramInputs, String> {
-        let mut diagrams = Vec::new();
+fn collect_strings(
+    values: Option<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&str>>>,
+) -> Option<Vec<String>> {
+    values.map(|items| items.iter().map(|value| value.to_string()).collect())
+}
 
-        for path in paths {
-            let data = fs::read(path).map_err(|e| format!("Failed to read {path}: {e}"))?;
+fn read_type_aliases(entity: fb_class::SimpleEntity<'_>) -> Vec<TypeAlias> {
+    entity
+        .type_aliases()
+        .map(|values| {
+            values
+                .iter()
+                .map(|value| TypeAlias {
+                    alias: value.alias().to_string(),
+                    original_type: value.original_type().to_string(),
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default()
+}
 
-            let diagram = flatbuffers::root::<fb_class::ClassDiagram>(&data)
-                .map_err(|e| format!("Failed to parse class FlatBuffer {path}: {e}"))?;
+fn read_variables(
+    entity: fb_class::SimpleEntity<'_>,
+    path: &str,
+) -> Result<Vec<MemberVariable>, String> {
+    entity
+        .variables()
+        .map(|values| {
+            values
+                .iter()
+                .map(|value| {
+                    Ok(MemberVariable {
+                        name: value.name().to_string(),
+                        data_type: value.data_type().map(|s| s.to_string()),
+                        visibility: map_visibility(
+                            value.visibility(),
+                            &format!("{path}:entity:{}:variable:{}", entity.id(), value.name()),
+                        )?,
+                        is_static: value.is_static(),
+                        is_const: value.is_const(),
+                    })
+                })
+                .collect::<Result<Vec<_>, String>>()
+        })
+        .transpose()
+        .map(|values| values.unwrap_or_default())
+}
 
-            let mut entities = Vec::new();
-            if let Some(raw_entities) = diagram.entities() {
-                for entity in raw_entities.iter() {
-                    // Rehydrate repeated FlatBuffer string vectors into owned
-                    // Rust values so validators can work without borrow/lifetime
-                    // coupling to the underlying buffer.
-                    let template_params = entity
-                        .template_parameters()
-                        .map(|values| values.iter().map(|p| p.to_string()).collect::<Vec<_>>())
-                        .unwrap_or_default();
+fn read_method(
+    method: fb_class::Method<'_>,
+    entity: fb_class::SimpleEntity<'_>,
+    path: &str,
+) -> Result<Method, String> {
+    let parameters = method
+        .parameters()
+        .map(|params| {
+            params
+                .iter()
+                .map(|param| FunctionArgument {
+                    name: param.name().to_string(),
+                    param_type: param.param_type().map(|s| s.to_string()),
+                    is_variadic: param.is_variadic(),
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
 
-                    entities.push(ClassDiagramEntityInput {
-                        id: entity.id().to_string(),
-                        name: Some(entity.name().to_string()),
-                        alias: None,
-                        parent_id: entity.enclosing_namespace_id().map(|s| s.to_string()),
-                        entity_type: format!("{:?}", entity.entity_type()),
-                        stereotypes: Vec::new(),
-                        template_params,
-                        source_file: entity.source_file().map(|s| s.to_string()),
-                        source_line: entity.source_line(),
-                    });
-                }
-            }
+    let template_parameters = collect_strings(method.template_parameters());
 
-            let mut relationships = Vec::new();
-            if let Some(raw_rels) = diagram.relationships() {
-                for rel in raw_rels.iter() {
-                    relationships.push(ClassDiagramRelationshipInput {
-                        source: rel.source().to_string(),
-                        target: rel.target().to_string(),
-                        relation_type: format!("{:?}", rel.relation_type()),
-                        label: None,
-                        stereotype: None,
-                        source_multiplicity: rel.source_multiplicity().map(|s| s.to_string()),
-                        target_multiplicity: rel.target_multiplicity().map(|s| s.to_string()),
-                        source_role: None,
-                        target_role: None,
-                    });
-                }
-            }
+    let modifiers = method
+        .modifiers()
+        .map(|mods| {
+            mods.iter()
+                .map(|modifier| {
+                    map_method_modifier(
+                        modifier,
+                        &format!("{path}:entity:{}:method:{}", entity.id(), method.name()),
+                    )
+                })
+                .collect::<Result<Vec<_>, String>>()
+        })
+        .transpose()?
+        .unwrap_or_default();
 
-            let source_files = diagram
-                .source_files()
-                .map(|values| values.iter().map(|f| f.to_string()).collect::<Vec<_>>())
-                .unwrap_or_default();
+    Ok(Method {
+        name: method.name().to_string(),
+        return_type: method.return_type().map(|s| s.to_string()),
+        visibility: map_visibility(
+            method.visibility(),
+            &format!("{path}:entity:{}:method:{}", entity.id(), method.name()),
+        )?,
+        parameters,
+        template_parameters,
+        modifiers,
+    })
+}
 
-            diagrams.push(ClassDiagramInput {
-                name: diagram.name().to_string(),
-                entities,
-                relationships,
-                source_files,
-                version: diagram.version().map(|s| s.to_string()),
-            });
-        }
+fn read_methods(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<Vec<Method>, String> {
+    entity
+        .methods()
+        .map(|values| {
+            values
+                .iter()
+                .map(|method| read_method(method, entity, path))
+                .collect::<Result<Vec<_>, String>>()
+        })
+        .transpose()
+        .map(|values| values.unwrap_or_default())
+}
 
-        Ok(ClassDiagramInputs { diagrams })
-    }
+fn read_enum_literals(entity: fb_class::SimpleEntity<'_>) -> Vec<EnumLiteral> {
+    entity
+        .enum_literals()
+        .map(|values| {
+            values
+                .iter()
+                .map(|value| EnumLiteral {
+                    name: value.name().to_string(),
+                    value: value.value().map(|s| s.to_string()),
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default()
+}
+
+fn read_entity_relationships(
+    entity: fb_class::SimpleEntity<'_>,
+    path: &str,
+) -> Result<Vec<Relationship>, String> {
+    entity
+        .relationships()
+        .map(|values| {
+            values
+                .iter()
+                .map(|rel| {
+                    read_relationship(rel, &format!("{path}:entity:{}:relationship", entity.id()))
+                })
+                .collect::<Result<Vec<_>, String>>()
+        })
+        .transpose()
+        .map(|values| values.unwrap_or_default())
+}
+
+fn read_entity(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<SimpleEntity, String> {
+    Ok(SimpleEntity {
+        id: entity.id().to_string(),
+        name: entity.name().to_string(),
+        enclosing_namespace_id: entity.enclosing_namespace_id().map(|s| s.to_string()),
+        entity_type: map_entity_type(
+            entity.entity_type(),
+            &format!("{path}:entity:{}", entity.id()),
+        )?,
+        type_aliases: read_type_aliases(entity),
+        variables: read_variables(entity, path)?,
+        methods: read_methods(entity, path)?,
+        template_parameters: collect_strings(entity.template_parameters()),
+        enum_literals: read_enum_literals(entity),
+        relationships: read_entity_relationships(entity, path)?,
+        source_file: entity.source_file().map(|s| s.to_string()),
+        source_line: if entity.source_line() == 0 {
+            None
+        } else {
+            Some(entity.source_line())
+        },
+    })
+}
+
+fn read_entities(
+    diagram: fb_class::ClassDiagram<'_>,
+    path: &str,
+) -> Result<Vec<SimpleEntity>, String> {
+    diagram
+        .entities()
+        .map(|raw_entities| {
+            raw_entities
+                .iter()
+                .map(|entity| read_entity(entity, path))
+                .collect::<Result<Vec<_>, String>>()
+        })
+        .transpose()
+        .map(|values| values.unwrap_or_default())
+}
+
+fn read_relationship(
+    rel: fb_class::Relationship<'_>,
+    context: &str,
+) -> Result<Relationship, String> {
+    Ok(Relationship {
+        source: rel.source().to_string(),
+        target: rel.target().to_string(),
+        relation_type: map_relation_type(rel.relation_type(), context)?,
+        source_multiplicity: rel.source_multiplicity().map(|s| s.to_string()),
+        target_multiplicity: rel.target_multiplicity().map(|s| s.to_string()),
+    })
 }
 
 impl Reader for ClassDiagramReader {
@@ -102,6 +228,92 @@ impl Reader for ClassDiagramReader {
     type Error = String;
 
     fn read(input: &Self::Input) -> Result<Self::Raw, Self::Error> {
-        ClassDiagramReader::read(input)
+        let mut diagrams = Vec::new();
+
+        for path in input {
+            let data = fs::read(path).map_err(|e| format!("Failed to read {path}: {e}"))?;
+
+            let diagram = flatbuffers::root::<fb_class::ClassDiagram>(&data)
+                .map_err(|e| format!("Failed to parse class FlatBuffer {path}: {e}"))?;
+
+            let entities = read_entities(diagram, path)?;
+
+            let relationships = diagram
+                .relationships()
+                .map(|rels| {
+                    rels.iter()
+                        .enumerate()
+                        .map(|(index, rel)| {
+                            read_relationship(rel, &format!("{path}:diagram_relationship[{index}]"))
+                        })
+                        .collect::<Result<Vec<_>, String>>()
+                })
+                .transpose()?
+                .unwrap_or_default();
+
+            let source_files = collect_strings(diagram.source_files()).unwrap_or_default();
+
+            diagrams.push(ClassDiagram {
+                name: diagram.name().to_string(),
+                entities,
+                relationships,
+                source_files,
+                version: diagram.version().map(|s| s.to_string()),
+            });
+        }
+
+        Ok(diagrams)
+    }
+}
+
+fn unsupported_enum<T: std::fmt::Debug>(context: &str, label: &str, value: T) -> String {
+    format!("{context}: unsupported {label} {value:?}")
+}
+
+fn map_entity_type(value: fb_class::EntityType, context: &str) -> Result<EntityType, String> {
+    match value {
+        fb_class::EntityType::Class => Ok(EntityType::Class),
+        fb_class::EntityType::Struct => Ok(EntityType::Struct),
+        fb_class::EntityType::Interface => Ok(EntityType::Interface),
+        fb_class::EntityType::AbstractClass => Ok(EntityType::AbstractClass),
+        fb_class::EntityType::Enum => Ok(EntityType::Enum),
+        _ => Err(unsupported_enum(context, "entity_type", value)),
+    }
+}
+
+fn map_visibility(value: fb_class::Visibility, context: &str) -> Result<Visibility, String> {
+    match value {
+        fb_class::Visibility::Public => Ok(Visibility::Public),
+        fb_class::Visibility::Private => Ok(Visibility::Private),
+        fb_class::Visibility::Protected => Ok(Visibility::Protected),
+        _ => Err(unsupported_enum(context, "visibility", value)),
+    }
+}
+
+fn map_relation_type(value: fb_class::RelationType, context: &str) -> Result<RelationType, String> {
+    match value {
+        fb_class::RelationType::Inheritance => Ok(RelationType::Inheritance),
+        fb_class::RelationType::Implementation => Ok(RelationType::Implementation),
+        fb_class::RelationType::Composition => Ok(RelationType::Composition),
+        fb_class::RelationType::Aggregation => Ok(RelationType::Aggregation),
+        fb_class::RelationType::Association => Ok(RelationType::Association),
+        fb_class::RelationType::Dependency => Ok(RelationType::Dependency),
+        _ => Err(unsupported_enum(context, "relation_type", value)),
+    }
+}
+
+fn map_method_modifier(
+    value: fb_class::MethodModifier,
+    context: &str,
+) -> Result<MethodModifier, String> {
+    match value {
+        fb_class::MethodModifier::Static => Ok(MethodModifier::Static),
+        fb_class::MethodModifier::Virtual => Ok(MethodModifier::Virtual),
+        fb_class::MethodModifier::Abstract => Ok(MethodModifier::Abstract),
+        fb_class::MethodModifier::Override => Ok(MethodModifier::Override),
+        fb_class::MethodModifier::Constructor => Ok(MethodModifier::Constructor),
+        fb_class::MethodModifier::Destructor => Ok(MethodModifier::Destructor),
+        fb_class::MethodModifier::Noexcept => Ok(MethodModifier::Noexcept),
+        _ => Err(unsupported_enum(context, "method_modifier", value)),
     }
 }

@@ -16,20 +16,18 @@
 //! This crate contains the shared models, readers, and validators used by the
 //! CLI entrypoints for architecture and design verification.
 
-pub mod models;
-pub mod readers;
-pub mod validators;
+mod models;
+mod readers;
+mod validators;
 
 pub use models::{
-    BazelArchitecture, BazelInput, BazelInputEntry, ClassDiagramEntityInput, ClassDiagramIndex,
-    ClassDiagramInput, ClassDiagramInputs, ClassDiagramRelationshipInput,
-    ComponentDiagramArchitecture, ComponentDiagramInput, ComponentDiagramInputs, EntityKey, Errors,
+    BazelArchitecture, BazelInput, ClassDiagramIndex, ClassDiagramInputs,
+    ComponentDiagramArchitecture, ComponentDiagramInputs, Errors,
 };
 
 pub use readers::{BazelReader, ClassDiagramReader, ComponentDiagramReader, Reader};
 
 pub use validators::{
-    validate_bazel_component, validate_component_class, validate_component_sequence,
-    BazelComponentValidator, ComponentClassValidator, RequiredInput, SelectedValidator,
-    ValidatorSpec, ALL_VALIDATORS,
+    validate_bazel_component, validate_component_class, validate_component_sequence, RequiredInput,
+    SelectedValidator, ValidatorSpec, ALL_VALIDATORS,
 };
