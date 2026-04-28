@@ -6,7 +6,7 @@
 //
 // This program and the accompanying materials are made available under the
 // terms of the Apache License Version 2.0 which is available at
-// https://www.apache.org/licenses/LICENSE-2.0
+// <https://www.apache.org/licenses/LICENSE-2.0>
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////////
@@ -48,13 +48,13 @@ pub struct SimpleEntity {
     /// Type of entity (class, struct, interface, enum, etc.)
     pub entity_type: EntityType,
 
-    // aliased type with using keyword also called annotaion in plantuml
+    // aliased type with using keyword also called annotation in plantuml
     pub type_aliases: Vec<TypeAlias>,
     pub variables: Vec<MemberVariable>,
     /// Methods (member functions)
     pub methods: Vec<Method>,
     /// Template parameters for generic types (empty option means not templated) empty vector means
-    /// template is an ampty bracket like template<> which can be encountered during explicit template specialization
+    /// template is an empty bracket like template<> which can be encountered during explicit template specialization
     pub template_parameters: Option<Vec<String>>,
 
     /// Enum literals (only for Enum entity_type)
@@ -63,7 +63,7 @@ pub struct SimpleEntity {
     // all relationships for current entity
     pub relationships: Vec<Relationship>,
 
-    /// Debug info for display in case of missmatch
+    /// Debug info for display in case of mismatch
     ///
     /// Source file location
     pub source_file: Option<String>,

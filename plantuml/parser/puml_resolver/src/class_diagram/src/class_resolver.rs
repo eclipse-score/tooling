@@ -16,9 +16,8 @@ use class_diagram::Visibility as ResolverVisibility;
 use class_diagram::*;
 use class_parser::Visibility as ParserVisibility;
 use class_parser::{
-    Attribute, ClassUmlFile, ClassUmlTopLevel, Element, EnumDef, EnumValue,
-    Method as ParserMethod, Name, Namespace, Package, Param as ParserParam,
-    Relationship as ParserRelationship,
+    Attribute, ClassUmlFile, ClassUmlTopLevel, Element, EnumDef, EnumValue, Method as ParserMethod,
+    Name, Namespace, Package, Param as ParserParam, Relationship as ParserRelationship,
     TypeAlias as ParserTypeAlias,
 };
 use parser_core::common_ast::Arrow;
@@ -195,12 +194,7 @@ impl ClassResolver {
         }
 
         // 4. Global search exported name
-        if let Some(e) = self
-            .logic
-            .entities
-            .iter()
-            .find(|e| e.name == name)
-        {
+        if let Some(e) = self.logic.entities.iter().find(|e| e.name == name) {
             return Some(e.id.clone());
         }
 
@@ -358,12 +352,7 @@ impl ClassResolver {
         bases: &[String],
         parent: Option<String>,
     ) -> Result<(), ClassPumlResolverError> {
-        self.process_declared_relationships(
-            child_name,
-            bases,
-            parent,
-            RelationType::Inheritance
-        )
+        self.process_declared_relationships(child_name, bases, parent, RelationType::Inheritance)
     }
 
     fn process_implements_relationships(
@@ -429,7 +418,8 @@ impl ClassResolver {
     }
 
     fn process_class(&mut self, def: &Element, parent: Option<String>, entity_type: EntityType) {
-        let (name, attributes, type_aliases, methods, template_parameters, source_line) = match def {
+        let (name, attributes, type_aliases, methods, template_parameters, source_line) = match def
+        {
             Element::ClassDef(c) => (
                 &c.name,
                 &c.attributes,
@@ -464,10 +454,7 @@ impl ClassResolver {
             name: Self::entity_name(name),
             enclosing_namespace_id: parent.clone(),
             entity_type,
-            type_aliases: type_aliases
-                .iter()
-                .map(Self::convert_type_alias)
-                .collect(),
+            type_aliases: type_aliases.iter().map(Self::convert_type_alias).collect(),
             variables: attributes.iter().map(Self::convert_variable).collect(),
             methods: methods
                 .iter()
@@ -682,9 +669,15 @@ impl ClassResolver {
         };
 
         let (source_multiplicity, target_multiplicity) = if reversed {
-            (rel.right_multiplicity.clone(), rel.left_multiplicity.clone())
+            (
+                rel.right_multiplicity.clone(),
+                rel.left_multiplicity.clone(),
+            )
         } else {
-            (rel.left_multiplicity.clone(), rel.right_multiplicity.clone())
+            (
+                rel.left_multiplicity.clone(),
+                rel.right_multiplicity.clone(),
+            )
         };
 
         self.logic.relationships.push(Relationship {
@@ -958,7 +951,10 @@ mod tests {
 
         for arrow in invalid_cases {
             let result = resolver.convert_arrow(&arrow);
-            assert!(matches!(result, Err(ClassPumlResolverError::InvalidRelationship { .. })));
+            assert!(matches!(
+                result,
+                Err(ClassPumlResolverError::InvalidRelationship { .. })
+            ));
         }
     }
 

@@ -185,6 +185,14 @@ impl ErrorView for ClassError {
     fn project(&self, base_dir: &Path) -> ProjectedError {
         match self {
             ClassError::Base(e) => e.project(base_dir),
+            ClassError::UnexpectedUsingAttribute => {
+                let _ = base_dir;
+                ProjectedError::new("UnexpectedUsingAttribute")
+            }
+            ClassError::UnexpectedClassMember(rule) => {
+                let _ = base_dir;
+                ProjectedError::new("UnexpectedClassMember").with_field("rule", rule.clone())
+            }
         }
     }
 }

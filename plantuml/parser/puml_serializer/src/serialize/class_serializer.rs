@@ -12,9 +12,8 @@
 // *******************************************************************************
 
 use class_diagram::{
-    ClassDiagram, EntityType, EnumLiteral, FunctionArgument, MemberVariable,
-    Method, MethodModifier, RelationType, Relationship, SimpleEntity, TypeAlias,
-    Visibility,
+    ClassDiagram, EntityType, EnumLiteral, FunctionArgument, MemberVariable, Method,
+    MethodModifier, RelationType, Relationship, SimpleEntity, TypeAlias, Visibility,
 };
 use class_fbs::class_metamodel as fb;
 use flatbuffers::FlatBufferBuilder;
@@ -50,7 +49,10 @@ impl ClassSerializer {
             .collect();
         let source_files_offset = builder.create_vector(&source_offsets);
 
-        let version_offset = diagram.version.as_ref().map(|version| builder.create_string(version));
+        let version_offset = diagram
+            .version
+            .as_ref()
+            .map(|version| builder.create_string(version));
 
         let root = fb::ClassDiagram::create(
             &mut builder,

@@ -12,13 +12,12 @@
 // *******************************************************************************
 use crate::class_ast::{
     Arrow, Attribute, ClassDef, ClassUmlFile, ClassUmlTopLevel, Element, EnumDef, EnumItem,
-    EnumValue, InterfaceDef, Method, Name, Namespace, Package, Param, Relationship,
-    StructDef, TypeAlias, Visibility,
+    EnumValue, InterfaceDef, Method, Name, Namespace, Package, Param, Relationship, StructDef,
+    TypeAlias, Visibility,
 };
 use crate::class_traits::{TypeDef, WritableName};
 use crate::source_map::{
-    normalize_multiline_member_signatures, remap_syntax_error_to_original_source,
-    NormalizedContent,
+    normalize_multiline_member_signatures, remap_syntax_error_to_original_source, NormalizedContent,
 };
 use parser_core::common_parser::{parse_arrow, PlantUmlCommonParser, Rule};
 use parser_core::{pest_to_syntax_error, BaseParseError, DiagramParser};
@@ -33,6 +32,10 @@ use thiserror::Error;
 pub enum ClassError {
     #[error(transparent)]
     Base(#[from] BaseParseError<Rule>),
+    #[error("encountered using attribute while parsing a class attribute")]
+    UnexpectedUsingAttribute,
+    #[error("unexpected class member rule: {0}")]
+    UnexpectedClassMember(String),
 }
 
 // Object definitions are ignored by the class parser, but their names must be
@@ -165,7 +168,7 @@ fn parse_named(pair: pest::iterators::Pair<Rule>, name: &mut Name) {
     }
 }
 
-fn parse_attribute(pair: pest::iterators::Pair<Rule>) -> Attribute {
+fn parse_attribute(pair: pest::iterators::Pair<Rule>) -> Result<Attribute, ClassError> {
     let mut attr = Attribute::default();
     let mut vis = None;
     let mut name = None;
@@ -175,7 +178,7 @@ fn parse_attribute(pair: pest::iterators::Pair<Rule>) -> Attribute {
         match p.as_rule() {
             Rule::static_modifier => attr.modifiers.push(p.as_str().to_string()),
             Rule::class_visibility => vis = Some(p),
-            Rule::using_attribute => unreachable!("using_attribute should be parsed as TypeAlias"),
+            Rule::using_attribute => return Err(ClassError::UnexpectedUsingAttribute),
             Rule::named_attribute => {
                 for inner in p.into_inner() {
                     match inner.as_rule() {
@@ -199,7 +202,7 @@ fn parse_attribute(pair: pest::iterators::Pair<Rule>) -> Attribute {
     attr.visibility = parse_visibility(vis);
     attr.name = name.unwrap_or_default();
     attr.r#type = typ;
-    attr
+    Ok(attr)
 }
 
 fn parse_type_alias(pair: pest::iterators::Pair<Rule>) -> TypeAlias {
@@ -232,7 +235,7 @@ enum ParsedClassMember {
     Method(Method),
 }
 
-fn parse_class_member(pair: pest::iterators::Pair<Rule>) -> ParsedClassMember {
+fn parse_class_member(pair: pest::iterators::Pair<Rule>) -> Result<ParsedClassMember, ClassError> {
     match pair.as_rule() {
         Rule::attribute => {
             let is_type_alias = pair
@@ -241,13 +244,16 @@ fn parse_class_member(pair: pest::iterators::Pair<Rule>) -> ParsedClassMember {
                 .any(|inner| inner.as_rule() == Rule::using_attribute);
 
             if is_type_alias {
-                ParsedClassMember::TypeAlias(parse_type_alias(pair))
+                Ok(ParsedClassMember::TypeAlias(parse_type_alias(pair)))
             } else {
-                ParsedClassMember::Attribute(parse_attribute(pair))
+                Ok(ParsedClassMember::Attribute(parse_attribute(pair)?))
             }
         }
-        Rule::method => ParsedClassMember::Method(parse_method(pair)),
-        _ => unreachable!("unexpected class member"),
+        Rule::method => Ok(ParsedClassMember::Method(parse_method(pair))),
+        _ => Err(ClassError::UnexpectedClassMember(format!(
+            "{:?}",
+            pair.as_rule()
+        ))),
     }
 }
 
@@ -372,7 +378,11 @@ fn parse_method(pair: pest::iterators::Pair<Rule>) -> Method {
     }
 
     fn ensure_abstract_modifier(method: &mut Method) {
-        if !method.modifiers.iter().any(|modifier| modifier == "{abstract}") {
+        if !method
+            .modifiers
+            .iter()
+            .any(|modifier| modifier == "{abstract}")
+        {
             method.modifiers.push("{abstract}".to_string());
         }
     }
@@ -386,9 +396,7 @@ fn parse_method(pair: pest::iterators::Pair<Rule>) -> Method {
             Rule::static_modifier
             | Rule::abstract_modifier
             | Rule::const_method_qualifier
-            | Rule::noexcept_method_qualifier => {
-                method.modifiers.push(p.as_str().to_string())
-            }
+            | Rule::noexcept_method_qualifier => method.modifiers.push(p.as_str().to_string()),
             Rule::pure_virtual_suffix => ensure_abstract_modifier(&mut method),
             Rule::class_visibility => vis = Some(p),
             Rule::method_name | Rule::identifier => name = Some(p.as_str().to_string()),
@@ -404,7 +412,9 @@ fn parse_method(pair: pest::iterators::Pair<Rule>) -> Method {
                 for return_type_inner in p.into_inner() {
                     match return_type_inner.as_rule() {
                         Rule::static_modifier => {
-                            method.modifiers.push(return_type_inner.as_str().to_string());
+                            method
+                                .modifiers
+                                .push(return_type_inner.as_str().to_string());
                         }
                         Rule::type_name => {
                             method.r#type = Some(return_type_inner.as_str().trim().to_string());
@@ -425,7 +435,7 @@ fn parse_method(pair: pest::iterators::Pair<Rule>) -> Method {
     method
 }
 
-fn parse_type_def_into<T>(pair: pest::iterators::Pair<Rule>) -> T
+fn parse_type_def_into<T>(pair: pest::iterators::Pair<Rule>) -> Result<T, ClassError>
 where
     T: TypeDef + Default,
 {
@@ -433,7 +443,7 @@ where
     let mut def = T::default();
     *def.source_line_mut() = Some(source_line);
 
-    fn walk<T>(pair: pest::iterators::Pair<Rule>, def: &mut T)
+    fn walk<T>(pair: pest::iterators::Pair<Rule>, def: &mut T) -> Result<(), ClassError>
     where
         T: TypeDef,
     {
@@ -445,16 +455,14 @@ where
                 for inner in pair.into_inner() {
                     if let Rule::class_member = inner.as_rule() {
                         for member in inner.into_inner() {
-                            match parse_class_member(member) {
+                            match parse_class_member(member)? {
                                 ParsedClassMember::Attribute(attribute) => {
                                     def.attributes_mut().push(attribute)
                                 }
                                 ParsedClassMember::TypeAlias(type_alias) => {
                                     def.type_aliases_mut().push(type_alias)
                                 }
-                                ParsedClassMember::Method(method) => {
-                                    def.methods_mut().push(method)
-                                }
+                                ParsedClassMember::Method(method) => def.methods_mut().push(method),
                             }
                         }
                     }
@@ -462,15 +470,17 @@ where
             }
             _ => {
                 for inner in pair.into_inner() {
-                    walk(inner, def);
+                    walk(inner, def)?;
                 }
             }
         }
+
+        Ok(())
     }
 
-    walk(pair, &mut def);
+    walk(pair, &mut def)?;
 
-    def
+    Ok(def)
 }
 
 fn parse_ignored_object_name(pair: pest::iterators::Pair<Rule>) -> Name {
@@ -501,12 +511,18 @@ fn filter_relationships(
         .collect()
 }
 
-fn original_start_line(pair: &pest::iterators::Pair<Rule>, normalized_content: &NormalizedContent) -> u32 {
+fn original_start_line(
+    pair: &pest::iterators::Pair<Rule>,
+    normalized_content: &NormalizedContent,
+) -> u32 {
     let (line, column) = pair.as_span().start_pos().line_col();
     normalized_content.map_position(line, column).0 as u32
 }
 
-fn parse_type_def(pair: pest::iterators::Pair<Rule>, normalized_content: &NormalizedContent) -> Element {
+fn parse_type_def(
+    pair: pest::iterators::Pair<Rule>,
+    normalized_content: &NormalizedContent,
+) -> Result<Element, ClassError> {
     debug_assert_eq!(pair.as_rule(), Rule::type_def);
 
     fn find_type_kind(pair: pest::iterators::Pair<Rule>) -> Option<String> {
@@ -681,44 +697,59 @@ fn parse_type_def(pair: pest::iterators::Pair<Rule>, normalized_content: &Normal
 
     match kind.as_str() {
         "abstract class" => {
-            let mut def = parse_type_def_into::<ClassDef>(pair);
+            let mut def = parse_type_def_into::<ClassDef>(pair)?;
             def.source_line = Some(source_line);
             def.is_abstract = true;
-            def.template_parameters =
-                resolve_type_template_parameters(explicit_template_parameters, &def.name, &raw_type_def);
+            def.template_parameters = resolve_type_template_parameters(
+                explicit_template_parameters,
+                &def.name,
+                &raw_type_def,
+            );
             def.extends = extends_targets;
             def.implements = implements_targets;
-            Element::ClassDef(def)
+            Ok(Element::ClassDef(def))
         }
         "class" => {
-            let mut def = parse_type_def_into::<ClassDef>(pair);
+            let mut def = parse_type_def_into::<ClassDef>(pair)?;
             def.source_line = Some(source_line);
-            def.template_parameters =
-                resolve_type_template_parameters(explicit_template_parameters, &def.name, &raw_type_def);
+            def.template_parameters = resolve_type_template_parameters(
+                explicit_template_parameters,
+                &def.name,
+                &raw_type_def,
+            );
             def.extends = extends_targets;
             def.implements = implements_targets;
-            Element::ClassDef(def)
+            Ok(Element::ClassDef(def))
         }
         "struct" => {
-            let mut def = parse_type_def_into::<StructDef>(pair);
+            let mut def = parse_type_def_into::<StructDef>(pair)?;
             def.source_line = Some(source_line);
-            def.template_parameters =
-                resolve_type_template_parameters(explicit_template_parameters, &def.name, &raw_type_def);
-            Element::StructDef(def)
+            def.template_parameters = resolve_type_template_parameters(
+                explicit_template_parameters,
+                &def.name,
+                &raw_type_def,
+            );
+            Ok(Element::StructDef(def))
         }
         "interface" => {
-            let mut def = parse_type_def_into::<InterfaceDef>(pair);
+            let mut def = parse_type_def_into::<InterfaceDef>(pair)?;
             def.source_line = Some(source_line);
-            def.template_parameters =
-                resolve_type_template_parameters(explicit_template_parameters, &def.name, &raw_type_def);
+            def.template_parameters = resolve_type_template_parameters(
+                explicit_template_parameters,
+                &def.name,
+                &raw_type_def,
+            );
             def.extends = extends_targets;
-            Element::InterfaceDef(def)
+            Ok(Element::InterfaceDef(def))
         }
         _ => unreachable!("unknown type_kind: {}", kind),
     }
 }
 
-fn parse_enum_def(pair: pest::iterators::Pair<Rule>, normalized_content: &NormalizedContent) -> EnumDef {
+fn parse_enum_def(
+    pair: pest::iterators::Pair<Rule>,
+    normalized_content: &NormalizedContent,
+) -> EnumDef {
     let mut enum_def = EnumDef::default();
     enum_def.source_line = Some(original_start_line(&pair, normalized_content));
 
@@ -792,7 +823,7 @@ where
 fn parse_namespace(
     pair: pest::iterators::Pair<Rule>,
     normalized_content: &NormalizedContent,
-) -> (Namespace, IgnoredObjectRegistry) {
+) -> Result<(Namespace, IgnoredObjectRegistry), ClassError> {
     let mut namespace = Namespace::default();
     let mut ignored_objects = IgnoredObjectRegistry::default();
 
@@ -802,47 +833,64 @@ fn parse_namespace(
                 parse_named(inner, &mut namespace.name);
             }
             Rule::top_level => {
-                visit_top_level(
-                    inner,
-                    &mut |top_level_inner| match top_level_inner.as_rule() {
+                let mut visit_result = Ok(());
+                visit_top_level(inner, &mut |top_level_inner| {
+                    if visit_result.is_err() {
+                        return;
+                    }
+
+                    visit_result = match top_level_inner.as_rule() {
                         Rule::type_def => {
-                            let mut type_def = parse_type_def(top_level_inner, normalized_content);
+                            let mut type_def =
+                                match parse_type_def(top_level_inner, normalized_content) {
+                                    Ok(type_def) => type_def,
+                                    Err(error) => return visit_result = Err(error),
+                                };
                             type_def.set_namespace(namespace.name.internal.clone());
                             namespace.types.push(type_def);
+                            Ok(())
                         }
                         Rule::unsupported_object_def => {
                             let ignored = parse_ignored_object_name(top_level_inner);
-                            ignored_objects.register(
-                                &ignored,
-                                &Some(namespace.name.internal.clone()),
-                            );
+                            ignored_objects
+                                .register(&ignored, &Some(namespace.name.internal.clone()));
+                            Ok(())
                         }
                         Rule::enum_def => {
-                            let mut enum_def = Element::EnumDef(parse_enum_def(top_level_inner, normalized_content));
+                            let mut enum_def = Element::EnumDef(parse_enum_def(
+                                top_level_inner,
+                                normalized_content,
+                            ));
                             enum_def.set_namespace(namespace.name.internal.clone());
                             namespace.types.push(enum_def);
+                            Ok(())
                         }
                         Rule::namespace_def => {
                             let (nested_namespace, nested_ignored_objects) =
-                                parse_namespace(top_level_inner, normalized_content);
+                                match parse_namespace(top_level_inner, normalized_content) {
+                                    Ok(parsed) => parsed,
+                                    Err(error) => return visit_result = Err(error),
+                                };
                             ignored_objects.merge(nested_ignored_objects);
                             namespace.namespaces.push(nested_namespace);
+                            Ok(())
                         }
-                        _ => (),
-                    },
-                );
+                        _ => Ok(()),
+                    };
+                });
+                visit_result?;
             }
             _ => (),
         }
     }
 
-    (namespace, ignored_objects)
+    Ok((namespace, ignored_objects))
 }
 
 fn parse_package(
     pair: pest::iterators::Pair<Rule>,
     normalized_content: &NormalizedContent,
-) -> (Package, IgnoredObjectRegistry) {
+) -> Result<(Package, IgnoredObjectRegistry), ClassError> {
     let mut package = Package::default();
     let mut ignored_objects = IgnoredObjectRegistry::default();
     let mut relationships = Vec::new();
@@ -854,31 +902,53 @@ fn parse_package(
             }
 
             Rule::top_level => {
-                visit_top_level(inner, &mut |t| match t.as_rule() {
+                let mut visit_result = Ok(());
+                visit_top_level(inner, &mut |t| {
+                    if visit_result.is_err() {
+                        return;
+                    }
+
+                    visit_result = match t.as_rule() {
                         Rule::type_def => {
-                            let mut r#type = parse_type_def(t, normalized_content);
+                            let mut r#type = match parse_type_def(t, normalized_content) {
+                                Ok(r#type) => r#type,
+                                Err(error) => return visit_result = Err(error),
+                            };
                             r#type.set_package(package.name.internal.clone());
                             package.types.push(r#type);
+                            Ok(())
                         }
                         Rule::unsupported_object_def => {
                             let ignored = parse_ignored_object_name(t);
-                            ignored_objects.register(&ignored, &Some(package.name.internal.clone()));
+                            ignored_objects
+                                .register(&ignored, &Some(package.name.internal.clone()));
+                            Ok(())
                         }
                         Rule::enum_def => {
-                            let mut enum_def = Element::EnumDef(parse_enum_def(t, normalized_content));
+                            let mut enum_def =
+                                Element::EnumDef(parse_enum_def(t, normalized_content));
                             enum_def.set_package(package.name.internal.clone());
                             package.types.push(enum_def);
+                            Ok(())
                         }
                         Rule::relationship => {
                             relationships.push(parse_relationship(t));
+                            Ok(())
                         }
                         Rule::package_def => {
-                            let (subpackage, nested_ignored_objects) = parse_package(t, normalized_content);
+                            let (subpackage, nested_ignored_objects) =
+                                match parse_package(t, normalized_content) {
+                                    Ok(parsed) => parsed,
+                                    Err(error) => return visit_result = Err(error),
+                                };
                             ignored_objects.merge(nested_ignored_objects);
                             package.packages.push(subpackage);
+                            Ok(())
                         }
-                        _ => {}
-                    });
+                        _ => Ok(()),
+                    };
+                });
+                visit_result?;
             }
             _ => {}
         }
@@ -890,7 +960,7 @@ fn parse_package(
         &Some(package.name.internal.clone()),
     );
 
-    (package, ignored_objects)
+    Ok((package, ignored_objects))
 }
 
 fn parse_label(pair: pest::iterators::Pair<Rule>) -> String {
@@ -912,7 +982,10 @@ fn parse_relationship(pair: pest::iterators::Pair<Rule>) -> Relationship {
 
     let next = inner.next().unwrap();
     let (left_multiplicity, arrow_pair) = if next.as_rule() == Rule::relationship_multiplicity {
-        (Some(strip_wrapping_quotes(next.as_str().trim())), inner.next().unwrap())
+        (
+            Some(strip_wrapping_quotes(next.as_str().trim())),
+            inner.next().unwrap(),
+        )
     } else {
         (None, next)
     };
@@ -986,38 +1059,63 @@ impl DiagramParser for PumlClassParser {
                 for pair in inner {
                     match pair.as_rule() {
                         Rule::top_level => {
-                            visit_top_level(pair, &mut |inner_pair| match inner_pair.as_rule() {
+                            let mut visit_result = Ok(());
+                            visit_top_level(pair, &mut |inner_pair| {
+                                if visit_result.is_err() {
+                                    return;
+                                }
+
+                                visit_result = match inner_pair.as_rule() {
                                     Rule::type_def => {
-                                        let type_def = parse_type_def(inner_pair, &normalized_content);
+                                        let type_def =
+                                            match parse_type_def(inner_pair, &normalized_content) {
+                                                Ok(type_def) => type_def,
+                                                Err(error) => return visit_result = Err(error),
+                                            };
                                         uml_file.elements.push(ClassUmlTopLevel::Types(type_def));
+                                        Ok(())
                                     }
                                     Rule::unsupported_object_def => {
                                         let ignored = parse_ignored_object_name(inner_pair);
                                         ignored_objects.register(&ignored, &None);
+                                        Ok(())
                                     }
                                     Rule::enum_def => {
                                         uml_file.elements.push(ClassUmlTopLevel::Enum(
                                             parse_enum_def(inner_pair, &normalized_content),
                                         ));
+                                        Ok(())
                                     }
                                     Rule::namespace_def => {
                                         let (namespace, nested_ignored_objects) =
-                                            parse_namespace(inner_pair, &normalized_content);
+                                            match parse_namespace(inner_pair, &normalized_content) {
+                                                Ok(parsed) => parsed,
+                                                Err(error) => return visit_result = Err(error),
+                                            };
                                         ignored_objects.merge(nested_ignored_objects);
                                         uml_file
                                             .elements
                                             .push(ClassUmlTopLevel::Namespace(namespace));
+                                        Ok(())
                                     }
                                     Rule::relationship => {
                                         relationships.push(parse_relationship(inner_pair));
+                                        Ok(())
                                     }
                                     Rule::package_def => {
-                                        let (package, nested_ignored_objects) = parse_package(inner_pair, &normalized_content);
+                                        let (package, nested_ignored_objects) =
+                                            match parse_package(inner_pair, &normalized_content) {
+                                                Ok(parsed) => parsed,
+                                                Err(error) => return visit_result = Err(error),
+                                            };
                                         ignored_objects.merge(nested_ignored_objects);
                                         uml_file.elements.push(ClassUmlTopLevel::Package(package));
+                                        Ok(())
                                     }
-                                    _ => (),
-                                });
+                                    _ => Ok(()),
+                                };
+                            });
+                            visit_result?;
                         }
                         Rule::startuml => {
                             let text = pair.as_str();

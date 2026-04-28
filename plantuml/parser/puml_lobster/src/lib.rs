@@ -124,7 +124,6 @@ fn map_entity_type_to_kind(entity_type: EntityType) -> &'static str {
         EntityType::Interface => "Interface",
         EntityType::Enum => "Enum",
         EntityType::AbstractClass => "AbstractClass",
-        EntityType::Annotation => "Annotation",
     }
 }
 
