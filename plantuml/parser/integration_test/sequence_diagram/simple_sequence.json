@@ -1,0 +1,479 @@
+[
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "Component A",
+          "id": "ComponentA"
+        }
+      },
+      "stereotype": "component"
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "Component B",
+          "id": "ComponentB"
+        }
+      },
+      "stereotype": "component"
+    }
+  },
+  {
+    "ParticipantDef": {
+      "participant_type": "Participant",
+      "identifier": {
+        "QuotedAsId": {
+          "quoted": "Component C",
+          "id": "ComponentC"
+        }
+      },
+      "stereotype": "component"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentA",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentB"
+        }
+      },
+      "description": "callMethod1()"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "condition1"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentA"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Else",
+      "text": null
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentC"
+        }
+      },
+      "description": "method2(1)"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentC",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentB"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Loop",
+      "text": "for i = 0; i < 3; ++i"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentC"
+        }
+      },
+      "description": "method2(i)"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentC",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentB"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "innerConditionA"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentC"
+        }
+      },
+      "description": "method2(extra)"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentC",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentB"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Loop",
+      "text": "while count > 0"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentC"
+        }
+      },
+      "description": "method2(count)"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentC",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentB"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "innerConditionB"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentC"
+        }
+      },
+      "description": "method2(fallback)"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentC",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentB"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Else",
+      "text": null
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentC"
+        }
+      },
+      "description": "method2(default)"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentC",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentB"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "Alt",
+      "text": "condition2"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentC"
+        }
+      },
+      "description": "method2(result)"
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentC",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentB"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  },
+  {
+    "Message": {
+      "content": {
+        "WithTargets": {
+          "left": "ComponentB",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": "ComponentA"
+        }
+      },
+      "description": "Return Result"
+    }
+  },
+  {
+    "GroupCmd": {
+      "group_type": "End",
+      "text": null
+    }
+  }
+]

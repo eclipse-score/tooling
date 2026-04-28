@@ -1,4 +1,4 @@
-// *******************************************************************************
+///////////////////////////////////////////////////////////////////////////////////
 // Copyright (c) 2026 Contributors to the Eclipse Foundation
 //
 // See the NOTICE file(s) distributed with this work for additional
@@ -6,14 +6,31 @@
 //
 // This program and the accompanying materials are made available under the
 // terms of the Apache License Version 2.0 which is available at
-// <https://www.apache.org/licenses/LICENSE-2.0>
+// https://www.apache.org/licenses/LICENSE-2.0
 //
 // SPDX-License-Identifier: Apache-2.0
-// *******************************************************************************
+////////////////////////////////////////////////////////////////////////////////////
 //! Logic parser module for constructing and visualizing sequence node trees
 
-use crate::logic_ast::*;
+use sequence_logic::*;
 use sequence_parser::*;
+
+/// Convert a syntax-level `GroupType` into the metamodel `ConditionType`.
+fn group_type_to_condition(gt: &GroupType) -> ConditionType {
+    match gt {
+        GroupType::Opt => ConditionType::Opt,
+        GroupType::Alt => ConditionType::Alt,
+        GroupType::Loop => ConditionType::Loop,
+        GroupType::Par => ConditionType::Par,
+        GroupType::Par2 => ConditionType::Par2,
+        GroupType::Break => ConditionType::Break,
+        GroupType::Critical => ConditionType::Critical,
+        GroupType::Else => ConditionType::Else,
+        GroupType::Also => ConditionType::Also,
+        GroupType::End => ConditionType::End,
+        GroupType::Group => ConditionType::Group,
+    }
+}
 
 /// Build a tree of SequenceNodes from a list of statements
 pub fn build_tree(statements: &[Statement]) -> Vec<SequenceNode> {
@@ -45,6 +62,78 @@ pub fn build_tree(statements: &[Statement]) -> Vec<SequenceNode> {
 /// Helper function to box sequence nodes
 pub(crate) fn box_nodes(nodes: Vec<SequenceNode>) -> Vec<SequenceNode> {
     nodes
+}
+
+fn is_group_start(group_type: &GroupType) -> bool {
+    matches!(
+        group_type,
+        GroupType::Alt
+            | GroupType::Opt
+            | GroupType::Loop
+            | GroupType::Par
+            | GroupType::Par2
+            | GroupType::Break
+            | GroupType::Critical
+            | GroupType::Group
+            | GroupType::Else
+            | GroupType::Also
+    )
+}
+
+fn collect_group_statements(statements: &[Statement]) -> (Vec<Statement>, usize) {
+    let mut group_statements = Vec::new();
+    let mut consumed = 1;
+    let mut nesting_depth = 0;
+
+    for stmt in &statements[1..] {
+        if let Statement::GroupCmd(group) = stmt {
+            match group.group_type {
+                GroupType::End => {
+                    if nesting_depth > 0 {
+                        nesting_depth -= 1;
+                        group_statements.push(stmt.clone());
+                    } else {
+                        break;
+                    }
+                }
+                GroupType::Else | GroupType::Also => {
+                    if nesting_depth > 0 {
+                        group_statements.push(stmt.clone());
+                    } else {
+                        break;
+                    }
+                }
+                _ if is_group_start(&group.group_type) => {
+                    nesting_depth += 1;
+                    group_statements.push(stmt.clone());
+                }
+                _ => {
+                    group_statements.push(stmt.clone());
+                }
+            }
+        } else {
+            group_statements.push(stmt.clone());
+        }
+        consumed += 1;
+    }
+
+    (group_statements, consumed)
+}
+
+fn build_group_node(statements: &[Statement], group: &GroupCmd) -> (SequenceNode, usize) {
+    let condition = Condition {
+        condition_type: group_type_to_condition(&group.group_type),
+        condition_value: group.text.clone().unwrap_or_default(),
+    };
+    let (group_statements, consumed) = collect_group_statements(statements);
+
+    (
+        SequenceNode {
+            event: Event::Condition(condition),
+            branches_node: box_nodes(build_tree(&group_statements)),
+        },
+        consumed,
+    )
 }
 
 /// Build a single sequence node and return how many statements were consumed
@@ -134,76 +223,8 @@ fn build_node(statements: &[Statement]) -> Option<(SequenceNode, usize)> {
                 GroupType::End => {
                     None // End markers signal the close of a branch
                 }
-                GroupType::Alt
-                | GroupType::Opt
-                | GroupType::Loop
-                | GroupType::Par
-                | GroupType::Par2
-                | GroupType::Break
-                | GroupType::Critical
-                | GroupType::Group
-                | GroupType::Else
-                | GroupType::Also => {
-                    // These start a new branch
-                    let condition = Condition {
-                        condition_type: group.group_type.clone(),
-                        condition_value: group.text.clone().unwrap_or_default(),
-                    };
-
-                    // Collect statements until we hit else/also/end at the same nesting level
-                    let mut branch_statements = Vec::new();
-                    let mut consumed = 1;
-                    let mut nesting_depth = 0;
-
-                    for stmt in &statements[1..] {
-                        if let Statement::GroupCmd(g) = stmt {
-                            match g.group_type {
-                                GroupType::Alt
-                                | GroupType::Opt
-                                | GroupType::Loop
-                                | GroupType::Par
-                                | GroupType::Par2
-                                | GroupType::Break
-                                | GroupType::Critical
-                                | GroupType::Group => {
-                                    // Entering a nested group
-                                    nesting_depth += 1;
-                                    branch_statements.push(stmt.clone());
-                                }
-                                GroupType::End => {
-                                    if nesting_depth > 0 {
-                                        // This is the end of a nested group
-                                        nesting_depth -= 1;
-                                        branch_statements.push(stmt.clone());
-                                    } else {
-                                        // This is the end of our group - stop here
-                                        break;
-                                    }
-                                }
-                                GroupType::Else | GroupType::Also => {
-                                    if nesting_depth > 0 {
-                                        // This else/also belongs to a nested group
-                                        branch_statements.push(stmt.clone());
-                                    } else {
-                                        // This else/also belongs to our level - stop here
-                                        break;
-                                    }
-                                }
-                            }
-                        } else {
-                            branch_statements.push(stmt.clone());
-                        }
-                        consumed += 1;
-                    }
-
-                    Some((
-                        SequenceNode {
-                            event: Event::Condition(condition),
-                            branches_node: box_nodes(build_tree(&branch_statements)),
-                        },
-                        consumed,
-                    ))
-                }
+                _ if is_group_start(&group.group_type) => Some(build_group_node(statements, group)),
+                _ => None,
             }
         }
         _ => None, // Skip non-message, non-group statements

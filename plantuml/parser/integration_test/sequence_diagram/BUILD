@@ -11,8 +11,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 filegroup(
-    name = "simple_sequence",
-    srcs = ["simple_sequence.puml"],
+    name = "simple_sequence_test",
+    srcs = [
+        "simple_sequence.puml",
+        "simple_sequence.json",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -29,7 +32,7 @@ filegroup(
     name = "sequence_diagram_tests",
     srcs = [
         ":comprehensive_sequence_test",
-        ":simple_sequence",
+        ":simple_sequence_test",
     ],
     visibility = ["//visibility:public"],
 )

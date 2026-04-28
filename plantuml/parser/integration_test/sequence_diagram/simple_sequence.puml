@@ -1,31 +1,42 @@
-' *******************************************************************************
-' Copyright (c) 2026 Contributors to the Eclipse Foundation
-'
-' See the NOTICE file(s) distributed with this work for additional
-' information regarding copyright ownership.
-'
-' This program and the accompanying materials are made available under the
-' terms of the Apache License Version 2.0 which is available at
-' https://www.apache.org/licenses/LICENSE-2.0
-'
-' SPDX-License-Identifier: Apache-2.0
-' *******************************************************************************
 @startuml
 
 participant "Component A" as ComponentA <<component>>
 participant "Component B" as ComponentB <<component>>
 participant "Component C" as ComponentC <<component>>
 
-ComponentA -> ComponentB : Call Method1()
-alt Condition1
+ComponentA -> ComponentB : callMethod1()
+alt condition1
     ComponentB --> ComponentA : Return Result
 else
-    ComponentB -> ComponentC : Call Method2()
+    ComponentB -> ComponentC : method2(1)
+    ComponentC --> ComponentB : Return Result
+
+    loop for i = 0; i < 3; ++i
+        ComponentB -> ComponentC : method2(i)
         ComponentC --> ComponentB : Return Result
-    alt Condition2
-        ComponentB -> ComponentC: Call Method2()
+        alt innerConditionA
+            ComponentB -> ComponentC : method2(extra)
+            ComponentC --> ComponentB : Return Result
+        end
+    end
+
+    loop while count > 0
+        ComponentB -> ComponentC : method2(count)
+        ComponentC --> ComponentB : Return Result
+        alt innerConditionB
+            ComponentB -> ComponentC : method2(fallback)
+            ComponentC --> ComponentB : Return Result
+        else
+            ComponentB -> ComponentC : method2(default)
+            ComponentC --> ComponentB : Return Result
+        end
+    end
+
+    alt condition2
+        ComponentB -> ComponentC : method2(result)
         ComponentC --> ComponentB : Return Result
     end
+
     ComponentB --> ComponentA : Return Result
 end
 

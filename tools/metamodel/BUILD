@@ -36,6 +36,18 @@ rust_test(
     ],
 )
 
+# Sequence Diagram Metamodel Library (shared types for PlantUML sequence logic)
+rust_library(
+    name = "sequence_diagram",
+    srcs = ["src/sequence_logic.rs"],
+    crate_name = "sequence_logic",
+    crate_root = "src/sequence_logic.rs",
+    edition = "2021",
+    deps = [
+        "@crates//:serde",
+    ],
+)
+
 # Raw FlatBuffer schema files (for tools that invoke flatc directly)
 filegroup(
     name = "schemas",

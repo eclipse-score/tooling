@@ -4,7 +4,7 @@
       "Interaction": {
         "caller": "ComponentA",
         "callee": "ComponentB",
-        "method": "Call Method1()"
+        "method": "callMethod1()"
       }
     },
     "branches_node": [
@@ -12,7 +12,7 @@
         "event": {
           "Condition": {
             "condition_type": "Alt",
-            "condition_value": "Contidition1"
+            "condition_value": "condition1"
           }
         },
         "branches_node": [
@@ -41,7 +41,7 @@
               "Interaction": {
                 "caller": "ComponentB",
                 "callee": "ComponentC",
-                "method": "Call Method2()"
+                "method": "method2(1)"
               }
             },
             "branches_node": [
@@ -60,8 +60,8 @@
           {
             "event": {
               "Condition": {
-                "condition_type": "Alt",
-                "condition_value": "Contidition2"
+                "condition_type": "Loop",
+                "condition_value": "for i = 0; i < 3; ++i"
               }
             },
             "branches_node": [
@@ -70,7 +70,162 @@
                   "Interaction": {
                     "caller": "ComponentB",
                     "callee": "ComponentC",
-                    "method": "Call Method2()"
+                    "method": "method2(i)"
+                  }
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Return": {
+                        "caller": "ComponentB",
+                        "callee": "ComponentC",
+                        "return_content": "Return Result"
+                      }
+                    },
+                    "branches_node": []
+                  }
+                ]
+              },
+              {
+                "event": {
+                  "Condition": {
+                    "condition_type": "Alt",
+                    "condition_value": "innerConditionA"
+                  }
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Interaction": {
+                        "caller": "ComponentB",
+                        "callee": "ComponentC",
+                        "method": "method2(extra)"
+                      }
+                    },
+                    "branches_node": [
+                      {
+                        "event": {
+                          "Return": {
+                            "caller": "ComponentB",
+                            "callee": "ComponentC",
+                            "return_content": "Return Result"
+                          }
+                        },
+                        "branches_node": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "event": {
+              "Condition": {
+                "condition_type": "Loop",
+                "condition_value": "while count > 0"
+              }
+            },
+            "branches_node": [
+              {
+                "event": {
+                  "Interaction": {
+                    "caller": "ComponentB",
+                    "callee": "ComponentC",
+                    "method": "method2(count)"
+                  }
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Return": {
+                        "caller": "ComponentB",
+                        "callee": "ComponentC",
+                        "return_content": "Return Result"
+                      }
+                    },
+                    "branches_node": []
+                  }
+                ]
+              },
+              {
+                "event": {
+                  "Condition": {
+                    "condition_type": "Alt",
+                    "condition_value": "innerConditionB"
+                  }
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Interaction": {
+                        "caller": "ComponentB",
+                        "callee": "ComponentC",
+                        "method": "method2(fallback)"
+                      }
+                    },
+                    "branches_node": [
+                      {
+                        "event": {
+                          "Return": {
+                            "caller": "ComponentB",
+                            "callee": "ComponentC",
+                            "return_content": "Return Result"
+                          }
+                        },
+                        "branches_node": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": {
+                  "Condition": {
+                    "condition_type": "Else",
+                    "condition_value": ""
+                  }
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Interaction": {
+                        "caller": "ComponentB",
+                        "callee": "ComponentC",
+                        "method": "method2(default)"
+                      }
+                    },
+                    "branches_node": [
+                      {
+                        "event": {
+                          "Return": {
+                            "caller": "ComponentB",
+                            "callee": "ComponentC",
+                            "return_content": "Return Result"
+                          }
+                        },
+                        "branches_node": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "event": {
+              "Condition": {
+                "condition_type": "Alt",
+                "condition_value": "condition2"
+              }
+            },
+            "branches_node": [
+              {
+                "event": {
+                  "Interaction": {
+                    "caller": "ComponentB",
+                    "callee": "ComponentC",
+                    "method": "method2(result)"
                   }
                 },
                 "branches_node": [

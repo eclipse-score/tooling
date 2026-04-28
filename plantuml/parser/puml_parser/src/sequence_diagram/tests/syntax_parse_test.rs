@@ -69,3 +69,11 @@ fn test_comprehensive_sequence() {
         "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.json",
     );
 }
+
+#[test]
+fn test_simple_sequence() {
+    test_file_pair(
+        "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "plantuml/parser/integration_test/sequence_diagram/simple_sequence.json",
+    );
+}
