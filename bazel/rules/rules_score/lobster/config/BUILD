@@ -27,6 +27,12 @@ filegroup(
 )
 
 filegroup(
+    name = "assumed_system_requirement",
+    srcs = ["lobster_assumed_system_req.yaml"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
     name = "failuremodes_config",
     srcs = ["lobster_failuremodes.yaml"],
     visibility = ["//visibility:public"],

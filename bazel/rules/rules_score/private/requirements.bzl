@@ -19,8 +19,9 @@ This module provides macros and rules for defining requirements at any level
 """
 
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
-load("@trlc//:trlc.bzl", "TrlcProviderInfo", "trlc_requirements_test")
-load("//bazel/rules/rules_score:providers.bzl", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
+load("@trlc//:trlc.bzl", "TrlcProviderInfo", "trlc_requirements", "trlc_requirements_test")
+load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_srcs_to_trlc")
 
 # ============================================================================
 # Private Rule Implementation
@@ -68,8 +69,13 @@ def _requirements_impl(ctx):
             srcs = depset([lobster_trlc_file]),
             name = ctx.label.name,
         )
-    else:
+    elif ctx.attr.req_kind == "component":
         req_provider = ComponentRequirementsInfo(
+            srcs = depset([lobster_trlc_file]),
+            name = ctx.label.name,
+        )
+    else:  # assumed_system
+        req_provider = AssumedSystemRequirementsInfo(
             srcs = depset([lobster_trlc_file]),
             name = ctx.label.name,
         )
@@ -102,9 +108,9 @@ _requirements = rule(
             doc = "Lobster YAML configuration file for traceability extraction",
         ),
         "req_kind": attr.string(
-            values = ["feature", "component"],
+            values = ["feature", "component", "assumed_system"],
             mandatory = True,
-            doc = "Kind of requirements: 'feature' or 'component'",
+            doc = "Kind of requirements: 'feature', 'component', or 'assumed_system'.",
         ),
         "_renderer": attr.label(
             default = Label("@trlc//tools/trlc_rst:trlc_rst"),
