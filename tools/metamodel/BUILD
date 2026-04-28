@@ -53,3 +53,8 @@ filegroup(
     name = "schemas",
     srcs = ["schema/class_diagram.fbs"],
 )
+
+filegroup(
+    name = "sequence_schemas",
+    srcs = ["schema/sequence_diagram.fbs"],
+)

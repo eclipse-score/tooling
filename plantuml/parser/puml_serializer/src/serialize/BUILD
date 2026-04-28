@@ -41,3 +41,18 @@ rust_library(
         "@crates//:flatbuffers",
     ],
 )
+
+rust_library(
+    name = "puml_serialize_sequence",
+    srcs = [
+        "sequence_serializer.rs",
+    ],
+    crate_name = "sequence_serializer",
+    crate_root = "sequence_serializer.rs",
+    visibility = ["//plantuml/parser:__subpackages__"],
+    deps = [
+        "//plantuml/parser/puml_serializer/src/fbs:sequence_fbs",
+        "//tools/metamodel:sequence_diagram",
+        "@crates//:flatbuffers",
+    ],
+)

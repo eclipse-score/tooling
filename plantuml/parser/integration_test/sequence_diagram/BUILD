@@ -13,8 +13,8 @@
 filegroup(
     name = "simple_sequence_test",
     srcs = [
-        "simple_sequence.puml",
         "simple_sequence.json",
+        "simple_sequence.puml",
     ],
     visibility = ["//visibility:public"],
 )
