@@ -200,7 +200,7 @@ fn build_validation_context(inputs: ValidationCliInputs) -> Result<ValidationCon
     let class = read_and_convert::<ClassDiagramReader, ClassDiagramIndex>(
         inputs.class_fbs.as_slice(),
         &mut errors,
-        |raw: ClassDiagramInputs, errs| raw.to_class_diagram_index(errs),
+        |raw: ClassDiagramInputs, errs| ClassDiagramIndex::build_index(&raw, errs),
     )?;
 
     Ok(ValidationContext {

@@ -56,7 +56,7 @@ impl<'a> BazelComponentValidator<'a> {
     ///
     /// The debug log is always built and stored in `errors.debug_output`.
     pub fn run(mut self) -> Errors {
-        self.errors.debug_output = self.build_debug_log();
+        self.errors.debug_output.push_str(&self.build_debug_log());
         self.check_seooc();
         self.check_components();
         self.check_units();
