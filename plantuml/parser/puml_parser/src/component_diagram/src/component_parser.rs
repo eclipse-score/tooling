@@ -111,9 +111,7 @@ impl PumlComponentParser {
         Ok(stmts)
     }
 
-    fn parse_component(
-        pair: pest::iterators::Pair<Rule>,
-    ) -> Result<Component, ComponentError> {
+    fn parse_component(pair: pest::iterators::Pair<Rule>) -> Result<Component, ComponentError> {
         let mut component = Component {
             component_type: "".to_string(),
             name: None,
@@ -172,9 +170,7 @@ impl PumlComponentParser {
         Ok(component)
     }
 
-    fn parse_relation(
-        pair: pest::iterators::Pair<Rule>,
-    ) -> Result<Relation, ComponentError> {
+    fn parse_relation(pair: pest::iterators::Pair<Rule>) -> Result<Relation, ComponentError> {
         let mut lhs = String::new();
         let mut rhs = String::new();
         let mut arrow = Arrow::default();
@@ -215,9 +211,8 @@ impl PumlComponentParser {
     }
 
     fn parse_arrow(pair: pest::iterators::Pair<Rule>) -> Result<Arrow, ComponentError> {
-        let arrow = common_parse_arrow(pair).map_err(|e| {
-            ComponentError::InvalidStatement(format!("invalid arrow: {}", e))
-        })?;
+        let arrow = common_parse_arrow(pair)
+            .map_err(|e| ComponentError::InvalidStatement(format!("invalid arrow: {}", e)))?;
 
         Ok(arrow)
     }

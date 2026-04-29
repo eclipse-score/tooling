@@ -25,7 +25,9 @@ use puml_lobster::{write_lobster_to_file, LobsterModel};
 use puml_parser::{
     DiagramParser, Preprocessor, PumlClassParser, PumlComponentParser, PumlSequenceParser,
 };
-use puml_resolver::{ClassResolver, ComponentResolver, DiagramResolver, SequenceResolver, SequenceTree};
+use puml_resolver::{
+    ClassResolver, ComponentResolver, DiagramResolver, SequenceResolver, SequenceTree,
+};
 use puml_serializer::{ClassSerializer, ComponentSerializer};
 use puml_utils::{write_fbs_to_file, write_json_to_file, write_placeholder_file, LogLevel};
 

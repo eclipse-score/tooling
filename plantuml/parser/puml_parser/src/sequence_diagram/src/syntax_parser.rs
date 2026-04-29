@@ -47,9 +47,10 @@ impl PumlSequenceParser {
     }
 
     fn parse_statement(pair: pest::iterators::Pair<Rule>) -> Result<Vec<Statement>, SequenceError> {
-        let inner = pair.into_inner().next().ok_or_else(|| {
-            SequenceError::InvalidStatement("empty statement".to_string())
-        })?;
+        let inner = pair
+            .into_inner()
+            .next()
+            .ok_or_else(|| SequenceError::InvalidStatement("empty statement".to_string()))?;
         match inner.as_rule() {
             Rule::participant_def => Ok(vec![Statement::ParticipantDef(
                 Self::parse_participant_def(inner)?,
@@ -58,16 +59,20 @@ impl PumlSequenceParser {
             Rule::group_cmd => Ok(vec![Statement::GroupCmd(Self::parse_group_cmd(inner)?)]),
             Rule::destroy_cmd => Ok(vec![Statement::DestroyCmd(Self::parse_destroy_cmd(inner)?)]),
             Rule::create_cmd => Ok(vec![Statement::CreateCmd(Self::parse_create_cmd(inner)?)]),
-            Rule::activate_cmd => Ok(vec![Statement::ActivateCmd(Self::parse_activate_cmd(inner)?)]),
-            Rule::deactivate_cmd => {
-                Ok(vec![Statement::DeactivateCmd(Self::parse_deactivate_cmd(inner)?)])
-            }
+            Rule::activate_cmd => Ok(vec![Statement::ActivateCmd(Self::parse_activate_cmd(
+                inner,
+            )?)]),
+            Rule::deactivate_cmd => Ok(vec![Statement::DeactivateCmd(Self::parse_deactivate_cmd(
+                inner,
+            )?)]),
             // Grammar-valid directives that are intentionally not modeled as statements
             _ => Ok(vec![]),
         }
     }
 
-    fn parse_participant_def(pair: pest::iterators::Pair<Rule>) -> Result<ParticipantDef, SequenceError> {
+    fn parse_participant_def(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<ParticipantDef, SequenceError> {
         let mut participant_type: Option<ParticipantType> = None;
         let mut identifier: Option<ParticipantIdentifier> = None;
         let mut stereotype: Option<String> = None;
@@ -85,9 +90,17 @@ impl PumlSequenceParser {
                     let quoted = parts
                         .next()
                         .map(|p| Self::extract_quoted_string(p.as_str()))
-                        .ok_or_else(|| SequenceError::InvalidStatement("missing quoted participant".to_string()))?;
-                    let alias_clause = parts.next().ok_or_else(|| SequenceError::InvalidStatement("missing alias clause".to_string()))?;
-                    let id_pair = alias_clause.into_inner().next().ok_or_else(|| SequenceError::InvalidStatement("missing alias id".to_string()))?;
+                        .ok_or_else(|| {
+                            SequenceError::InvalidStatement(
+                                "missing quoted participant".to_string(),
+                            )
+                        })?;
+                    let alias_clause = parts.next().ok_or_else(|| {
+                        SequenceError::InvalidStatement("missing alias clause".to_string())
+                    })?;
+                    let id_pair = alias_clause.into_inner().next().ok_or_else(|| {
+                        SequenceError::InvalidStatement("missing alias id".to_string())
+                    })?;
                     let id = match id_pair.as_rule() {
                         Rule::quoted_string => Self::extract_quoted_string(id_pair.as_str()),
                         _ => id_pair.as_str().trim().to_string(),
@@ -96,17 +109,39 @@ impl PumlSequenceParser {
                 }
                 Rule::participant_id_as_quoted => {
                     let mut parts = inner.into_inner();
-                    let id = parts.next().ok_or_else(|| SequenceError::InvalidStatement("missing participant id".to_string()))?.as_str().trim().to_string();
-                    let alias_clause = parts.next().ok_or_else(|| SequenceError::InvalidStatement("missing alias clause".to_string()))?;
-                    let quoted_pair = alias_clause.into_inner().next().ok_or_else(|| SequenceError::InvalidStatement("missing quoted alias".to_string()))?;
+                    let id = parts
+                        .next()
+                        .ok_or_else(|| {
+                            SequenceError::InvalidStatement("missing participant id".to_string())
+                        })?
+                        .as_str()
+                        .trim()
+                        .to_string();
+                    let alias_clause = parts.next().ok_or_else(|| {
+                        SequenceError::InvalidStatement("missing alias clause".to_string())
+                    })?;
+                    let quoted_pair = alias_clause.into_inner().next().ok_or_else(|| {
+                        SequenceError::InvalidStatement("missing quoted alias".to_string())
+                    })?;
                     let quoted = Self::extract_quoted_string(quoted_pair.as_str());
                     identifier = Some(ParticipantIdentifier::IdAsQuoted { id, quoted });
                 }
                 Rule::participant_id_as_id => {
                     let mut parts = inner.into_inner();
-                    let id1 = parts.next().ok_or_else(|| SequenceError::InvalidStatement("missing participant id1".to_string()))?.as_str().trim().to_string();
-                    let alias_clause = parts.next().ok_or_else(|| SequenceError::InvalidStatement("missing alias clause".to_string()))?;
-                    let id2_pair = alias_clause.into_inner().next().ok_or_else(|| SequenceError::InvalidStatement("missing alias id2".to_string()))?;
+                    let id1 = parts
+                        .next()
+                        .ok_or_else(|| {
+                            SequenceError::InvalidStatement("missing participant id1".to_string())
+                        })?
+                        .as_str()
+                        .trim()
+                        .to_string();
+                    let alias_clause = parts.next().ok_or_else(|| {
+                        SequenceError::InvalidStatement("missing alias clause".to_string())
+                    })?;
+                    let id2_pair = alias_clause.into_inner().next().ok_or_else(|| {
+                        SequenceError::InvalidStatement("missing alias id2".to_string())
+                    })?;
                     let id2 = id2_pair.as_str().trim().to_string();
                     identifier = Some(ParticipantIdentifier::IdAsId { id1, id2 });
                 }
@@ -129,8 +164,12 @@ impl PumlSequenceParser {
         }
 
         Ok(ParticipantDef {
-            participant_type: participant_type.ok_or_else(|| SequenceError::InvalidStatement("missing participant type".to_string()))?,
-            identifier: identifier.ok_or_else(|| SequenceError::InvalidStatement("missing participant identifier".to_string()))?,
+            participant_type: participant_type.ok_or_else(|| {
+                SequenceError::InvalidStatement("missing participant type".to_string())
+            })?,
+            identifier: identifier.ok_or_else(|| {
+                SequenceError::InvalidStatement("missing participant identifier".to_string())
+            })?,
             stereotype,
         })
     }
@@ -175,7 +214,10 @@ impl PumlSequenceParser {
                     activation_marker = Some(inner.as_str().to_string());
                 }
                 Rule::sequence_description => {
-                    description = inner.into_inner().next().map(|p| p.as_str().trim().to_string());
+                    description = inner
+                        .into_inner()
+                        .next()
+                        .map(|p| p.as_str().trim().to_string());
                 }
                 _ => {}
             }
@@ -183,7 +225,9 @@ impl PumlSequenceParser {
 
         let content = MessageContent::WithTargets {
             left: left.unwrap_or_default(),
-            arrow: arrow.ok_or_else(|| SequenceError::InvalidStatement("missing arrow in message".to_string()))?,
+            arrow: arrow.ok_or_else(|| {
+                SequenceError::InvalidStatement("missing arrow in message".to_string())
+            })?,
             right: right.unwrap_or_default(),
         };
 
@@ -195,9 +239,8 @@ impl PumlSequenceParser {
     }
 
     fn parse_arrow(pair: pest::iterators::Pair<Rule>) -> Result<Arrow, SequenceError> {
-        common_parse_arrow(pair).map_err(|e| {
-            SequenceError::InvalidStatement(format!("invalid arrow: {}", e))
-        })
+        common_parse_arrow(pair)
+            .map_err(|e| SequenceError::InvalidStatement(format!("invalid arrow: {}", e)))
     }
 
     fn parse_group_cmd(pair: pest::iterators::Pair<Rule>) -> Result<GroupCmd, SequenceError> {
@@ -217,7 +260,8 @@ impl PumlSequenceParser {
         }
 
         Ok(GroupCmd {
-            group_type: group_type.ok_or_else(|| SequenceError::InvalidStatement("missing group type".to_string()))?,
+            group_type: group_type
+                .ok_or_else(|| SequenceError::InvalidStatement("missing group type".to_string()))?,
             text,
         })
     }
@@ -250,7 +294,9 @@ impl PumlSequenceParser {
         }
 
         Ok(DestroyCmd {
-            participant: participant.ok_or_else(|| SequenceError::InvalidStatement("missing participant in destroy".to_string()))?,
+            participant: participant.ok_or_else(|| {
+                SequenceError::InvalidStatement("missing participant in destroy".to_string())
+            })?,
         })
     }
 
@@ -264,7 +310,9 @@ impl PumlSequenceParser {
         }
 
         Ok(CreateCmd {
-            participant: participant.ok_or_else(|| SequenceError::InvalidStatement("missing participant in create".to_string()))?,
+            participant: participant.ok_or_else(|| {
+                SequenceError::InvalidStatement("missing participant in create".to_string())
+            })?,
         })
     }
 
@@ -278,11 +326,15 @@ impl PumlSequenceParser {
         }
 
         Ok(ActivateCmd {
-            participant: participant.ok_or_else(|| SequenceError::InvalidStatement("missing participant in activate".to_string()))?,
+            participant: participant.ok_or_else(|| {
+                SequenceError::InvalidStatement("missing participant in activate".to_string())
+            })?,
         })
     }
 
-    fn parse_deactivate_cmd(pair: pest::iterators::Pair<Rule>) -> Result<DeactivateCmd, SequenceError> {
+    fn parse_deactivate_cmd(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<DeactivateCmd, SequenceError> {
         let mut participant: Option<String> = None;
 
         for inner in pair.into_inner() {

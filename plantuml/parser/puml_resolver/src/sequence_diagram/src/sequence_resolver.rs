@@ -58,25 +58,31 @@ mod sequence_resolver_tests {
     use super::*;
     use parser_core::common_ast::{Arrow, ArrowDecor, ArrowLine};
     use resolver_traits::DiagramResolver;
-    use sequence_parser::syntax_ast::{
-        Message, MessageContent, Statement,
-    };
+    use sequence_parser::syntax_ast::{Message, MessageContent, Statement};
 
     fn solid_arrow() -> Arrow {
         Arrow {
             left: None,
-            line: ArrowLine { raw: "-".to_string() },
+            line: ArrowLine {
+                raw: "-".to_string(),
+            },
             middle: None,
-            right: Some(ArrowDecor { raw: ">".to_string() }),
+            right: Some(ArrowDecor {
+                raw: ">".to_string(),
+            }),
         }
     }
 
     fn dashed_arrow() -> Arrow {
         Arrow {
             left: None,
-            line: ArrowLine { raw: "--".to_string() },
+            line: ArrowLine {
+                raw: "--".to_string(),
+            },
             middle: None,
-            right: Some(ArrowDecor { raw: ">".to_string() }),
+            right: Some(ArrowDecor {
+                raw: ">".to_string(),
+            }),
         }
     }
 
@@ -161,9 +167,6 @@ mod sequence_resolver_tests {
         let tree1 = resolver.resolve(&doc1).unwrap();
         let tree2 = resolver.resolve(&doc2).unwrap();
 
-        assert_eq!(
-            tree1.root_interactions.len(),
-            tree2.root_interactions.len()
-        );
+        assert_eq!(tree1.root_interactions.len(), tree2.root_interactions.len());
     }
 }

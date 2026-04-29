@@ -19,10 +19,10 @@ use crate::class_traits::{TypeDef, WritableName};
 use crate::source_map::{
     normalize_multiline_member_signatures, remap_syntax_error_to_original_source, NormalizedContent,
 };
+use log::{debug, trace};
 use parser_core::common_parser::{parse_arrow, PlantUmlCommonParser, Rule};
 use parser_core::{format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser};
 use pest::Parser;
-use log::{debug, trace};
 use puml_utils::LogLevel;
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -832,14 +832,12 @@ fn parse_top_level_element(
             ignored_objects.register(&ignored, &None);
             Ok(vec![])
         }
-        Rule::enum_def => {
-            Ok(vec![ClassUmlTopLevel::Enum(
-                parse_enum_def(pair, normalized_content),
-            )])
-        }
+        Rule::enum_def => Ok(vec![ClassUmlTopLevel::Enum(parse_enum_def(
+            pair,
+            normalized_content,
+        ))]),
         Rule::namespace_def => {
-            let (namespace, nested_ignored_objects) =
-                parse_namespace(pair, normalized_content)?;
+            let (namespace, nested_ignored_objects) = parse_namespace(pair, normalized_content)?;
             ignored_objects.merge(nested_ignored_objects);
             Ok(vec![ClassUmlTopLevel::Namespace(namespace)])
         }
@@ -848,8 +846,7 @@ fn parse_top_level_element(
             Ok(vec![])
         }
         Rule::package_def => {
-            let (package, nested_ignored_objects) =
-                parse_package(pair, normalized_content)?;
+            let (package, nested_ignored_objects) = parse_package(pair, normalized_content)?;
             ignored_objects.merge(nested_ignored_objects);
             Ok(vec![ClassUmlTopLevel::Package(package)])
         }
@@ -873,8 +870,7 @@ fn parse_namespace(
                 for top_level_inner in flatten_top_level(inner) {
                     match top_level_inner.as_rule() {
                         Rule::type_def => {
-                            let mut type_def =
-                                parse_type_def(top_level_inner, normalized_content)?;
+                            let mut type_def = parse_type_def(top_level_inner, normalized_content)?;
                             type_def.set_namespace(namespace.name.internal.clone());
                             namespace.types.push(type_def);
                         }

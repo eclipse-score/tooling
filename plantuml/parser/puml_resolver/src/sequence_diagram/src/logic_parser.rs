@@ -297,7 +297,9 @@ mod return_arrow_detection_tests {
     fn arrow(line: &str, right: Option<&str>) -> Arrow {
         Arrow {
             left: None,
-            line: ArrowLine { raw: line.to_string() },
+            line: ArrowLine {
+                raw: line.to_string(),
+            },
             middle: None,
             right: right.map(|r| ArrowDecor { raw: r.to_string() }),
         }
