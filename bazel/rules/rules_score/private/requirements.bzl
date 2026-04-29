@@ -64,30 +64,57 @@ def _requirements_impl(ctx):
 
     lobster_trlc_file, _lobster_trlc = subrule_lobster_trlc(ctx.files.srcs, ctx.file.lobster_config)
 
-    if ctx.attr.req_kind == "feature":
-        req_provider = FeatureRequirementsInfo(
-            srcs = depset([lobster_trlc_file]),
-            name = ctx.label.name,
-        )
-    elif ctx.attr.req_kind == "component":
-        req_provider = ComponentRequirementsInfo(
-            srcs = depset([lobster_trlc_file]),
-            name = ctx.label.name,
-        )
-    else:  # assumed_system
-        req_provider = AssumedSystemRequirementsInfo(
-            srcs = depset([lobster_trlc_file]),
-            name = ctx.label.name,
-        )
+    providers = [DefaultInfo(files = all_srcs)]
 
-    return [
-        DefaultInfo(files = all_srcs),
-        req_provider,
-        SphinxSourcesInfo(
-            srcs = all_srcs,
-            deps = all_srcs,
-        ),
-    ]
+    if ctx.attr.req_kind == "feature":
+        providers.append(FeatureRequirementsInfo(
+            srcs = depset([lobster_trlc_file]),
+            name = ctx.label.name,
+        ))
+
+        # Propagate AssumedSystemRequirementsInfo from deps so the parent
+        # dependable_element/component can include assumed system requirement
+        # lobster files without listing them separately.
+        asr_srcs = [
+            dep[AssumedSystemRequirementsInfo].srcs
+            for dep in ctx.attr.deps
+            if AssumedSystemRequirementsInfo in dep
+        ]
+        if asr_srcs:
+            providers.append(AssumedSystemRequirementsInfo(
+                srcs = depset(transitive = asr_srcs),
+                name = ctx.label.name,
+            ))
+    elif ctx.attr.req_kind == "assumed_system":
+        providers.append(AssumedSystemRequirementsInfo(
+            srcs = depset([lobster_trlc_file]),
+            name = ctx.label.name,
+        ))
+    else:  # component
+        providers.append(ComponentRequirementsInfo(
+            srcs = depset([lobster_trlc_file]),
+            name = ctx.label.name,
+        ))
+
+        # Propagate FeatureRequirementsInfo from deps so the parent component
+        # can include feature requirement lobster files in its traceability
+        # config without listing them separately.
+        feat_req_srcs = [
+            dep[FeatureRequirementsInfo].srcs
+            for dep in ctx.attr.deps
+            if FeatureRequirementsInfo in dep
+        ]
+        if feat_req_srcs:
+            providers.append(FeatureRequirementsInfo(
+                srcs = depset(transitive = feat_req_srcs),
+                name = ctx.label.name,
+            ))
+
+    providers.append(SphinxSourcesInfo(
+        srcs = all_srcs,
+        deps = all_srcs,
+    ))
+    return providers
 
 # ============================================================================
 # Rule Definition
@@ -111,6 +138,14 @@ _requirements = rule(
             values = ["feature", "component", "assumed_system"],
             mandatory = True,
             doc = "Kind of requirements: 'feature', 'component', or 'assumed_system'.",
+        ),
+        "deps": attr.label_list(
+            providers = [[FeatureRequirementsInfo], [AssumedSystemRequirementsInfo]],
+            doc = "Requirements targets this target derives from. " +
+                  "For 'component' req_kind: feature_requirements targets whose lobster files " +
+                  "are propagated as FeatureRequirementsInfo. " +
+                  "For 'feature' req_kind: assumed_system_requirements targets whose lobster " +
+                  "files are propagated as AssumedSystemRequirementsInfo.",
         ),
         "_renderer": attr.label(
             default = Label("@trlc//tools/trlc_rst:trlc_rst"),
@@ -152,7 +187,7 @@ def _create_trlc_aliases(name, srcs, visibility):
             )
             rst_index += 1
 
-def _score_requirements(name, srcs, deps, ref_package, visibility, req_kind):
+def _score_requirements(name, srcs, deps, ref_package, visibility, req_kind, req_deps = []):
     """Shared implementation for feature_requirements and component_requirements.
 
     Args:
@@ -162,11 +197,14 @@ def _score_requirements(name, srcs, deps, ref_package, visibility, req_kind):
         ref_package: TRLC package prefix for derived_from cross-references.
         visibility: Bazel visibility specification.
         req_kind: Either "feature" or "component".
+        req_deps: Requirements targets for provider propagation (e.g. assumed_system_requirements
+            targets for a feature_requirements target).
     """
     trlc_srcs = rst_srcs_to_trlc(name, srcs, deps = deps, ref_package = ref_package or "")
     _requirements(
         name = name,
         srcs = trlc_srcs,
+        deps = req_deps,
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:{}_requirement".format(req_kind)),
         req_kind = req_kind,
         visibility = visibility,
@@ -206,6 +244,7 @@ def feature_requirements(
         name,
         srcs,
         deps = [],
+        req_deps = [],
         ref_package = None,
         visibility = None):
     """Define feature requirements following S-CORE process guidelines.
@@ -216,32 +255,54 @@ def feature_requirements(
             or RST file paths containing ``feat_req`` directives.
             RST files are converted to TRLC automatically.
         deps: Optional list of trlc_requirements labels to include as
-            parsing dependencies (e.g. the assumed system requirements
-            target).  Only used when RST files are present in *srcs*.
+            parsing dependencies.  Only used when RST files are present in *srcs*.
+        req_deps: Optional list of assumed_system_requirements targets whose
+            AssumedSystemRequirementsInfo is propagated alongside this target's
+            FeatureRequirementsInfo so that consumers can resolve assumed system
+            requirement references without listing them separately.
         ref_package: TRLC package prefix for derived_from cross-references
             when converting RST sources.
         visibility: Bazel visibility specification.
     """
-    _score_requirements(name, srcs, deps, ref_package, visibility, "feature")
+    _score_requirements(name, srcs, deps, ref_package, visibility, "feature", req_deps = req_deps)
 
 def component_requirements(
         name,
         srcs = [],
         deps = [],
+        trlc_deps = [],
         ref_package = None,
         visibility = None):
     """Define component requirements following S-CORE process guidelines.
 
     Args:
         name: The name of the target.
-        srcs: List of trlc_requirements labels (providing TrlcProviderInfo)
-            or RST file paths containing ``comp_req`` directives.
+        srcs: List of trlc_requirements labels (providing TrlcProviderInfo) or
+            RST file paths containing ``comp_req`` directives.
             RST files are converted to TRLC automatically.
-        deps: Optional list of trlc_requirements labels to include as
-            parsing dependencies (e.g. assumed system or feature requirement
-            targets).  Only used when RST files are present in *srcs*.
+        deps: Optional list of feature_requirements targets whose lobster files are
+              propagated alongside this target's ComponentRequirementsInfo, so that
+              a parent component rule can resolve derived_from references without
+              having to list the feature requirements separately.
+        trlc_deps: Optional list of trlc_requirements labels to include as
+            parsing dependencies when RST files are present in *srcs*.
         ref_package: TRLC package prefix for derived_from cross-references
             when converting RST sources.
         visibility: Bazel visibility specification.
     """
-    _score_requirements(name, srcs, deps, ref_package, visibility, "component")
+    trlc_srcs = rst_srcs_to_trlc(name, srcs, deps = trlc_deps, ref_package = ref_package or "")
+    _requirements(
+        name = name,
+        srcs = trlc_srcs,
+        deps = deps,
+        lobster_config = Label("//bazel/rules/rules_score/lobster/config:component_requirement"),
+        req_kind = "component",
+        visibility = visibility,
+    )
+
+    trlc_requirements_test(
+        name = name + "_test",
+        reqs = trlc_srcs,
+        visibility = visibility,
+    )
+    _create_trlc_aliases(name, srcs, visibility)

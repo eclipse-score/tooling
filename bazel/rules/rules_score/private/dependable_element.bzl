@@ -28,6 +28,7 @@ load(
 load(
     "//bazel/rules/rules_score:providers.bzl",
     "ArchitecturalDesignInfo",
+    "AssumedSystemRequirementsInfo",
     "CertifiedScope",
     "ComponentInfo",
     "DependabilityAnalysisInfo",
@@ -826,11 +827,14 @@ def _dependable_element_index_impl(ctx):
             node = node.setdefault(path, default = {})
 
         if type(node) == type([]):
+            if certified_scope.name in node:
+                fail("The same scope is covered twice: {}".format(certified_scope))
             node.append(certified_scope.name)
         else:
-            inserted_element = node.setdefault(last_element, default = [certified_scope.name])
-            if inserted_element != [certified_scope.name]:
+            inserted_element = node.setdefault(last_element, default = [])
+            if certified_scope.name in inserted_element:
                 fail("The same scope is covered twice: {}".format(certified_scope))
+            inserted_element.append(certified_scope.name)
 
     dependencies = depset(transitive = collected_dependent_labels).to_list()
     for dep in dependencies:
@@ -842,11 +846,21 @@ def _dependable_element_index_impl(ctx):
                 elif dep.name in node:
                     break
                 else:
-                    fail("Not in certified scope {}, stopping at {}".format(dep, path))
+                    msg = "Not in certified scope {}, stopping at {}".format(dep, path)
+                    if ctx.attr.maturity == "development":
+                        print("WARNING: " + msg)
+                    else:
+                        fail(msg)
+                    break
 
             child = node.get(path)
             if child == None:
-                fail("Not in certified scope {}, stopping at {}".format(dep, path))
+                msg = "Not in certified scope {}, stopping at {}".format(dep, path)
+                if ctx.attr.maturity == "development":
+                    print("WARNING: " + msg)
+                else:
+                    fail(msg)
+                break
             else:
                 node = child
 
@@ -879,6 +893,8 @@ def _dependable_element_index_impl(ctx):
     for req_target in ctx.attr.requirements:
         if FeatureRequirementsInfo in req_target:
             feat_req_lobster_files.append(req_target[FeatureRequirementsInfo].srcs)
+        if AssumedSystemRequirementsInfo in req_target:
+            feat_req_lobster_files.append(req_target[AssumedSystemRequirementsInfo].srcs)
 
     feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)
 
@@ -1024,6 +1040,11 @@ _dependable_element_index = rule(
             values = _INTEGRITY_LEVELS,
             doc = "Integrity level of the dependable element. Allowed values: 'A', 'B', 'C', 'D' (D > C > B > A).",
         ),
+        "maturity": attr.string(
+            default = "release",
+            values = ["release", "development"],
+            doc = "Maturity level of the dependable element. 'release' (default) treats certified scope violations as errors; 'development' emits warnings and continues.",
+        ),
         "_validation_cli": attr.label(
             default = Label("//validation/core:validation_cli"),
             executable = True,
@@ -1147,6 +1168,7 @@ def dependable_element(
         integrity_level,
         checklists = [],
         deps = [],
+        maturity = "release",
         sphinx = Label("//bazel/rules/rules_score:score_build"),
         testonly = True,
         visibility = None):
@@ -1217,6 +1239,7 @@ def dependable_element(
         deps = deps,
         processed_deps = processed_deps,
         integrity_level = integrity_level,
+        maturity = maturity,
         testonly = testonly,
         visibility = visibility,
     )

@@ -9,7 +9,6 @@ requirements "Component Requirements" {
 
 activity "Unit Test" {
 {UNIT_TEST_SOURCES}
-  trace to: "Component Requirements";
 }
 
 implementation "Architecture" {

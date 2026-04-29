@@ -20,7 +20,7 @@ with associated requirements and tests.
 """
 
 load("@lobster//:lobster.bzl", "subrule_lobster_gtest", "subrule_lobster_html_report", "subrule_lobster_report")
-load("//bazel/rules/rules_score:providers.bzl", "CertifiedScope", "ComponentInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo", "UnitInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "CertifiedScope", "ComponentInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo", "UnitInfo")
 load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_sources")
 
 # ============================================================================
@@ -68,6 +68,8 @@ def _component_impl(ctx):
             req_lobster_files.append(req_target[ComponentRequirementsInfo].srcs)
         if FeatureRequirementsInfo in req_target:
             feat_req_lobster_files.append(req_target[FeatureRequirementsInfo].srcs)
+        if AssumedSystemRequirementsInfo in req_target:
+            feat_req_lobster_files.append(req_target[AssumedSystemRequirementsInfo].srcs)
 
     req_lobster_depset = depset(transitive = req_lobster_files)
     feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)

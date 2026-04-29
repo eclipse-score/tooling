@@ -13,5 +13,4 @@ implementation "Architecture" {
 
 activity "Unit Test" {
 {UNIT_TEST_SOURCES}
-  trace to: "Component Requirements";
 }
