@@ -10,9 +10,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
+use log::{debug, trace};
 use parser_core::common_parser::parse_arrow as common_parse_arrow;
 use parser_core::common_parser::{PlantUmlCommonParser, Rule};
-use parser_core::{pest_to_syntax_error, BaseParseError, DiagramParser};
+use parser_core::{format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser};
 use puml_utils::LogLevel;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -365,11 +366,23 @@ impl DiagramParser for PumlSequenceParser {
 
         // Log file content at trace level
         if matches!(log_level, LogLevel::Trace) {
-            eprintln!("{}:\n{}\n{}", path.display(), content, "=".repeat(30));
+            trace!("{}:\n{}\n{}", path.display(), content, "=".repeat(30));
         }
 
         let pairs = PlantUmlCommonParser::parse(Rule::sequence_start, content)
             .map_err(|e| pest_to_syntax_error(e, path.as_ref().clone(), content))?;
+
+        // Debug-only, excluded to keep coverage focused on parser logic.
+        #[cfg(not(coverage))]
+        if matches!(log_level, LogLevel::Debug | LogLevel::Trace) {
+            let mut tree_output = String::new();
+            format_parse_tree(pairs.clone(), 0, &mut tree_output);
+            debug!(
+                "\n=== Parse Tree for {} ===\n{}=== End Parse Tree ===",
+                path.display(),
+                tree_output
+            );
+        }
 
         let mut document = SeqPumlDocument {
             name: None,

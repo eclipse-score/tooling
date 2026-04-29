@@ -20,8 +20,9 @@ use crate::source_map::{
     normalize_multiline_member_signatures, remap_syntax_error_to_original_source, NormalizedContent,
 };
 use parser_core::common_parser::{parse_arrow, PlantUmlCommonParser, Rule};
-use parser_core::{pest_to_syntax_error, BaseParseError, DiagramParser};
+use parser_core::{format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser};
 use pest::Parser;
+use log::{debug, trace};
 use puml_utils::LogLevel;
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -1041,7 +1042,7 @@ impl DiagramParser for PumlClassParser {
 
         // Log file content at trace level
         if matches!(log_level, LogLevel::Trace) {
-            eprintln!(
+            trace!(
                 "{}:\n{}\n{}",
                 path.display(),
                 normalized_content.as_str(),
@@ -1054,7 +1055,20 @@ impl DiagramParser for PumlClassParser {
         let mut relationships = Vec::new();
 
         match PlantUmlCommonParser::parse(Rule::class_start, normalized_content.as_str()) {
-            Ok(mut pairs) => {
+            Ok(pairs) => {
+                // Debug-only, excluded to keep coverage focused on parser logic.
+                #[cfg(not(coverage))]
+                if matches!(log_level, LogLevel::Debug | LogLevel::Trace) {
+                    let mut tree_output = String::new();
+                    format_parse_tree(pairs.clone(), 0, &mut tree_output);
+                    debug!(
+                        "\n=== Parse Tree for {} ===\n{}=== End Parse Tree ===",
+                        path.display(),
+                        tree_output
+                    );
+                }
+
+                let mut pairs = pairs;
                 let file_pair = pairs.next().unwrap();
 
                 let inner = file_pair.into_inner();

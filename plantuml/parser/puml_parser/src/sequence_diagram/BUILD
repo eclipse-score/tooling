@@ -29,6 +29,7 @@ rust_library(
     deps = [
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_utils",
+        "@crates//:log",
         "@crates//:pest",
         "@crates//:serde",
         "@crates//:serde_json",

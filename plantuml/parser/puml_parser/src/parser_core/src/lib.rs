@@ -18,6 +18,28 @@ pub use common_ast::*;
 pub use common_parser::*;
 pub use error::{pest_to_syntax_error, BaseParseError};
 
+/// Recursively format a Pest parse tree into an indented string for diagnostic output.
+///
+/// Excluded from coverage instrumentation so that enabling `LogLevel::Debug` in tests
+/// does not distort coverage metrics.
+#[cfg(not(coverage))]
+pub fn format_parse_tree(
+    pairs: pest::iterators::Pairs<common_parser::Rule>,
+    indent: usize,
+    output: &mut String,
+) {
+    for pair in pairs {
+        let indent_str = "  ".repeat(indent);
+        output.push_str(&format!(
+            "{}Rule::{:?} -> \"{}\"\n",
+            indent_str,
+            pair.as_rule(),
+            pair.as_str()
+        ));
+        format_parse_tree(pair.into_inner(), indent + 1, output);
+    }
+}
+
 pub trait DiagramParser {
     type Output;
     type Error;

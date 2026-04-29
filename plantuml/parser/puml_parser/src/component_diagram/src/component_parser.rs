@@ -18,7 +18,7 @@ use thiserror::Error;
 use crate::{
     Arrow, CompPumlDocument, Component, ComponentStyle, Port, PortType, Relation, Statement,
 };
-use parser_core::{pest_to_syntax_error, BaseParseError, DiagramParser};
+use parser_core::{format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser};
 use puml_utils::LogLevel;
 
 use parser_core::common_parser::parse_arrow as common_parse_arrow;
@@ -43,24 +43,6 @@ pub struct PumlComponentParser;
 // lobster-trace: Tools.ArchitectureModelingComponentHierarchyComponent
 // lobster-trace: Tools.ArchitectureModelingComponentInteract
 impl PumlComponentParser {
-    // Debug-only, excluded to keep coverage focused on parser logic.
-    #[cfg(not(coverage))]
-    fn format_parse_tree(pairs: pest::iterators::Pairs<Rule>, indent: usize, output: &mut String) {
-        for pair in pairs {
-            let indent_str = "  ".repeat(indent);
-
-            output.push_str(&format!(
-                "{}Rule::{:?} -> \"{}\"\n",
-                indent_str,
-                pair.as_rule(),
-                pair.as_str()
-            ));
-
-            // Recursively print inner pairs
-            Self::format_parse_tree(pair.into_inner(), indent + 1, output);
-        }
-    }
-
     fn parse_statement(
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<Vec<Statement>, ComponentError> {
@@ -360,7 +342,7 @@ impl DiagramParser for PumlComponentParser {
         if matches!(log_level, LogLevel::Debug | LogLevel::Trace) {
             let mut tree_output = String::new();
 
-            Self::format_parse_tree(pairs.clone(), 0, &mut tree_output);
+            format_parse_tree(pairs.clone(), 0, &mut tree_output);
 
             debug!(
                 "\n=== Parse Tree for {} ===\n{}=== End Parse Tree ===",

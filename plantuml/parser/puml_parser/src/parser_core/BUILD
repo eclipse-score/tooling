@@ -31,6 +31,7 @@ rust_library(
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
         "//plantuml/parser/puml_utils",
+        "@crates//:log",
         "@crates//:pest",
         "@crates//:serde",
         "@crates//:thiserror",
