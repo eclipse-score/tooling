@@ -19,7 +19,9 @@ following S-CORE process guidelines. Assumptions of Use define the safety-releva
 operating conditions and constraints for a Safety Element out of Context (SEooC).
 """
 
+load("@trlc//:trlc.bzl", "TrlcProviderInfo", "trlc_requirements_test")
 load("//bazel/rules/rules_score:providers.bzl", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_srcs_to_trlc")
 
 # ============================================================================
 # Private Rule Implementation
@@ -79,9 +81,9 @@ _assumptions_of_use = rule(
     doc = "Collects Assumptions of Use documents with traceability to feature requirements",
     attrs = {
         "srcs": attr.label_list(
-            allow_files = [".rst", ".md", ".trlc"],
+            providers = [TrlcProviderInfo],
             mandatory = True,
-            doc = "Source files containing Assumptions of Use specifications",
+            doc = "trlc_requirements targets containing Assumptions of Use specifications",
         ),
         "requirements": attr.label_list(
             providers = [[FeatureRequirementsInfo], [ComponentRequirementsInfo]],
@@ -99,6 +101,7 @@ def assumptions_of_use(
         name,
         srcs,
         requirements = [],
+        ref_package = None,
         visibility = None):
     """Define Assumptions of Use following S-CORE process guidelines.
 
@@ -110,29 +113,49 @@ def assumptions_of_use(
     Args:
         name: The name of the assumptions of use target. Used as the base
             name for all generated targets.
-        srcs: List of labels to .rst, .md, or .trlc files containing the
+        srcs: List of labels to trlc_requirements targets containing the
             Assumptions of Use specifications as defined in the S-CORE
-            process.
+            process. RST files containing ``aou_req`` directives are also
+            accepted and will be converted to TRLC automatically.
         requirements: Optional list of labels to feature or component requirements
             targets that these Assumptions of Use trace to. Establishes
             traceability as defined in the S-CORE process.
+        ref_package: Optional TRLC package prefix used for ``derived_from``
+            cross-references when converting RST sources.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
         <name>: Main assumptions of use target providing AssumptionsOfUseInfo
+        <name>_test: TRLC validation test for the assumptions of use sources
 
-    Example:
+    Example using trlc_requirements targets:
         ```starlark
         assumptions_of_use(
             name = "my_assumptions_of_use",
-            srcs = ["assumptions_of_use.rst"],
+            srcs = [":my_aous_trlc"],
+            requirements = [":my_feature_requirements"],
+        )
+        ```
+
+    Example using RST sources directly:
+        ```starlark
+        assumptions_of_use(
+            name = "my_assumptions_of_use",
+            srcs = ["docs/assumptions_of_use.rst"],
             requirements = [":my_feature_requirements"],
         )
         ```
     """
+    trlc_srcs = rst_srcs_to_trlc(name, srcs, ref_package = ref_package or "")
+
     _assumptions_of_use(
         name = name,
-        srcs = srcs,
+        srcs = trlc_srcs,
         requirements = requirements,
+        visibility = visibility,
+    )
+    trlc_requirements_test(
+        name = name + "_test",
+        reqs = trlc_srcs,
         visibility = visibility,
     )

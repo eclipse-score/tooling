@@ -85,6 +85,14 @@ ComponentRequirementsInfo = provider(
     },
 )
 
+AssumedSystemRequirementsInfo = provider(
+    doc = "Provider for assumed system requirements artifacts.",
+    fields = {
+        "srcs": "Depset of .lobster traceability files generated from TRLC requirement sources.",
+        "name": "Name of the requirements target.",
+    },
+)
+
 AnalysisInfo = provider(
     doc = "Provider for safety analysis traceability artifacts (lobster files).",
     fields = {

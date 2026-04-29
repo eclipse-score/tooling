@@ -14,7 +14,9 @@ use log::debug;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use crate::{Arrow, CompPumlDocument, Component, ComponentStyle, Relation, Statement};
+use crate::{
+    Arrow, CompPumlDocument, Component, ComponentStyle, Port, PortType, Relation, Statement,
+};
 use parser_core::{pest_to_syntax_error, BaseParseError, DiagramParser};
 use puml_utils::LogLevel;
 
@@ -52,19 +54,70 @@ impl PumlComponentParser {
 
     fn parse_statement(
         pair: pest::iterators::Pair<Rule>,
-    ) -> Result<Statement, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Statement>, Box<dyn std::error::Error>> {
         for inner in pair.into_inner() {
             match inner.as_rule() {
                 Rule::component => {
-                    return Ok(Statement::Component(Self::parse_component(inner)?));
+                    return Ok(vec![Statement::Component(Self::parse_component(inner)?)]);
                 }
                 Rule::relation => {
-                    return Ok(Statement::Relation(Self::parse_relation(inner)?));
+                    return Ok(vec![Statement::Relation(Self::parse_relation(inner)?)]);
+                }
+                Rule::port_declaration => {
+                    return Ok(vec![Statement::Port(Self::parse_port(inner)?)]);
+                }
+                Rule::together_block => {
+                    // Flatten children into the enclosing scope (drop the wrapper)
+                    return Ok(Self::parse_together_block(inner)?);
                 }
                 _ => {}
             }
         }
-        Err("Invalid statement".into())
+        // footer_line and other non-statement rules produce nothing
+        Ok(vec![])
+    }
+
+    fn parse_port(pair: pest::iterators::Pair<Rule>) -> Result<Port, Box<dyn std::error::Error>> {
+        let mut port_type = PortType::Port;
+        let mut name = String::new();
+        let mut alias = None;
+
+        for inner in pair.into_inner() {
+            match inner.as_rule() {
+                Rule::port_keyword => {
+                    port_type = match inner.as_str() {
+                        "portin" => PortType::PortIn,
+                        "portout" => PortType::PortOut,
+                        _ => PortType::Port,
+                    };
+                }
+                Rule::port_name => {
+                    name = inner.as_str().to_string();
+                }
+                Rule::alias_clause => {
+                    alias = Self::extract_alias(inner);
+                }
+                _ => {}
+            }
+        }
+
+        Ok(Port {
+            port_type,
+            name,
+            alias,
+        })
+    }
+
+    fn parse_together_block(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<Vec<Statement>, Box<dyn std::error::Error>> {
+        let mut stmts = Vec::new();
+        for inner in pair.into_inner() {
+            if inner.as_rule() == Rule::component_statement {
+                stmts.append(&mut Self::parse_statement(inner)?);
+            }
+        }
+        Ok(stmts)
     }
 
     fn parse_component(
@@ -266,8 +319,8 @@ impl PumlComponentParser {
         for inner in pair.into_inner() {
             match inner.as_rule() {
                 Rule::component_statement => {
-                    if let Ok(stmt) = Self::parse_statement(inner) {
-                        statements.push(stmt);
+                    if let Ok(mut stmts) = Self::parse_statement(inner) {
+                        statements.append(&mut stmts);
                     }
                 }
                 _ => {
@@ -326,8 +379,8 @@ impl DiagramParser for PumlComponentParser {
                         }
                     }
                     Rule::component_statement => {
-                        if let Ok(stmt) = Self::parse_statement(inner_pair) {
-                            document.statements.push(stmt);
+                        if let Ok(mut stmts) = Self::parse_statement(inner_pair) {
+                            document.statements.append(&mut stmts);
                         }
                     }
                     _ => {

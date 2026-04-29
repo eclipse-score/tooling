@@ -16,7 +16,6 @@ rust_library(
     name = "puml_resolver_sequence",
     srcs = [
         "src/lib.rs",
-        "src/logic_ast.rs",
         "src/logic_parser.rs",
     ],
     crate_name = "sequence_resolver",
@@ -25,6 +24,7 @@ rust_library(
     deps = [
         "//plantuml/parser/puml_parser:sequence_diagram",
         "//plantuml/parser/puml_resolver:resolver_traits",
+        "//tools/metamodel:sequence_diagram",
         "@crates//:serde",
         "@crates//:serde_json",
     ],
@@ -49,7 +49,7 @@ rust_test(
     srcs = ["test/logic_parse_test.rs"],
     data = [
         "test/logic.json",
-        "test/syntax.json",
+        "//plantuml/parser/integration_test/sequence_diagram:simple_sequence_test",
     ],
     deps = [
         ":puml_resolver_sequence",

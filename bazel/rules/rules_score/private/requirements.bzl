@@ -19,8 +19,9 @@ This module provides macros and rules for defining requirements at any level
 """
 
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
-load("@trlc//:trlc.bzl", "TrlcProviderInfo", "trlc_requirements_test")
-load("//bazel/rules/rules_score:providers.bzl", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
+load("@trlc//:trlc.bzl", "TrlcProviderInfo", "trlc_requirements", "trlc_requirements_test")
+load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_srcs_to_trlc")
 
 # ============================================================================
 # Private Rule Implementation
@@ -68,8 +69,13 @@ def _requirements_impl(ctx):
             srcs = depset([lobster_trlc_file]),
             name = ctx.label.name,
         )
-    else:
+    elif ctx.attr.req_kind == "component":
         req_provider = ComponentRequirementsInfo(
+            srcs = depset([lobster_trlc_file]),
+            name = ctx.label.name,
+        )
+    else:  # assumed_system
+        req_provider = AssumedSystemRequirementsInfo(
             srcs = depset([lobster_trlc_file]),
             name = ctx.label.name,
         )
@@ -102,9 +108,9 @@ _requirements = rule(
             doc = "Lobster YAML configuration file for traceability extraction",
         ),
         "req_kind": attr.string(
-            values = ["feature", "component"],
+            values = ["feature", "component", "assumed_system"],
             mandatory = True,
-            doc = "Kind of requirements: 'feature' or 'component'",
+            doc = "Kind of requirements: 'feature', 'component', or 'assumed_system'.",
         ),
         "_renderer": attr.label(
             default = Label("@trlc//tools/trlc_rst:trlc_rst"),
@@ -119,53 +125,123 @@ _requirements = rule(
 # ============================================================================
 # Public Macros
 # ============================================================================
+def _create_trlc_aliases(name, srcs, visibility):
+    """Expose stable public aliases for generated trlc_requirements targets.
+
+    For each RST file in *srcs*, a named alias is created so that downstream
+    requirement macros can reference the generated trlc_requirements target via
+    ``deps`` for cross-package TRLC validation without knowing internal names.
+    When a single RST file is given the alias is ``<name>_trlc``; for multiple
+    RST files the per-source index is appended (``<name>_trlc_0``, …).
+
+    Args:
+        name: Base name used by the enclosing macro (same as passed to
+            rst_srcs_to_trlc).
+        srcs: Original srcs list passed to the enclosing macro.
+        visibility: Bazel visibility to apply to the generated aliases.
+    """
+    rst_count = len([s for s in srcs if s.endswith(".rst")])
+    rst_index = 0
+    for i, src in enumerate(srcs):
+        if src.endswith(".rst"):
+            alias_name = name + "_trlc" if rst_count == 1 else "{}_trlc_{}".format(name, rst_index)
+            native.alias(
+                name = alias_name,
+                actual = ":_{}_trlc_{}".format(name, i),
+                visibility = visibility,
+            )
+            rst_index += 1
+
+def _score_requirements(name, srcs, deps, ref_package, visibility, req_kind):
+    """Shared implementation for feature_requirements and component_requirements.
+
+    Args:
+        name: Target name.
+        srcs: Mixed list of trlc_requirements labels or RST file paths.
+        deps: trlc_requirements labels used as parsing dependencies for RST files.
+        ref_package: TRLC package prefix for derived_from cross-references.
+        visibility: Bazel visibility specification.
+        req_kind: Either "feature" or "component".
+    """
+    trlc_srcs = rst_srcs_to_trlc(name, srcs, deps = deps, ref_package = ref_package or "")
+    _requirements(
+        name = name,
+        srcs = trlc_srcs,
+        lobster_config = Label("//bazel/rules/rules_score/lobster/config:{}_requirement".format(req_kind)),
+        req_kind = req_kind,
+        visibility = visibility,
+    )
+    trlc_requirements_test(
+        name = name + "_test",
+        reqs = trlc_srcs,
+        visibility = visibility,
+    )
+    _create_trlc_aliases(name, srcs, visibility)
+
+def assumed_system_requirements(
+        name,
+        srcs,
+        deps = [],
+        ref_package = None,
+        visibility = None):
+    """Define Assumed System Requirements following S-CORE process guidelines.
+
+    Creates an assumed_system_requirements target (providing AssumedSystemRequirementsInfo
+    and SphinxSourcesInfo) and a validation test target named *name*_test.
+
+    Args:
+        name: The name of the target.
+        srcs: List of trlc_requirements labels (providing TrlcProviderInfo)
+            or RST file paths containing ``asr_req`` directives.
+            RST files are converted to TRLC automatically.
+        deps: Optional list of trlc_requirements labels to include as
+            parsing dependencies.  Only used when RST files are present in *srcs*.
+        ref_package: TRLC package prefix for derived_from cross-references
+            when converting RST sources.
+        visibility: Bazel visibility specification.
+    """
+    _score_requirements(name, srcs, deps, ref_package, visibility, "assumed_system")
 
 def feature_requirements(
         name,
         srcs,
+        deps = [],
+        ref_package = None,
         visibility = None):
     """Define feature requirements following S-CORE process guidelines.
 
     Args:
         name: The name of the target.
-        srcs: List of labels to trlc_requirements targets providing TrlcProviderInfo.
+        srcs: List of trlc_requirements labels (providing TrlcProviderInfo)
+            or RST file paths containing ``feat_req`` directives.
+            RST files are converted to TRLC automatically.
+        deps: Optional list of trlc_requirements labels to include as
+            parsing dependencies (e.g. the assumed system requirements
+            target).  Only used when RST files are present in *srcs*.
+        ref_package: TRLC package prefix for derived_from cross-references
+            when converting RST sources.
         visibility: Bazel visibility specification.
     """
-    _requirements(
-        name = name,
-        srcs = srcs,
-        lobster_config = Label("//bazel/rules/rules_score/lobster/config:feature_requirement"),
-        req_kind = "feature",
-        visibility = visibility,
-    )
-
-    trlc_requirements_test(
-        name = name + "_test",
-        reqs = srcs,
-        visibility = visibility,
-    )
+    _score_requirements(name, srcs, deps, ref_package, visibility, "feature")
 
 def component_requirements(
         name,
         srcs = [],
+        deps = [],
+        ref_package = None,
         visibility = None):
     """Define component requirements following S-CORE process guidelines.
 
     Args:
         name: The name of the target.
-        srcs: List of labels to trlc_requirements targets providing TrlcProviderInfo.
+        srcs: List of trlc_requirements labels (providing TrlcProviderInfo)
+            or RST file paths containing ``comp_req`` directives.
+            RST files are converted to TRLC automatically.
+        deps: Optional list of trlc_requirements labels to include as
+            parsing dependencies (e.g. assumed system or feature requirement
+            targets).  Only used when RST files are present in *srcs*.
+        ref_package: TRLC package prefix for derived_from cross-references
+            when converting RST sources.
         visibility: Bazel visibility specification.
     """
-    _requirements(
-        name = name,
-        srcs = srcs,
-        lobster_config = Label("//bazel/rules/rules_score/lobster/config:component_requirement"),
-        req_kind = "component",
-        visibility = visibility,
-    )
-
-    trlc_requirements_test(
-        name = name + "_test",
-        reqs = srcs,
-        visibility = visibility,
-    )
+    _score_requirements(name, srcs, deps, ref_package, visibility, "component")

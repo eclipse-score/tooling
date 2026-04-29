@@ -15,7 +15,13 @@
 
 component_start = { empty_line* ~ startuml ~ (component_statement | empty_line)* ~ enduml }
 
-component_statement = { ((relation | component | footer_line) ~ EOL) }
+component_statement = { ((relation | together_block | port_declaration | component | footer_line) ~ EOL) }
+
+port_declaration = { port_keyword ~ port_name ~ alias_clause? }
+port_keyword = @{ "portin" | "portout" | "port" }
+port_name = { CNAME }
+
+together_block = { "together" ~ "{" ~ EOL ~ (component_statement | empty_line)* ~ "}" }
 
 component = {
     (nested_component ~ alias_clause? ~ stereotype? ~ component_style? ~  (long_description | statement_block)? ) |

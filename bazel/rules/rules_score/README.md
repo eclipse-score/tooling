@@ -87,7 +87,7 @@ architectural_design(
 ```
 
 **`bazel build`** — runs `puml_parser` on every `.puml` file, producing:
-- a `.fbs.bin` FlatBuffers binary (diagram AST) — consumed by archver validation
+- a `.fbs.bin` FlatBuffers binary (diagram AST) — consumed by validation/core checks
 - a `.lobster` traceability file (Interface elements only) — consumed by LOBSTER
 - a `plantuml_links.json` — consumed by the `clickable_plantuml` Sphinx extension
 
@@ -195,7 +195,7 @@ dependable_element(
 **`bazel build`** — generates a complete HTML documentation zip via Sphinx.
 Internally:
 1. `_dependable_element_index` generates an `index.rst` aggregating all
-   artifacts, runs archver architecture validation as a subrule, and
+    artifacts, runs validation/core architecture checks as a subrule, and
    produces a DE-level LOBSTER report (`lobster_de.conf` template covering
    Feature Req → Component Req → Architecture → Public API → Failure Modes).
 2. `sphinx_module` compiles all RST sources + diagrams into an HTML zip.

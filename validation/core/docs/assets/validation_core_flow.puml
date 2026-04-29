@@ -1,0 +1,70 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml validation_core_flow
+title Validation Core Runtime Flow
+
+participant "CLI" as cli
+participant "BazelReader" as bazel_reader
+participant "ComponentDiagramReader" as component_reader
+participant "ClassDiagramReader" as class_reader
+participant "ValidationContext" as context
+participant "validate_bazel_component()" as bazel_validator
+participant "validate_component_class()" as class_validator
+participant "Errors" as errors
+
+cli -> cli: parse Args
+cli -> cli: build ValidationCliInputs
+
+opt architecture json provided
+  cli -> bazel_reader: read(path)
+  bazel_reader --> cli: BazelInput
+  cli -> cli: to_bazel_architecture(&mut base_errors)
+end
+
+opt component fbs provided
+  cli -> component_reader: read(paths)
+  component_reader --> cli: ComponentDiagramInputs
+  cli -> cli: to_diagram_architecture(&mut base_errors)
+end
+
+opt class fbs provided
+  cli -> class_reader: read(paths)
+  class_reader --> cli: ClassDiagramInputs
+  cli -> cli: to_class_diagram_index(&mut base_errors)
+end
+
+cli -> context: assemble ValidationContext
+cli -> cli: resolve_validators(context)
+
+opt bazel + component available
+  cli -> bazel_validator: validate_bazel_component(..., Errors::default())
+  bazel_validator --> cli: Errors
+  cli -> errors: merge_errors(...)
+end
+
+opt component + class available
+  cli -> class_validator: validate_component_class(..., Errors::default())
+  class_validator --> cli: Errors
+  cli -> errors: merge_errors(...)
+end
+
+cli -> cli: finish_validation(output_path, &errors)
+
+alt no errors
+  cli --> cli: return Ok(())
+else errors found
+  cli --> cli: return Err(formatted report)
+end
+
+@enduml

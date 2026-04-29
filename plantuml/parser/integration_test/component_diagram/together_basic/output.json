@@ -1,0 +1,31 @@
+{
+    "together_basic.puml": {
+        "SampleSEooC": {
+            "id": "SampleSEooC",
+            "name": "SampleSEooC",
+            "alias": "SampleSEooC",
+            "parent_id": null,
+            "comp_type": "Package",
+            "stereotype": null,
+            "relations": []
+        },
+        "SampleSEooC.ComponentA": {
+            "id": "SampleSEooC.ComponentA",
+            "name": "ComponentA",
+            "alias": "ComponentA",
+            "parent_id": "SampleSEooC",
+            "comp_type": "Component",
+            "stereotype": "component",
+            "relations": []
+        },
+        "SampleSEooC.ComponentB": {
+            "id": "SampleSEooC.ComponentB",
+            "name": "ComponentB",
+            "alias": "ComponentB",
+            "parent_id": "SampleSEooC",
+            "comp_type": "Component",
+            "stereotype": "component",
+            "relations": []
+        }
+    }
+}

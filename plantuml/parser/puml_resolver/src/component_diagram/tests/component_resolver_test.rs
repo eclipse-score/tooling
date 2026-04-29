@@ -93,3 +93,43 @@ fn test_invalid_unresolved_reference() {
 fn test_invalid_duplicate_component() {
     run_component_resolver_case("invalid_duplicate_component");
 }
+
+#[test]
+fn test_port_basic() {
+    run_component_resolver_case("port_basic");
+}
+
+#[test]
+fn test_port_relation_lifting() {
+    run_component_resolver_case("port_relation_lifting");
+}
+
+#[test]
+fn test_port_two_ports() {
+    run_component_resolver_case("port_two_ports");
+}
+
+#[test]
+fn test_together_basic() {
+    run_component_resolver_case("together_basic");
+}
+
+#[test]
+fn test_arrow_lollipop() {
+    run_component_resolver_case("arrow_lollipop");
+}
+
+#[test]
+fn test_port_alias() {
+    run_component_resolver_case("port_alias");
+}
+
+#[test]
+fn test_together_with_relation() {
+    run_component_resolver_case("together_with_relation");
+}
+
+#[test]
+fn test_port_deep_nesting() {
+    run_component_resolver_case("port_deep_nesting");
+}

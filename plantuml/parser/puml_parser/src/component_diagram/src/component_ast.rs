@@ -23,6 +23,21 @@ pub struct CompPumlDocument {
 pub enum Statement {
     Component(Component),
     Relation(Relation),
+    Port(Port),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Port {
+    pub port_type: PortType,
+    pub name: String,
+    pub alias: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum PortType {
+    Port,
+    PortIn,
+    PortOut,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

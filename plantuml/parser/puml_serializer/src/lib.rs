@@ -13,3 +13,4 @@
 
 pub use class_serializer::ClassSerializer;
 pub use component_serializer::ComponentSerializer;
+pub use sequence_serializer::SequenceSerializer;

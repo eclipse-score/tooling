@@ -72,6 +72,39 @@ rust_library(
     ],
     visibility = [
         "//plantuml/parser:__subpackages__",
+        "//validation/core:__subpackages__",
+    ],
+    deps = [
+        "@crates//:flatbuffers",
+    ],
+)
+
+flatbuffer_library_public(
+    name = "sequence_fbs_codegen",
+    srcs = [
+        "//tools/metamodel:sequence_schemas",
+    ],
+    outs = [
+        "sequence_diagram_generated.rs",
+    ],
+    flatc_args = [],
+    language_flag = "--rust",
+    visibility = ["//plantuml/parser:__subpackages__"],
+)
+
+rust_library(
+    name = "sequence_fbs",
+    srcs = [
+        ":sequence_fbs_codegen",
+    ],
+    rustc_flags = [
+        "--allow=unused_imports",
+        "--allow=clippy::extra-unused-lifetimes",
+        "--allow=clippy::missing-safety-doc",
+        "--allow=clippy::needless-lifetimes",
+    ],
+    visibility = [
+        "//plantuml/parser:__subpackages__",
     ],
     deps = [
         "@crates//:flatbuffers",

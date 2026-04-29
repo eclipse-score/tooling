@@ -43,6 +43,7 @@ load(
 )
 load(
     "//bazel/rules/rules_score/private:requirements.bzl",
+    _assumed_system_requirements = "assumed_system_requirements",
     _component_requirements = "component_requirements",
     _feature_requirements = "feature_requirements",
 )
@@ -61,6 +62,7 @@ load(
 
 architectural_design = _architectural_design
 assumptions_of_use = _assumptions_of_use
+assumed_system_requirements = _assumed_system_requirements
 component_requirements = _component_requirements
 dependability_analysis = _dependability_analysis
 feature_requirements = _feature_requirements

@@ -11,7 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-pub mod logic_ast;
 pub mod logic_parser;
 
-pub use logic_ast::{Condition, Event, Interaction, Return, SequenceNode, SequenceTree};
+pub use sequence_logic::{
+    Condition, ConditionType, Event, Interaction, Return, SequenceNode, SequenceTree,
+};

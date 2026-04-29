@@ -11,16 +11,22 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use crate::models::{DiagramInput, DiagramInputs};
-use component_fbs::component as fb_component;
+//! Reader for component-level PlantUML FlatBuffer exports used by architecture
+//! validation.
+
 use std::fs;
 
-pub struct DiagramReader;
+use component_fbs::component as fb_component;
 
-impl DiagramReader {
+use crate::models::{ComponentDiagramInput, ComponentDiagramInputs};
+use crate::readers::Reader;
+
+pub struct ComponentDiagramReader;
+
+impl ComponentDiagramReader {
     /// Read all `Component` and `Package` entities from the given FlatBuffers
     /// binary files.
-    pub fn read(paths: &[String]) -> Result<DiagramInputs, String> {
+    pub fn read(paths: &[String]) -> Result<ComponentDiagramInputs, String> {
         let mut out = Vec::new();
 
         for path in paths {
@@ -35,15 +41,16 @@ impl DiagramReader {
                         match comp.comp_type() {
                             fb_component::ComponentType::Component
                             | fb_component::ComponentType::Package => {
-                                out.push(DiagramInput {
+                                out.push(ComponentDiagramInput {
                                     id: comp.id().unwrap_or_default().to_string(),
                                     alias: comp.alias().map(|s| s.to_string()),
                                     parent_id: comp.parent_id().map(|s| s.to_string()),
                                     stereotype: comp.stereotype().map(|s| s.to_string()),
                                 });
                             }
-                            // Other diagram entity types (Artifact, Database, etc.)
-                            // are not relevant for architecture verification.
+                            // Other diagram entity types (Artifact, Database,
+                            // etc.) are not relevant for architecture
+                            // verification.
                             _ => {}
                         }
                     } else {
@@ -56,6 +63,16 @@ impl DiagramReader {
             }
         }
 
-        Ok(DiagramInputs { entities: out })
+        Ok(ComponentDiagramInputs { entities: out })
+    }
+}
+
+impl Reader for ComponentDiagramReader {
+    type Input = [String];
+    type Raw = ComponentDiagramInputs;
+    type Error = String;
+
+    fn read(input: &Self::Input) -> Result<Self::Raw, Self::Error> {
+        ComponentDiagramReader::read(input)
     }
 }

@@ -19,6 +19,7 @@ rust_library(
     deps = [
         ":class_serializer",
         ":component_serializer",
+        ":sequence_serializer",
     ],
 )
 
@@ -31,5 +32,11 @@ alias(
 alias(
     name = "class_serializer",
     actual = "//plantuml/parser/puml_serializer/src/serialize:puml_serialize_class",
+    visibility = ["//plantuml/parser:__subpackages__"],
+)
+
+alias(
+    name = "sequence_serializer",
+    actual = "//plantuml/parser/puml_serializer/src/serialize:puml_serialize_sequence",
     visibility = ["//plantuml/parser:__subpackages__"],
 )

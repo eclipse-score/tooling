@@ -17,13 +17,15 @@ use std::collections::HashMap;
 use crate::component_logic::{
     ComponentResolverError, ComponentType, LogicComponent, LogicRelation,
 };
-use component_parser::{CompPumlDocument, Component, Statement};
+use component_parser::{CompPumlDocument, Component, Port, Statement};
 use resolver_traits::DiagramResolver;
 
 #[derive(Default)]
 pub struct ComponentResolver {
     pub scope: Vec<String>,                          // component id stack
     pub components: HashMap<String, LogicComponent>, // FQN -> LogicComponent
+    /// Maps port FQN → parent component FQN (for relation lifting)
+    pub port_parents: HashMap<String, String>,
 }
 
 impl ComponentResolver {
@@ -31,6 +33,7 @@ impl ComponentResolver {
         Self {
             scope: Vec::new(),
             components: HashMap::new(),
+            port_parents: HashMap::new(),
         }
     }
 
@@ -78,6 +81,35 @@ impl ComponentResolver {
             None
         }
 
+        // Helper: recursively search for a port by local name within the given scope and its children,
+        // returning the port's parent component FQN when found.
+        fn find_port_in_scope_or_children(
+            scope: &[String],
+            port_local: &str,
+            port_parents: &HashMap<String, String>,
+        ) -> Option<String> {
+            // Direct candidate: scope + port_local
+            let mut candidate = scope.to_vec();
+            candidate.push(port_local.to_string());
+            let port_fqn = candidate.join(".");
+            if let Some(parent_fqn) = port_parents.get(&port_fqn) {
+                return Some(parent_fqn.clone());
+            }
+
+            // Search one level deeper for each component that has this scope as parent
+            for (pfqn, parent_comp) in port_parents {
+                let parts: Vec<&str> = pfqn.split('.').collect();
+                if parts.last() == Some(&port_local)
+                    && parts.len() > 1
+                    && parts[..parts.len() - 2].join(".") == scope.join(".")
+                {
+                    return Some(parent_comp.clone());
+                }
+            }
+
+            None
+        }
+
         // 1) Simple name: search upward from current scope
         if parts.len() == 1 {
             for i in (0..=self.scope.len()).rev() {
@@ -91,6 +123,16 @@ impl ComponentResolver {
                 if comp.alias.as_deref() == Some(parts[0]) || comp.name.as_deref() == Some(parts[0])
                 {
                     return Ok(comp.id.clone());
+                }
+            }
+            // Fallback: check if it's a port name and lift to parent component
+            // Search upward through scope levels AND through any nested component scope
+            for i in (0..=self.scope.len()).rev() {
+                let outer_scope = &self.scope[..i];
+                if let Some(parent_fqn) =
+                    find_port_in_scope_or_children(outer_scope, raw, &self.port_parents)
+                {
+                    return Ok(parent_fqn);
                 }
             }
         }
@@ -126,6 +168,9 @@ impl DiagramResolver for ComponentResolver {
             self.visit_statement(stmt)?;
         }
 
+        // Post-pass: lift port references to parent component
+        self.lift_port_relations();
+
         Ok(self.components.clone())
     }
 
@@ -133,6 +178,10 @@ impl DiagramResolver for ComponentResolver {
         match statement {
             Statement::Component(component) => {
                 self.visit_component(component)?;
+                Ok(())
+            }
+            Statement::Port(port) => {
+                self.visit_port(port);
                 Ok(())
             }
             Statement::Relation(relation) => {
@@ -155,6 +204,35 @@ impl DiagramResolver for ComponentResolver {
 }
 
 impl ComponentResolver {
+    fn visit_port(&mut self, port: &Port) {
+        let local_id = port.alias.as_deref().unwrap_or(&port.name);
+        let fqn = self.make_fqn(local_id);
+
+        // Record port_fqn -> parent_fqn for relation lifting
+        if let Some(parent_fqn) = if self.scope.is_empty() {
+            None
+        } else {
+            Some(self.scope.join("."))
+        } {
+            self.port_parents.insert(fqn, parent_fqn);
+        }
+        // Ports at top-level (no parent) are simply ignored
+    }
+
+    /// After all statements are visited, replace any relation endpoint that is a
+    /// port FQN with the port's parent component FQN.
+    fn lift_port_relations(&mut self) {
+        let port_parents = self.port_parents.clone();
+
+        for comp in self.components.values_mut() {
+            for rel in comp.relations.iter_mut() {
+                if let Some(parent) = port_parents.get(&rel.target) {
+                    rel.target = parent.clone();
+                }
+            }
+        }
+    }
+
     fn visit_component(&mut self, component: &Component) -> Result<(), ComponentResolverError> {
         let local_id = component
             .alias

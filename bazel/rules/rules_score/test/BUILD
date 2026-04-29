@@ -14,6 +14,7 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load(
     "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
+    "assumed_system_requirements",
     "assumptions_of_use",
     "component",
     "component_requirements",
@@ -37,6 +38,19 @@ load(
     "needs_transitive_test",
     "providers_test",
     "sphinx_module_test_suite",
+)
+load(
+    ":requirements_rst_test.bzl",
+    "aous_rst_provider_test",
+    "aous_rst_sphinx_test",
+    "asr_rst_output_test",
+    "asr_rst_provider_test",
+    "asr_rst_sphinx_test",
+    "comp_req_rst_provider_test",
+    "comp_req_rst_sphinx_test",
+    "feat_req_rst_provider_test",
+    "feat_req_rst_sphinx_test",
+    "requirements_rst_test_suite",
 )
 load(
     ":score_module_providers_test.bzl",
@@ -594,6 +608,84 @@ component_sphinx_sources_test(
 unit_component_test_suite(name = "unit_component_tests")
 
 # ============================================================================
+# RST-based Requirements Tests
+# ============================================================================
+
+# Fixture: assumed_system_requirements from RST
+assumed_system_requirements(
+    name = "asr_rst",
+    srcs = ["fixtures/rst_requirements/assumed_system_requirements.rst"],
+)
+
+# Fixture: feature_requirements from RST (depends on asr_rst for derived_from resolution)
+feature_requirements(
+    name = "feat_req_rst",
+    srcs = ["fixtures/rst_requirements/feature_requirements.rst"],
+    ref_package = "AssumedSystemRequirements",
+    deps = [":asr_rst_trlc"],
+)
+
+# Fixture: component_requirements from RST
+component_requirements(
+    name = "comp_req_rst",
+    srcs = ["fixtures/rst_requirements/component_requirements.rst"],
+)
+
+# Fixture: assumptions_of_use from RST
+assumptions_of_use(
+    name = "aous_rst",
+    srcs = ["fixtures/rst_requirements/assumptions_of_use.rst"],
+    requirements = [":feat_req_rst"],
+)
+
+asr_rst_output_test(
+    name = "asr_rst_output_test",
+    target_under_test = ":asr_rst",
+)
+
+asr_rst_provider_test(
+    name = "asr_rst_provider_test",
+    target_under_test = ":asr_rst",
+)
+
+asr_rst_sphinx_test(
+    name = "asr_rst_sphinx_test",
+    target_under_test = ":asr_rst",
+)
+
+feat_req_rst_provider_test(
+    name = "feat_req_rst_provider_test",
+    target_under_test = ":feat_req_rst",
+)
+
+feat_req_rst_sphinx_test(
+    name = "feat_req_rst_sphinx_test",
+    target_under_test = ":feat_req_rst",
+)
+
+comp_req_rst_provider_test(
+    name = "comp_req_rst_provider_test",
+    target_under_test = ":comp_req_rst",
+)
+
+comp_req_rst_sphinx_test(
+    name = "comp_req_rst_sphinx_test",
+    target_under_test = ":comp_req_rst",
+)
+
+aous_rst_provider_test(
+    name = "aous_rst_provider_test",
+    target_under_test = ":aous_rst",
+)
+
+aous_rst_sphinx_test(
+    name = "aous_rst_sphinx_test",
+    target_under_test = ":aous_rst",
+)
+
+requirements_rst_test_suite(name = "requirements_rst_tests")
+
+# ============================================================================
 # Combined Test Suite
 # ============================================================================
 
@@ -623,12 +715,22 @@ py_test(
     deps = ["//bazel/rules/rules_score:safety_analysis_tools"],
 )
 
+py_test(
+    name = "test_rst_to_trlc",
+    size = "small",
+    srcs = ["rst_to_trlc_test.py"],
+    main = "rst_to_trlc_test.py",
+    deps = ["//bazel/rules/rules_score:rst_to_trlc_lib"],
+)
+
 # Combined test suite for all tests
 test_suite(
     name = "all_tests",
     tests = [
+        ":requirements_rst_tests",
         ":seooc_tests",
         ":sphinx_module_tests",
+        ":test_rst_to_trlc",
         ":test_safety_analysis_tools",
         ":unit_component_tests",
     ],
