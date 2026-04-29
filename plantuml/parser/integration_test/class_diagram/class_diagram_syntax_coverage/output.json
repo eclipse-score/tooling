@@ -1,6 +1,6 @@
 {
-  "class_diagram_unsupported_syntax.puml": {
-    "name": "class_diagram_unsupported_syntax",
+  "class_diagram_syntax_coverage.puml": {
+    "name": "class_diagram_syntax_coverage",
     "entities": [
       {
         "id": "GroupedA",
@@ -11,7 +11,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 21,
         "variables": [],
         "relationships": []
@@ -25,7 +25,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 22,
         "variables": [],
         "relationships": []
@@ -54,7 +54,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 39,
         "variables": [],
         "relationships": []
@@ -68,7 +68,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 43,
         "variables": [],
         "relationships": []
@@ -82,7 +82,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 45,
         "variables": [],
         "relationships": [
@@ -111,7 +111,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 48,
         "variables": [],
         "relationships": []
@@ -136,7 +136,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 50,
         "variables": [],
         "relationships": []
@@ -159,7 +159,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 54,
         "variables": [
         ],
@@ -182,7 +182,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 58,
         "variables": [],
         "relationships": []
@@ -201,7 +201,7 @@
             "value": null
           }
         ],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 60,
         "variables": [],
         "relationships": [
@@ -230,7 +230,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 64,
         "variables": [
           {
@@ -262,7 +262,7 @@
           "T"
         ],
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 68,
         "variables": [],
         "relationships": []
@@ -298,7 +298,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 71,
         "variables": [],
         "relationships": []
@@ -347,7 +347,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 75,
         "variables": [],
         "relationships": []
@@ -580,7 +580,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 79,
         "variables": [
           {
@@ -635,7 +635,7 @@
           "T"
         ],
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 111,
         "variables": [],
         "relationships": []
@@ -689,7 +689,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 116,
         "variables": [
           {
@@ -738,7 +738,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_unsupported_syntax",
+        "source_file": "class_diagram_syntax_coverage",
         "source_line": 128,
         "variables": [],
         "relationships": []
@@ -803,7 +803,7 @@
       }
     ],
     "source_files": [
-      "class_diagram_unsupported_syntax"
+      "class_diagram_syntax_coverage"
     ],
     "version": null
   }

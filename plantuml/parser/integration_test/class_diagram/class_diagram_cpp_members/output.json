@@ -1,0 +1,130 @@
+{
+  "class_diagram_cpp_members.puml": {
+    "name": "class_diagram_cpp_members",
+    "entities": [
+      {
+        "id": "cpp_case.ServiceImpl",
+        "name": "ServiceImpl",
+        "enclosing_namespace_id": "cpp_case",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "~ServiceImpl",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [
+              "Destructor"
+            ]
+          },
+          {
+            "name": "operator()",
+            "return_type": "ResultBlank",
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "amp::stop_token",
+                "is_variadic": false
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          },
+          {
+            "name": "Submit",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "callable",
+                "param_type": null,
+                "is_variadic": false
+              },
+              {
+                "name": "arguments",
+                "param_type": null,
+                "is_variadic": false
+              }
+            ],
+            "template_parameters": [
+              "CallableType",
+              "ArgumentTypes..."
+            ],
+            "modifiers": []
+          },
+          {
+            "name": "Submit",
+            "return_type": "auto",
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "CallableType&&",
+                "is_variadic": false
+              },
+              {
+                "name": "",
+                "param_type": "ArgumentTypes&&",
+                "is_variadic": false
+              }
+            ],
+            "template_parameters": [
+              "T"
+            ],
+            "modifiers": []
+          },
+          {
+            "name": "operator->",
+            "return_type": "Result<Artifact>*",
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": []
+          },
+          {
+            "name": "Visit",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "visitor",
+                "param_type": "amp::callback<void(Flashing&)>",
+                "is_variadic": false
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          },
+          {
+            "name": "VisitUnnamed",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "amp::callback<void(FlashingMinion&)>",
+                "is_variadic": false
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_cpp_members",
+        "source_line": 16,
+        "variables": [],
+        "relationships": []
+      }
+    ],
+    "relationships": [],
+    "source_files": [
+      "class_diagram_cpp_members"
+    ],
+    "version": null
+  }
+}

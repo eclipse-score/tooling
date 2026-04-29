@@ -1,0 +1,113 @@
+{
+  "class_diagram_modifiers.puml": {
+    "name": "class_diagram_modifiers",
+    "entities": [
+      {
+        "id": "modifier_case.BaseJob",
+        "name": "BaseJob",
+        "enclosing_namespace_id": "modifier_case",
+        "entity_type": "AbstractClass",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "func",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [
+              "Abstract"
+            ]
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_modifiers",
+        "source_line": 16,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "modifier_case.ServiceImpl",
+        "name": "ServiceImpl",
+        "enclosing_namespace_id": "modifier_case",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Run",
+            "return_type": "ResultBlank",
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [
+              "Abstract"
+            ]
+          },
+          {
+            "name": "Finalize",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [
+              "Static"
+            ]
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_modifiers",
+        "source_line": 20,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "modifier_case.AllowModeChangeService",
+        "name": "AllowModeChangeService",
+        "enclosing_namespace_id": "modifier_case",
+        "entity_type": "Class",
+        "type_aliases": [
+          {
+            "alias": "AllowOpModeChangeOutput",
+            "original_type": "std::uint8_t"
+          }
+        ],
+        "methods": [
+          {
+            "name": "Func",
+            "return_type": "std::Result<Uptr>",
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "input_1",
+                "param_type": "const AllowOpModeChangeOutput",
+                "is_variadic": false
+              },
+              {
+                "name": "json_parser",
+                "param_type": "std::shared_ptr<std::uint32_t>",
+                "is_variadic": false
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": [
+              "Static"
+            ]
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_modifiers",
+        "source_line": 25,
+        "variables": [],
+        "relationships": []
+      }
+    ],
+    "relationships": [],
+    "source_files": [
+      "class_diagram_modifiers"
+    ],
+    "version": null
+  }
+}

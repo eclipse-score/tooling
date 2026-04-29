@@ -1,0 +1,152 @@
+{
+  "class_diagram_file_level_constructs.puml": {
+    "name": "class_diagram_file_level_constructs",
+    "entities": [
+      {
+        "id": "GroupedA",
+        "name": "GroupedA",
+        "enclosing_namespace_id": null,
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_file_level_constructs",
+        "source_line": 20,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "GroupedB",
+        "name": "GroupedB",
+        "enclosing_namespace_id": null,
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_file_level_constructs",
+        "source_line": 21,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "sample.file_level.IActivateTask",
+        "name": "IActivateTask",
+        "enclosing_namespace_id": "sample.file_level",
+        "entity_type": "Interface",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Execute",
+            "return_type": "ResultBlank",
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "amp::stop_token",
+                "is_variadic": false
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_file_level_constructs",
+        "source_line": 33,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "sample.file_level.<<template>>\\nTest<T>",
+        "name": "TestTemplate",
+        "enclosing_namespace_id": "sample.file_level",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Bind",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": [
+          "T"
+        ],
+        "enum_literals": [],
+        "source_file": "class_diagram_file_level_constructs",
+        "source_line": 37,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "sample.file_level.MultiLineMethods",
+        "name": "MultiLineMethods",
+        "enclosing_namespace_id": "sample.file_level",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "CreateJobs",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "const amp::stop_token&",
+                "is_variadic": false
+              },
+              {
+                "name": "",
+                "param_type": "InfrastructureContext",
+                "is_variadic": false
+              },
+              {
+                "name": "",
+                "param_type": "Context",
+                "is_variadic": false
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          },
+          {
+            "name": "ChangeHandler",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "amp::pmr::unique_ptr<ExecutorFactory>",
+                "is_variadic": false
+              },
+              {
+                "name": "",
+                "param_type": "std::shared_ptr<mw::diag::IConversations>",
+                "is_variadic": false
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_file_level_constructs",
+        "source_line": 41,
+        "variables": [],
+        "relationships": []
+      }
+    ],
+    "relationships": [],
+    "source_files": [
+      "class_diagram_file_level_constructs"
+    ],
+    "version": null
+  }
+}

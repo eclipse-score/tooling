@@ -1,0 +1,48 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+@startuml class_diagram_file_level_constructs
+
+title File-level Syntax Coverage
+
+set namespaceSeparator ::
+
+together {
+    class GroupedA
+    class GroupedB
+}
+
+legend top left
+|= Color |= Meaning |
+| <#Lavender> | Internal |
+end legend
+
+note top of GroupedA : top-level note coverage
+
+package sample::file_level #Lavender
+{
+    interface IActivateTask [[cd_activate_task.puml]] {
+        + Execute(amp::stop_token) : ResultBlank
+    }
+
+    class "<<template>>\nTest<T>" as TestTemplate <<service>> #Khaki {
+        + Bind()
+    }
+
+    class MultiLineMethods {
+        + CreateJobs(const amp::stop_token&,\n InfrastructureContext, Context)
+        + ChangeHandler(amp::pmr::unique_ptr<ExecutorFactory>,\
+                               \n  std::shared_ptr<mw::diag::IConversations>)
+    }
+}
+
+@enduml

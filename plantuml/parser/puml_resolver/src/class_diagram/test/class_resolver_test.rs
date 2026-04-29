@@ -73,6 +73,31 @@ fn test_class_negative() {
 }
 
 #[test]
-fn test_unsupported_syntax() {
-    run_class_resolver_case("class_diagram_unsupported_syntax");
+fn test_cpp_members() {
+    run_class_resolver_case("class_diagram_cpp_members");
+}
+
+#[test]
+fn test_file_level_constructs() {
+    run_class_resolver_case("class_diagram_file_level_constructs");
+}
+
+#[test]
+fn test_modifiers() {
+    run_class_resolver_case("class_diagram_modifiers");
+}
+
+#[test]
+fn test_object_syntax() {
+    run_class_resolver_case("class_diagram_object_syntax");
+}
+
+#[test]
+fn test_relationship_variants() {
+    run_class_resolver_case("class_diagram_relationship_variants");
+}
+
+#[test]
+fn test_syntax_coverage() {
+    run_class_resolver_case("class_diagram_syntax_coverage");
 }

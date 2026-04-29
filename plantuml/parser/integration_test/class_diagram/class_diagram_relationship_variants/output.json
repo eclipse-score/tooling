@@ -1,0 +1,188 @@
+{
+  "class_diagram_relationship_variants.puml": {
+    "name": "class_diagram_relationship_variants",
+    "entities": [
+      {
+        "id": "sample.relationships.ParentContract",
+        "name": "ParentContract",
+        "enclosing_namespace_id": "sample.relationships",
+        "entity_type": "Interface",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_relationship_variants",
+        "source_line": 18,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "sample.relationships.WorkerContract",
+        "name": "WorkerContract",
+        "enclosing_namespace_id": "sample.relationships",
+        "entity_type": "Interface",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_relationship_variants",
+        "source_line": 19,
+        "variables": [],
+        "relationships": [
+          {
+            "source": "sample.relationships.WorkerContract",
+            "target": "sample.relationships.ParentContract",
+            "relation_type": "Inheritance",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          }
+        ]
+      },
+      {
+        "id": "sample.relationships.WorkerImpl",
+        "name": "WorkerImpl",
+        "enclosing_namespace_id": "sample.relationships",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_relationship_variants",
+        "source_line": 21,
+        "variables": [],
+        "relationships": [
+          {
+            "source": "sample.relationships.WorkerImpl",
+            "target": "sample.relationships.WorkerContract",
+            "relation_type": "Implementation",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          }
+        ]
+      },
+      {
+        "id": "sample.relationships.WorkerResponse",
+        "name": "WorkerResponse",
+        "enclosing_namespace_id": "sample.relationships",
+        "entity_type": "Struct",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_relationship_variants",
+        "source_line": 23,
+        "variables": [
+          {
+            "name": "WorkerStatus",
+            "data_type": null,
+            "visibility": "public",
+            "is_static": false,
+            "is_const": false
+          }
+        ],
+        "relationships": [
+          {
+            "source": "sample.relationships.WorkerResponse",
+            "target": "sample.relationships.WorkerStatus",
+            "relation_type": "Association",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          }
+        ]
+      },
+      {
+        "id": "sample.relationships.CheckFlag",
+        "name": "CheckFlag",
+        "enclosing_namespace_id": "sample.relationships",
+        "entity_type": "Interface",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Get",
+            "return_type": "WorkerStatus",
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_relationship_variants",
+        "source_line": 27,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "sample.relationships.WorkerStatus",
+        "name": "WorkerStatus",
+        "enclosing_namespace_id": "sample.relationships",
+        "entity_type": "Enum",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_relationship_variants",
+        "source_line": 31,
+        "variables": [],
+        "relationships": [
+          {
+            "source": "sample.relationships.WorkerStatus",
+            "target": "sample.relationships.WorkerResponse",
+            "relation_type": "Aggregation",
+            "source_multiplicity": null,
+            "target_multiplicity": null
+          },
+          {
+            "source": "sample.relationships.WorkerStatus",
+            "target": "sample.relationships.WorkerImpl",
+            "relation_type": "Composition",
+            "source_multiplicity": "0..*",
+            "target_multiplicity": "1"
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "source": "sample.relationships.WorkerContract",
+        "target": "sample.relationships.ParentContract",
+        "relation_type": "Inheritance",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "sample.relationships.WorkerImpl",
+        "target": "sample.relationships.WorkerContract",
+        "relation_type": "Implementation",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "sample.relationships.WorkerResponse",
+        "target": "sample.relationships.WorkerStatus",
+        "relation_type": "Association",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "sample.relationships.WorkerStatus",
+        "target": "sample.relationships.WorkerResponse",
+        "relation_type": "Aggregation",
+        "source_multiplicity": null,
+        "target_multiplicity": null
+      },
+      {
+        "source": "sample.relationships.WorkerStatus",
+        "target": "sample.relationships.WorkerImpl",
+        "relation_type": "Composition",
+        "source_multiplicity": "0..*",
+        "target_multiplicity": "1"
+      }
+    ],
+    "source_files": [
+      "class_diagram_relationship_variants"
+    ],
+    "version": null
+  }
+}

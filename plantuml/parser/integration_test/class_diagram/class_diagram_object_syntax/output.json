@@ -1,0 +1,35 @@
+{
+  "class_diagram_object_syntax.puml": {
+    "name": "class_diagram_object_syntax",
+    "entities": [
+      {
+        "id": "object_case.ServiceImpl",
+        "name": "ServiceImpl",
+        "enclosing_namespace_id": "object_case",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Build",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "class_diagram_object_syntax",
+        "source_line": 20,
+        "variables": [],
+        "relationships": []
+      }
+    ],
+    "relationships": [],
+    "source_files": [
+      "class_diagram_object_syntax"
+    ],
+    "version": null
+  }
+}

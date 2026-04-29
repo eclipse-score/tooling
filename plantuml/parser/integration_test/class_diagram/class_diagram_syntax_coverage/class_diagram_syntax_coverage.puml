@@ -10,9 +10,9 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-@startuml class_diagram_unsupported_syntax
+@startuml class_diagram_syntax_coverage
 
-title Unsupported Class Diagram Syntax Coverage
+title Class Diagram Syntax Coverage
 
 ' Priority group 1: file-level constructs
 set namespaceSeparator ::
