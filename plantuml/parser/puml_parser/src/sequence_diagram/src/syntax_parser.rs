@@ -45,24 +45,24 @@ impl PumlSequenceParser {
         None
     }
 
-    fn parse_statement(pair: pest::iterators::Pair<Rule>) -> Result<Option<Statement>, SequenceError> {
+    fn parse_statement(pair: pest::iterators::Pair<Rule>) -> Result<Vec<Statement>, SequenceError> {
         let inner = pair.into_inner().next().ok_or_else(|| {
             SequenceError::InvalidStatement("empty statement".to_string())
         })?;
         match inner.as_rule() {
-            Rule::participant_def => Ok(Some(Statement::ParticipantDef(
+            Rule::participant_def => Ok(vec![Statement::ParticipantDef(
                 Self::parse_participant_def(inner)?,
-            ))),
-            Rule::message => Ok(Some(Statement::Message(Self::parse_message(inner)?))),
-            Rule::group_cmd => Ok(Some(Statement::GroupCmd(Self::parse_group_cmd(inner)?))),
-            Rule::destroy_cmd => Ok(Some(Statement::DestroyCmd(Self::parse_destroy_cmd(inner)?))),
-            Rule::create_cmd => Ok(Some(Statement::CreateCmd(Self::parse_create_cmd(inner)?))),
-            Rule::activate_cmd => Ok(Some(Statement::ActivateCmd(Self::parse_activate_cmd(inner)?))),
+            )]),
+            Rule::message => Ok(vec![Statement::Message(Self::parse_message(inner)?)]),
+            Rule::group_cmd => Ok(vec![Statement::GroupCmd(Self::parse_group_cmd(inner)?)]),
+            Rule::destroy_cmd => Ok(vec![Statement::DestroyCmd(Self::parse_destroy_cmd(inner)?)]),
+            Rule::create_cmd => Ok(vec![Statement::CreateCmd(Self::parse_create_cmd(inner)?)]),
+            Rule::activate_cmd => Ok(vec![Statement::ActivateCmd(Self::parse_activate_cmd(inner)?)]),
             Rule::deactivate_cmd => {
-                Ok(Some(Statement::DeactivateCmd(Self::parse_deactivate_cmd(inner)?)))
+                Ok(vec![Statement::DeactivateCmd(Self::parse_deactivate_cmd(inner)?)])
             }
             // Grammar-valid directives that are intentionally not modeled as statements
-            _ => Ok(None),
+            _ => Ok(vec![]),
         }
     }
 
@@ -384,9 +384,8 @@ impl DiagramParser for PumlSequenceParser {
                             document.name = Self::parse_startuml(inner_pair);
                         }
                         Rule::sequence_statement => {
-                            if let Some(stmt) = Self::parse_statement(inner_pair)? {
-                                document.statements.push(stmt);
-                            }
+                            let mut stmts = Self::parse_statement(inner_pair)?;
+                            document.statements.append(&mut stmts);
                         }
                         Rule::empty_line => {
                             // Skip empty lines

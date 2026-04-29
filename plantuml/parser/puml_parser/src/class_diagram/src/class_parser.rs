@@ -806,17 +806,53 @@ fn parse_enum_value(pair: pest::iterators::Pair<Rule>) -> EnumValue {
     }
 }
 
-fn visit_top_level<F>(pair: pest::iterators::Pair<Rule>, visitor: &mut F)
-where
-    F: FnMut(pest::iterators::Pair<Rule>),
-{
+fn flatten_top_level(pair: pest::iterators::Pair<Rule>) -> Vec<pest::iterators::Pair<Rule>> {
     match pair.as_rule() {
         Rule::top_level | Rule::together_def => {
-            for inner in pair.into_inner() {
-                visit_top_level(inner, visitor);
-            }
+            pair.into_inner().flat_map(flatten_top_level).collect()
         }
-        _ => visitor(pair),
+        _ => vec![pair],
+    }
+}
+
+fn parse_top_level_element(
+    pair: pest::iterators::Pair<Rule>,
+    normalized_content: &NormalizedContent,
+    ignored_objects: &mut IgnoredObjectRegistry,
+    relationships: &mut Vec<Relationship>,
+) -> Result<Vec<ClassUmlTopLevel>, ClassError> {
+    match pair.as_rule() {
+        Rule::type_def => {
+            let type_def = parse_type_def(pair, normalized_content)?;
+            Ok(vec![ClassUmlTopLevel::Types(type_def)])
+        }
+        Rule::unsupported_object_def => {
+            let ignored = parse_ignored_object_name(pair);
+            ignored_objects.register(&ignored, &None);
+            Ok(vec![])
+        }
+        Rule::enum_def => {
+            Ok(vec![ClassUmlTopLevel::Enum(
+                parse_enum_def(pair, normalized_content),
+            )])
+        }
+        Rule::namespace_def => {
+            let (namespace, nested_ignored_objects) =
+                parse_namespace(pair, normalized_content)?;
+            ignored_objects.merge(nested_ignored_objects);
+            Ok(vec![ClassUmlTopLevel::Namespace(namespace)])
+        }
+        Rule::relationship => {
+            relationships.push(parse_relationship(pair));
+            Ok(vec![])
+        }
+        Rule::package_def => {
+            let (package, nested_ignored_objects) =
+                parse_package(pair, normalized_content)?;
+            ignored_objects.merge(nested_ignored_objects);
+            Ok(vec![ClassUmlTopLevel::Package(package)])
+        }
+        _ => Ok(vec![]),
     }
 }
 
@@ -833,28 +869,18 @@ fn parse_namespace(
                 parse_named(inner, &mut namespace.name);
             }
             Rule::top_level => {
-                let mut visit_result = Ok(());
-                visit_top_level(inner, &mut |top_level_inner| {
-                    if visit_result.is_err() {
-                        return;
-                    }
-
-                    visit_result = match top_level_inner.as_rule() {
+                for top_level_inner in flatten_top_level(inner) {
+                    match top_level_inner.as_rule() {
                         Rule::type_def => {
                             let mut type_def =
-                                match parse_type_def(top_level_inner, normalized_content) {
-                                    Ok(type_def) => type_def,
-                                    Err(error) => return visit_result = Err(error),
-                                };
+                                parse_type_def(top_level_inner, normalized_content)?;
                             type_def.set_namespace(namespace.name.internal.clone());
                             namespace.types.push(type_def);
-                            Ok(())
                         }
                         Rule::unsupported_object_def => {
                             let ignored = parse_ignored_object_name(top_level_inner);
                             ignored_objects
                                 .register(&ignored, &Some(namespace.name.internal.clone()));
-                            Ok(())
                         }
                         Rule::enum_def => {
                             let mut enum_def = Element::EnumDef(parse_enum_def(
@@ -863,22 +889,16 @@ fn parse_namespace(
                             ));
                             enum_def.set_namespace(namespace.name.internal.clone());
                             namespace.types.push(enum_def);
-                            Ok(())
                         }
                         Rule::namespace_def => {
                             let (nested_namespace, nested_ignored_objects) =
-                                match parse_namespace(top_level_inner, normalized_content) {
-                                    Ok(parsed) => parsed,
-                                    Err(error) => return visit_result = Err(error),
-                                };
+                                parse_namespace(top_level_inner, normalized_content)?;
                             ignored_objects.merge(nested_ignored_objects);
                             namespace.namespaces.push(nested_namespace);
-                            Ok(())
                         }
-                        _ => Ok(()),
-                    };
-                });
-                visit_result?;
+                        _ => (),
+                    }
+                }
             }
             _ => (),
         }
@@ -902,53 +922,36 @@ fn parse_package(
             }
 
             Rule::top_level => {
-                let mut visit_result = Ok(());
-                visit_top_level(inner, &mut |t| {
-                    if visit_result.is_err() {
-                        return;
-                    }
-
-                    visit_result = match t.as_rule() {
+                for t in flatten_top_level(inner) {
+                    match t.as_rule() {
                         Rule::type_def => {
-                            let mut r#type = match parse_type_def(t, normalized_content) {
-                                Ok(r#type) => r#type,
-                                Err(error) => return visit_result = Err(error),
-                            };
+                            let mut r#type = parse_type_def(t, normalized_content)?;
                             r#type.set_package(package.name.internal.clone());
                             package.types.push(r#type);
-                            Ok(())
                         }
                         Rule::unsupported_object_def => {
                             let ignored = parse_ignored_object_name(t);
                             ignored_objects
                                 .register(&ignored, &Some(package.name.internal.clone()));
-                            Ok(())
                         }
                         Rule::enum_def => {
                             let mut enum_def =
                                 Element::EnumDef(parse_enum_def(t, normalized_content));
                             enum_def.set_package(package.name.internal.clone());
                             package.types.push(enum_def);
-                            Ok(())
                         }
                         Rule::relationship => {
                             relationships.push(parse_relationship(t));
-                            Ok(())
                         }
                         Rule::package_def => {
                             let (subpackage, nested_ignored_objects) =
-                                match parse_package(t, normalized_content) {
-                                    Ok(parsed) => parsed,
-                                    Err(error) => return visit_result = Err(error),
-                                };
+                                parse_package(t, normalized_content)?;
                             ignored_objects.merge(nested_ignored_objects);
                             package.packages.push(subpackage);
-                            Ok(())
                         }
-                        _ => Ok(()),
-                    };
-                });
-                visit_result?;
+                        _ => (),
+                    }
+                }
             }
             _ => {}
         }
@@ -1059,63 +1062,15 @@ impl DiagramParser for PumlClassParser {
                 for pair in inner {
                     match pair.as_rule() {
                         Rule::top_level => {
-                            let mut visit_result = Ok(());
-                            visit_top_level(pair, &mut |inner_pair| {
-                                if visit_result.is_err() {
-                                    return;
-                                }
-
-                                visit_result = match inner_pair.as_rule() {
-                                    Rule::type_def => {
-                                        let type_def =
-                                            match parse_type_def(inner_pair, &normalized_content) {
-                                                Ok(type_def) => type_def,
-                                                Err(error) => return visit_result = Err(error),
-                                            };
-                                        uml_file.elements.push(ClassUmlTopLevel::Types(type_def));
-                                        Ok(())
-                                    }
-                                    Rule::unsupported_object_def => {
-                                        let ignored = parse_ignored_object_name(inner_pair);
-                                        ignored_objects.register(&ignored, &None);
-                                        Ok(())
-                                    }
-                                    Rule::enum_def => {
-                                        uml_file.elements.push(ClassUmlTopLevel::Enum(
-                                            parse_enum_def(inner_pair, &normalized_content),
-                                        ));
-                                        Ok(())
-                                    }
-                                    Rule::namespace_def => {
-                                        let (namespace, nested_ignored_objects) =
-                                            match parse_namespace(inner_pair, &normalized_content) {
-                                                Ok(parsed) => parsed,
-                                                Err(error) => return visit_result = Err(error),
-                                            };
-                                        ignored_objects.merge(nested_ignored_objects);
-                                        uml_file
-                                            .elements
-                                            .push(ClassUmlTopLevel::Namespace(namespace));
-                                        Ok(())
-                                    }
-                                    Rule::relationship => {
-                                        relationships.push(parse_relationship(inner_pair));
-                                        Ok(())
-                                    }
-                                    Rule::package_def => {
-                                        let (package, nested_ignored_objects) =
-                                            match parse_package(inner_pair, &normalized_content) {
-                                                Ok(parsed) => parsed,
-                                                Err(error) => return visit_result = Err(error),
-                                            };
-                                        ignored_objects.merge(nested_ignored_objects);
-                                        uml_file.elements.push(ClassUmlTopLevel::Package(package));
-                                        Ok(())
-                                    }
-                                    _ => Ok(()),
-                                };
-                            });
-                            visit_result?;
+                            for inner_pair in flatten_top_level(pair) {
+                                let mut elements = parse_top_level_element(
+                                    inner_pair,
+                                    &normalized_content,
+                                    &mut ignored_objects,
+                                    &mut relationships,
+                                )?;
+                                uml_file.elements.append(&mut elements);
+                            }
                         }
                         Rule::startuml => {
                             let text = pair.as_str();
