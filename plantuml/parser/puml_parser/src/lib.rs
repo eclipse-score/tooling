@@ -13,10 +13,10 @@
 
 // Re-export commonly used items that don't have name conflicts
 pub use class_parser::{ClassError, ClassUmlFile, PumlClassParser};
-pub use component_parser::{CompPumlDocument, PumlComponentParser};
+pub use component_parser::{CompPumlDocument, ComponentError, PumlComponentParser};
 pub use parser_core::{common_ast, common_parser, Arrow, BaseParseError, DiagramParser};
 pub use preprocessor::{
     IncludeExpandError, IncludeParseError, PreprocessError, Preprocessor, ProcedureExpandError,
     ProcedureParseError,
 };
-pub use sequence_parser::{PumlSequenceParser, SeqPumlDocument};
+pub use sequence_parser::{PumlSequenceParser, SeqPumlDocument, SequenceError};

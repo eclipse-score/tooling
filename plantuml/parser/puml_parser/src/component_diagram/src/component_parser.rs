@@ -13,6 +13,7 @@
 use log::debug;
 use std::path::PathBuf;
 use std::rc::Rc;
+use thiserror::Error;
 
 use crate::{
     Arrow, CompPumlDocument, Component, ComponentStyle, Port, PortType, Relation, Statement,
@@ -22,6 +23,14 @@ use puml_utils::LogLevel;
 
 use parser_core::common_parser::parse_arrow as common_parse_arrow;
 use parser_core::common_parser::{PlantUmlCommonParser, Rule};
+
+#[derive(Debug, Error)]
+pub enum ComponentError {
+    #[error(transparent)]
+    Base(#[from] BaseParseError<Rule>),
+    #[error("invalid component statement: {0}")]
+    InvalidStatement(String),
+}
 
 pub struct PumlComponentParser;
 
@@ -54,7 +63,7 @@ impl PumlComponentParser {
 
     fn parse_statement(
         pair: pest::iterators::Pair<Rule>,
-    ) -> Result<Vec<Statement>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Statement>, ComponentError> {
         for inner in pair.into_inner() {
             match inner.as_rule() {
                 Rule::component => {
@@ -77,7 +86,7 @@ impl PumlComponentParser {
         Ok(vec![])
     }
 
-    fn parse_port(pair: pest::iterators::Pair<Rule>) -> Result<Port, Box<dyn std::error::Error>> {
+    fn parse_port(pair: pest::iterators::Pair<Rule>) -> Result<Port, ComponentError> {
         let mut port_type = PortType::Port;
         let mut name = String::new();
         let mut alias = None;
@@ -110,7 +119,7 @@ impl PumlComponentParser {
 
     fn parse_together_block(
         pair: pest::iterators::Pair<Rule>,
-    ) -> Result<Vec<Statement>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Statement>, ComponentError> {
         let mut stmts = Vec::new();
         for inner in pair.into_inner() {
             if inner.as_rule() == Rule::component_statement {
@@ -122,7 +131,7 @@ impl PumlComponentParser {
 
     fn parse_component(
         pair: pest::iterators::Pair<Rule>,
-    ) -> Result<Component, Box<dyn std::error::Error>> {
+    ) -> Result<Component, ComponentError> {
         let mut component = Component {
             component_type: "".to_string(),
             name: None,
@@ -183,7 +192,7 @@ impl PumlComponentParser {
 
     fn parse_relation(
         pair: pest::iterators::Pair<Rule>,
-    ) -> Result<Relation, Box<dyn std::error::Error>> {
+    ) -> Result<Relation, ComponentError> {
         let mut lhs = String::new();
         let mut rhs = String::new();
         let mut arrow = Arrow::default();
@@ -223,10 +232,9 @@ impl PumlComponentParser {
             .map(|p| p.as_str().trim().to_string())
     }
 
-    fn parse_arrow(pair: pest::iterators::Pair<Rule>) -> Result<Arrow, Box<dyn std::error::Error>> {
+    fn parse_arrow(pair: pest::iterators::Pair<Rule>) -> Result<Arrow, ComponentError> {
         let arrow = common_parse_arrow(pair).map_err(|e| {
-            Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
-                as Box<dyn std::error::Error>
+            ComponentError::InvalidStatement(format!("invalid arrow: {}", e))
         })?;
 
         Ok(arrow)
@@ -261,7 +269,7 @@ impl PumlComponentParser {
 
     fn parse_default_component(
         pair: pest::iterators::Pair<Rule>,
-    ) -> Result<(String, Option<String>), Box<dyn std::error::Error>> {
+    ) -> Result<(String, Option<String>), ComponentError> {
         let mut comp_type = String::new();
         let mut name = None;
 
@@ -289,7 +297,7 @@ impl PumlComponentParser {
 
     fn parse_bracket_component(
         pair: pest::iterators::Pair<Rule>,
-    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<String>, ComponentError> {
         let mut name: Option<String> = None;
 
         for inner in pair.into_inner() {
@@ -303,7 +311,7 @@ impl PumlComponentParser {
 
     fn parse_component_style(
         _pair: pest::iterators::Pair<Rule>,
-    ) -> Result<ComponentStyle, Box<dyn std::error::Error>> {
+    ) -> Result<ComponentStyle, ComponentError> {
         // Simplified implementation
         Ok(ComponentStyle {
             color: None,
@@ -313,15 +321,14 @@ impl PumlComponentParser {
 
     fn parse_statement_block(
         pair: pest::iterators::Pair<Rule>,
-    ) -> Result<Vec<Statement>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Statement>, ComponentError> {
         let mut statements = Vec::new();
 
         for inner in pair.into_inner() {
             match inner.as_rule() {
                 Rule::component_statement => {
-                    if let Ok(mut stmts) = Self::parse_statement(inner) {
-                        statements.append(&mut stmts);
-                    }
+                    let mut stmts = Self::parse_statement(inner)?;
+                    statements.append(&mut stmts);
                 }
                 _ => {
                     // Skip empty lines and other rules like braces
@@ -335,7 +342,7 @@ impl PumlComponentParser {
 
 impl DiagramParser for PumlComponentParser {
     type Output = CompPumlDocument;
-    type Error = BaseParseError<Rule>;
+    type Error = ComponentError;
 
     fn parse_file(
         &mut self,
@@ -379,9 +386,8 @@ impl DiagramParser for PumlComponentParser {
                         }
                     }
                     Rule::component_statement => {
-                        if let Ok(mut stmts) = Self::parse_statement(inner_pair) {
-                            document.statements.append(&mut stmts);
-                        }
+                        let mut stmts = Self::parse_statement(inner_pair)?;
+                        document.statements.append(&mut stmts);
                     }
                     _ => {
                         // Skip empty lines and other rules like enduml
@@ -391,5 +397,68 @@ impl DiagramParser for PumlComponentParser {
         }
 
         Ok(document)
+    }
+}
+
+#[cfg(test)]
+mod error_handling_tests {
+    use super::*;
+    use parser_core::DiagramParser;
+    use puml_utils::LogLevel;
+    use std::path::PathBuf;
+    use std::rc::Rc;
+
+    fn path() -> Rc<PathBuf> {
+        Rc::new(PathBuf::from("test.puml"))
+    }
+
+    /// A valid diagram must still parse successfully – no regression.
+    #[test]
+    fn test_valid_document_succeeds() {
+        let input = "@startuml\ncomponent A\ncomponent B\nA --> B\n@enduml";
+        let mut parser = PumlComponentParser;
+        let result = parser.parse_file(&path(), input, LogLevel::Info);
+        assert!(result.is_ok());
+        let doc = result.unwrap();
+        assert_eq!(doc.statements.len(), 3);
+    }
+
+    /// A relation that references a component which has no name and no alias
+    /// must not silently yield a document with fewer statements than expected.
+    #[test]
+    fn test_statement_count_matches_source() {
+        // Two explicit components + one relation = 3 statements.
+        let input =
+            "@startuml\ncomponent \"Alpha\" as A\ncomponent \"Beta\" as B\nA --> B : link\n@enduml";
+        let mut parser = PumlComponentParser;
+        let doc = parser
+            .parse_file(&path(), input, LogLevel::Info)
+            .expect("valid diagram must parse");
+        assert_eq!(
+            doc.statements.len(),
+            3,
+            "all statements must be present; none may be silently dropped"
+        );
+    }
+}
+
+#[cfg(test)]
+mod dispatch_style_tests {
+    use super::*;
+    use parser_core::DiagramParser;
+    use puml_utils::LogLevel;
+    use std::path::PathBuf;
+    use std::rc::Rc;
+
+    /// Smoke test: the statement count from a two-component, one-relation diagram
+    /// must be exactly 3 for the component parser.
+    #[test]
+    fn test_component_statement_count() {
+        let input = "@startuml\ncomponent A\ncomponent B\nA --> B\n@enduml";
+        let mut parser = PumlComponentParser;
+        let doc = parser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("valid input must parse");
+        assert_eq!(doc.statements.len(), 3);
     }
 }

@@ -40,6 +40,15 @@ rust_library(
         "@crates//:log",
         "@crates//:pest",
         "@crates//:serde",
+        "@crates//:thiserror",
+    ],
+)
+
+rust_test(
+    name = "component_unit_test",
+    crate = ":puml_parser_component",
+    proc_macro_deps = [
+        "@crates//:pest_derive",
     ],
 )
 

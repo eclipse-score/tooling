@@ -20,7 +20,7 @@ pub use syntax_ast::{
     Statement,
 };
 
-pub use syntax_parser::PumlSequenceParser;
+pub use syntax_parser::{PumlSequenceParser, SequenceError};
 
 /// Parse a PlantUML sequence diagram and return the document name and statements
 /// This is a convenience function for backwards compatibility with tests

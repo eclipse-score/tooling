@@ -16,8 +16,17 @@ use parser_core::{pest_to_syntax_error, BaseParseError, DiagramParser};
 use puml_utils::LogLevel;
 use std::path::PathBuf;
 use std::rc::Rc;
+use thiserror::Error;
 
 use crate::syntax_ast::*;
+
+#[derive(Debug, Error)]
+pub enum SequenceError {
+    #[error(transparent)]
+    Base(#[from] BaseParseError<Rule>),
+    #[error("invalid sequence statement: {0}")]
+    InvalidStatement(String),
+}
 
 pub struct PumlSequenceParser;
 
@@ -36,25 +45,28 @@ impl PumlSequenceParser {
         None
     }
 
-    fn parse_statement(pair: pest::iterators::Pair<Rule>) -> Option<Statement> {
-        let inner = pair.into_inner().next()?;
+    fn parse_statement(pair: pest::iterators::Pair<Rule>) -> Result<Option<Statement>, SequenceError> {
+        let inner = pair.into_inner().next().ok_or_else(|| {
+            SequenceError::InvalidStatement("empty statement".to_string())
+        })?;
         match inner.as_rule() {
-            Rule::participant_def => Some(Statement::ParticipantDef(Self::parse_participant_def(
-                inner,
-            )?)),
-            Rule::message => Some(Statement::Message(Self::parse_message(inner)?)),
-            Rule::group_cmd => Some(Statement::GroupCmd(Self::parse_group_cmd(inner)?)),
-            Rule::destroy_cmd => Some(Statement::DestroyCmd(Self::parse_destroy_cmd(inner)?)),
-            Rule::create_cmd => Some(Statement::CreateCmd(Self::parse_create_cmd(inner)?)),
-            Rule::activate_cmd => Some(Statement::ActivateCmd(Self::parse_activate_cmd(inner)?)),
+            Rule::participant_def => Ok(Some(Statement::ParticipantDef(
+                Self::parse_participant_def(inner)?,
+            ))),
+            Rule::message => Ok(Some(Statement::Message(Self::parse_message(inner)?))),
+            Rule::group_cmd => Ok(Some(Statement::GroupCmd(Self::parse_group_cmd(inner)?))),
+            Rule::destroy_cmd => Ok(Some(Statement::DestroyCmd(Self::parse_destroy_cmd(inner)?))),
+            Rule::create_cmd => Ok(Some(Statement::CreateCmd(Self::parse_create_cmd(inner)?))),
+            Rule::activate_cmd => Ok(Some(Statement::ActivateCmd(Self::parse_activate_cmd(inner)?))),
             Rule::deactivate_cmd => {
-                Some(Statement::DeactivateCmd(Self::parse_deactivate_cmd(inner)?))
+                Ok(Some(Statement::DeactivateCmd(Self::parse_deactivate_cmd(inner)?)))
             }
-            _ => None,
+            // Grammar-valid directives that are intentionally not modeled as statements
+            _ => Ok(None),
         }
     }
 
-    fn parse_participant_def(pair: pest::iterators::Pair<Rule>) -> Option<ParticipantDef> {
+    fn parse_participant_def(pair: pest::iterators::Pair<Rule>) -> Result<ParticipantDef, SequenceError> {
         let mut participant_type: Option<ParticipantType> = None;
         let mut identifier: Option<ParticipantIdentifier> = None;
         let mut stereotype: Option<String> = None;
@@ -71,9 +83,10 @@ impl PumlSequenceParser {
                     let mut parts = inner.into_inner();
                     let quoted = parts
                         .next()
-                        .map(|p| Self::extract_quoted_string(p.as_str()))?;
-                    let alias_clause = parts.next()?; // alias_clause
-                    let id_pair = alias_clause.into_inner().next()?;
+                        .map(|p| Self::extract_quoted_string(p.as_str()))
+                        .ok_or_else(|| SequenceError::InvalidStatement("missing quoted participant".to_string()))?;
+                    let alias_clause = parts.next().ok_or_else(|| SequenceError::InvalidStatement("missing alias clause".to_string()))?;
+                    let id_pair = alias_clause.into_inner().next().ok_or_else(|| SequenceError::InvalidStatement("missing alias id".to_string()))?;
                     let id = match id_pair.as_rule() {
                         Rule::quoted_string => Self::extract_quoted_string(id_pair.as_str()),
                         _ => id_pair.as_str().trim().to_string(),
@@ -82,17 +95,17 @@ impl PumlSequenceParser {
                 }
                 Rule::participant_id_as_quoted => {
                     let mut parts = inner.into_inner();
-                    let id = parts.next()?.as_str().trim().to_string();
-                    let alias_clause = parts.next()?; // alias_clause
-                    let quoted_pair = alias_clause.into_inner().next()?;
+                    let id = parts.next().ok_or_else(|| SequenceError::InvalidStatement("missing participant id".to_string()))?.as_str().trim().to_string();
+                    let alias_clause = parts.next().ok_or_else(|| SequenceError::InvalidStatement("missing alias clause".to_string()))?;
+                    let quoted_pair = alias_clause.into_inner().next().ok_or_else(|| SequenceError::InvalidStatement("missing quoted alias".to_string()))?;
                     let quoted = Self::extract_quoted_string(quoted_pair.as_str());
                     identifier = Some(ParticipantIdentifier::IdAsQuoted { id, quoted });
                 }
                 Rule::participant_id_as_id => {
                     let mut parts = inner.into_inner();
-                    let id1 = parts.next()?.as_str().trim().to_string();
-                    let alias_clause = parts.next()?; // alias_clause
-                    let id2_pair = alias_clause.into_inner().next()?;
+                    let id1 = parts.next().ok_or_else(|| SequenceError::InvalidStatement("missing participant id1".to_string()))?.as_str().trim().to_string();
+                    let alias_clause = parts.next().ok_or_else(|| SequenceError::InvalidStatement("missing alias clause".to_string()))?;
+                    let id2_pair = alias_clause.into_inner().next().ok_or_else(|| SequenceError::InvalidStatement("missing alias id2".to_string()))?;
                     let id2 = id2_pair.as_str().trim().to_string();
                     identifier = Some(ParticipantIdentifier::IdAsId { id1, id2 });
                 }
@@ -114,9 +127,9 @@ impl PumlSequenceParser {
             }
         }
 
-        Some(ParticipantDef {
-            participant_type: participant_type?,
-            identifier: identifier?,
+        Ok(ParticipantDef {
+            participant_type: participant_type.ok_or_else(|| SequenceError::InvalidStatement("missing participant type".to_string()))?,
+            identifier: identifier.ok_or_else(|| SequenceError::InvalidStatement("missing participant identifier".to_string()))?,
             stereotype,
         })
     }
@@ -136,7 +149,7 @@ impl PumlSequenceParser {
         }
     }
 
-    fn parse_message(pair: pest::iterators::Pair<Rule>) -> Option<Message> {
+    fn parse_message(pair: pest::iterators::Pair<Rule>) -> Result<Message, SequenceError> {
         let mut left: Option<String> = None;
         let mut arrow: Option<Arrow> = None;
         let mut right: Option<String> = None;
@@ -155,13 +168,13 @@ impl PumlSequenceParser {
                     }
                 }
                 Rule::sequence_arrow => {
-                    arrow = Self::parse_arrow(inner);
+                    arrow = Some(Self::parse_arrow(inner)?);
                 }
                 Rule::activation_marker => {
                     activation_marker = Some(inner.as_str().to_string());
                 }
                 Rule::sequence_description => {
-                    description = Some(inner.into_inner().next()?.as_str().trim().to_string());
+                    description = inner.into_inner().next().map(|p| p.as_str().trim().to_string());
                 }
                 _ => {}
             }
@@ -169,24 +182,24 @@ impl PumlSequenceParser {
 
         let content = MessageContent::WithTargets {
             left: left.unwrap_or_default(),
-            arrow: arrow?,
+            arrow: arrow.ok_or_else(|| SequenceError::InvalidStatement("missing arrow in message".to_string()))?,
             right: right.unwrap_or_default(),
         };
 
-        Some(Message {
+        Ok(Message {
             content,
             activation_marker,
             description,
         })
     }
 
-    fn parse_arrow(pair: pest::iterators::Pair<Rule>) -> Option<Arrow> {
-        let arrow = common_parse_arrow(pair).ok()?;
-
-        Some(arrow)
+    fn parse_arrow(pair: pest::iterators::Pair<Rule>) -> Result<Arrow, SequenceError> {
+        common_parse_arrow(pair).map_err(|e| {
+            SequenceError::InvalidStatement(format!("invalid arrow: {}", e))
+        })
     }
 
-    fn parse_group_cmd(pair: pest::iterators::Pair<Rule>) -> Option<GroupCmd> {
+    fn parse_group_cmd(pair: pest::iterators::Pair<Rule>) -> Result<GroupCmd, SequenceError> {
         let mut group_type: Option<GroupType> = None;
         let mut text: Option<String> = None;
 
@@ -202,8 +215,8 @@ impl PumlSequenceParser {
             }
         }
 
-        Some(GroupCmd {
-            group_type: group_type?,
+        Ok(GroupCmd {
+            group_type: group_type.ok_or_else(|| SequenceError::InvalidStatement("missing group type".to_string()))?,
             text,
         })
     }
@@ -226,7 +239,7 @@ impl PumlSequenceParser {
         }
     }
 
-    fn parse_destroy_cmd(pair: pest::iterators::Pair<Rule>) -> Option<DestroyCmd> {
+    fn parse_destroy_cmd(pair: pest::iterators::Pair<Rule>) -> Result<DestroyCmd, SequenceError> {
         let mut participant: Option<String> = None;
 
         for inner in pair.into_inner() {
@@ -235,12 +248,12 @@ impl PumlSequenceParser {
             }
         }
 
-        Some(DestroyCmd {
-            participant: participant?,
+        Ok(DestroyCmd {
+            participant: participant.ok_or_else(|| SequenceError::InvalidStatement("missing participant in destroy".to_string()))?,
         })
     }
 
-    fn parse_create_cmd(pair: pest::iterators::Pair<Rule>) -> Option<CreateCmd> {
+    fn parse_create_cmd(pair: pest::iterators::Pair<Rule>) -> Result<CreateCmd, SequenceError> {
         let mut participant: Option<String> = None;
 
         for inner in pair.into_inner() {
@@ -249,12 +262,12 @@ impl PumlSequenceParser {
             }
         }
 
-        Some(CreateCmd {
-            participant: participant?,
+        Ok(CreateCmd {
+            participant: participant.ok_or_else(|| SequenceError::InvalidStatement("missing participant in create".to_string()))?,
         })
     }
 
-    fn parse_activate_cmd(pair: pest::iterators::Pair<Rule>) -> Option<ActivateCmd> {
+    fn parse_activate_cmd(pair: pest::iterators::Pair<Rule>) -> Result<ActivateCmd, SequenceError> {
         let mut participant: Option<String> = None;
 
         for inner in pair.into_inner() {
@@ -263,12 +276,12 @@ impl PumlSequenceParser {
             }
         }
 
-        Some(ActivateCmd {
-            participant: participant?,
+        Ok(ActivateCmd {
+            participant: participant.ok_or_else(|| SequenceError::InvalidStatement("missing participant in activate".to_string()))?,
         })
     }
 
-    fn parse_deactivate_cmd(pair: pest::iterators::Pair<Rule>) -> Option<DeactivateCmd> {
+    fn parse_deactivate_cmd(pair: pest::iterators::Pair<Rule>) -> Result<DeactivateCmd, SequenceError> {
         let mut participant: Option<String> = None;
 
         for inner in pair.into_inner() {
@@ -277,7 +290,7 @@ impl PumlSequenceParser {
             }
         }
 
-        Some(DeactivateCmd { participant })
+        Ok(DeactivateCmd { participant })
     }
 
     // Helper functions
@@ -340,7 +353,7 @@ impl PumlSequenceParser {
 
 impl DiagramParser for PumlSequenceParser {
     type Output = SeqPumlDocument;
-    type Error = BaseParseError<Rule>;
+    type Error = SequenceError;
 
     fn parse_file(
         &mut self,
@@ -371,7 +384,7 @@ impl DiagramParser for PumlSequenceParser {
                             document.name = Self::parse_startuml(inner_pair);
                         }
                         Rule::sequence_statement => {
-                            if let Some(stmt) = Self::parse_statement(inner_pair) {
+                            if let Some(stmt) = Self::parse_statement(inner_pair)? {
                                 document.statements.push(stmt);
                             }
                         }
@@ -385,5 +398,71 @@ impl DiagramParser for PumlSequenceParser {
         }
 
         Ok(document)
+    }
+}
+
+#[cfg(test)]
+mod error_handling_tests {
+    use super::*;
+    use parser_core::DiagramParser;
+    use puml_utils::LogLevel;
+    use std::path::PathBuf;
+    use std::rc::Rc;
+
+    fn path() -> Rc<PathBuf> {
+        Rc::new(PathBuf::from("test.puml"))
+    }
+
+    /// A diagram with a known-good participant type must not lose the definition.
+    #[test]
+    fn test_valid_participant_is_present_in_output() {
+        let input = "@startuml\nparticipant Alice\nparticipant Bob\nAlice -> Bob : hello\n@enduml";
+        let mut parser = PumlSequenceParser;
+        let doc = parser
+            .parse_file(&path(), input, LogLevel::Info)
+            .expect("valid diagram must parse");
+
+        // 2 participant defs + 1 message = 3 statements
+        assert_eq!(
+            doc.statements.len(),
+            3,
+            "all statements must be present; none may be silently dropped"
+        );
+    }
+
+    /// parse_file must return Err (or log a warning) rather than return an
+    /// empty document when the content is semantically malformed.
+    #[test]
+    fn test_empty_document_on_grammar_failure_is_not_silently_ok() {
+        // Completely invalid PlantUML – the grammar must reject it.
+        let input = "@startuml\n$$$$invalid$$$$\n@enduml";
+        let mut parser = PumlSequenceParser;
+        let result = parser.parse_file(&path(), input, LogLevel::Info);
+        // Grammar-level rejection must surface as Err, not Ok(empty doc).
+        assert!(
+            result.is_err(),
+            "invalid syntax must produce an error, not a silently-empty document"
+        );
+    }
+}
+
+#[cfg(test)]
+mod dispatch_style_tests {
+    use super::*;
+    use parser_core::DiagramParser;
+    use puml_utils::LogLevel;
+    use std::path::PathBuf;
+    use std::rc::Rc;
+
+    /// Smoke test: the statement count from a two-participant, one-message diagram
+    /// must be exactly 3 for the sequence parser.
+    #[test]
+    fn test_sequence_statement_count() {
+        let input = "@startuml\nparticipant A\nparticipant B\nA -> B : call\n@enduml";
+        let mut parser = PumlSequenceParser;
+        let doc = parser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("valid input must parse");
+        assert_eq!(doc.statements.len(), 3);
     }
 }

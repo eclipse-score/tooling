@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 rust_library(
     name = "puml_parser_sequence",
@@ -32,6 +32,15 @@ rust_library(
         "@crates//:pest",
         "@crates//:serde",
         "@crates//:serde_json",
+        "@crates//:thiserror",
+    ],
+)
+
+rust_test(
+    name = "sequence_unit_test",
+    crate = ":puml_parser_sequence",
+    proc_macro_deps = [
+        "@crates//:pest_derive",
     ],
 )
 
