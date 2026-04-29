@@ -20,6 +20,7 @@ rust_library(
         ":class_resolver",
         ":component_resolver",
         ":resolver_traits",
+        ":sequence_resolver",
     ],
 )
 
@@ -32,6 +33,12 @@ alias(
 alias(
     name = "class_resolver",
     actual = "//plantuml/parser/puml_resolver/src/class_diagram:puml_resolver_class",
+    visibility = ["//plantuml/parser:__subpackages__"],
+)
+
+alias(
+    name = "sequence_resolver",
+    actual = "//plantuml/parser/puml_resolver/src/sequence_diagram:puml_resolver_sequence",
     visibility = ["//plantuml/parser:__subpackages__"],
 )
 

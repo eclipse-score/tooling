@@ -41,7 +41,7 @@ impl DiagramProcessor for ComponentResolverRunner {
             let parsed_ast = parser
                 .parse_file(path, &puml_file, LogLevel::Error)
                 .expect("Failed to parse test file");
-            let logic_ast = resolver.visit_document(&parsed_ast)?;
+            let logic_ast = resolver.resolve(&parsed_ast)?;
 
             results.insert(Rc::clone(path), logic_ast);
         }

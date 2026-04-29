@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 
 rust_binary(
     name = "puml_cli",
@@ -24,6 +24,26 @@ rust_binary(
         "//plantuml/parser/puml_serializer",
         "//plantuml/parser/puml_utils",
         "//tools/metamodel:class_diagram",
+        "//tools/metamodel:sequence_diagram",
+        "@crates//:clap",
+        "@crates//:env_logger",
+        "@crates//:log",
+        "@crates//:serde",
+    ],
+)
+
+rust_test(
+    name = "puml_cli_test",
+    srcs = ["src/main.rs"],
+    crate_root = "src/main.rs",
+    deps = [
+        "//plantuml/parser/puml_lobster",
+        "//plantuml/parser/puml_parser",
+        "//plantuml/parser/puml_resolver",
+        "//plantuml/parser/puml_serializer",
+        "//plantuml/parser/puml_utils",
+        "//tools/metamodel:class_diagram",
+        "//tools/metamodel:sequence_diagram",
         "@crates//:clap",
         "@crates//:env_logger",
         "@crates//:log",

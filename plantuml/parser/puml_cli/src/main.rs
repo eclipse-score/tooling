@@ -25,7 +25,7 @@ use puml_lobster::{write_lobster_to_file, LobsterModel};
 use puml_parser::{
     DiagramParser, Preprocessor, PumlClassParser, PumlComponentParser, PumlSequenceParser,
 };
-use puml_resolver::{ClassResolver, ComponentResolver, DiagramResolver};
+use puml_resolver::{ClassResolver, ComponentResolver, DiagramResolver, SequenceResolver, SequenceTree};
 use puml_serializer::{ClassSerializer, ComponentSerializer};
 use puml_utils::{write_fbs_to_file, write_json_to_file, write_placeholder_file, LogLevel};
 
@@ -185,6 +185,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let lobster_model = match &logic_result {
                         ResolvedDiagram::Component(model) => LobsterModel::Component(model),
                         ResolvedDiagram::Class(model) => LobsterModel::Class(model),
+                        ResolvedDiagram::Sequence(_) => LobsterModel::Empty,
                     };
                     write_lobster_to_file(lobster_model, path, ldir)?;
                 }
@@ -217,9 +218,15 @@ fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram, source_file: &
         }
         ResolvedDiagram::Class(resolved_content) => {
             ClassSerializer::serialize(resolved_content, source_file)
-        } // ResolvedDiagram::Sequence(_) => {    // placeholder
-          //     /* sequence serializer */
-          // }
+        }
+        ResolvedDiagram::Sequence(_) => {
+            log::warn!(
+                "Sequence diagram serialization is not yet implemented; \
+                 no output will be written for '{}'",
+                source_file
+            );
+            vec![]
+        }
     }
 }
 
@@ -227,7 +234,7 @@ fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram, source_file: &
 pub enum ResolvedDiagram {
     Component(HashMap<String, puml_resolver::LogicComponent>),
     Class(class_diagram::ClassDiagram),
-    // Sequence(SequenceLogic), // placeholder
+    Sequence(SequenceTree),
 }
 
 fn resolve_parsed_diagram(
@@ -242,9 +249,9 @@ fn resolve_parsed_diagram(
             let mut resolver = ClassResolver::new();
             puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Class)
         }
-        ParsedDiagram::Sequence(_) => {
-            /* sequence resolver */
-            Err("Sequence diagrams not implemented".into())
+        ParsedDiagram::Sequence(parsed_content) => {
+            let mut resolver = SequenceResolver;
+            puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Sequence)
         }
     }
 }
@@ -259,7 +266,7 @@ where
     Resolver::Error: std::error::Error + 'static,
 {
     let logic_result = resolver
-        .visit_document(parsed_content)
+        .resolve(parsed_content)
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
     Ok(logic_result)
@@ -415,4 +422,33 @@ fn collect_puml_files(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod sequence_pipeline_tests {
+    use super::*;
+
+    /// Parsing a sequence diagram must succeed end-to-end (parse → resolve).
+    /// Before the fix this returned Err("Sequence diagrams not implemented").
+    #[test]
+    fn test_sequence_diagram_resolves_without_error() {
+        let content = "\
+@startuml
+participant A
+participant B
+A -> B : call
+B --> A : reply
+@enduml";
+
+        let path = Rc::new(PathBuf::from("test.puml"));
+        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Sequence)
+            .expect("sequence parse must succeed");
+
+        let resolved = resolve_parsed_diagram(parsed);
+        assert!(
+            resolved.is_ok(),
+            "sequence diagram must resolve without error; got: {:?}",
+            resolved.err()
+        );
+    }
 }

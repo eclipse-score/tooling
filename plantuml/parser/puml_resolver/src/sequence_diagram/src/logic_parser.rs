@@ -288,3 +288,42 @@ fn is_return_arrow_from_arrow(arrow: &Arrow) -> bool {
     // Return arrows are typically dashed: "-->"
     arrow.line.raw.contains("--")
 }
+
+#[cfg(test)]
+mod return_arrow_detection_tests {
+    use super::*;
+    use parser_core::common_ast::{Arrow, ArrowDecor, ArrowLine};
+
+    fn arrow(line: &str, right: Option<&str>) -> Arrow {
+        Arrow {
+            left: None,
+            line: ArrowLine { raw: line.to_string() },
+            middle: None,
+            right: right.map(|r| ArrowDecor { raw: r.to_string() }),
+        }
+    }
+
+    /// "->" is a solid call arrow and must NOT be classified as a return.
+    #[test]
+    fn test_solid_call_arrow_is_not_return() {
+        assert!(!is_return_arrow_from_arrow(&arrow("-", Some(">"))));
+    }
+
+    /// "-->" is a dashed return arrow and MUST be classified as a return.
+    #[test]
+    fn test_dashed_return_arrow_is_return() {
+        assert!(is_return_arrow_from_arrow(&arrow("--", Some(">"))));
+    }
+
+    /// "->>" (solid with double-headed arrow) must NOT be classified as a return.
+    #[test]
+    fn test_solid_double_headed_arrow_is_not_return() {
+        assert!(!is_return_arrow_from_arrow(&arrow("-", Some(">>"))));
+    }
+
+    /// "-->>" (dashed with double-headed arrow) MUST be classified as a return.
+    #[test]
+    fn test_dashed_double_headed_arrow_is_return() {
+        assert!(is_return_arrow_from_arrow(&arrow("--", Some(">>"))));
+    }
+}

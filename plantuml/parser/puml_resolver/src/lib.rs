@@ -14,3 +14,4 @@
 pub use class_resolver::*;
 pub use component_resolver::*;
 pub use resolver_traits::DiagramResolver;
+pub use sequence_resolver::{SequenceResolver, SequenceResolverError, SequenceTree};

@@ -17,17 +17,24 @@ rust_library(
     srcs = [
         "src/lib.rs",
         "src/logic_parser.rs",
+        "src/sequence_resolver.rs",
     ],
     crate_name = "sequence_resolver",
     crate_root = "src/lib.rs",
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
+        "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_parser:sequence_diagram",
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//tools/metamodel:sequence_diagram",
         "@crates//:serde",
         "@crates//:serde_json",
     ],
+)
+
+rust_test(
+    name = "puml_resolver_sequence_unit_test",
+    crate = ":puml_resolver_sequence",
 )
 
 # Job 2: Build hierarchical tree from syntax JSON

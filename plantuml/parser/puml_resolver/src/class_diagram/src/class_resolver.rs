@@ -694,11 +694,12 @@ impl ClassResolver {
 
 impl DiagramResolver for ClassResolver {
     type Document = ClassUmlFile;
-    type Statement = ();
     type Output = ClassDiagram;
     type Error = ClassPumlResolverError;
 
-    fn visit_document(&mut self, document: &Self::Document) -> Result<Self::Output, Self::Error> {
+    // DESIGN: single-pass resolver — all logic lives in analyze(); there is no
+    // per-statement visitor step.
+    fn resolve(&mut self, document: &Self::Document) -> Result<Self::Output, Self::Error> {
         self.name_map.clear();
 
         self.logic.name = document.name.clone();
@@ -1030,7 +1031,7 @@ mod tests {
     }
 
     // ----------------------------
-    // visit_document integration
+    // resolve integration
     // ----------------------------
     #[test]
     fn test_visit_document_simple() {
@@ -1042,7 +1043,7 @@ mod tests {
             relationships: vec![],
         };
 
-        let logic = resolver.visit_document(&file).unwrap();
+        let logic = resolver.resolve(&file).unwrap();
         assert_eq!(logic.name, "test");
         assert_eq!(logic.entities.len(), 1);
         assert_eq!(logic.entities[0].id, "User");

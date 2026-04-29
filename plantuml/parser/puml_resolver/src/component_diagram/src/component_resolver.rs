@@ -157,11 +157,10 @@ impl ComponentResolver {
 
 impl DiagramResolver for ComponentResolver {
     type Document = CompPumlDocument;
-    type Statement = Statement;
     type Output = HashMap<String, LogicComponent>;
     type Error = ComponentResolverError;
 
-    fn visit_document(&mut self, document: &CompPumlDocument) -> Result<Self::Output, Self::Error> {
+    fn resolve(&mut self, document: &CompPumlDocument) -> Result<Self::Output, Self::Error> {
         self.scope.clear();
 
         for stmt in &document.statements {
@@ -173,8 +172,10 @@ impl DiagramResolver for ComponentResolver {
 
         Ok(self.components.clone())
     }
+}
 
-    fn visit_statement(&mut self, statement: &Statement) -> Result<(), Self::Error> {
+impl ComponentResolver {
+    fn visit_statement(&mut self, statement: &Statement) -> Result<(), ComponentResolverError> {
         match statement {
             Statement::Component(component) => {
                 self.visit_component(component)?;
