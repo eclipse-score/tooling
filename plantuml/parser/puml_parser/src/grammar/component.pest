@@ -13,58 +13,63 @@
 
 // PlantUML Component Diagram Grammar for Pest Parser
 
-component_start = { empty_line* ~ startuml ~ (component_statement | empty_line)* ~ enduml }
+diagram_start = { empty_line* ~ startuml ~ (diagram_statement | empty_line)* ~ enduml }
 
-component_statement = { ((relation | together_block | port_declaration | component | footer_line) ~ EOL) }
+diagram_statement = { ((relation | together_block | port_declaration | element | footer_line) ~ EOL) }
 
 port_declaration = { port_keyword ~ port_name ~ alias_clause? }
 port_keyword = @{ "portin" | "portout" | "port" }
 port_name = { CNAME }
 
-together_block = { "together" ~ "{" ~ EOL ~ (component_statement | empty_line)* ~ "}" }
+together_block = { "together" ~ "{" ~ EOL ~ (diagram_statement | empty_line)* ~ "}" }
 
-component = {
-    (nested_component ~ alias_clause? ~ stereotype? ~ component_style? ~  (long_description | statement_block)? ) |
-    ((interface_old | component_old) ~ alias_clause? ~ component_style?)
+element = {
+    (nested_element ~ alias_clause? ~ stereotype? ~ element_style? ~  (long_description | statement_block)? ) |
+    ((legacy_actor | legacy_interface | legacy_component | legacy_usecase) ~ alias_clause? ~ element_style?)
 }
 long_description = {"[" ~ EOL? ~ (ASCII_ALPHANUMERIC ~ EOL?)* ~ "]"}
 
-component_old = { "[" ~ component_old_name ~ "]" }
-interface_old = { "()" ~ interface_old_name }
+legacy_actor = { ":" ~ legacy_actor_name ~ ":" }
+legacy_component = { "[" ~ legacy_component_name ~ "]" }
+legacy_interface = { "()" ~ legacy_interface_name }
+legacy_usecase = { "(" ~ legacy_usecase_name ~ ")" }
 
-component_old_name = { BRACKET_NAME | CNAME }
-interface_old_name = { CNAME }
+legacy_actor_name = { BRACKET_NAME | CNAME }
+legacy_component_name = { BRACKET_NAME | CNAME }
+legacy_interface_name = { CNAME }
+legacy_usecase_name = { BRACKET_NAME | CNAME }
 
-default_component = { component_type ~ default_component_name? }
-bracket_component = { "component" ~ component_old }
+default_element = { element_kind ~ default_element_name? }
+bracket_element = { "component" ~ legacy_component }
 
-default_component_name = { CNAME }
+default_element_name = { CNAME }
 
-nested_component = { bracket_component | default_component }
+nested_element = { bracket_element | default_element }
 
-statement_block = { "{" ~ EOL ~ (component_statement | empty_line)* ~ "}" }
+statement_block = { "{" ~ EOL ~ (diagram_statement | empty_line)* ~ "}" }
 
-relation = { relation_left ~ connection_arrow ~ relation_right  ~ component_style? ~ component_description?}
-relation_left = { QUALIFIED_NAME | component_old | interface_old }
-relation_right = { QUALIFIED_NAME | component_old | interface_old }
+relation = { relation_left ~ connection_arrow ~ relation_right  ~ element_style? ~ relation_description?}
+relation_left = { QUALIFIED_NAME | legacy_actor | legacy_component | legacy_interface | legacy_usecase }
+relation_right = { QUALIFIED_NAME | legacy_actor | legacy_component | legacy_interface | legacy_usecase }
 
 // Terminals
 QUALIFIED_NAME = @{ NAME ~ ("." ~ NAME)* }
 
 BRACKET_NAME = @{ (ASCII_ALPHANUMERIC | "_" | "-" | " " | "\\")+ }
 
-component_type = { COMPONENT_TYPE }
-COMPONENT_TYPE = {
-    "artifact" | "card" | "cloud" | "component" | "database" |
-    "file" | "folder" | "frame" | "hexagon" | "interface" |
-    "node" | "package" | "queue" | "rectangle" | "stack" | "storage"
+element_kind = { ELEMENT_KIND }
+ELEMENT_KIND = {
+    "actor" | "agent" | "artifact" | "boundary" | "card" | "cloud" |
+    "component" | "control" | "database" | "entity" | "file" | "folder" |
+    "frame" | "hexagon" | "interface" | "node" | "package" | "queue" |
+    "rectangle" | "stack" | "storage" | "usecase"
 }
 
-footer_line = { footer_align? ~ ^"footer" ~ ":"? ~ component_text_content? ~ COMMENT* }
+footer_line = { footer_align? ~ ^"footer" ~ ":"? ~ diagram_text_content? ~ COMMENT* }
 footer_block_start = { footer_align? ~ ^"footer" }
 footer_block_end = { ^"end" ~ WHITESPACE? ~ ^"footer" }
 footer_align = { ^"left" | ^"right" | ^"center" }
-component_text_content = { (!EOL ~ !comment_start ~ ANY)+ }
+diagram_text_content = { (!EOL ~ !comment_start ~ ANY)+ }
 comment_start = _{ "//" | "'" | "/'" }
 
 // This is **bold**
@@ -74,7 +79,7 @@ comment_start = _{ "//" | "'" | "/'" }
 //    This is __underlined__
 //   This is ~~wave-underlined~~
 
-component_style = {
+element_style = {
     ("#" ~ component_color ~ (";" ~ component_attr)* ~ ";") |
     ("#" ~ component_color ~ (";" ~ component_attr)*) |
     ("#" ~ component_attr ~ (";" ~ component_attr)* ~ ";") |
@@ -92,5 +97,5 @@ COMPONENT_LINE_ATTR = @{ "dashed" | "bold" | "dotted" }
 COMPONENT_TEXT_COLOR = @{ "text" }
 COMPONENT_LINE_COLOR = @{ "line" }
 
-component_description = { ":" ~ description_text }
+relation_description = { ":" ~ description_text }
 description_text = @{ (!("\n" | "\r") ~ ANY)* }

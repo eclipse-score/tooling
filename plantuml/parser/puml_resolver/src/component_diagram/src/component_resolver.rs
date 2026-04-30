@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use crate::component_logic::{
     ComponentResolverError, ComponentType, LogicComponent, LogicRelation,
 };
-use component_parser::{CompPumlDocument, Component, Port, Statement};
+use component_parser::{CompPumlDocument, Element, Port, Statement};
 use resolver_traits::DiagramResolver;
 
 #[derive(Default)]
@@ -183,8 +183,8 @@ impl DiagramResolver for ComponentResolver {
 impl ComponentResolver {
     fn visit_statement(&mut self, statement: &Statement) -> Result<(), ComponentResolverError> {
         match statement {
-            Statement::Component(component) => {
-                self.visit_component(component)?;
+            Statement::Element(element) => {
+                self.visit_element(element)?;
                 Ok(())
             }
             Statement::Port(port) => {
@@ -238,12 +238,12 @@ impl ComponentResolver {
         }
     }
 
-    fn visit_component(&mut self, component: &Component) -> Result<(), ComponentResolverError> {
-        let local_id = component
+    fn visit_element(&mut self, element: &Element) -> Result<(), ComponentResolverError> {
+        let local_id = element
             .alias
             .as_deref()
-            .or(component.name.as_deref())
-            .expect("Component must have name or alias (guaranteed by grammar)");
+            .or(element.name.as_deref())
+            .expect("Element must have name or alias (guaranteed by grammar)");
 
         let fqn = self.make_fqn(local_id);
         if self.components.contains_key(&fqn) {
@@ -258,11 +258,11 @@ impl ComponentResolver {
 
         let logic = LogicComponent {
             id: fqn.clone(),
-            name: component.name.clone(),
-            alias: component.alias.clone(),
+            name: element.name.clone(),
+            alias: element.alias.clone(),
             parent_id,
-            comp_type: parse_component_type(&component.component_type)?,
-            stereotype: component.stereotype.clone(),
+            comp_type: parse_kind(&element.kind)?,
+            stereotype: element.stereotype.clone(),
             relations: Vec::new(),
         };
 
@@ -270,7 +270,7 @@ impl ComponentResolver {
 
         self.scope.push(local_id.to_string());
 
-        for stmt in &component.statements {
+        for stmt in &element.statements {
             self.visit_statement(stmt)?;
         }
 
@@ -299,7 +299,7 @@ const COMPONENT_TYPE_TABLE: &[(&str, ComponentType)] = &[
     ("storage", ComponentType::Storage),
 ];
 
-pub fn parse_component_type(raw: &str) -> Result<ComponentType, ComponentResolverError> {
+pub fn parse_kind(raw: &str) -> Result<ComponentType, ComponentResolverError> {
     COMPONENT_TYPE_TABLE
         .iter()
         .find(|(k, _)| k.eq_ignore_ascii_case(raw))

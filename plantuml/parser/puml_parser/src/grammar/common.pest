@@ -271,7 +271,7 @@ arrow_middle = {
     | arrow_mid_decor
 }
 
-arrow_mid_decor = @{ "0" | "(0" | "0)" | "(0)" | "()" | "(" | ")" }
+arrow_mid_decor = @{ "(0)" | "(0" | "0)" | "()" | "(" | ")" | "0" }
 
 // ---------- Direction ----------
 arrow_direction = @{

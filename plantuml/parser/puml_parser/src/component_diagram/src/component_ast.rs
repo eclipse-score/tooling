@@ -21,7 +21,7 @@ pub struct CompPumlDocument {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Statement {
-    Component(Component),
+    Element(Element),
     Relation(Relation),
     Port(Port),
 }
@@ -41,8 +41,8 @@ pub enum PortType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Component {
-    pub component_type: String,
+pub struct Element {
+    pub kind: String,
     pub name: Option<String>,
     pub alias: Option<String>,
     pub stereotype: Option<String>,

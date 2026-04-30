@@ -81,13 +81,13 @@ ComponentA --> ComponentB : uses
 === Parse Tree ===
 Rule::startuml -> "@startuml"
     Rule::statement -> "package \"Sample SEooC\" ..."
-        Rule::component
-            Rule::nested_component -> "package \"Sample SEooC\""
-                Rule::default_component
-                    Rule::component_type   -> "package"
-                    Rule::default_component_name -> "\"Sample SEooC\""
+        Rule::element
+            Rule::nested_element -> "package \"Sample SEooC\""
+                Rule::default_element
+                    Rule::element_kind   -> "package"
+                    Rule::default_element_name -> "\"Sample SEooC\""
             Rule::alias          -> "as SampleSEooC"
-            Rule::component_style -> "#LightBlue"
+            Rule::element_style -> "#LightBlue"
             Rule::statement_block -> "{ ... }"
     Rule::relation -> "ComponentA --> ComponentB : uses"
         Rule::relation_object -> "ComponentA"

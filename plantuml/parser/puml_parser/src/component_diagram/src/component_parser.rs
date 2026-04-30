@@ -16,7 +16,7 @@ use std::rc::Rc;
 use thiserror::Error;
 
 use crate::{
-    Arrow, CompPumlDocument, Component, ComponentStyle, Port, PortType, Relation, Statement,
+    Arrow, CompPumlDocument, ComponentStyle, Element, Port, PortType, Relation, Statement,
 };
 use parser_core::{
     format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser, ErrorLocation,
@@ -59,8 +59,8 @@ impl PumlComponentParser {
     ) -> Result<Vec<Statement>, ComponentError> {
         for inner in pair.into_inner() {
             match inner.as_rule() {
-                Rule::component => {
-                    return Ok(vec![Statement::Component(Self::parse_component(inner)?)]);
+                Rule::element => {
+                    return Ok(vec![Statement::Element(Self::parse_element(inner)?)]);
                 }
                 Rule::relation => {
                     return Ok(vec![Statement::Relation(Self::parse_relation(inner)?)]);
@@ -115,16 +115,16 @@ impl PumlComponentParser {
     ) -> Result<Vec<Statement>, ComponentError> {
         let mut stmts = Vec::new();
         for inner in pair.into_inner() {
-            if inner.as_rule() == Rule::component_statement {
+            if inner.as_rule() == Rule::diagram_statement {
                 stmts.append(&mut Self::parse_statement(inner)?);
             }
         }
         Ok(stmts)
     }
 
-    fn parse_component(pair: pest::iterators::Pair<Rule>) -> Result<Component, ComponentError> {
-        let mut component = Component {
-            component_type: "".to_string(),
+    fn parse_element(pair: pest::iterators::Pair<Rule>) -> Result<Element, ComponentError> {
+        let mut element = Element {
+            kind: "".to_string(),
             name: None,
             alias: None,
             stereotype: None,
@@ -134,51 +134,58 @@ impl PumlComponentParser {
 
         for inner in pair.into_inner() {
             match inner.as_rule() {
-                Rule::nested_component => {
-                    // Parse the nested component (which contains default_component or bracket_component)
+                Rule::nested_element => {
+                    // Parse the nested element head (which contains default_element or bracket_element)
                     for nested_inner in inner.into_inner() {
                         match nested_inner.as_rule() {
-                            Rule::default_component => {
-                                let (ctype, name_opt) =
-                                    Self::parse_default_component(nested_inner)?;
-                                component.component_type = ctype;
-                                component.name = name_opt;
+                            Rule::default_element => {
+                                let (kind, name_opt) = Self::parse_default_element(nested_inner)?;
+                                element.kind = kind;
+                                element.name = name_opt;
                             }
-                            // For bracket_component, it's always a `component` type
-                            Rule::bracket_component => {
-                                let name_opt = Self::parse_bracket_component(nested_inner)?;
-                                component.component_type = "component".to_string();
-                                component.name = name_opt;
+                            // For bracket_element, it's always a `component` kind
+                            Rule::bracket_element => {
+                                let name_opt = Self::parse_bracket_element(nested_inner)?;
+                                element.kind = "component".to_string();
+                                element.name = name_opt;
                             }
                             _ => {}
                         }
                     }
                 }
-                Rule::component_old => {
-                    component.name = Some(Self::extract_component_name(inner));
-                    component.component_type = "component".to_string();
+                Rule::legacy_component => {
+                    element.name = Some(Self::extract_component_name(inner));
+                    element.kind = "component".to_string();
                 }
-                Rule::interface_old => {
-                    component.name = Some(Self::extract_interface_name(inner));
-                    component.component_type = "interface".to_string();
+                Rule::legacy_actor => {
+                    element.name = Some(Self::extract_actor_name(inner));
+                    element.kind = "actor".to_string();
+                }
+                Rule::legacy_interface => {
+                    element.name = Some(Self::extract_interface_name(inner));
+                    element.kind = "interface".to_string();
+                }
+                Rule::legacy_usecase => {
+                    element.name = Some(Self::extract_usecase_name(inner));
+                    element.kind = "usecase".to_string();
                 }
                 Rule::alias_clause => {
-                    component.alias = Self::extract_alias(inner);
+                    element.alias = Self::extract_alias(inner);
                 }
                 Rule::stereotype => {
-                    component.stereotype = Self::extract_stereotype(inner);
+                    element.stereotype = Self::extract_stereotype(inner);
                 }
-                Rule::component_style => {
-                    component.style = Some(Self::parse_component_style(inner)?);
+                Rule::element_style => {
+                    element.style = Some(Self::parse_component_style(inner)?);
                 }
                 Rule::statement_block => {
-                    component.statements = Self::parse_statement_block(inner)?;
+                    element.statements = Self::parse_statement_block(inner)?;
                 }
                 _ => {}
             }
         }
 
-        Ok(component)
+        Ok(element)
     }
 
     fn parse_relation(pair: pest::iterators::Pair<Rule>) -> Result<Relation, ComponentError> {
@@ -199,7 +206,7 @@ impl PumlComponentParser {
                 Rule::connection_arrow => {
                     arrow = Self::parse_arrow(inner)?;
                 }
-                Rule::component_description => {
+                Rule::relation_description => {
                     description = Self::parse_description(inner);
                 }
                 _ => {}
@@ -231,14 +238,28 @@ impl PumlComponentParser {
     // Helper methods
     fn extract_component_name(pair: pest::iterators::Pair<Rule>) -> String {
         pair.into_inner()
-            .find(|inner| inner.as_rule() == Rule::component_old_name)
+            .find(|inner| inner.as_rule() == Rule::legacy_component_name)
+            .map(|inner| inner.as_str().to_string())
+            .unwrap_or_default()
+    }
+
+    fn extract_actor_name(pair: pest::iterators::Pair<Rule>) -> String {
+        pair.into_inner()
+            .find(|inner| inner.as_rule() == Rule::legacy_actor_name)
             .map(|inner| inner.as_str().to_string())
             .unwrap_or_default()
     }
 
     fn extract_interface_name(pair: pest::iterators::Pair<Rule>) -> String {
         pair.into_inner()
-            .find(|inner| inner.as_rule() == Rule::interface_old_name)
+            .find(|inner| inner.as_rule() == Rule::legacy_interface_name)
+            .map(|inner| inner.as_str().to_string())
+            .unwrap_or_default()
+    }
+
+    fn extract_usecase_name(pair: pest::iterators::Pair<Rule>) -> String {
+        pair.into_inner()
+            .find(|inner| inner.as_rule() == Rule::legacy_usecase_name)
             .map(|inner| inner.as_str().to_string())
             .unwrap_or_default()
     }
@@ -255,18 +276,18 @@ impl PumlComponentParser {
             .map(|inner| inner.as_str().to_string())
     }
 
-    fn parse_default_component(
+    fn parse_default_element(
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<(String, Option<String>), ComponentError> {
-        let mut comp_type = String::new();
+        let mut kind = String::new();
         let mut name = None;
 
         for inner in pair.into_inner() {
             match inner.as_rule() {
-                Rule::component_type => {
-                    comp_type = inner.as_str().to_string();
+                Rule::element_kind => {
+                    kind = inner.as_str().to_string();
                 }
-                Rule::default_component_name => {
+                Rule::default_element_name => {
                     let raw_name = inner.as_str().to_string();
                     // Remove surrounding quotes if present
                     let clean_name = if raw_name.starts_with('"') && raw_name.ends_with('"') {
@@ -280,16 +301,16 @@ impl PumlComponentParser {
             }
         }
 
-        Ok((comp_type, name))
+        Ok((kind, name))
     }
 
-    fn parse_bracket_component(
+    fn parse_bracket_element(
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<Option<String>, ComponentError> {
         let mut name: Option<String> = None;
 
         for inner in pair.into_inner() {
-            if inner.as_rule() == Rule::component_old {
+            if inner.as_rule() == Rule::legacy_component {
                 name = Some(Self::extract_component_name(inner));
             }
         }
@@ -314,7 +335,7 @@ impl PumlComponentParser {
 
         for inner in pair.into_inner() {
             match inner.as_rule() {
-                Rule::component_statement => {
+                Rule::diagram_statement => {
                     let mut stmts = Self::parse_statement(inner)?;
                     statements.append(&mut stmts);
                 }
@@ -340,7 +361,7 @@ impl DiagramParser for PumlComponentParser {
     ) -> Result<Self::Output, Self::Error> {
         use pest::Parser;
 
-        let pairs = PlantUmlCommonParser::parse(Rule::component_start, content)
+        let pairs = PlantUmlCommonParser::parse(Rule::diagram_start, content)
             .map_err(|e| pest_to_syntax_error(e, path.as_ref().clone(), content))?;
 
         // Debug-only, excluded to keep coverage focused on parser logic.
@@ -373,7 +394,7 @@ impl DiagramParser for PumlComponentParser {
                             document.name = Some(start_inner.as_str().to_string());
                         }
                     }
-                    Rule::component_statement => {
+                    Rule::diagram_statement => {
                         let mut stmts = Self::parse_statement(inner_pair)?;
                         document.statements.append(&mut stmts);
                     }

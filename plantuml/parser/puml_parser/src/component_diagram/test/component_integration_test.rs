@@ -267,9 +267,9 @@ fn test_component_golden() {
         r#"CompPumlDocument {
     name: None,
     statements: [
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "First component",
                 ),
@@ -279,9 +279,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "Another component",
                 ),
@@ -293,9 +293,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "Comp3",
                 ),
@@ -305,9 +305,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "Last\\ncomponent",
                 ),
@@ -328,9 +328,9 @@ fn test_component_golden() {
         r#"CompPumlDocument {
     name: None,
     statements: [
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "First component",
                 ),
@@ -340,9 +340,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "Another component",
                 ),
@@ -354,9 +354,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "Comp3",
                 ),
@@ -366,9 +366,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "Last\\ncomponent",
                 ),
@@ -389,9 +389,9 @@ fn test_component_golden() {
         r#"CompPumlDocument {
     name: None,
     statements: [
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "C1",
                 ),
@@ -401,9 +401,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "C2",
                 ),
@@ -413,9 +413,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "C3",
                 ),
@@ -450,9 +450,9 @@ fn test_component_golden() {
         r#"CompPumlDocument {
     name: None,
     statements: [
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "Web Server",
                 ),
@@ -476,9 +476,9 @@ fn test_component_golden() {
         r#"CompPumlDocument {
     name: None,
     statements: [
-        Component(
-            Component {
-                component_type: "interface",
+        Element(
+            Element {
+                kind: "interface",
                 name: Some(
                     "\"First Interface\"",
                 ),
@@ -488,9 +488,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "interface",
+        Element(
+            Element {
+                kind: "interface",
                 name: Some(
                     "\"Another interface\"",
                 ),
@@ -502,9 +502,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "interface",
+        Element(
+            Element {
+                kind: "interface",
                 name: Some(
                     "Interf3",
                 ),
@@ -514,9 +514,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "interface",
+        Element(
+            Element {
+                kind: "interface",
                 name: Some(
                     "Last\\ninterface",
                 ),
@@ -528,9 +528,9 @@ fn test_component_golden() {
                 statements: [],
             },
         ),
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "component",
                 ),
@@ -549,9 +549,9 @@ fn test_component_golden() {
         r#"CompPumlDocument {
     name: None,
     statements: [
-        Component(
-            Component {
-                component_type: "component",
+        Element(
+            Element {
+                kind: "component",
                 name: Some(
                     "comp1",
                 ),
@@ -570,9 +570,9 @@ fn test_component_golden() {
         r#"CompPumlDocument {
     name: None,
     statements: [
-        Component(
-            Component {
-                component_type: "interface",
+        Element(
+            Element {
+                kind: "interface",
                 name: Some(
                     "Data Access",
                 ),
