@@ -1,0 +1,193 @@
+{
+  "declare_elements.puml": {
+    "role_a": {
+      "id": "role_a",
+      "name": "role_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Actor",
+      "stereotype": null,
+      "relations": []
+    },
+    "role_b": {
+      "id": "role_b",
+      "name": "role_b",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Agent",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a": {
+      "id": "item_a",
+      "name": "item_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": []
+    },
+    "zone_a": {
+      "id": "zone_a",
+      "name": "zone_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Boundary",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_b": {
+      "id": "item_b",
+      "name": "item_b",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Card",
+      "stereotype": null,
+      "relations": []
+    },
+    "zone_b": {
+      "id": "zone_b",
+      "name": "zone_b",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Cloud",
+      "stereotype": null,
+      "relations": []
+    },
+    "part_a": {
+      "id": "part_a",
+      "name": "part_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": []
+    },
+    "part_b": {
+      "id": "part_b",
+      "name": "part_b",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Control",
+      "stereotype": null,
+      "relations": []
+    },
+    "store_a": {
+      "id": "store_a",
+      "name": "store_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Database",
+      "stereotype": null,
+      "relations": []
+    },
+    "record_a": {
+      "id": "record_a",
+      "name": "record_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Entity",
+      "stereotype": null,
+      "relations": []
+    },
+    "doc_a": {
+      "id": "doc_a",
+      "name": "doc_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "File",
+      "stereotype": null,
+      "relations": []
+    },
+    "dir_a": {
+      "id": "dir_a",
+      "name": "dir_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Folder",
+      "stereotype": null,
+      "relations": []
+    },
+    "zone_c": {
+      "id": "zone_c",
+      "name": "zone_c",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Frame",
+      "stereotype": null,
+      "relations": []
+    },
+    "port_a": {
+      "id": "port_a",
+      "name": "port_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": []
+    },
+    "host_a": {
+      "id": "host_a",
+      "name": "host_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Node",
+      "stereotype": null,
+      "relations": []
+    },
+    "pack_a": {
+      "id": "pack_a",
+      "name": "pack_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": []
+    },
+    "lane_a": {
+      "id": "lane_a",
+      "name": "lane_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Queue",
+      "stereotype": null,
+      "relations": []
+    },
+    "lane_b": {
+      "id": "lane_b",
+      "name": "lane_b",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Stack",
+      "stereotype": null,
+      "relations": []
+    },
+    "box_a": {
+      "id": "box_a",
+      "name": "box_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Rectangle",
+      "stereotype": null,
+      "relations": []
+    },
+    "store_b": {
+      "id": "store_b",
+      "name": "store_b",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Storage",
+      "stereotype": null,
+      "relations": []
+    },
+    "case_a": {
+      "id": "case_a",
+      "name": "case_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Usecase",
+      "stereotype": null,
+      "relations": []
+    }
+  }
+}

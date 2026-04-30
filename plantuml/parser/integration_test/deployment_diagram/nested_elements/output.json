@@ -1,0 +1,139 @@
+{
+  "nested_elements.puml": {
+    "item_a": {
+      "id": "item_a",
+      "name": "item_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b": {
+      "id": "item_a.item_b",
+      "name": "item_b",
+      "alias": null,
+      "parent_id": "item_a",
+      "comp_type": "Card",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a": {
+      "id": "item_a.item_b.zone_a",
+      "name": "zone_a",
+      "alias": null,
+      "parent_id": "item_a.item_b",
+      "comp_type": "Cloud",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a": {
+      "id": "item_a.item_b.zone_a.part_a",
+      "name": "part_a",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a",
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a.store_a": {
+      "id": "item_a.item_b.zone_a.part_a.store_a",
+      "name": "store_a",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a.part_a",
+      "comp_type": "Database",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a.store_a.doc_a": {
+      "id": "item_a.item_b.zone_a.part_a.store_a.doc_a",
+      "name": "doc_a",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a.part_a.store_a",
+      "comp_type": "File",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a": {
+      "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a",
+      "name": "dir_a",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a",
+      "comp_type": "Folder",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b": {
+      "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b",
+      "name": "zone_b",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a",
+      "comp_type": "Frame",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a": {
+      "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a",
+      "name": "cell_a",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b",
+      "comp_type": "Hexagon",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a": {
+      "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a",
+      "name": "host_a",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a",
+      "comp_type": "Node",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a": {
+      "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a",
+      "name": "pack_a",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a",
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a": {
+      "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a",
+      "name": "lane_a",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a",
+      "comp_type": "Queue",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a": {
+      "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a",
+      "name": "box_a",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a",
+      "comp_type": "Rectangle",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a.lane_b": {
+      "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a.lane_b",
+      "name": "lane_b",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a",
+      "comp_type": "Stack",
+      "stereotype": null,
+      "relations": []
+    },
+    "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a.lane_b.store_b": {
+      "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a.lane_b.store_b",
+      "name": "store_b",
+      "alias": null,
+      "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a.lane_b",
+      "comp_type": "Storage",
+      "stereotype": null,
+      "relations": []
+    }
+  }
+}

@@ -109,10 +109,15 @@ impl ComponentSerializer {
     fn convert_type(t: ComponentType) -> fb::ComponentType {
         match t {
             ComponentType::Artifact => fb::ComponentType::Artifact,
+            ComponentType::Actor => fb::ComponentType::Actor,
+            ComponentType::Agent => fb::ComponentType::Agent,
+            ComponentType::Boundary => fb::ComponentType::Boundary,
             ComponentType::Card => fb::ComponentType::Card,
             ComponentType::Cloud => fb::ComponentType::Cloud,
             ComponentType::Component => fb::ComponentType::Component,
+            ComponentType::Control => fb::ComponentType::Control,
             ComponentType::Database => fb::ComponentType::Database,
+            ComponentType::Entity => fb::ComponentType::Entity,
             ComponentType::File => fb::ComponentType::File,
             ComponentType::Folder => fb::ComponentType::Folder,
             ComponentType::Frame => fb::ComponentType::Frame,
@@ -124,6 +129,7 @@ impl ComponentSerializer {
             ComponentType::Rectangle => fb::ComponentType::Rectangle,
             ComponentType::Stack => fb::ComponentType::Stack,
             ComponentType::Storage => fb::ComponentType::Storage,
+            ComponentType::Usecase => fb::ComponentType::Usecase,
         }
     }
 }

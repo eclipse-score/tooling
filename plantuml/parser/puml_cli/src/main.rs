@@ -100,6 +100,7 @@ struct Args {
 enum DiagramType {
     None,
     Component,
+    Deployment,
     Class,
     Sequence,
 }
@@ -293,7 +294,7 @@ fn parse_puml_file(
     diagram_type: DiagramType,
 ) -> Result<ParsedDiagram, Box<dyn std::error::Error>> {
     match diagram_type {
-        DiagramType::Component => {
+        DiagramType::Component | DiagramType::Deployment => {
             parse_with_parser(&mut PumlComponentParser, path, content, log_level)
                 .map(ParsedDiagram::Component)
         }

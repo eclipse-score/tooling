@@ -39,6 +39,7 @@ rust_test(
     crate_root = "tests/component_resolver_test.rs",
     data = [
         "//plantuml/parser/integration_test/component_diagram:component_diagram_files",
+        "//plantuml/parser/integration_test/deployment_diagram:deployment_diagram_files",
     ],
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [

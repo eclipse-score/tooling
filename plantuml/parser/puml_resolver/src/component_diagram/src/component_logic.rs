@@ -32,10 +32,15 @@ pub struct LogicComponent {
 #[serde(rename_all = "PascalCase")]
 pub enum ComponentType {
     Artifact,
+    Actor,
+    Agent,
+    Boundary,
     Card,
     Cloud,
     Component,
+    Control,
     Database,
+    Entity,
     File,
     Folder,
     Frame,
@@ -47,6 +52,7 @@ pub enum ComponentType {
     Rectangle,
     Stack,
     Storage,
+    Usecase,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -1,0 +1,100 @@
+{
+  "deployment_diagram_it.puml": {
+    "aaa": {
+      "id": "aaa",
+      "name": "aaa",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": []
+    },
+    "aaa.Driver": {
+      "id": "aaa.Driver",
+      "name": "Driver",
+      "alias": null,
+      "parent_id": "aaa",
+      "comp_type": "Actor",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "aaa.ECU2.DisplayService",
+          "annotation": null,
+          "relation_type": "None"
+        }
+      ]
+    },
+    "aaa.ECU1": {
+      "id": "aaa.ECU1",
+      "name": "ECU1 (Provider)",
+      "alias": "ECU1",
+      "parent_id": "aaa",
+      "comp_type": "Node",
+      "stereotype": null,
+      "relations": []
+    },
+    "aaa.ECU1.someip": {
+      "id": "aaa.ECU1.someip",
+      "name": "SOME/IP Service Interface",
+      "alias": "someip",
+      "parent_id": "aaa.ECU1",
+      "comp_type": "Boundary",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "aaa.ECU1.SpeedService",
+          "annotation": null,
+          "relation_type": "None"
+        }
+      ]
+    },
+    "aaa.ECU1.SpeedService": {
+      "id": "aaa.ECU1.SpeedService",
+      "name": "SpeedService",
+      "alias": null,
+      "parent_id": "aaa.ECU1",
+      "comp_type": "Control",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "aaa.ECU1.VehicleSpeed",
+          "annotation": null,
+          "relation_type": "None"
+        }
+      ]
+    },
+    "aaa.ECU1.VehicleSpeed": {
+      "id": "aaa.ECU1.VehicleSpeed",
+      "name": "VehicleSpeed",
+      "alias": null,
+      "parent_id": "aaa.ECU1",
+      "comp_type": "Entity",
+      "stereotype": null,
+      "relations": []
+    },
+    "aaa.ECU2": {
+      "id": "aaa.ECU2",
+      "name": "ECU2 (Consumer)",
+      "alias": "ECU2",
+      "parent_id": "aaa",
+      "comp_type": "Node",
+      "stereotype": null,
+      "relations": []
+    },
+    "aaa.ECU2.DisplayService": {
+      "id": "aaa.ECU2.DisplayService",
+      "name": "DisplayService",
+      "alias": null,
+      "parent_id": "aaa.ECU2",
+      "comp_type": "Control",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "aaa.ECU1.someip",
+          "annotation": null,
+          "relation_type": "None"
+        }
+      ]
+    }
+  }
+}

@@ -282,10 +282,15 @@ impl ComponentResolver {
 
 const COMPONENT_TYPE_TABLE: &[(&str, ComponentType)] = &[
     ("artifact", ComponentType::Artifact),
+    ("actor", ComponentType::Actor),
+    ("agent", ComponentType::Agent),
+    ("boundary", ComponentType::Boundary),
     ("card", ComponentType::Card),
     ("cloud", ComponentType::Cloud),
     ("component", ComponentType::Component),
+    ("control", ComponentType::Control),
     ("database", ComponentType::Database),
+    ("entity", ComponentType::Entity),
     ("file", ComponentType::File),
     ("folder", ComponentType::Folder),
     ("frame", ComponentType::Frame),
@@ -297,6 +302,7 @@ const COMPONENT_TYPE_TABLE: &[(&str, ComponentType)] = &[
     ("rectangle", ComponentType::Rectangle),
     ("stack", ComponentType::Stack),
     ("storage", ComponentType::Storage),
+    ("usecase", ComponentType::Usecase),
 ];
 
 pub fn parse_kind(raw: &str) -> Result<ComponentType, ComponentResolverError> {

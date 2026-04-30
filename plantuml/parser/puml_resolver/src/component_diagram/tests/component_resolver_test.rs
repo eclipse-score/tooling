@@ -59,6 +59,15 @@ fn run_component_resolver_case(case_name: &str) {
     );
 }
 
+fn run_deployment_resolver_case(case_name: &str) {
+    run_case(
+        "integration_test/deployment_diagram",
+        case_name,
+        ComponentResolverRunner,
+        DefaultExpectationChecker,
+    );
+}
+
 #[test]
 fn test_relation_simple_name() {
     run_component_resolver_case("relation_simple_name");
@@ -142,4 +151,24 @@ fn test_top_level_port() {
 #[test]
 fn test_port_deep_nesting() {
     run_component_resolver_case("port_deep_nesting");
+}
+
+#[test]
+fn test_deployment_diagram() {
+    run_deployment_resolver_case("deployment_diagram_it");
+}
+
+#[test]
+fn test_declare_elements() {
+    run_deployment_resolver_case("declare_elements");
+}
+
+#[test]
+fn test_arrows_link() {
+    run_deployment_resolver_case("arrows_link");
+}
+
+#[test]
+fn test_nested_elements() {
+    run_deployment_resolver_case("nested_elements");
 }

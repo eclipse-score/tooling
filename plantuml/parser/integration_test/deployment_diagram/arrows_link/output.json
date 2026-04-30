@@ -1,0 +1,206 @@
+{
+  "arrows_link.puml": {
+    "host_a": {
+      "id": "host_a",
+      "name": "host_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Node",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "host_b",
+          "annotation": "mark_a",
+          "relation_type": "None"
+        },
+        {
+          "target": "host_c",
+          "annotation": "mark_b",
+          "relation_type": "None"
+        },
+        {
+          "target": "host_d",
+          "annotation": "mark_c",
+          "relation_type": "None"
+        },
+        {
+          "target": "host_e",
+          "annotation": null,
+          "relation_type": "None"
+        }
+      ]
+    },
+    "host_b": {
+      "id": "host_b",
+      "name": "host_b",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Node",
+      "stereotype": null,
+      "relations": []
+    },
+    "host_c": {
+      "id": "host_c",
+      "name": "host_c",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Node",
+      "stereotype": null,
+      "relations": []
+    },
+    "host_d": {
+      "id": "host_d",
+      "name": "host_d",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Node",
+      "stereotype": null,
+      "relations": []
+    },
+    "host_e": {
+      "id": "host_e",
+      "name": "host_e",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Node",
+      "stereotype": null,
+      "relations": []
+    },
+    "bundle_a": {
+      "id": "bundle_a",
+      "name": "bundle_a",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "bundle_b",
+          "annotation": null,
+          "relation_type": "None"
+        },
+        {
+          "target": "bundle_c",
+          "annotation": null,
+          "relation_type": "None"
+        },
+        {
+          "target": "bundle_d",
+          "annotation": null,
+          "relation_type": "None"
+        },
+        {
+          "target": "bundle_e",
+          "annotation": null,
+          "relation_type": "None"
+        },
+        {
+          "target": "bundle_f",
+          "annotation": null,
+          "relation_type": "None"
+        },
+        {
+          "target": "bundle_g",
+          "annotation": null,
+          "relation_type": "None"
+        },
+        {
+          "target": "bundle_h",
+          "annotation": null,
+          "relation_type": "None"
+        },
+        {
+          "target": "bundle_i",
+          "annotation": null,
+          "relation_type": "None"
+        },
+        {
+          "target": "bundle_j",
+          "annotation": null,
+          "relation_type": "None"
+        }
+      ]
+    },
+    "bundle_b": {
+      "id": "bundle_b",
+      "name": "bundle_b",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": []
+    },
+    "bundle_c": {
+      "id": "bundle_c",
+      "name": "bundle_c",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": []
+    },
+    "bundle_d": {
+      "id": "bundle_d",
+      "name": "bundle_d",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": []
+    },
+    "bundle_e": {
+      "id": "bundle_e",
+      "name": "bundle_e",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": []
+    },
+    "bundle_f": {
+      "id": "bundle_f",
+      "name": "bundle_f",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": []
+    },
+    "bundle_g": {
+      "id": "bundle_g",
+      "name": "bundle_g",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": []
+    },
+    "bundle_h": {
+      "id": "bundle_h",
+      "name": "bundle_h",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": []
+    },
+    "bundle_i": {
+      "id": "bundle_i",
+      "name": "bundle_i",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": []
+    },
+    "bundle_j": {
+      "id": "bundle_j",
+      "name": "bundle_j",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Artifact",
+      "stereotype": null,
+      "relations": []
+    }
+  }
+}

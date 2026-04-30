@@ -21,10 +21,15 @@ table LogicRelation {
 
 enum ComponentType:byte {
   Artifact,
+  Actor,
+  Agent,
+  Boundary,
   Card,
   Cloud,
   Component,
+  Control,
   Database,
+  Entity,
   File,
   Folder,
   Frame,
@@ -35,7 +40,8 @@ enum ComponentType:byte {
   Queue,
   Rectangle,
   Stack,
-  Storage
+  Storage,
+  Usecase
 }
 
 table LogicComponent {
