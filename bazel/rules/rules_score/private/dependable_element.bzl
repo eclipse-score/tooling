@@ -769,7 +769,6 @@ def _dependable_element_index_impl(ctx):
         substitutions = {
             "{title}": title,
             "{underline}": underline,
-            "{description}": ctx.attr.description,
             "{components}": components_ref,
             "{assumptions_of_use}": "\n   ".join(artifacts_by_type["assumptions_of_use"]),
             "{requirements}": "\n   ".join(artifacts_by_type["requirements"]),
@@ -988,10 +987,6 @@ _dependable_element_index = rule(
             mandatory = True,
             doc = "Name of the dependable element module (used as document title)",
         ),
-        "description": attr.string(
-            mandatory = True,
-            doc = "Description of the dependable element. Supports RST formatting.",
-        ),
         "assumptions_of_use": attr.label_list(
             mandatory = True,
             doc = "Assumptions of Use targets or files.",
@@ -1158,7 +1153,6 @@ _dependable_element_test = rule(
 # lobster-trace: Tools.ArchitectureModelingDependableElement
 def dependable_element(
         name,
-        description,
         assumptions_of_use,
         requirements,
         architectural_design,
@@ -1185,9 +1179,6 @@ def dependable_element(
     Args:
         name: The name of the dependable element. Used as the base name for
             all generated targets.
-        description: String containing a high-level description of the element.
-            This text provides context about what the element does and its purpose.
-            Supports RST formatting.
         assumptions_of_use: List of labels to assumptions_of_use targets that
             define the safety-relevant operating conditions and constraints.
         requirements: List of labels to requirements targets (component_requirements,
@@ -1227,7 +1218,6 @@ def dependable_element(
     _dependable_element_index(
         name = name + "_index",
         module_name = name,
-        description = description,
         template = Label("//bazel/rules/rules_score:templates/dependable_element_index.template.rst"),
         assumptions_of_use = assumptions_of_use,
         requirements = requirements,

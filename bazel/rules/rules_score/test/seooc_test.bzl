@@ -115,33 +115,3 @@ def _seooc_needs_provider_test_impl(ctx):
 seooc_needs_provider_test = analysistest.make(
     impl = _seooc_needs_provider_test_impl,
 )
-
-def _seooc_description_test_impl(ctx):
-    """Test that SEooC includes description in generated index.rst."""
-    env = analysistest.begin(ctx)
-    target_under_test = analysistest.target_under_test(env)
-
-    # Get the generated index file
-    files = target_under_test[DefaultInfo].files.to_list()
-
-    # Find index.rst
-    index_file = None
-    for f in files:
-        if f.basename == "index.rst":
-            index_file = f
-            break
-
-    # Note: We can't easily read file contents in analysis test,
-    # but we can verify the file exists. The description content
-    # would be validated through integration tests or manual inspection.
-    asserts.true(
-        env,
-        index_file != None,
-        "Expected index.rst to exist for description validation",
-    )
-
-    return analysistest.end(env)
-
-seooc_description_test = analysistest.make(
-    impl = _seooc_description_test_impl,
-)

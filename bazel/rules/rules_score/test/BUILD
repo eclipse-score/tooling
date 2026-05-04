@@ -69,7 +69,6 @@ load(
 load(
     ":seooc_test.bzl",
     "seooc_artifacts_copied_test",
-    "seooc_description_test",
     "seooc_index_generation_test",
     "seooc_needs_provider_test",
     "seooc_sphinx_module_generated_test",
@@ -214,7 +213,6 @@ dependable_element(
     assumptions_of_use = [":aous"],
     components = [],
     dependability_analysis = [":dependability_analysis_target"],
-    description = "Dependency SEooC module for testing the deps attribute of dependable_element.",
     integrity_level = "B",
     requirements = [":feat_req"],
     tests = [],
@@ -227,7 +225,6 @@ dependable_element(
     assumptions_of_use = [":aous"],
     components = [],
     dependability_analysis = [":dependability_analysis_target"],
-    description = "Test SEooC module demonstrating S-CORE process compliance structure.",
     integrity_level = "B",
     requirements = [":feat_req"],
     tests = [],
@@ -336,7 +333,6 @@ dependable_element(
     assumptions_of_use = [":aous"],
     components = [":test_component"],
     dependability_analysis = [":dependability_analysis_target"],
-    description = "Test dependable element for unit testing",
     integrity_level = "B",
     requirements = [":feat_req"],
     tests = [],  # Empty for testing
@@ -408,7 +404,6 @@ dependable_element(
     assumptions_of_use = [":aous"],
     components = [":test_parent_component"],
     dependability_analysis = [":dependability_analysis_target"],
-    description = "Test dependable element with nested components for testing recursive unit collection and deduplication",
     integrity_level = "B",
     requirements = [":feat_req"],
     tests = [],
@@ -501,11 +496,6 @@ seooc_index_generation_test(
     target_under_test = ":seooc_test_lib_index",
 )
 
-seooc_description_test(
-    name = "seooc_tests_description",
-    target_under_test = ":seooc_test_lib_index",
-)
-
 # ============================================================================
 # Test Suites
 # ============================================================================
@@ -571,7 +561,6 @@ test_suite(
     name = "seooc_tests",
     tests = [
         ":seooc_tests_artifacts_copied",
-        ":seooc_tests_description",
         ":seooc_tests_index_generation",
         ":seooc_tests_needs_provider",
         ":seooc_tests_sphinx_module_generated",

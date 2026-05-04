@@ -55,7 +55,6 @@ dependable_element(
     dependability_analysis = [
         ":sample_dependability_analysis",
     ],
-    description = "Safety Element out of Context (SEooC) example",
     integrity_level = "B",
     requirements = [
         "//bazel/rules/rules_score/examples/seooc/docs/requirements:feature_requirements",

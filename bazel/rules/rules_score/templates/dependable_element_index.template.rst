@@ -15,8 +15,6 @@
 Dependable element: {title}
 ===================={underline}
 
-{description}
-
 Architectural Design
 --------------------
 

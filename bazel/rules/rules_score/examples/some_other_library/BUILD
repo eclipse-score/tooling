@@ -51,7 +51,6 @@ dependable_element(
     assumptions_of_use = [],
     components = [":component_example"],
     dependability_analysis = [],
-    description = "XYZ",
     integrity_level = "D",
     requirements = [],
     tests = [],
