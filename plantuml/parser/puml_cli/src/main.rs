@@ -13,7 +13,7 @@
 
 use clap::{ArgGroup, Parser, ValueEnum};
 use env_logger::Builder;
-use log::{debug, error, warn};
+use log::debug;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -29,7 +29,7 @@ use puml_resolver::{
     ClassResolver, ComponentResolver, DiagramResolver, SequenceResolver, SequenceTree,
 };
 use puml_serializer::{ClassSerializer, ComponentSerializer};
-use puml_utils::{write_fbs_to_file, write_json_to_file, write_placeholder_file, LogLevel};
+use puml_utils::{write_fbs_to_file, write_json_to_file, LogLevel};
 
 /// CLI wrapper for LogLevel that implements ValueEnum
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -193,18 +193,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             Err(e) => {
-                error!("Resolve error in {}: {}", path.display(), e);
-                warn!(
-                    "Skipping file due to unimplemented diagram type: {}",
-                    path.display()
-                );
-                // Create empty placeholder files so the build continues
-                if let Some(ref dir) = fbs_output_dir {
-                    write_placeholder_file(path, dir)?;
-                }
-                if let Some(ref ldir) = lobster_output_dir {
-                    write_lobster_to_file(LobsterModel::Empty, path, ldir)?;
-                }
+                return Err(format!("Resolve error in {}: {}", path.display(), e).into());
             }
         }
     }
