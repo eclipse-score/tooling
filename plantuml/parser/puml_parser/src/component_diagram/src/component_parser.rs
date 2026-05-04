@@ -59,7 +59,7 @@ impl PumlComponentParser {
                 }
                 Rule::together_block => {
                     // Flatten children into the enclosing scope (drop the wrapper)
-                    return Ok(Self::parse_together_block(inner)?);
+                    return Self::parse_together_block(inner);
                 }
                 _ => {}
             }

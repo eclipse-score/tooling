@@ -651,12 +651,8 @@ fn parse_type_def(
             .unwrap_or(name)
             .trim();
 
-        let Some(start) = candidate.find('<') else {
-            return None;
-        };
-        let Some(end) = candidate.rfind('>') else {
-            return None;
-        };
+        let start = candidate.find('<')?;
+        let end = candidate.rfind('>')?;
 
         if end <= start {
             return None;
@@ -751,8 +747,10 @@ fn parse_enum_def(
     pair: pest::iterators::Pair<Rule>,
     normalized_content: &NormalizedContent,
 ) -> EnumDef {
-    let mut enum_def = EnumDef::default();
-    enum_def.source_line = Some(original_start_line(&pair, normalized_content));
+    let mut enum_def = EnumDef {
+        source_line: Some(original_start_line(&pair, normalized_content)),
+        ..EnumDef::default()
+    };
 
     for inner in pair.into_inner() {
         match inner.as_rule() {

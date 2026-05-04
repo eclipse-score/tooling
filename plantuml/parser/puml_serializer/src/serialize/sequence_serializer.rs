@@ -81,8 +81,8 @@ impl SequenceSerializer {
         )
     }
 
-    fn serialize_event<'a>(
-        builder: &mut FlatBufferBuilder<'a>,
+    fn serialize_event(
+        builder: &mut FlatBufferBuilder<'_>,
         event: &Event,
     ) -> (
         fb::Event,

@@ -81,7 +81,7 @@ impl<'a> ComponentClassValidator<'a> {
         // diagrams.
         for missing_name in self
             .expected_unit_names
-            .difference(&self.observed_namespace_names)
+            .difference(self.observed_namespace_names)
         {
             self.errors.push(format!(
                 "Naming consistency violation: missing unit namespace in class diagrams:\n\

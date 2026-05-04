@@ -83,15 +83,15 @@ impl<'a> BazelComponentValidator<'a> {
             self.diagram.filtered_unit_count
         ));
         log.push_str("DEBUG: PlantUML SEooC set:\n");
-        for (key, _) in &self.diagram.seooc_set {
+        for key in self.diagram.seooc_set.keys() {
             log.push_str(&format!("  {:?}\n", key));
         }
         log.push_str("DEBUG: PlantUML component set:\n");
-        for (key, _) in &self.diagram.comp_set {
+        for key in self.diagram.comp_set.keys() {
             log.push_str(&format!("  {:?}\n", key));
         }
         log.push_str("DEBUG: PlantUML unit set:\n");
-        for (key, _) in &self.diagram.unit_set {
+        for key in self.diagram.unit_set.keys() {
             log.push_str(&format!("  {:?}\n", key));
         }
         log.push_str("DEBUG: Bazel SEooC set:\n");
@@ -125,7 +125,7 @@ impl<'a> BazelComponentValidator<'a> {
         }
 
         // In PlantUML but not in Bazel -> EXTRA.
-        for (key, _) in &self.diagram.seooc_set {
+        for key in self.diagram.seooc_set.keys() {
             if !self.bazel.seooc_set.contains_key(key) {
                 let (name, _) = key;
                 self.errors
@@ -153,7 +153,7 @@ impl<'a> BazelComponentValidator<'a> {
         }
 
         // In PlantUML but not in Bazel -> EXTRA.
-        for (key, _) in &self.diagram.comp_set {
+        for key in self.diagram.comp_set.keys() {
             if !self.bazel.comp_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = parent
@@ -184,7 +184,7 @@ impl<'a> BazelComponentValidator<'a> {
         }
 
         // In PlantUML but not in Bazel -> EXTRA.
-        for (key, _) in &self.diagram.unit_set {
+        for key in self.diagram.unit_set.keys() {
             if !self.bazel.unit_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = parent
