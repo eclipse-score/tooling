@@ -81,8 +81,8 @@ impl ComponentResolver {
             None
         }
 
-        // Helper: recursively search for a port by local name within the given scope and its children,
-        // returning the port's parent component FQN when found.
+        // Helper: search for a port by local name within the given scope and any of its
+        // descendants, returning the port's parent component FQN when found.
         fn find_port_in_scope_or_children(
             scope: &[String],
             port_local: &str,
@@ -96,13 +96,18 @@ impl ComponentResolver {
                 return Some(parent_fqn.clone());
             }
 
-            // Search one level deeper for each component that has this scope as parent
+            // Search at any depth below the current scope: a port whose simple alias matches
+            // and whose parent component is a descendant of (or equal to) the current scope.
+            let scope_prefix = scope.join(".");
             for (pfqn, parent_comp) in port_parents {
                 let parts: Vec<&str> = pfqn.split('.').collect();
-                if parts.last() == Some(&port_local)
-                    && parts.len() > 1
-                    && parts[..parts.len() - 2].join(".") == scope.join(".")
-                {
+                if parts.last() != Some(&port_local) {
+                    continue;
+                }
+                let is_in_scope = scope.is_empty()
+                    || parent_comp == &scope_prefix
+                    || parent_comp.starts_with(&format!("{scope_prefix}."));
+                if is_in_scope {
                     return Some(parent_comp.clone());
                 }
             }
@@ -125,8 +130,9 @@ impl ComponentResolver {
                     return Ok(comp.id.clone());
                 }
             }
-            // Fallback: check if it's a port name and lift to parent component
-            // Search upward through scope levels AND through any nested component scope
+            // Fallback: check if it's a port name and lift to parent component.
+            // Search upward through scope levels — the innermost scope that contains a
+            // port with this alias wins (nearest-scope-first).
             for i in (0..=self.scope.len()).rev() {
                 let outer_scope = &self.scope[..i];
                 if let Some(parent_fqn) =
@@ -209,15 +215,13 @@ impl ComponentResolver {
         let local_id = port.alias.as_deref().unwrap_or(&port.name);
         let fqn = self.make_fqn(local_id);
 
-        // Record port_fqn -> parent_fqn for relation lifting
-        if let Some(parent_fqn) = if self.scope.is_empty() {
-            None
+        if self.scope.is_empty() {
+            // Top-level ports are pure connectors/aliases, not entities — ignore them.
+            // Use `interface` to declare a top-level interface as a first-class entity.
         } else {
-            Some(self.scope.join("."))
-        } {
-            self.port_parents.insert(fqn, parent_fqn);
+            // Nested port: record port_fqn -> parent_fqn for relation lifting.
+            self.port_parents.insert(fqn, self.scope.join("."));
         }
-        // Ports at top-level (no parent) are simply ignored
     }
 
     /// After all statements are visited, replace any relation endpoint that is a

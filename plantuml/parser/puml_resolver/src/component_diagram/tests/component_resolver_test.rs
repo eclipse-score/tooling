@@ -130,6 +130,16 @@ fn test_together_with_relation() {
 }
 
 #[test]
+fn test_port_global_name_resolution() {
+    run_component_resolver_case("port_global_name_resolution");
+}
+
+#[test]
+fn test_top_level_port() {
+    run_component_resolver_case("top_level_port");
+}
+
+#[test]
 fn test_port_deep_nesting() {
     run_component_resolver_case("port_deep_nesting");
 }

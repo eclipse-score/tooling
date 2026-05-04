@@ -1,0 +1,30 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+@startuml
+
+' Test: a top-level relation references a deeply nested port by its simple alias.
+' The resolver must lift the endpoint to the port's parent component (ServerComp),
+' not fail with UnresolvedReference.
+
+package "SampleSEooC" as SampleSEooC {
+    component "ClientComp" as ClientComp <<component>> {
+        portout out1
+    }
+    component "ServerComp" as ServerComp <<component>> {
+        portin in1
+    }
+}
+
+ClientComp --> in1 : calls
+
+@enduml

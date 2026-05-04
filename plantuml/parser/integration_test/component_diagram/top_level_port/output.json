@@ -1,0 +1,28 @@
+{
+    "top_level_port.puml": {
+        "ExternalAPI": {
+            "id": "ExternalAPI",
+            "name": "ExternalAPI",
+            "alias": "ExternalAPI",
+            "parent_id": null,
+            "comp_type": "Interface",
+            "stereotype": null,
+            "relations": []
+        },
+        "ClientComp": {
+            "id": "ClientComp",
+            "name": "ClientComp",
+            "alias": "ClientComp",
+            "parent_id": null,
+            "comp_type": "Component",
+            "stereotype": "component",
+            "relations": [
+                {
+                    "target": "ExternalAPI",
+                    "annotation": "sends",
+                    "relation_type": "None"
+                }
+            ]
+        }
+    }
+}
