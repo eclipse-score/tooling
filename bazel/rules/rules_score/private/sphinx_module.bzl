@@ -16,7 +16,21 @@
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load("@rules_python//sphinxdocs/private:sphinx_docs_library_info.bzl", "SphinxDocsLibraryInfo")
-load("//bazel/rules/rules_score:providers.bzl", "FilteredExecpathInfo", "SphinxModuleInfo", "SphinxNeedsInfo")
+load("//bazel/rules/rules_score:providers.bzl", "FilteredExecpathInfo", "SphinxIndexFileInfo", "SphinxModuleInfo", "SphinxNeedsInfo")
+
+def _get_index_file(ctx):
+    """Extract the index file from the index attribute.
+
+    If the target provides SphinxIndexFileInfo, use that. Otherwise expect
+    exactly one file and use it directly.
+    """
+    target = ctx.attr.index
+    if SphinxIndexFileInfo in target:
+        return target[SphinxIndexFileInfo].index_file
+    files = target.files.to_list()
+    if len(files) != 1:
+        fail("'index' target must provide SphinxIndexFileInfo or produce exactly one file, got %d files" % len(files))
+    return files[0]
 
 def _create_config_py(ctx):
     """Get or generate the conf.py configuration file.
@@ -70,7 +84,7 @@ def _score_needs_impl(ctx):
     needs_inputs = ctx.files.srcs + [config_file]
     needs_args = [
         "--index_file",
-        ctx.attr.index.files.to_list()[0].path,
+        _get_index_file(ctx).path,
         "--output_dir",
         needs_output.dirname,
         "--config",
@@ -181,12 +195,12 @@ def _score_html_impl(ctx):
     # Sphinx only accepts a single directory to read its doc sources from.
     # Because plain files and generated files are in different directories,
     # we need to merge the two into a single directory.
-    for orig_file in ctx.files.srcs:
-        _relocate(orig_file)
+    index_source_file = _get_index_file(ctx)
     relocated_index_file = ""
-    for input_file in sphinx_source_files:
-        if input_file.path.endswith("/index.rst"):
-            relocated_index_file = input_file.path
+    for orig_file in ctx.files.srcs:
+        dest = _relocate(orig_file)
+        if orig_file.path == index_source_file.path:
+            relocated_index_file = dest.path
 
     # Build HTML with external needs
     html_inputs = sphinx_source_files + ctx.files.needs + filtered_files + [config_file, needs_external_needs_json]

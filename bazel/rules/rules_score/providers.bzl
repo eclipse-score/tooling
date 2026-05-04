@@ -199,6 +199,13 @@ DependableElementLobsterInfo = provider(
     },
 )
 
+SphinxIndexFileInfo = provider(
+    doc = "Provider carrying the single index.rst file for a Sphinx documentation module.",
+    fields = {
+        "index_file": "File – the index.rst file to use as the Sphinx master document.",
+    },
+)
+
 SphinxModuleInfo = provider(
     doc = "Provider for Sphinx HTML module documentation",
     fields = {

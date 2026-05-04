@@ -21,7 +21,7 @@ Tests the SEooC (Safety Element out of Context) functionality including:
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("@score_tooling//bazel/rules/rules_score:providers.bzl", "SphinxModuleInfo", "SphinxNeedsInfo")
+load("@score_tooling//bazel/rules/rules_score:providers.bzl", "SphinxIndexFileInfo", "SphinxModuleInfo", "SphinxNeedsInfo")
 
 def _seooc_index_generation_test_impl(ctx):
     """Test that dependable_element generates proper index.rst file."""
@@ -114,4 +114,205 @@ def _seooc_needs_provider_test_impl(ctx):
 
 seooc_needs_provider_test = analysistest.make(
     impl = _seooc_needs_provider_test_impl,
+)
+
+# ============================================================================
+# Regression tests: correct index.rst resolution (multi-index scenario)
+#
+# These tests guard against a bug where _score_html_impl scanned all relocated
+# source files for any path ending with "/index.rst" and used the last match.
+# A dependable_element with components generates both:
+#   <name>/index.rst          (root – correct Sphinx entry point)
+#   <name>/components/index.rst  (sub-page – must NOT be the entry point)
+# The old code would pick the sub-page as the Sphinx entry point.
+# ============================================================================
+
+def _seooc_multi_index_files_exist_test_impl(ctx):
+    """
+    Given a dependable_element with at least one component,
+    When the _index rule generates its output file set,
+    Then both a root index.rst and a components/index.rst must be present,
+         confirming the fixture exercises the multi-index scenario.
+    """
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    # When: collect all output paths
+    files = target_under_test[DefaultInfo].files.to_list()
+    paths = [f.path for f in files]
+
+    # Then: a components/index.rst sub-page exists
+    components_index_paths = [p for p in paths if p.endswith("components/index.rst")]
+    asserts.true(
+        env,
+        len(components_index_paths) >= 1,
+        "Expected a components/index.rst to be generated (fixture must have at least one component)",
+    )
+
+    # Then: a root index.rst (not inside components/) also exists
+    root_index_paths = [
+        p
+        for p in paths
+        if p.endswith("index.rst") and "components/" not in p
+    ]
+    asserts.true(
+        env,
+        len(root_index_paths) >= 1,
+        "Expected a root index.rst (outside components/) to be generated",
+    )
+
+    return analysistest.end(env)
+
+seooc_multi_index_files_exist_test = analysistest.make(
+    impl = _seooc_multi_index_files_exist_test_impl,
+)
+
+def _seooc_sphinx_entry_point_is_root_index_test_impl(ctx):
+    """
+    Given a dependable_element whose source tree contains both a root index.rst
+          and a components/index.rst,
+    When the Sphinx HTML build action is constructed,
+    Then the --index_file argument passed to Sphinx must point to the root
+         index.rst and must NOT point to the components/index.rst sub-page.
+    """
+    env = analysistest.begin(ctx)
+
+    # When: inspect all actions produced for this target
+    actions = analysistest.target_actions(env)
+
+    # Find the Sphinx HTML action: it is a run() action whose outputs contain
+    # the "_html" directory (declared as <name>/_html).
+    sphinx_html_action = None
+    for action in actions:
+        for output in action.outputs.to_list():
+            if output.basename == "_html":
+                sphinx_html_action = action
+                break
+        if sphinx_html_action:
+            break
+
+    asserts.true(
+        env,
+        sphinx_html_action != None,
+        "Expected to find the Sphinx HTML build action (output ending in '_html')",
+    )
+
+    # Then: extract the value that follows --index_file in the argument list
+    argv = sphinx_html_action.argv
+    index_path = None
+    for i, arg in enumerate(argv):
+        if arg == "--index_file" and i + 1 < len(argv):
+            index_path = argv[i + 1]
+            break
+
+    asserts.true(
+        env,
+        index_path != None,
+        "Sphinx HTML action must contain a --index_file argument",
+    )
+
+    asserts.true(
+        env,
+        index_path.endswith("index.rst"),
+        "The --index_file value must end with index.rst; got: " + str(index_path),
+    )
+
+    asserts.false(
+        env,
+        "components/" in index_path,
+        "The --index_file value must NOT point to components/index.rst; got: " + str(index_path),
+    )
+
+    return analysistest.end(env)
+
+seooc_sphinx_entry_point_is_root_index_test = analysistest.make(
+    impl = _seooc_sphinx_entry_point_is_root_index_test_impl,
+)
+
+def _seooc_all_sources_relocated_test_impl(ctx):
+    """
+    Given a dependable_element that provides source files via SphinxSourcesInfo,
+    When the Sphinx HTML build action is constructed,
+    Then all source files must appear as inputs to the action, confirming that
+         every file is relocated (symlinked) and none are silently dropped.
+    """
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    # When: find the Sphinx HTML action (same selection as the entry-point test)
+    actions = analysistest.target_actions(env)
+    sphinx_html_action = None
+    for action in actions:
+        for output in action.outputs.to_list():
+            if output.basename == "_html":
+                sphinx_html_action = action
+                break
+        if sphinx_html_action:
+            break
+
+    asserts.true(
+        env,
+        sphinx_html_action != None,
+        "Expected to find the Sphinx HTML build action (output ending in '_html')",
+    )
+
+    # Then: every .rst / .md / .puml / .json source from the index target's
+    # output file set must appear as an input to the HTML action.
+    index_files = target_under_test[DefaultInfo].files.to_list()
+    source_exts = ("rst", "md", "puml", "plantuml", "json")
+    expected_sources = [
+        f
+        for f in index_files
+        if f.extension in source_exts
+    ]
+
+    action_input_paths = {f.path: True for f in sphinx_html_action.inputs.to_list()}
+
+    for src in expected_sources:
+        asserts.true(
+            env,
+            src.path in action_input_paths,
+            "Source file '{}' was not passed as input to the Sphinx HTML action".format(src.path),
+        )
+
+    return analysistest.end(env)
+
+seooc_all_sources_relocated_test = analysistest.make(
+    impl = _seooc_all_sources_relocated_test_impl,
+)
+
+def _seooc_index_file_provider_test_impl(ctx):
+    """
+    Given a _dependable_element_index target,
+    When its providers are inspected,
+    Then SphinxIndexFileInfo must be present and its index_file must be the
+         root index.rst (not a components/index.rst sub-page).
+    """
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    asserts.true(
+        env,
+        SphinxIndexFileInfo in target_under_test,
+        "_dependable_element_index must provide SphinxIndexFileInfo",
+    )
+
+    index_file = target_under_test[SphinxIndexFileInfo].index_file
+
+    asserts.true(
+        env,
+        index_file.basename == "index.rst",
+        "SphinxIndexFileInfo.index_file must be named index.rst; got: " + index_file.basename,
+    )
+
+    asserts.false(
+        env,
+        "components/" in index_file.path,
+        "SphinxIndexFileInfo.index_file must NOT point to components/index.rst; got: " + index_file.path,
+    )
+
+    return analysistest.end(env)
+
+seooc_index_file_provider_test = analysistest.make(
+    impl = _seooc_index_file_provider_test_impl,
 )

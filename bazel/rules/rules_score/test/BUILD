@@ -68,9 +68,13 @@ load(
 )
 load(
     ":seooc_test.bzl",
+    "seooc_all_sources_relocated_test",
     "seooc_artifacts_copied_test",
+    "seooc_index_file_provider_test",
     "seooc_index_generation_test",
+    "seooc_multi_index_files_exist_test",
     "seooc_needs_provider_test",
+    "seooc_sphinx_entry_point_is_root_index_test",
     "seooc_sphinx_module_generated_test",
 )
 load(
@@ -496,6 +500,27 @@ seooc_index_generation_test(
     target_under_test = ":seooc_test_lib_index",
 )
 
+# Regression tests: correct index.rst resolution when multiple index.rst files exist
+seooc_multi_index_files_exist_test(
+    name = "seooc_tests_multi_index_files_exist",
+    target_under_test = ":test_dependable_element_index",
+)
+
+seooc_sphinx_entry_point_is_root_index_test(
+    name = "seooc_tests_sphinx_entry_point_is_root_index",
+    target_under_test = ":test_dependable_element_doc",
+)
+
+seooc_all_sources_relocated_test(
+    name = "seooc_tests_all_sources_relocated",
+    target_under_test = ":test_dependable_element_doc",
+)
+
+seooc_index_file_provider_test(
+    name = "seooc_tests_index_file_provider",
+    target_under_test = ":test_dependable_element_index",
+)
+
 # ============================================================================
 # Test Suites
 # ============================================================================
@@ -560,9 +585,13 @@ sphinx_module_providers_test_suite(name = "sphinx_module_providers_tests")
 test_suite(
     name = "seooc_tests",
     tests = [
+        ":seooc_tests_all_sources_relocated",
         ":seooc_tests_artifacts_copied",
+        ":seooc_tests_index_file_provider",
         ":seooc_tests_index_generation",
+        ":seooc_tests_multi_index_files_exist",
         ":seooc_tests_needs_provider",
+        ":seooc_tests_sphinx_entry_point_is_root_index",
         ":seooc_tests_sphinx_module_generated",
     ],
 )

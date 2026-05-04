@@ -35,6 +35,7 @@ load(
     "DependableElementInfo",
     "DependableElementLobsterInfo",
     "FeatureRequirementsInfo",
+    "SphinxIndexFileInfo",
     "SphinxModuleInfo",
     "SphinxNeedsInfo",
     "SphinxSourcesInfo",
@@ -967,6 +968,7 @@ def _dependable_element_index_impl(ctx):
 
     return [
         DefaultInfo(files = depset(output_files)),
+        SphinxIndexFileInfo(index_file = index_rst),
         CertifiedScope(transitive_scopes = depset(transitive = collected_certified_scopes)),
         DependableElementInfo(
             integrity_level = ctx.attr.integrity_level,
