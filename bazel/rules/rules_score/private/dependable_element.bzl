@@ -1165,7 +1165,7 @@ def dependable_element(
         maturity = "release",
         sphinx = Label("//bazel/rules/rules_score:score_build"),
         testonly = True,
-        visibility = None):
+        **kwargs):
     """Define a dependable element (Safety Element out of Context - SEooC) following S-CORE process guidelines.
 
     This macro creates a complete dependable element with integrated documentation
@@ -1200,7 +1200,6 @@ def dependable_element(
             Cross-references will work automatically.
         sphinx: Label to sphinx build binary. Default: //bazel/rules/rules_score:score_build
         testonly: If True, only testonly targets can depend on this target.
-        visibility: Bazel visibility specification for the dependable element target.
 
     Generated Targets:
         <name>_index: Internal rule that generates index.rst and copies artifacts
@@ -1231,7 +1230,7 @@ def dependable_element(
         integrity_level = integrity_level,
         maturity = maturity,
         testonly = testonly,
-        visibility = visibility,
+        **kwargs
     )
 
     # Step 2: Create sphinx_module using generated index and artifacts.
@@ -1244,7 +1243,7 @@ def dependable_element(
         deps = [d + "_doc" for d in deps],
         sphinx = sphinx,
         testonly = testonly,
-        visibility = visibility,
+        **kwargs
     )
 
     # Step 3: Create the main <name> target:
@@ -1255,5 +1254,5 @@ def dependable_element(
         name = name,
         index_dep = ":" + name + "_index",
         sphinx_module_dep = ":" + name + "_doc",
-        visibility = visibility,
+        **kwargs
     )

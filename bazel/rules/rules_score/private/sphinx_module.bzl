@@ -294,7 +294,7 @@ def sphinx_module(
         extra_opts = [],
         extra_opts_targets = [],
         testonly = False,
-        visibility = ["//visibility:public"]):
+        **kwargs):
     """Build a Sphinx module with transitive HTML dependencies.
     This rule builds documentation modules into complete HTML sites with
     transitive dependency collection. All dependencies are automatically
@@ -325,7 +325,7 @@ def sphinx_module(
         index = index,
         deps = [d + "_needs" for d in deps],
         testonly = testonly,
-        visibility = visibility,
+        **kwargs
     )
     _score_html(
         name = name,
@@ -337,5 +337,5 @@ def sphinx_module(
         extra_opts = extra_opts,
         extra_opts_targets = extra_opts_targets,
         testonly = testonly,
-        visibility = visibility,
+        **kwargs
     )
