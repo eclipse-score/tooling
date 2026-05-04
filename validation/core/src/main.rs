@@ -44,6 +44,11 @@ struct Args {
 
     #[arg(long)]
     output: Option<String>,
+
+    /// When set, validation errors are printed as warnings and the tool exits
+    /// with code 0. Intended for use during development (maturity=development).
+    #[arg(long, default_value_t = false)]
+    warn_on_errors: bool,
 }
 
 struct ValidationCliInputs {
@@ -95,7 +100,12 @@ fn run(args: Args) -> Result<(), String> {
     let mut context = build_validation_context(inputs)?;
     let validators = resolve_validators(&context)?;
 
-    run_selected_validators(args.output.as_deref(), &validators, &mut context)
+    run_selected_validators(
+        args.output.as_deref(),
+        args.warn_on_errors,
+        &validators,
+        &mut context,
+    )
 }
 
 fn resolve_validators(context: &ValidationContext) -> Result<Vec<SelectedValidator>, String> {
@@ -117,6 +127,7 @@ fn resolve_validators(context: &ValidationContext) -> Result<Vec<SelectedValidat
 
 fn run_selected_validators(
     output_path: Option<&str>,
+    warn_on_errors: bool,
     validators: &[SelectedValidator],
     context: &mut ValidationContext,
 ) -> Result<(), String> {
@@ -126,7 +137,7 @@ fn run_selected_validators(
         merge_errors(&mut errors, run_validator(*validator, context));
     }
 
-    finish_validation(output_path, &errors)
+    finish_validation(output_path, warn_on_errors, &errors)
 }
 
 fn run_validator(validator: SelectedValidator, context: &ValidationContext) -> Errors {
@@ -195,7 +206,11 @@ fn merge_errors(target: &mut Errors, incoming: Errors) {
     }
 }
 
-fn finish_validation(output_path: Option<&str>, errors: &Errors) -> Result<(), String> {
+fn finish_validation(
+    output_path: Option<&str>,
+    warn_on_errors: bool,
+    errors: &Errors,
+) -> Result<(), String> {
     if let Some(path) = output_path {
         write_log(path, errors)?;
     }
@@ -215,7 +230,12 @@ fn finish_validation(output_path: Option<&str>, errors: &Errors) -> Result<(), S
             errors.messages.len(),
             details
         );
-        Err(output)
+        if warn_on_errors {
+            eprintln!("WARNING: {output}");
+            Ok(())
+        } else {
+            Err(output)
+        }
     }
 }
 

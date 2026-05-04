@@ -641,6 +641,8 @@ def _run_validation(ctx, arch_json, static_fbs_files):
     validation_args.add("--architecture-json", arch_json)
     validation_args.add_all("--component-fbs", static_fbs_files)
     validation_args.add("--output", validation_log)
+    if ctx.attr.maturity == "development":
+        validation_args.add("--warn-on-errors")
 
     # ctx.actions.run will fail the build if validation_cli returns non-zero exit code
     ctx.actions.run(
