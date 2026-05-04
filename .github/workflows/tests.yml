@@ -42,12 +42,15 @@ jobs:
       - name: Run rules_score tests
         run: |
           bazel test //bazel/rules/rules_score/...
-      - name: Run Plantuml Tooling tests
-        run: |
-          bazel test //plantuml/...
       - name: Run Plantuml Tooling clippy
         run: |
           bazel build //plantuml/... --config=clippy
+      - name: Run Plantuml Tooling tests
+        run: |
+          bazel test //plantuml/...
+      - name: Run Validation Tooling clippy
+        run: |
+          bazel build //validation/... --config=clippy
       - name: Run Validation Tooling tests
         run: |
           bazel test //validation/...
