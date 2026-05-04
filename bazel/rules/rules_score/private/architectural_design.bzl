@@ -87,6 +87,34 @@ def _parse_puml_diagrams(ctx, files):
             lobster_outputs.append(lobster)
     return fbs_outputs, lobster_outputs
 
+# Allowed file extensions per attribute.
+# static/dynamic: diagram sources (.puml/.plantuml) and documentation (.rst/.md).
+# public_api: diagram sources only — lobster traceability requires parseable diagrams.
+_ALLOWED_EXTENSIONS = {
+    "static": ["puml", "plantuml", "rst", "md"],
+    "dynamic": ["puml", "plantuml", "rst", "md"],
+    "public_api": ["puml", "plantuml"],
+}
+
+def _validate_file_extensions(ctx):
+    """Fail early if any resolved file has an unsupported extension.
+
+    Works for both direct file labels and filegroup contents because
+    ctx.files.* flattens everything to individual File objects.
+    """
+    for attr_name, allowed in _ALLOWED_EXTENSIONS.items():
+        for f in getattr(ctx.files, attr_name):
+            if f.extension not in allowed:
+                fail(
+                    "File '{}' passed to attribute '{}' of target '{}' has " +
+                    "unsupported extension '.{}'. Allowed extensions: {}",
+                    f.short_path,
+                    attr_name,
+                    ctx.label,
+                    f.extension,
+                    [".{}".format(e) for e in allowed],
+                )
+
 def _architectural_design_impl(ctx):
     """Implementation for architectural_design rule.
 
@@ -103,6 +131,8 @@ def _architectural_design_impl(ctx):
     Returns:
         List of providers including DefaultInfo, ArchitecturalDesignInfo, SphinxSourcesInfo
     """
+
+    _validate_file_extensions(ctx)
 
     # Parse static and dynamic diagrams separately so each provider field
     # carries the flatbuffers for its own category
@@ -172,17 +202,17 @@ _architectural_design = rule(
           "Automatically parses PlantUML files to produce FlatBuffers binary representations.",
     attrs = {
         "static": attr.label_list(
-            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+            allow_files = True,
             mandatory = False,
-            doc = "Static architecture diagrams (class diagrams, component diagrams, etc.)",
+            doc = "Static architecture diagrams. Accepts direct file labels, filegroups, or any target whose files include .puml/.plantuml (parsed to FlatBuffers) or .rst/.md (documentation).",
         ),
         "dynamic": attr.label_list(
-            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+            allow_files = True,
             mandatory = False,
-            doc = "Dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
+            doc = "Dynamic architecture diagrams. Accepts direct file labels, filegroups, or any target whose files include .puml/.plantuml (parsed to FlatBuffers) or .rst/.md (documentation).",
         ),
         "public_api": attr.label_list(
-            allow_files = [".puml", ".plantuml"],
+            allow_files = True,
             mandatory = False,
             doc = "Public API diagrams (parsed identically to static/dynamic). " +
                   "Classified separately so their lobster items are exposed via " +
@@ -213,7 +243,8 @@ def architectural_design(
         static = [],
         dynamic = [],
         public_api = [],
-        visibility = None):
+        visibility = None,
+        tags = []):
     """Define architectural design following S-CORE process guidelines.
 
     Architectural design documents describe the software architecture of a
@@ -237,6 +268,7 @@ def architectural_design(
             diagrams but classified separately so their lobster items are
             exposed via public_api_lobster_files, enabling failure-mode-to-
             interface traceability at the dependable element level.
+        tags: List of Bazel tags to apply to the generated target.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -265,4 +297,5 @@ def architectural_design(
         dynamic = dynamic,
         public_api = public_api,
         visibility = visibility,
+        tags = tags,
     )

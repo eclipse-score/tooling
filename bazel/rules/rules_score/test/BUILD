@@ -68,8 +68,10 @@ load(
 )
 load(
     ":seooc_test.bzl",
+    "arch_design_invalid_extension_test",
     "seooc_artifacts_copied_test",
     "seooc_description_test",
+    "seooc_filegroup_arch_design_test",
     "seooc_index_generation_test",
     "seooc_needs_provider_test",
     "seooc_sphinx_module_generated_test",
@@ -181,6 +183,31 @@ architectural_design(
 architectural_design(
     name = "arch_design_nested",
     static = ["fixtures/test_dependable_element_nested.puml"],
+)
+
+# Filegroup fixture: a plain RST file wrapped in a filegroup, used to test
+# that architectural_design.static accepts filegroup targets (not just direct file labels).
+filegroup(
+    name = "static_arch_filegroup",
+    srcs = ["fixtures/seooc_test/static_architecture.rst"],
+)
+
+# architectural_design that mixes a filegroup (RST docs) and a direct .puml file.
+# The .puml provides the SEooC declaration with no components (matching components=[]);
+# the filegroup exercises filegroup support.
+architectural_design(
+    name = "arch_design_with_filegroup",
+    static = [
+        ":static_arch_filegroup",
+        "fixtures/test_de_filegroup_arch_design.puml",
+    ],
+)
+
+# Filegroup with an unsupported file extension (.cc) — used by the failure test
+# that verifies architectural_design rejects bad file types at analysis time.
+filegroup(
+    name = "invalid_ext_filegroup",
+    srcs = ["fixtures/mock_lib1.cc"],
 )
 
 # - Safety Analysis (DFA):    wp__sw_component_dfa
@@ -414,6 +441,21 @@ dependable_element(
     tests = [],
 )
 
+# Dependable element that passes a filegroup into architectural_design via a wrapper
+# architectural_design target. Exercises the filegroup-in-static path.
+dependable_element(
+    name = "test_de_filegroup_arch_design",
+    testonly = True,
+    architectural_design = [":arch_design_with_filegroup"],
+    assumptions_of_use = [":aous"],
+    components = [],
+    dependability_analysis = [":dependability_analysis_target"],
+    description = "Test dependable element using a filegroup inside architectural_design.",
+    integrity_level = "B",
+    requirements = [":feat_req"],
+    tests = [],
+)
+
 # ============================================================================
 # Test Instantiations - HTML Generation Tests
 # ============================================================================
@@ -506,6 +548,24 @@ seooc_description_test(
     target_under_test = ":seooc_test_lib_index",
 )
 
+seooc_filegroup_arch_design_test(
+    name = "seooc_filegroup_arch_design_test",
+    target_under_test = ":test_de_filegroup_arch_design_index",
+)
+
+# Failure test: architectural_design must reject files with unsupported extensions
+# even when they arrive via a filegroup.
+architectural_design(
+    name = "arch_design_invalid_ext",
+    static = [":invalid_ext_filegroup"],
+    tags = ["manual"],
+)
+
+arch_design_invalid_extension_test(
+    name = "arch_design_invalid_extension_test",
+    target_under_test = ":arch_design_invalid_ext",
+)
+
 # ============================================================================
 # Test Suites
 # ============================================================================
@@ -570,6 +630,8 @@ sphinx_module_providers_test_suite(name = "sphinx_module_providers_tests")
 test_suite(
     name = "seooc_tests",
     tests = [
+        ":arch_design_invalid_extension_test",
+        ":seooc_filegroup_arch_design_test",
         ":seooc_tests_artifacts_copied",
         ":seooc_tests_description",
         ":seooc_tests_index_generation",

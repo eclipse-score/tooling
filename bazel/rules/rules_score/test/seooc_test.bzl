@@ -145,3 +145,54 @@ def _seooc_description_test_impl(ctx):
 seooc_description_test = analysistest.make(
     impl = _seooc_description_test_impl,
 )
+
+def _seooc_filegroup_arch_design_test_impl(ctx):
+    """Test that dependable_element works when a filegroup is used inside
+    architectural_design.static.
+
+    Verifies:
+    - index.rst is generated
+    - The RST file contributed by the filegroup is present in the output files
+      under the architectural_design/ directory.
+    """
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    files = target_under_test[DefaultInfo].files.to_list()
+    basenames = [f.basename for f in files]
+
+    asserts.true(
+        env,
+        "index.rst" in basenames,
+        "Expected index.rst to be generated when architectural_design contains a filegroup",
+    )
+
+    # The filegroup contributes static_architecture.rst; it must appear in outputs
+    # symlinked under the architectural_design/ subtree.
+    arch_rst_files = [f for f in files if f.basename == "static_architecture.rst"]
+    asserts.true(
+        env,
+        len(arch_rst_files) > 0,
+        "Expected static_architecture.rst (from filegroup) to be in output files under architectural_design/",
+    )
+
+    return analysistest.end(env)
+
+seooc_filegroup_arch_design_test = analysistest.make(
+    impl = _seooc_filegroup_arch_design_test_impl,
+)
+
+def _arch_design_invalid_extension_test_impl(ctx):
+    """Test that architectural_design fails with a clear error when a filegroup
+    contains a file with an unsupported extension (e.g. .cc)."""
+    env = analysistest.begin(ctx)
+    asserts.expect_failure(
+        env,
+        "unsupported extension",
+    )
+    return analysistest.end(env)
+
+arch_design_invalid_extension_test = analysistest.make(
+    impl = _arch_design_invalid_extension_test_impl,
+    expect_failure = True,
+)

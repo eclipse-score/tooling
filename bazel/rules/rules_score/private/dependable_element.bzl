@@ -1003,7 +1003,8 @@ _dependable_element_index = rule(
         ),
         "architectural_design": attr.label_list(
             mandatory = True,
-            doc = "Architectural design targets or files.",
+            providers = [ArchitecturalDesignInfo],
+            doc = "Architectural design targets (architectural_design rule only).",
         ),
         "dependability_analysis": attr.label_list(
             mandatory = True,
