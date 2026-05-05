@@ -37,6 +37,7 @@ rust_library(
         "--allow=clippy::extra-unused-lifetimes",
         "--allow=clippy::missing-safety-doc",
         "--allow=clippy::needless-lifetimes",
+        "--allow=mismatched_lifetime_syntaxes",
     ],
     visibility = [
         "//visibility:public",
@@ -69,6 +70,7 @@ rust_library(
         "--allow=clippy::extra-unused-lifetimes",
         "--allow=clippy::missing-safety-doc",
         "--allow=clippy::needless-lifetimes",
+        "--allow=mismatched_lifetime_syntaxes",
     ],
     visibility = [
         "//plantuml/parser:__subpackages__",
