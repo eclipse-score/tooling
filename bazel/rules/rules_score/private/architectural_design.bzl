@@ -23,6 +23,7 @@ to produce FlatBuffers binary representations of the parsed diagrams.
 """
 
 load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:puml_utils.bzl", "make_puml_rst_wrappers")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 # ============================================================================
@@ -149,6 +150,17 @@ def _architectural_design_impl(ctx):
         transitive = [all_source_files],
     )
 
+    # Generate a thin RST wrapper for every .puml diagram so it appears as a
+    # toctree entry in the dependable_element index.
+    rst_wrappers = make_puml_rst_wrappers(
+        ctx,
+        ctx.files.static + ctx.files.dynamic,
+        ctx.label.name,
+        ctx.file._puml_rst_template,
+    )
+
+    sphinx_srcs = depset(rst_wrappers, transitive = [sphinx_files])
+
     return [
         DefaultInfo(files = all_source_files),
         ArchitecturalDesignInfo(
@@ -160,8 +172,9 @@ def _architectural_design_impl(ctx):
         ),
         # Source diagram files + plantuml_links.json for the sphinx documentation build
         SphinxSourcesInfo(
-            srcs = sphinx_files,
-            deps = sphinx_files,
+            srcs = sphinx_srcs,
+            deps = sphinx_srcs,
+            ancillary = depset(),
         ),
     ]
 
@@ -204,6 +217,11 @@ _architectural_design = rule(
                 executable = True,
                 cfg = "exec",
                 doc = "Tool that generates plantuml_links.json from FlatBuffers diagram outputs",
+            ),
+            "_puml_rst_template": attr.label(
+                default = Label("//bazel/rules/rules_score:templates/puml_diagram.template.rst"),
+                allow_single_file = True,
+                doc = "RST template for PlantUML diagram wrapper pages.",
             ),
         },
         **VERBOSITY_ATTR
