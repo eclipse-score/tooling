@@ -16,5 +16,12 @@ build --tool_java_runtime_version=remotejdk_17
 build:clippy --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect
 build:clippy --output_groups=+clippy_checks
 
+# Log level configuration for rules_score build output
+# normal build: only errors and warnings (default – no flag needed)
+# info build:   additionally show info messages from all tools
+build:info --//bazel/rules/rules_score:verbosity=info
+# debug build:  complete output including debug/trace from all tools
+build:debug --//bazel/rules/rules_score:verbosity=debug
+
 # Import AI checker custom configuration
 try-import %workspace%/.bazelrc.ai_checker

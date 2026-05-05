@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@pip_rules_score//:requirements.bzl", "requirement")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 load(
@@ -180,4 +181,19 @@ lobster_linker(
         "//bazel/rules/rules_score/private:bzl_srcs",
     ],
     visibility = ["//docs/processes:__pkg__"],
+)
+
+# ---------------------------------------------------------------------------
+# Build setting: verbosity level for all rules_score tools
+# ---------------------------------------------------------------------------
+
+string_flag(
+    name = "verbosity",
+    build_setting_default = "warn",
+    values = [
+        "warn",
+        "info",
+        "debug",
+    ],
+    visibility = ["//visibility:public"],
 )
