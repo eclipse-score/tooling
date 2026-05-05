@@ -25,6 +25,7 @@ verification tooling.
 """
 
 load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo", "UnitDesignInfo")
+load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 # ============================================================================
 # Private Rule Implementation
@@ -46,6 +47,8 @@ def _run_puml_parser(ctx, puml_file):
             puml_file.path,
             "--fbs-output-dir",
             fbs_output.dirname,
+            "--log-level",
+            get_log_level(ctx),
         ],
         progress_message = "Parsing Unit Design PlantUML diagram: %s" % puml_file.short_path,
     )
@@ -103,24 +106,27 @@ _unit_design = rule(
     implementation = _unit_design_impl,
     doc = "Collects unit design documents and diagrams for S-CORE process compliance. " +
           "PlantUML files are passed through to Sphinx and parsed to FlatBuffers.",
-    attrs = {
-        "static": attr.label_list(
-            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
-            mandatory = False,
-            doc = "Static unit design diagrams (class diagrams, etc.)",
-        ),
-        "dynamic": attr.label_list(
-            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
-            mandatory = False,
-            doc = "Dynamic unit design diagrams (sequence diagrams, etc.)",
-        ),
-        "_puml_parser": attr.label(
-            default = Label("//plantuml/parser:parser"),
-            executable = True,
-            cfg = "exec",
-            doc = "PlantUML parser tool that generates FlatBuffers from .puml files",
-        ),
-    },
+    attrs = dict(
+        {
+            "static": attr.label_list(
+                allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+                mandatory = False,
+                doc = "Static unit design diagrams (class diagrams, etc.)",
+            ),
+            "dynamic": attr.label_list(
+                allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+                mandatory = False,
+                doc = "Dynamic unit design diagrams (sequence diagrams, etc.)",
+            ),
+            "_puml_parser": attr.label(
+                default = Label("//plantuml/parser:parser"),
+                executable = True,
+                cfg = "exec",
+                doc = "PlantUML parser tool that generates FlatBuffers from .puml files",
+            ),
+        },
+        **VERBOSITY_ATTR
+    ),
 )
 
 # ============================================================================

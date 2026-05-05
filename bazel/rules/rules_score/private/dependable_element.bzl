@@ -51,6 +51,7 @@ load(
     "format_lobster_sources",
 )
 load("//bazel/rules/rules_score/private:sphinx_module.bzl", "sphinx_module")
+load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 # ============================================================================
 # Template Constants
@@ -642,6 +643,7 @@ def _run_validation(ctx, arch_json, static_fbs_files):
     validation_args.add("--architecture-json", arch_json)
     validation_args.add_all("--component-fbs", static_fbs_files)
     validation_args.add("--output", validation_log)
+    validation_args.add("--log-level", get_log_level(ctx))
     if ctx.attr.maturity == "development":
         validation_args.add("--warn-on-errors")
 
@@ -986,76 +988,79 @@ def _dependable_element_index_impl(ctx):
 _dependable_element_index = rule(
     implementation = _dependable_element_index_impl,
     doc = "Generates index.rst file with references to dependable element artifacts",
-    attrs = {
-        "module_name": attr.string(
-            mandatory = True,
-            doc = "Name of the dependable element module (used as document title)",
-        ),
-        "assumptions_of_use": attr.label_list(
-            mandatory = True,
-            doc = "Assumptions of Use targets or files.",
-        ),
-        "requirements": attr.label_list(
-            mandatory = True,
-            providers = [FeatureRequirementsInfo],
-            doc = "Feature requirements targets (feature_requirements only).",
-        ),
-        "architectural_design": attr.label_list(
-            mandatory = True,
-            doc = "Architectural design targets or files.",
-        ),
-        "dependability_analysis": attr.label_list(
-            mandatory = True,
-            doc = "Dependability analysis targets or files.",
-        ),
-        "components": attr.label_list(
-            mandatory = True,
-            aspects = [collect_current_architecture_aspect],
-            doc = "Component targets (aspect is applied here and passed to subrule).",
-        ),
-        "tests": attr.label_list(
-            default = [],
-            doc = "Integration tests for the dependable element.",
-        ),
-        "checklists": attr.label_list(
-            default = [],
-            doc = "Safety checklists targets or files.",
-        ),
-        "template": attr.label(
-            allow_single_file = [".rst"],
-            mandatory = True,
-            doc = "Template file for generating index.rst",
-        ),
-        "deps": attr.label_list(
-            default = [],
-            doc = "Dependencies on other dependable element modules (submodules).",
-        ),
-        "processed_deps": attr.label_list(
-            default = [],
-            doc = "Dependencies on other dependable element modules (submodules).",
-        ),
-        "integrity_level": attr.string(
-            mandatory = True,
-            values = _INTEGRITY_LEVELS,
-            doc = "Integrity level of the dependable element. Allowed values: 'A', 'B', 'C', 'D' (D > C > B > A).",
-        ),
-        "maturity": attr.string(
-            default = "release",
-            values = ["release", "development"],
-            doc = "Maturity level of the dependable element. 'release' (default) treats certified scope violations as errors; 'development' emits warnings and continues.",
-        ),
-        "_validation_cli": attr.label(
-            default = Label("//validation/core:validation_cli"),
-            executable = True,
-            cfg = "exec",
-            doc = "Validation CLI tool",
-        ),
-        "_lobster_de_template": attr.label(
-            default = Label("//bazel/rules/rules_score/lobster/config:lobster_de_template"),
-            allow_single_file = True,
-            doc = "Lobster config template for dependable element traceability.",
-        ),
-    },
+    attrs = dict(
+        {
+            "module_name": attr.string(
+                mandatory = True,
+                doc = "Name of the dependable element module (used as document title)",
+            ),
+            "assumptions_of_use": attr.label_list(
+                mandatory = True,
+                doc = "Assumptions of Use targets or files.",
+            ),
+            "requirements": attr.label_list(
+                mandatory = True,
+                providers = [FeatureRequirementsInfo],
+                doc = "Feature requirements targets (feature_requirements only).",
+            ),
+            "architectural_design": attr.label_list(
+                mandatory = True,
+                doc = "Architectural design targets or files.",
+            ),
+            "dependability_analysis": attr.label_list(
+                mandatory = True,
+                doc = "Dependability analysis targets or files.",
+            ),
+            "components": attr.label_list(
+                mandatory = True,
+                aspects = [collect_current_architecture_aspect],
+                doc = "Component targets (aspect is applied here and passed to subrule).",
+            ),
+            "tests": attr.label_list(
+                default = [],
+                doc = "Integration tests for the dependable element.",
+            ),
+            "checklists": attr.label_list(
+                default = [],
+                doc = "Safety checklists targets or files.",
+            ),
+            "template": attr.label(
+                allow_single_file = [".rst"],
+                mandatory = True,
+                doc = "Template file for generating index.rst",
+            ),
+            "deps": attr.label_list(
+                default = [],
+                doc = "Dependencies on other dependable element modules (submodules).",
+            ),
+            "processed_deps": attr.label_list(
+                default = [],
+                doc = "Dependencies on other dependable element modules (submodules).",
+            ),
+            "integrity_level": attr.string(
+                mandatory = True,
+                values = _INTEGRITY_LEVELS,
+                doc = "Integrity level of the dependable element. Allowed values: 'A', 'B', 'C', 'D' (D > C > B > A).",
+            ),
+            "maturity": attr.string(
+                default = "release",
+                values = ["release", "development"],
+                doc = "Maturity level of the dependable element. 'release' (default) treats certified scope violations as errors; 'development' emits warnings and continues.",
+            ),
+            "_validation_cli": attr.label(
+                default = Label("//validation/core:validation_cli"),
+                executable = True,
+                cfg = "exec",
+                doc = "Validation CLI tool",
+            ),
+            "_lobster_de_template": attr.label(
+                default = Label("//bazel/rules/rules_score/lobster/config:lobster_de_template"),
+                allow_single_file = True,
+                doc = "Lobster config template for dependable element traceability.",
+            ),
+        },
+        **VERBOSITY_ATTR
+    ),
     subrules = [subrule_lobster_report, subrule_lobster_html_report],
 )
 

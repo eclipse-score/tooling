@@ -23,6 +23,7 @@ to produce FlatBuffers binary representations of the parsed diagrams.
 """
 
 load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 # ============================================================================
 # Private Rule Implementation
@@ -62,6 +63,8 @@ def _run_puml_parser(ctx, puml_file):
             fbs_output.dirname,
             "--lobster-output-dir",
             lobster_output.dirname,
+            "--log-level",
+            get_log_level(ctx),
         ],
         progress_message = "Parsing PlantUML diagram: %s" % puml_file.short_path,
     )
@@ -132,7 +135,7 @@ def _architectural_design_impl(ctx):
             inputs = all_fbs_files,
             outputs = [plantuml_links_json],
             executable = ctx.executable._linker,
-            arguments = ["--fbs-files"] + [f.path for f in all_fbs_files] + ["--output", plantuml_links_json.path],
+            arguments = ["--fbs-files"] + [f.path for f in all_fbs_files] + ["--output", plantuml_links_json.path, "--log-level", get_log_level(ctx)],
             progress_message = "Generating PlantUML links JSON for %s" % ctx.label.name,
         )
     else:
@@ -170,38 +173,41 @@ _architectural_design = rule(
     implementation = _architectural_design_impl,
     doc = "Collects architectural design documents and diagrams for S-CORE process compliance. " +
           "Automatically parses PlantUML files to produce FlatBuffers binary representations.",
-    attrs = {
-        "static": attr.label_list(
-            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
-            mandatory = False,
-            doc = "Static architecture diagrams (class diagrams, component diagrams, etc.)",
-        ),
-        "dynamic": attr.label_list(
-            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
-            mandatory = False,
-            doc = "Dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
-        ),
-        "public_api": attr.label_list(
-            allow_files = [".puml", ".plantuml"],
-            mandatory = False,
-            doc = "Public API diagrams (parsed identically to static/dynamic). " +
-                  "Classified separately so their lobster items are exposed via " +
-                  "public_api_lobster_files, enabling failure-mode-to-interface " +
-                  "traceability at the dependable element level.",
-        ),
-        "_puml_parser": attr.label(
-            default = Label("@score_tooling//plantuml/parser:parser"),
-            executable = True,
-            cfg = "exec",
-            doc = "PlantUML parser tool that generates FlatBuffers from .puml files",
-        ),
-        "_linker": attr.label(
-            default = Label("@score_tooling//plantuml/parser:linker"),
-            executable = True,
-            cfg = "exec",
-            doc = "Tool that generates plantuml_links.json from FlatBuffers diagram outputs",
-        ),
-    },
+    attrs = dict(
+        {
+            "static": attr.label_list(
+                allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+                mandatory = False,
+                doc = "Static architecture diagrams (class diagrams, component diagrams, etc.)",
+            ),
+            "dynamic": attr.label_list(
+                allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+                mandatory = False,
+                doc = "Dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
+            ),
+            "public_api": attr.label_list(
+                allow_files = [".puml", ".plantuml"],
+                mandatory = False,
+                doc = "Public API diagrams (parsed identically to static/dynamic). " +
+                      "Classified separately so their lobster items are exposed via " +
+                      "public_api_lobster_files, enabling failure-mode-to-interface " +
+                      "traceability at the dependable element level.",
+            ),
+            "_puml_parser": attr.label(
+                default = Label("@score_tooling//plantuml/parser:parser"),
+                executable = True,
+                cfg = "exec",
+                doc = "PlantUML parser tool that generates FlatBuffers from .puml files",
+            ),
+            "_linker": attr.label(
+                default = Label("@score_tooling//plantuml/parser:linker"),
+                executable = True,
+                cfg = "exec",
+                doc = "Tool that generates plantuml_links.json from FlatBuffers diagram outputs",
+            ),
+        },
+        **VERBOSITY_ATTR
+    ),
 )
 
 # ============================================================================

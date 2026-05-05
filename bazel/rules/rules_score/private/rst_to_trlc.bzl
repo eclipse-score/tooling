@@ -14,6 +14,7 @@
 """Bazel rule and helper macro for converting RST requirement directives to TRLC files."""
 
 load("@trlc//:trlc.bzl", "trlc_requirements")
+load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 def rst_srcs_to_trlc(name, srcs, deps = [], ref_package = ""):
     """Convert any .rst entries in srcs to trlc_requirements targets.
@@ -75,6 +76,8 @@ def _rst_to_trlc_impl(ctx):
         if ctx.attr.package:
             args.add("--package")
             args.add(ctx.attr.package)
+        args.add("--log-level")
+        args.add(get_log_level(ctx))
 
         ctx.actions.run(
             executable = ctx.executable._converter,
@@ -90,25 +93,28 @@ def _rst_to_trlc_impl(ctx):
 rst_to_trlc = rule(
     implementation = _rst_to_trlc_impl,
     doc = "Converts RST requirement directives to TRLC source files.",
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".rst"],
-            mandatory = True,
-            doc = "RST files containing supported requirement directives.",
-        ),
-        "_converter": attr.label(
-            default = Label("//bazel/rules/rules_score:rst_to_trlc"),
-            executable = True,
-            allow_files = True,
-            cfg = "exec",
-        ),
-        "ref_package": attr.string(
-            default = "",
-            doc = "TRLC package prefix used for derived_from cross-references.",
-        ),
-        "package": attr.string(
-            default = "",
-            doc = "Optional TRLC package name override; defaults to the input file stem.",
-        ),
-    },
+    attrs = dict(
+        {
+            "srcs": attr.label_list(
+                allow_files = [".rst"],
+                mandatory = True,
+                doc = "RST files containing supported requirement directives.",
+            ),
+            "_converter": attr.label(
+                default = Label("//bazel/rules/rules_score:rst_to_trlc"),
+                executable = True,
+                allow_files = True,
+                cfg = "exec",
+            ),
+            "ref_package": attr.string(
+                default = "",
+                doc = "TRLC package prefix used for derived_from cross-references.",
+            ),
+            "package": attr.string(
+                default = "",
+                doc = "Optional TRLC package name override; defaults to the input file stem.",
+            ),
+        },
+        **VERBOSITY_ATTR
+    ),
 )

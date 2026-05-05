@@ -43,6 +43,7 @@ by the ``dependability_analysis`` rule which wraps this one.
 
 load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 # ============================================================================
 # Root-cause (FTA) processing helper
@@ -84,6 +85,7 @@ def _process_root_causes(ctx):
     args.add("--metamodel", ctx.file._fta_metamodel)
     args.add("--output-dir", output_dir)
     args.add("--lobster", root_causes_lobster)
+    args.add("--log-level", get_log_level(ctx))
     args.add_all(puml_inputs)
     ctx.actions.run(
         inputs = puml_inputs + [ctx.file._fta_metamodel],
@@ -298,70 +300,73 @@ _fmea = rule(
     implementation = _fmea_impl,
     doc = "Renders FMEA TRLC sources to .inc files and generates lobster traceability files. " +
           "Build-only rule; traceability testing is owned by dependability_analysis.",
-    attrs = {
-        "failuremodes": attr.label_list(
-            providers = [TrlcProviderInfo],
-            mandatory = False,
-            doc = "Failure modes as trlc_requirements targets (rendered to .inc via trlc_rst).",
-        ),
-        "controlmeasures": attr.label_list(
-            providers = [TrlcProviderInfo],
-            mandatory = False,
-            doc = "Control measures as trlc_requirements targets (rendered to .inc via trlc_rst).",
-        ),
-        "root_causes": attr.label_list(
-            allow_files = [".puml", ".plantuml"],
-            mandatory = False,
-            doc = "Root cause FTA PlantUML diagram files.  " +
-                  "``fta_metamodel.puml`` is inlined automatically; " +
-                  "lobster items are extracted to ``root_causes.lobster``.",
-        ),
-        "arch_design": attr.label(
-            providers = [ArchitecturalDesignInfo],
-            mandatory = False,
-            doc = "Reference to architectural_design target for traceability.",
-        ),
-        "_safety_analysis_tools": attr.label(
-            default = Label("//bazel/rules/rules_score:safety_analysis_tools"),
-            executable = True,
-            allow_files = True,
-            cfg = "exec",
-            doc = "safety_analysis_tools binary: preprocess and extract subcommands.",
-        ),
-        "_fta_metamodel": attr.label(
-            default = Label("//plantuml:fta_metamodel"),
-            allow_single_file = True,
-            doc = "fta_metamodel.puml whose content is inlined into root cause diagrams.",
-        ),
-        "_renderer": attr.label(
-            default = Label("@trlc//tools/trlc_rst:trlc_rst"),
-            executable = True,
-            allow_files = True,
-            cfg = "exec",
-        ),
-        "_lobster_trlc": attr.label(
-            default = Label("@lobster//:lobster-trlc"),
-            executable = True,
-            allow_files = True,
-            cfg = "exec",
-            doc = "lobster-trlc executable used to generate FM and CM lobster files.",
-        ),
-        "_fm_lobster_config": attr.label(
-            default = Label("//bazel/rules/rules_score/lobster/config:failuremodes_config"),
-            allow_single_file = True,
-            doc = "lobster-trlc YAML config for FailureMode records.",
-        ),
-        "_cm_lobster_config": attr.label(
-            default = Label("//bazel/rules/rules_score/lobster/config:controlmeasures_config"),
-            allow_single_file = True,
-            doc = "lobster-trlc YAML config for ControlMeasure records.",
-        ),
-        "_template": attr.label(
-            default = Label("//bazel/rules/rules_score:templates/fmea.template.rst"),
-            allow_single_file = True,
-            doc = "RST template for the FMEA page.",
-        ),
-    },
+    attrs = dict(
+        {
+            "failuremodes": attr.label_list(
+                providers = [TrlcProviderInfo],
+                mandatory = False,
+                doc = "Failure modes as trlc_requirements targets (rendered to .inc via trlc_rst).",
+            ),
+            "controlmeasures": attr.label_list(
+                providers = [TrlcProviderInfo],
+                mandatory = False,
+                doc = "Control measures as trlc_requirements targets (rendered to .inc via trlc_rst).",
+            ),
+            "root_causes": attr.label_list(
+                allow_files = [".puml", ".plantuml"],
+                mandatory = False,
+                doc = "Root cause FTA PlantUML diagram files.  " +
+                      "``fta_metamodel.puml`` is inlined automatically; " +
+                      "lobster items are extracted to ``root_causes.lobster``.",
+            ),
+            "arch_design": attr.label(
+                providers = [ArchitecturalDesignInfo],
+                mandatory = False,
+                doc = "Reference to architectural_design target for traceability.",
+            ),
+            "_safety_analysis_tools": attr.label(
+                default = Label("//bazel/rules/rules_score:safety_analysis_tools"),
+                executable = True,
+                allow_files = True,
+                cfg = "exec",
+                doc = "safety_analysis_tools binary: preprocess and extract subcommands.",
+            ),
+            "_fta_metamodel": attr.label(
+                default = Label("//plantuml:fta_metamodel"),
+                allow_single_file = True,
+                doc = "fta_metamodel.puml whose content is inlined into root cause diagrams.",
+            ),
+            "_renderer": attr.label(
+                default = Label("@trlc//tools/trlc_rst:trlc_rst"),
+                executable = True,
+                allow_files = True,
+                cfg = "exec",
+            ),
+            "_lobster_trlc": attr.label(
+                default = Label("@lobster//:lobster-trlc"),
+                executable = True,
+                allow_files = True,
+                cfg = "exec",
+                doc = "lobster-trlc executable used to generate FM and CM lobster files.",
+            ),
+            "_fm_lobster_config": attr.label(
+                default = Label("//bazel/rules/rules_score/lobster/config:failuremodes_config"),
+                allow_single_file = True,
+                doc = "lobster-trlc YAML config for FailureMode records.",
+            ),
+            "_cm_lobster_config": attr.label(
+                default = Label("//bazel/rules/rules_score/lobster/config:controlmeasures_config"),
+                allow_single_file = True,
+                doc = "lobster-trlc YAML config for ControlMeasure records.",
+            ),
+            "_template": attr.label(
+                default = Label("//bazel/rules/rules_score:templates/fmea.template.rst"),
+                allow_single_file = True,
+                doc = "RST template for the FMEA page.",
+            ),
+        },
+        **VERBOSITY_ATTR
+    ),
 )
 
 # ============================================================================

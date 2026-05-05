@@ -17,6 +17,7 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load("@rules_python//sphinxdocs/private:sphinx_docs_library_info.bzl", "SphinxDocsLibraryInfo")
 load("//bazel/rules/rules_score:providers.bzl", "FilteredExecpathInfo", "SphinxIndexFileInfo", "SphinxModuleInfo", "SphinxNeedsInfo")
+load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 def _get_index_file(ctx):
     """Extract the index file from the index attribute.
@@ -54,20 +55,23 @@ def _create_config_py(ctx):
 # ======================================================================================
 # Common attributes for Sphinx rules
 # ======================================================================================
-sphinx_rule_attrs = {
-    "srcs": attr.label_list(
-        allow_files = True,
-        doc = "List of source files for the Sphinx documentation.",
-    ),
-    "index": attr.label(
-        allow_files = [".rst"],
-        doc = "Index file (index.rst) for the Sphinx documentation.",
-        mandatory = True,
-    ),
-    "deps": attr.label_list(
-        doc = "List of other sphinx_module targets this module depends on for intersphinx.",
-    ),
-}
+sphinx_rule_attrs = dict(
+    {
+        "srcs": attr.label_list(
+            allow_files = True,
+            doc = "List of source files for the Sphinx documentation.",
+        ),
+        "index": attr.label(
+            allow_files = [".rst"],
+            doc = "Index file (index.rst) for the Sphinx documentation.",
+            mandatory = True,
+        ),
+        "deps": attr.label_list(
+            doc = "List of other sphinx_module targets this module depends on for intersphinx.",
+        ),
+    },
+    **VERBOSITY_ATTR
+)
 
 # ======================================================================================
 # Rule implementations
@@ -91,6 +95,8 @@ def _score_needs_impl(ctx):
         config_file.path,
         "--builder",
         "needs",
+        "--log-level",
+        get_log_level(ctx),
     ]
     ctx.actions.run(
         inputs = needs_inputs,
@@ -214,6 +220,8 @@ def _score_html_impl(ctx):
         config_file.path,
         "--builder",
         "html",
+        "--log-level",
+        get_log_level(ctx),
     ]
     ctx.actions.run(
         inputs = html_inputs,
@@ -235,6 +243,8 @@ def _score_html_impl(ctx):
         html_output.path,
         "--main",
         sphinx_html_output.path,
+        "--log-level",
+        get_log_level(ctx),
     ]
     merge_inputs = [sphinx_html_output]
 
