@@ -39,7 +39,27 @@ def _assumptions_of_use_impl(ctx):
     Returns:
         List of providers including DefaultInfo and AssumptionsOfUseInfo
     """
-    srcs = depset(ctx.files.srcs)
+
+    # Render each TRLC source to RST for Sphinx
+    rendered_files = []
+    for src in ctx.attr.srcs:
+        trlc_provider = src[TrlcProviderInfo]
+        rendered_file = ctx.actions.declare_file("{}_{}.rst".format(ctx.attr.name, src.label.name))
+        args = ctx.actions.args()
+        args.add("--output", rendered_file.path)
+        args.add("--input-dir", ".")
+        args.add("--title", ctx.label.name.replace("_", " ").title())
+        args.add("--source-files")
+        args.add_all(trlc_provider.reqs)
+        ctx.actions.run(
+            inputs = src[DefaultInfo].files,
+            outputs = [rendered_file],
+            arguments = [args],
+            executable = ctx.executable._renderer,
+        )
+        rendered_files.append(rendered_file)
+
+    all_srcs = depset(rendered_files)
 
     # Collect requirements providers and lobster files
     reqs = []
@@ -55,20 +75,21 @@ def _assumptions_of_use_impl(ctx):
             lobster_files.append(info.srcs)
 
     # Collect transitive sphinx sources from requirements
-    transitive = [srcs]
+    transitive = [all_srcs]
     for req in ctx.attr.requirements:
         if SphinxSourcesInfo in req:
             transitive.append(req[SphinxSourcesInfo].deps)
 
     return [
-        DefaultInfo(files = srcs),
+        DefaultInfo(files = all_srcs),
         AssumptionsOfUseInfo(
             srcs = depset(transitive = lobster_files),
             name = ctx.label.name,
         ),
         SphinxSourcesInfo(
-            srcs = srcs,
+            srcs = all_srcs,
             deps = depset(transitive = transitive),
+            ancillary = depset(),
         ),
     ]
 
@@ -89,6 +110,12 @@ _assumptions_of_use = rule(
             providers = [[FeatureRequirementsInfo], [ComponentRequirementsInfo]],
             mandatory = False,
             doc = "List of feature or component requirements targets that these Assumptions of Use trace to",
+        ),
+        "_renderer": attr.label(
+            default = Label("@trlc//tools/trlc_rst:trlc_rst"),
+            executable = True,
+            allow_files = True,
+            cfg = "exec",
         ),
     },
 )
