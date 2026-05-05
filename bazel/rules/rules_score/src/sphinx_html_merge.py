@@ -24,11 +24,19 @@ Usage:
 """
 
 import argparse
+import logging
 import os
 import re
 import shutil
 import sys
 from pathlib import Path
+
+_LEVEL_MAP = {
+    "error": logging.ERROR,
+    "warn": logging.WARNING,
+    "info": logging.INFO,
+    "debug": logging.DEBUG,
+}
 
 
 # Standard Sphinx directories that should be copied
@@ -51,7 +59,7 @@ def copy_html_files(src_dir, dst_dir, exclude_module_dirs=None, sibling_modules=
     dst_path = Path(dst_dir)
 
     if not src_path.exists():
-        print(f"Warning: Source directory does not exist: {src_dir}", file=sys.stderr)
+        logging.warning("Source directory does not exist: %s", src_dir)
         return
 
     dst_path.mkdir(parents=True, exist_ok=True)
@@ -96,7 +104,7 @@ def copy_html_files(src_dir, dst_dir, exclude_module_dirs=None, sibling_modules=
                 dst_file.parent.mkdir(parents=True, exist_ok=True)
                 dst_file.write_text(modified_content, encoding="utf-8")
             except Exception as e:
-                print(f"Warning: Failed to process {src_file}: {e}", file=sys.stderr)
+                logging.warning("Failed to process %s: %s", src_file, e)
                 # Fallback to regular copy on error
                 shutil.copy2(src_file, dst_file)
         else:
@@ -141,7 +149,7 @@ def merge_html_dirs(output_dir, main_html_dir, dependencies):
     output_path = Path(output_dir)
 
     # First, copy the main HTML directory
-    print(f"Copying main HTML from {main_html_dir} to {output_dir}")
+    logging.info("Copying main HTML from %s to %s", main_html_dir, output_dir)
     copy_html_files(main_html_dir, output_dir)
 
     # Collect all dependency names for link fixing and exclusion
@@ -150,7 +158,9 @@ def merge_html_dirs(output_dir, main_html_dir, dependencies):
     # Then copy each dependency into a subdirectory with link fixing
     for dep_name, dep_html_dir in dependencies:
         dep_output = output_path / dep_name
-        print(f"Copying dependency {dep_name} from {dep_html_dir} to {dep_output}")
+        logging.info(
+            "Copying dependency %s from %s to %s", dep_name, dep_html_dir, dep_output
+        )
         # Exclude other module directories to avoid nested modules
         # Remove current module from the list to get actual siblings to exclude
         sibling_modules = set(n for n in dep_names if n != dep_name)
@@ -177,16 +187,25 @@ def main():
         metavar="NAME:PATH",
         help="Dependency HTML directory in format NAME:PATH",
     )
+    parser.add_argument(
+        "--log-level",
+        choices=["error", "warn", "info", "debug"],
+        default="warn",
+        dest="log_level",
+        help="Log level for tool output (default: warn).",
+    )
 
     args = parser.parse_args()
+    logging.basicConfig(
+        level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s"
+    )
 
     # Parse dependencies
     dependencies = []
     for dep_spec in args.dep:
         if ":" not in dep_spec:
-            print(
-                f"Error: Invalid dependency format '{dep_spec}', expected NAME:PATH",
-                file=sys.stderr,
+            logging.error(
+                "Invalid dependency format '%s', expected NAME:PATH", dep_spec
             )
             return 1
 
@@ -196,7 +215,7 @@ def main():
     # Merge the HTML directories
     merge_html_dirs(args.output, args.main, dependencies)
 
-    print(f"Successfully merged HTML into {args.output}")
+    logging.info("Successfully merged HTML into %s", args.output)
     return 0
 
 

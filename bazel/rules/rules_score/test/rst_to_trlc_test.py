@@ -738,16 +738,12 @@ class TestConvert(unittest.TestCase):
             "\n"
             "   The platform shall do something.\n"
         )
-        import sys
+        import logging
 
-        buf = StringIO()
-        old_stderr, sys.stderr = sys.stderr, buf
-        try:
+        with self.assertLogs("root", level=logging.WARNING) as cm:
             out = self._convert(rst)
-        finally:
-            sys.stderr = old_stderr
         # stkh_req has no TRLC mapping → treated as no directives found
-        self.assertIn("WARNING", buf.getvalue())
+        self.assertTrue(any("WARNING" in msg for msg in cm.output))
         self.assertNotIn("stkh_req", out)
 
 

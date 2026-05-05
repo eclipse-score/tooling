@@ -35,6 +35,13 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+_LEVEL_MAP = {
+    "error": logging.ERROR,
+    "warn": logging.WARNING,
+    "info": logging.INFO,
+    "debug": logging.DEBUG,
+}
+
 LOBSTER_GENERATOR = "safety_analysis_tools"
 LOBSTER_SCHEMA = "lobster-act-trace"
 LOBSTER_VERSION = 3
@@ -221,13 +228,15 @@ def preprocess_puml(
 
 
 def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(levelname)s: %(message)s",
-    )
-
     parser = argparse.ArgumentParser(
         description="Inline fta_metamodel.puml into FTA diagrams and extract lobster traceability.",
+    )
+    parser.add_argument(
+        "--log-level",
+        choices=["error", "warn", "info", "debug"],
+        default="warn",
+        dest="log_level",
+        help="Log level for tool output (default: warn).",
     )
     parser.add_argument(
         "--metamodel",
@@ -251,7 +260,11 @@ def main() -> None:
         help="PlantUML FTA .puml files to process.",
     )
 
-    _run_preprocess(parser.parse_args())
+    args = parser.parse_args()
+    logging.basicConfig(
+        level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s"
+    )
+    _run_preprocess(args)
 
 
 def _run_preprocess(args: argparse.Namespace) -> None:

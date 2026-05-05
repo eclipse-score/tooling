@@ -13,10 +13,18 @@
 """RST requirement directive to TRLC converter."""
 
 import argparse
+import logging
 import re
 import sys
 from pathlib import Path
 from typing import Any
+
+_LEVEL_MAP = {
+    "error": logging.ERROR,
+    "warn": logging.WARNING,
+    "info": logging.INFO,
+    "debug": logging.DEBUG,
+}
 
 # Maps RST directive names to TRLC types in the S-CORE requirements model.
 # Only directives that correspond to a concrete TRLC type in score_requirements_model.rsl
@@ -222,10 +230,7 @@ def convert(
     )
     directives = parse_directives(input_path.read_text(encoding="utf-8"))
     if not directives:
-        print(
-            f"WARNING: no supported requirement directives found in {input_path}",
-            file=sys.stderr,
-        )
+        logging.warning("no supported requirement directives found in %s", input_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         render_trlc(directives, pkg, ref_package or _DEFAULT_REF_PACKAGE),
@@ -240,11 +245,21 @@ if __name__ == "__main__":
     p.add_argument("--output-dir", type=Path, required=True)
     p.add_argument("--package", default=None)
     p.add_argument("--ref-package", default=None)
+    p.add_argument(
+        "--log-level",
+        choices=["error", "warn", "info", "debug"],
+        default="warn",
+        dest="log_level",
+        help="Log level for tool output (default: warn).",
+    )
     args = p.parse_args()
+    logging.basicConfig(
+        level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s"
+    )
     if not args.input_file.exists():
         sys.exit(f"ERROR: file not found: {args.input_file}")
     output_file = args.output_dir / (args.input_file.stem + ".trlc")
     record_count = convert(
         args.input_file, output_file, package=args.package, ref_package=args.ref_package
     )
-    print(f"  {args.input_file} -> {output_file}  ({record_count} record(s))")
+    logging.info("%s -> %s  (%d record(s))", args.input_file, output_file, record_count)

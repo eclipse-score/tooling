@@ -36,11 +36,24 @@ DEFAULT_PORT = 8000
 DEFAULT_GITHUB_VERSION = "main"
 DEFAULT_SOURCE_DIR = "."
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(message)s",
-)
+_LEVEL_MAP = {
+    "error": logging.ERROR,
+    "warn": logging.WARNING,
+    "info": logging.INFO,
+    "debug": logging.DEBUG,
+}
+
+# Mapping from --log-level to sphinx-build verbosity flags.
+# warn  → -q  (suppress info; show warnings/errors only)
+# info  → (nothing; sphinx default output)
+# debug → -vv (verbose sphinx output)
+_SPHINX_VERBOSITY_FLAGS = {
+    "error": ["-Q"],
+    "warn": ["-q"],
+    "info": [],
+    "debug": ["-vv"],
+}
+
 logger = logging.getLogger(__name__)
 
 SANDBOX_PATH = re.compile(r"^.*_main/")
@@ -157,6 +170,12 @@ def build_sphinx_arguments(
 
     base_arguments.extend(["-b", args.builder])
 
+    # Apply sphinx-build verbosity flags derived from --log-level
+    sphinx_verbosity = _SPHINX_VERBOSITY_FLAGS.get(
+        getattr(args, "log_level", "warn"), []
+    )
+    base_arguments.extend(sphinx_verbosity)
+
     # Forward extra options (e.g., -D flags) to Sphinx
     if extra_args:
         base_arguments.extend(extra_args)
@@ -246,6 +265,13 @@ def parse_arguments() -> argparse.Namespace:
         default=DEFAULT_PORT,
         help=f"Port to use for live preview (default: {DEFAULT_PORT}). Use 0 for auto-detection.",
     )
+    parser.add_argument(
+        "--log-level",
+        choices=["error", "warn", "info", "debug"],
+        default="warn",
+        dest="log_level",
+        help="Log level for wrapper and sphinx-build output (default: warn).",
+    )
 
     return parser.parse_known_args()
 
@@ -259,6 +285,9 @@ def main() -> int:
     """
     try:
         args, extra_args = parse_arguments()
+        logging.basicConfig(
+            level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s"
+        )
         validate_arguments(args)
         # Create processor instance
         stdout_processor = StdoutProcessor()
