@@ -29,6 +29,7 @@ exports_files([
     "templates/unit.template.rst",
     "templates/component.template.rst",
     "templates/fmea.template.rst",
+    "templates/puml_diagram.template.rst",
 ])
 
 compile_pip_requirements(
