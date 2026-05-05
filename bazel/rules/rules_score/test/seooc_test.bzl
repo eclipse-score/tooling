@@ -119,46 +119,51 @@ seooc_needs_provider_test = analysistest.make(
 # ============================================================================
 # Regression tests: correct index.rst resolution (multi-index scenario)
 #
-# These tests guard against a bug where _score_html_impl scanned all relocated
-# source files for any path ending with "/index.rst" and used the last match.
-# A dependable_element with components generates both:
-#   <name>/index.rst          (root – correct Sphinx entry point)
-#   <name>/components/index.rst  (sub-page – must NOT be the entry point)
-# The old code would pick the sub-page as the Sphinx entry point.
+# These tests guard against a bug where the wrong index.rst was picked as the
+# Sphinx entry point when multiple index.rst files are present in the output
+# tree (e.g. unit/index.rst, component/index.rst alongside the root index.rst).
+# The fix is to carry the correct File explicitly via SphinxIndexFileInfo rather
+# than scanning all output files for any path ending with "/index.rst".
 # ============================================================================
 
 def _seooc_multi_index_files_exist_test_impl(ctx):
     """
-    Given a dependable_element with at least one component,
-    When the _index rule generates its output file set,
-    Then both a root index.rst and a components/index.rst must be present,
-         confirming the fixture exercises the multi-index scenario.
+    Given a dependable_element with at least one component (which generates
+          multiple .rst files in subdirectories alongside the root index.rst),
+    When the _index rule finishes,
+    Then SphinxIndexFileInfo must be provided and its index_file must be the
+         root index.rst (not inside any subdirectory), confirming the correct
+         entry point is propagated explicitly rather than discovered by scanning.
     """
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    # When: collect all output paths
-    files = target_under_test[DefaultInfo].files.to_list()
-    paths = [f.path for f in files]
-
-    # Then: a components/index.rst sub-page exists
-    components_index_paths = [p for p in paths if p.endswith("components/index.rst")]
+    # Then: SphinxIndexFileInfo provider must be present
     asserts.true(
         env,
-        len(components_index_paths) >= 1,
-        "Expected a components/index.rst to be generated (fixture must have at least one component)",
+        SphinxIndexFileInfo in target_under_test,
+        "Expected SphinxIndexFileInfo provider to be present on the index target",
     )
 
-    # Then: a root index.rst (not inside components/) also exists
-    root_index_paths = [
-        p
-        for p in paths
-        if p.endswith("index.rst") and "components/" not in p
-    ]
+    index_file = target_under_test[SphinxIndexFileInfo].index_file
+
+    # Then: the index file must be named index.rst
     asserts.true(
         env,
-        len(root_index_paths) >= 1,
-        "Expected a root index.rst (outside components/) to be generated",
+        index_file.basename == "index.rst",
+        "SphinxIndexFileInfo.index_file must be named index.rst, got: " + index_file.basename,
+    )
+
+    # Then: the index file must be at the root of the output tree (no subdirectory in dirname)
+    # e.g. .../test_dependable_element_index/index.rst — the last path component of dirname
+    # must equal the target name, not a sub-page like "components" or "units".
+    parent = index_file.dirname.split("/")[-1]
+    asserts.true(
+        env,
+        parent == ctx.attr.target_under_test.label.name,
+        "SphinxIndexFileInfo.index_file must sit directly under the target output dir, " +
+        "not in a subdirectory. dirname ends in '" + parent + "', expected '" +
+        ctx.attr.target_under_test.label.name + "'",
     )
 
     return analysistest.end(env)

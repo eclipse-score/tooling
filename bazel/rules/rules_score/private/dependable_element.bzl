@@ -280,6 +280,21 @@ def _process_artifact_files(ctx, artifact_name, label):
                 .replace(".md", "")
             index_refs.append(doc_ref)
 
+    # Symlink ancillary files (present for sub-toctrees / .. uml:: resolution,
+    # but NOT added to the outer toctree index).
+    if SphinxSourcesInfo in label:
+        for anc_file in label[SphinxSourcesInfo].ancillary.to_list():
+            if anc_file.extension not in ["rst", "md", "puml", "plantuml", "png", "svg", "inc", "json"]:
+                continue
+            relative_path = _compute_relative_path(anc_file, _find_common_directory([anc_file]))
+            output_file = _create_artifact_symlink(
+                ctx,
+                artifact_name,
+                anc_file,
+                relative_path,
+            )
+            output_files.append(output_file)
+
     return (output_files, index_refs)
 
 def _process_artifact_type(ctx, artifact_name):
@@ -686,10 +701,8 @@ def _dependable_element_index_impl(ctx):
 
     # Process each well-known artifact type into symlinked output files and
     # toctree references for the index template.
-    # "requirements" covers both feature_requirements and component_requirements.
     artifact_types = [
         "assumptions_of_use",
-        "requirements",
         "architectural_design",
         "dependability_analysis",
         "checklists",
@@ -700,6 +713,24 @@ def _dependable_element_index_impl(ctx):
         files, refs = _process_artifact_type(ctx, artifact_name)
         output_files.extend(files)
         artifacts_by_type[artifact_name] = refs
+
+    # Collect feature_requirements refs from requirements targets that
+    # carry FeatureRequirementsInfo.
+    feature_req_refs = []
+    for req_target in ctx.attr.requirements:
+        if FeatureRequirementsInfo in req_target:
+            label_files, label_refs = _process_artifact_files(ctx, "feature_requirements", req_target)
+            output_files.extend(label_files)
+            feature_req_refs.extend(label_refs)
+
+    # Collect assumed_system_requirements refs from requirements targets that
+    # carry AssumedSystemRequirementsInfo.
+    assumed_system_req_refs = []
+    for req_target in ctx.attr.requirements:
+        if AssumedSystemRequirementsInfo in req_target:
+            label_files, label_refs = _process_artifact_files(ctx, "assumed_system_requirements", req_target)
+            output_files.extend(label_files)
+            assumed_system_req_refs.extend(label_refs)
 
     # Collect all units recursively from components
     all_units = _collect_units_recursive(ctx.attr.components)
@@ -746,18 +777,11 @@ def _dependable_element_index_impl(ctx):
         if CertifiedScope in dep:
             collected_certified_scopes.append(dep[CertifiedScope].transitive_scopes)
 
-    # Generate an intermediate components/index.rst that groups all component pages
-    # under a single "Components" navigation entry in the Sphinx sidebar.
+    # Reference component pages directly in the outer toctree, avoiding an
+    # intermediate components/index.rst that would repeat "Components" in the
+    # Sphinx sidebar navigation.
     if component_refs:
-        comp_index_rst = ctx.actions.declare_file(ctx.label.name + "/components/index.rst")
-        comp_index_underline = "=" * len("Components")
-        comp_toctree_entries = "\n   ".join(component_refs)
-        ctx.actions.write(
-            output = comp_index_rst,
-            content = "Components\n" + comp_index_underline + "\n\n.. toctree::\n   :maxdepth: 2\n\n   " + comp_toctree_entries + "\n",
-        )
-        output_files.append(comp_index_rst)
-        components_ref = "components/index"
+        components_ref = "\n   ".join(["components/" + name for name in component_refs])
     else:
         components_ref = ""
 
@@ -775,8 +799,9 @@ def _dependable_element_index_impl(ctx):
             "{title}": title,
             "{underline}": underline,
             "{components}": components_ref,
+            "{assumed_system_requirements}": "\n   ".join(assumed_system_req_refs),
             "{assumptions_of_use}": "\n   ".join(artifacts_by_type["assumptions_of_use"]),
-            "{requirements}": "\n   ".join(artifacts_by_type["requirements"]),
+            "{feature_requirements}": "\n   ".join(feature_req_refs),
             "{architectural_design}": "\n   ".join(artifacts_by_type["architectural_design"]),
             "{dependability_analysis}": "\n   ".join(artifacts_by_type["dependability_analysis"]),
             "{checklists}": "\n   ".join(artifacts_by_type["checklists"]),
@@ -1000,8 +1025,8 @@ _dependable_element_index = rule(
             ),
             "requirements": attr.label_list(
                 mandatory = True,
-                providers = [FeatureRequirementsInfo],
-                doc = "Feature requirements targets (feature_requirements only).",
+                providers = [[FeatureRequirementsInfo], [AssumedSystemRequirementsInfo]],
+                doc = "Feature or assumed system requirements targets.",
             ),
             "architectural_design": attr.label_list(
                 mandatory = True,

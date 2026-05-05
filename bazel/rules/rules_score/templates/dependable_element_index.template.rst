@@ -15,30 +15,25 @@
 Dependable element: {title}
 ===================={underline}
 
-Architectural Design
---------------------
+Assumed System
+--------------
 
 .. toctree::
    :maxdepth: 2
 
-   {architectural_design}
-
-
-Assumptions of Use
-------------------
-
-.. toctree::
-   :maxdepth: 2
-
+   {assumed_system_requirements}
    {assumptions_of_use}
 
-Requirements
-------------
+Software Architectural Level
+----------------------------
 
 .. toctree::
    :maxdepth: 2
 
-   {requirements}
+   {feature_requirements}
+   {architectural_design}
+   {dependability_analysis}
+
 
 Components
 ----------
@@ -48,16 +43,6 @@ Components
 
    {components}
 
-
-
-
-Dependability Analysis
-----------------------
-
-.. toctree::
-   :maxdepth: 2
-
-   {dependability_analysis}
 
 Checklists
 ----------
