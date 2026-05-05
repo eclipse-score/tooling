@@ -43,6 +43,7 @@ by the ``dependability_analysis`` rule which wraps this one.
 
 load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:puml_utils.bzl", "make_puml_rst_wrappers")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 # ============================================================================
@@ -58,7 +59,7 @@ def _process_root_causes(ctx):
              ``ctx.executable._safety_analysis_tools``.
 
     Returns:
-        Tuple ``(preprocessed_diagrams, [root_causes_lobster], rst_section_text)``.
+        Tuple ``(preprocessed_diagrams, detail_rsts, [root_causes_lobster], rst_section_text)``.
         All lists are empty and the section text is ``""`` when there are no
         PlantUML root-cause inputs.
     """
@@ -68,7 +69,7 @@ def _process_root_causes(ctx):
         if f.extension in ("puml", "plantuml")
     ]
     if not puml_inputs:
-        return [], [], ""
+        return [], [], [], ""
 
     # Declare one preprocessed output per input diagram (same directory).
     preprocessed_diagrams = [
@@ -95,13 +96,34 @@ def _process_root_causes(ctx):
         progress_message = "Processing root cause FTA diagrams for %s" % ctx.label.name,
     )
 
-    # Build the RST fragment that fmea.rst embeds.
-    diagrams_rst = "\n\n".join(
-        [".. uml:: " + diagram.basename for diagram in preprocessed_diagrams],
+    # Generate one detail RST per preprocessed FTA diagram via the shared
+    # puml_diagram template.  The "fta_" prefix is stripped from the stem so
+    # the page is titled e.g. "Server Not Listening" instead of
+    # "Fta Server Not Listening".
+    detail_rsts = make_puml_rst_wrappers(
+        ctx,
+        preprocessed_diagrams,
+        ctx.label.name,
+        ctx.file._puml_rst_template,
+        strip_prefix = "fta_",
+        filename_prefix = "detail_",
     )
-    root_causes_rst_section = "Root Causes\n-----------\n\n{}".format(diagrams_rst)
 
-    return preprocessed_diagrams, [root_causes_lobster], root_causes_rst_section
+    # Build toctree entries directly from the declared RST wrapper filenames so
+    # the toctree is always consistent with what make_puml_rst_wrappers produces,
+    # regardless of any prefix convention on the input files.
+    toctree_entries = [
+        "   " + rst.basename[:-4]  # strip ".rst"
+        for rst in detail_rsts
+    ]
+
+    root_causes_rst_section = (
+        "Root Cause Analysis\n-------------------\n\n" +
+        ".. toctree::\n   :maxdepth: 1\n\n" +
+        "\n".join(toctree_entries) + "\n"
+    )
+
+    return preprocessed_diagrams, detail_rsts, [root_causes_lobster], root_causes_rst_section
 
 # ============================================================================
 # Private Helpers
@@ -150,8 +172,9 @@ def _fmea_impl(ctx):
     # -------------------------------------------------------------------------
     # 0. Process root causes (FTA diagrams) if provided
     # -------------------------------------------------------------------------
-    preprocessed_diagrams, root_cause_lobster_files, root_causes_rst_section = _process_root_causes(ctx)
+    preprocessed_diagrams, detail_rsts, root_cause_lobster_files, root_causes_rst_section = _process_root_causes(ctx)
     output_files.extend(preprocessed_diagrams)
+    output_files.extend(detail_rsts)
 
     # -------------------------------------------------------------------------
     # 1. Render failure modes: TRLC -> .inc via trlc_rst
@@ -272,7 +295,10 @@ def _fmea_impl(ctx):
     for f in root_cause_lobster_files:
         lobster_files["root_causes.lobster"] = f
 
-    all_sphinx_srcs = depset(output_files)
+    # detail_rsts are ancillary: they must be present next to fmea.rst for the
+    # sub-toctree to resolve, but they are NOT top-level toctree entries.
+    toctree_files = [f for f in output_files if f not in detail_rsts]
+    all_sphinx_srcs = depset(toctree_files)
 
     sphinx_deps = [all_sphinx_srcs]
     if ctx.attr.arch_design and SphinxSourcesInfo in ctx.attr.arch_design:
@@ -289,6 +315,7 @@ def _fmea_impl(ctx):
         SphinxSourcesInfo(
             srcs = all_sphinx_srcs,
             deps = depset(transitive = sphinx_deps),
+            ancillary = depset(detail_rsts),
         ),
     ]
 
@@ -363,6 +390,11 @@ _fmea = rule(
                 default = Label("//bazel/rules/rules_score:templates/fmea.template.rst"),
                 allow_single_file = True,
                 doc = "RST template for the FMEA page.",
+            ),
+            "_puml_rst_template": attr.label(
+                default = Label("//bazel/rules/rules_score:templates/puml_diagram.template.rst"),
+                allow_single_file = True,
+                doc = "RST template for PlantUML diagram wrapper pages.",
             ),
         },
         **VERBOSITY_ATTR
