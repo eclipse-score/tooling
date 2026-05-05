@@ -30,21 +30,23 @@ load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_sou
 # Private Helpers
 # ============================================================================
 
-def _collect_analysis_providers(sa, rst_srcs_list, rst_deps_list, lobster_files):
+def _collect_analysis_providers(sa, rst_srcs_list, rst_deps_list, rst_ancillary_list, lobster_files):
     """Collect analysis providers from a single sub-analysis target.
 
     Updates the provided lists/dicts in-place.
 
     Args:
-        sa:             A sub-analysis target (fmea or security).
-        rst_srcs_list:  List of depsets to extend with SphinxSourcesInfo.srcs.
-        rst_deps_list:  List of depsets to extend with SphinxSourcesInfo.deps.
-        lobster_files:  Dict to update with AnalysisInfo.lobster_files
-                        (canonical name → File).
+        sa:                  A sub-analysis target (fmea or security).
+        rst_srcs_list:       List of depsets to extend with SphinxSourcesInfo.srcs.
+        rst_deps_list:       List of depsets to extend with SphinxSourcesInfo.deps.
+        rst_ancillary_list:  List of depsets to extend with SphinxSourcesInfo.ancillary.
+        lobster_files:       Dict to update with AnalysisInfo.lobster_files
+                             (canonical name → File).
     """
     if SphinxSourcesInfo in sa:
         rst_srcs_list.append(sa[SphinxSourcesInfo].srcs)
         rst_deps_list.append(sa[SphinxSourcesInfo].deps)
+        rst_ancillary_list.append(sa[SphinxSourcesInfo].ancillary)
     if AnalysisInfo in sa:
         lobster_files.update(sa[AnalysisInfo].lobster_files)
 
@@ -74,6 +76,7 @@ def _dependability_analysis_impl(ctx):
 
     rst_srcs_transitive = [dfa_rst_files]
     rst_deps_transitive = [dfa_rst_files]
+    rst_ancillary_transitive = []
     lobster_files = {}  # canonical name → File, merged from all sub-analyses
 
     # -------------------------------------------------------------------------
@@ -82,7 +85,7 @@ def _dependability_analysis_impl(ctx):
     fmea_output_files = []
     for sa in ctx.attr.fmea:
         fmea_output_files.append(sa[DefaultInfo].files)
-        _collect_analysis_providers(sa, rst_srcs_transitive, rst_deps_transitive, lobster_files)
+        _collect_analysis_providers(sa, rst_srcs_transitive, rst_deps_transitive, rst_ancillary_transitive, lobster_files)
 
     # -------------------------------------------------------------------------
     # Collect from security_analysis targets
@@ -90,7 +93,7 @@ def _dependability_analysis_impl(ctx):
     security_output_files = []
     for sa in ctx.attr.security_analysis:
         security_output_files.append(sa[DefaultInfo].files)
-        _collect_analysis_providers(sa, rst_srcs_transitive, rst_deps_transitive, lobster_files)
+        _collect_analysis_providers(sa, rst_srcs_transitive, rst_deps_transitive, rst_ancillary_transitive, lobster_files)
 
     # Architectural design sphinx deps (optional)
     if ctx.attr.arch_design and SphinxSourcesInfo in ctx.attr.arch_design:
@@ -182,6 +185,7 @@ def _dependability_analysis_impl(ctx):
         SphinxSourcesInfo(
             srcs = all_rst_srcs,
             deps = all_rst_deps,
+            ancillary = depset(transitive = rst_ancillary_transitive),
         ),
     ]
 
