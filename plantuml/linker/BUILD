@@ -20,7 +20,9 @@ rust_binary(
     deps = [
         "//plantuml/parser/puml_serializer/src/fbs:component_fbs",
         "@crates//:clap",
+        "@crates//:env_logger",
         "@crates//:flatbuffers",
+        "@crates//:log",
         "@crates//:serde",
         "@crates//:serde_json",
     ],

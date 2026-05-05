@@ -23,9 +23,36 @@
 use std::collections::HashMap;
 use std::fs;
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
+use env_logger::Builder;
 
 use component_fbs::component as fb_component;
+
+// ---------------------------------------------------------------------------
+// Log level
+// ---------------------------------------------------------------------------
+
+/// CLI-visible log level (mirrors the parser's convention).
+#[derive(Copy, Clone, ValueEnum, Debug)]
+enum CliLogLevel {
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+
+impl CliLogLevel {
+    fn to_level_filter(self) -> log::LevelFilter {
+        match self {
+            CliLogLevel::Error => log::LevelFilter::Error,
+            CliLogLevel::Warn => log::LevelFilter::Warn,
+            CliLogLevel::Info => log::LevelFilter::Info,
+            CliLogLevel::Debug => log::LevelFilter::Debug,
+            CliLogLevel::Trace => log::LevelFilter::Trace,
+        }
+    }
+}
 
 // ---------------------------------------------------------------------------
 // CLI
@@ -48,6 +75,10 @@ struct Args {
     /// Output JSON file path
     #[arg(long, default_value = "plantuml_links.json")]
     output: String,
+
+    /// Log level: error, warn, info, debug, trace
+    #[arg(long, value_enum, default_value = "warn")]
+    log_level: CliLogLevel,
 }
 
 // ---------------------------------------------------------------------------
@@ -198,6 +229,9 @@ fn generate_links(diagrams: &[DiagramInfo]) -> Vec<LinkEntry> {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+    Builder::new()
+        .filter_level(args.log_level.to_level_filter())
+        .init();
 
     if args.fbs_files.is_empty() {
         return Err("No .fbs.bin files provided. Use --fbs-files <file> ...".into());
@@ -207,7 +241,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for fbs_path in &args.fbs_files {
         match read_diagram(fbs_path) {
             Ok(diagram) => {
-                eprintln!(
+                log::info!(
                     "Read {} components from {}",
                     diagram.components.len(),
                     diagram.source_file
@@ -215,18 +249,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 diagrams.push(diagram);
             }
             Err(e) => {
-                eprintln!("Warning: skipping {fbs_path}: {e}");
+                log::warn!("Skipping {}: {}", fbs_path, e);
             }
         }
     }
 
     let links = generate_links(&diagrams);
-    eprintln!("Generated {} link(s)", links.len());
+    log::info!("Generated {} link(s)", links.len());
 
     let output = LinksJson { links };
     let json = serde_json::to_string_pretty(&output)?;
     fs::write(&args.output, &json)?;
-    eprintln!("Written to {}", args.output);
+    log::debug!("Written to {}", args.output);
 
     Ok(())
 }
