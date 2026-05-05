@@ -20,13 +20,36 @@ use std::fs;
 use std::mem;
 use std::process;
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
+use env_logger::Builder;
 use validation::{
     validate_bazel_component, validate_component_class, BazelArchitecture, BazelInput, BazelReader,
     ClassDiagramIndex, ClassDiagramInputs, ClassDiagramReader, ComponentDiagramArchitecture,
     ComponentDiagramInputs, ComponentDiagramReader, Errors, Reader, RequiredInput,
     SelectedValidator, ValidatorSpec, ALL_VALIDATORS,
 };
+
+/// CLI-visible log level (mirrors the parser/linker convention).
+#[derive(Copy, Clone, ValueEnum, Debug)]
+enum CliLogLevel {
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+
+impl CliLogLevel {
+    fn to_level_filter(self) -> log::LevelFilter {
+        match self {
+            CliLogLevel::Error => log::LevelFilter::Error,
+            CliLogLevel::Warn => log::LevelFilter::Warn,
+            CliLogLevel::Info => log::LevelFilter::Info,
+            CliLogLevel::Debug => log::LevelFilter::Debug,
+            CliLogLevel::Trace => log::LevelFilter::Trace,
+        }
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "validation")]
@@ -49,6 +72,10 @@ struct Args {
     /// with code 0. Intended for use during development (maturity=development).
     #[arg(long, default_value_t = false)]
     warn_on_errors: bool,
+
+    /// Log level: error, warn, info, debug, trace
+    #[arg(long, value_enum, default_value = "warn")]
+    log_level: CliLogLevel,
 }
 
 struct ValidationCliInputs {
@@ -231,7 +258,7 @@ fn finish_validation(
             details
         );
         if warn_on_errors {
-            eprintln!("WARNING: {output}");
+            log::warn!("{}", output);
             Ok(())
         } else {
             Err(output)
@@ -263,8 +290,12 @@ fn write_log(path: &str, errors: &Errors) -> Result<(), String> {
 }
 
 fn main() {
-    if let Err(msg) = run(Args::parse()) {
-        eprintln!("{msg}");
+    let args = Args::parse();
+    Builder::new()
+        .filter_level(args.log_level.to_level_filter())
+        .init();
+    if let Err(msg) = run(args) {
+        log::error!("{}", msg);
         process::exit(1);
     }
 }

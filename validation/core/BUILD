@@ -50,6 +50,8 @@ rust_binary(
     deps = [
         ":validation",
         "@crates//:clap",
+        "@crates//:env_logger",
+        "@crates//:log",
     ],
 )
 
