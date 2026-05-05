@@ -207,6 +207,7 @@ def _component_impl(ctx):
         SphinxSourcesInfo(
             srcs = req_sphinx_depset,
             deps = sphinx_depset,
+            ancillary = depset(),
         ),
     ]
 

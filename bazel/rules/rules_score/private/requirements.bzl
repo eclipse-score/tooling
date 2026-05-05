@@ -49,6 +49,7 @@ def _requirements_impl(ctx):
         args = ctx.actions.args()
         args.add("--output", rendered_file.path)
         args.add("--input-dir", ".")
+        args.add("--title", ctx.label.name.replace("_", " ").title())
         args.add("--source-files")
         args.add_all(trlc_provider.reqs)
 
@@ -113,6 +114,7 @@ def _requirements_impl(ctx):
     providers.append(SphinxSourcesInfo(
         srcs = all_srcs,
         deps = all_srcs,
+        ancillary = depset(),
     ))
     return providers
 

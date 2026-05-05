@@ -55,7 +55,8 @@ def _component_requirements_impl(ctx):
         ),
         SphinxSourcesInfo(
             srcs = srcs,
-            transitive_srcs = depset(transitive = transitive),
+            deps = depset(transitive = transitive),
+            ancillary = depset(),
         ),
     ]
 

@@ -49,7 +49,8 @@ def _feature_requirements_impl(ctx):
         ),
         SphinxSourcesInfo(
             srcs = srcs,
-            transitive_srcs = srcs,
+            deps = srcs,
+            ancillary = depset(),
         ),
     ]
 

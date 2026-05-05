@@ -53,6 +53,7 @@ SphinxSourcesInfo = provider(
     fields = {
         "srcs": "Depset of direct source files for Sphinx documentation (.rst, .md, .puml, .plantuml, .svg, .png, etc.)",
         "deps": "Depset of transitive Sphinx source files collected from all direct and transitive dependencies.",
+        "ancillary": "Depset of files that must be physically present in the Sphinx tree (e.g. for sub-toctrees or .. uml:: directives) but are NOT top-level toctree entries.",
     },
 )
 
