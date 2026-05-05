@@ -54,3 +54,6 @@ jobs:
       - name: Run Validation Tooling tests
         run: |
           bazel test //validation/...
+      - name: Ensure correct dependency resolution
+        run: |
+          bazel mod deps --lockfile_mode=update
