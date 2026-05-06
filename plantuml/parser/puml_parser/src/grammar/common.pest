@@ -62,7 +62,7 @@ NAME        = { COMPOUND_NAME | LOOSE_NAME }
 CNAME = @{ quoted_string | NAME }
 quoted_string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "«" ~ (!"»" ~ ANY)* ~ "»" }
 
-diagram_id = @{ (ASCII_ALPHANUMERIC | "_" | "-" | "." | "@")+ }
+diagram_id = @{ (ASCII_ALPHANUMERIC | "_" | "-" | "." | "@" | " ")+ }
 puml_name  = { STRING | diagram_id }
 
 identifier = @{ (ASCII_ALPHANUMERIC | "_")+ }
