@@ -16,7 +16,7 @@ pub mod error;
 
 pub use common_ast::*;
 pub use common_parser::*;
-pub use error::{pest_to_syntax_error, BaseParseError};
+pub use error::{pest_to_syntax_error, BaseParseError, ErrorLocation};
 
 /// Recursively format a Pest parse tree into an indented string for diagnostic output.
 ///

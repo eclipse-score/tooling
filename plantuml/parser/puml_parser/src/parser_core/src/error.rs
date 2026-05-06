@@ -35,6 +35,19 @@ pub enum BaseParseError<Rule> {
     },
 }
 
+pub trait ErrorLocation {
+    fn error_location(&self) -> Option<(usize, usize)>;
+}
+
+impl<Rule> ErrorLocation for BaseParseError<Rule> {
+    fn error_location(&self) -> Option<(usize, usize)> {
+        match self {
+            Self::SyntaxError { line, column, .. } => Some((*line, *column)),
+            _ => None,
+        }
+    }
+}
+
 pub fn pest_to_syntax_error<Rule>(
     err: PestError<Rule>,
     file: PathBuf,

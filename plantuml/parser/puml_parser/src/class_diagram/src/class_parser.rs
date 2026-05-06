@@ -21,7 +21,9 @@ use crate::source_map::{
 };
 use log::{debug, trace};
 use parser_core::common_parser::{parse_arrow, PlantUmlCommonParser, Rule};
-use parser_core::{format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser};
+use parser_core::{
+    format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser, ErrorLocation,
+};
 use pest::Parser;
 use puml_utils::LogLevel;
 use std::collections::HashSet;
@@ -37,6 +39,15 @@ pub enum ClassError {
     UnexpectedUsingAttribute,
     #[error("unexpected class member rule: {0}")]
     UnexpectedClassMember(String),
+}
+
+impl ErrorLocation for ClassError {
+    fn error_location(&self) -> Option<(usize, usize)> {
+        match self {
+            Self::Base(b) => b.error_location(),
+            _ => None,
+        }
+    }
 }
 
 // Object definitions are ignored by the class parser, but their names must be

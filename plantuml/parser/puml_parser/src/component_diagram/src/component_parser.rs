@@ -18,7 +18,9 @@ use thiserror::Error;
 use crate::{
     Arrow, CompPumlDocument, Component, ComponentStyle, Port, PortType, Relation, Statement,
 };
-use parser_core::{format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser};
+use parser_core::{
+    format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser, ErrorLocation,
+};
 use puml_utils::LogLevel;
 
 use parser_core::common_parser::parse_arrow as common_parse_arrow;
@@ -30,6 +32,15 @@ pub enum ComponentError {
     Base(#[from] BaseParseError<Rule>),
     #[error("invalid component statement: {0}")]
     InvalidStatement(String),
+}
+
+impl ErrorLocation for ComponentError {
+    fn error_location(&self) -> Option<(usize, usize)> {
+        match self {
+            Self::Base(b) => b.error_location(),
+            _ => None,
+        }
+    }
 }
 
 pub struct PumlComponentParser;

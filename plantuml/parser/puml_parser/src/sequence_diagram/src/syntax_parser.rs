@@ -13,7 +13,9 @@
 use log::{debug, trace};
 use parser_core::common_parser::parse_arrow as common_parse_arrow;
 use parser_core::common_parser::{PlantUmlCommonParser, Rule};
-use parser_core::{format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser};
+use parser_core::{
+    format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser, ErrorLocation,
+};
 use puml_utils::LogLevel;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -27,6 +29,15 @@ pub enum SequenceError {
     Base(#[from] BaseParseError<Rule>),
     #[error("invalid sequence statement: {0}")]
     InvalidStatement(String),
+}
+
+impl ErrorLocation for SequenceError {
+    fn error_location(&self) -> Option<(usize, usize)> {
+        match self {
+            Self::Base(b) => b.error_location(),
+            _ => None,
+        }
+    }
 }
 
 pub struct PumlSequenceParser;

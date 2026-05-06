@@ -23,7 +23,8 @@ use std::rc::Rc;
 
 use puml_lobster::{write_lobster_to_file, LobsterModel};
 use puml_parser::{
-    DiagramParser, Preprocessor, PumlClassParser, PumlComponentParser, PumlSequenceParser,
+    DiagramParser, ErrorLocation, Preprocessor, PumlClassParser, PumlComponentParser,
+    PumlSequenceParser,
 };
 use puml_resolver::{
     ClassResolver, ComponentResolver, DiagramResolver, SequenceResolver, SequenceTree,
@@ -111,7 +112,14 @@ enum ParsedDiagram {
     Sequence(puml_parser::SeqPumlDocument),
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("{e}");
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let log_level: LogLevel = args.log_level.into();
     Builder::new()
@@ -149,13 +157,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     debug!("Parsing started");
     for (path, content) in &preprocessed_files {
-        let parsed_content =
-            parse_puml_file(path, content, log_level, args.diagram_type).map_err(|e| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Parse error in {}: {}", path.display(), e),
-                )
-            })?;
+        let parsed_content = parse_puml_file(path, content, log_level, args.diagram_type)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
         if emit_debug_json {
             if let Some(ref dir) = fbs_output_dir {
                 write_json_to_file(&parsed_content, path, dir, "raw.ast")?;
@@ -304,36 +307,91 @@ fn parse_puml_file(
     }
 }
 
-type ParserFn =
-    fn(&Rc<PathBuf>, &str, LogLevel) -> Result<ParsedDiagram, Box<dyn std::error::Error>>;
+type ParseAttempt<'a> = (&'a str, Box<dyn std::error::Error>, Option<(usize, usize)>);
 
 fn parse_in_order(
     path: &Rc<PathBuf>,
     content: &str,
     log_level: LogLevel,
 ) -> Result<ParsedDiagram, Box<dyn std::error::Error>> {
-    let parsers: &[(&str, ParserFn)] = &[
-        ("Component", |p, c, l| {
-            parse_with_parser(&mut PumlComponentParser, p, c, l).map(ParsedDiagram::Component)
-        }),
-        ("Class", |p, c, l| {
-            parse_with_parser(&mut PumlClassParser, p, c, l).map(ParsedDiagram::Class)
-        }),
-        ("Sequence", |p, c, l| {
-            parse_with_parser(&mut PumlSequenceParser, p, c, l).map(ParsedDiagram::Sequence)
-        }),
-    ];
+    // Each attempt records the parser name, the boxed error, and the source
+    // location extracted from the concrete type before boxing.
+    let mut attempts: Vec<ParseAttempt<'_>> = Vec::new();
 
-    for (parser_name, parser) in parsers {
-        if let Ok(ast) = parser(path, content, log_level) {
-            debug!("Successfully detected as {} diagram", parser_name);
-            return Ok(ast);
+    match PumlComponentParser.parse_file(path, content, log_level) {
+        Ok(doc) => {
+            debug!("Successfully detected as Component diagram");
+            return Ok(ParsedDiagram::Component(doc));
+        }
+        Err(e) => {
+            let loc = e.error_location();
+            debug!("Component parser failed at {:?}: {}", loc, e);
+            attempts.push(("Component", Box::new(e), loc));
         }
     }
 
+    match PumlClassParser.parse_file(path, content, log_level) {
+        Ok(doc) => {
+            debug!("Successfully detected as Class diagram");
+            return Ok(ParsedDiagram::Class(doc));
+        }
+        Err(e) => {
+            let loc = e.error_location();
+            debug!("Class parser failed at {:?}: {}", loc, e);
+            attempts.push(("Class", Box::new(e), loc));
+        }
+    }
+
+    match PumlSequenceParser.parse_file(path, content, log_level) {
+        Ok(doc) => {
+            debug!("Successfully detected as Sequence diagram");
+            return Ok(ParsedDiagram::Sequence(doc));
+        }
+        Err(e) => {
+            let loc = e.error_location();
+            debug!("Sequence parser failed at {:?}: {}", loc, e);
+            attempts.push(("Sequence", Box::new(e), loc));
+        }
+    }
+
+    // The parser that reached the furthest line is the most informative one.
+    let best = attempts
+        .iter()
+        .max_by_key(|(_, _, loc)| loc.map_or(0, |(line, _)| line));
+
+    let tried_names: Vec<&str> = attempts.iter().map(|(n, _, _)| *n).collect();
+
+    let detail = match best {
+        Some((best_name, best_err, Some((line_no, _col)))) => {
+            let source_line = content
+                .lines()
+                .nth(line_no - 1)
+                .unwrap_or("<unknown>")
+                .trim();
+            format!(
+                "\n  Parsers tried: {}\n  Parser with longest match: {}\n  Failed at line {}: {}\n  Error: {}",
+                tried_names.join(", "),
+                best_name,
+                line_no,
+                source_line,
+                best_err,
+            )
+        }
+        Some((best_name, best_err, None)) => {
+            format!(
+                "\n  Parsers tried: {}\n  Parser with longest match: {}\n  Error: {}",
+                tried_names.join(", "),
+                best_name,
+                best_err,
+            )
+        }
+        None => String::new(),
+    };
+
     Err(format!(
-        "Failed to parse {} with any available parser",
-        path.display()
+        "Failed to parse {} with any available parser{}",
+        path.display(),
+        detail,
     )
     .into())
 }
