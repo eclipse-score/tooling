@@ -396,7 +396,7 @@ def has_copyright(path, template, use_mmap, encoding, offset, config=None):
         if BORDER_FILL_PATTERN.search(stripped_line):
             regex_parts.append(line_to_flexible_regex(line))
         else:
-            formatted = line.format(year=r"\\d\{4\}", author=r"\.\*")
+            formatted = line.format(year=r"\\d\{4\}\(-\\d\{4\}\)\?", author=r"\.\*")
             regex_parts.append(convert_bre_to_regex(formatted))
     template_regex = "".join(regex_parts) + "\n?"
 
@@ -431,7 +431,7 @@ def has_duplicate_copyright(path, template, use_mmap, encoding, offset):
         if BORDER_FILL_PATTERN.search(stripped_line):
             regex_parts.append(line_to_flexible_regex(line))
         else:
-            formatted = line.format(year=r"\\d\{4\}", author=r"\.\*")
+            formatted = line.format(year=r"\\d\{4\}\(-\\d\{4\}\)\?", author=r"\.\*")
             regex_parts.append(convert_bre_to_regex(formatted))
     template_regex = "\n?".join(regex_parts)
 

@@ -443,3 +443,19 @@ def test_process_files_detects_duplicate_header(tmp_path):
 
     assert results["duplicate_copyright"] == 1
     assert results["no_copyright"] == 0
+
+
+# test that has_duplicate_copyright detects two headers with different year ranges
+def test_has_duplicate_copyright_detects_different_year_ranges(tmp_path):
+    cr_checker = load_cr_checker_module()
+    test_file = tmp_path / "file.py"
+    header_template = load_template("py")
+    header1 = header_template.format(year="2026", author="Author")
+    header2 = header_template.format(year="2024-2026", author="Author")
+    test_file.write_text(header1 + header2 + "some content\n", encoding="utf-8")
+
+    result = cr_checker.has_duplicate_copyright(
+        test_file, header_template, False, "utf-8", 0
+    )
+
+    assert result is True
