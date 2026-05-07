@@ -41,7 +41,6 @@ This is a **build-only** rule.  The combined traceability *test* is owned
 by the ``dependability_analysis`` rule which wraps this one.
 """
 
-load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:puml_utils.bzl", "make_puml_rst_wrappers")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
@@ -129,33 +128,37 @@ def _process_root_causes(ctx):
 # Private Helpers
 # ============================================================================
 
-def _render_trlc_inc(ctx, src, suffix):
-    """Render a trlc_requirements target to an ``.inc`` file via trlc_rst.
+def _render_trlc_inc(ctx, trlc_files, spec_files, out_name):
+    """Render a list of ``.trlc`` source files to an ``.inc`` file via trlc_rst.
 
     The ``.inc`` extension means the file is symlinked into the output
     directory (via ``_filter_doc_files``) but is NOT added to any Sphinx
     toctree (``_is_document_file`` only matches ``.rst`` / ``.md``).
 
     Args:
-        ctx:    Rule context.
-        src:    Label carrying TrlcProviderInfo.
-        suffix: Suffix appended to the target name before ``.inc``.
+        ctx:        Rule context.
+        trlc_files: List of ``.trlc`` File objects to render.
+        spec_files: List of ``.rsl`` spec File objects needed for TRLC import
+                    resolution (passed as sandbox inputs only).
+        out_name:   Output filename (e.g. ``"failuremodes.inc"``).
 
     Returns:
-        Declared ``.inc`` output File inside ``{label.name}/``.
+        Declared ``.inc`` output File inside ``{label.name}/``, or ``None``
+        when ``trlc_files`` is empty.
     """
-    trlc_provider = src[TrlcProviderInfo]
+    if not trlc_files:
+        return None
     rendered = ctx.actions.declare_file(
-        "{}/{}{}.inc".format(ctx.label.name, src.label.name, suffix),
+        "{}/{}".format(ctx.label.name, out_name),
     )
     args = ctx.actions.args()
     args.add("--output", rendered.path)
     args.add("--input-dir", ".")
     args.add("--title", "")
     args.add("--source-files")
-    args.add_all(trlc_provider.reqs)
+    args.add_all(trlc_files)
     ctx.actions.run(
-        inputs = src[DefaultInfo].files,
+        inputs = trlc_files + spec_files,
         outputs = [rendered],
         arguments = [args],
         executable = ctx.executable._renderer,
@@ -179,36 +182,25 @@ def _fmea_impl(ctx):
     # -------------------------------------------------------------------------
     # 1. Render failure modes: TRLC -> .inc via trlc_rst
     # -------------------------------------------------------------------------
-    failuremodes_inc = [
-        _render_trlc_inc(ctx, src, "_failuremodes")
-        for src in ctx.attr.failuremodes
-    ]
+    spec_files = ctx.files.spec
+    fm_inc = _render_trlc_inc(ctx, ctx.files.failuremodes, spec_files, "failuremodes.inc")
+    failuremodes_inc = [fm_inc] if fm_inc else []
     output_files.extend(failuremodes_inc)
 
     # -------------------------------------------------------------------------
     # 2. Render control measures: TRLC -> .inc via trlc_rst
     # -------------------------------------------------------------------------
-    controlmeasures_inc = [
-        _render_trlc_inc(ctx, src, "_controlmeasures")
-        for src in ctx.attr.controlmeasures
-    ]
+    cm_inc = _render_trlc_inc(ctx, ctx.files.controlmeasures, spec_files, "controlmeasures.inc")
+    controlmeasures_inc = [cm_inc] if cm_inc else []
     output_files.extend(controlmeasures_inc)
 
     # -------------------------------------------------------------------------
-    # 3. Run lobster-trlc on TRLC sources -> lobster files
-    #    Use TrlcProviderInfo.reqs to check if there are any TRLC sources to
-    #    process.  Pass DefaultInfo.files as sandbox inputs so that the .rsl
-    #    spec files (needed to resolve `import ScoreReq` etc.) are available
-    #    alongside the .trlc record files.
+    # 3. Run lobster-trlc on TRLC sources -> lobster files.
+    #    Spec files must be sandbox inputs so the TRLC parser can resolve
+    #    ``import ScoreReq`` etc.
     # -------------------------------------------------------------------------
-    failure_mode_trlc_srcs = []
-    failure_mode_inputs = []
-    for src in ctx.attr.failuremodes:
-        failure_mode_trlc_srcs.extend(src[TrlcProviderInfo].reqs.to_list())
-        failure_mode_inputs.extend(src[DefaultInfo].files.to_list())
-
     failuremodes_lobster_files = []
-    if failure_mode_trlc_srcs:
+    if ctx.files.failuremodes:
         failuremodes_lobster = ctx.actions.declare_file(
             "{}/failuremodes.lobster".format(ctx.label.name),
         )
@@ -216,7 +208,7 @@ def _fmea_impl(ctx):
         args.add("--config", ctx.file._fm_lobster_config.path)
         args.add("--out", failuremodes_lobster.path)
         ctx.actions.run(
-            inputs = failure_mode_inputs + [ctx.file._fm_lobster_config],
+            inputs = ctx.files.failuremodes + spec_files + [ctx.file._fm_lobster_config],
             outputs = [failuremodes_lobster],
             executable = ctx.executable._lobster_trlc,
             arguments = [args],
@@ -224,14 +216,8 @@ def _fmea_impl(ctx):
         )
         failuremodes_lobster_files.append(failuremodes_lobster)
 
-    control_measure_trlc_srcs = []
-    control_measure_inputs = []
-    for src in ctx.attr.controlmeasures:
-        control_measure_trlc_srcs.extend(src[TrlcProviderInfo].reqs.to_list())
-        control_measure_inputs.extend(src[DefaultInfo].files.to_list())
-
     controlmeasures_lobster_files = []
-    if control_measure_trlc_srcs:
+    if ctx.files.controlmeasures:
         controlmeasures_lobster = ctx.actions.declare_file(
             "{}/controlmeasures.lobster".format(ctx.label.name),
         )
@@ -239,7 +225,7 @@ def _fmea_impl(ctx):
         args.add("--config", ctx.file._cm_lobster_config.path)
         args.add("--out", controlmeasures_lobster.path)
         ctx.actions.run(
-            inputs = control_measure_inputs + [ctx.file._cm_lobster_config],
+            inputs = ctx.files.controlmeasures + spec_files + [ctx.file._cm_lobster_config],
             outputs = [controlmeasures_lobster],
             executable = ctx.executable._lobster_trlc,
             arguments = [args],
@@ -330,14 +316,20 @@ _fmea = rule(
     attrs = dict(
         {
             "failuremodes": attr.label_list(
-                providers = [TrlcProviderInfo],
+                allow_files = [".trlc"],
                 mandatory = False,
-                doc = "Failure modes as trlc_requirements targets (rendered to .inc via trlc_rst).",
+                doc = "Failure mode ``.trlc`` source files.",
             ),
             "controlmeasures": attr.label_list(
-                providers = [TrlcProviderInfo],
+                allow_files = [".trlc"],
                 mandatory = False,
-                doc = "Control measures as trlc_requirements targets (rendered to .inc via trlc_rst).",
+                doc = "Control measure ``.trlc`` source files.",
+            ),
+            "spec": attr.label_list(
+                allow_files = [".rsl", ".trlc"],
+                default = [Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")],
+                doc = "TRLC model specification files (``.rsl``) required for import resolution. " +
+                      "Defaults to the S-CORE requirements model.",
             ),
             "root_causes": attr.label_list(
                 allow_files = [".puml", ".plantuml"],
@@ -407,6 +399,7 @@ _fmea = rule(
 
 def fmea(
         name,
+        spec = None,
         failuremodes = [],
         controlmeasures = [],
         root_causes = [],
@@ -420,7 +413,7 @@ def fmea(
 
     FTA diagrams passed via ``root_causes`` are preprocessed to inline
     ``fta_metamodel.puml`` (hermetic, no ``!include`` at render time) and
-    lobster traceability items are extracted to ``fta.lobster``.
+    lobster traceability items are extracted to ``root_causes.lobster``.
 
     This is a **build-only** rule.  The combined traceability test
     (FM + CM + FTA) is owned by the ``dependability_analysis`` that wraps
@@ -428,16 +421,20 @@ def fmea(
 
     Args:
         name: Target name.
-        failuremodes: trlc_requirements targets for failure mode records.
-        controlmeasures: trlc_requirements targets for control measure records.
+        spec: TRLC model specification files (``.rsl``) for resolving imports.
+            Defaults to the S-CORE requirements model. Override only when using
+            a custom TRLC schema.
+        failuremodes: Failure mode ``.trlc`` source files.
+        controlmeasures: Control measure ``.trlc`` source files.
         root_causes: Optional FTA PlantUML diagram files (``.puml`` /
             ``.plantuml``) representing the root causes of failure modes.
-        arch_design: Optional architectural_design target for traceability.
+        arch_design: Optional ``architectural_design`` target for traceability.
         visibility: Bazel visibility.
         tags: Additional Bazel tags.
     """
     _fmea(
         name = name,
+        spec = spec,
         failuremodes = failuremodes,
         controlmeasures = controlmeasures,
         root_causes = root_causes,
