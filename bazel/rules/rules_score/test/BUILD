@@ -125,38 +125,25 @@ sphinx_module(
 # Tests the score_component macro with S-CORE process artifacts
 
 # - Feature Requirements:     wp__requirements_feat
-trlc_requirements(
+assumed_system_requirements(
     name = "asr_trlc",
     srcs = ["fixtures/seooc_test/assumed_system_requirements.trlc"],
-    spec = ["@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model"],
-)
-
-trlc_requirements(
-    name = "feat_req_trlc",
-    srcs = ["fixtures/seooc_test/feature_requirements.trlc"],
-    spec = ["@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model"],
-    deps = [":asr_trlc"],
 )
 
 feature_requirements(
     name = "feat_req",
-    srcs = [":feat_req_trlc"],
+    srcs = ["fixtures/seooc_test/feature_requirements.trlc"],
+    deps = [":asr_trlc"],
 )
 
 # - Component Requirements:   wp__requirements_comp
-trlc_requirements(
-    name = "comp_req_trlc",
-    srcs = ["fixtures/seooc_test/component_requirements.trlc"],
-    spec = ["@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model"],
-    deps = [
-        ":asr_trlc",
-        ":feat_req_trlc",
-    ],
-)
-
 component_requirements(
     name = "comp_req",
-    srcs = [":comp_req_trlc"],
+    srcs = ["fixtures/seooc_test/component_requirements.trlc"],
+    deps = [
+        ":asr_trlc",
+        ":feat_req",
+    ],
 )
 
 # - Assumptions of Use:       wp__requirements_comp_aou
@@ -640,13 +627,17 @@ feature_requirements(
     name = "feat_req_rst",
     srcs = ["fixtures/rst_requirements/feature_requirements.rst"],
     ref_package = "AssumedSystemRequirements",
-    deps = [":asr_rst_trlc"],
+    deps = [":asr_rst"],
 )
 
 # Fixture: component_requirements from RST
 component_requirements(
     name = "comp_req_rst",
     srcs = ["fixtures/rst_requirements/component_requirements.rst"],
+    deps = [
+        ":asr_rst",
+        ":feat_req_rst",
+    ],
 )
 
 # Fixture: assumptions_of_use from RST

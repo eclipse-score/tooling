@@ -40,17 +40,17 @@ def _asr_rst_output_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
 
-    files = target_under_test[DefaultInfo].files.to_list()
     asserts.true(
         env,
-        len(files) > 0,
-        "assumed_system_requirements from RST should produce output files",
+        SphinxSourcesInfo in target_under_test,
+        "assumed_system_requirements should provide SphinxSourcesInfo",
     )
-    rst_files = [f for f in files if f.basename.endswith(".rst")]
+    sphinx_files = target_under_test[SphinxSourcesInfo].srcs.to_list()
+    rst_files = [f for f in sphinx_files if f.basename.endswith(".rst")]
     asserts.true(
         env,
         len(rst_files) > 0,
-        "assumed_system_requirements from RST should produce a rendered .rst file",
+        "assumed_system_requirements should produce a rendered .rst file in SphinxSourcesInfo.srcs",
     )
 
     return analysistest.end(env)
