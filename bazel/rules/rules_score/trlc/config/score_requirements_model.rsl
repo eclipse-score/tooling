@@ -35,12 +35,6 @@ abstract type Requirement {
     freeze status =         Status.valid
 }
 
-tuple ReqId {
-    item                     Requirement
-    separator                @
-    version                  Integer
-}
-
 abstract type RequirementSafety extends Requirement {
     safety                  Asil
 }
@@ -124,8 +118,8 @@ type AoU extends ControlMeasure {
 // Standards
 ///////////////////////////////
 
-abstract type StdReq extends Requirement {
-}
+// abstract type StdReq extends Requirement {
+// }
 
 
 ///////////////////////////////
