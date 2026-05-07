@@ -17,7 +17,7 @@ use puml_parser::{
     BaseParseError, ClassError, IncludeExpandError, IncludeParseError, PreprocessError,
     ProcedureExpandError, ProcedureParseError,
 };
-use puml_resolver::{ClassPumlResolverError, ComponentResolverError};
+use puml_resolver::{ClassPumlResolverError, ElementResolverError};
 
 #[derive(Debug)]
 pub struct ProjectedError {
@@ -197,22 +197,22 @@ impl ErrorView for ClassError {
     }
 }
 
-impl ErrorView for ComponentResolverError {
+impl ErrorView for ElementResolverError {
     fn project(&self, _base_dir: &Path) -> ProjectedError {
         match self {
-            ComponentResolverError::UnresolvedReference { reference } => {
+            ElementResolverError::UnresolvedReference { reference } => {
                 ProjectedError::new("UnresolvedReference")
                     .with_field("reference", reference.clone())
             }
 
-            ComponentResolverError::DuplicateComponent { component_id } => {
+            ElementResolverError::DuplicateElement { element_id } => {
                 ProjectedError::new("DuplicateComponent")
-                    .with_field("component_id", component_id.clone())
+                    .with_field("component_id", element_id.clone())
             }
 
-            ComponentResolverError::UnknownComponentType { component_type } => {
+            ElementResolverError::UnknownElementType { element_type } => {
                 ProjectedError::new("UnknownComponentType")
-                    .with_field("component_type", component_type.clone())
+                    .with_field("component_type", element_type.clone())
             }
         }
     }

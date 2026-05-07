@@ -15,23 +15,23 @@ use flatbuffers::FlatBufferBuilder;
 use std::collections::HashMap;
 
 use component_fbs::component as fb;
-use component_resolver::{ComponentType, LogicComponent};
+use component_resolver::{ElementType, LogicElement};
 
 pub struct ComponentSerializer;
 
 impl ComponentSerializer {
-    pub fn serialize(components: &HashMap<String, LogicComponent>, source_file: &str) -> Vec<u8> {
+    pub fn serialize(elements: &HashMap<String, LogicElement>, source_file: &str) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
 
         // --------------------------
         // 1) build components
         // --------------------------
-        let mut comps_map = Vec::with_capacity(components.len());
+        let mut comps_map = Vec::with_capacity(elements.len());
 
-        for comp in components.values() {
+        for element in elements.values() {
             let mut relation_offsets = Vec::new();
 
-            for r in &comp.relations {
+            for r in &element.relations {
                 let target_offset = builder.create_string(&r.target);
                 let annotation_offset = r.annotation.as_ref().map(|s| builder.create_string(s));
                 let relation_type_offset = builder.create_string(&r.relation_type);
@@ -50,11 +50,13 @@ impl ComponentSerializer {
             let relations_vector_offset = builder.create_vector(&relation_offsets);
 
             // component
-            let comp_id_offset = builder.create_string(&comp.id);
-            let comp_name_offset = comp.name.as_ref().map(|s| builder.create_string(s));
-            let comp_alias_offset = comp.alias.as_ref().map(|s| builder.create_string(s));
-            let comp_parent_id_offset = comp.parent_id.as_ref().map(|s| builder.create_string(s));
-            let comp_stereotype_offset = comp.stereotype.as_ref().map(|s| builder.create_string(s));
+            let comp_id_offset = builder.create_string(&element.id);
+            let comp_name_offset = element.name.as_ref().map(|s| builder.create_string(s));
+            let comp_alias_offset = element.alias.as_ref().map(|s| builder.create_string(s));
+            let comp_parent_id_offset =
+                element.parent_id.as_ref().map(|s| builder.create_string(s));
+            let comp_stereotype_offset =
+                element.stereotype.as_ref().map(|s| builder.create_string(s));
 
             let comp_offset = fb::LogicComponent::create(
                 &mut builder,
@@ -63,13 +65,13 @@ impl ComponentSerializer {
                     name: comp_name_offset,
                     alias: comp_alias_offset,
                     parent_id: comp_parent_id_offset,
-                    comp_type: Self::convert_type(comp.comp_type),
+                    comp_type: Self::convert_type(element.element_type),
                     stereotype: comp_stereotype_offset,
                     relations: Some(relations_vector_offset),
                 },
             );
 
-            let key_offset = builder.create_string(&comp.id);
+            let key_offset = builder.create_string(&element.id);
             let comp_map = fb::ComponentMap::create(
                 &mut builder,
                 &fb::ComponentMapArgs {
@@ -106,30 +108,30 @@ impl ComponentSerializer {
         builder.finished_data().to_vec()
     }
 
-    fn convert_type(t: ComponentType) -> fb::ComponentType {
+    fn convert_type(t: ElementType) -> fb::ComponentType {
         match t {
-            ComponentType::Artifact => fb::ComponentType::Artifact,
-            ComponentType::Actor => fb::ComponentType::Actor,
-            ComponentType::Agent => fb::ComponentType::Agent,
-            ComponentType::Boundary => fb::ComponentType::Boundary,
-            ComponentType::Card => fb::ComponentType::Card,
-            ComponentType::Cloud => fb::ComponentType::Cloud,
-            ComponentType::Component => fb::ComponentType::Component,
-            ComponentType::Control => fb::ComponentType::Control,
-            ComponentType::Database => fb::ComponentType::Database,
-            ComponentType::Entity => fb::ComponentType::Entity,
-            ComponentType::File => fb::ComponentType::File,
-            ComponentType::Folder => fb::ComponentType::Folder,
-            ComponentType::Frame => fb::ComponentType::Frame,
-            ComponentType::Hexagon => fb::ComponentType::Hexagon,
-            ComponentType::Interface => fb::ComponentType::Interface,
-            ComponentType::Node => fb::ComponentType::Node,
-            ComponentType::Package => fb::ComponentType::Package,
-            ComponentType::Queue => fb::ComponentType::Queue,
-            ComponentType::Rectangle => fb::ComponentType::Rectangle,
-            ComponentType::Stack => fb::ComponentType::Stack,
-            ComponentType::Storage => fb::ComponentType::Storage,
-            ComponentType::Usecase => fb::ComponentType::Usecase,
+            ElementType::Artifact => fb::ComponentType::Artifact,
+            ElementType::Actor => fb::ComponentType::Actor,
+            ElementType::Agent => fb::ComponentType::Agent,
+            ElementType::Boundary => fb::ComponentType::Boundary,
+            ElementType::Card => fb::ComponentType::Card,
+            ElementType::Cloud => fb::ComponentType::Cloud,
+            ElementType::Component => fb::ComponentType::Component,
+            ElementType::Control => fb::ComponentType::Control,
+            ElementType::Database => fb::ComponentType::Database,
+            ElementType::Entity => fb::ComponentType::Entity,
+            ElementType::File => fb::ComponentType::File,
+            ElementType::Folder => fb::ComponentType::Folder,
+            ElementType::Frame => fb::ComponentType::Frame,
+            ElementType::Hexagon => fb::ComponentType::Hexagon,
+            ElementType::Interface => fb::ComponentType::Interface,
+            ElementType::Node => fb::ComponentType::Node,
+            ElementType::Package => fb::ComponentType::Package,
+            ElementType::Queue => fb::ComponentType::Queue,
+            ElementType::Rectangle => fb::ComponentType::Rectangle,
+            ElementType::Stack => fb::ComponentType::Stack,
+            ElementType::Storage => fb::ComponentType::Storage,
+            ElementType::Usecase => fb::ComponentType::Usecase,
         }
     }
 }

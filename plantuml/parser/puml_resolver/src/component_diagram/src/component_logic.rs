@@ -14,23 +14,24 @@ use serde::{Deserialize, Serialize};
 
 // #[derive(Debug, Clone)]
 // pub struct Package {
-//     pub components: Vec<LogicComponent>,
+//     pub elements: Vec<LogicElement>,
 // }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct LogicComponent {
+pub struct LogicElement {
     pub id: String, //FQN
     pub name: Option<String>,
     pub alias: Option<String>,
     pub parent_id: Option<String>,  // FQN of parent
-    pub comp_type: ComponentType,   // e.g., package, component, etc.
+    #[serde(rename = "element_type", alias = "comp_type")]
+    pub element_type: ElementType,  // e.g., package, component, etc.
     pub stereotype: Option<String>, // e.g., component, unit, etc.
     pub relations: Vec<LogicRelation>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-pub enum ComponentType {
+pub enum ElementType {
     Artifact,
     Actor,
     Agent,
@@ -63,13 +64,17 @@ pub struct LogicRelation {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum ComponentResolverError {
-    #[error("Component Resolver: UnresolvedReference: {reference}")]
+pub enum ElementResolverError {
+    #[error("Element Resolver: UnresolvedReference: {reference}")]
     UnresolvedReference { reference: String },
 
-    #[error("Duplicate component id: {component_id}")]
-    DuplicateComponent { component_id: String },
+    #[error("Duplicate element id: {element_id}")]
+    DuplicateElement { element_id: String },
 
-    #[error("Unknown component type: {component_type}")]
-    UnknownComponentType { component_type: String },
+    #[error("Unknown element type: {element_type}")]
+    UnknownElementType { element_type: String },
 }
+
+pub type LogicComponent = LogicElement;
+pub type ComponentType = ElementType;
+pub type ComponentResolverError = ElementResolverError;

@@ -27,7 +27,7 @@ use puml_parser::{
     PumlSequenceParser,
 };
 use puml_resolver::{
-    ClassResolver, ComponentResolver, DiagramResolver, SequenceResolver, SequenceTree,
+    ClassResolver, DiagramResolver, ElementResolver, LogicElement, SequenceResolver, SequenceTree,
 };
 use puml_serializer::{ClassSerializer, ComponentSerializer};
 use puml_utils::{write_fbs_to_file, write_json_to_file, LogLevel};
@@ -227,7 +227,7 @@ fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram, source_file: &
 
 #[derive(Debug, Serialize)]
 pub enum ResolvedDiagram {
-    Component(HashMap<String, puml_resolver::LogicComponent>),
+    Component(HashMap<String, LogicElement>),
     Class(class_diagram::ClassDiagram),
     Sequence(SequenceTree),
 }
@@ -237,7 +237,7 @@ fn resolve_parsed_diagram(
 ) -> Result<ResolvedDiagram, Box<dyn std::error::Error>> {
     match parsed_content {
         ParsedDiagram::Component(parsed_content) => {
-            let mut resolver = ComponentResolver::new();
+            let mut resolver = ElementResolver::new();
             puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Component)
         }
         ParsedDiagram::Class(parsed_content) => {
