@@ -12,7 +12,6 @@
 ' *******************************************************************************
 @startuml arrows_link
 
-' Generic fixture names to avoid mirroring external example text.
 node host_a
 node host_b
 node host_c

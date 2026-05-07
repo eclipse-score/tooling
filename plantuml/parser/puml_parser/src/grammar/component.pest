@@ -25,22 +25,22 @@ together_block = { "together" ~ "{" ~ EOL ~ (diagram_statement | empty_line)* ~ 
 
 element = {
     (nested_element ~ alias_clause? ~ stereotype? ~ element_style? ~  (long_description | statement_block)? ) |
-    ((legacy_actor | legacy_interface | legacy_component | legacy_usecase) ~ alias_clause? ~ element_style?)
+    ((short_form_actor | short_form_interface | short_form_component | short_form_usecase) ~ alias_clause? ~ element_style?)
 }
 long_description = {"[" ~ EOL? ~ (ASCII_ALPHANUMERIC ~ EOL?)* ~ "]"}
 
-legacy_actor = { ":" ~ legacy_actor_name ~ ":" }
-legacy_component = { "[" ~ legacy_component_name ~ "]" }
-legacy_interface = { "()" ~ legacy_interface_name }
-legacy_usecase = { "(" ~ legacy_usecase_name ~ ")" }
+short_form_actor = { ":" ~ short_form_actor_name ~ ":" }
+short_form_component = { "[" ~ short_form_component_name ~ "]" }
+short_form_interface = { "()" ~ short_form_interface_name }
+short_form_usecase = { "(" ~ short_form_usecase_name ~ ")" }
 
-legacy_actor_name = { BRACKET_NAME | CNAME }
-legacy_component_name = { BRACKET_NAME | CNAME }
-legacy_interface_name = { CNAME }
-legacy_usecase_name = { BRACKET_NAME | CNAME }
+short_form_actor_name = { BRACKET_NAME | CNAME }
+short_form_component_name = { BRACKET_NAME | CNAME }
+short_form_interface_name = { CNAME }
+short_form_usecase_name = { BRACKET_NAME | CNAME }
 
 default_element = { element_kind ~ default_element_name? }
-bracket_element = { "component" ~ legacy_component }
+bracket_element = { "component" ~ short_form_component }
 
 default_element_name = { CNAME }
 
@@ -49,20 +49,24 @@ nested_element = { bracket_element | default_element }
 statement_block = { "{" ~ EOL ~ (diagram_statement | empty_line)* ~ "}" }
 
 relation = { relation_left ~ connection_arrow ~ relation_right  ~ element_style? ~ relation_description?}
-relation_left = { QUALIFIED_NAME | legacy_actor | legacy_component | legacy_interface | legacy_usecase }
-relation_right = { QUALIFIED_NAME | legacy_actor | legacy_component | legacy_interface | legacy_usecase }
+relation_left = { QUALIFIED_NAME | short_form_actor | short_form_component | short_form_interface | short_form_usecase }
+relation_right = { QUALIFIED_NAME | short_form_actor | short_form_component | short_form_interface | short_form_usecase }
 
 // Terminals
 QUALIFIED_NAME = @{ NAME ~ ("." ~ NAME)* }
 
 BRACKET_NAME = @{ (ASCII_ALPHANUMERIC | "_" | "-" | " " | "\\")+ }
 
-element_kind = { ELEMENT_KIND }
-ELEMENT_KIND = {
-    "actor" | "agent" | "artifact" | "boundary" | "card" | "cloud" |
-    "component" | "control" | "database" | "entity" | "file" | "folder" |
-    "frame" | "hexagon" | "interface" | "node" | "package" | "queue" |
-    "rectangle" | "stack" | "storage" | "usecase"
+element_kind = { component_kind | deployment_kind }
+
+component_kind = {
+    "artifact" | "card" | "cloud" | "component" | "database" |
+    "file" | "folder" | "frame" | "hexagon" | "interface" |
+    "node" | "package" | "queue" | "rectangle" | "stack" | "storage"
+}
+
+deployment_kind = {
+    "actor" | "agent" | "boundary" | "control" | "entity" | "usecase"
 }
 
 footer_line = { footer_align? ~ ^"footer" ~ ":"? ~ diagram_text_content? ~ COMMENT* }

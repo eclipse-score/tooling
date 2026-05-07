@@ -153,19 +153,19 @@ impl PumlComponentParser {
                         }
                     }
                 }
-                Rule::legacy_component => {
+                Rule::short_form_component => {
                     element.name = Some(Self::extract_component_name(inner));
                     element.kind = "component".to_string();
                 }
-                Rule::legacy_actor => {
+                Rule::short_form_actor => {
                     element.name = Some(Self::extract_actor_name(inner));
                     element.kind = "actor".to_string();
                 }
-                Rule::legacy_interface => {
+                Rule::short_form_interface => {
                     element.name = Some(Self::extract_interface_name(inner));
                     element.kind = "interface".to_string();
                 }
-                Rule::legacy_usecase => {
+                Rule::short_form_usecase => {
                     element.name = Some(Self::extract_usecase_name(inner));
                     element.kind = "usecase".to_string();
                 }
@@ -238,28 +238,28 @@ impl PumlComponentParser {
     // Helper methods
     fn extract_component_name(pair: pest::iterators::Pair<Rule>) -> String {
         pair.into_inner()
-            .find(|inner| inner.as_rule() == Rule::legacy_component_name)
+            .find(|inner| inner.as_rule() == Rule::short_form_component_name)
             .map(|inner| inner.as_str().to_string())
             .unwrap_or_default()
     }
 
     fn extract_actor_name(pair: pest::iterators::Pair<Rule>) -> String {
         pair.into_inner()
-            .find(|inner| inner.as_rule() == Rule::legacy_actor_name)
+            .find(|inner| inner.as_rule() == Rule::short_form_actor_name)
             .map(|inner| inner.as_str().to_string())
             .unwrap_or_default()
     }
 
     fn extract_interface_name(pair: pest::iterators::Pair<Rule>) -> String {
         pair.into_inner()
-            .find(|inner| inner.as_rule() == Rule::legacy_interface_name)
+            .find(|inner| inner.as_rule() == Rule::short_form_interface_name)
             .map(|inner| inner.as_str().to_string())
             .unwrap_or_default()
     }
 
     fn extract_usecase_name(pair: pest::iterators::Pair<Rule>) -> String {
         pair.into_inner()
-            .find(|inner| inner.as_rule() == Rule::legacy_usecase_name)
+            .find(|inner| inner.as_rule() == Rule::short_form_usecase_name)
             .map(|inner| inner.as_str().to_string())
             .unwrap_or_default()
     }
@@ -310,7 +310,7 @@ impl PumlComponentParser {
         let mut name: Option<String> = None;
 
         for inner in pair.into_inner() {
-            if inner.as_rule() == Rule::legacy_component {
+            if inner.as_rule() == Rule::short_form_component {
                 name = Some(Self::extract_component_name(inner));
             }
         }
