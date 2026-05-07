@@ -281,12 +281,13 @@ def _fmea_impl(ctx):
     for f in root_cause_lobster_files:
         lobster_files["root_causes.lobster"] = f
 
-    # detail_rsts are ancillary: they must be present next to fmea.rst for the
-    # sub-toctree to resolve, but they are NOT top-level toctree entries.
+    # detail_rsts are NOT top-level toctree entries (they live in sub-toctrees
+    # within fmea.rst), but they must be present in the Sphinx tree. They go
+    # into deps so dependable_element symlinks them alongside toctree files.
     toctree_files = [f for f in output_files if f not in detail_rsts]
     all_sphinx_srcs = depset(toctree_files)
 
-    sphinx_deps = [all_sphinx_srcs]
+    sphinx_deps = [all_sphinx_srcs, depset(detail_rsts)]
     if ctx.attr.arch_design and SphinxSourcesInfo in ctx.attr.arch_design:
         sphinx_deps.append(ctx.attr.arch_design[SphinxSourcesInfo].deps)
 
@@ -301,7 +302,6 @@ def _fmea_impl(ctx):
         SphinxSourcesInfo(
             srcs = all_sphinx_srcs,
             deps = depset(transitive = sphinx_deps),
-            ancillary = depset(detail_rsts),
         ),
     ]
 

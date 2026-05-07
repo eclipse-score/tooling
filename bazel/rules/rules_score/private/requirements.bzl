@@ -123,7 +123,6 @@ def _requirements_impl(ctx):
         SphinxSourcesInfo(
             srcs = sphinx_srcs,
             deps = depset(transitive = transitive_sphinx),
-            ancillary = depset(),
         ),
     ]
 

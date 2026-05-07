@@ -95,7 +95,6 @@ def _unit_design_impl(ctx):
         SphinxSourcesInfo(
             srcs = all_source_files,
             deps = all_source_files,
-            ancillary = depset(),
         ),
     ]
 
