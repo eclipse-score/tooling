@@ -25,12 +25,14 @@ The package contains two public targets:
 
 ## What It Validates
 
-The current implementation supports two validation flows:
+The current implementation supports three validation flows:
 
 1. `BazelComponent`: compares the indexed Bazel build graph with the indexed
    PlantUML component-diagram structure.
 2. `ComponentClass`: compares component-diagram unit aliases with enclosing
   namespace IDs observed in class diagrams.
+3. `ComponentSequence`: compares component-diagram unit aliases with
+  caller/callee participants observed in sequence diagrams (exact match).
 
 The CLI builds a `ValidationContext` from the provided inputs, infers which of
 these flows are executable, and runs all compatible validators in one pass.
@@ -59,6 +61,8 @@ The CLI accepts the following input families:
 - `--architecture-json`: Bazel architecture export consumed by `BazelReader`
 - `--component-fbs`: one or more component-diagram FlatBuffers files consumed by
   `ComponentDiagramReader`
+- `--sequence-fbs`: one or more sequence-diagram FlatBuffers files consumed by
+  `SequenceDiagramReader`
 - `--class-fbs`: one or more class-diagram FlatBuffers files consumed by
   `ClassDiagramReader`
 
@@ -66,8 +70,9 @@ The current inference rules are:
 
 - `--architecture-json` + `--component-fbs` enables `BazelComponent`
 - `--component-fbs` + `--class-fbs` enables `ComponentClass`
+- `--component-fbs` + `--sequence-fbs` enables `ComponentSequence`
 
-If both combinations are present, both validators are executed.
+If multiple combinations are present, all compatible validators are executed.
 
 ## Run
 
@@ -83,6 +88,7 @@ Run it directly:
 bazel run //validation/core:validation_cli -- \
     --architecture-json path/to/architecture.json \
     --component-fbs path/to/component.fbs.bin \
+    --sequence-fbs path/to/sequence.fbs.bin \
     --class-fbs path/to/class.fbs.bin \
     --output path/to/validation.log
 ```

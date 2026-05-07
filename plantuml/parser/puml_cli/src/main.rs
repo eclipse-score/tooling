@@ -29,7 +29,7 @@ use puml_parser::{
 use puml_resolver::{
     ClassResolver, DiagramResolver, ElementResolver, LogicElement, SequenceResolver, SequenceTree,
 };
-use puml_serializer::{ClassSerializer, ComponentSerializer};
+use puml_serializer::{ClassSerializer, ComponentSerializer, SequenceSerializer};
 use puml_utils::{write_fbs_to_file, write_json_to_file, LogLevel};
 
 /// CLI wrapper for LogLevel that implements ValueEnum
@@ -214,13 +214,8 @@ fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram, source_file: &
         ResolvedDiagram::Class(resolved_content) => {
             ClassSerializer::serialize(resolved_content, source_file)
         }
-        ResolvedDiagram::Sequence(_) => {
-            log::warn!(
-                "Sequence diagram serialization is not yet implemented; \
-                 no output will be written for '{}'",
-                source_file
-            );
-            vec![]
+        ResolvedDiagram::Sequence(resolved_content) => {
+            SequenceSerializer::serialize(resolved_content, source_file)
         }
     }
 }
