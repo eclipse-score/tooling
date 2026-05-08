@@ -1,0 +1,43 @@
+{
+  "changing_arrows_direction.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Relation": {
+          "lhs": "[Telemetry Hub]",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "SampleIngress",
+          "style": null,
+          "description": null
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "[Telemetry Hub]",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "CommandEgress",
+          "style": null,
+          "description": null
+        }
+      }
+    ]
+  }
+}

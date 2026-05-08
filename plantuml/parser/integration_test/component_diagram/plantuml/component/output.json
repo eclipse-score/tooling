@@ -1,0 +1,47 @@
+{
+  "component.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "kind": "component",
+          "name": "Telemetry collector",
+          "alias": null,
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "component",
+          "name": "Calibration service",
+          "alias": "CalibrationSvc",
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "component",
+          "name": "HealthMonitor",
+          "alias": null,
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "component",
+          "name": "Fallback\\nrecorder",
+          "alias": "FallbackRecorder",
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      }
+    ]
+  }
+}

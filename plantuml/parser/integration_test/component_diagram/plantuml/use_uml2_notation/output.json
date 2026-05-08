@@ -1,0 +1,51 @@
+{
+  "use_uml2_notation.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "kind": "interface",
+          "name": "Telemetry Feed",
+          "alias": "Feed",
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "Feed",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": null
+          },
+          "rhs": "[Normalizer Unit]",
+          "style": null,
+          "description": null
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "[Normalizer Unit]",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": ".."
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "AuditTrail",
+          "style": null,
+          "description": "records"
+        }
+      }
+    ]
+  }
+}

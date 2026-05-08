@@ -1,0 +1,43 @@
+{
+  "changing_arrows_direction2.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Relation": {
+          "lhs": "ArchiveSink",
+          "arrow": {
+            "left": {
+              "raw": "<"
+            },
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": null
+          },
+          "rhs": "[Telemetry Hub]",
+          "style": null,
+          "description": null
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "AlertSink",
+          "arrow": {
+            "left": {
+              "raw": "<"
+            },
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": null
+          },
+          "rhs": "[Telemetry Hub]",
+          "style": null,
+          "description": null
+        }
+      }
+    ]
+  }
+}

@@ -14,8 +14,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use puml_parser::{
-    ActivityParserError, BaseParseError, ClassError, IncludeExpandError, IncludeParseError,
-    PreprocessError, ProcedureExpandError, ProcedureParseError,
+    ActivityParserError, BaseParseError, ClassError, ComponentError, IncludeExpandError,
+    IncludeParseError, PreprocessError, ProcedureExpandError, ProcedureParseError,
 };
 use puml_resolver::{ActivityResolverError, ClassPumlResolverError, ComponentResolverError};
 
@@ -202,6 +202,18 @@ impl ErrorView for ActivityParserError {
         match self {
             ActivityParserError::Base(e) => e.project(base_dir),
             ActivityParserError::InvalidStatement(message) => {
+                let _ = base_dir;
+                ProjectedError::new("InvalidStatement").with_field("message", message.to_string())
+            }
+        }
+    }
+}
+
+impl ErrorView for ComponentError {
+    fn project(&self, base_dir: &Path) -> ProjectedError {
+        match self {
+            ComponentError::Base(e) => e.project(base_dir),
+            ComponentError::InvalidStatement(message) => {
                 let _ = base_dir;
                 ProjectedError::new("InvalidStatement").with_field("message", message.to_string())
             }

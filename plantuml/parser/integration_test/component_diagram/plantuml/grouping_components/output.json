@@ -1,0 +1,47 @@
+{
+  "grouping_components.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "kind": "component",
+          "name": "First component",
+          "alias": null,
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "component",
+          "name": "Another component",
+          "alias": "Comp2",
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "component",
+          "name": "Comp3",
+          "alias": null,
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "component",
+          "name": "Last\\ncomponent",
+          "alias": "Comp4",
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      }
+    ]
+  }
+}

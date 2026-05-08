@@ -1,0 +1,41 @@
+{
+  "basic_example.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Relation": {
+          "lhs": "SensorStream",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": null
+          },
+          "rhs": "[Signal Adapter]",
+          "style": null,
+          "description": null
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "[Signal Adapter]",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": ".."
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "CalibrationBus",
+          "style": null,
+          "description": "forwards"
+        }
+      }
+    ]
+  }
+}

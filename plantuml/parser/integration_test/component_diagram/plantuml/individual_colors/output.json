@@ -1,0 +1,20 @@
+{
+  "individual_colors.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "kind": "component",
+          "name": "Trace Collector",
+          "alias": null,
+          "stereotype": null,
+          "style": {
+            "color": null,
+            "attributes": []
+          },
+          "statements": []
+        }
+      }
+    ]
+  }
+}

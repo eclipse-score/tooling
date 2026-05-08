@@ -1,0 +1,53 @@
+{
+  "hide_or_remove_unlinked_component.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "kind": "component",
+          "name": "ActiveController",
+          "alias": null,
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "component",
+          "name": "DiagnosticsPanel",
+          "alias": null,
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "component",
+          "name": "DormantSimulator",
+          "alias": null,
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "ActiveController",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": null
+          },
+          "rhs": "DiagnosticsPanel",
+          "style": null,
+          "description": null
+        }
+      }
+    ]
+  }
+}

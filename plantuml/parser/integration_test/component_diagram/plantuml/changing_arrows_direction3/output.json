@@ -1,0 +1,95 @@
+{
+  "changing_arrows_direction3.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Relation": {
+          "lhs": "[Route Planner]",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": {
+              "style": null,
+              "direction": "Left",
+              "decorator": null
+            },
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "westQueue",
+          "style": null,
+          "description": null
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "[Route Planner]",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": {
+              "style": null,
+              "direction": "Right",
+              "decorator": null
+            },
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "eastQueue",
+          "style": null,
+          "description": null
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "[Route Planner]",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": {
+              "style": null,
+              "direction": "Up",
+              "decorator": null
+            },
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "northQueue",
+          "style": null,
+          "description": null
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "[Route Planner]",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": {
+              "style": null,
+              "direction": "Down",
+              "decorator": null
+            },
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "southQueue",
+          "style": null,
+          "description": null
+        }
+      }
+    ]
+  }
+}
