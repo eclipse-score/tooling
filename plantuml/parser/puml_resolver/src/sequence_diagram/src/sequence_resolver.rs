@@ -14,7 +14,9 @@
 use crate::logic_parser::build_tree;
 use resolver_traits::DiagramResolver;
 use sequence_logic::SequenceTree;
+use sequence_parser::syntax_ast::{MessageContent, ParticipantIdentifier, Statement};
 use sequence_parser::SeqPumlDocument;
+use std::collections::HashSet;
 
 /// Resolver for sequence diagrams.
 ///
@@ -24,20 +26,45 @@ use sequence_parser::SeqPumlDocument;
 pub struct SequenceResolver;
 
 /// Error type for `SequenceResolver`.
-///
-/// `build_tree` is currently infallible, so this enum has no variants.
-/// It satisfies the `std::error::Error` bound required by the CLI's generic
-/// `puml_resolver<R>` helper.
 #[derive(Debug)]
-pub enum SequenceResolverError {}
+pub enum SequenceResolverError {
+    /// A message references a participant that was not declared in a
+    /// `participant` (or actor/boundary/…) statement.
+    UndeclaredParticipant { name: String, role: &'static str },
+}
 
 impl std::fmt::Display for SequenceResolverError {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {}
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SequenceResolverError::UndeclaredParticipant { name, role } => {
+                write!(f, "{role} '{name}' is not declared as a participant")
+            }
+        }
     }
 }
 
 impl std::error::Error for SequenceResolverError {}
+
+/// Collect all identifiers that a `ParticipantIdentifier` makes available.
+fn collect_participant_names(id: &ParticipantIdentifier, out: &mut HashSet<String>) {
+    match id {
+        ParticipantIdentifier::QuotedAsId { quoted, id } => {
+            out.insert(quoted.clone());
+            out.insert(id.clone());
+        }
+        ParticipantIdentifier::IdAsQuoted { id, quoted } => {
+            out.insert(id.clone());
+            out.insert(quoted.clone());
+        }
+        ParticipantIdentifier::IdAsId { id1, id2 } => {
+            out.insert(id1.clone());
+            out.insert(id2.clone());
+        }
+        ParticipantIdentifier::Quoted(s) | ParticipantIdentifier::Id(s) => {
+            out.insert(s.clone());
+        }
+    }
+}
 
 impl DiagramResolver for SequenceResolver {
     type Document = SeqPumlDocument;
@@ -45,6 +72,36 @@ impl DiagramResolver for SequenceResolver {
     type Error = SequenceResolverError;
 
     fn resolve(&mut self, document: &SeqPumlDocument) -> Result<SequenceTree, Self::Error> {
+        // 1. Collect declared participants.
+        let mut declared = HashSet::new();
+        for stmt in &document.statements {
+            if let Statement::ParticipantDef(p) = stmt {
+                collect_participant_names(&p.identifier, &mut declared);
+            }
+        }
+
+        // 2. Validate message targets only when participants are declared.
+        if !declared.is_empty() {
+            for stmt in &document.statements {
+                if let Statement::Message(msg) = stmt {
+                    let MessageContent::WithTargets { left, right, .. } = &msg.content;
+                    if !left.is_empty() && !declared.contains(left) {
+                        return Err(SequenceResolverError::UndeclaredParticipant {
+                            name: left.clone(),
+                            role: "caller",
+                        });
+                    }
+                    if !right.is_empty() && !declared.contains(right) {
+                        return Err(SequenceResolverError::UndeclaredParticipant {
+                            name: right.clone(),
+                            role: "callee",
+                        });
+                    }
+                }
+            }
+        }
+
+        // 3. Build the tree.
         let root_interactions = build_tree(&document.statements);
         Ok(SequenceTree {
             name: document.name.clone(),
@@ -58,7 +115,9 @@ mod sequence_resolver_tests {
     use super::*;
     use parser_core::common_ast::{Arrow, ArrowDecor, ArrowLine};
     use resolver_traits::DiagramResolver;
-    use sequence_parser::syntax_ast::{Message, MessageContent, Statement};
+    use sequence_parser::syntax_ast::{
+        Message, MessageContent, ParticipantDef, ParticipantIdentifier, ParticipantType, Statement,
+    };
 
     fn solid_arrow() -> Arrow {
         Arrow {
@@ -168,5 +227,78 @@ mod sequence_resolver_tests {
         let tree2 = resolver.resolve(&doc2).unwrap();
 
         assert_eq!(tree1.root_interactions.len(), tree2.root_interactions.len());
+    }
+
+    fn make_participant(name: &str) -> Statement {
+        Statement::ParticipantDef(ParticipantDef {
+            participant_type: ParticipantType::Participant,
+            identifier: ParticipantIdentifier::Id(name.to_string()),
+            stereotype: None,
+        })
+    }
+
+    /// When participants are declared, all message targets must be among them.
+    #[test]
+    fn test_declared_participants_pass_validation() {
+        let stmts = vec![
+            make_participant("A"),
+            make_participant("B"),
+            make_call("A", "B", "doWork"),
+            make_return("B", "A", "result"),
+        ];
+        let mut resolver = SequenceResolver;
+        let doc = SeqPumlDocument {
+            name: Some("valid".to_string()),
+            statements: stmts,
+        };
+        assert!(resolver.resolve(&doc).is_ok());
+    }
+
+    /// An undeclared callee should cause an error.
+    #[test]
+    fn test_undeclared_callee_raises_error() {
+        let stmts = vec![make_participant("A"), make_call("A", "B", "doWork")];
+        let mut resolver = SequenceResolver;
+        let doc = SeqPumlDocument {
+            name: Some("bad_callee".to_string()),
+            statements: stmts,
+        };
+        let err = resolver.resolve(&doc).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("B"),
+            "error should name the undeclared participant"
+        );
+        assert!(msg.contains("callee"), "error should indicate the role");
+    }
+
+    /// An undeclared caller should cause an error.
+    #[test]
+    fn test_undeclared_caller_raises_error() {
+        let stmts = vec![make_participant("B"), make_call("A", "B", "doWork")];
+        let mut resolver = SequenceResolver;
+        let doc = SeqPumlDocument {
+            name: Some("bad_caller".to_string()),
+            statements: stmts,
+        };
+        let err = resolver.resolve(&doc).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("A"),
+            "error should name the undeclared participant"
+        );
+        assert!(msg.contains("caller"), "error should indicate the role");
+    }
+
+    /// When no participants are declared, messages are allowed freely (no validation).
+    #[test]
+    fn test_no_participants_declared_skips_validation() {
+        let stmts = vec![make_call("X", "Y", "hello")];
+        let mut resolver = SequenceResolver;
+        let doc = SeqPumlDocument {
+            name: Some("implicit".to_string()),
+            statements: stmts,
+        };
+        assert!(resolver.resolve(&doc).is_ok());
     }
 }
