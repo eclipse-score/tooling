@@ -22,12 +22,20 @@ load(
     _architectural_design = "architectural_design",
 )
 load(
+    "//bazel/rules/rules_score/private:assumed_system_requirements.bzl",
+    _assumed_system_requirements = "assumed_system_requirements",
+)
+load(
     "//bazel/rules/rules_score/private:assumptions_of_use.bzl",
     _assumptions_of_use = "assumptions_of_use",
 )
 load(
     "//bazel/rules/rules_score/private:component.bzl",
     _component = "component",
+)
+load(
+    "//bazel/rules/rules_score/private:component_requirements.bzl",
+    _component_requirements = "component_requirements",
 )
 load(
     "//bazel/rules/rules_score/private:dependability_analysis.bzl",
@@ -38,18 +46,16 @@ load(
     _dependable_element = "dependable_element",
 )
 load(
+    "//bazel/rules/rules_score/private:feature_requirements.bzl",
+    _feature_requirements = "feature_requirements",
+)
+load(
     "//bazel/rules/rules_score/private:filter_execpath.bzl",
     _filter_execpath = "filter_execpath",
 )
 load(
     "//bazel/rules/rules_score/private:fmea.bzl",
     _fmea = "fmea",
-)
-load(
-    "//bazel/rules/rules_score/private:requirements.bzl",
-    _assumed_system_requirements = "assumed_system_requirements",
-    _component_requirements = "component_requirements",
-    _feature_requirements = "feature_requirements",
 )
 load(
     "//bazel/rules/rules_score/private:sphinx_module.bzl",

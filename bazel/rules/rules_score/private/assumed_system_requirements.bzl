@@ -12,11 +12,11 @@
 # *******************************************************************************
 
 """
-Feature Requirements build rules for S-CORE projects.
+Assumed System Requirements build rules for S-CORE projects.
 
-Feature requirements describe the high-level features that a software component
-must implement. They are derived from Assumed System Requirements and feed into
-Component Requirements.
+Assumed System Requirements (ASR) are system-level requirements that represent
+the assumptions a Safety Element out of Context (SEooC) makes about the system
+it will be integrated into. Feature requirements are derived from them.
 """
 
 load("@trlc//:trlc.bzl", "trlc_requirements_test")
@@ -26,29 +26,29 @@ load("//bazel/rules/rules_score/private:requirements.bzl", "score_requirements_r
 # Public Macro
 # ============================================================================
 
-def feature_requirements(
+def assumed_system_requirements(
         name,
         srcs,
         deps = [],
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         ref_package = "",
         visibility = None):
-    """Define feature requirements following S-CORE process guidelines.
+    """Define Assumed System Requirements following S-CORE process guidelines.
 
-    Creates a target providing FeatureRequirementsInfo, TrlcProviderInfo,
+    Creates a target providing AssumedSystemRequirementsInfo, TrlcProviderInfo,
     and SphinxSourcesInfo, plus a validation test target ``<name>_test``.
 
     Because this target emits TrlcProviderInfo, downstream requirement targets
-    (e.g. component_requirements) can reference it directly in their ``deps``
+    (e.g. feature_requirements) can reference it directly in their ``deps``
     without any intermediate trlc_requirements wrapper.
 
     Args:
         name: The name of the target.
-        srcs: List of .trlc source files containing FeatReq records as defined
-            in the S-CORE requirements model.
-        deps: Optional list of requirement targets (e.g. assumed_system_requirements)
-            whose TRLC records are needed for cross-reference parsing.  These
-            targets must provide TrlcProviderInfo.
+        srcs: List of .trlc source files containing AssumedSystemReq records as
+            defined in the S-CORE requirements model.
+        deps: Optional list of requirement targets whose TRLC records are needed
+            for cross-reference parsing.  These targets must provide
+            TrlcProviderInfo.  Typically empty for top-level system requirements.
         spec: Optional TRLC specification target providing RSL type definitions.
             Defaults to the S-CORE requirements model
             (``@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model``).
@@ -56,8 +56,8 @@ def feature_requirements(
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
-        <name>:      Main target providing FeatureRequirementsInfo, TrlcProviderInfo,
-                     and SphinxSourcesInfo.
+        <name>:      Main target providing AssumedSystemRequirementsInfo,
+                     TrlcProviderInfo, and SphinxSourcesInfo.
         <name>_test: TRLC validation test (runs ``trlc --verify``).
 
     Example:
@@ -78,8 +78,8 @@ def feature_requirements(
         name = name,
         srcs = srcs,
         deps = deps,
-        req_kind = "feature",
-        lobster_config = Label("//bazel/rules/rules_score/lobster/config:feature_requirement"),
+        req_kind = "assumed_system",
+        lobster_config = Label("//bazel/rules/rules_score/lobster/config:assumed_system_requirement"),
         spec = spec,
         ref_package = ref_package,
         visibility = visibility,

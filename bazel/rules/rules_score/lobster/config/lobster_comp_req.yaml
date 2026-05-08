@@ -22,6 +22,7 @@ conversion-rules:
   - package: ScoreReq
     record-type: CompReq
     namespace: req
+    version-field: version
     description-fields: description
     tags:
       - derived_from

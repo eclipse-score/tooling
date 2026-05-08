@@ -12,299 +12,207 @@
 # *******************************************************************************
 
 """
-Requirements build rules for S-CORE projects.
+Shared internal requirements rule for S-CORE projects.
 
-This module provides macros and rules for defining requirements at any level
-(feature, component, etc.) following S-CORE process guidelines.
+Not intended for direct use. See feature_requirements.bzl,
+component_requirements.bzl, and assumed_system_requirements.bzl for the
+public-facing macros.
 """
 
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
-load("@trlc//:trlc.bzl", "TrlcProviderInfo", "trlc_requirements", "trlc_requirements_test")
+load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_srcs_to_trlc")
+load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
 # ============================================================================
 # Private Rule Implementation
 # ============================================================================
 
 def _requirements_impl(ctx):
-    """Implementation for requirements rule.
+    """Shared implementation for all requirement kinds.
 
-    Collects requirement source files, renders TRLC to RST,
-    and extracts lobster traceability items.
 
     Args:
-        ctx: Rule context
+        ctx: Rule context.
 
     Returns:
-        List of providers including DefaultInfo, FeatureRequirementsInfo or ComponentRequirementsInfo,
-        and SphinxSourcesInfo
+        [DefaultInfo, TrlcProviderInfo, <kind>RequirementsInfo, SphinxSourcesInfo]
     """
-    rendered_files = []
 
-    for src in ctx.attr.srcs:
-        trlc_provider = src[TrlcProviderInfo]
-        rendered_file = ctx.actions.declare_file("{}_{}.rst".format(ctx.attr.name, src.label.name))
+    # -------------------------------------------------------------------------
+    # Assemble TrlcProviderInfo
+    # -------------------------------------------------------------------------
+    transitive_spec = []
+    transitive_reqs = []
+    for dep in ctx.attr.deps:
+        trlc_info = dep[TrlcProviderInfo]
+        transitive_spec.append(trlc_info.spec)
+        transitive_reqs.append(trlc_info.reqs)
+        transitive_reqs.append(trlc_info.deps)
 
-        args = ctx.actions.args()
-        args.add("--output", rendered_file.path)
-        args.add("--input-dir", ".")
-        args.add("--title", ctx.label.name.replace("_", " ").title())
-        args.add("--source-files")
-        args.add_all(trlc_provider.reqs)
+    own_spec_files = ctx.attr.spec[DefaultInfo].files
+    spec_depset = depset(transitive = [own_spec_files] + transitive_spec)
+    deps_depset = depset(transitive = transitive_reqs)
 
-        ctx.actions.run(
-            inputs = src[DefaultInfo].files,
-            outputs = [rendered_file],
-            arguments = [args],
-            executable = ctx.executable._renderer,
-        )
-        rendered_files.append(rendered_file)
+    # All files needed for TRLC parsing: own sources + spec RSL + transitive deps.
+    # This matches DefaultInfo.files of an equivalent trlc_requirements target so
+    # that trlc_requirements_test(reqs=[":this_target"]) works out of the box.
+    all_trlc_files = depset(ctx.files.srcs, transitive = [spec_depset, deps_depset])
 
-    all_srcs = depset(rendered_files)
+    # -------------------------------------------------------------------------
+    # Render TRLC → RST for Sphinx documentation.
+    # --source-files: own .trlc files — rendered AND registered for parsing.
+    # --dep-files:    spec .rsl + transitive .trlc deps — parsed but not rendered.
+    # -------------------------------------------------------------------------
+    rendered_file = ctx.actions.declare_file("{}.rst".format(ctx.attr.name))
+    dep_files_depset = depset(transitive = [spec_depset, deps_depset])
 
-    lobster_trlc_file, _lobster_trlc = subrule_lobster_trlc(ctx.files.srcs, ctx.file.lobster_config)
+    render_args = ctx.actions.args()
+    render_args.add("--output", rendered_file.path)
+    render_args.add_all("--source-files", ctx.files.srcs)
+    render_args.add_all("--dep-files", dep_files_depset)
 
-    providers = [DefaultInfo(files = all_srcs)]
+    ctx.actions.run(
+        inputs = all_trlc_files,
+        outputs = [rendered_file],
+        executable = ctx.executable._renderer,
+        arguments = [render_args],
+        progress_message = "Rendering TRLC to RST for %s" % ctx.label,
+        mnemonic = "TrlcToRst",
+    )
 
+    # -------------------------------------------------------------------------
+    # Lobster traceability extraction.
+    # -------------------------------------------------------------------------
+    lobster_file, _ = subrule_lobster_trlc(all_trlc_files.to_list(), ctx.file.lobster_config)
+
+    # -------------------------------------------------------------------------
+    # Build the kind-specific domain provider.
+    # -------------------------------------------------------------------------
     if ctx.attr.req_kind == "feature":
-        providers.append(FeatureRequirementsInfo(
-            srcs = depset([lobster_trlc_file]),
+        req_provider = FeatureRequirementsInfo(
+            srcs = depset([lobster_file]),
             name = ctx.label.name,
-        ))
-
-        # Propagate AssumedSystemRequirementsInfo from deps so the parent
-        # dependable_element/component can include assumed system requirement
-        # lobster files without listing them separately.
-        asr_srcs = [
-            dep[AssumedSystemRequirementsInfo].srcs
-            for dep in ctx.attr.deps
-            if AssumedSystemRequirementsInfo in dep
-        ]
-        if asr_srcs:
-            providers.append(AssumedSystemRequirementsInfo(
-                srcs = depset(transitive = asr_srcs),
-                name = ctx.label.name,
-            ))
-    elif ctx.attr.req_kind == "assumed_system":
-        providers.append(AssumedSystemRequirementsInfo(
-            srcs = depset([lobster_trlc_file]),
+        )
+    elif ctx.attr.req_kind == "component":
+        req_provider = ComponentRequirementsInfo(
+            srcs = depset([lobster_file]),
             name = ctx.label.name,
-        ))
-    else:  # component
-        providers.append(ComponentRequirementsInfo(
-            srcs = depset([lobster_trlc_file]),
+        )
+    else:  # assumed_system
+        req_provider = AssumedSystemRequirementsInfo(
+            srcs = depset([lobster_file]),
             name = ctx.label.name,
-        ))
+        )
 
-        # Propagate FeatureRequirementsInfo from deps so the parent component
-        # can include feature requirement lobster files in its traceability
-        # config without listing them separately.
-        feat_req_srcs = [
-            dep[FeatureRequirementsInfo].srcs
-            for dep in ctx.attr.deps
-            if FeatureRequirementsInfo in dep
-        ]
-        if feat_req_srcs:
-            providers.append(FeatureRequirementsInfo(
-                srcs = depset(transitive = feat_req_srcs),
-                name = ctx.label.name,
-            ))
+    sphinx_srcs = depset([rendered_file])
 
-    providers.append(SphinxSourcesInfo(
-        srcs = all_srcs,
-        deps = all_srcs,
-        ancillary = depset(),
-    ))
-    return providers
+    transitive_sphinx = [sphinx_srcs]
+    for dep in ctx.attr.deps:
+        if SphinxSourcesInfo in dep:
+            transitive_sphinx.append(dep[SphinxSourcesInfo].deps)
+
+    return [
+        DefaultInfo(files = all_trlc_files),
+        TrlcProviderInfo(
+            spec = spec_depset,
+            reqs = depset(ctx.files.srcs),
+            deps = deps_depset,
+        ),
+        req_provider,
+        SphinxSourcesInfo(
+            srcs = sphinx_srcs,
+            deps = depset(transitive = transitive_sphinx),
+            ancillary = depset(),
+        ),
+    ]
 
 # ============================================================================
 # Rule Definition
 # ============================================================================
 
-_requirements = rule(
+_score_requirements_rule = rule(
     implementation = _requirements_impl,
-    doc = "Collects requirements documents for S-CORE process compliance",
+    doc = """Shared internal rule for all S-CORE requirement kinds.
+
+    Accepts raw .trlc source files and emits TrlcProviderInfo so that
+    downstream requirement targets can list this target in their deps
+    directly, without needing an intermediate trlc_requirements wrapper.
+    """,
     attrs = {
         "srcs": attr.label_list(
-            providers = [TrlcProviderInfo],
+            allow_files = [".trlc"],
             mandatory = True,
-            doc = "TRLC requirement targets providing TrlcProviderInfo",
+            doc = "TRLC source files containing requirement records.",
         ),
-        "lobster_config": attr.label(
-            allow_single_file = True,
-            mandatory = True,
-            doc = "Lobster YAML configuration file for traceability extraction",
+        "deps": attr.label_list(
+            providers = [TrlcProviderInfo],
+            default = [],
+            doc = "Other requirement targets whose TRLC records are needed for cross-reference parsing.",
         ),
         "req_kind": attr.string(
             values = ["feature", "component", "assumed_system"],
             mandatory = True,
-            doc = "Kind of requirements: 'feature', 'component', or 'assumed_system'.",
+            doc = "Kind of requirements; determines which domain provider is emitted.",
         ),
-        "deps": attr.label_list(
-            providers = [[FeatureRequirementsInfo], [AssumedSystemRequirementsInfo]],
-            doc = "Requirements targets this target derives from. " +
-                  "For 'component' req_kind: feature_requirements targets whose lobster files " +
-                  "are propagated as FeatureRequirementsInfo. " +
-                  "For 'feature' req_kind: assumed_system_requirements targets whose lobster " +
-                  "files are propagated as AssumedSystemRequirementsInfo.",
+        "lobster_config": attr.label(
+            allow_single_file = True,
+            mandatory = True,
+            doc = "Lobster YAML configuration file for traceability extraction.",
+        ),
+        "spec": attr.label(
+            default = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
+            doc = "TRLC specification target providing the RSL files that define the requirement types. Defaults to the S-CORE requirements model.",
         ),
         "_renderer": attr.label(
             default = Label("@trlc//tools/trlc_rst:trlc_rst"),
             executable = True,
-            allow_files = True,
             cfg = "exec",
+            doc = "TRLC-to-RST renderer tool.",
         ),
     },
     subrules = [subrule_lobster_trlc],
 )
 
-# ============================================================================
-# Public Macros
-# ============================================================================
-def _create_trlc_aliases(name, srcs, visibility):
-    """Expose stable public aliases for generated trlc_requirements targets.
+def score_requirements_rule(
+        name,
+        srcs,
+        req_kind,
+        lobster_config,
+        deps = [],
+        spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
+        ref_package = "",
+        visibility = None):
+    """Macro wrapper around _score_requirements_rule with RST support.
 
-    For each RST file in *srcs*, a named alias is created so that downstream
-    requirement macros can reference the generated trlc_requirements target via
-    ``deps`` for cross-package TRLC validation without knowing internal names.
-    When a single RST file is given the alias is ``<name>_trlc``; for multiple
-    RST files the per-source index is appended (``<name>_trlc_0``, …).
+    Any .rst files in srcs are converted to .trlc via rst_to_trlc before
+    being passed to the underlying rule.  .trlc sources are passed through
+    unchanged.
 
     Args:
-        name: Base name used by the enclosing macro (same as passed to
-            rst_srcs_to_trlc).
-        srcs: Original srcs list passed to the enclosing macro.
-        visibility: Bazel visibility to apply to the generated aliases.
+        ref_package: TRLC package prefix used for derived_from cross-references
+            when converting RST sources (e.g. "AssumedSystemRequirements" for
+            feature requirements that derive from ASR).
     """
-    rst_count = len([s for s in srcs if s.endswith(".rst")])
-    rst_index = 0
+    trlc_srcs = []
     for i, src in enumerate(srcs):
-        if src.endswith(".rst"):
-            alias_name = name + "_trlc" if rst_count == 1 else "{}_trlc_{}".format(name, rst_index)
-            native.alias(
-                name = alias_name,
-                actual = ":_{}_trlc_{}".format(name, i),
-                visibility = visibility,
+        if type(src) == type("") and src.endswith(".rst"):
+            gen_name = "_{}_rst_gen_{}".format(name, i)
+            rst_to_trlc(
+                name = gen_name,
+                srcs = [src],
+                ref_package = ref_package,
             )
-            rst_index += 1
+            trlc_srcs.append(":" + gen_name)
+        else:
+            trlc_srcs.append(src)
 
-def _score_requirements(name, srcs, deps, ref_package, visibility, req_kind, req_deps = []):
-    """Shared implementation for feature_requirements and component_requirements.
-
-    Args:
-        name: Target name.
-        srcs: Mixed list of trlc_requirements labels or RST file paths.
-        deps: trlc_requirements labels used as parsing dependencies for RST files.
-        ref_package: TRLC package prefix for derived_from cross-references.
-        visibility: Bazel visibility specification.
-        req_kind: Either "feature" or "component".
-        req_deps: Requirements targets for provider propagation (e.g. assumed_system_requirements
-            targets for a feature_requirements target).
-    """
-    trlc_srcs = rst_srcs_to_trlc(name, srcs, deps = deps, ref_package = ref_package or "")
-    _requirements(
-        name = name,
-        srcs = trlc_srcs,
-        deps = req_deps,
-        lobster_config = Label("//bazel/rules/rules_score/lobster/config:{}_requirement".format(req_kind)),
-        req_kind = req_kind,
-        visibility = visibility,
-    )
-    trlc_requirements_test(
-        name = name + "_test",
-        reqs = trlc_srcs,
-        visibility = visibility,
-    )
-    _create_trlc_aliases(name, srcs, visibility)
-
-def assumed_system_requirements(
-        name,
-        srcs,
-        deps = [],
-        ref_package = None,
-        visibility = None):
-    """Define Assumed System Requirements following S-CORE process guidelines.
-
-    Creates an assumed_system_requirements target (providing AssumedSystemRequirementsInfo
-    and SphinxSourcesInfo) and a validation test target named *name*_test.
-
-    Args:
-        name: The name of the target.
-        srcs: List of trlc_requirements labels (providing TrlcProviderInfo)
-            or RST file paths containing ``asr_req`` directives.
-            RST files are converted to TRLC automatically.
-        deps: Optional list of trlc_requirements labels to include as
-            parsing dependencies.  Only used when RST files are present in *srcs*.
-        ref_package: TRLC package prefix for derived_from cross-references
-            when converting RST sources.
-        visibility: Bazel visibility specification.
-    """
-    _score_requirements(name, srcs, deps, ref_package, visibility, "assumed_system")
-
-def feature_requirements(
-        name,
-        srcs,
-        deps = [],
-        req_deps = [],
-        ref_package = None,
-        visibility = None):
-    """Define feature requirements following S-CORE process guidelines.
-
-    Args:
-        name: The name of the target.
-        srcs: List of trlc_requirements labels (providing TrlcProviderInfo)
-            or RST file paths containing ``feat_req`` directives.
-            RST files are converted to TRLC automatically.
-        deps: Optional list of trlc_requirements labels to include as
-            parsing dependencies.  Only used when RST files are present in *srcs*.
-        req_deps: Optional list of assumed_system_requirements targets whose
-            AssumedSystemRequirementsInfo is propagated alongside this target's
-            FeatureRequirementsInfo so that consumers can resolve assumed system
-            requirement references without listing them separately.
-        ref_package: TRLC package prefix for derived_from cross-references
-            when converting RST sources.
-        visibility: Bazel visibility specification.
-    """
-    _score_requirements(name, srcs, deps, ref_package, visibility, "feature", req_deps = req_deps)
-
-def component_requirements(
-        name,
-        srcs = [],
-        deps = [],
-        trlc_deps = [],
-        ref_package = None,
-        visibility = None):
-    """Define component requirements following S-CORE process guidelines.
-
-    Args:
-        name: The name of the target.
-        srcs: List of trlc_requirements labels (providing TrlcProviderInfo) or
-            RST file paths containing ``comp_req`` directives.
-            RST files are converted to TRLC automatically.
-        deps: Optional list of feature_requirements targets whose lobster files are
-              propagated alongside this target's ComponentRequirementsInfo, so that
-              a parent component rule can resolve derived_from references without
-              having to list the feature requirements separately.
-        trlc_deps: Optional list of trlc_requirements labels to include as
-            parsing dependencies when RST files are present in *srcs*.
-        ref_package: TRLC package prefix for derived_from cross-references
-            when converting RST sources.
-        visibility: Bazel visibility specification.
-    """
-    trlc_srcs = rst_srcs_to_trlc(name, srcs, deps = trlc_deps, ref_package = ref_package or "")
-    _requirements(
+    _score_requirements_rule(
         name = name,
         srcs = trlc_srcs,
         deps = deps,
-        lobster_config = Label("//bazel/rules/rules_score/lobster/config:component_requirement"),
-        req_kind = "component",
+        req_kind = req_kind,
+        lobster_config = lobster_config,
+        spec = spec,
         visibility = visibility,
     )
-
-    trlc_requirements_test(
-        name = name + "_test",
-        reqs = trlc_srcs,
-        visibility = visibility,
-    )
-    _create_trlc_aliases(name, srcs, visibility)

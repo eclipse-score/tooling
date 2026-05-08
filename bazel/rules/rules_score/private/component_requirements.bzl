@@ -14,67 +14,12 @@
 """
 Component Requirements build rules for S-CORE projects.
 
-This module provides macros and rules for defining component requirements
-following S-CORE process guidelines. Component requirements are derived from
-feature requirements and define the specific requirements for a software component.
+Component requirements are derived from feature requirements and define the
+specific requirements for a software component.
 """
 
-load("//bazel/rules/rules_score:providers.bzl", "ComponentRequirementsInfo", "SphinxSourcesInfo")
-
-# ComponentRequirementsInfo and FeatureRequirementsInfo are re-exported from providers.bzl for backward compatibility.
-
-# ============================================================================
-# Private Rule Implementation
-# ============================================================================
-
-def _component_requirements_impl(ctx):
-    """Implementation for component_requirements rule.
-
-    Collects component requirements source files and links them to their
-    parent feature requirements through providers.
-
-    Args:
-        ctx: Rule context
-
-    Returns:
-        List of providers including DefaultInfo and ComponentRequirementsInfo
-    """
-    srcs = depset(ctx.files.srcs)
-
-    # Collect feature requirements providers
-    feature_reqs = []
-
-    # Collect transitive sphinx sources from feature requirements
-    transitive = [srcs]
-
-    return [
-        DefaultInfo(files = srcs),
-        ComponentRequirementsInfo(
-            srcs = srcs,
-            name = ctx.label.name,
-        ),
-        SphinxSourcesInfo(
-            srcs = srcs,
-            deps = depset(transitive = transitive),
-            ancillary = depset(),
-        ),
-    ]
-
-# ============================================================================
-# Rule Definition
-# ============================================================================
-
-_component_requirements = rule(
-    implementation = _component_requirements_impl,
-    doc = "Collects component requirements documents with traceability to feature requirements",
-    attrs = {
-        "srcs": attr.label_list(
-            allow_files = [".rst", ".md", ".trlc"],
-            mandatory = True,
-            doc = "Source files containing component requirements specifications",
-        ),
-    },
-)
+load("@trlc//:trlc.bzl", "trlc_requirements_test")
+load("//bazel/rules/rules_score/private:requirements.bzl", "score_requirements_rule")
 
 # ============================================================================
 # Public Macro
@@ -83,35 +28,58 @@ _component_requirements = rule(
 def component_requirements(
         name,
         srcs,
+        deps = [],
+        spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
+        ref_package = "",
         visibility = None):
     """Define component requirements following S-CORE process guidelines.
 
-    Component requirements are derived from feature requirements and define
-    the specific functional and safety requirements for a software component.
-    They establish traceability from high-level features to component-level
-    specifications.
+    Creates a target providing ComponentRequirementsInfo, TrlcProviderInfo,
+    and SphinxSourcesInfo, plus a validation test target ``<name>_test``.
+
+    Because this target emits TrlcProviderInfo, downstream targets can
+    reference it directly in their ``deps`` without any intermediate
+    trlc_requirements wrapper.
 
     Args:
-        name: The name of the component requirements target. Used as the base
-            name for all generated targets.
-        srcs: List of labels to .rst, .md, or .trlc files containing the
-            component requirements specifications as defined in the S-CORE
-            process.
+        name: The name of the target.
+        srcs: List of .trlc source files containing CompReq records as defined
+            in the S-CORE requirements model.
+        deps: Optional list of requirement targets (e.g. assumed_system_requirements,
+            feature_requirements) whose TRLC records are needed for cross-reference
+            parsing.  These targets must provide TrlcProviderInfo.
+        spec: Optional TRLC specification target providing RSL type definitions.
+            Defaults to the S-CORE requirements model
+            (``@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model``).
+            Override this when using a custom requirements model.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
-        <name>: Main component requirements target providing ComponentRequirementsInfo
+        <name>:      Main target providing ComponentRequirementsInfo, TrlcProviderInfo,
+                     and SphinxSourcesInfo.
+        <name>_test: TRLC validation test (runs ``trlc --verify``).
 
     Example:
         ```starlark
         component_requirements(
-            name = "my_component_requirements",
-            srcs = ["component_requirements.rst"],
+            name = "comp_req",
+            srcs = ["component_requirements.trlc"],
+            deps = [":asr", ":feat_req"],
         )
         ```
     """
-    _component_requirements(
+    score_requirements_rule(
         name = name,
         srcs = srcs,
+        deps = deps,
+        req_kind = "component",
+        lobster_config = Label("//bazel/rules/rules_score/lobster/config:component_requirement"),
+        spec = spec,
+        ref_package = ref_package,
+        visibility = visibility,
+    )
+    trlc_requirements_test(
+        name = name + "_test",
+        reqs = [":" + name],
         visibility = visibility,
     )
