@@ -143,7 +143,7 @@ def unit(
         tests,
         scope = [],
         testonly = True,
-        visibility = None):
+        **kwargs):
     """Define a software unit following S-CORE process guidelines.
 
     A unit is the smallest testable software element in the S-CORE process.
@@ -188,5 +188,5 @@ def unit(
         scope = scope,
         tests = tests,
         testonly = testonly,
-        visibility = visibility,
+        **kwargs
     )

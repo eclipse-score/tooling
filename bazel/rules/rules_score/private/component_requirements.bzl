@@ -31,7 +31,7 @@ def component_requirements(
         deps = [],
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         ref_package = "",
-        visibility = None):
+        **kwargs):
     """Define component requirements following S-CORE process guidelines.
 
     Creates a target providing ComponentRequirementsInfo, TrlcProviderInfo,
@@ -76,10 +76,10 @@ def component_requirements(
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:component_requirement"),
         spec = spec,
         ref_package = ref_package,
-        visibility = visibility,
+        **kwargs
     )
     trlc_requirements_test(
         name = name + "_test",
         reqs = [":" + name],
-        visibility = visibility,
+        **kwargs
     )

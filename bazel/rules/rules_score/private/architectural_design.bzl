@@ -237,7 +237,7 @@ def architectural_design(
         static = [],
         dynamic = [],
         public_api = [],
-        visibility = None):
+        **kwargs):
     """Define architectural design following S-CORE process guidelines.
 
     Architectural design documents describe the software architecture of a
@@ -288,5 +288,5 @@ def architectural_design(
         static = static,
         dynamic = dynamic,
         public_api = public_api,
-        visibility = visibility,
+        **kwargs
     )

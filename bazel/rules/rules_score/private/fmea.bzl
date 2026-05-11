@@ -411,8 +411,7 @@ def fmea(
         controlmeasures = [],
         root_causes = [],
         arch_design = None,
-        visibility = None,
-        tags = []):
+        **kwargs):
     """Define FMEA (Failure Mode and Effects Analysis) following S-CORE process guidelines.
 
     Generates a single ``fmea.rst`` page with up to three sections:
@@ -443,6 +442,5 @@ def fmea(
         controlmeasures = controlmeasures,
         root_causes = root_causes,
         arch_design = arch_design,
-        visibility = visibility,
-        tags = tags,
+        **kwargs
     )

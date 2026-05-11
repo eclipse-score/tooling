@@ -244,8 +244,7 @@ def dependability_analysis(
         security_analysis = [],
         dfa = [],
         arch_design = None,
-        visibility = None,
-        tags = []):
+        **kwargs):
     """Define dependability analysis following S-CORE process guidelines.
 
     Aggregates up to three sub-analysis rules and validates the combined
@@ -281,6 +280,5 @@ def dependability_analysis(
         security_analysis = security_analysis,
         dfa = dfa,
         arch_design = arch_design,
-        visibility = visibility,
-        tags = tags,
+        **kwargs
     )

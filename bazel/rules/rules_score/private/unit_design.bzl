@@ -138,7 +138,7 @@ def unit_design(
         name,
         static = [],
         dynamic = [],
-        visibility = None):
+        **kwargs):
     """Define unit design following S-CORE process guidelines.
 
     Unit design documents describe the internal design of a software unit,
@@ -192,5 +192,5 @@ def unit_design(
         name = name,
         static = static,
         dynamic = dynamic,
-        visibility = visibility,
+        **kwargs
     )

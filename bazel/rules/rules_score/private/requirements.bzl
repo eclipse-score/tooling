@@ -182,7 +182,7 @@ def score_requirements_rule(
         deps = [],
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         ref_package = "",
-        visibility = None):
+        **kwargs):
     """Macro wrapper around _score_requirements_rule with RST support.
 
     Any .rst files in srcs are converted to .trlc via rst_to_trlc before
@@ -214,5 +214,5 @@ def score_requirements_rule(
         req_kind = req_kind,
         lobster_config = lobster_config,
         spec = spec,
-        visibility = visibility,
+        **kwargs
     )
