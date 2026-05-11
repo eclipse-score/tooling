@@ -14,16 +14,14 @@
 use log::error;
 use std::collections::HashMap;
 
-use crate::component_logic::{
-    ElementResolverError, ElementType, LogicElement, LogicRelation,
-};
+use crate::component_logic::{ElementResolverError, ElementType, LogicElement, LogicRelation};
 use component_parser::{CompPumlDocument, Element, Port, Statement};
 use resolver_traits::DiagramResolver;
 
 #[derive(Default)]
 pub struct ElementResolver {
-    pub scope: Vec<String>,                          // element id stack
-    pub elements: HashMap<String, LogicElement>,     // FQN -> LogicElement
+    pub scope: Vec<String>,                      // element id stack
+    pub elements: HashMap<String, LogicElement>, // FQN -> LogicElement
     /// Maps port FQN → parent element FQN (for relation lifting)
     pub port_parents: HashMap<String, String>,
 }
@@ -70,10 +68,12 @@ impl ElementResolver {
                     if parent == &scope.join(".") {
                         let mut child_scope = scope.to_vec();
                         child_scope.push(
-                            element.alias.clone().unwrap_or(element.name.clone().unwrap()),
+                            element
+                                .alias
+                                .clone()
+                                .unwrap_or(element.name.clone().unwrap()),
                         );
-                        if let Some(f) = find_in_scope_or_children(&child_scope, parts, elements)
-                        {
+                        if let Some(f) = find_in_scope_or_children(&child_scope, parts, elements) {
                             return Some(f);
                         }
                     }
@@ -121,8 +121,7 @@ impl ElementResolver {
         if parts.len() == 1 {
             for i in (0..=self.scope.len()).rev() {
                 let outer_scope = &self.scope[..i];
-                if let Some(fqn) = find_in_scope_or_children(outer_scope, &parts, &self.elements)
-                {
+                if let Some(fqn) = find_in_scope_or_children(outer_scope, &parts, &self.elements) {
                     return Ok(fqn);
                 }
             }

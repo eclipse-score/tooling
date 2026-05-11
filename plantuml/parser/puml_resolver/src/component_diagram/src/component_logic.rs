@@ -22,9 +22,9 @@ pub struct LogicElement {
     pub id: String, //FQN
     pub name: Option<String>,
     pub alias: Option<String>,
-    pub parent_id: Option<String>,  // FQN of parent
+    pub parent_id: Option<String>, // FQN of parent
     #[serde(rename = "element_type", alias = "comp_type")]
-    pub element_type: ElementType,  // e.g., package, component, etc.
+    pub element_type: ElementType, // e.g., package, component, etc.
     pub stereotype: Option<String>, // e.g., component, unit, etc.
     pub relations: Vec<LogicRelation>,
 }

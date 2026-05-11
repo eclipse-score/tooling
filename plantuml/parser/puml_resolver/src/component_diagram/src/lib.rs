@@ -15,7 +15,7 @@ mod component_logic;
 mod component_resolver;
 
 pub use component_logic::{
-	ComponentResolverError, ComponentType, ElementResolverError, ElementType, LogicComponent,
-	LogicElement,
+    ComponentResolverError, ComponentType, ElementResolverError, ElementType, LogicComponent,
+    LogicElement,
 };
 pub use component_resolver::{ComponentResolver, ElementResolver};

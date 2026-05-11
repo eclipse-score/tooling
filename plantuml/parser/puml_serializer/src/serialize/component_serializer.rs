@@ -55,8 +55,10 @@ impl ComponentSerializer {
             let comp_alias_offset = element.alias.as_ref().map(|s| builder.create_string(s));
             let comp_parent_id_offset =
                 element.parent_id.as_ref().map(|s| builder.create_string(s));
-            let comp_stereotype_offset =
-                element.stereotype.as_ref().map(|s| builder.create_string(s));
+            let comp_stereotype_offset = element
+                .stereotype
+                .as_ref()
+                .map(|s| builder.create_string(s));
 
             let comp_offset = fb::LogicComponent::create(
                 &mut builder,
