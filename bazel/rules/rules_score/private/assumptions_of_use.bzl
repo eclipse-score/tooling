@@ -89,7 +89,6 @@ def _assumptions_of_use_impl(ctx):
         SphinxSourcesInfo(
             srcs = all_srcs,
             deps = depset(transitive = transitive),
-            ancillary = depset(),
         ),
     ]
 
@@ -129,7 +128,7 @@ def assumptions_of_use(
         srcs,
         requirements = [],
         ref_package = None,
-        visibility = None):
+        **kwargs):
     """Define Assumptions of Use following S-CORE process guidelines.
 
     Assumptions of Use (AoU) define the safety-relevant operating conditions
@@ -179,10 +178,10 @@ def assumptions_of_use(
         name = name,
         srcs = trlc_srcs,
         requirements = requirements,
-        visibility = visibility,
+        **kwargs
     )
     trlc_requirements_test(
         name = name + "_test",
         reqs = trlc_srcs,
-        visibility = visibility,
+        **kwargs
     )

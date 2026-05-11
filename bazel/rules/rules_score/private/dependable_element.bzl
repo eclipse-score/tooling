@@ -121,7 +121,7 @@ _INTEGRITY_LEVEL_RANK = {level: rank for rank, level in enumerate(_INTEGRITY_LEV
 # ============================================================================
 
 def _get_sphinx_files(target):
-    return target[SphinxSourcesInfo].srcs.to_list()
+    return target[SphinxSourcesInfo].deps.to_list()
 
 def _filter_doc_files(files):
     """Filter files to only include documentation files.
@@ -249,12 +249,16 @@ def _process_artifact_files(ctx, artifact_name, label):
     output_files = []
     index_refs = []
 
-    # Get and filter files
+    # deps contains all files to symlink (own srcs + transitive children);
+    # srcs are the toctree entries for this rule only.
     all_files = _get_sphinx_files(label)
     doc_files = _filter_doc_files(all_files)
 
     if not doc_files:
         return (output_files, index_refs)
+
+    # Build a lookup of srcs paths so we know which files are toctree entries.
+    srcs_paths = {f.path: True for f in label[SphinxSourcesInfo].srcs.to_list()}
 
     # Find common directory to preserve hierarchy
     common_dir = _find_common_directory(doc_files)
@@ -273,27 +277,12 @@ def _process_artifact_files(ctx, artifact_name, label):
         )
         output_files.append(output_file)
 
-        # Add to index if it's a document file
-        if _is_document_file(artifact_file):
+        # Add to toctree index only for files directly owned by this rule.
+        if _is_document_file(artifact_file) and artifact_file.path in srcs_paths:
             doc_ref = (artifact_name + "/" + relative_path) \
                 .replace(".rst", "") \
                 .replace(".md", "")
             index_refs.append(doc_ref)
-
-    # Symlink ancillary files (present for sub-toctrees / .. uml:: resolution,
-    # but NOT added to the outer toctree index).
-    if SphinxSourcesInfo in label:
-        for anc_file in label[SphinxSourcesInfo].ancillary.to_list():
-            if anc_file.extension not in ["rst", "md", "puml", "plantuml", "png", "svg", "inc", "json"]:
-                continue
-            relative_path = _compute_relative_path(anc_file, _find_common_directory([anc_file]))
-            output_file = _create_artifact_symlink(
-                ctx,
-                artifact_name,
-                anc_file,
-                relative_path,
-            )
-            output_files.append(output_file)
 
     return (output_files, index_refs)
 

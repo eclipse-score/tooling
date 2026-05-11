@@ -207,7 +207,6 @@ def _component_impl(ctx):
         SphinxSourcesInfo(
             srcs = req_sphinx_depset,
             deps = sphinx_depset,
-            ancillary = depset(),
         ),
     ]
 
@@ -263,8 +262,7 @@ def component(
         requirements = None,
         components = [],
         testonly = True,
-        visibility = None,
-        tags = []):
+        **kwargs):
     """Define a software component following S-CORE process guidelines.
 
     A component is a collection of related units that together provide
@@ -302,6 +300,5 @@ def component(
         components = components,
         tests = tests,
         testonly = testonly,
-        visibility = visibility,
-        tags = tags,
+        **kwargs
     )

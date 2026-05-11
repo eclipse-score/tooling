@@ -11,44 +11,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test")
 load(
     "//bazel/rules/rules_score:rules_score.bzl",
     "fmea",
-)
-
-# FMEA
-trlc_requirements(
-    name = "sample_fmea_failure_modes",
-    srcs = [
-        "sample_fmea_failure_modes.trlc",
-    ],
-    spec = [
-        "@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-trlc_requirements(
-    name = "sample_fmea_control_measures",
-    srcs = [
-        "sample_fmea_control_measures.trlc",
-    ],
-    spec = [
-        "@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":sample_fmea_failure_modes",
-    ],
-)
-
-trlc_requirements_test(
-    name = "sample_fmea_test",
-    reqs = [
-        ":sample_fmea_control_measures",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 #  FTA
@@ -64,10 +29,8 @@ filegroup(
 fmea(
     name = "sample_fmea",
     arch_design = "//bazel/rules/rules_score/examples/seooc/design:sample_seooc_design",
-    controlmeasures = [
-        ":sample_fmea_control_measures",
-    ],
-    failuremodes = [":sample_fmea_failure_modes"],
+    controlmeasures = ["sample_fmea_control_measures.trlc"],
+    failuremodes = ["sample_fmea_failure_modes.trlc"],
     root_causes = [":sample_fta"],
     visibility = ["//visibility:public"],
 )
