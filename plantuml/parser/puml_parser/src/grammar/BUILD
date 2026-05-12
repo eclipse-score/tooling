@@ -13,6 +13,7 @@
 filegroup(
     name = "grammar_files",
     srcs = [
+        ":activity_grammar",
         ":class_grammar",
         ":common_grammar",
         ":component_grammar",
@@ -67,6 +68,14 @@ filegroup(
     name = "common_grammar",
     srcs = [
         "common.pest",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "activity_grammar",
+    srcs = [
+        "activity.pest",
     ],
     visibility = ["//visibility:public"],
 )

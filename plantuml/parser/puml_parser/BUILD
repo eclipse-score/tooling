@@ -17,12 +17,19 @@ rust_library(
     srcs = ["src/lib.rs"],
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
+        ":activity_diagram",
         ":class_diagram",
         ":component_diagram",
         ":parser_core",
         ":preprocessor",
         ":sequence_diagram",
     ],
+)
+
+alias(
+    name = "activity_diagram",
+    actual = "//plantuml/parser/puml_parser/src/activity_diagram:puml_parser_activity",
+    visibility = ["//plantuml/parser:__subpackages__"],
 )
 
 alias(

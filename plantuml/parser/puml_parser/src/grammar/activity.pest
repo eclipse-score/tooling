@@ -1,0 +1,124 @@
+// *******************************************************************************
+// Copyright (c) 2026 Contributors to the Eclipse Foundation
+//
+// See the NOTICE file(s) distributed with this work for additional
+// information regarding copyright ownership.
+//
+// This program and the accompanying materials are made available under the
+// terms of the Apache License Version 2.0 which is available at
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// SPDX-License-Identifier: Apache-2.0
+// *******************************************************************************
+activity_diagram = {
+    SOI
+    ~ empty_line*
+    ~ startuml
+    ~ (statement | empty_line)*
+    ~ enduml
+    ~ EOI
+}
+
+statement = _{
+      // fork
+      fork_again_stmt
+    | fork_end_stmt
+    | fork_start_stmt
+
+      // repeat
+    | repeat_while_stmt
+    | repeat_start_stmt
+
+      // if
+    | else_stmt
+    | endif_stmt
+    | if_start_stmt
+
+      // while
+    | endwhile_stmt
+    | while_start_stmt
+
+      // base
+    | action_stmt
+    | swimlane_stmt
+    | start_stmt
+    | stop_stmt
+}
+
+// Basic Wheels
+action_text = @{
+    (!(";" | NEWLINE) ~ ANY)+
+}
+
+condition_text = @{
+    (!(")" | NEWLINE) ~ ANY)+
+}
+
+swimlane_text = @{
+    (!("|" | NEWLINE) ~ ANY)+
+}
+
+keyword_boundary = _{ !ASCII_ALPHANUMERIC }
+
+// Action
+action_stmt = { ":" ~ action_text ~ ";" }
+
+// If
+if_start_stmt = {
+    "if"
+    ~ "(" ~ condition_text ~ ")"
+    ~ "then"
+    ~ then_label?
+}
+then_label = { "(" ~ condition_text ~ ")" }
+
+else_stmt = {
+    "else"
+    ~ ("(" ~ condition_text ~ ")")?
+}
+
+endif_stmt = { "endif" }
+
+// While
+while_start_stmt = {
+    "while"
+    ~ "(" ~ condition_text ~ ")"
+}
+
+endwhile_stmt = { "endwhile" }
+
+// Repeat While
+repeat_start_stmt = { "repeat" }
+
+repeat_while_stmt = {
+    "repeat while"
+    ~ "(" ~ condition_text ~ ")"
+}
+
+// Fork
+fork_start_stmt = {
+    "fork"
+    ~ keyword_boundary
+}
+fork_again_stmt = { "fork again" }
+
+fork_end_stmt = {
+    ("end fork" | "end merge")
+    ~ fork_modifier?
+}
+
+fork_modifier = {
+    "{"
+    ~ ("and" | "or")
+    ~ "}"
+}
+
+// Swimlane
+swimlane_stmt = { "|" ~ swimlane_text ~ "|" }
+
+// Start/Stop
+start_stmt = { "start" }
+stop_stmt = {
+      "stop"
+    | "end"
+}
