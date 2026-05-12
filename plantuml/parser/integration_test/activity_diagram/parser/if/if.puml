@@ -10,50 +10,21 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-@startuml test_activity_beta_syntax
-title "Beta Activity Syntax Coverage"
+@startuml if
 
-start
-
-:Initialize parser context;
-note left: Basic action and note
-
-if (fatal configuration error?) then (yes)
-  end
-else (no)
-  :Continue setup;
-endif
-
-if (beta syntax enabled?) then (yes)
+if (beta syntax enabled?) then
   :Enter beta flow;
   if (extra validation needed?) then (yes)
     :Run nested validation;
   else (no)
     :Skip nested validation;
+    stop
   endif
 else (no)
   :Fallback configuration path;
+  kill
 endif
 
-while (retry budget available?) is (yes)
-  :Try parse step;
-  if (parse step succeeded?) then (yes)
-    break
-  else (no)
-    :Update retry state;
-  endif
-endwhile
-
-repeat
-  #LightBlue:Read next activity token;
-  if (token available?) then (yes)
-    :Consume token;
-  else (no)
-    break
-  endif
-repeat while (more tokens expected?) is (yes)
-
-:Finalize result;
 stop
 
 @enduml

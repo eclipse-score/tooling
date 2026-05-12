@@ -1,4 +1,4 @@
-// *****************************************************************************
+// *******************************************************************************
 // Copyright (c) 2026 Contributors to the Eclipse Foundation
 //
 // See the NOTICE file(s) distributed with this work for additional
@@ -9,8 +9,11 @@
 // <https://www.apache.org/licenses/LICENSE-2.0>
 //
 // SPDX-License-Identifier: Apache-2.0
-// *****************************************************************************
+// *******************************************************************************
 
 mod activity_ast;
+mod creole;
+mod activity_parser;
 
 pub use activity_ast::{RawActivityDiagram, RawActivityStmt};
+pub use activity_parser::{ActivityParserError, PumlActivityParser};

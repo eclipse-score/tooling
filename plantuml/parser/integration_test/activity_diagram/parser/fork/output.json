@@ -1,0 +1,54 @@
+{
+  "fork.puml": {
+    "name": "fork",
+    "statements": [
+      {
+        "Start": null
+      },
+      {
+        "ForkStart": null
+      },
+      {
+        "Action": {
+          "label": "A"
+        }
+      },
+      {
+        "ForkAgain": null
+      },
+      {
+        "Action": {
+          "label": "B"
+        }
+      },
+      {
+        "Stop": null
+      },
+      {
+        "ForkAgain": null
+      },
+      {
+        "Action": {
+          "label": "C"
+        }
+      },
+      {
+        "ForkAgain": null
+      },
+      {
+        "Action": {
+          "label": "D"
+        }
+      },
+      {
+        "ForkEnd": {
+          "kind": "EndFork",
+          "modifier": null
+        }
+      },
+      {
+        "Stop": null
+      }
+    ]
+  }
+}

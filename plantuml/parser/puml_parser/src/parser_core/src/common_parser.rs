@@ -16,6 +16,7 @@ use crate::common_ast::*;
 
 #[derive(Parser)]
 #[grammar = "../grammar/common.pest"]
+#[grammar = "../grammar/activity.pest"]
 #[grammar = "../grammar/class.pest"]
 #[grammar = "../grammar/component.pest"]
 #[grammar = "../grammar/sequence.pest"]

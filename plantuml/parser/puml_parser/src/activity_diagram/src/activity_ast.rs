@@ -21,9 +21,12 @@ pub struct RawActivityDiagram {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RawActivityStmt {
     Action(ActionStmt),
+    Arrow(ArrowStmt),
+    Backward(BackwardStmt),
 
     Start(StartStmt),
     Stop(StopStmt),
+    Control(ControlStmt),
 
     // ===== If =====
     IfStart(IfStartStmt),
@@ -53,10 +56,33 @@ pub struct ActionStmt {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ArrowStmt {
+    pub syntax: String,
+    pub label: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BackwardStmt {
+    pub label: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StartStmt;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StopStmt;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ControlStmt {
+    pub kind: ControlKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ControlKind {
+    Break,
+    Kill,
+    Detach,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IfStartStmt {
@@ -75,10 +101,13 @@ pub struct EndIfStmt;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WhileStartStmt {
     pub condition: String,
+    pub label: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct EndWhileStmt;
+pub struct EndWhileStmt {
+    pub label: Option<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RepeatStartStmt;
@@ -86,6 +115,7 @@ pub struct RepeatStartStmt;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RepeatWhileStmt {
     pub condition: String,
+    pub label: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

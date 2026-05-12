@@ -12,7 +12,7 @@
 // *******************************************************************************
 
 // Re-export commonly used items that don't have name conflicts
-pub use activity_parser::{RawActivityDiagram, RawActivityStmt};
+pub use activity_parser::{ActivityParserError, PumlActivityParser, RawActivityDiagram, RawActivityStmt};
 pub use class_parser::{ClassError, ClassUmlFile, PumlClassParser};
 pub use component_parser::{CompPumlDocument, ComponentError, Element, PumlComponentParser};
 pub use parser_core::{

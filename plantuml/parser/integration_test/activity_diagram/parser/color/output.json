@@ -1,0 +1,12 @@
+{
+  "color.puml": {
+    "name": "color",
+    "statements": [
+      {
+        "Action": {
+          "label": "Hello Activity Diagram"
+        }
+      }
+    ]
+  }
+}

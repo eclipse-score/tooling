@@ -1,0 +1,76 @@
+{
+  "arrows.puml": {
+    "name": "arrows",
+    "statements": [
+      {
+        "Action": {
+          "label": "foo1"
+        }
+      },
+      {
+        "Arrow": {
+          "syntax": "->",
+          "label": "You can put text on arrows"
+        }
+      },
+      {
+        "IfStart": {
+          "condition": "test",
+          "label": null
+        }
+      },
+      {
+        "Arrow": {
+          "syntax": "-[#blue]->",
+          "label": null
+        }
+      },
+      {
+        "Action": {
+          "label": "foo2"
+        }
+      },
+      {
+        "Arrow": {
+          "syntax": "-[#green,dashed]->",
+          "label": "The text can\nalso be on several lines\nand very long..."
+        }
+      },
+      {
+        "Action": {
+          "label": "foo3"
+        }
+      },
+      {
+        "Else": {
+          "label": null
+        }
+      },
+      {
+        "Arrow": {
+          "syntax": "-[#black,dotted]->",
+          "label": null
+        }
+      },
+      {
+        "Action": {
+          "label": "foo4"
+        }
+      },
+      {
+        "EndIf": null
+      },
+      {
+        "Arrow": {
+          "syntax": "-[#gray,bold]->",
+          "label": null
+        }
+      },
+      {
+        "Action": {
+          "label": "foo5"
+        }
+      }
+    ]
+  }
+}

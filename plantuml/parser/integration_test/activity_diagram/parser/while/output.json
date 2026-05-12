@@ -1,0 +1,48 @@
+{
+  "while.puml": {
+    "name": "while",
+    "statements": [
+      {
+        "Start": null
+      },
+      {
+        "WhileStart": {
+          "condition": "check array length ?",
+          "label": "not 0"
+        }
+      },
+      {
+        "Action": {
+          "label": "get elements"
+        }
+      },
+      {
+        "IfStart": {
+          "condition": "elements is minus",
+          "label": "yes"
+        }
+      },
+      {
+        "Control": {
+          "kind": "Break"
+        }
+      },
+      {
+        "EndIf": null
+      },
+      {
+        "EndWhile": {
+          "label": "is 0"
+        }
+      },
+      {
+        "Action": {
+          "label": "delete array"
+        }
+      },
+      {
+        "Stop": null
+      }
+    ]
+  }
+}

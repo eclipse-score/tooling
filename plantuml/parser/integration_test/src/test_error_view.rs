@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use puml_parser::{
-    BaseParseError, ClassError, IncludeExpandError, IncludeParseError, PreprocessError,
+    ActivityParserError, BaseParseError, ClassError, IncludeExpandError, IncludeParseError, PreprocessError,
     ProcedureExpandError, ProcedureParseError,
 };
 use puml_resolver::{ClassPumlResolverError, ElementResolverError};
@@ -192,6 +192,18 @@ impl ErrorView for ClassError {
             ClassError::UnexpectedClassMember(rule) => {
                 let _ = base_dir;
                 ProjectedError::new("UnexpectedClassMember").with_field("rule", rule.clone())
+            }
+        }
+    }
+}
+
+impl ErrorView for ActivityParserError {
+    fn project(&self, base_dir: &Path) -> ProjectedError {
+        match self {
+            ActivityParserError::Base(e) => e.project(base_dir),
+            ActivityParserError::NotImplemented => {
+                let _ = base_dir;
+                ProjectedError::new("NotImplemented")
             }
         }
     }

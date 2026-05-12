@@ -1,0 +1,66 @@
+{
+  "if.puml": {
+    "name": "if",
+    "statements": [
+      {
+        "IfStart": {
+          "condition": "beta syntax enabled?",
+          "label": null
+        }
+      },
+      {
+        "Action": {
+          "label": "Enter beta flow"
+        }
+      },
+      {
+        "IfStart": {
+          "condition": "extra validation needed?",
+          "label": "yes"
+        }
+      },
+      {
+        "Action": {
+          "label": "Run nested validation"
+        }
+      },
+      {
+        "Else": {
+          "label": "no"
+        }
+      },
+      {
+        "Action": {
+          "label": "Skip nested validation"
+        }
+      },
+      {
+        "Stop": null
+      },
+      {
+        "EndIf": null
+      },
+      {
+        "Else": {
+          "label": "no"
+        }
+      },
+      {
+        "Action": {
+          "label": "Fallback configuration path"
+        }
+      },
+      {
+        "Control": {
+          "kind": "Kill"
+        }
+      },
+      {
+        "EndIf": null
+      },
+      {
+        "Stop": null
+      }
+    ]
+  }
+}
