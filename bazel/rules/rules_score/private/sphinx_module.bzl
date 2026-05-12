@@ -266,7 +266,7 @@ def _score_html_impl(ctx):
         tools = [sphinx_toolchain.html_merge_tool.files_to_run],
     )
     return [
-        DefaultInfo(files = depset(ctx.files.needs + [html_output])),
+        DefaultInfo(files = depset([html_output])),
         SphinxModuleInfo(
             html_dir = html_output,
         ),
