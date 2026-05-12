@@ -20,6 +20,7 @@ load(
 load(
     "//bazel/rules/rules_score/private:architectural_design.bzl",
     _architectural_design = "architectural_design",
+    _parse_puml_diagrams = "parse_puml_diagrams",
 )
 load(
     "//bazel/rules/rules_score/private:assumed_system_requirements.bzl",
@@ -71,6 +72,7 @@ load(
 )
 
 architectural_design = _architectural_design
+parse_puml_diagrams = _parse_puml_diagrams
 assumptions_of_use = _assumptions_of_use
 assumed_system_requirements = _assumed_system_requirements
 component_requirements = _component_requirements
