@@ -154,7 +154,7 @@ def _architectural_design_impl(ctx):
     # toctree entry in the dependable_element index.
     rst_wrappers = make_puml_rst_wrappers(
         ctx,
-        ctx.files.static + ctx.files.dynamic,
+        ctx.files.static + ctx.files.dynamic + ctx.files.public_api,
         ctx.label.name,
         ctx.file._puml_rst_template,
     )

@@ -27,7 +27,7 @@ Type Hierarchy
     ├── description: String
     ├── version: Integer
     ├── note: optional String
-    ├── status: Status {valid, invalid}
+    ├── status: Status {valid, invalid}  -- frozen to "valid"
     │
     └── RequirementSafety (abstract, extends Requirement)
         ├── safety: Asil {QM, B, D}
@@ -36,10 +36,12 @@ Type Hierarchy
         │   └── rationale: String
         │
         ├── FeatReq
-        │   └── derived_from: list of ReqId
+        │   └── derived_from: AssumedSystemReqId[1..*]
         │
         └── CompReq
-            └── derived_from: list of ReqId
+            ├── derived_from (optional): FeatReqId[1..*]
+            ├── fulfilledBy (optional): String
+            └── mitigates (optional): String
 
 Usage
 -----
@@ -59,6 +61,9 @@ Reference this metamodel as ``spec`` in ``trlc_requirements`` rules:
 Traceability
 ------------
 
-``ReqId`` tuples (e.g., ``FeatReq.derived_from``) connect requirements across levels:
+Typed tuple IDs connect requirements across levels:
 ``AssumedSystemReq`` → ``FeatReq`` → ``CompReq``, forming the traceability chain
 enforced by LOBSTER at the dependable-element level.
+
+- ``FeatReq.derived_from`` accepts ``AssumedSystemReqId`` tuples (mandatory)
+- ``CompReq.derived_from`` accepts ``FeatReqId`` tuples (optional)

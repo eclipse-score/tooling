@@ -19,19 +19,36 @@ Assumed System
 --------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :caption: Assumed System Requirements
 
    {assumed_system_requirements}
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Assumptions of Use
+
    {assumptions_of_use}
 
 Software Architectural Level
 ----------------------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :caption: Feature Requirements
 
    {feature_requirements}
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Architectural Design
+
    {architectural_design}
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Dependability Analysis
+
    {dependability_analysis}
 
 
@@ -39,7 +56,7 @@ Components
 ----------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    {components}
 
