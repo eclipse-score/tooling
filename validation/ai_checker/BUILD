@@ -48,6 +48,11 @@ py_library(
     name = "copilot_langchain",
     srcs = [
         "src/copilot_adapter/__init__.py",
+        "src/copilot_adapter/_client_manager.py",
+        "src/copilot_adapter/_errors.py",
+        "src/copilot_adapter/_message_converter.py",
+        "src/copilot_adapter/_preflight.py",
+        "src/copilot_adapter/_tool_converter.py",
         "src/copilot_adapter/copilot_langchain.py",
     ],
     imports = ["src"],
