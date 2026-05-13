@@ -24,298 +24,36 @@ Provides a fully LangChain-compatible chat model that supports:
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import logging
-import os
-import stat
-import uuid
 from collections.abc import Sequence
-from pathlib import Path
 from typing import Any, Callable, Optional
 
-from copilot import CopilotClient
-from copilot.generated.session_events import SessionEvent, SessionEventType
-from copilot.types import SessionConfig, Tool as CopilotTool, ToolInvocation, ToolResult
-
-logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Auth-related environment variables checked by the Copilot CLI (priority order)
-# ---------------------------------------------------------------------------
-_AUTH_ENV_VARS = [
-    "COPILOT_GITHUB_TOKEN",  # Recommended for explicit Copilot usage
-    "GH_TOKEN",  # GitHub CLI compatible
-    "GITHUB_TOKEN",  # GitHub Actions compatible
-]
-
-
-class CopilotSetupError(RuntimeError):
-    """Raised when the Copilot SDK environment is not correctly configured."""
-
-
-def _resolve_copilot_cli_path() -> Optional[str]:
-    """Find the executable copy of the copilot CLI created by copy_executables.
-
-    rules_python strips the executable bit from binaries inside wheels.
-    The pip.whl_mods / copy_executables mechanism creates an executable
-    copy called ``copilot_cli`` next to the package.  We walk up from
-    ``copilot.__file__`` until we find it.
-
-    IMPORTANT: we must NOT resolve symlinks (Path.resolve()) because in
-    the Bazel runfiles tree the symlinks point back to the source repo
-    where the genrule output does not exist.  The raw __file__ path
-    stays inside the execution root where the copy IS present.
-    """
-    import copilot as _copilot_pkg
-
-    pkg_file = Path(_copilot_pkg.__file__)  # .../site-packages/copilot/__init__.py
-    # Walk up: copilot/ -> site-packages/ -> lib/ -> ... -> repo root
-    current = pkg_file.parent
-    for _ in range(10):
-        candidate = current / "copilot_cli"
-        if candidate.exists():
-            return str(candidate)
-        current = current.parent
-    return None
-
-
-def _check_cli_binary(cli_path: str) -> list[str]:
-    """Validate that the CLI binary exists and is executable.
-
-    Returns a list of problem descriptions (empty = all good).
-    """
-    problems: list[str] = []
-    p = Path(cli_path)
-    if not p.exists():
-        problems.append(f"Copilot CLI binary not found at: {cli_path}")
-        return problems
-    if not p.is_file():
-        problems.append(f"Copilot CLI path is not a file: {cli_path}")
-        return problems
-    mode = p.stat().st_mode
-    if not (mode & stat.S_IXUSR):
-        problems.append(
-            f"Copilot CLI binary is NOT executable (mode {oct(mode)}): {cli_path}\n"
-            "  Hint: rules_python strips +x from wheel binaries. Make sure\n"
-            "  pip.whl_mods / copy_executables is configured in MODULE.bazel."
-        )
-    return problems
-
-
-def _check_environment() -> list[str]:
-    """Check that the runtime environment has what the Copilot CLI needs.
-
-    Returns a list of problem descriptions (empty = all good).
-    """
-    problems: list[str] = []
-
-    if not os.environ.get("HOME"):
-        problems.append(
-            "HOME environment variable is not set.\n"
-            "  The Copilot CLI needs HOME to locate stored OAuth credentials.\n"
-            "  Ensure .bazelrc.ai_checker contains:  build --action_env=HOME"
-        )
-
-    # The Copilot CLI binary (Node.js) uses fetch() to reach api.github.com.
-    # Behind a corporate proxy it needs HTTPS_PROXY.
-    if not os.environ.get("HTTPS_PROXY") and not os.environ.get("https_proxy"):
-        problems.append(
-            "HTTPS_PROXY / https_proxy environment variable is not set.\n"
-            "  If you are behind a corporate proxy the Copilot CLI cannot\n"
-            "  reach api.github.com and will fail with 'TypeError: fetch failed'.\n"
-            "  Ensure .bazelrc.ai_checker contains:  build --action_env=HTTPS_PROXY"
-        )
-
-    return problems
-
-
-def _describe_auth_sources() -> str:
-    """Return a human-readable summary of available auth sources."""
-    lines = ["Authentication sources detected:"]
-    found_any = False
-
-    for var in _AUTH_ENV_VARS:
-        val = os.environ.get(var)
-        if val:
-            # Mask the token for security
-            masked = val[:4] + "..." + val[-4:] if len(val) > 10 else "****"
-            lines.append(f"  [OK] ${var} = {masked}")
-            found_any = True
-        else:
-            lines.append(f"  [  ] ${var} — not set")
-
-    home = os.environ.get("HOME", "")
-    if home:
-        lines.append(f"  [OK] $HOME = {home}  (CLI can search system keychain)")
-    else:
-        lines.append(
-            "  [  ] $HOME — not set  (CLI cannot find stored OAuth credentials)"
-        )
-
-    if not found_any and not home:
-        lines.append("")
-        lines.append("  ** No authentication source available! **")
-        lines.append(
-            "  Fix: set COPILOT_GITHUB_TOKEN, or ensure HOME is passed to the action."
-        )
-        lines.append(
-            "  See: https://github.com/github/copilot-sdk/blob/main/docs/auth/index.md"
-        )
-
-    # Network / proxy info
-    lines.append("")
-    proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
-    if proxy:
-        lines.append(f"  [OK] HTTPS_PROXY = {proxy}")
-    else:
-        lines.append(
-            "  [  ] HTTPS_PROXY — not set  (may cause 'fetch failed' behind a proxy)"
-        )
-
-    return "\n".join(lines)
-
+from copilot.generated.session_events import ExternalToolRequestedData, SessionEventType
+from copilot.session import PermissionHandler, SessionConfig
 
 from langchain_core.callbacks import (
-    CallbackManagerForLLMRun,
     AsyncCallbackManagerForLLMRun,
+    CallbackManagerForLLMRun,
 )
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import (
-    AIMessage,
-    BaseMessage,
-    HumanMessage,
-    SystemMessage,
-    ToolMessage,
-)
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.tools import BaseTool
-from langchain_core.utils.function_calling import convert_to_openai_tool
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import Field, PrivateAttr
 
+from ._client_manager import CopilotClientManager
+from ._errors import CopilotSetupError
+from ._message_converter import extract_system_message, messages_to_prompt
+from ._preflight import describe_auth_sources
+from ._tool_converter import (
+    build_copilot_tools,
+    convert_tools_to_openai_format,
+    deep_decode_json_strings,
+)
 
-def _convert_tools_to_openai_format(
-    tools: Sequence[dict[str, Any] | type | Callable | BaseTool],
-) -> list[dict[str, Any]]:
-    """Convert LangChain tool specs to OpenAI-format tool definitions."""
-    result = []
-    for tool in tools:
-        if isinstance(tool, dict):
-            # Already a dict — assume it's in OpenAI format or close enough
-            result.append(tool)
-        else:
-            result.append(convert_to_openai_tool(tool))
-    return result
-
-
-def _build_copilot_tools(
-    openai_tools: list[dict[str, Any]],
-) -> list[CopilotTool]:
-    """Convert OpenAI-format tool dicts into Copilot SDK Tool objects.
-
-    The handler is a no-op because we never let the Copilot agent
-    autonomously execute tools — we only need the definitions so the
-    model can emit tool_calls in its response.
-    """
-    copilot_tools = []
-    for t in openai_tools:
-        fn = t.get("function", t)
-        name = fn["name"]
-        description = fn.get("description", "")
-        parameters = fn.get("parameters")
-
-        # Capture loop variables explicitly to avoid the closure-over-loop-variable
-        # pitfall.  Although _noop_handler is never actually invoked (tool
-        # execution is intercepted at the LangChain level), the correct capture
-        # pattern is important for correctness and future maintainability.
-        def _make_noop_handler(tool_name: str):
-            async def _noop_handler(invocation: ToolInvocation) -> ToolResult:
-                # This handler should never actually be invoked because we
-                # intercept tool requests at the LangChain level.
-                return ToolResult(
-                    textResultForLlm="Tool execution is managed by LangChain.",
-                    resultType="success",
-                )
-
-            return _noop_handler
-
-        copilot_tools.append(
-            CopilotTool(
-                name=name,
-                description=description,
-                handler=_make_noop_handler(name),
-                parameters=parameters,
-            )
-        )
-    return copilot_tools
-
-
-def _deep_decode_json_strings(obj: Any) -> Any:
-    """Recursively decode values that are JSON-encoded strings.
-
-    Some LLMs (e.g. Claude via the Copilot SDK) double-encode nested
-    lists or objects as JSON strings inside the outer tool-call arguments
-    dict.  This function walks the structure and replaces any string value
-    that successfully parses as a JSON array or object with the decoded
-    Python value, leaving plain strings untouched.
-    """
-    if isinstance(obj, dict):
-        return {k: _deep_decode_json_strings(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_deep_decode_json_strings(v) for v in obj]
-    if isinstance(obj, str):
-        stripped = obj.strip()
-        if stripped and stripped[0] in ("{", "["):
-            try:
-                decoded = json.loads(stripped)
-                # Only substitute if the result is a richer structure
-                if isinstance(decoded, (dict, list)):
-                    return _deep_decode_json_strings(decoded)
-            except (json.JSONDecodeError, ValueError):
-                pass
-    return obj
-
-
-def _messages_to_prompt(messages: list[BaseMessage]) -> str:
-    """Convert a list of LangChain messages into a single prompt string.
-
-    The Copilot SDK accepts a plain text prompt rather than a structured
-    message array. We serialise the conversation into a tagged format so
-    the model can distinguish roles.
-    """
-    parts: list[str] = []
-    for msg in messages:
-        content = (
-            msg.content if isinstance(msg.content, str) else json.dumps(msg.content)
-        )
-
-        if isinstance(msg, SystemMessage):
-            parts.append(f"[system]\n{content}")
-        elif isinstance(msg, HumanMessage):
-            parts.append(f"[user]\n{content}")
-        elif isinstance(msg, AIMessage):
-            text_parts = [f"[assistant]\n{content}"] if content else ["[assistant]"]
-            # Include any tool calls the AI made previously
-            if msg.tool_calls:
-                for tc in msg.tool_calls:
-                    text_parts.append(
-                        f"[tool_call id={tc['id']} name={tc['name']}]\n"
-                        f"{json.dumps(tc['args'])}"
-                    )
-            parts.append("\n".join(text_parts))
-        elif isinstance(msg, ToolMessage):
-            parts.append(f"[tool_result id={msg.tool_call_id}]\n{content}")
-        else:
-            parts.append(f"[{msg.type}]\n{content}")
-
-    return "\n\n".join(parts)
-
-
-def _extract_system_message(messages: list[BaseMessage]) -> Optional[str]:
-    """Extract the system message content if the first message is a SystemMessage."""
-    if messages and isinstance(messages[0], SystemMessage):
-        content = messages[0].content
-        return content if isinstance(content, str) else json.dumps(content)
-    return None
+logger = logging.getLogger(__name__)
 
 
 class ChatCopilot(BaseChatModel):
@@ -361,11 +99,13 @@ class ChatCopilot(BaseChatModel):
     """Options passed to CopilotClient() constructor."""
 
     # Private attributes (not serialised by Pydantic)
-    _client: Optional[CopilotClient] = PrivateAttr(default=None)
-    _client_started: bool = PrivateAttr(default=False)
+    _manager: CopilotClientManager = PrivateAttr(default=None)
     _bound_tools: list[dict[str, Any]] = PrivateAttr(default_factory=list)
     _tool_choice: Optional[str] = PrivateAttr(default=None)
     _ls_structured_output_format: Optional[dict[str, Any]] = PrivateAttr(default=None)
+
+    def model_post_init(self, __context: Any) -> None:
+        self._manager = CopilotClientManager(self.copilot_client_options)
 
     # ------------------------------------------------------------------ #
     # LangChain required properties
@@ -380,143 +120,95 @@ class ChatCopilot(BaseChatModel):
         return {"model": self.model}
 
     # ------------------------------------------------------------------ #
-    # Client lifecycle
+    # Lifecycle
     # ------------------------------------------------------------------ #
-
-    async def _ensure_client(self) -> CopilotClient:
-        """Lazily create, start, and verify the CopilotClient.
-
-        Performs pre-flight checks before starting the CLI:
-        1. Resolves the CLI binary path (copy_executables workaround)
-        2. Validates the binary exists and is executable
-        3. Checks required environment variables (HOME, token vars)
-        4. Starts the CLI server
-        5. Verifies authentication via ``get_auth_status()``
-
-        Raises:
-            CopilotSetupError: If any pre-flight check fails with a
-                detailed, actionable error message.
-        """
-        if self._client is None:
-            opts = dict(self.copilot_client_options or {})
-
-            # --- Resolve CLI binary path --------------------------------
-            if "cli_path" not in opts and "cli_url" not in opts:
-                resolved = _resolve_copilot_cli_path()
-                if resolved:
-                    opts["cli_path"] = resolved
-                    logger.info("Resolved Copilot CLI path: %s", resolved)
-                else:
-                    logger.warning(
-                        "Could not find copilot_cli (copy_executables target). "
-                        "Falling back to bundled binary — this may fail with "
-                        "PermissionError if the executable bit was stripped."
-                    )
-
-            # --- Pre-flight: check binary -------------------------------
-            cli_path = opts.get("cli_path")
-            if cli_path:
-                problems = _check_cli_binary(cli_path)
-                if problems:
-                    raise CopilotSetupError(
-                        "Copilot CLI binary check failed:\n"
-                        + "\n".join(f"  - {p}" for p in problems)
-                    )
-
-            # --- Pre-flight: check environment --------------------------
-            env_problems = _check_environment()
-            if env_problems:
-                logger.warning(
-                    "Environment issues detected:\n%s\n%s",
-                    "\n".join(f"  - {p}" for p in env_problems),
-                    _describe_auth_sources(),
-                )
-                # Don't hard-fail here — the user may have a token env var.
-                # We'll verify auth after starting the client.
-
-            logger.info("Starting CopilotClient...\n%s", _describe_auth_sources())
-            self._client = CopilotClient(opts or None)
-
-        if not self._client_started:
-            try:
-                await self._client.start()
-            except PermissionError as exc:
-                raise CopilotSetupError(
-                    f"PermissionError starting Copilot CLI: {exc}\n"
-                    "  The CLI binary is not executable. Make sure\n"
-                    "  pip.whl_mods / copy_executables is configured in MODULE.bazel\n"
-                    "  to create an executable copy of copilot/bin/copilot."
-                ) from exc
-            except RuntimeError as exc:
-                if "timeout" in str(exc).lower() or "Timeout" in str(exc):
-                    raise CopilotSetupError(
-                        f"Timeout starting Copilot CLI server: {exc}\n"
-                        "  The CLI started but did not become ready in time.\n"
-                        "  This usually means the CLI cannot authenticate.\n\n"
-                        + _describe_auth_sources()
-                        + "\n\n"
-                        "  Possible fixes:\n"
-                        "  1. Run 'copilot' in a terminal and sign in interactively.\n"
-                        "  2. Set COPILOT_GITHUB_TOKEN (or GH_TOKEN / GITHUB_TOKEN)\n"
-                        "     and pass it via --action_env=COPILOT_GITHUB_TOKEN.\n"
-                        "  3. Ensure HOME is available in the action environment\n"
-                        "     (use_default_shell_env = True in the Bazel rule).\n"
-                        "  See: https://github.com/github/copilot-sdk/blob/main/docs/auth/index.md"
-                    ) from exc
-                raise
-            except Exception as exc:
-                raise CopilotSetupError(
-                    f"Failed to start CopilotClient: {type(exc).__name__}: {exc}\n\n"
-                    + _describe_auth_sources()
-                ) from exc
-
-            self._client_started = True
-
-            # --- Post-start: verify authentication ----------------------
-            try:
-                auth_status = await self._client.get_auth_status()
-                if (
-                    hasattr(auth_status, "isAuthenticated")
-                    and auth_status.isAuthenticated
-                ):
-                    user = getattr(auth_status, "login", "unknown")
-                    logger.info("Copilot authenticated as: %s", user)
-                elif (
-                    hasattr(auth_status, "is_authenticated")
-                    and auth_status.is_authenticated
-                ):
-                    user = getattr(auth_status, "login", "unknown")
-                    logger.info("Copilot authenticated as: %s", user)
-                else:
-                    raise CopilotSetupError(
-                        "Copilot CLI started but is NOT authenticated.\n"
-                        f"  Auth status: {auth_status}\n\n"
-                        + _describe_auth_sources()
-                        + "\n\n"
-                        "  Possible fixes:\n"
-                        "  1. Run 'copilot' in a terminal and sign in interactively.\n"
-                        "  2. Set COPILOT_GITHUB_TOKEN (or GH_TOKEN / GITHUB_TOKEN).\n"
-                        "  See: https://github.com/github/copilot-sdk/blob/main/docs/auth/index.md"
-                    )
-            except CopilotSetupError:
-                raise
-            except Exception as exc:
-                # get_auth_status itself failed — log but don't block.
-                # The actual LLM call will fail with a clearer error if auth
-                # is truly broken.
-                logger.warning(
-                    "Could not verify auth status (non-fatal): %s: %s",
-                    type(exc).__name__,
-                    exc,
-                )
-
-        return self._client
 
     async def aclose(self) -> None:
         """Shut down the underlying Copilot CLI process."""
-        if self._client and self._client_started:
-            await self._client.stop()
-            self._client_started = False
+        await self._manager.close()
+
+    # ------------------------------------------------------------------ #
+    # Structured output (JSON-based, bypasses tool calling)
+    # ------------------------------------------------------------------ #
+
+    def with_structured_output(
+        self,
+        schema: Any,
+        *,
+        include_raw: bool = False,
+        **kwargs: Any,
+    ) -> Any:
+        """Return a chain that produces structured output via JSON text parsing.
+
+        The Copilot CLI's model ignores tool-calling instructions and produces
+        natural language responses even when tools are registered. This override
+        injects a JSON schema requirement directly into the system prompt and
+        parses the model's text response, which is far more reliable.
+        """
+        from pydantic import BaseModel as PydanticBaseModel
+
+        from langchain_core.runnables import RunnableLambda
+
+        is_pydantic = isinstance(schema, type) and issubclass(schema, PydanticBaseModel)
+        schema_json = schema.model_json_schema() if is_pydantic else schema
+        schema_str = json.dumps(schema_json, indent=2)
+
+        json_instruction = (
+            "\n\n# CRITICAL OUTPUT FORMAT REQUIREMENT\n"
+            "You MUST respond with ONLY a valid JSON object. No prose, no markdown, "
+            "no explanations, no code fences.\n"
+            "Your ENTIRE response must be a single valid JSON object matching this schema:\n"
+            f"{schema_str}\n"
+            "Start your response immediately with `{` and end with `}`."
+        )
+
+        def _inject(messages: list[BaseMessage]) -> list[BaseMessage]:
+            out: list[BaseMessage] = []
+            injected = False
+            for msg in messages:
+                if isinstance(msg, SystemMessage) and not injected:
+                    out.append(SystemMessage(content=msg.content + json_instruction))
+                    injected = True
+                else:
+                    out.append(msg)
+            if not injected:
+                out.insert(0, SystemMessage(content=json_instruction.lstrip()))
+            return out
+
+        def _parse(ai_message: AIMessage) -> Any:
+            content = (ai_message.content or "").strip()
+            # Strip markdown code fences if present
+            if content.startswith("```"):
+                lines = content.split("\n")
+                content = "\n".join(lines[1:-1]).strip()
+            # Extract outermost JSON object
+            start = content.find("{")
+            end = content.rfind("}") + 1
+            if start == -1 or end == 0:
+                raise ValueError(
+                    f"No JSON object found in model response.\n"
+                    f"--- LLM output ---\n{content}\n--- end ---"
+                )
+            json_text = content[start:end]
+            try:
+                parsed = json.loads(json_text)
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"Model returned invalid JSON: {exc}\n"
+                    f"--- LLM output ---\n{content}\n--- end ---"
+                ) from exc
+            if not is_pydantic:
+                return parsed
+            try:
+                return schema.model_validate(parsed)
+            except Exception as exc:
+                raise ValueError(
+                    f"Model output did not match the expected schema: {exc}\n"
+                    f"--- LLM output ---\n{content}\n--- end ---"
+                ) from exc
+
+        chain = RunnableLambda(_inject) | self | RunnableLambda(_parse)
+        return chain
 
     # ------------------------------------------------------------------ #
     # Tool binding
@@ -539,14 +231,13 @@ class ChatCopilot(BaseChatModel):
         Returns:
             A new ChatCopilot instance with the tools bound.
         """
-        openai_tools = _convert_tools_to_openai_format(tools)
-        # Create a shallow copy with the tools attached
+        openai_tools = convert_tools_to_openai_format(tools)
         new = self.model_copy()
         new._bound_tools = openai_tools
         new._tool_choice = tool_choice
         new._ls_structured_output_format = kwargs.get("ls_structured_output_format")
-        new._client = self._client
-        new._client_started = self._client_started
+        # Share the same client manager so the subprocess is not restarted
+        new._manager = self._manager
         return new
 
     # ------------------------------------------------------------------ #
@@ -561,101 +252,89 @@ class ChatCopilot(BaseChatModel):
         **kwargs: Any,
     ) -> ChatResult:
         try:
-            client = await self._ensure_client()
+            client = await self._manager.ensure_client()
         except CopilotSetupError:
-            raise  # Already has a clear message
+            raise
         except Exception as exc:
             raise CopilotSetupError(
                 f"Unexpected error initialising Copilot SDK: {type(exc).__name__}: {exc}\n\n"
-                + _describe_auth_sources()
+                + describe_auth_sources()
             ) from exc
 
         # Build session config
         session_config: SessionConfig = {
             "model": kwargs.get("model", self.model),
+            "available_tools": [],  # Disable built-in tools
         }
-
-        # Disable all built-in tools so only our bound tools are available
-        session_config["available_tools"] = []
 
         # Merge any extra tools from kwargs with bound tools
         extra_tools = kwargs.get("tools", [])
         all_openai_tools = self._bound_tools + (
-            _convert_tools_to_openai_format(extra_tools) if extra_tools else []
+            convert_tools_to_openai_format(extra_tools) if extra_tools else []
         )
-
         if all_openai_tools:
-            session_config["tools"] = _build_copilot_tools(all_openai_tools)
+            session_config["tools"] = build_copilot_tools(all_openai_tools)
 
-        # Use system message from the conversation if present
-        system_content = _extract_system_message(messages)
+        # System message
+        system_content = extract_system_message(messages)
         if system_content:
             base_system = system_content
-            # Remove system message from prompt construction
             prompt_messages = [m for m in messages if not isinstance(m, SystemMessage)]
         else:
             base_system = "You are a helpful assistant."
             prompt_messages = messages
 
-        # When tool_choice="any" (structured output), force the model to
-        # respond exclusively via tool calls.
-        if self._tool_choice == "any" and all_openai_tools:
-            tool_names = [t.get("function", t)["name"] for t in all_openai_tools]
-            base_system += (
-                "\n\nIMPORTANT: You MUST respond by calling one of the following "
-                f"tools: {', '.join(tool_names)}. "
-                "Do NOT respond with plain text. You MUST use a tool call. "
-                "Pass your entire answer as arguments to the tool."
-            )
-
-        session_config["system_message"] = {
-            "mode": "replace",
-            "content": base_system,
-        }
-
-        # Disable infinite sessions for simple request/response
+        session_config["system_message"] = {"mode": "replace", "content": base_system}
         session_config["infinite_sessions"] = {"enabled": False}
 
-        # Create session
-        session = await client.create_session(session_config)
-
+        session = await client.create_session(
+            on_permission_request=PermissionHandler.approve_all,
+            **session_config,
+        )
         try:
-            # Build the prompt from messages
-            prompt = _messages_to_prompt(prompt_messages)
+            prompt = messages_to_prompt(prompt_messages)
 
-            # Collect streaming events for tool calls
             tool_requests: list[Any] = []
 
             def _event_handler(event: Any) -> None:
+                # New SDK (protocol v3): custom tool calls come as ExternalToolRequestedData
+                # broadcast events rather than AssistantMessageData.tool_requests.
+                if isinstance(event.data, ExternalToolRequestedData):
+                    tool_requests.append(event.data)
+                    return
+                # Legacy fallback: tool calls in AssistantMessageData.tool_requests
                 if event.type == SessionEventType.ASSISTANT_MESSAGE:
                     if event.data.tool_requests:
                         tool_requests.extend(event.data.tool_requests)
 
             unsubscribe = session.on(_event_handler)
-
             try:
                 response = await session.send_and_wait(
-                    {"prompt": prompt},
+                    prompt,
                     timeout=self.timeout,
                 )
             finally:
                 unsubscribe()
 
-            # Extract content
             content = ""
             if response and response.data and response.data.content:
                 content = response.data.content
 
-            # Check for tool requests on the response itself
             if response and response.data and response.data.tool_requests:
                 for tr in response.data.tool_requests:
                     if tr not in tool_requests:
                         tool_requests.append(tr)
 
-            # Build tool_calls for the AIMessage
             tool_calls = []
+            seen_ids: set[str] = set()
             for tr in tool_requests:
-                args = tr.arguments
+                if isinstance(tr, ExternalToolRequestedData):
+                    name, call_id, args = tr.tool_name, tr.tool_call_id, tr.arguments
+                else:
+                    name, call_id, args = tr.name, tr.tool_call_id, tr.arguments
+                if call_id in seen_ids:
+                    continue
+                seen_ids.add(call_id)
                 if isinstance(args, str):
                     try:
                         args = json.loads(args)
@@ -663,34 +342,22 @@ class ChatCopilot(BaseChatModel):
                         args = {"raw": args}
                 elif args is None:
                     args = {}
-
-                # Deep-decode: some models (e.g. Claude via Copilot SDK) return
-                # nested lists/objects as JSON-encoded strings inside the outer
-                # tool-call arguments dict.  Un-double-encode them so LangChain's
-                # structured-output parser receives proper Python objects.
                 if isinstance(args, dict):
-                    args = _deep_decode_json_strings(args)
-
+                    args = deep_decode_json_strings(args)
                 tool_calls.append(
                     {
-                        "name": tr.name,
+                        "name": name,
                         "args": args if isinstance(args, dict) else {"raw": args},
-                        "id": tr.tool_call_id,
+                        "id": call_id,
                     }
                 )
 
-            # Build the AIMessage
             ai_message = AIMessage(
                 content=content,
                 tool_calls=tool_calls if tool_calls else [],
-                response_metadata={
-                    "model": self.model,
-                },
+                response_metadata={"model": self.model},
             )
-
-            return ChatResult(
-                generations=[ChatGeneration(message=ai_message)],
-            )
+            return ChatResult(generations=[ChatGeneration(message=ai_message)])
         finally:
             await session.destroy()
 
@@ -712,10 +379,6 @@ class ChatCopilot(BaseChatModel):
             loop = None
 
         if loop and loop.is_running():
-            # We're already in an async context — use a helper to run in
-            # a new thread to avoid blocking the event loop.
-            import concurrent.futures
-
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 future = pool.submit(
                     asyncio.run,
