@@ -1,0 +1,7 @@
+{
+  "should_pass": false,
+  "error_contains": [
+    "Missing unit in PlantUML",
+    "Alias          : \"unit_2\""
+  ]
+}
