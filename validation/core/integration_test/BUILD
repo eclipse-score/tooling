@@ -26,6 +26,19 @@ filegroup(
     ],
 )
 
+filegroup(
+    name = "component_class_test_data",
+    srcs = [
+        "//validation/core/integration_test/component_class/negative_boundary_mismatch:case_data",
+        "//validation/core/integration_test/component_class/negative_case_sensitive_mismatch:case_data",
+        "//validation/core/integration_test/component_class/negative_missing_namespace_coverage:case_data",
+        "//validation/core/integration_test/component_class/negative_multi_class_files_with_mismatch:case_data",
+        "//validation/core/integration_test/component_class/positive_exact_match:case_data",
+        "//validation/core/integration_test/component_class/positive_multi_class_files:case_data",
+        "//validation/core/integration_test/component_class/positive_suffix_match:case_data",
+    ],
+)
+
 rust_library(
     name = "test_framework",
     srcs = [
@@ -51,6 +64,23 @@ rust_test(
     ],
     deps = [
         ":test_framework",
+        "//validation/core:validation",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "component_class_integration_test",
+    srcs = ["src/component_class_suite.rs"],
+    crate_root = "src/component_class_suite.rs",
+    data = [
+        ":component_class_test_data",
+        "//validation/core:validation_cli",
+    ],
+    deps = [
+        ":test_framework",
+        "//tools/metamodel:class_diagram",
         "//validation/core:validation",
         "@crates//:serde",
         "@crates//:serde_json",

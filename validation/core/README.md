@@ -29,8 +29,9 @@ The current implementation supports three validation flows:
 
 1. `BazelComponent`: compares the indexed Bazel build graph with the indexed
    PlantUML component-diagram structure.
-2. `ComponentClass`: compares component-diagram unit aliases with enclosing
-  namespace IDs observed in class diagrams.
+2. `ComponentClass`: compares component-diagram unit IDs with enclosing
+  namespace IDs observed in class diagrams using boundary-aware suffix
+  matching.
 3. `ComponentSequence`: compares component-diagram unit aliases with
   caller/callee participants observed in sequence diagrams (exact match).
 
