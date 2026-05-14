@@ -1,0 +1,7 @@
+{
+  "should_pass": false,
+  "error_contains": [
+    "Extra unit in PlantUML not in Bazel",
+    "Alias          : \"unit_3\""
+  ]
+}
