@@ -1,0 +1,9 @@
+{
+  "should_pass": false,
+  "error_contains": [
+    "no enclosing namespace ID suffix match for component unit ID",
+    "package_b.component_b.unit_2",
+    "enclosing namespace ID is not a suffix of any component unit ID",
+    "Namespace ID       : \"unit_3\""
+  ]
+}
