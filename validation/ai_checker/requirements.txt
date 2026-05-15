@@ -181,9 +181,9 @@ langchain-protocol==0.0.15 \
     --hash=sha256:461eb794358f83d5e42635a5797799ffec7b4702314e34edf73ac21e75d3ef79 \
     --hash=sha256:9ab2d11ee73944754f10e037e717098d3a6796f0e58afa9cadda6154e7655ade
     # via langchain-core
-langsmith==0.6.3 \
-    --hash=sha256:33246769c0bb24e2c17e0c34bb21931084437613cd37faf83bd0978a297b826f \
-    --hash=sha256:44fdf8084165513e6bede9dda715e7b460b1b3f57ac69f2ca3f03afa911233ec
+langsmith==0.8.0 \
+    --hash=sha256:12cc4bc5622b835a6d841964d6034df3617bdb912dae0c1381fd0a68a9b3a3ef \
+    --hash=sha256:59fe5b2a56bbbe14a08aa76691f84b49e8675dd21e11b57d80c6db8c08bac2e3
     # via langchain-core
 orjson==3.11.6 \
     --hash=sha256:09dded2de64e77ac0b312ad59f35023548fb87393a57447e1bb36a26c181a90f \
