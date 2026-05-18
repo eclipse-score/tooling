@@ -268,6 +268,11 @@ def _process_artifact_files(ctx, artifact_name, label):
         # Compute paths
         relative_path = _compute_relative_path(artifact_file, common_dir)
 
+        # Document files (rst/md) that are transitive deps but not owned by
+        # this rule are already placed in their own artifact section.
+        if _is_document_file(artifact_file) and artifact_file.path not in srcs_paths:
+            continue
+
         # Create symlink
         output_file = _create_artifact_symlink(
             ctx,
@@ -278,7 +283,7 @@ def _process_artifact_files(ctx, artifact_name, label):
         output_files.append(output_file)
 
         # Add to toctree index only for files directly owned by this rule.
-        if _is_document_file(artifact_file) and artifact_file.path in srcs_paths:
+        if _is_document_file(artifact_file):
             doc_ref = (artifact_name + "/" + relative_path) \
                 .replace(".rst", "") \
                 .replace(".md", "")
