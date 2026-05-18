@@ -22,12 +22,15 @@ mod validators;
 
 pub use models::{
     BazelArchitecture, BazelInput, ClassDiagramIndex, ClassDiagramInputs,
-    ComponentDiagramArchitecture, ComponentDiagramInputs, Errors,
+    ComponentDiagramArchitecture, ComponentDiagramInputs, Errors, SequenceDiagramIndex,
+    SequenceDiagramInputs,
 };
 
-pub use readers::{BazelReader, ClassDiagramReader, ComponentDiagramReader, Reader};
+pub use readers::{
+    BazelReader, ClassDiagramReader, ComponentDiagramReader, Reader, SequenceDiagramReader,
+};
 
 pub use validators::{
     validate_bazel_component, validate_component_class, validate_component_sequence, RequiredInput,
-    SelectedValidator, ValidatorSpec, ALL_VALIDATORS,
+    SelectedValidator, ALL_VALIDATORS,
 };

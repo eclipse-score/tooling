@@ -13,34 +13,25 @@
 
 use flatbuffers::FlatBufferBuilder;
 use sequence_fbs::sequence_metamodel as fb;
-use sequence_logic::{ConditionType, Event, SequenceNode};
+use sequence_logic::{ConditionType, Event, SequenceNode, SequenceTree};
 
 pub struct SequenceSerializer;
 
 impl SequenceSerializer {
-    pub fn serialize(
-        nodes: &[SequenceNode],
-        name: Option<&str>,
-        source_files: &[String],
-        version: Option<&str>,
-    ) -> Vec<u8> {
+    pub fn serialize(diagram: &SequenceTree, source_file: &str) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
 
-        let name_offset = name.map(|n| builder.create_string(n));
+        let name_offset = diagram.name.as_deref().map(|n| builder.create_string(n));
 
-        let node_offsets: Vec<_> = nodes
+        let node_offsets: Vec<_> = diagram
+            .root_interactions
             .iter()
             .map(|node| Self::serialize_node(&mut builder, node))
             .collect();
         let nodes_offset = builder.create_vector(&node_offsets);
 
-        let source_offsets: Vec<_> = source_files
-            .iter()
-            .map(|s| builder.create_string(s))
-            .collect();
+        let source_offsets = [builder.create_string(source_file)];
         let source_files_offset = builder.create_vector(&source_offsets);
-
-        let version_offset = version.map(|v| builder.create_string(v));
 
         let root = fb::SequenceDiagram::create(
             &mut builder,
@@ -48,7 +39,7 @@ impl SequenceSerializer {
                 name: name_offset,
                 root_interactions: Some(nodes_offset),
                 source_files: Some(source_files_offset),
-                version: version_offset,
+                version: None,
             },
         );
 

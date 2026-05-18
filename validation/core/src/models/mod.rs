@@ -18,6 +18,7 @@ mod bazel_models;
 mod class_diagram_models;
 mod component_diagram_models;
 mod error_models;
+mod sequence_diagram_models;
 mod shared;
 
 use shared::EntityKey;
@@ -30,3 +31,6 @@ pub use component_diagram_models::{
     ComponentDiagramArchitecture, ComponentDiagramInput, ComponentDiagramInputs,
 };
 pub use error_models::Errors;
+pub use sequence_diagram_models::{
+    SequenceDiagramIndex, SequenceDiagramInput, SequenceDiagramInputs,
+};

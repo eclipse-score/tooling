@@ -29,12 +29,15 @@ package "validation/core" {
   package "readers" {
     class "BazelReader"
     class "ComponentDiagramReader"
+    class "SequenceDiagramReader"
     class "ClassDiagramReader"
   }
 
   package "models" {
     class "BazelArchitecture"
     class "ComponentDiagramArchitecture"
+    class "SequenceDiagramInputs"
+    class "SequenceDiagramIndex"
     class "ClassDiagramInputs"
     class "ClassDiagramIndex"
     class "Errors"
@@ -50,27 +53,33 @@ package "validation/core" {
     +base_errors: Errors
     +bazel: Option<BazelArchitecture>
     +component: Option<ComponentDiagramArchitecture>
+    +sequence: Option<SequenceDiagramIndex>
     +class: Option<ClassDiagramIndex>
   }
 }
 
 cli --> BazelReader : reads architecture json
 cli --> ComponentDiagramReader : reads component fbs
+cli --> SequenceDiagramReader : reads sequence fbs
 cli --> ClassDiagramReader : reads class fbs
 
 BazelReader --> BazelArchitecture
 ComponentDiagramReader --> ComponentDiagramArchitecture
+SequenceDiagramReader --> SequenceDiagramInputs
 ClassDiagramReader --> ClassDiagramInputs
+cli --> SequenceDiagramIndex : to_sequence_diagram_index(...)
 cli --> ClassDiagramIndex : to_class_diagram_index(...)
 
 cli --> context : builds
 context --> Errors
 context --> BazelArchitecture
 context --> ComponentDiagramArchitecture
+context --> SequenceDiagramIndex
 context --> ClassDiagramIndex
 
 cli --> "validate_bazel_component()" : when bazel + component exist
 cli --> "validate_component_class()" : when component + class exist
+cli --> "validate_component_sequence()" : when component + sequence exist
 
 "validate_bazel_component()" --> BazelArchitecture
 "validate_bazel_component()" --> ComponentDiagramArchitecture
@@ -79,6 +88,10 @@ cli --> "validate_component_class()" : when component + class exist
 "validate_component_class()" --> ComponentDiagramArchitecture
 "validate_component_class()" --> ClassDiagramIndex
 "validate_component_class()" --> Errors
+
+"validate_component_sequence()" --> ComponentDiagramArchitecture
+"validate_component_sequence()" --> SequenceDiagramIndex
+"validate_component_sequence()" --> Errors
 
 note bottom of cli
 CLI owns orchestration:
