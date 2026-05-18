@@ -27,7 +27,8 @@ def copyright_checker(
         remove_offset = 0,
         debug = False,
         use_memory_map = False,
-        fix = False):
+        fix = False,
+        target_compatible_with = None):
     """
     Defines a custom build rule for checking and optionally fixing files for compliance
     with specific requirements, such as copyright headers.
@@ -109,12 +110,14 @@ def copyright_checker(
             args = args,
             data = data,
             visibility = visibility,
+            target_compatible_with = target_compatible_with,
         )
 
     native.alias(
         name = "copyright-check",
         actual = ":" + name + ".check",
         visibility = visibility,
+        target_compatible_with = target_compatible_with,
         tags = [
             "cli_help=Check for license headers:\n" +
             "bazel run //:copyright-check",
