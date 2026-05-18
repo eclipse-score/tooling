@@ -31,14 +31,8 @@ rust_library(
     srcs = [
         ":component_fbs_codegen",
     ],
-    # Generated code from flatc - suppress clippy warnings we can't fix
-    rustc_flags = [
-        "--allow=unused_imports",
-        "--allow=clippy::extra-unused-lifetimes",
-        "--allow=clippy::missing-safety-doc",
-        "--allow=clippy::needless-lifetimes",
-        "--allow=mismatched_lifetime_syntaxes",
-    ],
+    # Generated code from flatc - suppress all lints we can't fix
+    rustc_flags = ["--cap-lints=allow"],
     visibility = [
         "//visibility:public",
     ],
@@ -65,13 +59,8 @@ rust_library(
     srcs = [
         ":class_fbs_codegen",
     ],
-    rustc_flags = [
-        "--allow=unused_imports",
-        "--allow=clippy::extra-unused-lifetimes",
-        "--allow=clippy::missing-safety-doc",
-        "--allow=clippy::needless-lifetimes",
-        "--allow=mismatched_lifetime_syntaxes",
-    ],
+    # Generated code from flatc - suppress all lints we can't fix
+    rustc_flags = ["--cap-lints=allow"],
     visibility = [
         "//plantuml/parser:__subpackages__",
         "//validation/core:__subpackages__",
@@ -99,13 +88,8 @@ rust_library(
     srcs = [
         ":sequence_fbs_codegen",
     ],
-    rustc_flags = [
-        "--allow=unused_imports",
-        "--allow=clippy::extra-unused-lifetimes",
-        "--allow=clippy::missing-safety-doc",
-        "--allow=clippy::needless-lifetimes",
-        "--allow=mismatched_lifetime_syntaxes",
-    ],
+    # Generated code from flatc - suppress all lints we can't fix
+    rustc_flags = ["--cap-lints=allow"],
     visibility = [
         "//plantuml/parser:__subpackages__",
         "//validation/core:__subpackages__",
