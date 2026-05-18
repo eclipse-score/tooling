@@ -458,7 +458,7 @@ minijinja==2.19.0 \
 myst-parser==5.0.0 \
     --hash=sha256:ab31e516024918296e169139072b81592336f2fef55b8986aa31c9f04b5f7211 \
     --hash=sha256:f6f231452c56e8baa662cc352c548158f6a16fcbd6e3800fc594978002b94f3a
-    # via -r bazel/rules/rules_score/requirements.in
+    # via -r requirements.in
 packaging==25.0 \
     --hash=sha256:29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484 \
     --hash=sha256:d443872c98d677bf60f6a1f2f8c1cb748e8fe762d2bf9d3148b5599295b0fc4f
@@ -665,7 +665,7 @@ pyyaml==6.0.3 \
 readthedocs-sphinx-ext==2.2.5 \
     --hash=sha256:ee5fd5b99db9f0c180b2396cbce528aa36671951b9526bb0272dbfce5517bd27 \
     --hash=sha256:f8c56184ea011c972dd45a90122568587cc85b0127bc9cf064d17c68bc809daa
-    # via -r bazel/rules/rules_score/requirements.in
+    # via -r requirements.in
 reportlab==4.4.10 \
     --hash=sha256:5abc815746ae2bc44e7ff25db96814f921349ca814c992c7eac3c26029bf7c24 \
     --hash=sha256:5cbbb34ac3546039d0086deb2938cdec06b12da3cdb836e813258eb33cd28487
@@ -695,7 +695,7 @@ roman-numerals==4.1.0 \
 rst2pdf==0.104 \
     --hash=sha256:cc26a7990192842927f02e983bdea41985f0908de914f08678e8bb07ecee504d \
     --hash=sha256:d68e8c721841e93d1e251b8d8bc9e766a42758cfbbf99469625128c4bb0495b3
-    # via -r bazel/rules/rules_score/requirements.in
+    # via -r requirements.in
 snowballstemmer==3.0.1 \
     --hash=sha256:6cd7b3897da8d6c9ffb968a6781fa6532dce9c3618a4b127d920dab764a19064 \
     --hash=sha256:6d5eeeec8e9f84d4d56b847692bacf79bc2c8e90c7f80ca4444ff8b6f2e52895
@@ -704,7 +704,7 @@ sphinx==9.1.0 \
     --hash=sha256:7741722357dd75f8190766926071fed3bdc211c74dd2d7d4df5404da95930ddb \
     --hash=sha256:c84fdd4e782504495fe4f2c0b3413d6c2bf388589bb352d439b2a3bb99991978
     # via
-    #   -r bazel/rules/rules_score/requirements.in
+    #   -r requirements.in
     #   myst-parser
     #   sphinx-data-viewer
     #   sphinx-design
@@ -720,15 +720,15 @@ sphinx-data-viewer==0.1.5 \
 sphinx-design==0.7.0 \
     --hash=sha256:d2a3f5b19c24b916adb52f97c5f00efab4009ca337812001109084a740ec9b7a \
     --hash=sha256:f82bf179951d58f55dca78ab3706aeafa496b741a91b1911d371441127d64282
-    # via -r bazel/rules/rules_score/requirements.in
+    # via -r requirements.in
 sphinx-needs==8.0.0 \
     --hash=sha256:540c380c074d4088a557ea353e91513bfc1cb7712b10925c13ac9e5ebb7be091 \
     --hash=sha256:c4336ee0e3c949eff9eb11a14910f7b6b68cb8284d731cfddf97694037337674
-    # via -r bazel/rules/rules_score/requirements.in
+    # via -r requirements.in
 sphinx-rtd-theme==3.1.0 \
     --hash=sha256:1785824ae8e6632060490f67cf3a72d404a85d2d9fc26bce3619944de5682b89 \
     --hash=sha256:b44276f2c276e909239a4f6c955aa667aaafeb78597923b1c60babc76db78e4c
-    # via -r bazel/rules/rules_score/requirements.in
+    # via -r requirements.in
 sphinxcontrib-applehelp==2.0.0 \
     --hash=sha256:2f29ef331735ce958efa4734873f084941970894c6090408b079c61b2e1c06d1 \
     --hash=sha256:4cd3f0ec4ac5dd9c17ec65e9ab272c9b867ea77425228e68ecf08d6b28ddbdb5
@@ -753,7 +753,7 @@ sphinxcontrib-jsmath==1.0.1 \
     # via sphinx
 sphinxcontrib-plantuml==0.31 \
     --hash=sha256:fd74752f8ea070e641c3f8a402fccfa1d4a4056e0967b56033d2a76282d9f956
-    # via -r bazel/rules/rules_score/requirements.in
+    # via -r requirements.in
 sphinxcontrib-qthelp==2.0.0 \
     --hash=sha256:4fe7d0ac8fc171045be623aba3e2a8f613f8682731f9153bb2e40ece16b9bbab \
     --hash=sha256:b18a828cdba941ccd6ee8445dbe72ffa3ef8cbe7505d8cd1fa0d42d3f2d5f3eb
@@ -765,11 +765,11 @@ sphinxcontrib-serializinghtml==2.0.0 \
 sphinxcontrib-umlet==1.0.2 \
     --hash=sha256:0b028e2be46a8312b497cae3370ffb0b5b3c1470dae75a3ad33aa32bf7af45f0 \
     --hash=sha256:c342c2506675f135baafc19f44fa0375d6d508655b12f33cdc8b7b91c20c62a3
-    # via -r bazel/rules/rules_score/requirements.in
+    # via -r requirements.in
 svglib==1.6.0 \
     --hash=sha256:4c38a274a744ef0d1677f55d5d62fc0fb798819f813e52872a796e615741733d \
     --hash=sha256:9aea8e2e81cbbf9c844460e4c7dc90e0a06aea7983bc201975ccd279d7b2d194
-    # via -r bazel/rules/rules_score/requirements.in
+    # via -r requirements.in
 tinycss2==1.5.1 \
     --hash=sha256:3415ba0f5839c062696996998176c4a3751d18b7edaaeeb658c9ce21ec150661 \
     --hash=sha256:d339d2b616ba90ccce58da8495a78f46e55d4d25f9fd71dfd526f07e7d53f957
@@ -780,9 +780,9 @@ typing-extensions==4.15.0 \
     --hash=sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466 \
     --hash=sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548
     # via sphinx-needs
-urllib3==2.6.3 \
-    --hash=sha256:1b62b6884944a57dbe321509ab94fd4d3b307075e0c2eae991ac71ee15ad38ed \
-    --hash=sha256:bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4
+urllib3==2.7.0 \
+    --hash=sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c \
+    --hash=sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897
     # via requests
 webencodings==0.5.1 \
     --hash=sha256:a0af1213f3c2226497a97e2b3aa01a7e4bee4f403f95be16fc9acd2947514a78 \
