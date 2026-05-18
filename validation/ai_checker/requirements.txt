@@ -138,13 +138,13 @@ charset-normalizer==3.4.4 \
     --hash=sha256:faa3a41b2b66b6e50f84ae4a68c64fcd0c44355741c6374813a800cd6695db9e \
     --hash=sha256:fd44c878ea55ba351104cb93cc85e74916eb8fa440ca7903e57575e97394f608
     # via requests
-github-copilot-sdk==0.1.25 \
-    --hash=sha256:13ef99fa8c709c5f80d820672bf36ee9176bc33f0efce6a2b5cbf6d1bb2369e8 \
-    --hash=sha256:1a90ee583309ff308fea42f9edec61203645a33ca1d3dc42953628fb8c3eda07 \
-    --hash=sha256:5249a63d1ac1e4d325c70c9902e81327b0baca53afa46010f52ac3fd3b5a111b \
-    --hash=sha256:7af33d3afbe09a78dfc9d65a843526e47aba15631e90926c42a21a200fab12da \
-    --hash=sha256:bc74a3d08ee45313ac02a3f7159c583ec41fc16090ec5f27f88c4b737f03139e \
-    --hash=sha256:d32c3fc2c393f70923a645a133607da2e562d078b87437f499100d5bb8c1902f
+github-copilot-sdk==0.3.0 \
+    --hash=sha256:7e241d9b00ebf8bb4d10b2d6101c75fcef38de04d144d729e07fa48394270ee1 \
+    --hash=sha256:93b07c46f60cebbbb003d5bddba22eab886849b1d052b98037b52b6434a5bc07 \
+    --hash=sha256:b591546d789f9f8243fb59ca71b08cb0bb1dbec818fbef060c3830c6787de2c8 \
+    --hash=sha256:c5712d57a2c6291b805c79e039c55c48d858034b1a37fc8e1653925403a028e9 \
+    --hash=sha256:ed8f27989158824c754d7febb473bdf25744a1e6bc07a06f114f7e7deebd2c22 \
+    --hash=sha256:f4d98a67b8f038885ddd38bd7033d1ac20c3010f04c72ee0fc74ba4984b69ffa
     # via -r validation/ai_checker/requirements.txt.in
 h11==0.16.0 \
     --hash=sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1 \
@@ -173,10 +173,14 @@ jsonpointer==3.0.0 \
     --hash=sha256:13e088adc14fca8b6aa8177c044e12701e6ad4b28ff10e65f2267a90109c9942 \
     --hash=sha256:2b2d729f2091522d61c3b31f82e11870f60b68f43fbc705cb76bf4b832af59ef
     # via jsonpatch
-langchain-core==1.2.13 \
-    --hash=sha256:b31823e28d3eff1e237096d0bd3bf80c6f9624eb471a9496dbfbd427779f8d82 \
-    --hash=sha256:d2773d0d0130a356378db9a858cfeef64c3d64bc03722f1d4d6c40eb46fdf01b
+langchain-core==1.4.0 \
+    --hash=sha256:1dc341eed802ed9c117c0df3923c991e5e9e226571e5725c194eeb5bd93d1a7f \
+    --hash=sha256:23cbbdb46e38ddd1dd5247e6167e96013eae74bea4c5949c550809970a9e565c
     # via -r validation/ai_checker/requirements.txt.in
+langchain-protocol==0.0.15 \
+    --hash=sha256:461eb794358f83d5e42635a5797799ffec7b4702314e34edf73ac21e75d3ef79 \
+    --hash=sha256:9ab2d11ee73944754f10e037e717098d3a6796f0e58afa9cadda6154e7655ade
+    # via langchain-core
 langsmith==0.6.3 \
     --hash=sha256:33246769c0bb24e2c17e0c34bb21931084437613cd37faf83bd0978a297b826f \
     --hash=sha256:44fdf8084165513e6bede9dda715e7b460b1b3f57ac69f2ca3f03afa911233ec
@@ -519,8 +523,8 @@ typing-extensions==4.15.0 \
     --hash=sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548
     # via
     #   anyio
-    #   github-copilot-sdk
     #   langchain-core
+    #   langchain-protocol
     #   pydantic
     #   pydantic-core
     #   typing-inspection

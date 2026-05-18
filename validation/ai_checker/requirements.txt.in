@@ -5,5 +5,5 @@ pydantic
 pyyaml
 
 # LangChain + GitHub Copilot SDK
-github-copilot-sdk>=0.1.23
-langchain-core>=1.2.9
+github-copilot-sdk>=0.3.0
+langchain-core>=1.4.0

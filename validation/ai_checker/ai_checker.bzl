@@ -164,7 +164,7 @@ fi
 _COMMON_AI_TEST_ATTRS = {
     "model": attr.string(
         doc = "AI model name to use for analysis.",
-        default = "anthropic/claude-sonnet-4-5",
+        default = "claude-sonnet-4.6",
     ),
     "score_threshold": attr.string(
         doc = "Minimum average score required to pass the test (0-10).",

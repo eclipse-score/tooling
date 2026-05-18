@@ -17,4 +17,4 @@ This module provides shared constants used across AI checker components.
 """
 
 # Default AI model to use for all analysis operations
-DEFAULT_MODEL = "anthropic/claude-sonnet-4-5"
+DEFAULT_MODEL = "claude-sonnet-4.6"
