@@ -16,6 +16,7 @@
 mod bazel_reader;
 mod class_diagram_reader;
 mod component_diagram_reader;
+mod sequence_diagram_reader;
 
 pub trait InputPresence {
     fn is_present(&self) -> bool;
@@ -48,3 +49,4 @@ pub trait Reader {
 pub use bazel_reader::BazelReader;
 pub use class_diagram_reader::ClassDiagramReader;
 pub use component_diagram_reader::ComponentDiagramReader;
+pub use sequence_diagram_reader::SequenceDiagramReader;

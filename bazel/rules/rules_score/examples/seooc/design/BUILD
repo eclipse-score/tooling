@@ -17,6 +17,9 @@ load(
 
 architectural_design(
     name = "sample_seooc_design",
+    dynamic = [
+        "dynamic_design.puml",
+    ],
     public_api = [
         "public_api.puml",
     ],

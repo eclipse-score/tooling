@@ -22,6 +22,7 @@ mod component_sequence_validator;
 pub enum RequiredInput {
     Bazel,
     Component,
+    Sequence,
     Class,
 }
 
@@ -30,33 +31,28 @@ pub enum RequiredInput {
 pub enum SelectedValidator {
     BazelComponent,
     ComponentClass,
+    ComponentSequence,
 }
 
-pub const ALL_VALIDATORS: [SelectedValidator; 2] = [
+pub const ALL_VALIDATORS: [SelectedValidator; 3] = [
     SelectedValidator::BazelComponent,
     SelectedValidator::ComponentClass,
+    SelectedValidator::ComponentSequence,
 ];
 
-/// Validator metadata and execution contract used by orchestrators.
-pub trait ValidatorSpec {
-    fn required_inputs(self) -> &'static [RequiredInput];
+impl SelectedValidator {
+    pub fn required_inputs(self) -> &'static [RequiredInput] {
+        match self {
+            Self::BazelComponent => &[RequiredInput::Bazel, RequiredInput::Component],
+            Self::ComponentClass => &[RequiredInput::Component, RequiredInput::Class],
+            Self::ComponentSequence => &[RequiredInput::Component, RequiredInput::Sequence],
+        }
+    }
 
-    fn can_run(self, is_available: impl Fn(RequiredInput) -> bool) -> bool
-    where
-        Self: Sized,
-    {
+    pub fn can_run(self, is_available: impl Fn(RequiredInput) -> bool) -> bool {
         self.required_inputs()
             .iter()
             .all(|input| is_available(*input))
-    }
-}
-
-impl ValidatorSpec for SelectedValidator {
-    fn required_inputs(self) -> &'static [RequiredInput] {
-        match self {
-            SelectedValidator::BazelComponent => &[RequiredInput::Bazel, RequiredInput::Component],
-            SelectedValidator::ComponentClass => &[RequiredInput::Component, RequiredInput::Class],
-        }
     }
 }
 
