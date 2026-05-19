@@ -34,15 +34,15 @@ use puml_utils::LogLevel;
 pub enum ActivityParserError {
 	#[error(transparent)]
 	Base(#[from] BaseParseError<Rule>),
-	#[error("activity parser logic is not implemented yet")]
-	NotImplemented,
+	#[error("invalid activity statement: {0}")]
+	InvalidStatement(String),
 }
 
 impl ErrorLocation for ActivityParserError {
 	fn error_location(&self) -> Option<(usize, usize)> {
 		match self {
 			Self::Base(base) => base.error_location(),
-			Self::NotImplemented => None,
+			_ => None,
 		}
 	}
 }
@@ -108,13 +108,16 @@ impl PumlActivityParser {
 		}
 
 		Ok(ArrowStmt {
-			syntax: syntax.ok_or(ActivityParserError::NotImplemented)?,
+			syntax: syntax.ok_or_else(|| {
+				ActivityParserError::InvalidStatement("missing arrow syntax".to_string())
+			})?,
 			label,
 		})
 	}
 
 	fn parse_action_label(
 		pair: pest::iterators::Pair<Rule>,
+		statement_kind: &str,
 	) -> Result<String, ActivityParserError> {
 		pair
 			.into_inner()
@@ -122,13 +125,18 @@ impl PumlActivityParser {
 				matches!(inner.as_rule(), Rule::action_text | Rule::action_line_text)
 			})
 			.map(|inner| normalize_creole_text(inner.as_str().trim()))
-			.ok_or(ActivityParserError::NotImplemented)
+			.ok_or_else(|| {
+				ActivityParserError::InvalidStatement(format!(
+					"missing {} label",
+					statement_kind,
+				))
+			})
 	}
 
 	fn parse_action_stmt(
 		pair: pest::iterators::Pair<Rule>,
 	) -> Result<ActionStmt, ActivityParserError> {
-		let label = Self::parse_action_label(pair)?;
+		let label = Self::parse_action_label(pair, "action")?;
 
 		Ok(ActionStmt {
 			label,
@@ -138,7 +146,7 @@ impl PumlActivityParser {
 	fn parse_backward_stmt(
 		pair: pest::iterators::Pair<Rule>,
 	) -> Result<BackwardStmt, ActivityParserError> {
-		let label = Self::parse_action_label(pair)?;
+		let label = Self::parse_action_label(pair, "backward")?;
 
 		Ok(BackwardStmt { label })
 	}
@@ -152,13 +160,18 @@ impl PumlActivityParser {
 	}
 
 	fn parse_control_stmt(
-		_pair: pest::iterators::Pair<Rule>,
+		pair: pest::iterators::Pair<Rule>,
 	) -> Result<ControlStmt, ActivityParserError> {
-		let kind = match _pair.as_str().trim() {
+		let kind = match pair.as_str().trim() {
 			"break" => ControlKind::Break,
 			"kill" => ControlKind::Kill,
 			"detach" => ControlKind::Detach,
-			_ => return Err(ActivityParserError::NotImplemented),
+			_ => {
+				return Err(ActivityParserError::InvalidStatement(format!(
+					"invalid control kind: {}",
+					pair.as_str().trim(),
+				)))
+			}
 		};
 
 		Ok(ControlStmt { kind })
@@ -192,7 +205,9 @@ impl PumlActivityParser {
 		}
 
 		Ok(IfStartStmt {
-			condition: condition.ok_or(ActivityParserError::NotImplemented)?,
+			condition: condition.ok_or_else(|| {
+				ActivityParserError::InvalidStatement("missing if condition".to_string())
+			})?,
 			label,
 		})
 	}
@@ -232,7 +247,9 @@ impl PumlActivityParser {
 		}
 
 		Ok(WhileStartStmt {
-			condition: condition.ok_or(ActivityParserError::NotImplemented)?,
+			condition: condition.ok_or_else(|| {
+				ActivityParserError::InvalidStatement("missing while condition".to_string())
+			})?,
 			label,
 		})
 	}
@@ -281,7 +298,9 @@ impl PumlActivityParser {
 		}
 
 		Ok(RepeatWhileStmt {
-			condition: condition.ok_or(ActivityParserError::NotImplemented)?,
+			condition: condition.ok_or_else(|| {
+				ActivityParserError::InvalidStatement("missing repeat while condition".to_string())
+			})?,
 			label,
 		})
 	}
@@ -301,24 +320,29 @@ impl PumlActivityParser {
 	fn parse_fork_end_stmt(
 		pair: pest::iterators::Pair<Rule>,
 	) -> Result<ForkEndStmt, ActivityParserError> {
-		let mut kind = ForkEndKind::EndFork;
+		let kind = if pair.as_str().contains("merge") {
+			ForkEndKind::EndMerge
+		} else {
+			ForkEndKind::EndFork
+		};
 		let mut modifier = None;
 
 		for inner in pair.into_inner() {
 			match inner.as_rule() {
 				Rule::fork_modifier => {
-					modifier = match inner.as_str().trim() {
-						"{and}" => Some(ForkModifier::And),
-						"{or}" => Some(ForkModifier::Or),
-						_ => return Err(ActivityParserError::NotImplemented),
+					let text = inner.as_str();
+					modifier = if text.contains("and") {
+						Some(ForkModifier::And)
+					} else if text.contains("or") {
+						Some(ForkModifier::Or)
+					} else {
+						return Err(ActivityParserError::InvalidStatement(format!(
+							"invalid fork modifier: {}",
+							text,
+						)));
 					};
 				}
-				_ => {
-					let text = inner.as_str().trim();
-					if text == "end merge" {
-						kind = ForkEndKind::EndMerge;
-					}
-				}
+				_ => {}
 			}
 		}
 
@@ -335,7 +359,9 @@ impl PumlActivityParser {
 			.into_inner()
 			.find(|inner| inner.as_rule() == Rule::swimlane_text)
 			.map(|inner| normalize_creole_text(inner.as_str().trim()))
-			.ok_or(ActivityParserError::NotImplemented)?;
+			.ok_or_else(|| {
+				ActivityParserError::InvalidStatement("missing swimlane name".to_string())
+			})?;
 
 		Ok(SwimlaneStmt {
 			name,

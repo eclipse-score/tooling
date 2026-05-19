@@ -201,9 +201,9 @@ impl ErrorView for ActivityParserError {
     fn project(&self, base_dir: &Path) -> ProjectedError {
         match self {
             ActivityParserError::Base(e) => e.project(base_dir),
-            ActivityParserError::NotImplemented => {
+            ActivityParserError::InvalidStatement(message) => {
                 let _ = base_dir;
-                ProjectedError::new("NotImplemented")
+                ProjectedError::new("InvalidStatement").with_field("message", message.clone())
             }
         }
     }

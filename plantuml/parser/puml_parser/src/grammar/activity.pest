@@ -164,12 +164,18 @@ fork_start_stmt = {
 }
 fork_again_stmt = { "fork again" }
 
+end_fork_kw = { "end fork" }
+
+end_merge_kw = { "end merge" }
+
+fork_end_keyword = { end_fork_kw | end_merge_kw }
+
 fork_end_stmt = {
-    ("end fork" | "end merge")
+    fork_end_keyword
     ~ fork_modifier?
 }
 
-fork_modifier = {
+fork_modifier = ${
     "{"
     ~ ("and" | "or")
     ~ "}"
