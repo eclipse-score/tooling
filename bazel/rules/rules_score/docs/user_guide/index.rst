@@ -12,18 +12,14 @@
    # SPDX-License-Identifier: Apache-2.0
    # *******************************************************************************
 
-SCORE Rules for Bazel
-=====================
-
-``rules_score`` provides Bazel build rules for structuring and documenting
-safety-critical software according to S-CORE process guidelines. It covers
-the full artefact lifecycle — from requirements and architecture through
-safety analysis to the top-level SEooC assembly.
+User Guide
+==========
 
 .. toctree::
    :maxdepth: 2
 
-   overview
-   integration_guide
-   user_guide/index
-   rule_reference
+   general
+   requirements
+   architectural_design
+   unit_design
+   dependability_analysis
