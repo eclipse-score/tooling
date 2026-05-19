@@ -14,8 +14,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use puml_parser::{
-    ActivityParserError, BaseParseError, ClassError, IncludeExpandError, IncludeParseError, PreprocessError,
-    ProcedureExpandError, ProcedureParseError,
+    ActivityParserError, BaseParseError, ClassError, IncludeExpandError, IncludeParseError,
+    PreprocessError, ProcedureExpandError, ProcedureParseError,
 };
 use puml_resolver::{ClassPumlResolverError, ElementResolverError};
 

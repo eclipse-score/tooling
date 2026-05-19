@@ -12,10 +12,13 @@
 # *******************************************************************************
 filegroup(
     name = "activity_diagram_files",
-    srcs = glob([
-        "**/*.puml",
-        "**/*.json",
-        "**/*.yaml",
-    ], allow_empty = True),
+    srcs = glob(
+        [
+            "**/*.puml",
+            "**/*.json",
+            "**/*.yaml",
+        ],
+        allow_empty = True,
+    ),
     visibility = ["//visibility:public"],
 )

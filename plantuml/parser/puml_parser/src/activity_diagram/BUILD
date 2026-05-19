@@ -16,8 +16,8 @@ filegroup(
     name = "puml_parser_activity_files",
     srcs = [
         "src/activity_ast.rs",
-        "src/creole.rs",
         "src/activity_parser.rs",
+        "src/creole.rs",
         "src/lib.rs",
     ],
     visibility = ["//plantuml/parser:__subpackages__"],
