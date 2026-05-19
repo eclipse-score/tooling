@@ -1,0 +1,82 @@
+{
+  "swimlane.puml": {
+    "name": "swimlane",
+    "statements": [
+      {
+        "Swimlane": {
+          "name": "Actor_For_green"
+        }
+      },
+      {
+        "Start": null
+      },
+      {
+        "IfStart": {
+          "condition": "color?",
+          "label": "green"
+        }
+      },
+      {
+        "Action": {
+          "label": "action green"
+        }
+      },
+      {
+        "Action": {
+          "label": "foo1"
+        }
+      },
+      {
+        "Else": {
+          "label": "not green"
+        }
+      },
+      {
+        "Swimlane": {
+          "name": "Actor_For_no_green"
+        }
+      },
+      {
+        "Action": {
+          "label": "action not green"
+        }
+      },
+      {
+        "Action": {
+          "label": "foo2"
+        }
+      },
+      {
+        "EndIf": null
+      },
+      {
+        "Swimlane": {
+          "name": "Next_Actor"
+        }
+      },
+      {
+        "Action": {
+          "label": "foo3"
+        }
+      },
+      {
+        "Action": {
+          "label": "foo4"
+        }
+      },
+      {
+        "Swimlane": {
+          "name": "Final_Actor"
+        }
+      },
+      {
+        "Action": {
+          "label": "foo5"
+        }
+      },
+      {
+        "Stop": null
+      }
+    ]
+  }
+}

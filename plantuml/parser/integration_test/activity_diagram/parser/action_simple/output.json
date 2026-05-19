@@ -1,0 +1,17 @@
+{
+  "action_simple.puml": {
+    "name": "action_simple",
+    "statements": [
+      {
+        "Action": {
+          "label": "Hello activity diagram"
+        }
+      },
+      {
+        "Action": {
+          "label": "This block is defined on\nseveral lines"
+        }
+      }
+    ]
+  }
+}

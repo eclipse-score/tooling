@@ -1,0 +1,22 @@
+{
+  "action_separated.puml": {
+    "name": "action_separated",
+    "statements": [
+      {
+        "Action": {
+          "label": "A1"
+        }
+      },
+      {
+        "Action": {
+          "label": "A2"
+        }
+      },
+      {
+        "Action": {
+          "label": "A3"
+        }
+      }
+    ]
+  }
+}

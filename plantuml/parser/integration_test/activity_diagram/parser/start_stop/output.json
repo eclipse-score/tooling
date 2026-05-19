@@ -1,0 +1,23 @@
+{
+  "start_stop.puml": {
+    "name": "start_stop",
+    "statements": [
+      {
+        "Start": null
+      },
+      {
+        "Action": {
+          "label": "Hello activity diagram"
+        }
+      },
+      {
+        "Action": {
+          "label": "This is defined on\nseveral lines"
+        }
+      },
+      {
+        "Stop": null
+      }
+    ]
+  }
+}

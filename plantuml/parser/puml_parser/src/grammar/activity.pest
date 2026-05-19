@@ -1,0 +1,192 @@
+// *******************************************************************************
+// Copyright (c) 2026 Contributors to the Eclipse Foundation
+//
+// See the NOTICE file(s) distributed with this work for additional
+// information regarding copyright ownership.
+//
+// This program and the accompanying materials are made available under the
+// terms of the Apache License Version 2.0 which is available at
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// SPDX-License-Identifier: Apache-2.0
+// *******************************************************************************
+activity_diagram = {
+    SOI
+    ~ empty_line*
+    ~ startuml
+    ~ (statement | empty_line)*
+    ~ activity_enduml
+    ~ EOI
+}
+
+activity_enduml = {
+    "@enduml"
+    ~ (WHITESPACE* ~ EOL)*
+    ~ WHITESPACE*
+}
+
+statement = _{
+      // fork
+      fork_again_stmt
+    | fork_end_stmt
+    | fork_start_stmt
+
+      // repeat
+    | repeat_while_stmt
+    | repeat_start_stmt
+
+      // if
+    | else_stmt
+    | endif_stmt
+    | if_start_stmt
+
+      // while
+    | endwhile_stmt
+    | while_start_stmt
+
+      // base
+    | note_declaration
+    | backward_stmt
+    | arrow_stmt
+    | action_stmt
+    | control_stmt
+    | swimlane_stmt
+    | start_stmt
+    | stop_stmt
+}
+
+// Basic Wheels
+action_text = @{
+    (!(";") ~ ANY)+
+}
+
+action_line_text = @{
+    (!NEWLINE ~ ANY)+
+}
+
+arrow_text = @{
+    arrow_text_first_line
+    ~ (!(";") ~ ANY)*
+}
+
+arrow_text_first_line = {
+    (!(";" | NEWLINE) ~ ANY)+
+}
+
+condition_text = @{
+    (condition_nested_group | condition_char)+
+}
+
+condition_nested_group = {
+    "("
+    ~ (condition_nested_group | condition_char)*
+    ~ ")"
+}
+
+condition_char = {
+    !("(" | ")" | NEWLINE)
+    ~ ANY
+}
+
+swimlane_text = @{
+    (!("|" | NEWLINE) ~ ANY)+
+}
+
+keyword_boundary = _{ !ASCII_ALPHANUMERIC }
+
+control_stmt = { "break" | "kill" | "detach" }
+
+// Action
+action_stmt = { BASIC_COLOR? ~ ":" ~ action_text ~ ";" | "-" ~ action_line_text }
+backward_stmt = { "backward" ~ BASIC_COLOR? ~ ":" ~ action_text ~ ";" }
+arrow_stmt = {
+    connection_arrow
+    ~ (
+        INLINE_WS* ~ arrow_text ~ ";"
+        | &(WHITESPACE* ~ NEWLINE)
+        | &activity_enduml
+    )
+}
+
+// If
+if_start_stmt = {
+    "if"
+    ~ "(" ~ condition_text ~ ")"
+    ~ (if_pre_label ~ "then" | "then" ~ then_label?)
+}
+if_pre_label = { "is" ~ "(" ~ condition_text ~ ")" }
+then_label = { "(" ~ condition_text ~ ")" }
+
+else_stmt = {
+    "else"
+    ~ ("(" ~ condition_text ~ ")")?
+}
+
+endif_stmt = { "endif" }
+
+// While
+while_start_stmt = {
+    "while"
+    ~ "(" ~ condition_text ~ ")"
+    ~ while_label?
+}
+
+while_label = {
+    "is"
+    ~ "(" ~ condition_text ~ ")"
+}
+
+endwhile_stmt = {
+    "endwhile"
+    ~ endwhile_label?
+}
+
+endwhile_label = { "(" ~ condition_text ~ ")" }
+
+// Repeat While
+repeat_start_stmt = { "repeat" }
+
+repeat_while_stmt = {
+    "repeat while"
+    ~ "(" ~ condition_text ~ ")"
+    ~ repeat_label?
+}
+
+repeat_label = {
+    "is"
+    ~ "(" ~ condition_text ~ ")"
+}
+
+// Fork
+fork_start_stmt = {
+    "fork"
+    ~ keyword_boundary
+}
+fork_again_stmt = { "fork again" }
+
+end_fork_kw = { "end fork" }
+
+end_merge_kw = { "end merge" }
+
+fork_end_keyword = { end_fork_kw | end_merge_kw }
+
+fork_end_stmt = {
+    fork_end_keyword
+    ~ fork_modifier?
+}
+
+fork_modifier = ${
+    "{"
+    ~ ("and" | "or")
+    ~ "}"
+}
+
+// Swimlane
+swimlane_stmt = { "|" ~ (BASIC_COLOR ~ "|")? ~ swimlane_text ~ "|" }
+
+// Start/Stop
+start_stmt = { "start" }
+stop_stmt = {
+      "stop"
+    | "end"
+}

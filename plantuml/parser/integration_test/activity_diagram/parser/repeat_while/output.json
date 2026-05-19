@@ -1,0 +1,37 @@
+{
+  "repeat_while.puml": {
+    "name": "repeat_while",
+    "statements": [
+      {
+        "Start": null
+      },
+      {
+        "Action": {
+          "label": "i = 0\\nj = 0"
+        }
+      },
+      {
+        "RepeatStart": null
+      },
+      {
+        "Action": {
+          "label": "i++"
+        }
+      },
+      {
+        "Backward": {
+          "label": "j = i"
+        }
+      },
+      {
+        "RepeatWhile": {
+          "condition": "i <= 10?",
+          "label": "yes"
+        }
+      },
+      {
+        "Stop": null
+      }
+    ]
+  }
+}
