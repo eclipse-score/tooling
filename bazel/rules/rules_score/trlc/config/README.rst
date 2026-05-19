@@ -40,7 +40,6 @@ Type Hierarchy
         │
         └── CompReq
             ├── derived_from (optional): FeatReqId[1..*]
-            ├── fulfilledBy (optional): String
             └── mitigates (optional): String
 
 Usage
