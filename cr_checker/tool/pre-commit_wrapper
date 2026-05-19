@@ -31,5 +31,10 @@ if __name__ == "__main__":
         4,
         os.path.normpath(os.path.join(script_dir, '..', 'resources', 'config.json')),
     )
+    sys.argv.insert(5, '--exclusion-file')
+    sys.argv.insert(
+        6,
+        os.path.normpath(os.path.join(script_dir, '..', 'resources', 'exclusion.txt')),
+    )
 
     sys.exit(cr_checker.main(sys.argv[1:]))
