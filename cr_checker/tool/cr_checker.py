@@ -408,35 +408,50 @@ def has_copyright(path, template, use_mmap, encoding, offset, config=None):
     return False
 
 
-def has_duplicate_copyright(path, template, use_mmap, encoding, offset):
+def has_any_copyright(path, use_mmap, encoding, offset):
     """
-    Checks if the copyright header appears more than once in the file.
+    Checks if any copyright notice is present in the file header, regardless of format.
 
     Args:
         path (Path): A `pathlib.Path` object pointing to the file to check.
-        template (str): The copyright template to search for.
         use_mmap (bool): If True, uses memory-mapped file reading.
         encoding (str): Encoding type to use when reading the file.
         offset (int): Byte offset to skip (e.g. shebang line).
 
     Returns:
-        bool: True if the copyright header appears more than once, False otherwise.
+        bool: True if any copyright notice is found, False otherwise.
     """
     load_text = load_text_from_file_with_mmap if use_mmap else load_text_from_file
+    content = load_text(path, BYTES_TO_READ, encoding, offset)
+    return bool(
+        re.search(
+            r"Copyright.*SPDX-License-Identifier", content, re.IGNORECASE | re.DOTALL
+        )
+    )
 
-    lines = template.splitlines(keepends=True)
-    regex_parts = []
-    for line in lines:
-        stripped_line = line.rstrip("\n")
-        if BORDER_FILL_PATTERN.search(stripped_line):
-            regex_parts.append(line_to_flexible_regex(line))
-        else:
-            formatted = line.format(year=r"\\d\{4\}\(-\\d\{4\}\)\?", author=r"\.\*")
-            regex_parts.append(convert_bre_to_regex(formatted))
-    template_regex = "\n?".join(regex_parts)
 
-    content = load_text(path, 2 * BYTES_TO_READ, encoding, offset)
-    matches = list(re.finditer(template_regex, content))
+def has_duplicate_copyright(path, template, use_mmap, encoding, offset):
+    """
+    Checks if more than one copyright notice is present in the file header.
+
+    The check is format-agnostic: it counts occurrences of ``SPDX-License-Identifier``
+    within a window of twice the template length, so that headers written by different
+    tools (e.g. REUSE vs. cr_checker) are both counted while string literals that
+    embed copyright text further into the file are ignored.
+
+    Args:
+        path (Path): A `pathlib.Path` object pointing to the file to check.
+        template (str): The copyright template; its length defines the search window.
+        use_mmap (bool): If True, uses memory-mapped file reading.
+        encoding (str): Encoding type to use when reading the file.
+        offset (int): Byte offset to skip (e.g. shebang line).
+
+    Returns:
+        bool: True if more than one copyright notice is found, False otherwise.
+    """
+    load_text = load_text_from_file_with_mmap if use_mmap else load_text_from_file
+    content = load_text(path, 2 * len(template), encoding, offset)
+    matches = list(re.finditer(r"SPDX-License-Identifier", content, re.IGNORECASE))
     if len(matches) > 1:
         LOGGER.debug("File %s has %d copyright headers.", path, len(matches))
         return True
@@ -500,6 +515,8 @@ def collect_inputs(inputs, exts=None):
         ):
             LOGGER.debug("Processing file: %s", item)
             all_files.append(item)
+        elif item.is_file():
+            LOGGER.debug("Skipped (no configuration for file extension): %s", item)
         else:
             LOGGER.warning("Skipped (input is not a valid file or directory): %s", item)
     return all_files
@@ -658,7 +675,11 @@ def process_files(
         elif not has_copyright(
             item, templates[key], use_mmap, encoding, effective_offset, config
         ):
-            if fix:
+            if has_any_copyright(item, use_mmap, encoding, effective_offset):
+                LOGGER.warning(
+                    "Wrong copyright format in: %s, expected format from template", item
+                )
+            elif fix:
                 if remove_offset:
                     remove_old_header(item, encoding, remove_offset)
                 fix_result = fix_copyright(

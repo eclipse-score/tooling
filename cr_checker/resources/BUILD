@@ -26,3 +26,11 @@ filegroup(
     ],
     visibility = ["//visibility:public"],
 )
+
+filegroup(
+    name = "exclusion",
+    srcs = [
+        "exclusion.txt",
+    ],
+    visibility = ["//visibility:public"],
+)

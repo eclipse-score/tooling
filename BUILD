@@ -37,6 +37,7 @@ copyright_checker(
         # Add other directories/files you want to check
     ],
     config = "//cr_checker/resources:config",
+    exclusion = "//cr_checker/resources:exclusion",
     template = "//cr_checker/resources:templates",
     visibility = ["//visibility:public"],
 )
