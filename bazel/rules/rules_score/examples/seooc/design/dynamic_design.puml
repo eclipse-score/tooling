@@ -1,5 +1,5 @@
 ' *******************************************************************************
-' Copyright (c) 2026 Contributors to the Eclipse Foundation
+' Copyright (c) 2025 Contributors to the Eclipse Foundation
 '
 ' See the NOTICE file(s) distributed with this work for additional
 ' information regarding copyright ownership.
@@ -11,28 +11,12 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml unit_2_class_diagram
+@startuml
 
-namespace unit_1 {
-    class Foo {
-        {final}
-        --
-        + GetNumber() : uint8_t
-        + SetNumber(value : uint8_t) : void
-    }
-}
+participant "Unit 1" as unit_1 <<unit>>
+participant "Unit 2" as unit_2 <<unit>>
 
-namespace unit_2 {
-    class Bar {
-        {final}
-        --
-        - foo_ : unique_ptr<unit_1::Foo>
-        --
-        + Bar(foo : unique_ptr<unit_1::Foo>)
-        + AssertNumber() : bool
-    }
-}
-
-Bar --> Foo : uses
+unit_1 -> unit_2 : callMethod1()
+unit_2 -> unit_1 : callMethod2()
 
 @enduml

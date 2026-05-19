@@ -23,10 +23,11 @@ use std::process;
 use clap::{Parser, ValueEnum};
 use env_logger::Builder;
 use validation::{
-    validate_bazel_component, validate_component_class, BazelArchitecture, BazelInput, BazelReader,
-    ClassDiagramIndex, ClassDiagramInputs, ClassDiagramReader, ComponentDiagramArchitecture,
-    ComponentDiagramInputs, ComponentDiagramReader, Errors, Reader, RequiredInput,
-    SelectedValidator, ValidatorSpec, ALL_VALIDATORS,
+    validate_bazel_component, validate_component_class, validate_component_sequence,
+    BazelArchitecture, BazelInput, BazelReader, ClassDiagramIndex, ClassDiagramInputs,
+    ClassDiagramReader, ComponentDiagramArchitecture, ComponentDiagramInputs,
+    ComponentDiagramReader, Errors, Reader, RequiredInput, SelectedValidator, SequenceDiagramIndex,
+    SequenceDiagramInputs, SequenceDiagramReader, ALL_VALIDATORS,
 };
 
 /// CLI-visible log level (mirrors the parser/linker convention).
@@ -62,6 +63,9 @@ struct Args {
     #[arg(long = "component-fbs", num_args = 1..)]
     component_fbs: Option<Vec<String>>,
 
+    #[arg(long = "sequence-fbs", num_args = 1..)]
+    sequence_fbs: Option<Vec<String>>,
+
     #[arg(long = "class-fbs", num_args = 1..)]
     class_fbs: Option<Vec<String>>,
 
@@ -81,6 +85,7 @@ struct Args {
 struct ValidationCliInputs {
     architecture_json: Option<String>,
     component_fbs: Vec<String>,
+    sequence_fbs: Vec<String>,
     class_fbs: Vec<String>,
 }
 
@@ -88,6 +93,7 @@ struct ValidationContext {
     base_errors: Errors,
     bazel: Option<BazelArchitecture>,
     component: Option<ComponentDiagramArchitecture>,
+    sequence: Option<SequenceDiagramIndex>,
     class: Option<ClassDiagramIndex>,
 }
 
@@ -96,7 +102,28 @@ impl ValidationContext {
         match input {
             RequiredInput::Bazel => self.bazel.is_some(),
             RequiredInput::Component => self.component.is_some(),
+            RequiredInput::Sequence => self.sequence.is_some(),
             RequiredInput::Class => self.class.is_some(),
+        }
+    }
+
+    fn run_validator(&self, validator: SelectedValidator) -> Errors {
+        match validator {
+            SelectedValidator::BazelComponent => validate_bazel_component(
+                self.bazel.as_ref().unwrap(),
+                self.component.as_ref().unwrap(),
+                Errors::default(),
+            ),
+            SelectedValidator::ComponentClass => validate_component_class(
+                self.component.as_ref().unwrap(),
+                self.class.as_ref().unwrap(),
+                Errors::default(),
+            ),
+            SelectedValidator::ComponentSequence => validate_component_sequence(
+                self.component.as_ref().unwrap(),
+                self.sequence.as_ref().unwrap(),
+                Errors::default(),
+            ),
         }
     }
 }
@@ -121,6 +148,7 @@ fn run(args: Args) -> Result<(), String> {
     let inputs = ValidationCliInputs {
         architecture_json: args.architecture_json,
         component_fbs: args.component_fbs.unwrap_or_default(),
+        sequence_fbs: args.sequence_fbs.unwrap_or_default(),
         class_fbs: args.class_fbs.unwrap_or_default(),
     };
 
@@ -144,7 +172,7 @@ fn resolve_validators(context: &ValidationContext) -> Result<Vec<SelectedValidat
 
     if inferred.is_empty() {
         Err(
-            "Unable to infer any validation to run from inputs. Provide compatible input files (for example: --architecture-json with --component-fbs, or --component-fbs with --class-fbs)."
+            "Unable to infer any validation to run from inputs. Provide compatible input files (for example: --architecture-json with --component-fbs, --component-fbs with --class-fbs, or --component-fbs with --sequence-fbs)."
                 .to_string(),
         )
     } else {
@@ -161,25 +189,10 @@ fn run_selected_validators(
     let mut errors = mem::take(&mut context.base_errors);
 
     for validator in validators {
-        merge_errors(&mut errors, run_validator(*validator, context));
+        merge_errors(&mut errors, context.run_validator(*validator));
     }
 
     finish_validation(output_path, warn_on_errors, &errors)
-}
-
-fn run_validator(validator: SelectedValidator, context: &ValidationContext) -> Errors {
-    match validator {
-        SelectedValidator::BazelComponent => {
-            let (bazel, component) = bazel_component_refs(context)
-                .expect("BazelComponent validator requires Bazel and component inputs");
-            validate_bazel_component(bazel, component, Errors::default())
-        }
-        SelectedValidator::ComponentClass => {
-            let (component, class) = component_class_refs(context)
-                .expect("ComponentClass validator requires component and class inputs");
-            validate_component_class(component, class, Errors::default())
-        }
-    }
 }
 
 fn build_validation_context(inputs: ValidationCliInputs) -> Result<ValidationContext, String> {
@@ -197,30 +210,24 @@ fn build_validation_context(inputs: ValidationCliInputs) -> Result<ValidationCon
         &mut errors,
         |raw: ComponentDiagramInputs, errs| raw.to_diagram_architecture(errs),
     )?;
+    let sequence = read_and_convert::<SequenceDiagramReader, SequenceDiagramIndex>(
+        inputs.sequence_fbs.as_slice(),
+        &mut errors,
+        |raw: SequenceDiagramInputs, errs| raw.to_sequence_diagram_index(errs),
+    )?;
     let class = read_and_convert::<ClassDiagramReader, ClassDiagramIndex>(
         inputs.class_fbs.as_slice(),
         &mut errors,
-        |raw: ClassDiagramInputs, errs| raw.to_class_diagram_index(errs),
+        |raw: ClassDiagramInputs, errs| ClassDiagramIndex::build_index(&raw, errs),
     )?;
 
     Ok(ValidationContext {
         base_errors: errors,
         bazel,
         component,
+        sequence,
         class,
     })
-}
-
-fn bazel_component_refs(
-    context: &ValidationContext,
-) -> Option<(&BazelArchitecture, &ComponentDiagramArchitecture)> {
-    Some((context.bazel.as_ref()?, context.component.as_ref()?))
-}
-
-fn component_class_refs(
-    context: &ValidationContext,
-) -> Option<(&ComponentDiagramArchitecture, &ClassDiagramIndex)> {
-    Some((context.component.as_ref()?, context.class.as_ref()?))
 }
 
 fn merge_errors(target: &mut Errors, incoming: Errors) {

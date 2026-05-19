@@ -17,9 +17,11 @@ title Validation Core Runtime Flow
 participant "CLI" as cli
 participant "BazelReader" as bazel_reader
 participant "ComponentDiagramReader" as component_reader
+participant "SequenceDiagramReader" as sequence_reader
 participant "ClassDiagramReader" as class_reader
 participant "ValidationContext" as context
 participant "validate_bazel_component()" as bazel_validator
+participant "validate_component_sequence()" as sequence_validator
 participant "validate_component_class()" as class_validator
 participant "Errors" as errors
 
@@ -38,6 +40,12 @@ opt component fbs provided
   cli -> cli: to_diagram_architecture(&mut base_errors)
 end
 
+opt sequence fbs provided
+  cli -> sequence_reader: read(paths)
+  sequence_reader --> cli: SequenceDiagramInputs
+  cli -> cli: to_sequence_diagram_index(&mut base_errors)
+end
+
 opt class fbs provided
   cli -> class_reader: read(paths)
   class_reader --> cli: ClassDiagramInputs
@@ -50,6 +58,12 @@ cli -> cli: resolve_validators(context)
 opt bazel + component available
   cli -> bazel_validator: validate_bazel_component(..., Errors::default())
   bazel_validator --> cli: Errors
+  cli -> errors: merge_errors(...)
+end
+
+opt component + sequence available
+  cli -> sequence_validator: validate_component_sequence(..., Errors::default())
+  sequence_validator --> cli: Errors
   cli -> errors: merge_errors(...)
 end
 
