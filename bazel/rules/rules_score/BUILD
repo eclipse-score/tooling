@@ -109,6 +109,7 @@ sphinx_module(
         [
             "docs/**/*.rst",
             "docs/**/*.puml",
+            "docs/**/*.md",
         ],
         allow_empty = True,
     ),

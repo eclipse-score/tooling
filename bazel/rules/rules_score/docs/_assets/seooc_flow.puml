@@ -1,0 +1,89 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml seooc_flow
+
+skinparam linetype ortho
+skinparam defaultTextAlignment center
+skinparam ArrowFontSize 11
+skinparam ArrowFontStyle italic
+
+skinparam rectangle {
+    BackgroundColor<<input>> #EFF6FB
+    BorderColor<<input>> #0066B1
+    BackgroundColor<<rule>> #FFF8E1
+    BorderColor<<rule>> #F9A825
+    BackgroundColor<<output>> #E8F5E9
+    BorderColor<<output>> #388E3C
+}
+
+' ── Inputs ──────────────────────────────────────────────────────────────────
+rectangle "System Requirements\n(.trlc)" <<input>> as asr_in
+rectangle "Feature Requirements\n(.trlc)" <<input>> as feat_in
+rectangle "Component Requirements\n(.trlc)" <<input>> as comp_in
+rectangle "Assumptions of Use\n(.trlc)" <<input>> as aou_in
+rectangle "Architecture Diagrams\n(.puml / .svg)" <<input>> as arch_in
+rectangle "Unit Design Diagrams\n(.puml / .rst)" <<input>> as ud_in
+rectangle "Implementation\n(cc_library / py_library…)" <<input>> as impl_in
+rectangle "Tests\n(cc_test / py_test…)" <<input>> as tests_in
+rectangle "Failure Modes\n(.trlc)" <<input>> as fm_in
+rectangle "Control Measures\n(.trlc)" <<input>> as cm_in
+rectangle "FTA Diagrams\n(.puml)" <<input>> as fta_in
+
+' ── Bazel Rules ─────────────────────────────────────────────────────────────
+rectangle "assumed_system_requirements" <<rule>> as asr_r
+rectangle "feature_requirements" <<rule>> as feat_r
+rectangle "component_requirements" <<rule>> as comp_r
+rectangle "assumptions_of_use" <<rule>> as aou_r
+rectangle "architectural_design" <<rule>> as arch_r
+rectangle "unit_design" <<rule>> as ud_r
+rectangle "unit" <<rule>> as unit_r
+rectangle "component" <<rule>> as comp_r2
+rectangle "fmea" <<rule>> as fmea_r
+rectangle "dependability_analysis" <<rule>> as da_r
+rectangle "dependable_element" <<rule>> as de_r
+
+' ── Outputs ──────────────────────────────────────────────────────────────────
+rectangle "HTML Documentation\n+ Traceability Report" <<output>> as out
+
+' ── Connections ──────────────────────────────────────────────────────────────
+asr_in --> asr_r
+feat_in --> feat_r
+comp_in --> comp_r
+aou_in --> aou_r
+arch_in --> arch_r
+ud_in --> ud_r
+impl_in --> unit_r
+tests_in --> unit_r
+fm_in --> fmea_r
+cm_in --> fmea_r
+fta_in --> fmea_r
+
+asr_r --> feat_r : deps
+asr_r --> aou_r
+feat_r --> aou_r : requirements
+feat_r --> de_r
+comp_r --> comp_r2 : requirements
+
+ud_r --> unit_r : unit_design
+unit_r --> comp_r2 : components
+fmea_r --> da_r : fmea
+
+arch_r --> de_r : architectural_design
+aou_r --> de_r : assumptions_of_use
+comp_r2 --> de_r : components
+da_r --> de_r : dependability_analysis
+
+de_r --> out
+
+@enduml
