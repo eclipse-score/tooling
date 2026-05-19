@@ -27,91 +27,105 @@ enum Status {
 // Abstract Types
 ///////////////////////////////
 
-abstract type Requirement {
-    description				String
-    version                 Integer
-	note optional           String
-    status                  Status
-    freeze status =         Status.valid
+abstract type Requirement "Base type for all S-CORE requirements." {
+    description "The normative requirement text. Must express an obligation (shall/should)."
+                String
+    version     "Monotonically increasing version counter. Increment on every content change."
+                Integer
+    note        "Non-normative explanatory text providing additional context."
+                optional String
+    status      "Current lifecycle status of this requirement."
+                Status
+    freeze status = Status.valid
 }
 
-abstract type RequirementSafety extends Requirement {
-    safety                  Asil
+abstract type RequirementSafety "Extension of Requirement that carries an ASIL classification." extends Requirement {
+    safety "The Automotive Safety Integrity Level assigned to this requirement."
+           Asil
 }
 
 ///////////////////////////////
 // S-Core Requirements Model
 ///////////////////////////////
 
-type AssumedSystemReq extends RequirementSafety {
-    rationale				String
+type AssumedSystemReq "System-level requirement received from the wider operational context (e.g. platform)." extends RequirementSafety {
+    rationale "Explanation of why this system-level requirement exists and how it was derived."
+              String
 }
 
 tuple AssumedSystemReqId {
-    item                     AssumedSystemReq
-    separator                @
-    version                  Integer
+    item    AssumedSystemReq
+    separator @
+    version Integer
 }
 
-type FeatReq extends RequirementSafety {
-    derived_from			AssumedSystemReqId[1 .. *]
+type FeatReq "High-level feature requirement derived from one or more AssumedSystemReq items." extends RequirementSafety {
+    derived_from "One or more versioned references to the AssumedSystemReq items this feature requirement is derived from."
+                 AssumedSystemReqId[1 .. *]
 }
 
 tuple FeatReqId {
-    item                     FeatReq
-    separator                @
-    version                  Integer
+    item    FeatReq
+    separator @
+    version Integer
 }
 
-type CompReq extends RequirementSafety {
-    derived_from optional   FeatReqId[1 .. *]
-    fulfilledBy optional    String
-    mitigates optional      String
+type CompReq "Component-level requirement allocated to a specific software component." extends RequirementSafety {
+    derived_from "Versioned references to the FeatReq items this component requirement is derived from. Omit only for component-internal requirements with no feature-level parent."
+                 optional FeatReqId[1 .. *]
+    mitigates    "Reference to the FailureMode or safety concern that this requirement mitigates."
+                 optional String
 }
 
 tuple CompReqId {
-    item                     CompReq
-    separator                @
-    version                  Integer
+    item    CompReq
+    separator @
+    version Integer
 }
 
 ///////////////////////////////
 // Safety Analyses
 ///////////////////////////////
 
-enum GuideWord {
-    TooEarly
-    TooLate
-    Wrong
-    LossOfFunction
-    PartialFunction
-    UnintendedFunction
-    ExceedingFunction
-    DelayedFunction
+enum GuideWord "HAZOP-style guide words used to categorise the nature of a failure mode." {
+    TooEarly           "The function or signal occurs earlier than expected."
+    TooLate            "The function or signal occurs later than expected."
+    Wrong              "The function produces an incorrect value or signal."
+    LossOfFunction     "The function is completely absent when it should be active."
+    PartialFunction    "The function is active but only partially fulfils its purpose."
+    UnintendedFunction "The function is active when it should not be."
+    ExceedingFunction  "The function operates beyond its specified bounds."
+    DelayedFunction    "The function is active but with an unacceptable delay."
 }
 
-type FailureMode extends ScoreReq.RequirementSafety {
-    guideword               GuideWord
-    failureeffect           String
-    rationale optional      String
-    potentialcause optional String
-    interface optional      String
+type FailureMode "A potential failure of a system function, described using a HAZOP guide word." extends ScoreReq.RequirementSafety {
+    guideword      "HAZOP guide word classifying the nature of this failure."
+                   GuideWord
+    failureeffect  "Description of the consequence of this failure mode on the system or its users."
+                   String
+    rationale      "Explanation of why this failure mode is considered relevant."
+                   optional String
+    potentialcause "Description of the root cause or triggering condition for this failure mode."
+                   optional String
+    interface      "The system interface or signal that is affected by this failure mode."
+                   optional String
 }
 
-abstract type Measure extends ScoreReq.RequirementSafety {
+abstract type Measure "Abstract base type for all safety measures. Cannot be instantiated directly." extends ScoreReq.RequirementSafety {
 }
 
-type ControlMeasure extends Measure {
+type ControlMeasure "A design or operational measure that detects, prevents, or limits a failure mode." extends Measure {
 }
 
-type PreventiveMeasure extends Measure {
+type PreventiveMeasure "A measure that prevents a failure mode from occurring in the first place." extends Measure {
 }
 
-type Mitigation extends Measure {
+type Mitigation "A measure that reduces the severity or probability of a failure mode's effect." extends Measure {
 }
 
-type AoU extends ControlMeasure {
-    mitigates optional               String
+type AoU "Assumption of Use — a safety-relevant condition that a caller must fulfil when using this component." extends ControlMeasure {
+    mitigates "Reference to the FailureMode or hazard that is mitigated when this assumption is satisfied."
+              optional String
 }
 
 ///////////////////////////////
