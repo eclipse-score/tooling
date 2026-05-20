@@ -85,8 +85,8 @@ def _run_ai_analysis(ctx, analysis_files, all_input_files, input_dirs, dep_dirs,
     if ctx.attr.model:
         args.add("--model", ctx.attr.model)
 
-    if ctx.attr._batch_size > 0:
-        args.add("--batch-size", str(ctx.attr._batch_size))
+    if ctx.attr.batch_size > 0:
+        args.add("--batch-size", str(ctx.attr.batch_size))
 
     # NOTE: --cache is intentionally NOT passed.  Bazel actions are
     # already cached by Bazel's action cache; an additional Python-level
@@ -182,7 +182,7 @@ _COMMON_AI_TEST_ATTRS = {
         doc = "Minimum average score required to pass the test (0-10).",
         default = "0.0",
     ),
-    "_batch_size": attr.int(
+    "batch_size": attr.int(
         doc = "Number of artefacts to process per batch (0 = all at once).",
         default = 0,
     ),
