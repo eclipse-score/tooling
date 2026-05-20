@@ -148,7 +148,9 @@ if plantuml_path is None:
         f"Could not find plantuml binary via runfiles lookup. Searched: {searched}."
     )
 
-plantuml = str(plantuml_path)
+# Use PlantUML's built-in Smetana layout engine (Java port of Graphviz).
+# This avoids requiring an external dot binary in the Bazel sandbox.
+plantuml = f"{plantuml_path} -Playout=smetana"
 plantuml_output_format = "svg_obj"
 
 # HTML theme
