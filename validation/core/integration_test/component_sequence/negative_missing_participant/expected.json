@@ -1,0 +1,7 @@
+{
+  "should_pass": false,
+  "error_contains": [
+    "component unit alias not found in sequence participants",
+    "\"unit_3\""
+  ]
+}
