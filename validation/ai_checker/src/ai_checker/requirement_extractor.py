@@ -32,7 +32,10 @@ class RequirementExtractor(ArtefactExtractor):
     """Extracts structured requirement data from TRLC files."""
 
     def __init__(
-        self, input_directory: str, dependency_directories: list[str] | None = None
+        self,
+        input_directory: str,
+        dependency_directories: list[str] | None = None,
+        req_files: list[str] | None = None,
     ):
         """
         Initialize the RequirementExtractor with directory paths.
@@ -42,18 +45,28 @@ class RequirementExtractor(ArtefactExtractor):
                 analyze
             dependency_directories: Optional list of additional
                 directories for link resolution
+            req_files: Optional list of individual TRLC files to register
+                instead of scanning the entire input directory. When set,
+                only these files are registered so that other files present
+                in the same directory (e.g. files not declared in Bazel
+                srcs) are not picked up by TRLC.
         """
         self.input_directory = os.path.abspath(input_directory)
         self.dependency_directories = [
             os.path.abspath(d) for d in (dependency_directories or [])
         ]
+        self.req_files = [os.path.abspath(f) for f in (req_files or [])]
         self.symbols: trlc.ast.Symbol_Table | None = None
 
     def parse_trlc_files(self) -> trlc.ast.Symbol_Table:
         """
         Parse TRLC files in the specified directories.
 
-        Registers all directories (input + dependencies) with TRLC for link resolution.
+        When ``req_files`` was supplied at construction time, only those
+        individual files are registered from the input directory; dependency
+        directories are still registered in full for link resolution.
+        When ``req_files`` is empty (the default), all directories including
+        the input directory are registered (original behaviour).
 
         Returns:
             Symbol table containing parsed TRLC objects
@@ -64,37 +77,51 @@ class RequirementExtractor(ArtefactExtractor):
         message_handler = Message_Handler()
         source_manager = Source_Manager(message_handler)
 
-        # Collect all directories and filter out overlapping ones
-        all_dirs = [self.input_directory] + self.dependency_directories
+        if self.req_files:
+            # Register only the specific req files declared in the Bazel target.
+            # This avoids picking up extra .trlc files in the same directory that
+            # are not part of the target and may fail TRLC validation.
+            for file_path in self.req_files:
+                source_manager.register_file(file_path)
 
-        # Remove duplicates and filter out directories that are
-        # subdirectories of others
-        unique_dirs = []
-        for dir_path in sorted(set(all_dirs)):
-            # Check if this directory is a subdirectory of any already
-            # registered directory
-            is_subdir = False
-            for existing_dir in unique_dirs:
-                if dir_path.startswith(existing_dir + os.sep):
-                    is_subdir = True
-                    break
+            # Register dependency directories in full for cross-reference / link
+            # resolution (these dirs are controlled by Bazel deps and are expected
+            # to be valid).
+            for dep_dir in self.dependency_directories:
+                source_manager.register_directory(dep_dir)
+        else:
+            # Original behaviour: register all directories (input + deps).
+            # Collect all directories and filter out overlapping ones.
+            all_dirs = [self.input_directory] + self.dependency_directories
 
-            # Also check if any existing directory is a subdirectory of this one
-            # In that case, remove the existing one and add this one
-            dirs_to_remove = []
-            for i, existing_dir in enumerate(unique_dirs):
-                if existing_dir.startswith(dir_path + os.sep):
-                    dirs_to_remove.append(i)
+            # Remove duplicates and filter out directories that are
+            # subdirectories of others
+            unique_dirs = []
+            for dir_path in sorted(set(all_dirs)):
+                # Check if this directory is a subdirectory of any already
+                # registered directory
+                is_subdir = False
+                for existing_dir in unique_dirs:
+                    if dir_path.startswith(existing_dir + os.sep):
+                        is_subdir = True
+                        break
 
-            for i in reversed(dirs_to_remove):
-                unique_dirs.pop(i)
+                # Also check if any existing directory is a subdirectory of this one
+                # In that case, remove the existing one and add this one
+                dirs_to_remove = []
+                for i, existing_dir in enumerate(unique_dirs):
+                    if existing_dir.startswith(dir_path + os.sep):
+                        dirs_to_remove.append(i)
 
-            if not is_subdir:
-                unique_dirs.append(dir_path)
+                for i in reversed(dirs_to_remove):
+                    unique_dirs.pop(i)
 
-        # Register all unique, non-overlapping directories
-        for dir_path in unique_dirs:
-            source_manager.register_directory(dir_path)
+                if not is_subdir:
+                    unique_dirs.append(dir_path)
+
+            # Register all unique, non-overlapping directories
+            for dir_path in unique_dirs:
+                source_manager.register_directory(dir_path)
 
         symbols = source_manager.process()
         if symbols is None:

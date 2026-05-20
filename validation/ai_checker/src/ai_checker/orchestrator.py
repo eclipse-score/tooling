@@ -166,7 +166,10 @@ class AnalysisOrchestrator:
         self._extracted_artefacts = None
 
     def analyze_directory(
-        self, input_dir: str, dependency_dirs: list[str] | None = None
+        self,
+        input_dir: str,
+        dependency_dirs: list[str] | None = None,
+        req_files: list[str] | None = None,
     ) -> AnalysisResults:
         """
         Extract and analyze artefacts from a directory using TRLC
@@ -176,12 +179,20 @@ class AnalysisOrchestrator:
             input_dir: Path to directory containing files to analyze
             dependency_dirs: Optional list of directories containing
                 dependencies for link resolution
+            req_files: Optional list of individual TRLC files to register
+                instead of scanning the entire input directory. When set,
+                only these files are parsed so that unreferenced files
+                present in the same directory are not picked up.
 
         Returns:
             AnalysisResults containing structured analyses for each artefact
         """
         # Initialize TRLC requirement extractor
-        self.artefact_extractor = RequirementExtractor(input_dir, dependency_dirs)
+        self.artefact_extractor = RequirementExtractor(
+            input_dir,
+            dependency_dirs,
+            req_files=req_files or [],
+        )
 
         # Extract artefacts
         artefacts = self.artefact_extractor.extract()
@@ -255,6 +266,18 @@ def argument_parser() -> argparse.ArgumentParser:
     """Create argument parser for CLI."""
     parser = argparse.ArgumentParser(
         description="Analyze TRLC requirements against engineering guidelines"
+    )
+    parser.add_argument(
+        "--req-file",
+        action="append",
+        default=[],
+        dest="req_file",
+        help=(
+            "Individual TRLC file to register for analysis "
+            "(can be specified multiple times). When provided, only these "
+            "files are registered from the input directory instead of "
+            "scanning the entire directory."
+        ),
     )
     parser.add_argument(
         "-i",
@@ -362,7 +385,11 @@ def main() -> None:
             max_concurrent_requests=args.max_concurrent_requests,
             max_batch_chars=args.max_batch_chars,
         )
-        analysis_results = orchestrator.analyze_directory(args.input, args.deps)
+        analysis_results = orchestrator.analyze_directory(
+            args.input,
+            args.deps,
+            req_files=args.req_file or None,
+        )
 
         # Format and output results
         orchestrator.format_and_output(
