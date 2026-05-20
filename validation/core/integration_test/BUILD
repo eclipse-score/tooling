@@ -39,6 +39,16 @@ filegroup(
     ],
 )
 
+filegroup(
+    name = "component_sequence_test_data",
+    srcs = [
+        "//validation/core/integration_test/component_sequence/negative_missing_participant:case_data",
+        "//validation/core/integration_test/component_sequence/negative_mixed_mismatch:case_data",
+        "//validation/core/integration_test/component_sequence/negative_orphan_participant:case_data",
+        "//validation/core/integration_test/component_sequence/positive_exact_match:case_data",
+    ],
+)
+
 rust_library(
     name = "test_framework",
     srcs = [
@@ -81,6 +91,22 @@ rust_test(
     deps = [
         ":test_framework",
         "//tools/metamodel:class_diagram",
+        "//validation/core:validation",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "component_sequence_integration_test",
+    srcs = ["src/component_sequence_suite.rs"],
+    crate_root = "src/component_sequence_suite.rs",
+    data = [
+        ":component_sequence_test_data",
+        "//validation/core:validation_cli",
+    ],
+    deps = [
+        ":test_framework",
         "//validation/core:validation",
         "@crates//:serde",
         "@crates//:serde_json",
