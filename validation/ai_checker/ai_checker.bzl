@@ -23,7 +23,7 @@ load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo")
 # Shared implementation
 # ============================================================================
 
-def _run_ai_analysis(ctx, analysis_files, all_input_files, input_dirs, dep_dirs):
+def _run_ai_analysis(ctx, analysis_files, all_input_files, input_dirs, dep_dirs, req_files = None):
     """Common implementation for all AI artefact analysis test rules.
 
     Args:
@@ -32,6 +32,10 @@ def _run_ai_analysis(ctx, analysis_files, all_input_files, input_dirs, dep_dirs)
         all_input_files: All files needed as action inputs (incl. deps for resolution).
         input_dirs: Dict of directories containing analysis files.
         dep_dirs: Dict of dependency directories (for link resolution).
+        req_files: Optional list of individual files to register with TRLC instead
+            of scanning the entire input directory. When set, only these files are
+            parsed; other files present in the same directory are ignored. This
+            avoids picking up unreferenced files that may fail TRLC validation.
 
     Returns:
         List of providers (DefaultInfo).
@@ -62,6 +66,14 @@ def _run_ai_analysis(ctx, analysis_files, all_input_files, input_dirs, dep_dirs)
     for extra_dir in input_dirs.keys():
         if extra_dir != input_dir:
             args.add("--deps", extra_dir)
+
+    # When individual req files are provided, pass them explicitly so the
+    # extractor registers only those files and ignores other files present in
+    # the same directory (e.g. files not declared in Bazel srcs that may fail
+    # TRLC validation).
+    if req_files:
+        for f in req_files:
+            args.add("--req-file", f)
 
     args.add("--output", json_report.path)
     args.add("--html", html_report.path)
@@ -212,7 +224,7 @@ def _trlc_requirements_ai_test_impl(ctx):
         for f in dep_reqs + spec_files:
             dep_dirs[f.dirname] = True
 
-    return _run_ai_analysis(ctx, analysis_files, all_files, input_dirs, dep_dirs)
+    return _run_ai_analysis(ctx, analysis_files, all_files, input_dirs, dep_dirs, req_files = analysis_files)
 
 trlc_requirements_ai_test = rule(
     implementation = _trlc_requirements_ai_test_impl,
