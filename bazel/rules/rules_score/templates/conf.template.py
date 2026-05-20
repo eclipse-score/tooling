@@ -153,4 +153,8 @@ plantuml_output_format = "svg_obj"
 
 # HTML theme
 html_theme = "sphinx_rtd_theme"
+
+# Note: version_flyout.css and version_flyout.js are injected by the
+# deploy workflow via _shared/ paths so they load once across all versions.
+
 logger.debug("#" * 80)
