@@ -205,6 +205,7 @@ DependableElementLobsterInfo = provider(
     fields = {
         "lobster_report": "The lobster report JSON File object, or None when no traceability data is available.",
         "lobster_html_report": "The lobster HTML report File object, or None when no traceability data is available.",
+        "lobster_rst_dir": "The lobster multi-page RST report TreeArtifact (directory), or None when no traceability data is available.",
     },
 )
 
