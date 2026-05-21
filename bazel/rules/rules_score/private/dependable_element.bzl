@@ -790,6 +790,22 @@ def _dependable_element_index_impl(ctx):
     # Generate submodule links for the index page
     deps_links = _process_deps(ctx)
 
+    # The traceability report is generated into {label.name}/traceability_report/,
+    # which is a sibling of index.rst inside the same {label.name}/ srcdir that
+    # Sphinx uses (srcdir = parent of --index_file).  The toctree therefore
+    # references it as "traceability_report/index" with no "../" traversal.
+    # A lightweight provider-presence check mirrors the condition in the lobster
+    # block below; when no lobster inputs exist the substitution is empty so
+    # Sphinx does not complain about a missing document.
+    _has_feature_reqs = any([
+        FeatureRequirementsInfo in r or AssumedSystemRequirementsInfo in r
+        for r in ctx.attr.requirements
+    ])
+    _has_comp_reqs = any([ComponentInfo in c for c in ctx.attr.components])
+    traceability_report = (
+        "traceability_report/index" if _has_feature_reqs and _has_comp_reqs else ""
+    )
+
     # Render the index.rst using the template
     title = ctx.attr.module_name
     underline = "=" * len(title)
@@ -808,6 +824,7 @@ def _dependable_element_index_impl(ctx):
             "{dependability_analysis}": "\n   ".join(artifacts_by_type["dependability_analysis"]),
             "{checklists}": "\n   ".join(artifacts_by_type["checklists"]),
             "{submodules}": deps_links,
+            "{traceability_report}": traceability_report,
         },
     )
 
@@ -980,6 +997,7 @@ def _dependable_element_index_impl(ctx):
 
     lobster_report_file = None
     lobster_html_report = None
+    lobster_rst_dir = None
     lobster_files = []
     if feat_req_list and comp_req_list:
         lobster_config = ctx.actions.declare_file(ctx.label.name + "/de_traceability_config")
@@ -1002,7 +1020,28 @@ def _dependable_element_index_impl(ctx):
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_html_report = subrule_lobster_html_report(lobster_report_file)
 
-        lobster_files = [lobster_config, lobster_report_file, lobster_html_report]
+        # Generate multi-page RST report inside the index subdirectory so that
+        # Sphinx (which uses {label.name}/index.rst's parent as srcdir) can
+        # resolve the toctree entry "traceability_report/index" without ../.
+        lobster_rst_dir = ctx.actions.declare_directory(
+            ctx.label.name + "/traceability_report",
+        )
+        package = ctx.label.package
+        package_depth = len(package.split("/")) if package else 0
+        source_root = "/".join([".." for _ in range(package_depth + 2)]) + "/"
+        rst_args = ctx.actions.args()
+        rst_args.add(lobster_report_file.path)
+        rst_args.add_all(["--out-dir", lobster_rst_dir.path])
+        rst_args.add_all(["--source-root", source_root])
+        ctx.actions.run(
+            executable = ctx.executable._lobster_rst_report,
+            inputs = [lobster_report_file],
+            outputs = [lobster_rst_dir],
+            arguments = [rst_args],
+            progress_message = "lobster-rst-report (pages) {}".format(ctx.label.name),
+        )
+
+        lobster_files = [lobster_config, lobster_report_file, lobster_html_report, lobster_rst_dir]
         output_files.extend(lobster_files)
 
     return [
@@ -1016,6 +1055,7 @@ def _dependable_element_index_impl(ctx):
         DependableElementLobsterInfo(
             lobster_report = lobster_report_file,
             lobster_html_report = lobster_html_report,
+            lobster_rst_dir = lobster_rst_dir,
         ),
         OutputGroupInfo(debug = depset([validation_log])),
     ]
@@ -1092,6 +1132,12 @@ _dependable_element_index = rule(
                 default = Label("//bazel/rules/rules_score/lobster/config:lobster_de_template"),
                 allow_single_file = True,
                 doc = "Lobster config template for dependable element traceability.",
+            ),
+            "_lobster_rst_report": attr.label(
+                default = Label("//tools/lobster_rst_report:lobster-rst-report"),
+                executable = True,
+                cfg = "exec",
+                doc = "Lobster RST report tool for generating the multi-page Sphinx traceability report.",
             ),
         },
         **VERBOSITY_ATTR

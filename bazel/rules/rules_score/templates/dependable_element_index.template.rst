@@ -61,6 +61,15 @@ Components
    {components}
 
 
+Traceability
+------------
+
+.. toctree::
+   :maxdepth: 1
+
+   {traceability_report}
+
+
 Checklists
 ----------
 
