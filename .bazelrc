@@ -23,5 +23,13 @@ build:info --//bazel/rules/rules_score:verbosity=info
 # debug build:  complete output including debug/trace from all tools
 build:debug --//bazel/rules/rules_score:verbosity=debug
 
+# Standard combined coverage (Rust + Python, no Ferrocene required)
+# Usage: bazel coverage --config=coverage <targets>
+# Then run: bazel run //coverage:combined_report
+coverage:coverage --combined_report=lcov
+coverage:coverage --instrumentation_filter=//plantuml,//validation,//manual_analysis,-//plantuml/parser/integration_test,-//validation/core/integration_test
+coverage:coverage --@rules_rust//rust/settings:extra_rustc_flag=-Clink-dead-code
+coverage:coverage --@rules_rust//rust/settings:extra_rustc_flag=-Ccodegen-units=1
+
 # Import AI checker custom configuration
 try-import %workspace%/.bazelrc.ai_checker
