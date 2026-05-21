@@ -9,3 +9,5 @@ external
 .clwb/
 
 __pycache__
+.ruff_cache/
+coverage-html/

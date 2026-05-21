@@ -30,7 +30,19 @@ See the individual README files for detailed usage instructions and configuratio
 | **python_basics** | Python development utilities and testing | [README](python_basics/README.md) |
 | **starpls** | Starlark language server support | [README](starpls/README.md) |
 | **tools** | Formatters & Linters | [README](tools/README.md) |
-| **coverage** | Ferrocene Rust coverage workflow | [README](coverage/README.md) |
+| **coverage** | Rust + Python coverage reports | [README](coverage/README.md) |
+
+## Coverage
+
+Generate a combined Rust + Python HTML coverage report for `plantuml`, `validation`,
+and `manual_analysis`:
+
+```bash
+bazel run //coverage:combined_report
+```
+
+See [coverage/README.md](coverage/README.md) for full details, options, and the
+Ferrocene Rust coverage workflow.
 
 ## Usage Examples
 

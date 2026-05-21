@@ -36,3 +36,9 @@ sh_binary(
     srcs = ["llvm_profile_wrapper.sh"],
     visibility = ["//visibility:public"],
 )
+
+sh_binary(
+    name = "combined_report",
+    srcs = ["run_combined_coverage.sh"],
+    data = ["@lcov_deb//:srcs"],
+)
