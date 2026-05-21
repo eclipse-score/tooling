@@ -1,0 +1,58 @@
+@startuml activity_AST
+
+skinparam classAttributeIconSize 0
+hide empty members
+
+class ActivityDiagram {
+  +name: Option<String>
+  +statements: Vec<ActivityStmt>
+}
+
+abstract class ActivityStmt
+
+class ActionNode {
+  +label: String
+}
+
+class IfNode {
+  +condition: String
+  +body: Vec<ActivityStmt>
+  +orelse: Vec<ActivityStmt>
+}
+
+class WhileNode {
+  +condition: String
+  +body: Vec<ActivityStmt>
+  +backward: Option<BackwardNode>
+}
+
+class RepeatNode {
+  +body: Vec<ActivityStmt>
+  +condition: String
+  +backward: Option<BackwardNode>
+}
+
+class BackwardNode {
+  +label: String
+}
+
+class ControlNode {
+  +kind: Stop | Kill | Detach | Break | Continue
+}
+
+ActivityDiagram *-- "0..*" ActivityStmt : statements
+
+ActivityStmt <|-- ActionNode
+ActivityStmt <|-- IfNode
+ActivityStmt <|-- WhileNode
+ActivityStmt <|-- RepeatNode
+ActivityStmt <|-- ControlNode
+
+IfNode *-- "0..*" ActivityStmt : body
+IfNode *-- "0..*" ActivityStmt : orelse
+WhileNode *-- "0..*" ActivityStmt : body
+WhileNode o-- "0..1" BackwardNode : backward
+RepeatNode *-- "0..*" ActivityStmt : body
+RepeatNode o-- "0..1" BackwardNode : backward
+
+@enduml

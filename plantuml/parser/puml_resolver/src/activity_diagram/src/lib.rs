@@ -11,8 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-pub use activity_resolver::*;
-pub use class_resolver::*;
-pub use component_resolver::*;
-pub use resolver_traits::DiagramResolver;
-pub use sequence_resolver::{SequenceResolver, SequenceResolverError, SequenceTree};
+mod activity_logic;
+mod activity_resolver;
+
+pub use activity_logic::{
+    ActionNode, ActivityDiagram, ActivityStmt, BackwardNode, IfNode, RepeatNode,
+    WhileNode,
+};
+pub use activity_resolver::{ActivityResolver, ActivityResolverError};
