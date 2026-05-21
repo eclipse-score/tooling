@@ -1,0 +1,68 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package UseCases
+import ToolQualification
+import Tools
+
+section "Use Cases" {
+
+    ToolQualification.UseCase Build_Traceable_Documentation {
+        description = '''
+            As a safety engineer I want to build HTML documentation from
+            requirements, architecture diagrams, and safety analyses so that
+            all artefacts are rendered in a single navigable document with
+            cross-references and traceability information.
+        '''
+        affected_tools = [Tools.Bazel, Tools.TRLC, Tools.Docs]
+    }
+
+    ToolQualification.UseCase Validate_Requirement_Chains {
+        description = '''
+            As a requirements engineer I want the build system to validate
+            that all component requirements trace back to feature requirements
+            and all feature requirements trace back to assumed system
+            requirements so that incomplete traceability is detected early.
+        '''
+        affected_tools = [Tools.TRLC, Tools.Bazel, Tools.Lobster]
+    }
+
+    ToolQualification.UseCase Render_Safety_Analyses {
+        description = '''
+            As a safety engineer I want FMEA failure modes and control
+            measures to be rendered into the documentation automatically so
+            that the safety analysis artefacts are always up to date with the
+            source TRLC definitions.
+        '''
+        affected_tools = [Tools.TRLC, Tools.Bazel, Tools.Docs]
+    }
+
+    ToolQualification.UseCase Assemble_Dependable_Element {
+        description = '''
+            As a project lead I want to assemble a dependable element (SEooC)
+            from its components, requirements, architectural design and safety
+            analyses so that the complete safety case is represented as a
+            single auditable artefact.
+        '''
+        affected_tools = [Tools.Bazel]
+    }
+
+    ToolQualification.UseCase Parse_Architectural_Diagrams {
+        description = '''
+            As a software architect I want PlantUML component and sequence
+            diagrams to be parsed and verified during the build so that
+            architectural design errors are caught before integration.
+        '''
+        affected_tools = [Tools.PlantumlParser, Tools.Bazel]
+    }
+
+}

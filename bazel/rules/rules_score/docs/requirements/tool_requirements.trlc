@@ -1,0 +1,126 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package UseCases
+import ToolQualification
+import Tools
+
+section "Tool Requirements" {
+
+    section "Requirements Rendering" {
+
+        ToolQualification.ToolRequirement Render_All_TRLC_Records {
+            description = '''
+                The trlc_rst renderer shall produce an RST output that contains
+                every requirement record present in the input TRLC source files.
+            '''
+            mitigates = [Missing_Requirement_In_Output]
+            derived_from = [Build_Traceable_Documentation]
+            satisfied_by = Tools.TRLC
+        }
+
+        ToolQualification.ToolRequirement Resolve_Derived_From_References {
+            description = '''
+                The rendered RST output shall contain working cross-references
+                for all derived_from fields, linking child requirements to their
+                parent requirements.
+            '''
+            mitigates = [Broken_Cross_Reference]
+            derived_from = [Build_Traceable_Documentation]
+            satisfied_by = Tools.TRLC
+        }
+
+    }
+
+    section "Requirement Validation" {
+
+        ToolQualification.ToolRequirement Validate_Traceability_Completeness {
+            description = '''
+                The build shall fail when a component requirement does not have
+                a derived_from reference to at least one feature requirement,
+                unless the requirement is explicitly marked as component-internal.
+            '''
+            mitigates = [Undetected_Missing_Traceability]
+            derived_from = [Validate_Requirement_Chains]
+            satisfied_by = Tools.Bazel
+        }
+
+        ToolQualification.ToolRequirement Emit_Correct_Provider_Info {
+            description = '''
+                The score_requirements_rule shall emit a TrlcProviderInfo
+                provider containing all own TRLC source files, the specification
+                RSL files, and all transitive dependency TRLC files.
+            '''
+            mitigates = [Incorrect_Provider_Chain]
+            derived_from = [Validate_Requirement_Chains]
+            satisfied_by = Tools.Bazel
+        }
+
+        ToolQualification.ToolRequirement Emit_Sphinx_Sources {
+            description = '''
+                The score_requirements_rule shall emit a SphinxSourcesInfo
+                provider containing the rendered RST file and all transitive
+                Sphinx source dependencies.
+            '''
+            mitigates = [Incorrect_Provider_Chain]
+            derived_from = [Build_Traceable_Documentation]
+            satisfied_by = Tools.Bazel
+        }
+
+    }
+
+    section "Safety Analysis Rendering" {
+
+        ToolQualification.ToolRequirement Render_All_Failure_Modes {
+            description = '''
+                The FMEA rule shall render every FailureMode record from the
+                input TRLC sources into the documentation output.
+            '''
+            mitigates = [Missing_Failure_Mode_In_Render]
+            derived_from = [Render_Safety_Analyses]
+            satisfied_by = Tools.Docs
+        }
+
+    }
+
+    section "Architecture Parsing" {
+
+        ToolQualification.ToolRequirement Reject_Invalid_PlantUML {
+            description = '''
+                The PlantUML parser shall exit with a non-zero return code when
+                the input diagram contains syntactical errors, preventing silent
+                production of incorrect output.
+            '''
+            mitigates = [Silent_Diagram_Parse_Failure]
+            note = "This requirement traces to the plantuml parser source (Rust)."
+            derived_from = [Parse_Architectural_Diagrams]
+            satisfied_by = Tools.PlantumlParser
+        }
+
+    }
+
+    section "Lobster Traceability" {
+
+        ToolQualification.ToolRequirement Extract_Lobster_From_Requirements {
+            description = '''
+                The requirements rule shall extract a lobster traceability file
+                from all TRLC requirement records using the configured lobster
+                extraction schema.
+            '''
+            mitigates = [Undetected_Missing_Traceability]
+            derived_from = [Validate_Requirement_Chains]
+            satisfied_by = Tools.Lobster
+        }
+
+    }
+
+}

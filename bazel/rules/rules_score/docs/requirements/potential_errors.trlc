@@ -1,0 +1,100 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package UseCases
+import ToolQualification
+
+section "Potential Errors" {
+
+    section "Documentation Build" {
+
+        ToolQualification.PotentialError Missing_Requirement_In_Output {
+            description = '''
+                A requirement defined in a TRLC source file is silently omitted
+                from the rendered RST output, causing the documentation to be
+                incomplete without any build error.
+            '''
+            impacts = ["Incomplete safety documentation delivered to assessor"]
+            affects = [Build_Traceable_Documentation]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
+        ToolQualification.PotentialError Broken_Cross_Reference {
+            description = '''
+                A cross-reference between requirements (e.g. derived_from) is
+                not resolved correctly in the rendered documentation, showing
+                a broken link or missing reference.
+            '''
+            impacts = ["Traceability information is incorrect in delivered documentation"]
+            affects = [Build_Traceable_Documentation, Validate_Requirement_Chains]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
+    }
+
+    section "Requirement Traceability" {
+
+        ToolQualification.PotentialError Undetected_Missing_Traceability {
+            description = '''
+                A component requirement that lacks a derived_from reference to
+                a feature requirement is not flagged as an error during the
+                build, allowing gaps in the traceability chain.
+            '''
+            impacts = ["Safety requirements may not be implemented"]
+            affects = [Validate_Requirement_Chains]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
+        ToolQualification.PotentialError Incorrect_Provider_Chain {
+            description = '''
+                The Bazel provider chain (TrlcProviderInfo, SphinxSourcesInfo)
+                is assembled incorrectly so that downstream rules receive stale
+                or incomplete requirement data.
+            '''
+            impacts = ["Traceability report based on outdated information"]
+            affects = [Validate_Requirement_Chains, Assemble_Dependable_Element]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
+    }
+
+    section "Safety Analysis" {
+
+        ToolQualification.PotentialError Missing_Failure_Mode_In_Render {
+            description = '''
+                A failure mode defined in TRLC is not rendered in the FMEA
+                documentation output, causing an incomplete safety analysis
+                artefact.
+            '''
+            impacts = ["Incomplete FMEA delivered as part of safety case"]
+            affects = [Render_Safety_Analyses, Assemble_Dependable_Element]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
+    }
+
+    section "Architecture" {
+
+        ToolQualification.PotentialError Silent_Diagram_Parse_Failure {
+            description = '''
+                A syntactically invalid PlantUML diagram is not rejected by
+                the parser, producing an incorrect or empty FlatBuffers output
+                that is consumed silently by downstream rules.
+            '''
+            impacts = ["Architecture verification based on incorrect model"]
+            affects = [Parse_Architectural_Diagrams, Assemble_Dependable_Element]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
+    }
+
+}
