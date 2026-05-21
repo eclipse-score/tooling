@@ -1,0 +1,99 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package ToolQualification
+
+enum Impact_Type {
+    Safety
+      '''
+      The potential error has a safety impact.
+      '''
+    Financial
+      '''
+      The potential error has a financial impact.
+      '''
+}
+
+enum Classification {
+    None
+    TCL_1
+    TCL_2
+    TCL_3
+}
+
+type Tool {
+  description               String
+  classification            Classification
+}
+
+type UseCase {
+    description
+      '''
+      The text of the use case.
+      The format shall be: As a <role> I want <description of the UseCase>.
+      A use case shall describe the goal that the user wants to achieve by
+      using the tool. The use case shall not describe tool implementation.
+      '''
+        String
+    affected_tools
+      '''List of tools that contribute features to fulfill the use case'''
+        Tool[1..*]
+}
+
+type PotentialError {
+    description
+      '''
+      The text of the potential error.
+      This shall be a description of a potential error that may occur in the tool.
+      Potential errors describe hypothetical bugs, not user misuse.
+      '''
+        String
+
+    impacts
+      '''
+      Description of the consequences if this error occurs.
+      '''
+        String[1..*]
+
+    affects
+      '''
+      List of use cases which the potential error could affect.
+      '''
+        UseCase[1..*]
+
+    impact_type Impact_Type
+}
+
+type ToolRequirement {
+    description
+      '''
+      The content of the tool requirement.
+      A tool requirement describes what the tool shall do.
+      It is the traceable level — linked to source code and test cases.
+      '''
+        String
+
+    mitigates
+      '''
+      List of potential errors that this requirement addresses.
+      '''
+        optional PotentialError[1..*]
+
+    note
+      '''
+      Non-normative explanatory text providing additional context.
+      '''
+        optional String
+
+    derived_from             UseCase[1..*]
+    satisfied_by             Tool
+}

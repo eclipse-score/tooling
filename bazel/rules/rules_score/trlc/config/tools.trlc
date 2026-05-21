@@ -1,0 +1,72 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package Tools
+import ToolQualification
+
+section "Tools" {
+
+    ToolQualification.Tool TRLC {
+        description = "Requirements management system"
+        classification = ToolQualification.Classification.None
+    }
+
+    ToolQualification.Tool Lobster {
+        description = "Traceability Tooling"
+        classification = ToolQualification.Classification.None
+    }
+
+    ToolQualification.Tool Bazel {
+        description = "Build System"
+        classification = ToolQualification.Classification.None
+    }
+
+    ToolQualification.Tool PlantumlParser {
+        description = "Parser for Plantuml Diagrams"
+        classification = ToolQualification.Classification.None
+    }
+
+    ToolQualification.Tool PlantumlLinter {
+        description = "Linter for Plantuml Diagrams"
+        classification = ToolQualification.Classification.None
+    }
+
+    ToolQualification.Tool PlantumlFormatter {
+        description = "Formatter for Plantuml Diagrams"
+        classification = ToolQualification.Classification.None
+    }
+
+    ToolQualification.Tool BazelMetamodel {
+        description = "Metamodel for Software Architectural Design"
+        classification = ToolQualification.Classification.None
+    }
+
+    ToolQualification.Tool LibClang {
+        description = "Parsing Library for C/C++ Code"
+        classification = ToolQualification.Classification.None
+    }
+
+    ToolQualification.Tool Verifier {
+        description = "Verification Framework"
+        classification = ToolQualification.Classification.None
+    }
+
+    ToolQualification.Tool Docs {
+        description = "Docs Build Tooling"
+        classification = ToolQualification.Classification.None
+    }
+
+    ToolQualification.Tool AIChecker {
+        description = "AI-based Analysis Tool"
+        classification = ToolQualification.Classification.None
+    }
+}

@@ -112,7 +112,10 @@ sphinx_module(
             "docs/**/*.md",
         ],
         allow_empty = True,
-    ),
+    ) + [
+        "//bazel/rules/rules_score/docs/requirements:requirements_rst",
+        "//bazel/rules/rules_score/docs/requirements:traceability_rst",
+    ],
     index = "docs/index.rst",
     visibility = ["//visibility:public"],
 )
@@ -176,13 +179,22 @@ filegroup(
     srcs = glob(["*.bzl"]),
 )
 
+filegroup(
+    name = "py_srcs",
+    srcs = glob(["src/*.py"]),
+)
+
 lobster_linker(
     name = "rules_score_impl",
     srcs = [
         ":bzl_srcs",
+        ":py_srcs",
         "//bazel/rules/rules_score/private:bzl_srcs",
     ],
-    visibility = ["//docs/processes:__pkg__"],
+    visibility = [
+        "//bazel/rules/rules_score/docs/requirements:__pkg__",
+        "//docs/processes:__pkg__",
+    ],
 )
 
 # ---------------------------------------------------------------------------

@@ -27,4 +27,5 @@ safety analysis to the top-level SEooC assembly.
    integration_guide
    user_guide/index
    rule_reference
+   tool_qualification
    quality_report
