@@ -17,7 +17,7 @@ use puml_parser::{
     ActivityParserError, BaseParseError, ClassError, IncludeExpandError, IncludeParseError,
     PreprocessError, ProcedureExpandError, ProcedureParseError,
 };
-use puml_resolver::{ClassPumlResolverError, ElementResolverError};
+use puml_resolver::{ActivityResolverError, ClassPumlResolverError, ElementResolverError};
 
 #[derive(Debug)]
 pub struct ProjectedError {
@@ -240,6 +240,14 @@ impl ErrorView for ElementResolverError {
             } => ProjectedError::new("AmbiguousReference")
                 .with_field("reference", reference.clone())
                 .with_field("candidates", candidates.join(", ")),
+        }
+    }
+}
+
+impl ErrorView for ActivityResolverError {
+    fn project(&self, _base_dir: &Path) -> ProjectedError {
+        match self {
+            ActivityResolverError::NotImplemented => ProjectedError::new("NotImplemented"),
         }
     }
 }
