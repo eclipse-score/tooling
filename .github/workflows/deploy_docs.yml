@@ -46,7 +46,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config libcairo2-dev
+          sudo apt-get install -y pkg-config libcairo2-dev lcov
       - name: Determine version
         id: version
         run: |

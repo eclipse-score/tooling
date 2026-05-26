@@ -68,6 +68,10 @@ jobs:
           disk-cache: true
           repository-cache: true
           bazelisk-cache: true
+      - name: Install lcov
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lcov
       - name: Generate combined coverage report
         run: bazel run //coverage:combined_report -- --out-dir coverage-html
       - name: Upload coverage report artifact
