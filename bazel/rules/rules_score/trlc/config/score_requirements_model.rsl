@@ -29,7 +29,7 @@ enum Status {
 
 abstract type Requirement "Base type for all S-CORE requirements." {
     description "The normative requirement text. Must express an obligation (shall/should)."
-                String
+                Markup_String
     version     "Monotonically increasing version counter. Increment on every content change."
                 Integer
     note        "Non-normative explanatory text providing additional context."
