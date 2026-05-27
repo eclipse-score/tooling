@@ -19,19 +19,42 @@ pub struct ActivityDiagram {
     pub statements: Vec<ActivityStmt>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct IfDisplay {
+    pub then_label: Option<String>,
+    pub else_label: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct LoopDisplay {
+    pub continue_label: Option<String>,
+    pub exit_label: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ActivityStmt {
+    Title(TitleNode),
     Action(ActionNode),
 
     If(IfNode),
     While(WhileNode),
-    Repeat(RepeatNode),
+    RepeatWhile(RepeatWhileNode),
 
     Control(ControlNode),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum ControlNode {
+pub struct TitleNode {
+    pub text: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ControlNode {
+    pub kind: ControlKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ControlKind {
     /// stop current path (end this execution branch)
     Stop,
 
@@ -87,14 +110,14 @@ pub struct BackwardNode {
 ///     body: vec![
 ///         Action(foo)
 ///     ],
-///     orelse: vec![
+///     else_branch: vec![
 ///         ActivityStmt::If(
 ///             IfNode {
 ///                 condition: "B",
 ///                 body: vec![
 ///                     Action(bar)
 ///                 ],
-///                 orelse: vec![],
+///                 else_branch: vec![],
 ///             }
 ///         )
 ///     ],
@@ -107,12 +130,16 @@ pub struct BackwardNode {
 /// - Makes CFG generation easier
 /// - Matches how Python's AST represents `elif`
 ///
-/// An empty `orelse` means there is no `else` branch.
+/// An empty `else_branch` means there is no `else` branch.
+///
+/// Optional display labels are stored separately in `display` so they do not
+/// affect the core control-flow semantics.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IfNode {
     pub condition: String,
     pub body: Vec<ActivityStmt>,
-    pub orelse: Vec<ActivityStmt>,
+    pub else_branch: Vec<ActivityStmt>,
+    pub display: Option<IfDisplay>,
 }
 
 /// Represents a structured `while` loop node.
@@ -135,6 +162,7 @@ pub struct IfNode {
 ///         )
 ///     ],
 ///     backward: None,
+///     display: None,
 /// }
 ///
 /// Notes:
@@ -142,13 +170,14 @@ pub struct IfNode {
 /// - `condition` represents the loop condition
 /// - `body` contains the loop statements
 /// - `backward` is an optional action on the loop return path
-/// - loop edge labels are rendering metadata and do not affect control-flow
-///   semantics, so they are intentionally omitted here
+/// - `display` stores optional loop edge labels separately from the core
+///   semantics
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WhileNode {
     pub condition: String,
     pub body: Vec<ActivityStmt>,
     pub backward: Option<BackwardNode>,
+    pub display: Option<LoopDisplay>,
 }
 
 /// Represents a structured `repeat ... repeat while` loop.
@@ -158,8 +187,9 @@ pub struct WhileNode {
 /// sequential loop body. It runs only on the back-edge when the repeat loop
 /// continues.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct RepeatNode {
+pub struct RepeatWhileNode {
     pub body: Vec<ActivityStmt>,
     pub condition: String,
     pub backward: Option<BackwardNode>,
+    pub display: Option<LoopDisplay>,
 }

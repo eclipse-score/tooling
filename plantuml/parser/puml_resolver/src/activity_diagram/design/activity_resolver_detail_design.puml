@@ -1,0 +1,128 @@
+@startuml activity_resolver_detail_design
+
+title ActivityResolver Detail Design
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam roundcorner 12
+skinparam defaultTextAlignment left
+skinparam wrapWidth 220
+
+rectangle "RawActivityDiagram\n- name: Option<String>\n- statements: Vec<RawActivityStmt>" as raw_doc
+rectangle "ActivityDiagram\n- name: Option<String>\n- statements: Vec<ActivityStmt>" as logic_doc
+rectangle "ActivityResolverError\n- UnexpectedEndOfInput\n- UnexpectedStatement\n- UnsupportedStatement" as resolver_error
+
+package "ActivityResolver" {
+  rectangle "cursor: usize" as cursor
+
+  rectangle "resolve(document)" as resolve
+  rectangle "visit_block_until(statements, terminator)" as visit_block
+  rectangle "visit_statement(statements)" as visit_stmt
+  rectangle "visit_loop_body_until(statements, terminator)" as visit_loop
+
+  rectangle "visit_if(statements, condition, then_label)" as visit_if
+  rectangle "visit_while(statements, condition, continue_label)" as visit_while
+  rectangle "visit_repeat_while(statements)" as visit_repeat
+
+  rectangle "consume_endif(statements)" as consume_endif
+  rectangle "consume_endwhile_label(statements)" as consume_endwhile
+  rectangle "consume_repeat_while_data(statements)" as consume_repeat
+
+  rectangle "peek_statement(statements)" as peek_stmt
+  rectangle "next_statement(statements)" as next_stmt
+  rectangle "resolve_control_kind(kind)" as resolve_control
+}
+
+raw_doc --> resolve : input
+resolve --> cursor : reset to 0
+resolve --> visit_block : terminator = false
+visit_block --> peek_stmt : stop when terminator matches
+visit_block --> visit_stmt : resolve each non-terminator stmt
+visit_stmt --> next_stmt : consume current raw stmt
+visit_stmt --> resolve_control : map RawControlKind
+
+visit_stmt --> visit_if : RawActivityStmt::IfStart
+visit_stmt --> visit_while : RawActivityStmt::WhileStart
+visit_stmt --> visit_repeat : RawActivityStmt::RepeatStart
+
+visit_if --> visit_block : then body until Else/EndIf
+visit_if --> visit_block : else body until EndIf
+visit_if --> consume_endif
+
+visit_while --> visit_loop : body until EndWhile
+visit_while --> consume_endwhile
+
+visit_repeat --> visit_loop : body until RepeatWhile
+visit_repeat --> consume_repeat
+
+visit_loop --> peek_stmt : inspect next stmt
+visit_loop --> visit_stmt : non-Backward stmt
+resolve --> logic_doc : build ActivityDiagram
+resolve ..> resolver_error : propagate errors
+visit_block ..> resolver_error
+visit_stmt ..> resolver_error
+visit_if ..> resolver_error
+visit_while ..> resolver_error
+visit_repeat ..> resolver_error
+consume_endif ..> resolver_error
+consume_endwhile ..> resolver_error
+consume_repeat ..> resolver_error
+
+note right of resolve
+Single-pass recursive descent.
+
+1. Reset cursor.
+2. Resolve the whole document through visit_block_until.
+3. Return ActivityDiagram with preserved document name.
+end note
+
+note right of visit_stmt
+Raw statement dispatch:
+
+- Title -> ActivityStmt::Title
+- Arrow | Start -> skipped in logic AST
+- Action -> ActivityStmt::Action
+- Stop -> Control(kind = Stop)
+- Control -> Control(kind mapped from parser enum)
+- IfStart -> visit_if(...)
+- WhileStart -> visit_while(...)
+- RepeatStart -> visit_repeat_while(...)
+
+Errors:
+
+- Else / EndIf / EndWhile / RepeatWhile / Backward
+  at statement position -> UnexpectedStatement
+- Fork* / Swimlane -> UnsupportedStatement
+end note
+
+note right of visit_loop
+Loop-body special rule:
+
+- Backward is not emitted as a sequential ActivityStmt.
+- It is captured as BackwardNode on the loop back-edge.
+- If multiple backward statements appear, the last one wins.
+- The function advances cursor directly after consuming Backward.
+end note
+
+note bottom of consume_endif
+Structured terminator helpers enforce block boundaries.
+If the next raw stmt is missing or of the wrong kind,
+the resolver returns a precise structural error.
+end note
+
+note bottom of logic_doc
+Semantic output keeps only structured control-flow nodes:
+
+- Title
+- Action
+- If
+- While
+- RepeatWhile
+- Control
+
+Arrow and Start remain parser-level syntax markers
+and are intentionally dropped during resolution.
+end note
+
+@enduml

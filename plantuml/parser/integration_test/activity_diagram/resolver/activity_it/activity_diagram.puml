@@ -20,6 +20,8 @@ note left: Basic action and note
 
 if (fatal configuration error?) then (yes)
   end
+elseif (configuration warning?) then (yes)
+  :check warning;
 else (no)
   :Continue setup;
 endif

@@ -15,5 +15,5 @@ mod activity_ast;
 mod activity_parser;
 mod creole;
 
-pub use activity_ast::{RawActivityDiagram, RawActivityStmt};
+pub use activity_ast::{ControlKind as RawControlKind, RawActivityDiagram, RawActivityStmt};
 pub use activity_parser::{ActivityParserError, PumlActivityParser};
