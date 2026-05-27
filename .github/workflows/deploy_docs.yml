@@ -46,7 +46,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config libcairo2-dev
+          sudo apt-get install -y pkg-config libcairo2-dev lcov
       - name: Determine version
         id: version
         run: |
@@ -63,6 +63,8 @@ jobs:
           fi
       - name: Build Sphinx documentation
         run: bazel build //bazel/rules/rules_score:rules_score_doc
+      - name: Generate combined coverage report
+        run: bazel run //coverage:combined_report -- --out-dir coverage-html
       - name: Prepare documentation output
         run: |
           BAZEL_BIN="$(bazel info bazel-bin)"
@@ -76,6 +78,12 @@ jobs:
           mkdir -p docs_output
           cp -r "${HTML_DIR}/." docs_output/
           chmod -R u+w docs_output/
+
+          # Embed the combined coverage report at docs_output/coverage/
+          if [[ -d coverage-html ]]; then
+            mkdir -p docs_output/coverage
+            cp -r coverage-html/. docs_output/coverage/
+          fi
 
           # Prevent Jekyll from ignoring _static directories
           touch docs_output/.nojekyll

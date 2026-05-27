@@ -12,19 +12,18 @@
    # SPDX-License-Identifier: Apache-2.0
    # *******************************************************************************
 
-SCORE Rules for Bazel
-=====================
+Quality Report
+==============
 
-``rules_score`` provides Bazel build rules for structuring and documenting
-safety-critical software according to S-CORE process guidelines. It covers
-the full artefact lifecycle — from requirements and architecture through
-safety analysis to the top-level SEooC assembly.
+This section provides quality reports generated for the tooling repository.
 
-.. toctree::
-   :maxdepth: 2
+Code Coverage
+-------------
 
-   overview
-   integration_guide
-   user_guide/index
-   rule_reference
-   quality_report
+The combined Rust + Python HTML coverage report is generated using:
+
+.. code-block:: bash
+
+   bazel run //coverage:combined_report
+
+`View Coverage Report <coverage/index.html>`_
