@@ -1,0 +1,72 @@
+{
+  "repeat_if.puml": {
+    "name": "repeat_if",
+    "statements": [
+      {
+        "Title": {
+          "text": "\"Repeat_If\""
+        }
+      },
+      {
+        "Action": {
+          "label": "Determine point in time of last call to GetNewSamples @kind: read @reads: [last_reference_time] @effect_kind: ReadState"
+        }
+      },
+      {
+        "Action": {
+          "label": "Adapt maxSampleCount: min(maxSampleCount, freeSamples) @kind: update @reads: [maxSampleCount, freeSamples] @writes: [maxSampleCount] @effect_kind: ValueRestriction"
+        }
+      },
+      {
+        "RepeatWhile": {
+          "body": [
+            {
+              "Action": {
+                "label": "ReferenceNextEvent @kind: subactivity_ref @ref: EventDataControl.ReferenceNextEvent @in: [last_reference_time, upper_limit] @out: [optional_slot] @effect_kind: ReadSelection"
+              }
+            },
+            {
+              "If": {
+                "condition": "reference success? @condition_ref: optional_slot.has_value @branches: [yes, no]",
+                "body": [
+                  {
+                    "Control": {
+                      "kind": "Break"
+                    }
+                  }
+                ],
+                "else_branch": [
+                  {
+                    "Action": {
+                      "label": "Update UpperLimit with timestamp of referenced event @kind: update @reads: [referenced_event.timestamp] @writes: [upper_limit] @effect_kind: StateUpdate"
+                    }
+                  },
+                  {
+                    "Action": {
+                      "label": "Callback User with SamplePtr @kind: callback @ref: App.callback @target: App @arg: SamplePtr @effect_kind: UserVisibleDelivery"
+                    }
+                  }
+                ],
+                "display": {
+                  "then_label": "no",
+                  "else_label": "yes"
+                }
+              }
+            }
+          ],
+          "condition": "maxSampleCount not reached? @repeat_while: returned_count < maxSampleCount @condition_ref: returned_count < maxSampleCount",
+          "backward": null,
+          "display": {
+            "continue_label": "yes",
+            "exit_label": null
+          }
+        }
+      },
+      {
+        "Control": {
+          "kind": "Stop"
+        }
+      }
+    ]
+  }
+}

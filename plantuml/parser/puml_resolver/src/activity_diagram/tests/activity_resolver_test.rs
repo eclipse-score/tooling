@@ -63,3 +63,23 @@ fn run_activity_resolver_case(case_name: &str) {
 fn test_activity_resolver_smoke() {
     run_activity_resolver_case("activity_it");
 }
+
+#[test]
+fn test_activity_resolver_repeat_if() {
+    run_activity_resolver_case("repeat_if");
+}
+
+#[test]
+fn test_activity_resolver_negative_if_unclosed() {
+    run_activity_resolver_case("negative_if_unclosed");
+}
+
+#[test]
+fn test_activity_resolver_negative_while_unclosed() {
+    run_activity_resolver_case("negative_while_unclosed");
+}
+
+#[test]
+fn test_activity_resolver_negative_repeat_unclosed() {
+    run_activity_resolver_case("negative_repeat_unclosed");
+}

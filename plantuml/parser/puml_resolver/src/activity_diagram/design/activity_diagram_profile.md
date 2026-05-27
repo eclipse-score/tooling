@@ -3,9 +3,8 @@
 ## Purpose
 
 This document defines an initial controlled profile for PlantUML activity diagrams.
-The goal is to reduce free-form natural language in activity diagrams and make them easier to compare with:
 
-- sequence diagrams
+The goal is to reduce free-form natural language in activity diagrams and make them easier to compare with sequence diagrams.
 
 Support for comparisons against class or model diagrams, and against implementation-level code evidence, is intentionally left as future work in this document.
 
@@ -18,11 +17,10 @@ This profile is intended for activity diagrams that describe:
 
 - algorithms
 - control flow
-- state updates
 - callbacks
 - interactions with named runtime entities
 
-Typical examples are event access flows such as GetNewSamples, ReferenceNextEvent, allocation, notification, and subscription-related activities.
+Typical examples are event access flows such as `GetNewSamples` and `ReferenceNextEvent`. As well as allocation, notification, and subscription-related activities.
 
 ## Design Principles
 
@@ -59,16 +57,15 @@ Therefore, consistency checking must support one-to-many mappings.
 
 ## Drawing Rules
 
-### 1. Supported Activity Elements
+The rules in this section follow a consistent outline:
 
-Use only the following activity elements:
+- Rule statement: what the diagram author should do
+- Rationale: why the rule matters for comparison and review
+- Examples: how to follow the rule and what to avoid
 
-- Action
-- If
-- While
-- RepeatWhile
+### 1. Reuse Stable Names
 
-### 2. Reuse Stable Names
+Rule statement:
 
 When possible, reuse the same names that appear in related sequence diagrams or design documents.
 This applies in particular to:
@@ -79,36 +76,87 @@ This applies in particular to:
 - callback targets
 - created objects
 
-Prefer concrete names such as:
+Rationale:
 
-- EventDataControl
-- ProxyEvent
-- SamplePtr
-- maxSampleCount
-- freeSamples
-- ReferenceNextEvent
-- App.callback
+Stable names reduce ambiguity and make it easier to align activity steps with sequence interactions, design documentation, and later comparison logic.
 
-Avoid vague labels such as:
+Examples:
 
-- Process data
-- Handle event
-- Do callback logic
-- Update internal state
+Preferred examples:
 
-### 3. One Action Should Describe One Logical Step
+```text
+@startuml
+start
+' Compliant: reuses the stable operation name from related design artifacts.
+:ReferenceNextEvent\n@ref: EventDataControl.ReferenceNextEvent;
+' Compliant: reuses stable variable names that can be matched across diagrams.
+:Adapt maxSampleCount: min(maxSampleCount, freeSamples)\n@reads: [maxSampleCount, freeSamples]\n@writes: [maxSampleCount];
+' Compliant: reuses stable callback and payload names.
+:Callback App with SamplePtr\n@ref: App.callback\n@target: App\n@arg: SamplePtr;
+stop
+@enduml
+```
+
+Avoid examples:
+
+```text
+@startuml
+start
+' Non-compliant: "Process data" is too vague and does not reuse a stable operation or entity name.
+:Process data;
+' Non-compliant: "Handle event" does not identify which event-related operation is meant.
+:Handle event;
+' Non-compliant: "Do callback logic" hides the callback target and callback name.
+:Do callback logic;
+' Non-compliant: "Update internal state" does not expose which state variable is updated.
+:Update internal state;
+stop
+@enduml
+```
+
+### 2. One Action Should Describe One Logical Step
+
+Rule statement:
 
 Each Action node should describe one step that can be matched to a single logical step in the sequence diagram.
 
-Good examples:
+Rationale:
 
-- ReferenceNextEvent
-- Update UpperLimit with timestamp of referenced event
-- Callback User with SamplePtr
+An Action is easier to compare when it expresses one effect or one decision point. Combining unrelated effects in one node makes one-to-one or one-to-many matching less clear.
 
-Avoid combining unrelated effects in a single Action node.
+Examples:
 
-### 4. Make the Intent of Each Action Explicit
+Preferred examples:
+
+```text
+@startuml
+start
+' Compliant: one action expresses one sub-activity reference.
+:ReferenceNextEvent;
+' Compliant: one action expresses one state update.
+:Update UpperLimit with timestamp of referenced event;
+' Compliant: one action expresses one callback step.
+:Callback App with SamplePtr;
+stop
+@enduml
+```
+
+Avoid examples:
+
+```text
+@startuml
+start
+' Non-compliant: this single action combines sub-activity, state update, and callback behavior.
+:ReferenceNextEvent, update UpperLimit, and callback App with SamplePtr;
+' Non-compliant: this single action combines a state read with object creation.
+:Read freeSamples and create SamplePtr;
+stop
+@enduml
+```
+
+### 3. Make the Intent of Each Action Explicit
+
+Rule statement:
 
 For key actions, make the intent clear from the text.
 Typical intents are:
@@ -120,77 +168,256 @@ Typical intents are:
 - callback user logic
 - create or destroy an object
 
-When possible, use stable verbs such as:
+Rationale:
 
-- Read
-- Update
-- Call
-- Check
-- Create
-- Destroy
-- Callback
+Explicit intent helps a reviewer or comparison tool understand whether an Action is reading state, changing state, invoking another operation, or interacting with a user-visible target.
 
-### 5. Make Read and Write Targets Visible
+Examples:
+
+Preferred wording:
+
+```text
+@startuml
+start
+' Compliant: the verb "Read" makes the action intent explicit.
+:Read freeSamples;
+' Compliant: the verb "Call" makes the action intent explicit.
+:Call ReferenceNextEvent;
+' Compliant: the verb "Callback" makes the user-visible effect explicit.
+:Callback App with SamplePtr;
+stop
+@enduml
+```
+
+Avoid wording:
+
+```text
+@startuml
+start
+' Non-compliant: "Process data" does not say whether this reads, updates, creates, or calls.
+:Process data;
+' Non-compliant: "Handle event" hides the concrete action intent.
+:Handle event;
+' Non-compliant: "Do callback logic" does not say whether this is a callback, a read, or an update.
+:Do callback logic;
+stop
+@enduml
+```
+
+### 4. Make Read and Write Targets Visible
+
+Rule statement:
 
 If an action reads state, mention what is being read.
 If an action updates state, mention what is being written and, where useful, from what source.
 
-Good examples:
+Rationale:
 
-- Adapt maxSampleCount: min(maxSampleCount, freeSamples)
-- Update UpperLimit with timestamp of referenced event
+Visible read and write targets make data dependencies explicit. This is important when comparing activity logic with sequence interactions or implementation evidence.
 
-### 6. Use Explicit Conditions in If Nodes
+Examples:
+
+Preferred examples:
+
+```text
+@startuml
+start
+' Compliant: the read and write targets are visible in both the display text and metadata.
+:Adapt maxSampleCount: min(maxSampleCount, freeSamples)\n@reads: [maxSampleCount, freeSamples]\n@writes: [maxSampleCount];
+' Compliant: the written state and its source are both visible.
+:Update UpperLimit with timestamp of referenced event\n@reads: [referenced_event.timestamp]\n@writes: [upper_limit];
+stop
+@enduml
+```
+
+Avoid examples:
+
+```text
+@startuml
+start
+' Non-compliant: this does not say which state is updated.
+:Update internal state;
+' Non-compliant: this does not say which value changes or where the value comes from.
+:Adjust value;
+stop
+@enduml
+```
+
+### 5. Use Explicit Conditions in If Nodes
+
+Rule statement:
 
 If nodes should use conditions that make the success or failure criterion visible.
 
-Good examples:
+Rationale:
 
-- reference success?
-- slot found?
-- maxSampleCount not reached?
+An explicit condition shows what is actually being checked. This makes control flow easier to review and easier to align with predicates in related diagrams.
 
-Avoid vague conditions such as:
+Examples:
 
-- continue?
-- valid?
-- okay?
+Preferred examples:
 
-### 7. Use Explicit Loop Conditions
+```text
+@startuml
+start
+' Compliant: the condition makes the success criterion explicit.
+if (reference success?\n@condition_ref: optional_slot.has_value\n@branches: [yes, no]) then (yes)
+  :Callback App with SamplePtr;
+else (no)
+  :Stop processing;
+endif
+stop
+@enduml
+```
+
+Avoid examples:
+
+```text
+@startuml
+start
+' Non-compliant: "continue?" does not say what is being checked.
+if (continue?) then (yes)
+  :Callback App with SamplePtr;
+else (no)
+  :Stop processing;
+endif
+' Non-compliant: "valid?" is too vague to identify the predicate.
+if (valid?) then (yes)
+  :ReferenceNextEvent;
+else (no)
+  :Stop processing;
+endif
+stop
+@enduml
+```
+
+### 6. Use Explicit Loop Conditions
+
+Rule statement:
 
 While and RepeatWhile should make the loop condition visible.
 The loop condition should correspond to a loop or repeated interaction in the related sequence diagram.
 
-Good examples:
+Rationale:
 
-- maxSampleCount not reached?
-- no new samples available?
+An explicit loop condition makes repeated behavior observable and testable. It also makes it easier to compare the activity loop with repeated sequence fragments.
 
-### 8. Reuse Named Sub-Activities When Available
+Examples:
+
+Preferred examples:
+
+```text
+@startuml
+start
+repeat
+  :ReferenceNextEvent;
+' Compliant: the loop condition states exactly why another iteration occurs.
+repeat while (maxSampleCount not reached?\n@condition_ref: returned_count < maxSampleCount) is (yes)
+stop
+@enduml
+```
+
+Avoid examples:
+
+```text
+@startuml
+start
+repeat
+  :ReferenceNextEvent;
+' Non-compliant: "continue?" does not expose the loop predicate.
+repeat while (continue?) is (yes)
+stop
+@enduml
+```
+
+### 7. Reuse Named Sub-Activities When Available
+
+Rule statement:
 
 If a step is already modeled as a separate activity or is known as a named operation, use that name directly.
 
-Example:
+Rationale:
 
-- ReferenceNextEvent
+Reusing the known name preserves traceability across diagrams and makes it clearer that the Action refers to an existing sub-activity or operation rather than an informal paraphrase.
+
+Examples:
+
+Preferred example:
+
+```text
+@startuml
+start
+' Compliant: the action reuses the existing sub-activity name directly.
+:ReferenceNextEvent\n@ref: EventDataControl.ReferenceNextEvent;
+stop
+@enduml
+```
 
 This makes it easier to align one activity step with one or more sequence interactions.
 
-### 9. Make Callback and Creation Semantics Visible
+Avoid example:
+
+```text
+@startuml
+start
+' Non-compliant: this paraphrases an existing operation instead of reusing its known name.
+:Find next event;
+stop
+@enduml
+```
+
+### 8. Make Callback and Creation Semantics Visible
+
+Rule statement:
 
 If the flow delivers data to the user, mention the callback target and the delivered object.
 If the flow creates an output or helper object, mention that object explicitly.
 
-Good examples:
+Rationale:
 
-- Callback User with SamplePtr
-- Create SamplePtr
-- Create SampleDeleter
+Callback and creation steps are often important externally visible effects. Naming the target and object makes those effects comparable across diagrams.
 
-### 10. Recommended Format per Activity Element
+Examples:
 
-The rules above describe what should be visible in the diagram.
-This section explains how each supported activity element should be written so that a comparison view can recover stable fields such as kind, ref, reads, writes, in, out, target, and arg.
+Preferred examples:
+
+```text
+@startuml
+start
+' Compliant: the created object is named explicitly.
+:Create SamplePtr;
+' Compliant: the helper object is named explicitly.
+:Create SampleDeleter;
+' Compliant: the callback target and delivered object are both visible.
+:Callback App with SamplePtr\n@ref: App.callback\n@target: App\n@arg: SamplePtr;
+stop
+@enduml
+```
+
+Avoid examples:
+
+```text
+@startuml
+start
+' Non-compliant: this hides both the callback target and the delivered object.
+:Return result;
+' Non-compliant: this does not identify which helper object is created.
+:Allocate helper;
+stop
+@enduml
+```
+
+### 9. Recommended Format per Activity Element
+
+Rule statement:
+
+Write each supported activity element in a regular textual format so that a comparison view can recover stable fields such as kind, ref, reads, writes, in, out, target, and arg.
+
+Rationale:
+
+The rules above describe what should be visible in the diagram. This rule explains how to write that information directly in the PlantUML text so that a parser can extract it consistently.
+
+Examples:
 
 The recommended approach is to write these fields directly in the PlantUML text so that an activity diagram parser can extract them directly.
 
@@ -201,22 +428,67 @@ Recommended pattern:
 
 General examples:
 
-- `ReferenceNextEvent\n@kind: subactivity_ref\n@ref: EventDataControl.ReferenceNextEvent\n@in: [last_reference_time, upper_limit]\n@out: [optional_slot]`
-- `reference success?\n@condition_ref: optional_slot.has_value\n@branches: [yes, no]`
-- `maxSampleCount not reached?\n@repeat_while: returned_count < maxSampleCount\n@condition_ref: returned_count < maxSampleCount`
+```
+ReferenceNextEvent
+@kind: subactivity_ref
+@ref: EventDataControl.ReferenceNextEvent
+@in: [last_reference_time, upper_limit]
+@out: [optional_slot]
+```
+
+```
+reference success?
+@condition_ref: optional_slot.has_value
+@branches: [yes, no]
+```
+
+```
+maxSampleCount not reached?
+@repeat_while: returned_count < maxSampleCount
+@condition_ref: returned_count < maxSampleCount
+```
 
 #### Action
 
+Rule statement:
+
 Write an Action as one logical step using a stable verb plus a concrete object, target, or state.
 
-Preferred text patterns:
+Rationale:
 
-- Read `state`
-- Update `target` with `source`
-- Call `operation`
-- Create `object`
-- Destroy `object`
-- Callback `target` with `object`
+A clear Action label and a regular field layout make the Action easier to compare with sequence calls, state updates, and callbacks.
+
+Examples:
+
+Preferred example:
+
+```text
+@startuml
+start
+' Compliant: the action uses a stable verb and makes the read intent explicit.
+:Read freeSamples\n@kind: read\n@reads: [freeSamples];
+' Compliant: the action uses a stable operation name and marks it as a sub-activity reference.
+:ReferenceNextEvent\n@kind: subactivity_ref\n@ref: EventDataControl.ReferenceNextEvent\n@in: [last_reference_time, upper_limit]\n@out: [optional_slot];
+' Compliant: the action uses a stable callback verb and names the target and payload.
+:Callback App with SamplePtr\n@kind: callback\n@ref: App.callback\n@target: App\n@arg: SamplePtr;
+stop
+@enduml
+```
+
+Avoid example:
+
+```text
+@startuml
+start
+' Non-compliant: this action uses a vague label and does not expose the action kind.
+:Process data;
+' Non-compliant: this action combines multiple logical steps into one node.
+:Read freeSamples and callback App with SamplePtr;
+' Non-compliant: this action refers to an operation informally instead of using stable metadata.
+:Call next event;
+stop
+@enduml
+```
 
 Each Action should make the following information recoverable when relevant:
 
@@ -232,26 +504,91 @@ Each Action should make the following information recoverable when relevant:
 
 Recommended Action format:
 
-- `display\n@kind: <kind>\n@ref: <ref>\n@reads: [...]\n@writes: [...]\n@in: [...]\n@out: [...]\n@target: <target>\n@arg: <arg>`
+```
+display
+@kind: <kind>
+@ref: <ref>
+@reads: [...]
+@writes: [...]
+@in: [...]
+@out: [...]
+@target: <target>
+@arg: <arg>
+```
 
 Examples:
 
-- `ReferenceNextEvent\n@kind: subactivity_ref\n@ref: EventDataControl.ReferenceNextEvent\n@in: [last_reference_time, upper_limit]\n@out: [optional_slot]`
+```
+ReferenceNextEvent
+@kind: subactivity_ref
+@ref: EventDataControl.ReferenceNextEvent
+@in: [last_reference_time, upper_limit]
+@out: [optional_slot]
+```
 
-- `Adapt maxSampleCount: min(maxSampleCount, freeSamples)\n@kind: update\n@reads: [maxSampleCount, freeSamples]\n@writes: [maxSampleCount]`
+```
+Adapt maxSampleCount: min(maxSampleCount, freeSamples)
+@kind: update
+@reads: [maxSampleCount, freeSamples]
+@writes: [maxSampleCount]
+```
 
-- `Callback User with SamplePtr\n@kind: callback\n@ref: App.callback\n@target: App\n@arg: SamplePtr`
+```
+Callback User with SamplePtr
+@kind: callback
+@ref: App.callback
+@target: App
+@arg: SamplePtr
+```
 
 #### If
+
+Rule statement:
 
 Write an If condition as an explicit observable question.
 The condition should describe what is being checked, not a vague outcome.
 
-Preferred text patterns:
+Rationale:
 
-- `condition`?
-- `object` found?
-- `operation` success?
+The If node should expose the predicate behind the branch, not just the fact that a branch exists. This keeps decision logic explicit and comparable.
+
+Examples:
+
+Preferred example:
+
+```text
+@startuml
+start
+' Compliant: the condition is an explicit observable question with stable predicate metadata.
+if (reference success?\n@condition_ref: optional_slot.has_value\n@branches: [yes, no]) then (yes)
+  :Callback App with SamplePtr;
+else (no)
+  :Stop processing;
+endif
+stop
+@enduml
+```
+
+Avoid example:
+
+```text
+@startuml
+start
+' Non-compliant: "valid?" is too vague and does not identify the checked predicate.
+if (valid?) then (yes)
+  :Callback App with SamplePtr;
+else (no)
+  :Stop processing;
+endif
+' Non-compliant: "continue?" does not explain the branch criterion.
+if (continue?) then (yes)
+  :ReferenceNextEvent;
+else (no)
+  :Stop processing;
+endif
+stop
+@enduml
+```
 
 Each If should make the following information recoverable:
 
@@ -261,13 +598,25 @@ Each If should make the following information recoverable:
 
 Recommended If format:
 
-- `display\n@condition_ref: <condition_ref>\n@branches: [yes, no]`
+```
+display
+@condition_ref: <condition_ref>
+@branches: [yes, no]
+```
 
 Examples:
 
-- `reference success?\n@condition_ref: optional_slot.has_value\n@branches: [yes, no]`
+```
+reference success?
+@condition_ref: optional_slot.has_value
+@branches: [yes, no]
+```
 
-- `slot found?\n@condition_ref: slot_found\n@branches: [yes, no]`
+```
+slot found?
+@condition_ref: slot_found
+@branches: [yes, no]
+```
 
 Avoid vague conditions such as:
 
@@ -277,8 +626,42 @@ Avoid vague conditions such as:
 
 #### While
 
+Rule statement:
+
 Write a While condition as an explicit continuation condition.
 It should be easy to match to a loop condition in the related sequence diagram.
+
+Rationale:
+
+The While node should show why the loop continues. This gives the loop a stable predicate that can be reviewed and compared.
+
+Examples:
+
+Preferred example:
+
+```text
+@startuml
+start
+' Compliant: the while condition makes the continuation predicate explicit.
+while (maxSampleCount not reached?\n@while: returned_count < maxSampleCount\n@condition_ref: returned_count < maxSampleCount) is (yes)
+  :ReferenceNextEvent;
+endwhile (no)
+stop
+@enduml
+```
+
+Avoid example:
+
+```text
+@startuml
+start
+' Non-compliant: "continue?" does not expose the loop predicate.
+while (continue?) is (yes)
+  :ReferenceNextEvent;
+endwhile (no)
+stop
+@enduml
+```
 
 Each While should make the following information recoverable:
 
@@ -288,16 +671,58 @@ Each While should make the following information recoverable:
 
 Recommended While format:
 
-- `display\n@while: <expression>\n@condition_ref: <condition_ref>`
+```
+display
+@while: <expression>
+@condition_ref: <condition_ref>
+```
 
 Example:
 
-- `maxSampleCount not reached?\n@while: returned_count < maxSampleCount\n@condition_ref: returned_count < maxSampleCount`
+```
+maxSampleCount not reached?
+@while: returned_count < maxSampleCount
+@condition_ref: returned_count < maxSampleCount
+```
 
 #### RepeatWhile
 
+Rule statement:
+
 Write a RepeatWhile condition in the same style as While.
 The difference is only that the condition is evaluated after the loop body.
+
+Rationale:
+
+RepeatWhile should expose the post-condition that controls the next iteration. This keeps post-tested loops explicit and comparable.
+
+Examples:
+
+Preferred example:
+
+```text
+@startuml
+start
+repeat
+  :ReferenceNextEvent;
+' Compliant: the repeat condition exposes the post-tested loop predicate explicitly.
+repeat while (maxSampleCount not reached?\n@repeat_while: returned_count < maxSampleCount\n@condition_ref: returned_count < maxSampleCount) is (yes)
+stop
+@enduml
+```
+
+Avoid example:
+
+```text
+@startuml
+start
+repeat
+  :ReferenceNextEvent;
+' Non-compliant: "loop again?" does not identify the post-condition.
+repeat while (loop again?) is (yes)
+stop
+@enduml
+```
 
 Each RepeatWhile should make the following information recoverable:
 
@@ -307,41 +732,23 @@ Each RepeatWhile should make the following information recoverable:
 
 Recommended RepeatWhile format:
 
-- `display\n@repeat_while: <expression>\n@condition_ref: <condition_ref>`
+```
+display
+@repeat_while: <expression>
+@condition_ref: <condition_ref>
+```
 
 Example:
 
-- `maxSampleCount not reached?\n@repeat_while: returned_count < maxSampleCount\n@condition_ref: returned_count < maxSampleCount`
-
-## What Will Be Compared Against Sequence Diagrams
-
-To support activity-to-sequence consistency checking, the following aspects should be visible in the activity diagram:
-
-- control structure
-- referenced entities
-- referenced operations or sub-activities
-- read and write intent
-- callback and creation semantics
-
-The comparison does not require sentence equality.
-A single activity step may map to one sequence message or to a small sequence fragment.
-
-Example:
-
-- activity step: ReferenceNextEvent
-- sequence fragment:
-  - `ProxyEvent -> EventDataControl: referenceNextEvent(...)`
-  - `EventDataControl --> ProxyEvent: optional<EventSlotIndexType>`
-
-This is a valid one-to-many mapping.
-
-## Future Work
-
-Comparison against class or model diagrams and against code is not covered by this document yet.
+```
+maxSampleCount not reached?
+@repeat_while: returned_count < maxSampleCount
+@condition_ref: returned_count < maxSampleCount
+```
 
 ## Example: GetNewSamples Fragment
 
-The example below is based on the following activity diagram:
+The example below shows how the recommended format from the drawing rules can be applied to a GetNewSamples fragment.
 
 <img alt="GET_NEW_SAMPLES_ACTIVITY" src="https://www.plantuml.com/plantuml/proxy?src=https://raw.githubusercontent.com/eclipse-score/communication/refs/heads/main/score/mw/com/design/events_fields/get_new_samples_activity.puml">
 
@@ -430,3 +837,29 @@ stop
 
 @enduml
 ```
+
+## What Will Be Compared Against Sequence Diagrams
+
+To support activity-to-sequence consistency checking, the following aspects should be visible in the activity diagram:
+
+- control structure
+- referenced entities
+- referenced operations or sub-activities
+- read and write intent
+- callback and creation semantics
+
+The comparison does not require sentence equality.
+A single activity step may map to one sequence message or to a small sequence fragment.
+
+Example:
+
+- activity step: ReferenceNextEvent
+- sequence fragment:
+  - `ProxyEvent -> EventDataControl: referenceNextEvent(...)`
+  - `EventDataControl --> ProxyEvent: optional<EventSlotIndexType>`
+
+This is a valid one-to-many mapping.
+
+## Future Work
+
+Comparison against class or model diagrams and against code is not covered by this document yet.

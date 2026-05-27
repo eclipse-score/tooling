@@ -8,6 +8,16 @@ class ActivityDiagram {
   +statements: Vec<ActivityStmt>
 }
 
+class IfDisplay {
+  +then_label: Option<String>
+  +else_label: Option<String>
+}
+
+class LoopDisplay {
+  +continue_label: Option<String>
+  +exit_label: Option<String>
+}
+
 abstract class ActivityStmt
 
 class ActionNode {
@@ -17,19 +27,22 @@ class ActionNode {
 class IfNode {
   +condition: String
   +body: Vec<ActivityStmt>
-  +orelse: Vec<ActivityStmt>
+  +else_branch: Vec<ActivityStmt>
+  +display: Option<IfDisplay>
 }
 
 class WhileNode {
   +condition: String
   +body: Vec<ActivityStmt>
   +backward: Option<BackwardNode>
+  +display: Option<LoopDisplay>
 }
 
-class RepeatNode {
+class RepeatWhileNode {
   +body: Vec<ActivityStmt>
   +condition: String
   +backward: Option<BackwardNode>
+  +display: Option<LoopDisplay>
 }
 
 class BackwardNode {
@@ -37,7 +50,15 @@ class BackwardNode {
 }
 
 class ControlNode {
-  +kind: Stop | Kill | Detach | Break | Continue
+  +kind: ControlKind
+}
+
+enum ControlKind {
+  Stop
+  Kill
+  Detach
+  Break
+  Continue
 }
 
 ActivityDiagram *-- "0..*" ActivityStmt : statements
@@ -45,14 +66,17 @@ ActivityDiagram *-- "0..*" ActivityStmt : statements
 ActivityStmt <|-- ActionNode
 ActivityStmt <|-- IfNode
 ActivityStmt <|-- WhileNode
-ActivityStmt <|-- RepeatNode
+ActivityStmt <|-- RepeatWhileNode
 ActivityStmt <|-- ControlNode
 
 IfNode *-- "0..*" ActivityStmt : body
-IfNode *-- "0..*" ActivityStmt : orelse
+IfNode *-- "0..*" ActivityStmt : else_branch
+IfNode o-- "0..1" IfDisplay : display
 WhileNode *-- "0..*" ActivityStmt : body
 WhileNode o-- "0..1" BackwardNode : backward
-RepeatNode *-- "0..*" ActivityStmt : body
-RepeatNode o-- "0..1" BackwardNode : backward
+WhileNode o-- "0..1" LoopDisplay : display
+RepeatWhileNode *-- "0..*" ActivityStmt : body
+RepeatWhileNode o-- "0..1" BackwardNode : backward
+RepeatWhileNode o-- "0..1" LoopDisplay : display
 
 @enduml

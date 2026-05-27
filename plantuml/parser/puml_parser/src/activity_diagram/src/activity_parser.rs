@@ -19,8 +19,8 @@ use thiserror::Error;
 use crate::activity_ast::{
     ActionStmt, ArrowStmt, BackwardStmt, ControlKind, ControlStmt, ElseStmt, EndIfStmt,
     EndWhileStmt, ForkAgainStmt, ForkEndKind, ForkEndStmt, ForkModifier, ForkStartStmt,
-    IfStartStmt, RepeatStartStmt, RepeatWhileStmt, StartStmt, StopStmt, SwimlaneStmt,
-    WhileStartStmt,
+    IfStartStmt, RawActivitySourceSpan, RepeatStartStmt, RepeatWhileStmt, StartStmt,
+    StopStmt, SwimlaneStmt, TitleStmt, WhileStartStmt,
 };
 use crate::creole::normalize_creole_text;
 use crate::{RawActivityDiagram, RawActivityStmt};
@@ -50,6 +50,19 @@ impl ErrorLocation for ActivityParserError {
 pub struct PumlActivityParser;
 
 impl PumlActivityParser {
+    fn pair_source(pair: &pest::iterators::Pair<Rule>) -> RawActivitySourceSpan {
+        let span = pair.as_span();
+        let (start_line, start_column) = span.start_pos().line_col();
+        let (end_line, end_column) = span.end_pos().line_col();
+
+        RawActivitySourceSpan {
+            start_line,
+            start_column,
+            end_line,
+            end_column,
+        }
+    }
+
     fn parse_startuml(pair: pest::iterators::Pair<Rule>) -> Option<String> {
         pair.into_inner()
             .find(|inner| inner.as_rule() == Rule::puml_name)
@@ -59,38 +72,68 @@ impl PumlActivityParser {
     fn parse_statement(
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<Vec<RawActivityStmt>, ActivityParserError> {
+        let source = Self::pair_source(&pair);
         let statement = match pair.as_rule() {
-            Rule::action_stmt => RawActivityStmt::Action(Self::parse_action_stmt(pair)?),
-            Rule::arrow_stmt => RawActivityStmt::Arrow(Self::parse_arrow_stmt(pair)?),
-            Rule::backward_stmt => RawActivityStmt::Backward(Self::parse_backward_stmt(pair)?),
-            Rule::control_stmt => RawActivityStmt::Control(Self::parse_control_stmt(pair)?),
-            Rule::start_stmt => RawActivityStmt::Start(Self::parse_start_stmt(pair)?),
-            Rule::stop_stmt => RawActivityStmt::Stop(Self::parse_stop_stmt(pair)?),
-            Rule::if_start_stmt => RawActivityStmt::IfStart(Self::parse_if_start_stmt(pair)?),
-            Rule::else_stmt => RawActivityStmt::Else(Self::parse_else_stmt(pair)?),
-            Rule::endif_stmt => RawActivityStmt::EndIf(Self::parse_endif_stmt(pair)?),
-            Rule::while_start_stmt => {
-                RawActivityStmt::WhileStart(Self::parse_while_start_stmt(pair)?)
+            Rule::title_stmt => RawActivityStmt::Title(Self::parse_title_stmt(pair, source)?),
+            Rule::action_stmt => RawActivityStmt::Action(Self::parse_action_stmt(pair, source)?),
+            Rule::arrow_stmt => RawActivityStmt::Arrow(Self::parse_arrow_stmt(pair, source)?),
+            Rule::backward_stmt => {
+                RawActivityStmt::Backward(Self::parse_backward_stmt(pair, source)?)
             }
-            Rule::endwhile_stmt => RawActivityStmt::EndWhile(Self::parse_endwhile_stmt(pair)?),
+            Rule::control_stmt => {
+                RawActivityStmt::Control(Self::parse_control_stmt(pair, source)?)
+            }
+            Rule::start_stmt => RawActivityStmt::Start(Self::parse_start_stmt(source)?),
+            Rule::stop_stmt => RawActivityStmt::Stop(Self::parse_stop_stmt(source)?),
+            Rule::if_start_stmt => {
+                RawActivityStmt::IfStart(Self::parse_if_start_stmt(pair, source)?)
+            }
+            Rule::else_stmt => RawActivityStmt::Else(Self::parse_else_stmt(pair, source)?),
+            Rule::endif_stmt => RawActivityStmt::EndIf(Self::parse_endif_stmt(source)?),
+            Rule::while_start_stmt => {
+                RawActivityStmt::WhileStart(Self::parse_while_start_stmt(pair, source)?)
+            }
+            Rule::endwhile_stmt => {
+                RawActivityStmt::EndWhile(Self::parse_endwhile_stmt(pair, source)?)
+            }
             Rule::repeat_start_stmt => {
-                RawActivityStmt::RepeatStart(Self::parse_repeat_start_stmt(pair)?)
+                RawActivityStmt::RepeatStart(Self::parse_repeat_start_stmt(source)?)
             }
             Rule::repeat_while_stmt => {
-                RawActivityStmt::RepeatWhile(Self::parse_repeat_while_stmt(pair)?)
+                RawActivityStmt::RepeatWhile(Self::parse_repeat_while_stmt(pair, source)?)
             }
-            Rule::fork_start_stmt => RawActivityStmt::ForkStart(Self::parse_fork_start_stmt(pair)?),
-            Rule::fork_again_stmt => RawActivityStmt::ForkAgain(Self::parse_fork_again_stmt(pair)?),
-            Rule::fork_end_stmt => RawActivityStmt::ForkEnd(Self::parse_fork_end_stmt(pair)?),
-            Rule::swimlane_stmt => RawActivityStmt::Swimlane(Self::parse_swimlane_stmt(pair)?),
+            Rule::fork_start_stmt => {
+                RawActivityStmt::ForkStart(Self::parse_fork_start_stmt(source)?)
+            }
+            Rule::fork_again_stmt => {
+                RawActivityStmt::ForkAgain(Self::parse_fork_again_stmt(source)?)
+            }
+            Rule::fork_end_stmt => RawActivityStmt::ForkEnd(Self::parse_fork_end_stmt(pair, source)?),
+            Rule::swimlane_stmt => RawActivityStmt::Swimlane(Self::parse_swimlane_stmt(pair, source)?),
             _ => return Ok(vec![]),
         };
 
         Ok(vec![statement])
     }
 
+    fn parse_title_stmt(
+        pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
+    ) -> Result<TitleStmt, ActivityParserError> {
+        let raw = pair.as_str().trim();
+        let text = raw
+            .get(5..)
+            .map(|value| normalize_creole_text(value.trim()))
+            .ok_or_else(|| {
+                ActivityParserError::InvalidStatement("missing title text".to_string())
+            })?;
+
+        Ok(TitleStmt { text, source })
+    }
+
     fn parse_arrow_stmt(
         pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<ArrowStmt, ActivityParserError> {
         let mut syntax = None;
         let mut label = None;
@@ -112,6 +155,7 @@ impl PumlActivityParser {
                 ActivityParserError::InvalidStatement("missing arrow syntax".to_string())
             })?,
             label,
+            source,
         })
     }
 
@@ -129,34 +173,33 @@ impl PumlActivityParser {
 
     fn parse_action_stmt(
         pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<ActionStmt, ActivityParserError> {
         let label = Self::parse_action_label(pair, "action")?;
 
-        Ok(ActionStmt { label })
+        Ok(ActionStmt { label, source })
     }
 
     fn parse_backward_stmt(
         pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<BackwardStmt, ActivityParserError> {
         let label = Self::parse_action_label(pair, "backward")?;
 
-        Ok(BackwardStmt { label })
+        Ok(BackwardStmt { label, source })
     }
 
-    fn parse_start_stmt(
-        _pair: pest::iterators::Pair<Rule>,
-    ) -> Result<StartStmt, ActivityParserError> {
-        Ok(StartStmt)
+    fn parse_start_stmt(source: RawActivitySourceSpan) -> Result<StartStmt, ActivityParserError> {
+        Ok(StartStmt { source })
     }
 
-    fn parse_stop_stmt(
-        _pair: pest::iterators::Pair<Rule>,
-    ) -> Result<StopStmt, ActivityParserError> {
-        Ok(StopStmt)
+    fn parse_stop_stmt(source: RawActivitySourceSpan) -> Result<StopStmt, ActivityParserError> {
+        Ok(StopStmt { source })
     }
 
     fn parse_control_stmt(
         pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<ControlStmt, ActivityParserError> {
         let kind = match pair.as_str().trim() {
             "break" => ControlKind::Break,
@@ -170,11 +213,12 @@ impl PumlActivityParser {
             }
         };
 
-        Ok(ControlStmt { kind })
+        Ok(ControlStmt { kind, source })
     }
 
     fn parse_if_start_stmt(
         pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<IfStartStmt, ActivityParserError> {
         let mut condition = None;
         let mut label = None;
@@ -205,26 +249,29 @@ impl PumlActivityParser {
                 ActivityParserError::InvalidStatement("missing if condition".to_string())
             })?,
             label,
+            source,
         })
     }
 
-    fn parse_else_stmt(pair: pest::iterators::Pair<Rule>) -> Result<ElseStmt, ActivityParserError> {
+    fn parse_else_stmt(
+        pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
+    ) -> Result<ElseStmt, ActivityParserError> {
         let label = pair
             .into_inner()
             .find(|inner| inner.as_rule() == Rule::condition_text)
             .map(|inner| normalize_creole_text(inner.as_str().trim()));
 
-        Ok(ElseStmt { label })
+        Ok(ElseStmt { label, source })
     }
 
-    fn parse_endif_stmt(
-        _pair: pest::iterators::Pair<Rule>,
-    ) -> Result<EndIfStmt, ActivityParserError> {
-        Ok(EndIfStmt)
+    fn parse_endif_stmt(source: RawActivitySourceSpan) -> Result<EndIfStmt, ActivityParserError> {
+        Ok(EndIfStmt { source })
     }
 
     fn parse_while_start_stmt(
         pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<WhileStartStmt, ActivityParserError> {
         let mut condition = None;
         let mut label = None;
@@ -249,11 +296,13 @@ impl PumlActivityParser {
                 ActivityParserError::InvalidStatement("missing while condition".to_string())
             })?,
             label,
+            source,
         })
     }
 
     fn parse_endwhile_stmt(
         pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<EndWhileStmt, ActivityParserError> {
         let label = pair
             .into_inner()
@@ -265,17 +314,18 @@ impl PumlActivityParser {
             })
             .map(|inner| normalize_creole_text(inner.as_str().trim()));
 
-        Ok(EndWhileStmt { label })
+        Ok(EndWhileStmt { label, source })
     }
 
     fn parse_repeat_start_stmt(
-        _pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<RepeatStartStmt, ActivityParserError> {
-        Ok(RepeatStartStmt)
+        Ok(RepeatStartStmt { source })
     }
 
     fn parse_repeat_while_stmt(
         pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<RepeatWhileStmt, ActivityParserError> {
         let mut condition = None;
         let mut label = None;
@@ -300,23 +350,25 @@ impl PumlActivityParser {
                 ActivityParserError::InvalidStatement("missing repeat while condition".to_string())
             })?,
             label,
+            source,
         })
     }
 
     fn parse_fork_start_stmt(
-        _pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<ForkStartStmt, ActivityParserError> {
-        Ok(ForkStartStmt)
+        Ok(ForkStartStmt { source })
     }
 
     fn parse_fork_again_stmt(
-        _pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<ForkAgainStmt, ActivityParserError> {
-        Ok(ForkAgainStmt)
+        Ok(ForkAgainStmt { source })
     }
 
     fn parse_fork_end_stmt(
         pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<ForkEndStmt, ActivityParserError> {
         let kind = if pair.as_str().contains("merge") {
             ForkEndKind::EndMerge
@@ -341,11 +393,16 @@ impl PumlActivityParser {
             }
         }
 
-        Ok(ForkEndStmt { kind, modifier })
+        Ok(ForkEndStmt {
+            kind,
+            modifier,
+            source,
+        })
     }
 
     fn parse_swimlane_stmt(
         pair: pest::iterators::Pair<Rule>,
+        source: RawActivitySourceSpan,
     ) -> Result<SwimlaneStmt, ActivityParserError> {
         let name = pair
             .into_inner()
@@ -355,7 +412,7 @@ impl PumlActivityParser {
                 ActivityParserError::InvalidStatement("missing swimlane name".to_string())
             })?;
 
-        Ok(SwimlaneStmt { name })
+        Ok(SwimlaneStmt { name, source })
     }
 }
 
@@ -395,7 +452,8 @@ impl DiagramParser for PumlActivityParser {
                     Rule::startuml => {
                         document.name = Self::parse_startuml(inner_pair);
                     }
-                    Rule::arrow_stmt
+                    Rule::title_stmt
+                    | Rule::arrow_stmt
                     | Rule::backward_stmt
                     | Rule::action_stmt
                     | Rule::control_stmt

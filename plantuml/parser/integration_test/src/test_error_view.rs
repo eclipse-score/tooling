@@ -247,7 +247,38 @@ impl ErrorView for ElementResolverError {
 impl ErrorView for ActivityResolverError {
     fn project(&self, _base_dir: &Path) -> ProjectedError {
         match self {
-            ActivityResolverError::NotImplemented => ProjectedError::new("NotImplemented"),
+            ActivityResolverError::UnexpectedEndOfInput {
+                context,
+                line,
+                column,
+            } => {
+                ProjectedError::new("UnexpectedEndOfInput")
+                    .with_field("context", context.to_string())
+                    .with_field("line", line.to_string())
+                    .with_field("column", column.to_string())
+            }
+            ActivityResolverError::UnexpectedStatement {
+                context,
+                statement,
+                line,
+                column,
+            } => {
+                ProjectedError::new("UnexpectedStatement")
+                    .with_field("context", context.to_string())
+                    .with_field("statement", statement.to_string())
+                    .with_field("line", line.to_string())
+                    .with_field("column", column.to_string())
+            }
+            ActivityResolverError::UnsupportedStatement {
+                statement,
+                line,
+                column,
+            } => {
+                ProjectedError::new("UnsupportedStatement")
+                    .with_field("statement", statement.to_string())
+                    .with_field("line", line.to_string())
+                    .with_field("column", column.to_string())
+            }
         }
     }
 }
