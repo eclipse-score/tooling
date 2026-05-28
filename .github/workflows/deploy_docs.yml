@@ -20,12 +20,14 @@ on:
     branches: [main]
     paths:
       - 'bazel/rules/rules_score/docs/**'
+      - 'coverage/**'
       - '.github/workflows/deploy_docs.yml'
   workflow_dispatch:
 permissions:
   contents: write # needed for uploading release assets
   pages: write
   id-token: write
+  pull-requests: write # needed for posting PR comments
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -64,7 +66,14 @@ jobs:
       - name: Build Sphinx documentation
         run: bazel build //bazel/rules/rules_score:rules_score_doc
       - name: Generate combined coverage report
-        run: bazel run //coverage:combined_report -- --out-dir coverage-html
+        id: coverage
+        run: |
+          COVERAGE_OUTPUT=$(bazel run //coverage:combined_report -- --out-dir coverage-html 2>&1)
+          echo "${COVERAGE_OUTPUT}"
+          LINES=$(echo "${COVERAGE_OUTPUT}" | grep -oP 'lines\.+: \K[\d.]+%' | head -1 | tr -d '\n' || echo 'N/A')
+          FUNCTIONS=$(echo "${COVERAGE_OUTPUT}" | grep -oP 'functions\.+: \K[\d.]+%' | head -1 | tr -d '\n' || echo 'N/A')
+          echo "lines=${LINES}" >> "$GITHUB_OUTPUT"
+          echo "functions=${FUNCTIONS}" >> "$GITHUB_OUTPUT"
       - name: Prepare documentation output
         run: |
           BAZEL_BIN="$(bazel info bazel-bin)"
@@ -102,6 +111,40 @@ jobs:
           fi
           echo "Documentation built successfully"
           find docs_output -type f | wc -l | xargs -I{} echo "Total files: {}"
+      - name: Upload coverage report artifact
+        if: always()
+        id: upload-coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-html/
+      - name: Post coverage summary to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const lines = '${{ steps.coverage.outputs.lines }}';
+            const functions = '${{ steps.coverage.outputs.functions }}';
+            const runUrl = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            const body = [
+              '## Coverage Report',
+              '',
+              'Coverage report was generated.',
+              '',
+              `**Full report** can be downloaded from the [CI artifacts](${runUrl}) (expand **Artifacts** at the bottom of the run).`,
+              '',
+              '**Overall coverage rate:**',
+              '```',
+              `lines......: ${lines}`,
+              `functions......: ${functions}`,
+              '```'
+            ].join('\n');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
       - name: Upload docs to release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
