@@ -105,7 +105,7 @@ impl ComponentSerializer {
         // --------------------------
         // 4) finish
         // --------------------------
-        builder.finish(root, None);
+        builder.finish(root, Some("COMP"));
 
         builder.finished_data().to_vec()
     }
@@ -118,6 +118,7 @@ impl ComponentSerializer {
             ElementType::Boundary => fb::ComponentType::Boundary,
             ElementType::Card => fb::ComponentType::Card,
             ElementType::Cloud => fb::ComponentType::Cloud,
+            ElementType::Collections => fb::ComponentType::Collections,
             ElementType::Component => fb::ComponentType::Component,
             ElementType::Control => fb::ComponentType::Control,
             ElementType::Database => fb::ComponentType::Database,

@@ -789,6 +789,7 @@ const ELEMENT_TYPE_TABLE: &[(&str, ElementType)] = &[
     ("boundary", ElementType::Boundary),
     ("card", ElementType::Card),
     ("cloud", ElementType::Cloud),
+    ("collections", ElementType::Collections),
     ("component", ElementType::Component),
     ("control", ElementType::Control),
     ("database", ElementType::Database),

@@ -60,7 +60,7 @@ BRACKET_NAME = @{ (ASCII_ALPHANUMERIC | "_" | "-" | " " | "\\")+ }
 element_kind = { component_kind | deployment_kind }
 
 component_kind = {
-    "artifact" | "card" | "cloud" | "component" | "database" |
+    "artifact" | "card" | "cloud" | "collections" | "component" | "database" |
     "file" | "folder" | "frame" | "hexagon" | "interface" |
     "node" | "package" | "queue" | "rectangle" | "stack" | "storage"
 }

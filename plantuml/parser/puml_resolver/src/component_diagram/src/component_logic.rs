@@ -38,6 +38,7 @@ pub enum ElementType {
     Boundary,
     Card,
     Cloud,
+    Collections,
     Component,
     Control,
     Database,

@@ -39,6 +39,7 @@ enum ComponentType:byte {
   Boundary,
   Card,
   Cloud,
+  Collections,
   Component,
   Control,
   Database,
@@ -78,3 +79,5 @@ table ComponentGraph {
 }
 
 root_type ComponentGraph;
+
+file_identifier "COMP";
