@@ -23,7 +23,7 @@ const UNKNOWN_SOURCE_LINE: u32 = 0;
 pub struct ClassSerializer;
 
 impl ClassSerializer {
-    pub fn serialize(diagram: &ClassDiagram, _source_file: &str) -> Vec<u8> {
+    pub fn serialize(diagram: &ClassDiagram, source_file: &str) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
 
         let name_offset = builder.create_string(&diagram.name);
@@ -42,8 +42,11 @@ impl ClassSerializer {
             .collect();
         let relationships_offset = builder.create_vector(&relationship_offsets);
 
-        let source_offsets: Vec<_> = diagram
-            .source_files
+        // Prepend the actual source filename so the linker can correlate
+        // class diagrams with their .puml file (used by clickable_plantuml).
+        let mut sources: Vec<&str> = vec![source_file];
+        sources.extend(diagram.source_files.iter().map(|s| s.as_str()));
+        let source_offsets: Vec<_> = sources
             .iter()
             .map(|source| builder.create_string(source))
             .collect();
