@@ -29,8 +29,13 @@ _ENV_LINK_DATA = "clickable_plantuml_link_data"
 # Stores {puml_basename: (docname, anchor_id_or_None)}
 _ENV_PUML_DOCNAMES = "clickable_plantuml_puml_docnames"
 
-# Characters allowed in PlantUML alias identifiers.
-_ALIAS_SAFE_RE = re.compile(r"^[\w.]+$")
+# Simple PlantUML alias: alphanumeric + underscore only (matches ALIAS_ID grammar rule).
+_ALIAS_SIMPLE_RE = re.compile(r"^[\w]+$")
+# Extended simple alias: also allows hyphens and dots (common in FQN-style identifiers).
+_ALIAS_EXTENDED_RE = re.compile(r"^[\w][\w.\-]*$")
+# Quoted PlantUML alias: word chars, spaces, hyphens, and dots
+# (injected as "name" in url-of directives).
+_ALIAS_QUOTED_RE = re.compile(r"^[\w\s.\-]+$")
 
 
 def _find_parent_section_id(node: nodes.Node) -> str | None:
@@ -100,20 +105,45 @@ def _collect_link_data(source_dir: Path) -> dict[str, dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
+def _format_alias_part(alias: str) -> str | None:
+    """Return the PlantUML-safe representation of *alias*, or ``None`` if unsafe.
+
+    Simple identifiers (``[A-Za-z0-9_]+``) are returned as-is.
+    Extended identifiers (word chars, hyphens, dots) are returned as-is
+    (PlantUML accepts them in ``url of`` without quoting).
+    Names that contain spaces are wrapped in double-quotes.
+    Anything else is rejected to prevent injection into the ``url of`` directive.
+    """
+    if _ALIAS_SIMPLE_RE.match(alias):
+        return alias
+    if _ALIAS_EXTENDED_RE.match(alias):
+        return alias
+    stripped = alias.strip()
+    if _ALIAS_QUOTED_RE.match(alias) and stripped:
+        return f'"{stripped}"'
+    return None
+
+
 def _inject_links_into_uml(uml_content: str, links: dict[str, str]) -> str:
-    """Append ``url of <alias> is [[url]]`` directives before ``@enduml``."""
+    """Append ``url of <alias> is [[url{}{_top}]]`` directives before ``@enduml``.
+
+    The ``{_top}`` window target ensures that clickable links inside an SVG
+    embedded via ``<object>`` navigate the top-level browser frame rather than
+    the object's own browsing context.
+    """
     if not links:
         return uml_content
-    safe_links = {
-        alias: url
-        for alias, url in links.items()
-        if _ALIAS_SAFE_RE.match(alias) and "]]" not in url
-    }
-    if not safe_links:
+    url_directives_list = []
+    for alias, url in links.items():
+        if "]]" in url:
+            continue
+        alias_part = _format_alias_part(alias)
+        if alias_part is None:
+            continue
+        url_directives_list.append(f"url of {alias_part} is [[{url}{{}}{{_top}}]]")
+    if not url_directives_list:
         return uml_content
-    url_directives = "\n".join(
-        f"url of {alias} is [[{url}]]" for alias, url in safe_links.items()
-    )
+    url_directives = "\n".join(url_directives_list)
     enduml_match = re.search(r"^\s*@enduml\s*$", uml_content, re.MULTILINE)
     if enduml_match:
         prefix = uml_content[: enduml_match.start()]
