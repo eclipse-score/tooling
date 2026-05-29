@@ -62,6 +62,7 @@ rust_library(
     # Generated code from flatc - suppress all lints we can't fix
     rustc_flags = ["--cap-lints=allow"],
     visibility = [
+        "//plantuml/linker:__pkg__",
         "//plantuml/parser:__subpackages__",
         "//validation/core:__subpackages__",
     ],
@@ -91,6 +92,7 @@ rust_library(
     # Generated code from flatc - suppress all lints we can't fix
     rustc_flags = ["--cap-lints=allow"],
     visibility = [
+        "//plantuml/linker:__pkg__",
         "//plantuml/parser:__subpackages__",
         "//validation/core:__subpackages__",
     ],
