@@ -29,7 +29,7 @@
                 {
                     "target": "Root.SampleSEooC.ServerComp",
                     "annotation": "calls",
-                    "relation_type": "None"
+                    "relation_type": "Dependency"
                 }
             ]
         },

@@ -29,12 +29,12 @@
         {
           "target": "SampleSEooC.ComponentA.UnitA",
           "annotation": "uses",
-          "relation_type": "None"
+          "relation_type": "Dependency"
         },
         {
           "target": "SampleSEooC.ComponentB",
           "annotation": "uses",
-          "relation_type": "None"
+          "relation_type": "Dependency"
         }
       ]
     },

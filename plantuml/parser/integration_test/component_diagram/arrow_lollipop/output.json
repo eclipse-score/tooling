@@ -18,14 +18,10 @@
             "stereotype": "component",
             "relations": [
                 {
-                    "target": "SampleSEooC.ComponentB",
+                    "target": "SampleSEooC.IService",
                     "annotation": "provides",
-                    "relation_type": "None"
-                },
-                {
-                    "target": "SampleSEooC.ComponentB",
-                    "annotation": "requires",
-                    "relation_type": "None"
+                    "relation_type": "InterfaceBinding",
+                    "source_role": "Provided"
                 }
             ]
         },
@@ -36,6 +32,22 @@
             "parent_id": "SampleSEooC",
             "comp_type": "Component",
             "stereotype": "component",
+            "relations": [
+                {
+                    "target": "SampleSEooC.IService",
+                    "annotation": "requires",
+                    "relation_type": "InterfaceBinding",
+                    "source_role": "Required"
+                }
+            ]
+        },
+        "SampleSEooC.IService": {
+            "id": "SampleSEooC.IService",
+            "name": "IService",
+            "alias": null,
+            "parent_id": "SampleSEooC",
+            "comp_type": "Interface",
+            "stereotype": null,
             "relations": []
         }
     }

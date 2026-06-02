@@ -12,18 +12,41 @@
 // *******************************************************************************
 
 use log::error;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
-use crate::component_logic::{ElementResolverError, ElementType, LogicElement, LogicRelation};
-use component_parser::{CompPumlDocument, Element, Port, Statement};
+use crate::component_logic::{
+    ComponentRelationType, ElementResolverError, ElementType, EndpointRole, LogicElement,
+    LogicRelation,
+};
+use component_parser::{Arrow, CompPumlDocument, Element, Port, PortType, Relation, Statement};
 use resolver_traits::DiagramResolver;
+
+#[derive(Clone)]
+struct PendingRelation {
+    scope: Vec<String>,
+    relation: Relation,
+}
+
+#[derive(Clone)]
+struct ArrowAnalysis {
+    has_provided_token: bool,
+    has_required_token: bool,
+    has_direction: bool,
+    reverse_direction: bool,
+    decor_role: Option<EndpointRole>,
+}
 
 #[derive(Default)]
 pub struct ElementResolver {
     pub scope: Vec<String>,                      // element id stack
     pub elements: HashMap<String, LogicElement>, // FQN -> LogicElement
+    /// Maps parent FQN -> direct child element FQNs
+    pub child_elements_by_parent: HashMap<Option<String>, Vec<String>>,
     /// Maps port FQN → parent element FQN (for relation lifting)
     pub port_parents: HashMap<String, String>,
+    /// Maps port FQN -> parser port type (`port` / `portin` / `portout`)
+    pub port_types: HashMap<String, PortType>,
+    pending_relations: Vec<PendingRelation>,
 }
 
 impl ElementResolver {
@@ -31,8 +54,213 @@ impl ElementResolver {
         Self {
             scope: Vec::new(),
             elements: HashMap::new(),
+            child_elements_by_parent: HashMap::new(),
             port_parents: HashMap::new(),
+            port_types: HashMap::new(),
+            pending_relations: Vec::new(),
         }
+    }
+
+    fn port_type_to_role(port_type: PortType) -> EndpointRole {
+        match port_type {
+            PortType::Port => EndpointRole::None,
+            PortType::PortIn => EndpointRole::Required,
+            PortType::PortOut => EndpointRole::Provided,
+        }
+    }
+
+    /// Collect all matching port FQNs by local/simple port name within `scope`
+    /// and all descendant scopes.
+    ///
+    /// Notes:
+    /// - `port_local` is treated as a single-segment name (no dot path parsing here).
+    /// - Direct candidate `<scope>.<port_local>` is checked first.
+    /// - Descendant matches are included when their parent component is inside scope.
+    /// - Return value is deterministic and deduplicated (sorted via `BTreeSet`).
+    fn collect_matching_port_fqns_in_scope_or_children(
+        &self,
+        scope: &[String],
+        port_local: &str,
+    ) -> Vec<String> {
+        let mut matches = BTreeSet::new();
+
+        // 1. Direct candidate: scope + port_local
+        let mut candidate = scope.to_vec();
+        candidate.push(port_local.to_string());
+
+        let direct_fqn = candidate.join(".");
+        if self.port_parents.contains_key(&direct_fqn) {
+            return vec![direct_fqn];
+        }
+
+        // 2. scope prefix
+        // Search at any depth below the current scope: a port whose simple alias matches
+        // and whose parent element is a descendant of (or equal to) the current scope.
+        let scope_prefix = scope.join(".");
+        for (pfqn, parent_comp) in &self.port_parents {
+            let parts: Vec<&str> = pfqn.split('.').collect();
+            if parts.last() != Some(&port_local) {
+                continue;
+            }
+
+            if scope.is_empty()
+                || parent_comp == &scope_prefix
+                || parent_comp.starts_with(&format!("{scope_prefix}."))
+            {
+                matches.insert(pfqn.clone());
+            }
+        }
+
+        matches.into_iter().collect()
+    }
+
+    /// Collect all element FQN candidates for `parts` (single or multi segment path)
+    /// under `scope` and all descendant scopes.
+    ///
+    /// Behavior:
+    /// - Builds candidate `<scope>.<parts...>` and checks exact existence.
+    /// - Recursively descends into child elements and repeats the same lookup.
+    /// - Returns all matches (not first-hit), deduplicated and deterministically ordered.
+    fn collect_element_fqns_in_scope_or_children(
+        &self,
+        scope: &[String],
+        parts: &[&str],
+    ) -> Vec<String> {
+        let mut found = BTreeSet::new();
+
+        self.collect_element_fqns_rec(scope, parts, &mut found);
+
+        found.into_iter().collect()
+    }
+
+    fn collect_element_fqns_rec(
+        &self,
+        scope: &[String],
+        parts: &[&str],
+        found: &mut BTreeSet<String>,
+    ) {
+        // 1. direct FQN check
+        let fqn = if scope.is_empty() {
+            parts.join(".")
+        } else {
+            format!("{}.{}", scope.join("."), parts.join("."))
+        };
+
+        if self.elements.contains_key(&fqn) {
+            found.insert(fqn);
+        }
+
+        // 2. find children
+        let scope_key = if scope.is_empty() {
+            None
+        } else {
+            Some(scope.join("."))
+        };
+
+        let children: Vec<String> = self
+            .child_elements_by_parent
+            .get(&scope_key)
+            .cloned()
+            .unwrap_or_default();
+
+        for child_id in children {
+            let Some(element) = self.elements.get(&child_id) else {
+                continue;
+            };
+
+            let Some(name) = element.alias.as_deref().or_else(|| element.name.as_deref()) else {
+                continue;
+            };
+
+            let mut child_scope = scope.to_vec();
+            child_scope.push(name.to_string());
+
+            self.collect_element_fqns_rec(&child_scope, parts, found);
+        }
+    }
+
+    /// Collect possible port FQN candidates from a raw reference token.
+    /// Returns deduplicated, deterministic candidates (sorted by `BTreeSet`).
+    fn collect_port_fqn_candidates_for_raw(&self, raw: &str) -> Vec<String> {
+        let parts: Vec<&str> = raw.split('.').collect();
+        let mut candidates = std::collections::BTreeSet::new();
+
+        // 1. scope-based lookup (only for simple name)
+        if parts.len() == 1 {
+            for i in (0..=self.scope.len()).rev() {
+                let outer_scope = &self.scope[..i];
+                let matches = self.collect_matching_port_fqns_in_scope_or_children(outer_scope, raw);
+                if !matches.is_empty() {
+                    // Keep nearest-scope matches only for simple names.
+                    candidates.extend(matches);
+                    break;
+                }
+            }
+        }
+
+        // 2. relative FQN (scope + parts)
+        let mut relative = self.scope.clone();
+        relative.extend(parts.iter().map(|p| p.to_string()));
+
+        let relative_port_fqn = relative.join(".");
+        if self.port_types.contains_key(&relative_port_fqn) {
+            candidates.insert(relative_port_fqn);
+        }
+
+        // 3. direct match
+        if self.port_types.contains_key(raw) {
+            candidates.insert(raw.to_string());
+        }
+
+        candidates.into_iter().collect()
+    }
+
+    /// Resolve a port role hint for `raw` reference, but only when port candidates are
+    /// consistent with the already resolved endpoint identity (`resolved`).
+    ///
+    /// This prevents using an unrelated same-name port as role hint.
+    ///
+    /// Returns:
+    /// - `Ok(None)`: no usable/aligned port hint.
+    /// - `Ok(Some(role))`: exactly one aligned port candidate.
+    /// - `Err(AmbiguousReference)`: multiple aligned port candidates.
+    fn resolve_port_role_hint_for_ref(
+        &self,
+        raw: &str,
+        resolved: &str,
+    ) -> Result<Option<EndpointRole>, ElementResolverError> {
+        let candidates = self.collect_port_fqn_candidates_for_raw(raw);
+
+        let mut matched: Option<&String> = None;
+
+        for pfqn in &candidates {
+            let ok = pfqn == resolved
+                || self.port_parents
+                    .get(pfqn)
+                    .map(|p| p == resolved)
+                    .unwrap_or(false);
+
+            if ok {
+                if matched.is_some() {
+                    return Err(ElementResolverError::AmbiguousReference {
+                        reference: raw.to_string(),
+                        candidates,
+                    });
+                }
+                matched = Some(pfqn);
+            }
+        }
+
+        let pfqn = match matched {
+            Some(v) => v,
+            None => return Ok(None),
+        };
+
+        Ok(self
+            .port_types
+            .get(pfqn)
+            .copied()
+            .map(Self::port_type_to_role))
     }
 
     fn make_fqn(&self, local: &str) -> String {
@@ -47,110 +275,26 @@ impl ElementResolver {
     /// 1) Simple name: search upward from current scope + recurse into children
     /// 2) Relative qualified name: path starting from current scope
     /// 3) Absolute FQN: full path
-    fn resolve_ref(&self, raw: &str) -> Result<String, ElementResolverError> {
+    ///
+    /// Ambiguity handling:
+    /// - If any stage returns multiple valid candidates, return
+    ///   `ElementResolverError::AmbiguousReference` immediately.
+    pub fn resolve_ref(&self, raw: &str) -> Result<String, ElementResolverError> {
         let parts: Vec<&str> = raw.split('.').collect();
 
-        // Helper: recursively search for an element FQN within the given scope and its children
-        fn find_in_scope_or_children(
-            scope: &[String],
-            parts: &[&str],
-            elements: &HashMap<String, LogicElement>,
-        ) -> Option<String> {
-            let mut candidate = scope.to_vec();
-            candidate.extend(parts.iter().map(|s| s.to_string()));
-            let fqn = candidate.join(".");
-            if elements.contains_key(&fqn) {
-                return Some(fqn);
-            }
-
-            for element in elements.values() {
-                if let Some(parent) = &element.parent_id {
-                    if parent == &scope.join(".") {
-                        let mut child_scope = scope.to_vec();
-                        child_scope.push(
-                            element
-                                .alias
-                                .clone()
-                                .unwrap_or(element.name.clone().unwrap()),
-                        );
-                        if let Some(f) = find_in_scope_or_children(&child_scope, parts, elements) {
-                            return Some(f);
-                        }
-                    }
-                }
-            }
-
-            None
-        }
-
-        // Helper: search for a port by local name within the given scope and any of its
-        // descendants, returning the port's parent element FQN when found.
-        fn find_port_in_scope_or_children(
-            scope: &[String],
-            port_local: &str,
-            port_parents: &HashMap<String, String>,
-        ) -> Option<String> {
-            // Direct candidate: scope + port_local
-            let mut candidate = scope.to_vec();
-            candidate.push(port_local.to_string());
-            let port_fqn = candidate.join(".");
-            if let Some(parent_fqn) = port_parents.get(&port_fqn) {
-                return Some(parent_fqn.clone());
-            }
-
-            // Search at any depth below the current scope: a port whose simple alias matches
-            // and whose parent element is a descendant of (or equal to) the current scope.
-            let scope_prefix = scope.join(".");
-            for (pfqn, parent_comp) in port_parents {
-                let parts: Vec<&str> = pfqn.split('.').collect();
-                if parts.last() != Some(&port_local) {
-                    continue;
-                }
-                let is_in_scope = scope.is_empty()
-                    || parent_comp == &scope_prefix
-                    || parent_comp.starts_with(&format!("{scope_prefix}."));
-                if is_in_scope {
-                    return Some(parent_comp.clone());
-                }
-            }
-
-            None
-        }
-
-        // 1) Simple name: search upward from current scope
+        // 1. simple name
         if parts.len() == 1 {
-            for i in (0..=self.scope.len()).rev() {
-                let outer_scope = &self.scope[..i];
-                if let Some(fqn) = find_in_scope_or_children(outer_scope, &parts, &self.elements) {
-                    return Ok(fqn);
-                }
-            }
-            for element in self.elements.values() {
-                if element.alias.as_deref() == Some(parts[0])
-                    || element.name.as_deref() == Some(parts[0])
-                {
-                    return Ok(element.id.clone());
-                }
-            }
-            // Fallback: check if it's a port name and lift to the parent element.
-            // Search upward through scope levels — the innermost scope that contains a
-            // port with this alias wins (nearest-scope-first).
-            for i in (0..=self.scope.len()).rev() {
-                let outer_scope = &self.scope[..i];
-                if let Some(parent_fqn) =
-                    find_port_in_scope_or_children(outer_scope, raw, &self.port_parents)
-                {
-                    return Ok(parent_fqn);
-                }
+            if let Some(res) = self.resolve_simple_name(parts[0], raw)? {
+                return Ok(res);
             }
         }
 
-        // 2) Relative qualified name + recurse into children
-        if let Some(fqn) = find_in_scope_or_children(&self.scope, &parts, &self.elements) {
-            return Ok(fqn);
+        // 2. relative qualified name
+        if let Some(res) = self.resolve_relative(&parts)? {
+            return Ok(res);
         }
 
-        // 3) Absolute FQN
+        // 3. absolute FQN
         let fqn = parts.join(".");
         if self.elements.contains_key(&fqn) {
             return Ok(fqn);
@@ -161,6 +305,251 @@ impl ElementResolver {
             reference: raw.to_string(),
         })
     }
+
+    fn resolve_simple_name(
+        &self,
+        name: &str,
+        raw: &str,
+    ) -> Result<Option<String>, ElementResolverError> {
+        // 1) lexical element lookup
+        if let Some(res) = self.walk_scopes_nearest_first(|scope| {
+            let matches = self.collect_element_fqns_in_scope_or_children(scope, &[name]);
+            Self::pick_unique(matches, raw)
+        })? {
+            return Ok(Some(res));
+        }
+
+        // 2) lexical port lookup (collapsed to parent component)
+        if let Some(res) = self.walk_scopes_nearest_first(|scope| {
+            let ports =
+                self.collect_matching_port_fqns_in_scope_or_children(scope, name);
+
+            if ports.is_empty() {
+                return Ok(None);
+            }
+
+            let parents: Vec<String> = ports
+                .iter()
+                .filter_map(|p| self.port_parents.get(p))
+                .cloned()
+                .collect::<std::collections::BTreeSet<_>>()
+                .into_iter()
+                .collect();
+
+            Self::pick_unique(parents, raw)
+        })? {
+            return Ok(Some(res));
+        }
+
+        // 3) global alias fallback
+        let global: Vec<String> = self
+            .elements
+            .values()
+            .filter(|e| {
+                e.alias.as_deref() == Some(name)
+                    || e.name.as_deref() == Some(name)
+            })
+            .map(|e| e.id.clone())
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect();
+
+        Ok(Self::pick_unique(global, raw)?)
+    }
+
+    fn resolve_relative(
+        &self,
+        parts: &[&str],
+    ) -> Result<Option<String>, ElementResolverError> {
+        let matches =
+            self.collect_element_fqns_in_scope_or_children(&self.scope, parts);
+
+        Ok(Self::pick_unique(matches, &parts.join("."))?)
+    }
+
+    fn walk_scopes_nearest_first<F>(
+        &self,
+        mut f: F,
+    ) -> Result<Option<String>, ElementResolverError>
+    where
+        F: FnMut(&[String]) -> Result<Option<String>, ElementResolverError>,
+    {
+        for i in (0..=self.scope.len()).rev() {
+            let scope = &self.scope[..i];
+            if let Some(res) = f(scope)? {
+                return Ok(Some(res));
+            }
+        }
+        Ok(None)
+    }
+
+    fn pick_unique(
+        mut matches: Vec<String>,
+        raw: &str,
+    ) -> Result<Option<String>, ElementResolverError> {
+        if matches.is_empty() {
+            return Ok(None);
+        }
+
+        if matches.len() == 1 {
+            return Ok(Some(matches.remove(0)));
+        }
+
+        matches.sort();
+        Err(ElementResolverError::AmbiguousReference {
+            reference: raw.to_string(),
+            candidates: matches,
+        })
+    }
+}
+
+// Resolve Relationship
+impl ElementResolver {
+    fn arrow_parts(arrow: &Arrow) -> (&str, &str, &str) {
+        let left = arrow.left.as_ref().map(|d| d.raw.as_str()).unwrap_or("");
+        let right = arrow.right.as_ref().map(|d| d.raw.as_str()).unwrap_or("");
+        let middle = arrow
+            .middle
+            .as_ref()
+            .and_then(|m| m.decorator.as_deref())
+            .unwrap_or("");
+        (left, right, middle)
+    }
+
+    // Supported relation syntaxes:
+    // - Interface binding: `)-`, `-(`
+    // - Directed: `-->`, `<--`, `..>`, `<..`
+    // - Undirected: `--`, `..`
+    fn parse_arrow(relation: &Relation) -> Result<ArrowAnalysis, ElementResolverError> {
+        let (left, right, middle) = Self::arrow_parts(&relation.arrow);
+        let line = relation.arrow.line.raw.as_str();
+
+        let has_provided_token = left == ")";
+        let has_required_token = middle == "(" || right == "(";
+
+        if has_provided_token && has_required_token {
+            return Err(ElementResolverError::InvalidRelationship {
+                from: relation.lhs.clone(),
+                to: relation.rhs.clone(),
+                reason: "Mixed interface decorators are not allowed: cannot combine provided ')' with required '(' in one relation"
+                    .to_string(),
+            });
+        }
+
+        let decor_role = if line == "-" && left == ")" && middle.is_empty() && right.is_empty() {
+            Some(EndpointRole::Provided)
+        } else if line == "-"
+            && left.is_empty()
+            && ((middle == "(" && right.is_empty()) || (middle.is_empty() && right == "("))
+        {
+            Some(EndpointRole::Required)
+        } else {
+            None
+        };
+
+        let has_direction = left.contains('<') || right.contains('>');
+        let reverse_direction = left.contains('<') && !right.contains('>');
+
+        Ok(ArrowAnalysis {
+            has_provided_token,
+            has_required_token,
+            has_direction,
+            reverse_direction,
+            decor_role,
+        })
+    }
+
+    fn infer_relation_type(parsed_arrow: &ArrowAnalysis) -> ComponentRelationType {
+        if parsed_arrow.decor_role.is_some() {
+            ComponentRelationType::InterfaceBinding
+        } else if parsed_arrow.has_direction {
+            ComponentRelationType::Dependency
+        } else {
+            ComponentRelationType::Association
+        }
+    }
+
+    fn resolve_ref_with_metadata(
+        &self,
+        raw: &str,
+    ) -> Result<(String, Option<EndpointRole>, Option<ElementType>), ElementResolverError> {
+        let resolved = self.resolve_ref(raw)?;
+        let port_role_hint = self.resolve_port_role_hint_for_ref(raw, &resolved)?;
+
+        let element_type = self.elements.get(&resolved).map(|e| e.element_type);
+
+        Ok((resolved, port_role_hint, element_type))
+    }
+
+    fn resolve_one_relation(&mut self, relation: &Relation) -> Result<(), ElementResolverError> {
+        let (mut src_fqn, mut src_port_role, mut src_type) =
+            self.resolve_ref_with_metadata(&relation.lhs)?;
+
+        let (mut tgt_fqn, mut tgt_port_role, mut tgt_type) =
+            self.resolve_ref_with_metadata(&relation.rhs)?;
+
+        let parsed_arrow = Self::parse_arrow(relation)?;
+        if parsed_arrow.reverse_direction {
+            std::mem::swap(&mut src_fqn, &mut tgt_fqn);
+            std::mem::swap(&mut src_port_role, &mut tgt_port_role);
+            std::mem::swap(&mut src_type, &mut tgt_type);
+        }
+
+        let relation_type = Self::infer_relation_type(&parsed_arrow);
+        let src_role = src_port_role.clone();
+        let tgt_role = tgt_port_role.clone();
+
+        let source_role = if relation_type == ComponentRelationType::InterfaceBinding {
+            parsed_arrow
+                .decor_role
+                .clone()
+                .or(src_role)
+                .or(tgt_role)
+                .unwrap_or(EndpointRole::None)
+        } else {
+            EndpointRole::None
+        };
+
+        let (owner_fqn, target_fqn) = (src_fqn.clone(), tgt_fqn.clone());
+
+        let source_element = self.elements.get_mut(&owner_fqn).ok_or_else(|| {
+            ElementResolverError::UnresolvedReference {
+                reference: owner_fqn.clone(),
+            }
+        })?;
+
+        let duplicate = source_element.relations.iter().any(|existing| {
+            existing.target == target_fqn
+                && existing.relation_type == relation_type
+                && existing.source_role == source_role
+        });
+
+        if duplicate {
+            return Ok(());
+        }
+
+        source_element.relations.push(LogicRelation {
+            target: target_fqn,
+            annotation: relation.description.clone(),
+            relation_type,
+            source_role,
+        });
+
+        Ok(())
+    }
+
+    fn resolve_pending_relations(&mut self) -> Result<(), ElementResolverError> {
+        let pending_relations = std::mem::take(&mut self.pending_relations);
+
+        for relation in pending_relations {
+            let saved_scope = std::mem::replace(&mut self.scope, relation.scope);
+            let res = self.resolve_one_relation(&relation.relation);
+            self.scope = saved_scope;
+            res?;
+        }
+
+        Ok(())
+    }
 }
 
 impl DiagramResolver for ElementResolver {
@@ -170,13 +559,17 @@ impl DiagramResolver for ElementResolver {
 
     fn resolve(&mut self, document: &CompPumlDocument) -> Result<Self::Output, Self::Error> {
         self.scope.clear();
+        self.elements.clear();
+        self.child_elements_by_parent.clear();
+        self.port_parents.clear();
+        self.port_types.clear();
+        self.pending_relations.clear();
 
         for stmt in &document.statements {
             self.visit_statement(stmt)?;
         }
 
-        // Post-pass: lift port references to their parent element
-        self.lift_port_relations();
+        self.resolve_pending_relations()?;
 
         Ok(self.elements.clone())
     }
@@ -194,19 +587,11 @@ impl ElementResolver {
                 Ok(())
             }
             Statement::Relation(relation) => {
-                let src_fqn = self.resolve_ref(&relation.lhs)?;
-                let tgt_fqn = self.resolve_ref(&relation.rhs)?;
-
-                if let Some(source_element) = self.elements.get_mut(&src_fqn) {
-                    source_element.relations.push(LogicRelation {
-                        target: tgt_fqn,
-                        annotation: relation.description.clone(),
-                        relation_type: "None".to_string(), // Placeholder, can be enhanced to capture relation type from arrow
-                    });
-                    Ok(())
-                } else {
-                    Err(ElementResolverError::UnresolvedReference { reference: src_fqn })
-                }
+                self.pending_relations.push(PendingRelation {
+                    scope: self.scope.clone(),
+                    relation: relation.clone(),
+                });
+                Ok(())
             }
         }
     }
@@ -222,21 +607,8 @@ impl ElementResolver {
             // Use `interface` to declare a top-level interface as a first-class entity.
         } else {
             // Nested port: record port_fqn -> parent_fqn for relation lifting.
+            self.port_types.insert(fqn.clone(), port.port_type);
             self.port_parents.insert(fqn, self.scope.join("."));
-        }
-    }
-
-    /// After all statements are visited, replace any relation endpoint that is a
-    /// port FQN with the port's parent element FQN.
-    fn lift_port_relations(&mut self) {
-        let port_parents = self.port_parents.clone();
-
-        for element in self.elements.values_mut() {
-            for rel in element.relations.iter_mut() {
-                if let Some(parent) = port_parents.get(&rel.target) {
-                    rel.target = parent.clone();
-                }
-            }
         }
     }
 
@@ -262,13 +634,18 @@ impl ElementResolver {
             id: fqn.clone(),
             name: element.name.clone(),
             alias: element.alias.clone(),
-            parent_id,
+            parent_id: parent_id.clone(),
             element_type: parse_kind(&element.kind)?,
             stereotype: element.stereotype.clone(),
             relations: Vec::new(),
         };
 
         self.elements.insert(fqn.clone(), logic);
+
+        self.child_elements_by_parent
+            .entry(parent_id.clone())
+            .or_default()
+            .push(fqn.clone());
 
         self.scope.push(local_id.to_string());
 

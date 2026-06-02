@@ -29,7 +29,7 @@
         {
           "target": "SampleSEooC.ComponentB.UnitB",
           "annotation": "uses",
-          "relation_type": "None"
+          "relation_type": "Dependency"
         }
       ]
     },

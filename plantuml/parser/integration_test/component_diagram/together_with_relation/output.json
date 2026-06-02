@@ -20,7 +20,7 @@
                 {
                     "target": "SampleSEooC.ComponentB",
                     "annotation": "depends",
-                    "relation_type": "None"
+                    "relation_type": "Dependency"
                 }
             ]
         },

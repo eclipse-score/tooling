@@ -226,6 +226,21 @@ impl ErrorView for ElementResolverError {
                 ProjectedError::new("UnknownComponentType")
                     .with_field("component_type", element_type.clone())
             }
+
+            ElementResolverError::InvalidRelationship { from, to, reason } => {
+                ProjectedError::new("InvalidRelationship")
+                    .with_field("from", from.clone())
+                    .with_field("to", to.clone())
+                    .with_field("reason", reason.clone())
+            }
+
+            ElementResolverError::AmbiguousReference {
+                reference,
+                candidates,
+            } => ProjectedError::new("AmbiguousReference")
+                .with_field("reference", reference.clone())
+                .with_field("candidates", candidates.join(", ")),
+
         }
     }
 }
