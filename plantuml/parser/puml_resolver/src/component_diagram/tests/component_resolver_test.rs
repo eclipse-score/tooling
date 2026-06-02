@@ -124,6 +124,31 @@ fn test_invalid_duplicate_component() {
 }
 
 #[test]
+fn test_invalid_interface_decor_between_components() {
+    run_component_resolver_case("invalid_interface_decor_between_components");
+}
+
+#[test]
+fn test_invalid_interface_decor_between_interfaces() {
+    run_component_resolver_case("invalid_interface_decor_between_interfaces");
+}
+
+#[test]
+fn test_invalid_interface_left_decorator() {
+    run_component_resolver_case("invalid_interface_left_decorator");
+}
+
+#[test]
+fn test_invalid_interface_binding_non_component() {
+    run_component_resolver_case("invalid_interface_binding_non_component");
+}
+
+#[test]
+fn test_invalid_source_endpoint_role_mismatch() {
+    run_component_resolver_case("invalid_source_endpoint_role_mismatch");
+}
+
+#[test]
 fn test_invalid_mixed_interface_decor() {
     run_component_resolver_case("invalid_mixed_interface_decor");
 }
