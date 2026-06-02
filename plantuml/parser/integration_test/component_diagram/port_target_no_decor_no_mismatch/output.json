@@ -1,0 +1,29 @@
+{
+  "port_target_no_decor_no_mismatch.puml": {
+    "Client": {
+      "id": "Client",
+      "name": "Client",
+      "alias": "Client",
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": [
+        {
+          "target": "Server",
+          "annotation": "calls",
+          "relation_type": "Dependency",
+          "source_role": "None"
+        }
+      ]
+    },
+    "Server": {
+      "id": "Server",
+      "name": "Server",
+      "alias": "Server",
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": []
+    }
+  }
+}

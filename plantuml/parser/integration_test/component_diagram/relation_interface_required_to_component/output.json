@@ -1,0 +1,38 @@
+{
+  "relation_interface_required_to_component.puml": {
+    "Pkg": {
+      "id": "Pkg",
+      "name": "Pkg",
+      "alias": "Pkg",
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": []
+    },
+    "Pkg.IReq": {
+      "id": "Pkg.IReq",
+      "name": "IReq",
+      "alias": "IReq",
+      "parent_id": "Pkg",
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": []
+    },
+    "Pkg.A": {
+      "id": "Pkg.A",
+      "name": "A",
+      "alias": "A",
+      "parent_id": "Pkg",
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": [
+        {
+          "target": "Pkg.IReq",
+          "annotation": "requires",
+          "relation_type": "InterfaceBinding",
+          "source_role": "Required"
+        }
+      ]
+    }
+  }
+}

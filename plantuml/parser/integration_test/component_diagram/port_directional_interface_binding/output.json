@@ -1,0 +1,53 @@
+{
+  "port_directional_interface_binding.puml": {
+    "Pkg": {
+      "id": "Pkg",
+      "name": "Pkg",
+      "alias": "Pkg",
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": []
+    },
+    "Pkg.Client": {
+      "id": "Pkg.Client",
+      "name": "Client",
+      "alias": "Client",
+      "parent_id": "Pkg",
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": [
+        {
+          "target": "Pkg.IProvided",
+          "annotation": "provides",
+          "relation_type": "InterfaceBinding",
+          "source_role": "Provided"
+        },
+        {
+          "target": "Pkg.IRequired",
+          "annotation": "requires",
+          "relation_type": "InterfaceBinding",
+          "source_role": "Required"
+        }
+      ]
+    },
+    "Pkg.IProvided": {
+      "id": "Pkg.IProvided",
+      "name": "IProvided",
+      "alias": "IProvided",
+      "parent_id": "Pkg",
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": []
+    },
+    "Pkg.IRequired": {
+      "id": "Pkg.IRequired",
+      "name": "IRequired",
+      "alias": "IRequired",
+      "parent_id": "Pkg",
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": []
+    }
+  }
+}

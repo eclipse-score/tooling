@@ -1,0 +1,37 @@
+{
+    "relation_invalid_arrow_parsed_as_association.puml": {
+        "Pkg.ComponentA": {
+            "id": "Pkg.ComponentA",
+            "name": "Component A",
+            "alias": "ComponentA",
+            "parent_id": "Pkg",
+            "comp_type": "Component",
+            "stereotype": "component",
+            "relations": [
+                {
+                    "target": "Pkg.IService",
+                    "annotation": "association",
+                    "relation_type": "Association"
+                }
+            ]
+        },
+        "Pkg.IService": {
+            "id": "Pkg.IService",
+            "name": "IService",
+            "alias": "IService",
+            "parent_id": "Pkg",
+            "comp_type": "Interface",
+            "stereotype": null,
+            "relations": []
+        },
+        "Pkg": {
+            "id": "Pkg",
+            "name": "Pkg",
+            "alias": "Pkg",
+            "parent_id": null,
+            "comp_type": "Package",
+            "stereotype": null,
+            "relations": []
+        }
+    }
+}
