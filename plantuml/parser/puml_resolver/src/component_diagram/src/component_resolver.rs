@@ -36,8 +36,8 @@ struct ArrowAnalysis {
     decor_role: Option<EndpointRole>,
 }
 
-struct RelationValidationInput {
-    relation: Relation,
+struct RelationValidationInput<'a> {
+    relation: &'a Relation,
     has_interface_tokens: bool,
     src_is_interface: bool,
     tgt_is_interface: bool,
@@ -46,7 +46,7 @@ struct RelationValidationInput {
     src_port_role: Option<EndpointRole>,
 }
 
-type RelationValidationRule = fn(&RelationValidationInput) -> Option<ElementResolverError>;
+type RelationValidationRule = fn(&RelationValidationInput<'_>) -> Option<ElementResolverError>;
 
 #[derive(Default)]
 pub struct ElementResolver {
@@ -110,8 +110,11 @@ impl ElementResolver {
         // and whose parent element is a descendant of (or equal to) the current scope.
         let scope_prefix = scope.join(".");
         for (pfqn, parent_comp) in &self.port_parents {
-            let parts: Vec<&str> = pfqn.split('.').collect();
-            if parts.last() != Some(&port_local) {
+            let pfqn_last = match pfqn.rfind('.') {
+                Some(i) => &pfqn[i + 1..],
+                None => pfqn,
+            };
+            if pfqn_last != port_local {
                 continue;
             }
 
@@ -169,18 +172,22 @@ impl ElementResolver {
             Some(scope.join("."))
         };
 
-        let children: Vec<String> = self
+        let children: &[String] = self
             .child_elements_by_parent
             .get(&scope_key)
-            .cloned()
-            .unwrap_or_default();
+            .map(Vec::as_slice)
+            .unwrap_or(&[]);
 
         for child_id in children {
-            let Some(element) = self.elements.get(&child_id) else {
+            let Some(element) = self.elements.get(child_id) else {
                 continue;
             };
 
-            let Some(name) = element.alias.as_deref().or_else(|| element.name.as_deref()) else {
+            let Some(name) = element
+                .alias
+                .as_deref()
+                .or_else(|| element.name.as_deref())
+            else {
                 continue;
             };
 
@@ -253,6 +260,8 @@ impl ElementResolver {
                     .unwrap_or(false);
 
             if ok {
+                // Invariant: after aligning candidates to resolved endpoint identity, there should be at most one match.
+                // If multiple matches remain, this indicates inconsistent resolver state or unexpected duplicate-alignment; fail fast with AmbiguousReference instead of silently picking one.
                 if matched.is_some() {
                     return Err(ElementResolverError::AmbiguousReference {
                         reference: raw.to_string(),
@@ -504,7 +513,7 @@ impl ElementResolver {
         src_port_role: Option<EndpointRole>,
     ) -> Result<(), ElementResolverError> {
         let input = RelationValidationInput {
-            relation: relation.clone(),
+            relation,
             has_interface_tokens,
             src_is_interface,
             tgt_is_interface,
@@ -531,7 +540,7 @@ impl ElementResolver {
     }
 
     fn rule_require_exactly_one_interface_endpoint(
-        input: &RelationValidationInput,
+        input: &RelationValidationInput<'_>
     ) -> Option<ElementResolverError> {
         if input.has_interface_tokens
             && !input.src_is_interface
@@ -549,7 +558,7 @@ impl ElementResolver {
     }
 
     fn rule_disallow_interface_to_interface(
-        input: &RelationValidationInput,
+        input: &RelationValidationInput<'_>
     ) -> Option<ElementResolverError> {
         if input.has_interface_tokens
             && input.src_is_interface
@@ -567,7 +576,7 @@ impl ElementResolver {
     }
 
     fn rule_require_component_endpoint_for_binding(
-        input: &RelationValidationInput,
+        input: &RelationValidationInput<'_>
     ) -> Option<ElementResolverError> {
         if input.has_interface_tokens && input.decor_role.is_some() {
             if !input.src_is_component || !input.tgt_is_interface {
@@ -582,7 +591,7 @@ impl ElementResolver {
     }
 
     fn rule_disallow_generic_decor_with_direction(
-        input: &RelationValidationInput,
+        input: &RelationValidationInput<'_>
     ) -> Option<ElementResolverError> {
         if input.has_interface_tokens
             && input.decor_role.is_none()
@@ -598,9 +607,11 @@ impl ElementResolver {
         None
     }
 
-    fn rule_port_role_consistency(input: &RelationValidationInput) -> Option<ElementResolverError> {
+    fn rule_port_role_consistency(
+        input: &RelationValidationInput<'_>
+    ) -> Option<ElementResolverError> {
         if let (Some(port_role), Some(decor_role)) =
-            (input.src_port_role.clone(), input.decor_role.clone())
+            (input.src_port_role, input.decor_role)
         {
             if port_role != decor_role {
                 return Some(ElementResolverError::InvalidRelationship {
@@ -641,35 +652,30 @@ impl ElementResolver {
             src_is_interface,
             tgt_is_interface,
             src_is_component,
-            parsed_arrow.decor_role.clone(),
-            src_port_role.clone(),
+            parsed_arrow.decor_role,
+            src_port_role,
         )?;
 
         let relation_type = Self::infer_relation_type(&parsed_arrow);
-        let src_role = src_port_role.clone();
-        let tgt_role = tgt_port_role.clone();
 
         let source_role = if relation_type == ComponentRelationType::InterfaceBinding {
+            // Guard-only invariant check: InterfaceBinding should always carry a decorator role.
+            // If this panics, resolver invariants have been broken by upstream logic changes.
             parsed_arrow
                 .decor_role
-                .clone()
-                .or(src_role)
-                .or(tgt_role)
-                .unwrap_or(EndpointRole::None)
+                .expect("Invariant: InterfaceBinding requires decorator role")
         } else {
             EndpointRole::None
         };
 
-        let (owner_fqn, target_fqn) = (src_fqn.clone(), tgt_fqn.clone());
-
-        let source_element = self.elements.get_mut(&owner_fqn).ok_or_else(|| {
+        let source_element = self.elements.get_mut(&src_fqn).ok_or_else(|| {
             ElementResolverError::UnresolvedReference {
-                reference: owner_fqn.clone(),
+                reference: src_fqn.clone(),
             }
         })?;
 
         let duplicate = source_element.relations.iter().any(|existing| {
-            existing.target == target_fqn
+            existing.target == tgt_fqn
                 && existing.relation_type == relation_type
                 && existing.source_role == source_role
         });
@@ -679,7 +685,7 @@ impl ElementResolver {
         }
 
         source_element.relations.push(LogicRelation {
-            target: target_fqn,
+            target: tgt_fqn,
             annotation: relation.description.clone(),
             relation_type,
             source_role,

@@ -67,7 +67,7 @@ pub struct LogicRelation {
     pub source_role: EndpointRole,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
 pub enum ComponentRelationType {
     #[default]
     #[serde(alias = "None")]
@@ -79,7 +79,7 @@ pub enum ComponentRelationType {
     InterfaceBinding,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
 pub enum EndpointRole {
     #[default]
     None,
