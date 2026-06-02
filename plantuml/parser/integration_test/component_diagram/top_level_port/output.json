@@ -20,7 +20,7 @@
                 {
                     "target": "ExternalAPI",
                     "annotation": "sends",
-                    "relation_type": "None"
+                    "relation_type": "Dependency"
                 }
             ]
         }

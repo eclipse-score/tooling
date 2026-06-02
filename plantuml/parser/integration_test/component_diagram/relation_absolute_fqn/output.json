@@ -38,7 +38,7 @@
         {
           "target": "PkgA.ComponentA",
           "annotation": "uses",
-          "relation_type": "None"
+          "relation_type": "Dependency"
         }
       ]
     }

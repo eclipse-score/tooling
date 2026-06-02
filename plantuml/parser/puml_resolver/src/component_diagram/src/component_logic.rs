@@ -60,7 +60,31 @@ pub enum ElementType {
 pub struct LogicRelation {
     pub target: String, // FQN
     pub annotation: Option<String>,
-    pub relation_type: String,
+    #[serde(default)]
+    pub relation_type: ComponentRelationType,
+    /// Role of source component w.r.t. target interface.
+    #[serde(default)]
+    pub source_role: EndpointRole,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub enum ComponentRelationType {
+    #[default]
+    #[serde(alias = "None")]
+    /// Association or Connected, `--` or `..`
+    Association,
+    /// Dependency (uses/calls) `..>`, `-->`
+    Dependency,
+    /// Interface, `port --() Interface`, `-(`, `)-`
+    InterfaceBinding,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub enum EndpointRole {
+    #[default]
+    None,
+    Provided,
+    Required,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -68,11 +92,24 @@ pub enum ElementResolverError {
     #[error("Element Resolver: UnresolvedReference: {reference}")]
     UnresolvedReference { reference: String },
 
+    #[error("Element Resolver: AmbiguousReference: {reference} -> {candidates:?}")]
+    AmbiguousReference {
+        reference: String,
+        candidates: Vec<String>,
+    },
+
     #[error("Duplicate element id: {element_id}")]
     DuplicateElement { element_id: String },
 
     #[error("Unknown element type: {element_type}")]
     UnknownElementType { element_type: String },
+
+    #[error("Invalid relationship: {from} -> {to}: {reason}")]
+    InvalidRelationship {
+        from: String,
+        to: String,
+        reason: String,
+    },
 }
 
 pub type LogicComponent = LogicElement;

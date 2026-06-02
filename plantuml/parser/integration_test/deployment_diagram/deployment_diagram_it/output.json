@@ -20,7 +20,7 @@
         {
           "target": "aaa.ECU2.DisplayService",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Dependency"
         }
       ]
     },
@@ -44,7 +44,7 @@
         {
           "target": "aaa.ECU1.SpeedService",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Dependency"
         }
       ]
     },
@@ -59,7 +59,7 @@
         {
           "target": "aaa.ECU1.VehicleSpeed",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Dependency"
         }
       ]
     },
@@ -92,7 +92,7 @@
         {
           "target": "aaa.ECU1.someip",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Dependency"
         }
       ]
     }

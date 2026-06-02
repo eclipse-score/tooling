@@ -77,7 +77,7 @@
         {
           "target": "bundle_b",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Dependency"
         },
         {
           "target": "bundle_c",
@@ -102,7 +102,7 @@
         {
           "target": "bundle_g",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Dependency"
         },
         {
           "target": "bundle_h",
@@ -117,7 +117,9 @@
         {
           "target": "bundle_j",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Association",
+          "source_endpoint": "Component",
+          "target_endpoint": "Component"
         }
       ]
     },

@@ -20,7 +20,7 @@
         {
           "target": "PkgB.AliasB",
           "annotation": "uses",
-          "relation_type": "None"
+          "relation_type": "Dependency"
         }
       ]
     },

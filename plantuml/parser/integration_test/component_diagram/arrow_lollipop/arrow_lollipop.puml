@@ -17,8 +17,11 @@ package "SampleSEooC" as SampleSEooC {
     }
     component "ComponentB" as ComponentB <<component>> {
     }
-    ComponentA -( ComponentB : provides
-    ComponentA )- ComponentB : requires
+
+    interface IService
+
+    ComponentA )- IService : provides
+    ComponentB -( IService : requires
 }
 
 @enduml
