@@ -36,6 +36,18 @@ struct ArrowAnalysis {
     decor_role: Option<EndpointRole>,
 }
 
+struct RelationValidationInput {
+    relation: Relation,
+    has_interface_tokens: bool,
+    src_is_interface: bool,
+    tgt_is_interface: bool,
+    src_is_component: bool,
+    decor_role: Option<EndpointRole>,
+    src_port_role: Option<EndpointRole>,
+}
+
+type RelationValidationRule = fn(&RelationValidationInput) -> Option<ElementResolverError>;
+
 #[derive(Default)]
 pub struct ElementResolver {
     pub scope: Vec<String>,                      // element id stack
@@ -481,6 +493,130 @@ impl ElementResolver {
         Ok((resolved, port_role_hint, element_type))
     }
 
+    fn validate_relation_constraints(
+        &self,
+        relation: &Relation,
+        has_interface_tokens: bool,
+        src_is_interface: bool,
+        tgt_is_interface: bool,
+        src_is_component: bool,
+        decor_role: Option<EndpointRole>,
+        src_port_role: Option<EndpointRole>,
+    ) -> Result<(), ElementResolverError> {
+        let input = RelationValidationInput {
+            relation: relation.clone(),
+            has_interface_tokens,
+            src_is_interface,
+            tgt_is_interface,
+            src_is_component,
+            decor_role,
+            src_port_role,
+        };
+
+        let rules: [RelationValidationRule; 5] = [
+            Self::rule_require_exactly_one_interface_endpoint,
+            Self::rule_disallow_interface_to_interface,
+            Self::rule_require_component_endpoint_for_binding,
+            Self::rule_disallow_generic_decor_with_direction,
+            Self::rule_port_role_consistency,
+        ];
+
+        for rule in rules {
+            if let Some(err) = rule(&input) {
+                return Err(err);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn rule_require_exactly_one_interface_endpoint(
+        input: &RelationValidationInput,
+    ) -> Option<ElementResolverError> {
+        if input.has_interface_tokens
+            && !input.src_is_interface
+            && !input.tgt_is_interface
+        {
+            return Some(ElementResolverError::InvalidRelationship {
+                from: input.relation.lhs.clone(),
+                to: input.relation.rhs.clone(),
+                reason:
+                    "Interface decorators '-(' and ')-' require exactly one Interface endpoint"
+                        .to_string(),
+            });
+        }
+        None
+    }
+
+    fn rule_disallow_interface_to_interface(
+        input: &RelationValidationInput,
+    ) -> Option<ElementResolverError> {
+        if input.has_interface_tokens
+            && input.src_is_interface
+            && input.tgt_is_interface
+        {
+            return Some(ElementResolverError::InvalidRelationship {
+                from: input.relation.lhs.clone(),
+                to: input.relation.rhs.clone(),
+                reason:
+                    "Interface decorators '-(' and ')-' are not allowed between two interfaces"
+                        .to_string(),
+            });
+        }
+        None
+    }
+
+    fn rule_require_component_endpoint_for_binding(
+        input: &RelationValidationInput,
+    ) -> Option<ElementResolverError> {
+        if input.has_interface_tokens && input.decor_role.is_some() {
+            if !input.src_is_component || !input.tgt_is_interface {
+                return Some(ElementResolverError::InvalidRelationship {
+                    from: input.relation.lhs.clone(),
+                    to: input.relation.rhs.clone(),
+                    reason: "Decorator binding only allows Component on the left and Interface on the right".to_string(),
+                });
+            }
+        }
+        None
+    }
+
+    fn rule_disallow_generic_decor_with_direction(
+        input: &RelationValidationInput,
+    ) -> Option<ElementResolverError> {
+        if input.has_interface_tokens
+            && input.decor_role.is_none()
+            && (input.src_is_interface || input.tgt_is_interface)
+        {
+            return Some(ElementResolverError::InvalidRelationship {
+                from: input.relation.lhs.clone(),
+                to: input.relation.rhs.clone(),
+                reason: "Unsupported interface decorator syntax: only ')-' (Provided) and '-(' (Required) are supported"
+                    .to_string(),
+            });
+        }
+        None
+    }
+
+    fn rule_port_role_consistency(input: &RelationValidationInput) -> Option<ElementResolverError> {
+        if let (Some(port_role), Some(decor_role)) =
+            (input.src_port_role.clone(), input.decor_role.clone())
+        {
+            if port_role != decor_role {
+                return Some(ElementResolverError::InvalidRelationship {
+                    from: input.relation.lhs.clone(),
+                    to: input.relation.rhs.clone(),
+                    reason: format!(
+                        "Source endpoint role mismatch: port role {:?} conflicts with decorator role {:?}",
+                        port_role, decor_role
+                    ),
+                });
+            }
+        }
+
+        None
+    }
+
     fn resolve_one_relation(&mut self, relation: &Relation) -> Result<(), ElementResolverError> {
         let (mut src_fqn, mut src_port_role, mut src_type) =
             self.resolve_ref_with_metadata(&relation.lhs)?;
@@ -494,6 +630,20 @@ impl ElementResolver {
             std::mem::swap(&mut src_port_role, &mut tgt_port_role);
             std::mem::swap(&mut src_type, &mut tgt_type);
         }
+
+        let src_is_interface = matches!(src_type, Some(ElementType::Interface));
+        let tgt_is_interface = matches!(tgt_type, Some(ElementType::Interface));
+        let src_is_component = matches!(src_type, Some(ElementType::Component));
+
+        self.validate_relation_constraints(
+            relation,
+            parsed_arrow.has_provided_token || parsed_arrow.has_required_token,
+            src_is_interface,
+            tgt_is_interface,
+            src_is_component,
+            parsed_arrow.decor_role.clone(),
+            src_port_role.clone(),
+        )?;
 
         let relation_type = Self::infer_relation_type(&parsed_arrow);
         let src_role = src_port_role.clone();
