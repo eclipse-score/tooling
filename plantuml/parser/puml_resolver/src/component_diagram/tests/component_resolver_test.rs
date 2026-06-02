@@ -74,6 +74,11 @@ fn test_relation_simple_name() {
 }
 
 #[test]
+fn test_relation_reverse_simple_name() {
+    run_component_resolver_case("relation_reverse_simple_name");
+}
+
+#[test]
 fn test_relation_fqn() {
     run_component_resolver_case("relation_fqn");
 }
@@ -89,6 +94,11 @@ fn test_relation_simple_name_alias() {
 }
 
 #[test]
+fn test_relation_invalid_arrow_parsed_as_association() {
+    run_component_resolver_case("relation_invalid_arrow_parsed_as_association");
+}
+
+#[test]
 fn test_relation_absolute_fqn() {
     run_component_resolver_case("relation_absolute_fqn");
 }
@@ -99,8 +109,23 @@ fn test_invalid_unresolved_reference() {
 }
 
 #[test]
+fn test_invalid_ambiguous_reference() {
+    run_component_resolver_case("invalid_ambiguous_reference");
+}
+
+#[test]
+fn test_invalid_ambiguous_reference_element_alias() {
+    run_component_resolver_case("invalid_ambiguous_reference_element_alias");
+}
+
+#[test]
 fn test_invalid_duplicate_component() {
     run_component_resolver_case("invalid_duplicate_component");
+}
+
+#[test]
+fn test_invalid_mixed_interface_decor() {
+    run_component_resolver_case("invalid_mixed_interface_decor");
 }
 
 #[test]
@@ -129,6 +154,21 @@ fn test_arrow_lollipop() {
 }
 
 #[test]
+fn test_relation_interface_required_to_component() {
+    run_component_resolver_case("relation_interface_required_to_component");
+}
+
+#[test]
+fn test_relation_interface_provided_to_component() {
+    run_component_resolver_case("relation_interface_provided_to_component");
+}
+
+#[test]
+fn test_port_directional_interface_binding() {
+    run_component_resolver_case("port_directional_interface_binding");
+}
+
+#[test]
 fn test_port_alias() {
     run_component_resolver_case("port_alias");
 }
@@ -151,6 +191,11 @@ fn test_top_level_port() {
 #[test]
 fn test_port_deep_nesting() {
     run_component_resolver_case("port_deep_nesting");
+}
+
+#[test]
+fn test_port_target_no_decor_no_mismatch() {
+    run_component_resolver_case("port_target_no_decor_no_mismatch");
 }
 
 #[test]
