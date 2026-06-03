@@ -76,8 +76,7 @@
             "name": "WorkerStatus",
             "data_type": null,
             "visibility": "public",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           }
         ],
         "relationships": [

@@ -1,0 +1,117 @@
+{
+  "class_diagram_enum_value_sequence.puml": {
+    "name": "class_diagram_enum_value_sequence",
+    "entities": [
+      {
+        "id": "util.LogLevel",
+        "name": "LogLevel",
+        "enclosing_namespace_id": "util",
+        "entity_type": "Enum",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [
+          {
+            "name": "De",
+            "value": 5
+          },
+          {
+            "name": "Info",
+            "value": 6
+          },
+          {
+            "name": "Warn",
+            "value": 7
+          },
+          {
+            "name": "Err",
+            "value": 8
+          },
+          {
+            "name": "Fatal",
+            "value": 10
+          },
+          {
+            "name": "Trace",
+            "value": 11
+          }
+        ],
+        "source_file": "class_diagram_enum_value_sequence",
+        "source_line": 17,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "system.SystemState",
+        "name": "SystemState",
+        "enclosing_namespace_id": "system",
+        "entity_type": "Enum",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [
+          {
+            "name": "Init",
+            "value": 0
+          },
+          {
+            "name": "Running",
+            "value": 1
+          },
+          {
+            "name": "Stopped",
+            "value": 10
+          },
+          {
+            "name": "Failed",
+            "value": 11
+          }
+        ],
+        "source_file": "class_diagram_enum_value_sequence",
+        "source_line": 29,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "platform.PowerMode",
+        "name": "PowerMode",
+        "enclosing_namespace_id": "platform",
+        "entity_type": "Enum",
+        "type_aliases": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [
+          {
+            "name": "Unknown",
+            "value": -5
+          },
+          {
+            "name": "Off",
+            "value": -4
+          },
+          {
+            "name": "Standby",
+            "value": 0
+          },
+          {
+            "name": "Active",
+            "value": 1
+          },
+          {
+            "name": "Sleep",
+            "value": 2
+          }
+        ],
+        "source_file": "class_diagram_enum_value_sequence",
+        "source_line": 39,
+        "variables": [],
+        "relationships": []
+      }
+    ],
+    "relationships": [],
+    "source_files": [
+      "class_diagram_enum_value_sequence"
+    ],
+    "version": null
+  }
+}

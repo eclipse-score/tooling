@@ -180,7 +180,6 @@ impl ClassSerializer {
                 data_type: data_type_offset,
                 visibility: Self::map_visibility(variable.visibility),
                 is_static: variable.is_static,
-                is_const: variable.is_const,
             },
         )
     }
@@ -255,10 +254,10 @@ impl ClassSerializer {
         literal: &EnumLiteral,
     ) -> flatbuffers::WIPOffset<fb::EnumLiteral<'a>> {
         let name_offset = builder.create_string(&literal.name);
-        let value_offset = literal
-            .value
-            .as_ref()
-            .map(|value| builder.create_string(value));
+        let value_offset = literal.value.map(|value| {
+            let value = value.to_string();
+            builder.create_string(&value)
+        });
 
         fb::EnumLiteral::create(
             builder,

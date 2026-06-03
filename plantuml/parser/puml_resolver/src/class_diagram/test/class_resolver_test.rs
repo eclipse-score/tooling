@@ -101,3 +101,8 @@ fn test_relationship_variants() {
 fn test_syntax_coverage() {
     run_class_resolver_case("class_diagram_syntax_coverage");
 }
+
+#[test]
+fn test_enum_value_sequence() {
+    run_class_resolver_case("class_diagram_enum_value_sequence");
+}

@@ -62,7 +62,6 @@ table MemberVariable {
     data_type: string;
     visibility: Visibility = Public;
     is_static: bool = false;
-    is_const: bool = false;
 }
 
 table Method {
