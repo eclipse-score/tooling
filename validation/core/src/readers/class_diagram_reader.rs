@@ -65,7 +65,6 @@ fn read_variables(
                             &format!("{path}:entity:{}:variable:{}", entity.id(), value.name()),
                         )?,
                         is_static: value.is_static(),
-                        is_const: value.is_const(),
                     })
                 })
                 .collect::<Result<Vec<_>, String>>()
@@ -144,7 +143,7 @@ fn read_enum_literals(entity: fb_class::SimpleEntity<'_>) -> Vec<EnumLiteral> {
                 .iter()
                 .map(|value| EnumLiteral {
                     name: value.name().to_string(),
-                    value: value.value().map(|s| s.to_string()),
+                    value: value.value().and_then(|s| s.parse::<i128>().ok()),
                 })
                 .collect::<Vec<_>>()
         })

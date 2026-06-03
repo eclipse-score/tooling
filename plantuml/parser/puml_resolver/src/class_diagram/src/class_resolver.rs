@@ -490,7 +490,6 @@ impl ClassResolver {
             data_type: attr.r#type.clone(),
             visibility: Self::map_visibility(attr.visibility.clone()),
             is_static: has_modifier(&attr.modifiers, "static"),
-            is_const: has_modifier(&attr.modifiers, "const"),
         }
     }
 
@@ -510,14 +509,17 @@ impl ClassResolver {
             visibility: Self::map_visibility(m.visibility.clone()),
             parameters: m.params.iter().map(Self::convert_param).collect(),
             template_parameters: m.template_parameters.clone(),
-            modifiers: MethodModifier::make_modifier_vec(
-                has_modifier(&m.modifiers, "static"),
-                false,
-                has_modifier(&m.modifiers, "abstract"),
-                false,
-                is_constructor,
-                is_destructor,
-            ),
+            modifiers: MethodModifier::from_conditions([
+                (has_modifier(&m.modifiers, "static"), MethodModifier::Static),
+                (false, MethodModifier::Virtual),
+                (
+                    has_modifier(&m.modifiers, "abstract"),
+                    MethodModifier::Abstract,
+                ),
+                (false, MethodModifier::Override),
+                (is_constructor, MethodModifier::Constructor),
+                (is_destructor, MethodModifier::Destructor),
+            ]),
         }
     }
 
@@ -541,16 +543,28 @@ impl ClassResolver {
     fn process_enum(&mut self, def: &EnumDef, parent: Option<String>) {
         let id = self.build_fqn(&def.name.internal, &parent);
 
+        let mut last_value: Option<i128> = None;
         let literals = def
             .items
             .iter()
-            .map(|item| EnumLiteral {
-                name: item.name.clone(),
-                value: match &item.value {
-                    Some(EnumValue::Literal(v)) => Some(v.clone()),
-                    Some(EnumValue::Description(d)) => Some(d.clone()),
-                    None => None,
-                },
+            .map(|item| {
+                let value = match &item.value {
+                    Some(EnumValue::Literal(v)) => v
+                        .parse::<i128>()
+                        .ok()
+                        .or_else(|| last_value.map(|lv| lv + 1))
+                        .or(Some(0)),
+                    Some(EnumValue::Description(_)) | None => {
+                        last_value.map(|lv| lv + 1).or(Some(0))
+                    }
+                };
+
+                last_value = value;
+
+                EnumLiteral {
+                    name: item.name.clone(),
+                    value,
+                }
             })
             .collect();
 

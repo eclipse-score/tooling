@@ -198,7 +198,7 @@
         "enum_literals": [
           {
             "name": "kUnspecified",
-            "value": null
+            "value": 0
           }
         ],
         "source_file": "class_diagram_syntax_coverage",
@@ -237,8 +237,7 @@
             "name": "ErrorInfo",
             "data_type": null,
             "visibility": "public",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           }
         ],
         "relationships": [
@@ -587,15 +586,13 @@
             "name": "config_",
             "data_type": "Config",
             "visibility": "private",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           },
           {
             "name": "non_fatal_errors",
             "data_type": "{test::result::Error}",
             "visibility": "public",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           }
         ],
         "relationships": [
@@ -696,8 +693,7 @@
             "name": "",
             "data_type": "std::mutex",
             "visibility": "private",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           }
         ],
         "relationships": []

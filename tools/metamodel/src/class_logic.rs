@@ -20,7 +20,6 @@ pub struct ClassDiagram {
     pub entities: Vec<SimpleEntity>,
     // all relationships in the entire diagram
     pub relationships: Vec<Relationship>, // would make sense inside entities
-
     pub source_files: Vec<String>,
     pub version: Option<String>,
 }
@@ -69,7 +68,6 @@ pub struct SimpleEntity {
     pub source_file: Option<String>,
     /// 1-based line number in source; `None` means the source line is unknown
     pub source_line: Option<u32>,
-    // pub relstionships: Vec<LogicRelationship>, // relationships where this entity is the source
 }
 
 /// The type of entity in a class diagram
@@ -81,12 +79,10 @@ pub enum EntityType {
     Class,
     /// Data structure (typically POD in C++)
     Struct,
-
     /// Abstract interface
     Interface,
     /// Abstract class
     AbstractClass,
-
     /// Enumeration
     Enum,
 }
@@ -125,8 +121,6 @@ pub struct MemberVariable {
     pub visibility: Visibility,
     /// Whether this is a static member
     pub is_static: bool,
-    /// Whether this is a const member
-    pub is_const: bool,
 }
 
 /// Represents a method parameter
@@ -152,34 +146,13 @@ pub enum MethodModifier {
 }
 
 impl MethodModifier {
-    pub fn make_modifier_vec(
-        is_static: bool,
-        is_virtual: bool,
-        is_abstract: bool,
-        is_override: bool,
-        is_constructor: bool,
-        is_destructor: bool,
+    pub fn from_conditions(
+        conditions: impl IntoIterator<Item = (bool, MethodModifier)>,
     ) -> Vec<MethodModifier> {
-        let mut modifiers = Vec::new();
-        if is_static {
-            modifiers.push(MethodModifier::Static);
-        }
-        if is_virtual {
-            modifiers.push(MethodModifier::Virtual);
-        }
-        if is_abstract {
-            modifiers.push(MethodModifier::Abstract);
-        }
-        if is_override {
-            modifiers.push(MethodModifier::Override);
-        }
-        if is_constructor {
-            modifiers.push(MethodModifier::Constructor);
-        }
-        if is_destructor {
-            modifiers.push(MethodModifier::Destructor);
-        }
-        modifiers
+        conditions
+            .into_iter()
+            .filter_map(|(enabled, modifier)| enabled.then_some(modifier))
+            .collect()
     }
 }
 
@@ -242,7 +215,7 @@ pub struct EnumLiteral {
     /// Literal name
     pub name: String,
     /// Explicit value (e.g., `HIGH = 0`)
-    pub value: Option<String>,
+    pub value: Option<i128>,
 }
 
 #[cfg(test)]
@@ -261,7 +234,6 @@ mod tests {
                 data_type: Some("string".to_string()),
                 visibility: Visibility::Public,
                 is_static: false,
-                is_const: false,
             }],
             methods: vec![Method {
                 name: "getName".to_string(),

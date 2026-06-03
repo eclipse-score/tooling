@@ -18,15 +18,13 @@
             "name": "x",
             "data_type": "f32",
             "visibility": "public",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           },
           {
             "name": "y",
             "data_type": "f32",
             "visibility": "public",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           }
         ],
         "relationships": []
@@ -47,15 +45,13 @@
             "name": "width",
             "data_type": "f32",
             "visibility": "public",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           },
           {
             "name": "height",
             "data_type": "f32",
             "visibility": "public",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           }
         ],
         "relationships": []
@@ -71,15 +67,15 @@
         "enum_literals": [
           {
             "name": "Red",
-            "value": "0"
+            "value": 0
           },
           {
             "name": "Green",
-            "value": "1"
+            "value": 1
           },
           {
             "name": "Blue",
-            "value": "2"
+            "value": 2
           }
         ],
         "source_file": "class_positive_test",
@@ -203,8 +199,7 @@
             "name": "shapes",
             "data_type": "Shape",
             "visibility": "private",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           }
         ],
         "relationships": [
@@ -242,15 +237,13 @@
             "name": "center",
             "data_type": "Point",
             "visibility": "private",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           },
           {
             "name": "radius",
             "data_type": "f32",
             "visibility": "private",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           }
         ],
         "relationships": [
@@ -295,15 +288,13 @@
             "name": "origin",
             "data_type": "Point",
             "visibility": "private",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           },
           {
             "name": "size",
             "data_type": "Size",
             "visibility": "private",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           }
         ],
         "relationships": [
@@ -339,8 +330,7 @@
             "name": "corner_radius",
             "data_type": "f32",
             "visibility": "private",
-            "is_static": false,
-            "is_const": false
+            "is_static": false
           }
         ],
         "relationships": [
@@ -364,19 +354,19 @@
         "enum_literals": [
           {
             "name": "De",
-            "value": "Debug"
+            "value": 0
           },
           {
             "name": "Info",
-            "value": "Information"
+            "value": 1
           },
           {
             "name": "Warn",
-            "value": "Warnning"
+            "value": 2
           },
           {
             "name": "Err",
-            "value": "Error"
+            "value": 3
           }
         ],
         "source_file": "class_positive_test",
