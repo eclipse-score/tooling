@@ -31,6 +31,7 @@ def assumed_system_requirements(
         srcs,
         deps = [],
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
+        lobster_config = Label("//bazel/rules/rules_score/lobster/config:assumed_system_requirement"),
         ref_package = "",
         **kwargs):
     """Define Assumed System Requirements following S-CORE process guidelines.
@@ -53,6 +54,8 @@ def assumed_system_requirements(
             Defaults to the S-CORE requirements model
             (``@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model``).
             Override this when using a custom requirements model.
+        lobster_config: Optional Lobster extraction config label. Defaults to the
+            S-CORE assumed system requirement config.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -79,7 +82,7 @@ def assumed_system_requirements(
         srcs = srcs,
         deps = deps,
         req_kind = "assumed_system",
-        lobster_config = Label("//bazel/rules/rules_score/lobster/config:assumed_system_requirement"),
+        lobster_config = lobster_config,
         spec = spec,
         ref_package = ref_package,
         **kwargs

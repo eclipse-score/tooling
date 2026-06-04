@@ -30,6 +30,7 @@ def component_requirements(
         srcs,
         deps = [],
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
+        lobster_config = Label("//bazel/rules/rules_score/lobster/config:component_requirement"),
         ref_package = "",
         **kwargs):
     """Define component requirements following S-CORE process guidelines.
@@ -52,6 +53,8 @@ def component_requirements(
             Defaults to the S-CORE requirements model
             (``@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model``).
             Override this when using a custom requirements model.
+        lobster_config: Optional Lobster extraction config label. Defaults to the
+            S-CORE component requirement config.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -73,7 +76,7 @@ def component_requirements(
         srcs = srcs,
         deps = deps,
         req_kind = "component",
-        lobster_config = Label("//bazel/rules/rules_score/lobster/config:component_requirement"),
+        lobster_config = lobster_config,
         spec = spec,
         ref_package = ref_package,
         **kwargs
