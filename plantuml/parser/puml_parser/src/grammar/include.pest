@@ -31,16 +31,18 @@ IGNORED   = _{ (WHITESPACE | COMMENT)+ }
 
 // Entry Rule
 file = { SOI ~ line* ~ EOI }
+line_end = _{ NEWLINE | &EOI }
 
 line= _{
       includesub_line
     | include_line
     | sub_block
     | text_line
+    | NEWLINE
 }
 
 // ---------------- Include ----------------
-include_line = { include_directive ~ NEWLINE }
+include_line = { include_directive ~ line_end }
 include_directive = {
     include_keyword ~ include_path
 }
@@ -52,7 +54,7 @@ include_keyword = {
 include_path = @{ (!"!" ~(ASCII_ALPHANUMERIC | "_" | "-" | "." | "/" | " "))+ }
 
 // --------------- IncludeSub ---------------
-includesub_line = { includesub_directive ~ NEWLINE }
+includesub_line = { includesub_directive ~ line_end }
 includesub_directive = {
     "!includesub" ~ include_path ~ include_suffix ~ !include_suffix
 }
@@ -65,7 +67,7 @@ include_index = @{ ASCII_DIGIT+ }
 
 // ---------------- SubBlock ----------------
 sub_block = {
-    startsub_directive ~ NEWLINE ~ sub_content* ~ endsub_directive ~ NEWLINE
+    startsub_directive ~ NEWLINE ~ sub_content* ~ endsub_directive ~ line_end
 }
 startsub_directive = { "!startsub" ~ ((include_index | include_label)) }
 endsub_directive = { "!endsub" }
@@ -73,10 +75,11 @@ sub_content = _{
       includesub_line
     | include_line
     | text_line
+    | NEWLINE
  }
 
 // ---------------- Text Line ----------------
-text_line = { (!("!" ~ preprocess_keyword) ~ (!NEWLINE ~ ANY)*) ~ NEWLINE }
+text_line = { (!("!" ~ preprocess_keyword) ~ (!NEWLINE ~ ANY)+) ~ line_end }
 preprocess_keyword = {
       include_keyword
     | "includesub"
