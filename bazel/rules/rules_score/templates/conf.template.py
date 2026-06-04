@@ -52,6 +52,7 @@ extensions = [
     "sphinx_needs",
     "sphinx_design",
     "myst_parser",
+    "sphinxcontrib.mermaid",
     "sphinxcontrib.plantuml",
     "trlc",
     "clickable_plantuml",

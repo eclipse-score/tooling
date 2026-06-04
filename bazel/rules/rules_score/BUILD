@@ -147,6 +147,7 @@ py_binary(
         requirement("rst2pdf"),
         requirement("sphinxcontrib-umlet"),
         requirement("svglib"),
+        requirement("sphinxcontrib-mermaid"),
         requirement("sphinxcontrib-plantuml"),
     ],
 )

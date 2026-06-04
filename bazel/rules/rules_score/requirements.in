@@ -4,6 +4,7 @@ rst2pdf
 sphinx
 sphinx-needs
 sphinx-design
+sphinxcontrib-mermaid
 sphinxcontrib-plantuml
 sphinxcontrib-umlet
 sphinx-rtd-theme
