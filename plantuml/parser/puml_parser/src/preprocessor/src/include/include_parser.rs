@@ -246,6 +246,18 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_include_without_trailing_newline() {
+        let input = "@startuml\n!include path/to/file";
+
+        let result = IncludeParser::parse(Rule::file, input);
+
+        assert!(
+            result.is_ok(),
+            "expected parser to accept !include at EOF without trailing newline"
+        );
+    }
+
+    #[test]
     fn test_parse_includesub_directive() {
         let input = "!includesub path/to/file!2";
         let pair = IncludeParser::parse(Rule::includesub_directive, input)
@@ -258,6 +270,18 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_includesub_without_trailing_newline() {
+        let input = "@startuml\n!includesub path/to/file!2";
+
+        let result = IncludeParser::parse(Rule::file, input);
+
+        assert!(
+            result.is_ok(),
+            "expected parser to accept !includesub at EOF without trailing newline"
+        );
+    }
+
+    #[test]
     fn test_parse_file_io_error() {
         let mut service = IncludeParserService;
         let missing = PathBuf::from("does-not-exist-include-test.puml");
@@ -266,5 +290,29 @@ mod tests {
             result,
             Err(IncludeParseError::Base(BaseParseError::IoError { .. }))
         ));
+    }
+
+    #[test]
+    fn test_parse_file_without_trailing_newline() {
+        let input = "@startuml\nclass User {}\n@enduml";
+
+        let result = IncludeParser::parse(Rule::file, input);
+
+        assert!(
+            result.is_ok(),
+            "expected parser to accept EOF without trailing newline"
+        );
+    }
+
+    #[test]
+    fn test_parse_sub_block_without_trailing_newline() {
+        let input = "!startsub label\nclass User {}\n!endsub";
+
+        let result = IncludeParser::parse(Rule::file, input);
+
+        assert!(
+            result.is_ok(),
+            "expected parser to accept !endsub at EOF without trailing newline"
+        );
     }
 }
