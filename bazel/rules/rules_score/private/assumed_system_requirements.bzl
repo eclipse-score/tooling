@@ -32,6 +32,7 @@ def assumed_system_requirements(
         deps = [],
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         ref_package = "",
+        image_srcs = [],
         **kwargs):
     """Define Assumed System Requirements following S-CORE process guidelines.
 
@@ -82,6 +83,7 @@ def assumed_system_requirements(
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:assumed_system_requirement"),
         spec = spec,
         ref_package = ref_package,
+        image_srcs = image_srcs,
         **kwargs
     )
     trlc_requirements_test(

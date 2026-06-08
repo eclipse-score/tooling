@@ -105,7 +105,26 @@ def _requirements_impl(ctx):
             name = ctx.label.name,
         )
 
-    sphinx_srcs = depset([rendered_file])
+    image_outputs = []
+    package_prefix = ctx.label.package + "/"
+    for image in ctx.files.image_srcs:
+        relative_path = image.short_path
+
+        # Keep `.. image:: img/...` references stable across packages.
+        # If the source path contains an img segment, stage from there.
+        img_split = relative_path.split("/img/", 1)
+        if len(img_split) == 2:
+            relative_path = "img/" + img_split[1]
+        elif relative_path.startswith(package_prefix):
+            relative_path = relative_path[len(package_prefix):]
+        else:
+            relative_path = image.basename
+
+        output = ctx.actions.declare_file(relative_path)
+        ctx.actions.symlink(output = output, target_file = image)
+        image_outputs.append(output)
+
+    sphinx_srcs = depset([rendered_file] + image_outputs)
 
     transitive_sphinx = [sphinx_srcs]
     for dep in ctx.attr.deps:
@@ -163,6 +182,11 @@ _score_requirements_rule = rule(
             default = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
             doc = "TRLC specification target providing the RSL files that define the requirement types. Defaults to the S-CORE requirements model.",
         ),
+        "image_srcs": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "Image files to stage relative to the rendered requirements RST.",
+        ),
         "_renderer": attr.label(
             default = Label("@trlc//tools/trlc_rst:trlc_rst"),
             executable = True,
@@ -181,6 +205,7 @@ def score_requirements_rule(
         deps = [],
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         ref_package = "",
+        image_srcs = [],
         **kwargs):
     """Macro wrapper around _score_requirements_rule with RST support.
 
@@ -213,5 +238,6 @@ def score_requirements_rule(
         req_kind = req_kind,
         lobster_config = lobster_config,
         spec = spec,
+        image_srcs = image_srcs,
         **kwargs
     )
