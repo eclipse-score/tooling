@@ -35,6 +35,16 @@ updates:
           - "*"
     commit-message:
       prefix: chore(pip)
+  - package-ecosystem: docker
+    directory: /.devcontainer
+    schedule:
+      interval: weekly
+    groups:
+      docker:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: chore(docker)
   - package-ecosystem: pre-commit
     directory: /
     schedule:
