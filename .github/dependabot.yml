@@ -10,49 +10,48 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+# Please see the documentation for all configuration options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+# As problems are rare, we group each ecosystem into "all-in-one" PRs.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
     groups:
-      all-in-one:
+      github-actions:
         patterns:
           - "*"
-        update-types:
-          - "minor"
-          - "patch"
+    commit-message:
+      prefix: chore(github-actions)
   - package-ecosystem: pip
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
     groups:
-      all-in-one:
+      python:
         patterns:
           - "*"
-        update-types:
-          - "minor"
-          - "patch"
+    commit-message:
+      prefix: chore(pip)
   - package-ecosystem: docker
     directory: /.devcontainer
     schedule:
-      interval: daily
+      interval: weekly
     groups:
-      all-in-one:
+      docker:
         patterns:
           - "*"
-        update-types:
-          - "minor"
-          - "patch"
-  - package-ecosystem: bazel
+    commit-message:
+      prefix: chore(docker)
+  - package-ecosystem: pre-commit
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
     groups:
-      all-in-one:
+      pre-commit:
         patterns:
           - "*"
-        update-types:
-          - "minor"
-          - "patch"
+    commit-message:
+      prefix: chore(pre-commit)
