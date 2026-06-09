@@ -4,10 +4,10 @@
 #
 #    bazel run //python_basics/private:requirements.update
 #
-basedpyright==1.35.0 \
-    --hash=sha256:2a7e0bd476623d48499e2b18ff6ed19dc28c51909cf9e1152ad355b5809049ad \
-    --hash=sha256:4f4f84023df5a0cd4ee154916ba698596682ac98bacfa22c941ed6aaf07bba4e
-    # via -r requirements.in
+basedpyright==1.39.7 \
+    --hash=sha256:688d913a19c417870c164c630ed9cdd83a8d8b484b30ab8e99f5dec4ae9604a6 \
+    --hash=sha256:81266deb6044c9be98fb4555e4b7b1a521d8aee06b66e80858d183b0e3991140
+    # via -r python_basics/requirements.in
 iniconfig==2.3.0 \
     --hash=sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730 \
     --hash=sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12
@@ -38,4 +38,4 @@ pygments==2.20.0 \
 pytest==9.0.3 \
     --hash=sha256:2c5efc453d45394fdd706ade797c0a81091eccd1d6e4bccfcd476e2b8e0ab5d9 \
     --hash=sha256:b86ada508af81d19edeb213c681b1d48246c1a91d304c6c81a427674c17eb91c
-    # via -r requirements.in
+    # via -r python_basics/requirements.in
