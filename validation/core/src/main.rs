@@ -69,6 +69,9 @@ struct Args {
     #[arg(long = "class-fbs", num_args = 1..)]
     class_fbs: Option<Vec<String>>,
 
+    #[arg(long = "internal-api-fbs", num_args = 1..)]
+    internal_api_fbs: Option<Vec<String>>,
+
     #[arg(long)]
     output: Option<String>,
 

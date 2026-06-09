@@ -94,9 +94,10 @@ def _parse_puml_diagrams(ctx, files):
 def _architectural_design_impl(ctx):
     """Implementation for architectural_design rule.
 
-    Collects architectural design artifacts including static and dynamic
-    diagrams, runs the PlantUML parser on .puml files to generate FlatBuffers
-    binaries, and provides them through the ArchitecturalDesignInfo provider.
+    Collects architectural design artifacts including static, dynamic, public
+    API, and internal API diagrams, runs the PlantUML parser on .puml files to
+    generate FlatBuffers binaries, and provides them through the
+    ArchitecturalDesignInfo provider.
 
     The diagram type (component, class, sequence) is auto-detected by the
     parser and encoded in the FlatBuffers binary via its schema root_type.
@@ -108,26 +109,28 @@ def _architectural_design_impl(ctx):
         List of providers including DefaultInfo, ArchitecturalDesignInfo, SphinxSourcesInfo
     """
 
-    # Parse static and dynamic diagrams separately so each provider field
-    # carries the flatbuffers for its own category
+    # Parse each architectural view separately so each provider field carries
+    # the flatbuffers for its own category.
     static_fbs_list, static_lobster_list = _parse_puml_diagrams(ctx, ctx.files.static)
     dynamic_fbs_list, dynamic_lobster_list = _parse_puml_diagrams(ctx, ctx.files.dynamic)
     public_api_fbs_list, public_api_lobster_list = _parse_puml_diagrams(ctx, ctx.files.public_api)
+    internal_api_fbs_list, _internal_api_lobster_list = _parse_puml_diagrams(ctx, ctx.files.internal_api)
 
     static_fbs = depset(static_fbs_list)
     dynamic_fbs = depset(dynamic_fbs_list)
     public_api_fbs = depset(public_api_fbs_list)
+    internal_api_fbs = depset(internal_api_fbs_list)
     all_lobster = depset(static_lobster_list + dynamic_lobster_list + public_api_lobster_list)
     public_api_lobster = depset(public_api_lobster_list)
 
     # Source files for SphinxSourcesInfo (sphinx documentation pipeline)
     all_source_files = depset(
-        transitive = [depset(ctx.files.static), depset(ctx.files.dynamic), depset(ctx.files.public_api)],
+        transitive = [depset(ctx.files.static), depset(ctx.files.dynamic), depset(ctx.files.public_api), depset(ctx.files.internal_api)],
     )
 
     # Run the linker on all generated .fbs.bin files to produce a
     # plantuml_links.json for the clickable_plantuml Sphinx extension.
-    all_fbs_files = static_fbs.to_list() + dynamic_fbs.to_list() + public_api_fbs.to_list()
+    all_fbs_files = static_fbs.to_list() + dynamic_fbs.to_list() + public_api_fbs.to_list() + internal_api_fbs.to_list()
     plantuml_links_json = ctx.actions.declare_file(
         "{}/plantuml_links.json".format(ctx.label.name),
     )
@@ -154,7 +157,7 @@ def _architectural_design_impl(ctx):
     # toctree entry in the dependable_element index.
     rst_wrappers = make_puml_rst_wrappers(
         ctx,
-        ctx.files.static + ctx.files.dynamic + ctx.files.public_api,
+        ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api,
         ctx.label.name,
         ctx.file._puml_rst_template,
     )
@@ -166,6 +169,7 @@ def _architectural_design_impl(ctx):
         ArchitecturalDesignInfo(
             static = static_fbs,
             dynamic = dynamic_fbs,
+            internal_api = internal_api_fbs,
             name = ctx.label.name,
             lobster_files = all_lobster,
             public_api_lobster_files = public_api_lobster,
@@ -206,6 +210,13 @@ _architectural_design = rule(
                       "public_api_lobster_files, enabling failure-mode-to-interface " +
                       "traceability at the dependable element level.",
             ),
+            "internal_api": attr.label_list(
+                allow_files = [".puml", ".plantuml"],
+                mandatory = False,
+                doc = "Internal API diagrams (class diagrams). " +
+                      "Classified separately so their FlatBuffers outputs are exposed via " +
+                      "ArchitecturalDesignInfo.internal_api for downstream validation.",
+            ),
             "_puml_parser": attr.label(
                 default = Label("@score_tooling//plantuml/parser:parser"),
                 executable = True,
@@ -237,6 +248,7 @@ def architectural_design(
         static = [],
         dynamic = [],
         public_api = [],
+        internal_api = [],
         **kwargs):
     """Define architectural design following S-CORE process guidelines.
 
@@ -261,6 +273,11 @@ def architectural_design(
             diagrams but classified separately so their lobster items are
             exposed via public_api_lobster_files, enabling failure-mode-to-
             interface traceability at the dependable element level.
+        internal_api: Optional list of .puml files describing internal
+            interfaces of this element. These are parsed identically to
+            static/dynamic diagrams but classified separately so their
+            FlatBuffers outputs are exposed via ArchitecturalDesignInfo.
+            internal_api for downstream validation.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -279,6 +296,7 @@ def architectural_design(
                 "sequence_diagram.puml",
                 "activity_diagram.puml",
             ],
+            internal_api = ["internal_api.puml"],
         )
         ```
     """
@@ -288,5 +306,6 @@ def architectural_design(
         static = static,
         dynamic = dynamic,
         public_api = public_api,
+        internal_api = internal_api,
         **kwargs
     )

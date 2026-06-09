@@ -32,11 +32,18 @@ The current implementation supports three validation flows:
 2. `ComponentClass`: compares component-diagram unit IDs with enclosing
   namespace IDs observed in class diagrams using boundary-aware suffix
   matching.
-3. `ComponentSequence`: compares component-diagram unit aliases with
-  caller/callee participants observed in sequence diagrams (exact match).
+3. `ComponentSequence`: checks that component-diagram unit aliases, shared
+  interface relations, and sequence-diagram function-call connections stay in
+  sync. When internal API diagrams are provided, it also checks that each
+  sequence function name is declared on a shared interface referenced by both
+  participating units.
 
-The CLI builds a `ValidationContext` from the provided inputs, infers which of
-these flows are executable, and runs all compatible validators in one pass.
+Internal API diagrams are handled separately from regular class diagrams.
+If no `--internal-api-fbs` inputs are provided, `ComponentSequence` still runs
+the alias and interface-connection checks and skips method-level validation.
+
+The CLI inspects the provided inputs, determines which validations can run,
+and executes all compatible checks in one pass.
 
 ## Layering
 
@@ -59,19 +66,21 @@ model construction.
 
 The CLI accepts the following input families:
 
-- `--architecture-json`: Bazel architecture export consumed by `BazelReader`
-- `--component-fbs`: one or more component-diagram FlatBuffers files consumed by
-  `ComponentDiagramReader`
-- `--sequence-fbs`: one or more sequence-diagram FlatBuffers files consumed by
-  `SequenceDiagramReader`
-- `--class-fbs`: one or more class-diagram FlatBuffers files consumed by
-  `ClassDiagramReader`
+- `--architecture-json`: Bazel architecture export
+- `--component-fbs`: one or more component-diagram FlatBuffers files
+- `--sequence-fbs`: one or more sequence-diagram FlatBuffers files
+- `--class-fbs`: one or more class-diagram FlatBuffers files
+- `--internal-api-fbs`: optional internal-API FlatBuffers files for the
+  `ComponentSequence` validator
 
 The current inference rules are:
 
 - `--architecture-json` + `--component-fbs` enables `BazelComponent`
 - `--component-fbs` + `--class-fbs` enables `ComponentClass`
 - `--component-fbs` + `--sequence-fbs` enables `ComponentSequence`
+
+`--internal-api-fbs` is an optional additional input for
+`ComponentSequence`. It does not enable a validator on its own.
 
 If multiple combinations are present, all compatible validators are executed.
 
@@ -91,6 +100,7 @@ bazel run //validation/core:validation_cli -- \
     --component-fbs path/to/component.fbs.bin \
     --sequence-fbs path/to/sequence.fbs.bin \
     --class-fbs path/to/class.fbs.bin \
+    --internal-api-fbs path/to/internal_api.fbs.bin \
     --output path/to/validation.log
 ```
 

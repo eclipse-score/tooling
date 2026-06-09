@@ -21,6 +21,9 @@ architectural_design(
     dynamic = [
         "dynamic_design.puml",
     ],
+    internal_api = [
+        "internal_api.puml",
+    ],
     public_api = [
         "public_api.puml",
     ],
