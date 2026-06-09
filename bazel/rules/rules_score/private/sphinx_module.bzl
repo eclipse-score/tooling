@@ -223,10 +223,32 @@ def _score_html_impl(ctx):
         "--log-level",
         get_log_level(ctx),
     ]
+
+    # Wire in the hermetic graphviz deb (dot_builtins + bundled libs).
+    # dot_builtins uses RUNPATH=$ORIGIN/../lib so shared libs are found
+    # automatically. LTDL_LIBRARY_PATH directs libltdl to the plugin .so files.
+    graphviz_env = {}
+    graphviz_files = ctx.files.graphviz
+    if graphviz_files:
+        dot_binary = None
+        for f in graphviz_files:
+            if f.path.endswith("/usr/bin/dot_builtins"):
+                dot_binary = f
+                break
+        if dot_binary:
+            plugin_dir = dot_binary.path.replace("/usr/bin/dot_builtins", "/usr/lib/graphviz")
+            graphviz_env = {
+                "GRAPHVIZ_DOT": dot_binary.path,
+                "LTDL_LIBRARY_PATH": plugin_dir,
+            }
+            html_inputs = html_inputs + graphviz_files
+            html_args = html_args + ["-D", "graphviz_dot=" + dot_binary.path]
+
     ctx.actions.run(
         inputs = html_inputs,
         outputs = [sphinx_html_output],
         arguments = html_args + [args],
+        env = graphviz_env,
         progress_message = "Building HTML: %s" % ctx.label.name,
         executable = sphinx_toolchain.sphinx.files_to_run.executable,
         tools = [
@@ -311,6 +333,12 @@ _score_html = rule(
         ),
         extra_opts = attr.string_list(
             doc = "Regular additional string options to pass onto Sphinx.",
+        ),
+        graphviz = attr.label(
+            default = Label("@graphviz_deb//:all"),
+            allow_files = True,
+            doc = "Graphviz cmake-release deb files (dot_builtins binary + bundled libs). " +
+                  "Provides a hermetic 'dot' binary without requiring a system graphviz installation.",
         ),
     ),
     toolchains = ["//bazel/rules/rules_score:toolchain_type"],

@@ -224,6 +224,17 @@ deb(
     urls = ["https://archive.ubuntu.com/ubuntu/pool/universe/l/lcov/lcov_2.0-4ubuntu2_all.deb"],
 )
 
+###############################################################################
+# Graphviz deb package (cmake release; bundles all graphviz .so files so
+# dot_builtins runs without system graphviz installation)
+###############################################################################
+deb(
+    name = "graphviz_deb",
+    build = "//third_party/graphviz:graphviz.BUILD",
+    integrity = "sha256-Jk5gSqo8l0INoY+kr1ZAsi2WhZY8LlAFlEag54H3Q2Q=",
+    urls = ["https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/12.2.1/ubuntu_24.04_graphviz-12.2.1-cmake.deb"],
+)
+
 register_toolchains(
     "//bazel/rules/rules_score:sphinx_default_toolchain",
 )
