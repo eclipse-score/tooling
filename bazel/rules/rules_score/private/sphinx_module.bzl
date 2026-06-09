@@ -256,6 +256,18 @@ def _score_html_impl(ctx):
             merge_inputs.append(dep_html_dir)
             merge_args.extend(["--dep", dep_name + ":" + dep_html_dir.path])
 
+    # Auto-detect static files from srcs: any file whose short_path contains
+    # '/_static/' is a static asset that Sphinx may not copy correctly in the
+    # Bazel sandbox (confdir != srcdir prevents html_static_path from resolving).
+    # Copy them explicitly into output/_static/ via the merge step.
+    for orig_file in ctx.files.srcs:
+        path = orig_file.short_path
+        static_marker = "/_static/"
+        if static_marker in path:
+            subpath = path[path.index(static_marker) + len(static_marker):]
+            merge_args.extend(["--extra-static", orig_file.path + ":" + subpath])
+            merge_inputs.append(orig_file)
+
     # Merging html files
     ctx.actions.run(
         inputs = merge_inputs,

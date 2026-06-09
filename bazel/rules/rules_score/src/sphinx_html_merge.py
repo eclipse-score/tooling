@@ -138,19 +138,29 @@ def copy_html_files(src_dir, dst_dir, exclude_module_dirs=None, sibling_modules=
     copy_tree(src_path, dst_path, Path("."))
 
 
-def merge_html_dirs(output_dir, main_html_dir, dependencies):
+def merge_html_dirs(output_dir, main_html_dir, dependencies, extra_static=None):
     """Merge HTML directories.
 
     Args:
         output_dir: Target output directory
         main_html_dir: Main module's HTML directory to copy as-is
         dependencies: List of (name, path) tuples for dependency modules
+        extra_static: List of (src_file, dest_subpath) tuples for extra files to
+                      place in output/_static/.  These are copied AFTER the main
+                      HTML so they overwrite any theme-provided files if needed.
     """
     output_path = Path(output_dir)
 
     # First, copy the main HTML directory
     logging.info("Copying main HTML from %s to %s", main_html_dir, output_dir)
     copy_html_files(main_html_dir, output_dir)
+
+    # Copy any extra static files into output/_static/
+    for src_file, dest_subpath in extra_static or []:
+        dst = output_path / "_static" / dest_subpath
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_file, dst)
+        logging.info("Copied extra static %s → _static/%s", src_file, dest_subpath)
 
     # Collect all dependency names for link fixing and exclusion
     dep_names = [name for name, _ in dependencies]
@@ -188,6 +198,13 @@ def main():
         help="Dependency HTML directory in format NAME:PATH",
     )
     parser.add_argument(
+        "--extra-static",
+        action="append",
+        default=[],
+        metavar="SRC:SUBPATH",
+        help="Extra file to place in output/_static/.  Format: SRC_FILE:DEST_SUBPATH",
+    )
+    parser.add_argument(
         "--log-level",
         choices=["error", "warn", "info", "debug"],
         default="warn",
@@ -212,8 +229,19 @@ def main():
         name, path = dep_spec.split(":", 1)
         dependencies.append((name, path))
 
+    # Parse extra static files
+    extra_static = []
+    for spec in args.extra_static:
+        if ":" not in spec:
+            logging.error(
+                "Invalid --extra-static format '%s', expected SRC:SUBPATH", spec
+            )
+            return 1
+        src, subpath = spec.split(":", 1)
+        extra_static.append((src, subpath))
+
     # Merge the HTML directories
-    merge_html_dirs(args.output, args.main, dependencies)
+    merge_html_dirs(args.output, args.main, dependencies, extra_static=extra_static)
 
     logging.info("Successfully merged HTML into %s", args.output)
     return 0

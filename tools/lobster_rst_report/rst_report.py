@@ -42,7 +42,7 @@ from lobster.common.exceptions import LOBSTER_Exception
 from lobster.common.errors import LOBSTER_Error
 from .graphviz_utils import is_dot_available
 
-from ._helpers import RstUtils, ItemNaming
+from ._helpers import RstUtils, ItemNaming, PolicyDiagramBuilder
 from ._renderers import (
     _KIND_ORDER,
     _build_page_map,
@@ -89,7 +89,12 @@ def write_rst(report: Report, source_root: str = "") -> str:
     lines.append(f"| LOBSTER Version: {LOBSTER_VERSION}")
     lines.append("")
 
-    # Coverage table + tracing-policy diagram (rubric = not a TOC entry)
+    # Tracing-policy diagram (rubric = not a TOC entry)
+    lines.append(".. rubric:: Tracing Policy")
+    lines.append("")
+    lines += PolicyDiagramBuilder.build(report)
+
+    # Coverage table (rubric = not a TOC entry)
     lines.append(".. rubric:: Coverage Summary")
     lines.append("")
 
@@ -222,7 +227,12 @@ def write_rst_pages(report: Report, source_root: str = "") -> Dict[str, str]:
     lines.append(f"| LOBSTER Version: {LOBSTER_VERSION}")
     lines.append("")
 
-    # Coverage table + policy diagram (rubric = not a TOC entry)
+    # Tracing-policy diagram (rubric = not a TOC entry)
+    lines.append(".. rubric:: Tracing Policy")
+    lines.append("")
+    lines += PolicyDiagramBuilder.build(report)
+
+    # Coverage table (rubric = not a TOC entry)
     lines.append(".. rubric:: Coverage Summary")
     lines.append("")
 
@@ -239,6 +249,9 @@ def write_rst_pages(report: Report, source_root: str = "") -> Dict[str, str]:
 
     # Per-kind toctrees -- :caption: shows in sidebar but doesn't create a
     # heading node, so clicking a level goes straight to that level's page
+    # The first toctree includes 'self' so the overview page appears as a
+    # navigation item alongside the per-level sub-pages.
+    first = True
     for kind, kind_title in _KIND_ORDER:
         levels_of_kind = [lv for lv in report.config.values() if lv.kind == kind]
         if not levels_of_kind:
@@ -246,7 +259,11 @@ def write_rst_pages(report: Report, source_root: str = "") -> Dict[str, str]:
         lines.append(".. toctree::")
         lines.append(f"   :caption: {kind_title}")
         lines.append("   :maxdepth: 1")
+        lines.append("   :hidden:")
         lines.append("")
+        if first:
+            lines.append("   Overview <self>")
+            first = False
         for lv in levels_of_kind:
             lines.append(f"   {page_map[lv.name]}")
         lines.append("")

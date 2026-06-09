@@ -24,6 +24,8 @@ Organised into four static-method classes with focused concerns:
 
 from typing import Dict, Tuple
 
+import os
+
 from lobster.common.report import Report
 from lobster.common.location import (
     Void_Reference,
@@ -32,6 +34,7 @@ from lobster.common.location import (
     Codebeamer_Reference,
 )
 from lobster.common.items import Item, Requirement, Implementation, Activity
+from .graphviz_utils import is_dot_available
 
 
 class RstUtils:
@@ -176,6 +179,8 @@ class ItemNaming:
         # lobster-trace: rst_req.RST_Source_Root_Prefix
         if isinstance(location, File_Reference):
             href = source_root + location.filename if source_root else location.filename
+            if location.line:
+                href += f"#L{location.line}"
             return f"`{e(location.to_string())} <{href}>`__"
 
         # lobster-trace: UseCases.Item_GitHub_Source
@@ -340,8 +345,37 @@ class PolicyDiagramBuilder:
         return text.replace("\\", "\\\\").replace('"', '\\"')
 
     @classmethod
+    def _build_dot_lines(cls, report: Report) -> list:
+        """Return the raw DOT diagram lines (without the RST directive wrapper)."""
+        lines = []
+        lines.append("digraph tracing_policy {")
+        lines.append("   rankdir=TB;")
+        lines.append(
+            '   node [shape=box, style=filled, fontname="Helvetica", margin="0.3,0.1"];'
+        )
+        lines.append("   edge [arrowhead=open];")
+        lines.append("")
+        for level_name, level in report.config.items():
+            fill, font = cls.KIND_COLORS.get(level.kind, ("#9E9E9E", "white"))
+            safe = cls.dot_escape(level_name)
+            lines.append(f'   "{safe}" [fillcolor="{fill}", fontcolor="{font}"];')
+        for level_name, level in report.config.items():
+            for trace_target in level.traces:
+                src = cls.dot_escape(level_name)
+                dst = cls.dot_escape(trace_target)
+                lines.append(f'   "{src}" -> "{dst}";')
+        lines.append("}")
+        return lines
+
+    @classmethod
     def build(cls, report: Report, indent: int = 0) -> list:
-        """Return RST lines for a ``.. graphviz::`` tracing-policy diagram.
+        """Return RST lines for the tracing-policy diagram.
+
+        When Graphviz ``dot`` is available, emits a ``.. graphviz::`` directive
+        that Sphinx renders as an image.  When ``dot`` is not found, emits a
+        ``.. note::`` explaining how to install Graphviz together with the raw
+        DOT source in a ``.. code-block::`` so the diagram can still be
+        visualised manually.
 
         Args:
             report: The loaded LOBSTER report whose ``config`` provides level
@@ -356,28 +390,34 @@ class PolicyDiagramBuilder:
         # lobster-trace: rst_req.RST_Report_Tracing_Policy_Diagram
         indent_str = " " * indent
         nested_indent = indent_str + "   "
+        dot_lines = cls._build_dot_lines(report)
+
+        # Respect an explicit GRAPHVIZ_DOT env var set by the build system
+        # (e.g. via --action_env=GRAPHVIZ_DOT=/usr/bin/dot in CI).
+        dot_bin = os.environ.get("GRAPHVIZ_DOT") or None
+        if is_dot_available(dot_bin):
+            out = []
+            out.append(f"{indent_str}.. graphviz::")
+            out.append("")
+            for dot_line in dot_lines:
+                out.append(f"{nested_indent}{dot_line}")
+            out.append("")
+            return out
         out = []
-        out.append(f"{indent_str}.. graphviz::")
+        out.append(f"{indent_str}.. note::")
         out.append("")
-        out.append(f"{nested_indent}digraph tracing_policy {{")
-        out.append(f"{nested_indent}   rankdir=TB;")
         out.append(
-            f"{nested_indent}   node [shape=box, style=filled, "
-            f'fontname="Helvetica", margin="0.3,0.1"];'
+            f"{nested_indent}The tracing-policy diagram below could not be rendered "
+            f"because the Graphviz ``dot`` utility was not found."
         )
-        out.append(f"{nested_indent}   edge [arrowhead=open];")
+        out.append(
+            f"{nested_indent}Install `Graphviz <https://graphviz.org>`__ and rebuild "
+            f"to see the diagram as an image."
+        )
         out.append("")
-        for level_name, level in report.config.items():
-            fill, font = cls.KIND_COLORS.get(level.kind, ("#9E9E9E", "white"))
-            safe = cls.dot_escape(level_name)
-            out.append(
-                f'{nested_indent}   "{safe}" [fillcolor="{fill}", fontcolor="{font}"];'
-            )
-        for level_name, level in report.config.items():
-            for trace_target in level.traces:
-                src = cls.dot_escape(level_name)
-                dst = cls.dot_escape(trace_target)
-                out.append(f'{nested_indent}   "{src}" -> "{dst}";')
-        out.append(f"{nested_indent}}}")
+        out.append(f"{nested_indent}.. code-block:: dot")
+        out.append("")
+        for dot_line in dot_lines:
+            out.append(f"{nested_indent}   {dot_line}")
         out.append("")
         return out
