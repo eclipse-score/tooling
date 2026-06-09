@@ -328,14 +328,11 @@ class LevelSectionBuilder:
 
 
 class CoverageGridBuilder:
-    """Build the coverage summary section (table + policy diagram side by side).
+    """Build the coverage summary table.
 
-    Uses a sphinx-design ``.. grid:: 1 1 2 2`` layout:
-
-    * Left column (7/12 width on desktop) -- a ``.. list-table::`` with
-      per-level coverage statistics and links to each level.
-    * Right column (5/12 width on desktop) -- the :class:`PolicyDiagramBuilder`
-      graphviz diagram showing level kinds and tracing relationships.
+    Emits a plain ``.. list-table::`` with per-level coverage statistics and
+    links to each level.  The tracing-policy diagram is emitted separately
+    (above this table) by the caller via :class:`PolicyDiagramBuilder`.
 
     Usage::
 
@@ -352,7 +349,7 @@ class CoverageGridBuilder:
         self._report = report
 
     def build(self, ref_fn) -> list:
-        """Return RST lines for the coverage grid.
+        """Return RST lines for the coverage table.
 
         Args:
             ref_fn: A callable ``(level_name: str) -> str`` returning an RST
@@ -365,29 +362,25 @@ class CoverageGridBuilder:
         # lobster-trace: UseCases.Item_Coverage
         # lobster-trace: rst_req.RST_Report_Coverage_Table
         lines = []
-        lines += [".. grid:: 1 1 2 2", "   :gutter: 3", ""]
-        lines += ["   .. grid-item::", "      :columns: 12 12 7 7", ""]
         lines += [
-            "      .. list-table::",
-            "         :header-rows: 1",
-            "         :widths: 35 15 15 15",
+            ".. list-table::",
+            "   :header-rows: 1",
+            "   :widths: 35 15 15 15",
             "",
         ]
         lines += [
-            "         * - Category",
-            "           - Coverage",
-            "           - OK Items",
-            "           - Total Items",
+            "   * - Category",
+            "     - Coverage",
+            "     - OK Items",
+            "     - Total Items",
         ]
         for level_name in self._report.config:
             data = self._report.coverage[level_name]
-            lines.append(f"         * - {ref_fn(level_name)}")
-            lines.append(f"           - {data.coverage:.1f}%")
-            lines.append(f"           - {data.ok}")
-            lines.append(f"           - {data.items}")
+            lines.append(f"   * - {ref_fn(level_name)}")
+            lines.append(f"     - {data.coverage:.1f}%")
+            lines.append(f"     - {data.ok}")
+            lines.append(f"     - {data.items}")
         lines.append("")
-        lines += ["   .. grid-item::", "      :columns: 12 12 5 5", ""]
-        lines += PolicyDiagramBuilder.build(self._report, indent=6)
         return lines
 
 

@@ -153,6 +153,10 @@ if plantuml_path is None:
 plantuml = f"{plantuml_path} -Playout=smetana"
 plantuml_output_format = "svg_obj"
 
+import shutil as _shutil
+
+graphviz_dot = os.environ.get("GRAPHVIZ_DOT") or _shutil.which("dot") or "dot"
+
 # HTML theme
 html_theme = "sphinx_rtd_theme"
 

@@ -1026,9 +1026,12 @@ def _dependable_element_index_impl(ctx):
         lobster_rst_dir = ctx.actions.declare_directory(
             ctx.label.name + "/traceability_report",
         )
-        package = ctx.label.package
-        package_depth = len(package.split("/")) if package else 0
-        source_root = "/".join([".." for _ in range(package_depth + 2)]) + "/"
+
+        source_root = ctx.var.get("LOBSTER_SOURCE_ROOT", "")
+        if not source_root:
+            package = ctx.label.package
+            package_depth = len(package.split("/")) if package else 0
+            source_root = "/".join([".." for _ in range(package_depth + 2)]) + "/"
         rst_args = ctx.actions.args()
         rst_args.add(lobster_report_file.path)
         rst_args.add_all(["--out-dir", lobster_rst_dir.path])
