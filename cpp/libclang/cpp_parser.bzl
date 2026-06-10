@@ -20,24 +20,34 @@ def _extract_files_from_attr(attr, attr_name):
             files.extend(src.files.to_list())
     return files
 
-SourceFilesInfo = provider(fields = ["files"])
+SourceFilesInfo = provider(fields = ["files", "inputs"])
 
 def _cc_sources_aspect_impl(target, ctx):
-    files = []
+    direct_srcs = _extract_files_from_attr(ctx.rule.attr, "srcs")
+    direct_hdrs = _extract_files_from_attr(ctx.rule.attr, "hdrs")
+    direct_textual_hdrs = _extract_files_from_attr(ctx.rule.attr, "textual_hdrs")
 
-    files.extend(_extract_files_from_attr(ctx.rule.attr, "srcs"))
+    transitive_inputs = []
+    for dep in getattr(ctx.rule.attr, "deps", []):
+        if SourceFilesInfo in dep:
+            transitive_inputs.append(dep[SourceFilesInfo].inputs)
 
-    transitive = []
+    if direct_srcs:
+        files = direct_srcs
+    else:
+        files = []
+        files.extend(direct_hdrs)
+        files.extend(direct_textual_hdrs)
 
-    if CcInfo in target:
-        cc_info = target[CcInfo]
-        if hasattr(cc_info, "compilation_context"):
-            cc_ctx = cc_info.compilation_context
-            transitive = cc_ctx.headers
+    direct_inputs = []
+    direct_inputs.extend(direct_srcs)
+    direct_inputs.extend(direct_hdrs)
+    direct_inputs.extend(direct_textual_hdrs)
 
     return [
         SourceFilesInfo(
-            files = depset(files, transitive = [transitive]),
+            files = depset(files),
+            inputs = depset(direct_inputs, transitive = transitive_inputs),
         ),
     ]
 
@@ -207,7 +217,9 @@ def _cpp_parser_impl(ctx):
     for ea in extra_args:
         args += ["--extra-arg", ea]
 
-    target_source_files_list = ctx.attr.target[SourceFilesInfo].files.to_list()
+    target_source_files_info = ctx.attr.target[SourceFilesInfo]
+    target_source_files_list = target_source_files_info.files.to_list()
+    target_source_inputs_list = target_source_files_info.inputs.to_list()
 
     # extend args with input sources
     if SourceFilesInfo in ctx.attr.target:
@@ -215,7 +227,7 @@ def _cpp_parser_impl(ctx):
 
     inputs = [
         libclang,
-    ] + target_source_files_list + cxx_builtin_include_files + extra_config_site_files
+    ] + target_source_inputs_list + cxx_builtin_include_files + extra_config_site_files
 
     ctx.actions.run(
         inputs = inputs,
