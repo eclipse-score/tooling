@@ -240,7 +240,6 @@ impl ErrorView for ElementResolverError {
             } => ProjectedError::new("AmbiguousReference")
                 .with_field("reference", reference.clone())
                 .with_field("candidates", candidates.join(", ")),
-
         }
     }
 }
