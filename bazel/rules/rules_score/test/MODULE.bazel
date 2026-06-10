@@ -71,7 +71,7 @@ register_toolchains(
 bazel_dep(name = "trlc", version = "0.0.0")
 git_override(
     module_name = "trlc",
-    commit = "c7750ebd0520996e05b9a9bc91eb6a4f62030f22",
+    commit = "7f06d0396fd0e5f02b657d25700775af5113b7e0",
     remote = "https://github.com/bmw-software-engineering/trlc.git",
 )
 

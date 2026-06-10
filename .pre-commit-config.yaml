@@ -31,7 +31,7 @@ repos:
     rev: a1bb792acda6fd0724936b4ebbdbc8eceb9c0459 # v6.2.0
     hooks:
       - id: reuse-lint-file
-        exclude: \.(svg|tpl|txt|conf|lock|json|in)$
+        exclude: \.(svg|tpl|txt|conf|lock|json|in|png)$
   - repo: local
     hooks:
       - id: copyright

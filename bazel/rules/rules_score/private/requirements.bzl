@@ -20,7 +20,7 @@ public-facing macros.
 """
 
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
-load("@trlc//:trlc.bzl", "TrlcProviderInfo")
+load("@trlc//:trlc.bzl", "TrlcProviderInfo", "subrule_trlc_image_stage")
 load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
@@ -105,7 +105,9 @@ def _requirements_impl(ctx):
             name = ctx.label.name,
         )
 
-    sphinx_srcs = depset([rendered_file])
+    image_outputs = subrule_trlc_image_stage(ctx.files.image_srcs)
+
+    sphinx_srcs = depset([rendered_file] + image_outputs)
 
     transitive_sphinx = [sphinx_srcs]
     for dep in ctx.attr.deps:
@@ -163,6 +165,11 @@ _score_requirements_rule = rule(
             default = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
             doc = "TRLC specification target providing the RSL files that define the requirement types. Defaults to the S-CORE requirements model.",
         ),
+        "image_srcs": attr.label_list(
+            allow_files = [".svg"],
+            default = [],
+            doc = "SVG image files to stage next to the rendered RST. The package-relative path of each file (e.g. 'diagrams/arch.svg') must match the path written in a ``.. image::`` directive inside the requirement description field. Only SVG files are permitted.",
+        ),
         "_renderer": attr.label(
             default = Label("@trlc//tools/trlc_rst:trlc_rst"),
             executable = True,
@@ -170,7 +177,7 @@ _score_requirements_rule = rule(
             doc = "TRLC-to-RST renderer tool.",
         ),
     },
-    subrules = [subrule_lobster_trlc],
+    subrules = [subrule_lobster_trlc, subrule_trlc_image_stage],
 )
 
 def score_requirements_rule(
