@@ -183,11 +183,7 @@ impl ElementResolver {
                 continue;
             };
 
-            let Some(name) = element
-                .alias
-                .as_deref()
-                .or_else(|| element.name.as_deref())
-            else {
+            let Some(name) = element.alias.as_deref().or(element.name.as_deref()) else {
                 continue;
             };
 
@@ -208,7 +204,8 @@ impl ElementResolver {
         if parts.len() == 1 {
             for i in (0..=self.scope.len()).rev() {
                 let outer_scope = &self.scope[..i];
-                let matches = self.collect_matching_port_fqns_in_scope_or_children(outer_scope, raw);
+                let matches =
+                    self.collect_matching_port_fqns_in_scope_or_children(outer_scope, raw);
                 if !matches.is_empty() {
                     // Keep nearest-scope matches only for simple names.
                     candidates.extend(matches);
@@ -254,7 +251,8 @@ impl ElementResolver {
 
         for pfqn in &candidates {
             let ok = pfqn == resolved
-                || self.port_parents
+                || self
+                    .port_parents
                     .get(pfqn)
                     .map(|p| p == resolved)
                     .unwrap_or(false);
@@ -342,8 +340,7 @@ impl ElementResolver {
 
         // 2) lexical port lookup (collapsed to parent component)
         if let Some(res) = self.walk_scopes_nearest_first(|scope| {
-            let ports =
-                self.collect_matching_port_fqns_in_scope_or_children(scope, name);
+            let ports = self.collect_matching_port_fqns_in_scope_or_children(scope, name);
 
             if ports.is_empty() {
                 return Ok(None);
@@ -366,32 +363,22 @@ impl ElementResolver {
         let global: Vec<String> = self
             .elements
             .values()
-            .filter(|e| {
-                e.alias.as_deref() == Some(name)
-                    || e.name.as_deref() == Some(name)
-            })
+            .filter(|e| e.alias.as_deref() == Some(name) || e.name.as_deref() == Some(name))
             .map(|e| e.id.clone())
             .collect::<std::collections::BTreeSet<_>>()
             .into_iter()
             .collect();
 
-        Ok(Self::pick_unique(global, raw)?)
+        Self::pick_unique(global, raw)
     }
 
-    fn resolve_relative(
-        &self,
-        parts: &[&str],
-    ) -> Result<Option<String>, ElementResolverError> {
-        let matches =
-            self.collect_element_fqns_in_scope_or_children(&self.scope, parts);
+    fn resolve_relative(&self, parts: &[&str]) -> Result<Option<String>, ElementResolverError> {
+        let matches = self.collect_element_fqns_in_scope_or_children(&self.scope, parts);
 
-        Ok(Self::pick_unique(matches, &parts.join("."))?)
+        Self::pick_unique(matches, &parts.join("."))
     }
 
-    fn walk_scopes_nearest_first<F>(
-        &self,
-        mut f: F,
-    ) -> Result<Option<String>, ElementResolverError>
+    fn walk_scopes_nearest_first<F>(&self, mut f: F) -> Result<Option<String>, ElementResolverError>
     where
         F: FnMut(&[String]) -> Result<Option<String>, ElementResolverError>,
     {
@@ -504,24 +491,8 @@ impl ElementResolver {
 
     fn validate_relation_constraints(
         &self,
-        relation: &Relation,
-        has_interface_tokens: bool,
-        src_is_interface: bool,
-        tgt_is_interface: bool,
-        src_is_component: bool,
-        decor_role: Option<EndpointRole>,
-        src_port_role: Option<EndpointRole>,
+        input: &RelationValidationInput<'_>,
     ) -> Result<(), ElementResolverError> {
-        let input = RelationValidationInput {
-            relation,
-            has_interface_tokens,
-            src_is_interface,
-            tgt_is_interface,
-            src_is_component,
-            decor_role,
-            src_port_role,
-        };
-
         let rules: [RelationValidationRule; 5] = [
             Self::rule_require_exactly_one_interface_endpoint,
             Self::rule_disallow_interface_to_interface,
@@ -531,7 +502,7 @@ impl ElementResolver {
         ];
 
         for rule in rules {
-            if let Some(err) = rule(&input) {
+            if let Some(err) = rule(input) {
                 return Err(err);
             }
         }
@@ -540,58 +511,53 @@ impl ElementResolver {
     }
 
     fn rule_require_exactly_one_interface_endpoint(
-        input: &RelationValidationInput<'_>
+        input: &RelationValidationInput<'_>,
     ) -> Option<ElementResolverError> {
-        if input.has_interface_tokens
-            && !input.src_is_interface
-            && !input.tgt_is_interface
-        {
+        if input.has_interface_tokens && !input.src_is_interface && !input.tgt_is_interface {
             return Some(ElementResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
-                reason:
-                    "Interface decorators '-(' and ')-' require exactly one Interface endpoint"
-                        .to_string(),
+                reason: "Interface decorators '-(' and ')-' require exactly one Interface endpoint"
+                    .to_string(),
             });
         }
         None
     }
 
     fn rule_disallow_interface_to_interface(
-        input: &RelationValidationInput<'_>
+        input: &RelationValidationInput<'_>,
     ) -> Option<ElementResolverError> {
-        if input.has_interface_tokens
-            && input.src_is_interface
-            && input.tgt_is_interface
-        {
+        if input.has_interface_tokens && input.src_is_interface && input.tgt_is_interface {
             return Some(ElementResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
-                reason:
-                    "Interface decorators '-(' and ')-' are not allowed between two interfaces"
-                        .to_string(),
+                reason: "Interface decorators '-(' and ')-' are not allowed between two interfaces"
+                    .to_string(),
             });
         }
         None
     }
 
     fn rule_require_component_endpoint_for_binding(
-        input: &RelationValidationInput<'_>
+        input: &RelationValidationInput<'_>,
     ) -> Option<ElementResolverError> {
-        if input.has_interface_tokens && input.decor_role.is_some() {
-            if !input.src_is_component || !input.tgt_is_interface {
-                return Some(ElementResolverError::InvalidRelationship {
-                    from: input.relation.lhs.clone(),
-                    to: input.relation.rhs.clone(),
-                    reason: "Decorator binding only allows Component on the left and Interface on the right".to_string(),
-                });
-            }
+        if input.has_interface_tokens
+            && input.decor_role.is_some()
+            && (!input.src_is_component || !input.tgt_is_interface)
+        {
+            return Some(ElementResolverError::InvalidRelationship {
+                from: input.relation.lhs.clone(),
+                to: input.relation.rhs.clone(),
+                reason:
+                    "Decorator binding only allows Component on the left and Interface on the right"
+                        .to_string(),
+            });
         }
         None
     }
 
     fn rule_disallow_generic_decor_with_direction(
-        input: &RelationValidationInput<'_>
+        input: &RelationValidationInput<'_>,
     ) -> Option<ElementResolverError> {
         if input.has_interface_tokens
             && input.decor_role.is_none()
@@ -608,11 +574,9 @@ impl ElementResolver {
     }
 
     fn rule_port_role_consistency(
-        input: &RelationValidationInput<'_>
+        input: &RelationValidationInput<'_>,
     ) -> Option<ElementResolverError> {
-        if let (Some(port_role), Some(decor_role)) =
-            (input.src_port_role, input.decor_role)
-        {
+        if let (Some(port_role), Some(decor_role)) = (input.src_port_role, input.decor_role) {
             if port_role != decor_role {
                 return Some(ElementResolverError::InvalidRelationship {
                     from: input.relation.lhs.clone(),
@@ -646,15 +610,18 @@ impl ElementResolver {
         let tgt_is_interface = matches!(tgt_type, Some(ElementType::Interface));
         let src_is_component = matches!(src_type, Some(ElementType::Component));
 
-        self.validate_relation_constraints(
+        let validation_input = RelationValidationInput {
             relation,
-            parsed_arrow.has_provided_token || parsed_arrow.has_required_token,
+            has_interface_tokens: parsed_arrow.has_provided_token
+                || parsed_arrow.has_required_token,
             src_is_interface,
             tgt_is_interface,
             src_is_component,
-            parsed_arrow.decor_role,
+            decor_role: parsed_arrow.decor_role,
             src_port_role,
-        )?;
+        };
+
+        self.validate_relation_constraints(&validation_input)?;
 
         let relation_type = Self::infer_relation_type(&parsed_arrow);
 

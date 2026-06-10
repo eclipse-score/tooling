@@ -13,10 +13,23 @@
 
 namespace component;
 
+enum ComponentRelationType:byte {
+  Association,
+  Dependency,
+  InterfaceBinding
+}
+
+enum EndpointRole:byte {
+  None,
+  Provided,
+  Required
+}
+
 table LogicRelation {
   target:string;
   annotation:string;
-  relation_type:string;
+  relation_type:ComponentRelationType = Association;
+  source_role:EndpointRole = None;
 }
 
 enum ComponentType:byte {

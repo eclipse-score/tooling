@@ -15,7 +15,7 @@ use flatbuffers::FlatBufferBuilder;
 use std::collections::HashMap;
 
 use component_fbs::component as fb;
-use component_resolver::{ElementType, LogicElement};
+use component_resolver::{ComponentRelationType, ElementType, EndpointRole, LogicElement};
 
 pub struct ComponentSerializer;
 
@@ -34,14 +34,14 @@ impl ComponentSerializer {
             for r in &element.relations {
                 let target_offset = builder.create_string(&r.target);
                 let annotation_offset = r.annotation.as_ref().map(|s| builder.create_string(s));
-                let relation_type_offset = builder.create_string(&r.relation_type);
 
                 let rel = fb::LogicRelation::create(
                     &mut builder,
                     &fb::LogicRelationArgs {
                         target: Some(target_offset),
                         annotation: annotation_offset,
-                        relation_type: Some(relation_type_offset),
+                        relation_type: Self::convert_relation_type(r.relation_type),
+                        source_role: Self::convert_endpoint_role(r.source_role),
                     },
                 );
                 relation_offsets.push(rel);
@@ -134,6 +134,22 @@ impl ComponentSerializer {
             ElementType::Stack => fb::ComponentType::Stack,
             ElementType::Storage => fb::ComponentType::Storage,
             ElementType::Usecase => fb::ComponentType::Usecase,
+        }
+    }
+
+    fn convert_relation_type(relation_type: ComponentRelationType) -> fb::ComponentRelationType {
+        match relation_type {
+            ComponentRelationType::Association => fb::ComponentRelationType::Association,
+            ComponentRelationType::Dependency => fb::ComponentRelationType::Dependency,
+            ComponentRelationType::InterfaceBinding => fb::ComponentRelationType::InterfaceBinding,
+        }
+    }
+
+    fn convert_endpoint_role(source_role: EndpointRole) -> fb::EndpointRole {
+        match source_role {
+            EndpointRole::None => fb::EndpointRole::None,
+            EndpointRole::Provided => fb::EndpointRole::Provided,
+            EndpointRole::Required => fb::EndpointRole::Required,
         }
     }
 }
