@@ -61,7 +61,7 @@ local_path_override(
 bazel_dep(name = "trlc", version = "0.0.0")
 git_override(
     module_name = "trlc",
-    commit = "1872957ae981ae632a0ec6eafb5b8d3aa44bdb86",
+    commit = "7f06d0396fd0e5f02b657d25700775af5113b7e0",
     remote = "https://github.com/bmw-software-engineering/trlc.git",
 )
 

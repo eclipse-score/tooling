@@ -40,6 +40,11 @@ load(
     "sphinx_module_test_suite",
 )
 load(
+    ":requirements_image_test.bzl",
+    "image_srcs_sphinx_sources_test",
+    "requirements_image_test_suite",
+)
+load(
     ":requirements_rst_test.bzl",
     "aous_rst_provider_test",
     "aous_rst_sphinx_test",
@@ -695,6 +700,25 @@ aous_rst_sphinx_test(
 requirements_rst_test_suite(name = "requirements_rst_tests")
 
 # ============================================================================
+# Image srcs Tests
+# ============================================================================
+
+# Fixture: feature_requirements with image_srcs
+feature_requirements(
+    name = "feat_req_with_image",
+    srcs = ["fixtures/seooc_test/feature_requirements.trlc"],
+    image_srcs = ["fixtures/image_srcs/diagrams/arch.svg"],
+    deps = [":asr_trlc"],
+)
+
+image_srcs_sphinx_sources_test(
+    name = "image_srcs_sphinx_sources_test",
+    target_under_test = ":feat_req_with_image",
+)
+
+requirements_image_test_suite(name = "requirements_image_tests")
+
+# ============================================================================
 # Combined Test Suite
 # ============================================================================
 
@@ -732,15 +756,29 @@ py_test(
     deps = ["//bazel/rules/rules_score:rst_to_trlc_lib"],
 )
 
+py_test(
+    name = "test_trlc_rst_image_rendering",
+    size = "small",
+    srcs = ["trlc_rst_image_rendering_test.py"],
+    data = [
+        "fixtures/image_requirements/image_requirements.trlc",
+        "fixtures/image_requirements/schema.rsl",
+    ],
+    main = "trlc_rst_image_rendering_test.py",
+    deps = ["@trlc//tools/trlc_rst:trlc_rst_lib"],
+)
+
 # Combined test suite for all tests
 test_suite(
     name = "all_tests",
     tests = [
+        ":requirements_image_tests",
         ":requirements_rst_tests",
         ":seooc_tests",
         ":sphinx_module_tests",
         ":test_rst_to_trlc",
         ":test_safety_analysis_tools",
+        ":test_trlc_rst_image_rendering",
         ":unit_component_tests",
     ],
 )

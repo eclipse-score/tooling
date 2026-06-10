@@ -33,6 +33,7 @@ def feature_requirements(
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:feature_requirement"),
         ref_package = "",
+        image_srcs = [],
         **kwargs):
     """Define feature requirements following S-CORE process guidelines.
 
@@ -85,6 +86,7 @@ def feature_requirements(
         lobster_config = lobster_config,
         spec = spec,
         ref_package = ref_package,
+        image_srcs = image_srcs,
         **kwargs
     )
     trlc_requirements_test(
