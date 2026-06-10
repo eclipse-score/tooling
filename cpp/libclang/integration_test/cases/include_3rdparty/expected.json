@@ -1,0 +1,67 @@
+{
+  "classes": {
+    "Car": {
+      "id": "Car",
+      "name": "Car",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "getNameOffset",
+          "return_type": "flatbuffers::Offset<flatbuffers::String>",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "createBuilder",
+          "return_type": "flatbuffers::FlatBufferBuilder",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "m_doors",
+          "data_type": "std::uint64_t",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "m_windows",
+          "data_type": "std::vector<int>",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "m_builder",
+          "data_type": "flatbuffers::FlatBufferBuilder",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "m_name_offsets",
+          "data_type": "std::vector<flatbuffers::Offset<flatbuffers::String>>",
+          "is_static": false,
+          "visibility": "protected"
+        },
+        {
+          "name": "m_offsets",
+          "data_type": "std::vector<flatbuffers::uoffset_t>",
+          "is_static": false,
+          "visibility": "private"
+        }
+      ],
+      "source_file": "./cpp/libclang/integration_test/cases/include_3rdparty/transport.h",
+      "source_line": 19
+    }
+  },
+  "functions": []
+}

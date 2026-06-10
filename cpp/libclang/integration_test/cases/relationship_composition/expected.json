@@ -1,0 +1,48 @@
+{
+  "classes": {
+    "Car": {
+      "id": "Car",
+      "name": "Car",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [
+        {
+          "source": "Car",
+          "target": "Engine",
+          "relation_type": "Composition",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "engine",
+          "data_type": "Engine",
+          "is_static": false,
+          "visibility": "private"
+        }
+      ],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_composition/composition.cpp",
+      "source_line": 15
+    },
+    "Engine": {
+      "id": "Engine",
+      "name": "Engine",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_composition/composition.cpp",
+      "source_line": 13
+    }
+  },
+  "functions": []
+}

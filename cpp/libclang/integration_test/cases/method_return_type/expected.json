@@ -1,0 +1,129 @@
+{
+  "classes": {
+    "MethodReturnTypeSample": {
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "id": "MethodReturnTypeSample",
+      "methods": [
+        {
+          "name": "getName",
+          "return_type": "const char *",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "getIdRef",
+          "return_type": "const int &",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "getIdRValueRef",
+          "return_type": "const int &&",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "getMutableIdPtr",
+          "return_type": "int *",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "getPinnedIdPtr",
+          "return_type": "const int *const",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "getHistory",
+          "return_type": "std::vector<int>",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "getNames",
+          "return_type": "std::vector<const char *>",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "getConstPointerMatrix",
+          "return_type": "std::vector<std::vector<const int *>>",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "getNameIndex",
+          "return_type": "std::map<int, std::vector<const char *>>",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "getRouteInfoById",
+          "return_type": "std::map<int, external_types::RouteInfo>",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "name": "MethodReturnTypeSample",
+      "relationships": [
+        {
+          "source": "MethodReturnTypeSample",
+          "target": "external_types::RouteInfo",
+          "relation_type": "Association",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "source_file": "cpp/libclang/integration_test/cases/method_return_type/transport.cpp",
+      "source_line": 25,
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": []
+    },
+    "external_types::RouteInfo": {
+      "id": "external_types::RouteInfo",
+      "name": "RouteInfo",
+      "enclosing_namespace_id": "external_types",
+      "entity_type": "Struct",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "route_id",
+          "data_type": "int",
+          "is_static": false,
+          "visibility": "public"
+        }
+      ],
+      "source_file": "cpp/libclang/integration_test/cases/method_return_type/transport.cpp",
+      "source_line": 18
+    }
+  },
+  "functions": []
+}

@@ -1,0 +1,103 @@
+{
+  "classes": {
+    "Engine": {
+      "id": "Engine",
+      "name": "Engine",
+      "enclosing_namespace_id": null,
+      "entity_type": "Struct",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [
+        {
+          "source": "Engine",
+          "target": "Manufacturer",
+          "relation_type": "Composition",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "cylinders",
+          "data_type": "int",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "displacement",
+          "data_type": "double",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "manufacturer",
+          "data_type": "char[32]",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "model",
+          "data_type": "const char *",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "status",
+          "data_type": "volatile int",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "vendor",
+          "data_type": "Manufacturer",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "start",
+          "data_type": "void (*)(Engine *)",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "stop",
+          "data_type": "int (*)(Engine *, int)",
+          "is_static": false,
+          "visibility": "public"
+        }
+      ],
+      "source_file": "cpp/libclang/integration_test/cases/simple_struct/transport.cpp",
+      "source_line": 20
+    },
+    "Manufacturer": {
+      "id": "Manufacturer",
+      "name": "Manufacturer",
+      "enclosing_namespace_id": null,
+      "entity_type": "Struct",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "name",
+          "data_type": "const char *",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "country_code",
+          "data_type": "int",
+          "is_static": false,
+          "visibility": "public"
+        }
+      ],
+      "source_file": "cpp/libclang/integration_test/cases/simple_struct/transport.cpp",
+      "source_line": 14
+    }
+  },
+  "functions": []
+}

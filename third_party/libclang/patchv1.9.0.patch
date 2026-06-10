@@ -1,0 +1,26 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index dd3548f..e512edf 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,3 +1,8 @@
++## [1.9.0] - 2024-09-24
++
++### Changed
++- Added `--link-static` flag when listing static libraries to link to
++
+ ## [1.8.2] - 2024-05-29
+ 
+ ### Changed
+diff --git a/build/static.rs b/build/static.rs
+index 6bc2bea..e835178 100644
+--- a/build/static.rs
++++ b/build/static.rs
+@@ -41,7 +41,7 @@ fn get_library_name(path: &Path) -> Option<String> {
+ 
+ /// Gets the LLVM static libraries required to link to `libclang`.
+ fn get_llvm_libraries() -> Vec<String> {
+-    common::run_llvm_config(&["--libs"])
++    common::run_llvm_config(&["--libs", "--link-static"])
+         .unwrap()
+         .split_whitespace()
+         .filter_map(|p| {

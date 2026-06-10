@@ -1,0 +1,270 @@
+{
+  "classes": {
+    "MyNamespace::MyNamespace2::Car": {
+      "id": "MyNamespace::MyNamespace2::Car",
+      "name": "Car",
+      "enclosing_namespace_id": "MyNamespace::MyNamespace2",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "Car",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "name",
+              "param_type": "const char *"
+            },
+            {
+              "is_variadic": false,
+              "name": "doors",
+              "param_type": "int"
+            }
+          ],
+          "modifiers": [
+            "Constructor"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "start",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Override"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "stop",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Override"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "getDoors",
+          "return_type": "int",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "wheelCount",
+          "return_type": "int",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Override"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "MyNamespace::MyNamespace2::Car",
+          "target": "MyNamespace::MyNamespace2::VehicleBase",
+          "relation_type": "Inheritance",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "m_doors",
+          "data_type": "int",
+          "is_static": false,
+          "visibility": "private"
+        }
+      ],
+      "source_file": "cpp/libclang/integration_test/cases/complex_class/transport.cpp",
+      "source_line": 21
+    },
+    "MyNamespace::MyNamespace2::ITransport": {
+      "id": "MyNamespace::MyNamespace2::ITransport",
+      "name": "ITransport",
+      "enclosing_namespace_id": "MyNamespace::MyNamespace2",
+      "entity_type": "Interface",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "~ITransport",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Destructor"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "start",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Abstract"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "stop",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Abstract"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/complex_class/transport.h",
+      "source_line": 20
+    },
+    "MyNamespace::MyNamespace2::VehicleBase": {
+      "id": "MyNamespace::MyNamespace2::VehicleBase",
+      "name": "VehicleBase",
+      "enclosing_namespace_id": "MyNamespace::MyNamespace2",
+      "entity_type": "AbstractClass",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "VehicleBase",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "name",
+              "param_type": "const char *"
+            }
+          ],
+          "modifiers": [
+            "Constructor"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "~VehicleBase",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Override",
+            "Destructor"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "wheelCount",
+          "return_type": "int",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Abstract"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "instanceCount",
+          "return_type": "int",
+          "parameters": [],
+          "modifiers": [
+            "Static"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "create",
+          "return_type": "MyNamespace::MyNamespace2::VehicleBase *",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "name",
+              "param_type": "const char *"
+            }
+          ],
+          "modifiers": [
+            "Static"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "MyNamespace::MyNamespace2::VehicleBase",
+          "target": "MyNamespace::MyNamespace2::ITransport",
+          "relation_type": "Implementation",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "m_speed",
+          "data_type": "int",
+          "is_static": false,
+          "visibility": "protected"
+        },
+        {
+          "name": "m_name",
+          "data_type": "const char *",
+          "is_static": false,
+          "visibility": "private"
+        },
+        {
+          "name": "m_id",
+          "data_type": "char *const",
+          "is_static": false,
+          "visibility": "private"
+        },
+        {
+          "name": "m_max_speed",
+          "data_type": "const int",
+          "is_static": false,
+          "visibility": "private"
+        },
+        {
+          "name": "m_firmware",
+          "data_type": "const int *const",
+          "is_static": false,
+          "visibility": "private"
+        },
+        {
+          "name": "m_ref",
+          "data_type": "const int &",
+          "is_static": false,
+          "visibility": "private"
+        }
+      ],
+      "source_file": "cpp/libclang/integration_test/cases/complex_class/transport.h",
+      "source_line": 29
+    }
+  },
+  "functions": []
+}

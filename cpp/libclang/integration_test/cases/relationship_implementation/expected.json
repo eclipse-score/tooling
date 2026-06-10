@@ -1,0 +1,76 @@
+{
+  "classes": {
+    "Vehicle::Car": {
+      "id": "Vehicle::Car",
+      "name": "Car",
+      "enclosing_namespace_id": "Vehicle",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "run",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Override"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "Vehicle::Car",
+          "target": "Rel::IService",
+          "relation_type": "Implementation",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_implementation/implementation.cpp",
+      "source_line": 22
+    },
+    "Rel::IService": {
+      "id": "Rel::IService",
+      "name": "IService",
+      "enclosing_namespace_id": "Rel",
+      "entity_type": "Interface",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "~IService",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Destructor"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "run",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Abstract"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_implementation/implementation.cpp",
+      "source_line": 14
+    }
+  },
+  "functions": []
+}

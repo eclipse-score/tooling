@@ -1,0 +1,53 @@
+{
+  "classes": {
+    "Base": {
+      "id": "Base",
+      "name": "Base",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "~Base",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Destructor"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_inheritance/inheritance.cpp",
+      "source_line": 13
+    },
+    "Vehicle::Car": {
+      "id": "Vehicle::Car",
+      "name": "Car",
+      "enclosing_namespace_id": "Vehicle",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [
+        {
+          "source": "Vehicle::Car",
+          "target": "Base",
+          "relation_type": "Inheritance",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_inheritance/inheritance.cpp",
+      "source_line": 19
+    }
+  },
+  "functions": []
+}

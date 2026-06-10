@@ -1,0 +1,75 @@
+{
+  "classes": {
+    "Alpha::Engine": {
+      "id": "Alpha::Engine",
+      "name": "Engine",
+      "enclosing_namespace_id": "Alpha",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/same_name_diff_namespace/transport.cpp",
+      "source_line": 15
+    },
+    "Beta::Engine": {
+      "id": "Beta::Engine",
+      "name": "Engine",
+      "enclosing_namespace_id": "Beta",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/same_name_diff_namespace/transport.cpp",
+      "source_line": 19
+    },
+    "Car": {
+      "id": "Car",
+      "name": "Car",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [
+        {
+          "source": "Car",
+          "target": "Alpha::Engine",
+          "relation_type": "Composition",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        },
+        {
+          "source": "Car",
+          "target": "Beta::Engine",
+          "relation_type": "Composition",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "alpha_engine",
+          "data_type": "Alpha::Engine",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "beta_engine",
+          "data_type": "Beta::Engine",
+          "is_static": false,
+          "visibility": "public"
+        }
+      ],
+      "source_file": "cpp/libclang/integration_test/cases/same_name_diff_namespace/transport.cpp",
+      "source_line": 22
+    }
+  },
+  "functions": []
+}

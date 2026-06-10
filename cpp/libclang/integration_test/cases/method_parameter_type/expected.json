@@ -1,0 +1,216 @@
+{
+  "classes": {
+    "MethodParameterTypeSample": {
+      "id": "MethodParameterTypeSample",
+      "name": "MethodParameterTypeSample",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "setId",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "id",
+              "param_type": "int"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setName",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "name",
+              "param_type": "const char *"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setIdRef",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "id",
+              "param_type": "const int &"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setIdRValueRef",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "id",
+              "param_type": "const int &&"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setMutableBuffer",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "buffer",
+              "param_type": "int *"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setPinnedBuffer",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "buffer",
+              "param_type": "int *const"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setConstBuffer",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "buffer",
+              "param_type": "const int *const"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setHistory",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "history",
+              "param_type": "std::vector<int>"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setNameList",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "names",
+              "param_type": "const std::vector<const char *> &"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setHistoryMatrix",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "matrix",
+              "param_type": "std::vector<std::vector<int>>"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setNameMatrix",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "matrix",
+              "param_type": "std::vector<std::vector<const char *>>"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setNameIndex",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "index",
+              "param_type": "std::map<int, std::vector<const char *>>"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setHistoryLayerViews",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "layers",
+              "param_type": "std::vector<const std::vector<int> *>"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "setConstPointerMatrix",
+          "return_type": "void",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "matrix",
+              "param_type": "std::vector<std::vector<const int *>>"
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/method_parameter_type/transport.cpp",
+      "source_line": 17
+    }
+  },
+  "functions": []
+}
