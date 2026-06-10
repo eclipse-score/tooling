@@ -74,7 +74,7 @@ impl ClassVisitor {
         };
 
         let mut class_entity = SimpleEntity {
-            id: id,
+            id,
             name: name.clone(),
             enclosing_namespace_id: namespace.map(|ns| ns.to_string()),
             ..Default::default()
@@ -153,12 +153,8 @@ fn parse_source_location(entity: &Entity) -> (Option<String>, Option<u32>) {
 }
 
 fn collect_variable_type(entity: &Entity) -> Option<ParsedVariableType> {
-    let Some(name) = entity.get_name() else {
-        return None;
-    };
-    let Some(field_type) = entity.get_type() else {
-        return None;
-    };
+    let name = entity.get_name()?;
+    let field_type = entity.get_type()?;
 
     Some(ParsedVariableType {
         name,

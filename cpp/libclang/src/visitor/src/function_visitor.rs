@@ -18,7 +18,7 @@
 
 use crate::{context::VisitContext, AstVisitor};
 use clang::{Entity, EntityKind};
-use sequence_diagram::{BodyItem, FunctionDef};
+use sequence_logic::{BodyItem, FunctionDef};
 
 pub struct FunctionVisitor;
 

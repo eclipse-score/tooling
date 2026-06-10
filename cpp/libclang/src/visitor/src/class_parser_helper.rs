@@ -10,6 +10,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////////
+#![cfg_attr(test, allow(dead_code))]
+
 use clang::{Entity, EntityKind, Type, TypeKind};
 use serde::{Deserialize, Serialize};
 
@@ -450,7 +452,7 @@ fn resolve_unqualified_type(original: &Type, canonical: &Type) -> ResolvedType {
 
             ResolvedType::Array {
                 element: Box::new(element),
-                size: original.get_size().map(|s| s as usize),
+                size: original.get_size(),
             }
         }
 
@@ -624,7 +626,7 @@ fn build_fqn_from_entity(entity: &Entity) -> String {
     // Traversal is semantic (not lexical) so aliases/nested constructs resolve to
     // stable ownership hierarchy used by relationship and id matching.
     let mut parts: Vec<(String, bool)> = Vec::new();
-    let mut current = Some(entity.clone());
+    let mut current = Some(*entity);
 
     while let Some(entity) = current {
         match entity.get_kind() {

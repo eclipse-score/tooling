@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub use class_diagram::SimpleEntity;
-use sequence_diagram::FunctionDef;
+use sequence_logic::FunctionDef;
 
 use crate::class_parser_helper::ResolvedType;
 

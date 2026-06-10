@@ -152,11 +152,6 @@ crate.annotation(
         "runtime",
         "clang_18_0",
     ],
-    patch_args = ["-p1"],
-    patches = [
-        "//third_party:libclang/patchv1.8.2.patch",
-        "//third_party:libclang/patchv1.9.0.patch",
-    ],
     deps = ["@crates//:libloading"],
 )
 crate.annotation(

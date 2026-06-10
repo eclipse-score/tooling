@@ -36,7 +36,7 @@ impl EnumVisitor {
         };
         Some(SimpleEntity {
             id: full_qualified_id,
-            name: name,
+            name,
             enclosing_namespace_id: namespace_id,
             entity_type: EntityType::Enum,
             enum_literals: get_literals(entity),

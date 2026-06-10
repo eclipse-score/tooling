@@ -22,6 +22,6 @@ pub use class_visitor::ClassVisitor;
 pub use context::VisitContext;
 pub use enum_visitor::EnumVisitor;
 pub use function_visitor::FunctionVisitor;
-pub use sequence_diagram::{BodyItem, FunctionDef};
+pub use sequence_logic::{BodyItem, FunctionDef};
 pub use visitor::AstVisitor;
 pub use visitor::Visitor;

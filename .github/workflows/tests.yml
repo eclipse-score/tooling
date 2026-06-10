@@ -57,3 +57,9 @@ jobs:
       - name: Ensure correct dependency resolution
         run: |
           bazel mod deps --lockfile_mode=update
+      - name: Run Libclang Parser Tooling clippy
+        run: |
+          bazel build //cpp/libclang/... --config=clippy
+      - name: Run Libclang Parser Tooling tests
+        run: |
+          bazel test //cpp/libclang/...

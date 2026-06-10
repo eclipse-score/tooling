@@ -49,7 +49,7 @@ struct Args {
 
 fn parse_file(
     file: &PathBuf,
-    compilation_flags: &Vec<String>,
+    compilation_flags: &[String],
     index: &clang::Index,
     ast_file_output_path: &PathBuf,
     all_classes: &mut BTreeMap<String, context::TypeMapValue>,
@@ -64,7 +64,7 @@ fn parse_file(
         }
     };
 
-    let parse_result = index.parser(&file).arguments(&compilation_flags).parse();
+    let parse_result = index.parser(file).arguments(compilation_flags).parse();
 
     match parse_result {
         Ok(parsed) => {
@@ -76,7 +76,7 @@ fn parse_file(
             }
 
             let entity = parsed.get_entity();
-            print_entity(&entity, 0, PrintMode::File(&ast_file_output_path));
+            print_entity(&entity, 0, PrintMode::File(ast_file_output_path));
             print_entity(&entity, 0, PrintMode::Stdout);
 
             let mut ctx = VisitContext::default();
@@ -139,8 +139,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let compilation_flags = &command_line_args.extra_args;
 
         parse_file(
-            &file,
-            &compilation_flags,
+            file,
+            compilation_flags,
             &index,
             &ast_file_output_path,
             &mut all_classes,

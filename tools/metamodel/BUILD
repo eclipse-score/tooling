@@ -40,7 +40,7 @@ rust_test(
 rust_library(
     name = "sequence_diagram",
     srcs = ["src/sequence_logic.rs"],
-    crate_name = "sequence_diagram",
+    crate_name = "sequence_logic",
     crate_root = "src/sequence_logic.rs",
     edition = "2021",
     deps = [
