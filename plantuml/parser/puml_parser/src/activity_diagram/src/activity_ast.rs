@@ -22,8 +22,6 @@ pub struct RawActivityDiagram {
 pub struct RawActivitySourceSpan {
     pub start_line: usize,
     pub start_column: usize,
-    pub end_line: usize,
-    pub end_column: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -60,8 +58,8 @@ pub enum RawActivityStmt {
 }
 
 impl RawActivityStmt {
-    pub fn start_location(&self) -> (usize, usize) {
-        let source = match self {
+    pub fn span(&self) -> RawActivitySourceSpan {
+        match self {
             Self::Title(stmt) => stmt.source,
             Self::Action(stmt) => stmt.source,
             Self::Arrow(stmt) => stmt.source,
@@ -80,9 +78,7 @@ impl RawActivityStmt {
             Self::ForkAgain(stmt) => stmt.source,
             Self::ForkEnd(stmt) => stmt.source,
             Self::Swimlane(stmt) => stmt.source,
-        };
-
-        (source.start_line, source.start_column)
+        }
     }
 }
 

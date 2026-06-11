@@ -19,8 +19,8 @@ use thiserror::Error;
 use crate::activity_ast::{
     ActionStmt, ArrowStmt, BackwardStmt, ControlKind, ControlStmt, ElseStmt, EndIfStmt,
     EndWhileStmt, ForkAgainStmt, ForkEndKind, ForkEndStmt, ForkModifier, ForkStartStmt,
-    IfStartStmt, RawActivitySourceSpan, RepeatStartStmt, RepeatWhileStmt, StartStmt,
-    StopStmt, SwimlaneStmt, TitleStmt, WhileStartStmt,
+    IfStartStmt, RawActivitySourceSpan, RepeatStartStmt, RepeatWhileStmt, StartStmt, StopStmt,
+    SwimlaneStmt, TitleStmt, WhileStartStmt,
 };
 use crate::creole::normalize_creole_text;
 use crate::{RawActivityDiagram, RawActivityStmt};
@@ -30,12 +30,34 @@ use parser_core::{
 };
 use puml_utils::LogLevel;
 
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum ActivityInvalidStatement {
+    #[error("missing title text")]
+    MissingTitleText,
+    #[error("missing arrow syntax")]
+    MissingArrowSyntax,
+    #[error("missing {statement_kind} label")]
+    MissingLabel { statement_kind: &'static str },
+    #[error("invalid control kind: {0}")]
+    InvalidControlKind(String),
+    #[error("missing if condition")]
+    MissingIfCondition,
+    #[error("missing while condition")]
+    MissingWhileCondition,
+    #[error("missing repeat while condition")]
+    MissingRepeatWhileCondition,
+    #[error("invalid fork modifier: {0}")]
+    InvalidForkModifier(String),
+    #[error("missing swimlane name")]
+    MissingSwimlaneName,
+}
+
 #[derive(Debug, Error)]
 pub enum ActivityParserError {
     #[error(transparent)]
     Base(#[from] BaseParseError<Rule>),
     #[error("invalid activity statement: {0}")]
-    InvalidStatement(String),
+    InvalidStatement(ActivityInvalidStatement),
 }
 
 impl ErrorLocation for ActivityParserError {
@@ -53,13 +75,10 @@ impl PumlActivityParser {
     fn pair_source(pair: &pest::iterators::Pair<Rule>) -> RawActivitySourceSpan {
         let span = pair.as_span();
         let (start_line, start_column) = span.start_pos().line_col();
-        let (end_line, end_column) = span.end_pos().line_col();
 
         RawActivitySourceSpan {
             start_line,
             start_column,
-            end_line,
-            end_column,
         }
     }
 
@@ -80,9 +99,7 @@ impl PumlActivityParser {
             Rule::backward_stmt => {
                 RawActivityStmt::Backward(Self::parse_backward_stmt(pair, source)?)
             }
-            Rule::control_stmt => {
-                RawActivityStmt::Control(Self::parse_control_stmt(pair, source)?)
-            }
+            Rule::control_stmt => RawActivityStmt::Control(Self::parse_control_stmt(pair, source)?),
             Rule::start_stmt => RawActivityStmt::Start(Self::parse_start_stmt(source)?),
             Rule::stop_stmt => RawActivityStmt::Stop(Self::parse_stop_stmt(source)?),
             Rule::if_start_stmt => {
@@ -108,8 +125,12 @@ impl PumlActivityParser {
             Rule::fork_again_stmt => {
                 RawActivityStmt::ForkAgain(Self::parse_fork_again_stmt(source)?)
             }
-            Rule::fork_end_stmt => RawActivityStmt::ForkEnd(Self::parse_fork_end_stmt(pair, source)?),
-            Rule::swimlane_stmt => RawActivityStmt::Swimlane(Self::parse_swimlane_stmt(pair, source)?),
+            Rule::fork_end_stmt => {
+                RawActivityStmt::ForkEnd(Self::parse_fork_end_stmt(pair, source)?)
+            }
+            Rule::swimlane_stmt => {
+                RawActivityStmt::Swimlane(Self::parse_swimlane_stmt(pair, source)?)
+            }
             _ => return Ok(vec![]),
         };
 
@@ -121,12 +142,17 @@ impl PumlActivityParser {
         source: RawActivitySourceSpan,
     ) -> Result<TitleStmt, ActivityParserError> {
         let raw = pair.as_str().trim();
-        let text = raw
-            .get(5..)
-            .map(|value| normalize_creole_text(value.trim()))
-            .ok_or_else(|| {
-                ActivityParserError::InvalidStatement("missing title text".to_string())
-            })?;
+        let title_text = raw
+            .get("title".len()..)
+            .ok_or(ActivityParserError::InvalidStatement(
+                ActivityInvalidStatement::MissingTitleText,
+            ))?;
+        let title_text = title_text.trim();
+        let title_text = title_text
+            .strip_prefix('"')
+            .and_then(|text| text.strip_suffix('"'))
+            .unwrap_or(title_text);
+        let text = normalize_creole_text(title_text);
 
         Ok(TitleStmt { text, source })
     }
@@ -151,9 +177,9 @@ impl PumlActivityParser {
         }
 
         Ok(ArrowStmt {
-            syntax: syntax.ok_or_else(|| {
-                ActivityParserError::InvalidStatement("missing arrow syntax".to_string())
-            })?,
+            syntax: syntax.ok_or(ActivityParserError::InvalidStatement(
+                ActivityInvalidStatement::MissingArrowSyntax,
+            ))?,
             label,
             source,
         })
@@ -161,14 +187,14 @@ impl PumlActivityParser {
 
     fn parse_action_label(
         pair: pest::iterators::Pair<Rule>,
-        statement_kind: &str,
+        statement_kind: &'static str,
     ) -> Result<String, ActivityParserError> {
         pair.into_inner()
             .find(|inner| matches!(inner.as_rule(), Rule::action_text | Rule::action_line_text))
             .map(|inner| normalize_creole_text(inner.as_str().trim()))
-            .ok_or_else(|| {
-                ActivityParserError::InvalidStatement(format!("missing {} label", statement_kind,))
-            })
+            .ok_or(ActivityParserError::InvalidStatement(
+                ActivityInvalidStatement::MissingLabel { statement_kind },
+            ))
     }
 
     fn parse_action_stmt(
@@ -206,10 +232,9 @@ impl PumlActivityParser {
             "kill" => ControlKind::Kill,
             "detach" => ControlKind::Detach,
             _ => {
-                return Err(ActivityParserError::InvalidStatement(format!(
-                    "invalid control kind: {}",
-                    pair.as_str().trim(),
-                )))
+                return Err(ActivityParserError::InvalidStatement(
+                    ActivityInvalidStatement::InvalidControlKind(pair.as_str().trim().to_string()),
+                ))
             }
         };
 
@@ -245,9 +270,9 @@ impl PumlActivityParser {
         }
 
         Ok(IfStartStmt {
-            condition: condition.ok_or_else(|| {
-                ActivityParserError::InvalidStatement("missing if condition".to_string())
-            })?,
+            condition: condition.ok_or(ActivityParserError::InvalidStatement(
+                ActivityInvalidStatement::MissingIfCondition,
+            ))?,
             label,
             source,
         })
@@ -292,9 +317,9 @@ impl PumlActivityParser {
         }
 
         Ok(WhileStartStmt {
-            condition: condition.ok_or_else(|| {
-                ActivityParserError::InvalidStatement("missing while condition".to_string())
-            })?,
+            condition: condition.ok_or(ActivityParserError::InvalidStatement(
+                ActivityInvalidStatement::MissingWhileCondition,
+            ))?,
             label,
             source,
         })
@@ -346,9 +371,9 @@ impl PumlActivityParser {
         }
 
         Ok(RepeatWhileStmt {
-            condition: condition.ok_or_else(|| {
-                ActivityParserError::InvalidStatement("missing repeat while condition".to_string())
-            })?,
+            condition: condition.ok_or(ActivityParserError::InvalidStatement(
+                ActivityInvalidStatement::MissingRepeatWhileCondition,
+            ))?,
             label,
             source,
         })
@@ -385,10 +410,9 @@ impl PumlActivityParser {
                 } else if text.contains("or") {
                     Some(ForkModifier::Or)
                 } else {
-                    return Err(ActivityParserError::InvalidStatement(format!(
-                        "invalid fork modifier: {}",
-                        text,
-                    )));
+                    return Err(ActivityParserError::InvalidStatement(
+                        ActivityInvalidStatement::InvalidForkModifier(text.to_string()),
+                    ));
                 };
             }
         }
@@ -408,9 +432,9 @@ impl PumlActivityParser {
             .into_inner()
             .find(|inner| inner.as_rule() == Rule::swimlane_text)
             .map(|inner| normalize_creole_text(inner.as_str().trim()))
-            .ok_or_else(|| {
-                ActivityParserError::InvalidStatement("missing swimlane name".to_string())
-            })?;
+            .ok_or(ActivityParserError::InvalidStatement(
+                ActivityInvalidStatement::MissingSwimlaneName,
+            ))?;
 
         Ok(SwimlaneStmt { name, source })
     }

@@ -12,23 +12,52 @@
 // *******************************************************************************
 
 use crate::activity_logic::{
-    ActionNode, ActivityDiagram, ActivityStmt, BackwardNode, ControlKind, ControlNode,
-    IfDisplay, IfNode, LoopDisplay, RepeatWhileNode, TitleNode, WhileNode,
+    ActionNode, ActivityDiagram, ActivityStmt, BackwardNode, ControlKind, ControlNode, IfDisplay,
+    IfNode, LoopDisplay, RepeatWhileNode, TitleNode, WhileNode,
 };
-use activity_parser::{RawActivityDiagram, RawActivityStmt, RawControlKind};
+use activity_parser::{RawActivityDiagram, RawActivitySourceSpan, RawActivityStmt, RawControlKind};
 use resolver_traits::DiagramResolver;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActivityResolverContext {
+    Statement,
+    ElseIfChain,
+    IfBlock,
+    WhileLoop,
+    RepeatLoop,
+}
+
+impl ActivityResolverContext {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Statement => "statement",
+            Self::ElseIfChain => "elseif chain",
+            Self::IfBlock => "if block",
+            Self::WhileLoop => "while loop",
+            Self::RepeatLoop => "repeat loop",
+        }
+    }
+}
+
+impl std::fmt::Display for ActivityResolverContext {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum ActivityResolverError {
     #[error("unexpected end of input while parsing {context} at line {line}, column {column}")]
     UnexpectedEndOfInput {
-        context: &'static str,
+        context: ActivityResolverContext,
         line: usize,
         column: usize,
     },
-    #[error("unexpected statement {statement} while parsing {context} at line {line}, column {column}")]
+    #[error(
+        "unexpected statement {statement} while parsing {context} at line {line}, column {column}"
+    )]
     UnexpectedStatement {
-        context: &'static str,
+        context: ActivityResolverContext,
         statement: &'static str,
         line: usize,
         column: usize,
@@ -51,34 +80,40 @@ impl ActivityResolver {
         Self::default()
     }
 
-    fn current_statement_location(&self, statements: &[RawActivityStmt]) -> Option<(usize, usize)> {
-        self.peek_statement(statements)
-            .map(RawActivityStmt::start_location)
+    fn current_statement_location(
+        &self,
+        statements: &[RawActivityStmt],
+    ) -> Option<RawActivitySourceSpan> {
+        self.peek_statement(statements).map(RawActivityStmt::span)
     }
 
-    fn previous_statement_location(&self, statements: &[RawActivityStmt]) -> Option<(usize, usize)> {
+    fn previous_statement_location(
+        &self,
+        statements: &[RawActivityStmt],
+    ) -> Option<RawActivitySourceSpan> {
         self.cursor
             .checked_sub(1)
             .and_then(|index| statements.get(index))
-            .map(RawActivityStmt::start_location)
+            .map(RawActivityStmt::span)
     }
 
     fn resolve_error_location(
         &self,
         statements: &[RawActivityStmt],
-        fallback: Option<(usize, usize)>,
+        fallback: Option<RawActivitySourceSpan>,
     ) -> (usize, usize) {
         fallback
             .or_else(|| self.current_statement_location(statements))
             .or_else(|| self.previous_statement_location(statements))
+            .map(|source| (source.start_line, source.start_column))
             .unwrap_or((1, 1))
     }
 
     fn unexpected_end_of_input(
         &self,
         statements: &[RawActivityStmt],
-        context: &'static str,
-        fallback: Option<(usize, usize)>,
+        context: ActivityResolverContext,
+        fallback: Option<RawActivitySourceSpan>,
     ) -> ActivityResolverError {
         let (line, column) = self.resolve_error_location(statements, fallback);
 
@@ -91,10 +126,11 @@ impl ActivityResolver {
 
     fn unexpected_statement(
         &self,
-        context: &'static str,
+        context: ActivityResolverContext,
         statement: &RawActivityStmt,
     ) -> ActivityResolverError {
-        let (line, column) = statement.start_location();
+        let source = statement.span();
+        let (line, column) = (source.start_line, source.start_column);
 
         ActivityResolverError::UnexpectedStatement {
             context,
@@ -105,7 +141,8 @@ impl ActivityResolver {
     }
 
     fn unsupported_statement(&self, statement: &RawActivityStmt) -> ActivityResolverError {
-        let (line, column) = statement.start_location();
+        let source = statement.span();
+        let (line, column) = (source.start_line, source.start_column);
 
         ActivityResolverError::UnsupportedStatement {
             statement: raw_statement_name(statement),
@@ -123,17 +160,17 @@ impl ActivityResolver {
             .join(" ")
     }
 
-    fn normalize_optional_logic_text(text: Option<String>) -> Option<String> {
-        text.map(|value| Self::normalize_logic_text(&value))
+    fn normalize_optional_logic_text(text: Option<&str>) -> Option<String> {
+        text.map(Self::normalize_logic_text)
     }
 
     fn visit_statement(
         &mut self,
         statements: &[RawActivityStmt],
     ) -> Result<Option<ActivityStmt>, ActivityResolverError> {
-        let statement = self
-            .next_statement(statements)
-            .ok_or_else(|| self.unexpected_end_of_input(statements, "statement", None))?;
+        let statement = self.next_statement(statements).ok_or_else(|| {
+            self.unexpected_end_of_input(statements, ActivityResolverContext::Statement, None)
+        })?;
 
         match statement {
             RawActivityStmt::Title(title) => Ok(Some(ActivityStmt::Title(TitleNode {
@@ -152,25 +189,27 @@ impl ActivityResolver {
             RawActivityStmt::IfStart(if_start) => Ok(Some(ActivityStmt::If(self.visit_if(
                 statements,
                 Self::normalize_logic_text(&if_start.condition),
-                Self::normalize_optional_logic_text(if_start.label.clone()),
-                statement.start_location(),
+                Self::normalize_optional_logic_text(if_start.label.as_deref()),
+                statement.span(),
             )?))),
-            RawActivityStmt::WhileStart(while_start) => Ok(Some(ActivityStmt::While(
-                self.visit_while(
+            RawActivityStmt::WhileStart(while_start) => {
+                Ok(Some(ActivityStmt::While(self.visit_while(
                     statements,
                     Self::normalize_logic_text(&while_start.condition),
-                    Self::normalize_optional_logic_text(while_start.label.clone()),
-                    statement.start_location(),
-                )?,
-            ))),
+                    Self::normalize_optional_logic_text(while_start.label.as_deref()),
+                    statement.span(),
+                )?)))
+            }
             RawActivityStmt::RepeatStart(_) => Ok(Some(ActivityStmt::RepeatWhile(
-                self.visit_repeat_while(statements, statement.start_location())?,
+                self.visit_repeat_while(statements, statement.span())?,
             ))),
             RawActivityStmt::Else(_)
             | RawActivityStmt::EndIf(_)
             | RawActivityStmt::EndWhile(_)
             | RawActivityStmt::RepeatWhile(_)
-            | RawActivityStmt::Backward(_) => Err(self.unexpected_statement("statement", statement)),
+            | RawActivityStmt::Backward(_) => {
+                Err(self.unexpected_statement(ActivityResolverContext::Statement, statement))
+            }
             RawActivityStmt::ForkStart(_)
             | RawActivityStmt::ForkAgain(_)
             | RawActivityStmt::ForkEnd(_)
@@ -239,10 +278,13 @@ impl ActivityResolver {
         statements: &[RawActivityStmt],
         condition: String,
         then_label: Option<String>,
-        if_location: (usize, usize),
+        if_location: RawActivitySourceSpan,
     ) -> Result<IfNode, ActivityResolverError> {
         let body = self.visit_block_until(statements, |statement| {
-            matches!(statement, RawActivityStmt::Else(_) | RawActivityStmt::EndIf(_))
+            matches!(
+                statement,
+                RawActivityStmt::Else(_) | RawActivityStmt::EndIf(_)
+            )
         })?;
 
         let mut else_label = None;
@@ -250,10 +292,13 @@ impl ActivityResolver {
         let mut endif_consumed_by_elseif = false;
 
         if let Some(RawActivityStmt::Else(else_stmt)) = self.peek_statement(statements) {
-            else_label = Self::normalize_optional_logic_text(else_stmt.label.clone());
+            else_label = Self::normalize_optional_logic_text(else_stmt.label.as_deref());
             self.cursor += 1;
 
-            if matches!(self.peek_statement(statements), Some(RawActivityStmt::IfStart(_))) {
+            if matches!(
+                self.peek_statement(statements),
+                Some(RawActivityStmt::IfStart(_))
+            ) {
                 else_branch.push(ActivityStmt::If(self.visit_elseif_chain(statements)?));
                 endif_consumed_by_elseif = true;
             } else {
@@ -288,18 +333,18 @@ impl ActivityResolver {
         &mut self,
         statements: &[RawActivityStmt],
     ) -> Result<IfNode, ActivityResolverError> {
-        let statement = self
-            .next_statement(statements)
-            .ok_or_else(|| self.unexpected_end_of_input(statements, "elseif chain", None))?;
+        let statement = self.next_statement(statements).ok_or_else(|| {
+            self.unexpected_end_of_input(statements, ActivityResolverContext::ElseIfChain, None)
+        })?;
 
         match statement {
             RawActivityStmt::IfStart(if_start) => self.visit_if(
                 statements,
                 Self::normalize_logic_text(&if_start.condition),
-                Self::normalize_optional_logic_text(if_start.label.clone()),
-                statement.start_location(),
+                Self::normalize_optional_logic_text(if_start.label.as_deref()),
+                statement.span(),
             ),
-            other => Err(self.unexpected_statement("elseif chain", other)),
+            other => Err(self.unexpected_statement(ActivityResolverContext::ElseIfChain, other)),
         }
     }
 
@@ -308,12 +353,11 @@ impl ActivityResolver {
         statements: &[RawActivityStmt],
         condition: String,
         continue_label: Option<String>,
-        while_location: (usize, usize),
+        while_location: RawActivitySourceSpan,
     ) -> Result<WhileNode, ActivityResolverError> {
-        let (body, backward) = self.visit_loop_body_until(
-            statements,
-            |statement| matches!(statement, RawActivityStmt::EndWhile(_)),
-        )?;
+        let (body, backward) = self.visit_loop_body_until(statements, |statement| {
+            matches!(statement, RawActivityStmt::EndWhile(_))
+        })?;
 
         let exit_label = self.consume_endwhile_label(statements, while_location)?;
         let display = if continue_label.is_some() || exit_label.is_some() {
@@ -336,12 +380,11 @@ impl ActivityResolver {
     fn visit_repeat_while(
         &mut self,
         statements: &[RawActivityStmt],
-        repeat_location: (usize, usize),
+        repeat_location: RawActivitySourceSpan,
     ) -> Result<RepeatWhileNode, ActivityResolverError> {
-        let (body, backward) = self.visit_loop_body_until(
-            statements,
-            |statement| matches!(statement, RawActivityStmt::RepeatWhile(_)),
-        )?;
+        let (body, backward) = self.visit_loop_body_until(statements, |statement| {
+            matches!(statement, RawActivityStmt::RepeatWhile(_))
+        })?;
 
         let (condition, continue_label) =
             self.consume_repeat_while_data(statements, repeat_location)?;
@@ -361,14 +404,16 @@ impl ActivityResolver {
     fn consume_endif(
         &mut self,
         statements: &[RawActivityStmt],
-        if_location: (usize, usize),
+        if_location: RawActivitySourceSpan,
     ) -> Result<(), ActivityResolverError> {
         match self.next_statement(statements) {
             Some(RawActivityStmt::EndIf(_)) => Ok(()),
-            Some(statement) => Err(self.unexpected_statement("if block", statement)),
+            Some(statement) => {
+                Err(self.unexpected_statement(ActivityResolverContext::IfBlock, statement))
+            }
             None => Err(self.unexpected_end_of_input(
                 statements,
-                "if block",
+                ActivityResolverContext::IfBlock,
                 Some(if_location),
             )),
         }
@@ -377,16 +422,18 @@ impl ActivityResolver {
     fn consume_endwhile_label(
         &mut self,
         statements: &[RawActivityStmt],
-        while_location: (usize, usize),
+        while_location: RawActivitySourceSpan,
     ) -> Result<Option<String>, ActivityResolverError> {
         match self.next_statement(statements) {
-            Some(RawActivityStmt::EndWhile(endwhile)) => {
-                Ok(Self::normalize_optional_logic_text(endwhile.label.clone()))
+            Some(RawActivityStmt::EndWhile(endwhile)) => Ok(Self::normalize_optional_logic_text(
+                endwhile.label.as_deref(),
+            )),
+            Some(statement) => {
+                Err(self.unexpected_statement(ActivityResolverContext::WhileLoop, statement))
             }
-            Some(statement) => Err(self.unexpected_statement("while loop", statement)),
             None => Err(self.unexpected_end_of_input(
                 statements,
-                "while loop",
+                ActivityResolverContext::WhileLoop,
                 Some(while_location),
             )),
         }
@@ -395,17 +442,19 @@ impl ActivityResolver {
     fn consume_repeat_while_data(
         &mut self,
         statements: &[RawActivityStmt],
-        repeat_location: (usize, usize),
+        repeat_location: RawActivitySourceSpan,
     ) -> Result<(String, Option<String>), ActivityResolverError> {
         match self.next_statement(statements) {
             Some(RawActivityStmt::RepeatWhile(repeat_while)) => Ok((
                 Self::normalize_logic_text(&repeat_while.condition),
-                Self::normalize_optional_logic_text(repeat_while.label.clone()),
+                Self::normalize_optional_logic_text(repeat_while.label.as_deref()),
             )),
-            Some(statement) => Err(self.unexpected_statement("repeat loop", statement)),
+            Some(statement) => {
+                Err(self.unexpected_statement(ActivityResolverContext::RepeatLoop, statement))
+            }
             None => Err(self.unexpected_end_of_input(
                 statements,
-                "repeat loop",
+                ActivityResolverContext::RepeatLoop,
                 Some(repeat_location),
             )),
         }
@@ -415,7 +464,10 @@ impl ActivityResolver {
         statements.get(self.cursor)
     }
 
-    fn next_statement<'a>(&mut self, statements: &'a [RawActivityStmt]) -> Option<&'a RawActivityStmt> {
+    fn next_statement<'a>(
+        &mut self,
+        statements: &'a [RawActivityStmt],
+    ) -> Option<&'a RawActivityStmt> {
         let statement = statements.get(self.cursor)?;
         self.cursor += 1;
         Some(statement)

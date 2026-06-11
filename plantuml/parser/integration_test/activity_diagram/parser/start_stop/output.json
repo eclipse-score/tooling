@@ -3,20 +3,38 @@
     "name": "start_stop",
     "statements": [
       {
-        "Start": null
-      },
-      {
-        "Action": {
-          "label": "Hello activity diagram"
+        "Start": {
+          "source": {
+            "start_line": 15,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "This is defined on\nseveral lines"
+          "label": "Hello activity diagram",
+          "source": {
+            "start_line": 16,
+            "start_column": 1
+          }
         }
       },
       {
-        "Stop": null
+        "Action": {
+          "label": "This is defined on\nseveral lines",
+          "source": {
+            "start_line": 17,
+            "start_column": 1
+          }
+        }
+      },
+      {
+        "Stop": {
+          "source": {
+            "start_line": 19,
+            "start_column": 1
+          }
+        }
       }
     ]
   }
