@@ -30,3 +30,9 @@ exports_files([
     "requirements.in",
     "requirements.txt",
 ])
+
+filegroup(
+    name = "readme_md",
+    srcs = ["README.md"],
+    visibility = ["//visibility:public"],
+)

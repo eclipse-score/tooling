@@ -11,6 +11,8 @@
   SPDX-License-Identifier: Apache-2.0
 ----------------------------------------------------------------------------- -->
 
+# Manual Analysis
+
 | Target          | Kind   | Purpose                                                                  |
 |-----------------|--------|--------------------------------------------------------------------------|
 | `{name}`        | `test` | Checks that the lock file is current and generates the `.lobster` output |
@@ -28,6 +30,8 @@
 The `contexts` attribute accepts **any** target that provides
 `ManualAnalysisContextInfo`. The two rules below are convenience examples.
 You can define additional project-specific context-provider rules as needed.
+
+## Context Providers
 
 ### `manual_analysis_context_from_filegroup`
 
@@ -243,7 +247,7 @@ lobster_test(
 
 ## Example
 
-A fully working example is available in the [`example/BUILD`](example/BUILD)
+A fully working example is available in the `example/BUILD`
 package alongside the accompanying sample inputs and generated artifacts. It
 demonstrates:
 

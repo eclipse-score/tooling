@@ -15,57 +15,40 @@
 
 ## Purpose
 
-Define the consistency rules between the indexed Bazel architecture and the
-indexed PlantUML component diagram.
+This validator enforces consistency between the implemented Bazel SW architecture and
+the targetted architecture in PlantUML component diagram.
 
-This validator checks whether the same SEooC packages, components, and units
-exist on both sides after model normalization.
+It shall make sure that the same architectural elements exist on both sides and are related in the same way.
 
 ## What is Validated
 
-A dependable element must be defined both in Bazel and in PlantUML. The validator checks:
+All comparisons are case-insensitive. Names are derived from the PlantUML
+`alias` when present, otherwise from the `id`. On the Bazel IDs are generated
+from the target name.
 
-- top-level dependable element: PlantUML `package <<SEooC>>` vs. Bazel dependable element
-- names: PlantUML `alias` when present, otherwise `id` vs. Bazel target name
-- components: PlantUML `<<component>>` vs. Bazel component under the expected parent
-- units: PlantUML `<<unit>>` vs. Bazel unit under the expected component
-- parent context must match
-- matching is case-insensitive
+### Dependable Element Consistency
 
-In the common case, components nested directly under the dependable element use
-the dependable element alias as parent. More deeply nested components use their
-immediate enclosing component alias as parent.
+Every PlantUML `package <<SEooC>>` must have a corresponding Bazel
+`dependable_element` target, and vice versa.
+*(Requirement: {requirement:downstream-ref}`Tools.BazelComponentDependableElementConsistency`)*
 
-## Failure Cases
+```starlark
+dependable_element(
+  name = "safety_software_seooc_example",
+  components = [":component_example"],
+)
+```
 
-### Missing in PlantUML
+```text
+package "Sample Seooc" as safety_software_seooc_example <<SEooC>> {
+}
+```
 
-Validation fails when Bazel defines a dependable element, component, or unit
-that is not present in the PlantUML diagram.
+### Component Consistency
 
-This includes cases where the name exists in PlantUML but under the wrong
-parent, or with the wrong stereotype.
-
-### Extra in PlantUML
-
-Validation fails when PlantUML contains a dependable element, component, or
-unit that does not have a corresponding definition in Bazel.
-
-This ensures the diagram does not introduce additional structure beyond what is
-declared in the Bazel architecture.
-
-## Debug Output
-
-The validator appends a debug log containing:
-
-- all diagram entities
-- filtered entity counts
-- all normalized PlantUML keys
-- all normalized Bazel keys
-
-## Example
-
-In Bazel BUILD files, the same structure can be declared like this:
+Every PlantUML `<<component>>` must have a corresponding Bazel `component`
+target under the same parent dependable element, and vice versa.
+*(Requirement: {requirement:downstream-ref}`Tools.BazelComponentComponentConsistency`)*
 
 ```starlark
 component(
@@ -75,12 +58,22 @@ component(
     "//bazel/rules/rules_score/examples/seooc/unit_2:unit_2",
   ],
 )
+```
 
-dependable_element(
-  name = "safety_software_seooc_example",
-  components = [":component_example"],
-)
+```text
+package "Sample Seooc" as safety_software_seooc_example <<SEooC>> {
+    component "Component Example" as component_example <<component>> {
+    }
+}
+```
 
+### Unit Consistency
+
+Every PlantUML `<<unit>>` must have a corresponding Bazel `unit` target under
+the same parent component, and vice versa.
+*(Requirement: {requirement:downstream-ref}`Tools.BazelComponentUnitConsistency`)*
+
+```starlark
 unit(
   name = "unit_1",
 )
@@ -90,22 +83,36 @@ unit(
 )
 ```
 
-When exported into the indexed Bazel architecture, these targets produce keys such as:
-
-If the Bazel architecture JSON contains:
-
-- dependable element: `safety_software_seooc_example` -> key: `("safety_software_seooc_example", None)`
-- component: `@//bazel/rules/rules_score/examples/seooc:component_example` -> key: `("component_example", Some("safety_software_seooc_example"))`
-- unit: `@//bazel/rules/rules_score/examples/seooc/unit_1:unit_1` -> key: `("unit_1", Some("component_example"))`
-- unit: `@//bazel/rules/rules_score/examples/seooc/unit_2:unit_2` -> key: `("unit_2", Some("component_example"))`
-
-then PlantUML must contain entities with the same normalized keys:
-
-```plantuml
-package "Sample Seooc" as safety_software_seooc_example <<SEooC>> {
-    component "Component Example" as component_example <<component>> {
-        component "Unit 1" as unit_1 <<unit>>
-        component "Unit 2" as unit_2 <<unit>>
-    }
+```text
+component "Component Example" as component_example <<component>> {
+    component "Unit 1" as unit_1 <<unit>>
+    component "Unit 2" as unit_2 <<unit>>
 }
 ```
+
+### Parent Context
+
+In the common case, components nested directly under the dependable element use
+the dependable element alias as parent. More deeply nested components use their
+immediate enclosing component alias as parent.
+*(Requirements: {requirement:downstream-ref}`Tools.BazelComponentNameCaseInsensitive`, {requirement:downstream-ref}`Tools.BazelComponentParentContext`)*
+
+## Failure Cases
+
+| Failure case | Validation rule |
+|---|---|
+| Missing dependable element in PlantUML | Dependable Element Consistency |
+| Extra dependable element in PlantUML | Dependable Element Consistency |
+| Missing component in PlantUML | Component Consistency |
+| Extra component in PlantUML | Component Consistency |
+| Missing unit in PlantUML | Unit Consistency |
+| Extra unit in PlantUML | Unit Consistency |
+
+## Debug Output
+
+The validator emits debug output containing:
+
+- all diagram entities
+- filtered entity counts
+- all normalized PlantUML keys
+- all normalized Bazel keys

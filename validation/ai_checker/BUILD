@@ -13,11 +13,15 @@
 load("@pip_ai_checker//:requirements.bzl", "requirement")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 
-exports_files(
-    [
-        "ai_checker.bzl",
-        "src/ai_checker/orchestrator.py",
-    ],
+filegroup(
+    name = "readme_md",
+    srcs = ["README.md"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "doc_assets",
+    srcs = glob(["_assets/*.svg"]),
     visibility = ["//visibility:public"],
 )
 

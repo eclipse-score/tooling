@@ -30,14 +30,8 @@ Requirements
 ------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   requirements/requirements_rst
-
-Traceability Report
--------------------
-
-.. toctree::
-   :maxdepth: 2
-
-   requirements/traceability_rst/index
+   Use Cases <requirements/use_cases_rst>
+   Potential Errors <requirements/potential_errors_rst>
+   Tool Requirements <requirements/tool_requirements_rst>

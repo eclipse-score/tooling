@@ -1,0 +1,73 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml tooling_chain
+
+' Which external tool each Bazel rule/macro invokes during the build.
+' Left column: rules_score rules (Starlark).  Right column: the tools they drive.
+
+skinparam linetype ortho
+skinparam ArrowFontSize 10
+skinparam ArrowColor #555555
+skinparam defaultTextAlignment center
+
+skinparam rectangle {
+    BackgroundColor<<rule>> #FFF8E1
+    BorderColor<<rule>> #F9A825
+    BackgroundColor<<tool>> #E3F2FD
+    BorderColor<<tool>> #1565C0
+    BackgroundColor<<own>> #E8F5E9
+    BorderColor<<own>> #2E7D32
+}
+
+' ── Rules (Starlark macros) ───────────────────────────────────────────────────
+rectangle "feature_requirements\ncomponent_requirements\nassumed_system_requirements" <<rule>> as req
+rectangle "architectural_design\nunit_design" <<rule>> as arch
+rectangle "fmea" <<rule>> as fmea
+rectangle "unit" <<rule>> as unit
+rectangle "dependability_analysis" <<rule>> as da
+rectangle "dependable_element" <<rule>> as de
+rectangle "sphinx_module" <<rule>> as sphinx
+
+' ── Tools ─────────────────────────────────────────────────────────────────────
+rectangle "**TRLC**\ntrlc parser + trlc_rst\n(.trlc/.rsl -> .rst/.inc)" <<tool>> as trlc
+rectangle "**rst_to_trlc**\n(.rst -> .trlc)" <<own>> as r2t
+rectangle "**PlantUML Parser**\nparser + linker (Rust)\n(.puml -> .fbs.bin + .lobster)" <<tool>> as puml
+rectangle "**safety_analysis_tools**\nFTA preprocess + lobster\n(.puml -> root_causes.lobster)" <<own>> as sat
+rectangle "**Lobster**\nlobster-trlc / -report /\n-ci-report / gtest_report" <<tool>> as lob
+rectangle "**Architecture Verifier**\nvalidation_cli\n(arch.json + .fbs.bin)" <<tool>> as verifier
+rectangle "**Sphinx**\nscore_build + html_merge\n(.rst -> needs.json + HTML)" <<tool>> as docs
+
+' ── Tool-qualification branch (traces tool requirements to source) ────────────
+rectangle "rules_score_impl\n(tool-qualification target)" <<rule>> as impl
+rectangle "**Lobster Bazel**\nlobster_linker\n(source tags -> .lobster)" <<own>> as lobbz
+
+req --> r2t   : .rst sources
+req --> trlc  : render + typecheck
+req --> lob   : lobster-trlc
+
+arch --> puml : parse diagrams
+fmea --> trlc : render FM/CM
+fmea --> sat  : FTA root causes
+fmea --> lob  : lobster-trlc
+unit --> lob  : gtest_report
+
+da  --> lob   : lobster-report (FM+CM+FTA)
+de  --> verifier : conformance check
+de  --> lob   : lobster-ci-report (gate)
+de  --> sphinx : assemble docs
+sphinx --> docs
+
+impl --> lobbz : extract trace tags
+
+@enduml
