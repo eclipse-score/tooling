@@ -155,6 +155,7 @@ sphinx_module(
         "//plantuml/sphinx/clickable_plantuml:readme_md": "bazel/rules/rules_score/docs/tool_reference/clickable_plantuml.md",
         "//lobster_bazel:readme_md": "bazel/rules/rules_score/docs/tool_reference/lobster_bazel.md",
         "//manual_analysis:readme_md": "bazel/rules/rules_score/docs/tool_reference/manual_analysis.md",
+        "//validation/core/docs/requirements:requirements_rst": "bazel/rules/rules_score/docs/requirements/validation_core_requirements_rst.rst",
     },
     visibility = ["//visibility:public"],
 )

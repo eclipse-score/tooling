@@ -298,7 +298,7 @@ git_override(
 bazel_dep(name = "lobster", version = "0.0.0")
 git_override(
     module_name = "lobster",
-    commit = "9da4a491ef65c33f50e82d1e29346180dd5acc60",
+    commit = "2792e2daee2cf524fdc7b1545fd3537791ebc36c",
     remote = "https://github.com/bmw-software-engineering/lobster.git",
 )
 
