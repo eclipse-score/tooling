@@ -1,0 +1,90 @@
+{
+  "classes": {
+    "Car": {
+      "id": "Car",
+      "name": "Car",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [
+        {
+          "source": "Car",
+          "target": "MyNamespace::Engine",
+          "relation_type": "Composition",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        },
+        {
+          "source": "Car",
+          "target": "MyNamespace::Engine",
+          "relation_type": "Aggregation",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [
+        {
+          "alias": "MyEngine",
+          "original_type": "MyNamespace::Engine"
+        }
+      ],
+      "variables": [
+        {
+          "name": "engine1",
+          "data_type": "MyNamespace::Engine",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "engine2",
+          "data_type": "MyNamespace::Engine",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "engine3",
+          "data_type": "MyNamespace::Engine *",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "engine4",
+          "data_type": "MyNamespace::Engine &",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "engine5",
+          "data_type": "std::vector<MyNamespace::Engine>",
+          "is_static": false,
+          "visibility": "public"
+        },
+        {
+          "name": "engine6",
+          "data_type": "MyNamespace::Engine",
+          "is_static": false,
+          "visibility": "public"
+        }
+      ],
+      "source_file": "cpp/libclang/integration_test/cases/variable_namespace/transport.cpp",
+      "source_line": 21
+    },
+    "MyNamespace::Engine": {
+      "id": "MyNamespace::Engine",
+      "name": "Engine",
+      "enclosing_namespace_id": "MyNamespace",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/variable_namespace/transport.cpp",
+      "source_line": 16
+    }
+  },
+  "functions": []
+}

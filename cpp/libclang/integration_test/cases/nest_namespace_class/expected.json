@@ -1,0 +1,53 @@
+{
+  "classes": {
+    "MyNamespace::MyNamespace2::ITransport": {
+      "id": "MyNamespace::MyNamespace2::ITransport",
+      "name": "ITransport",
+      "enclosing_namespace_id": "MyNamespace::MyNamespace2",
+      "entity_type": "Interface",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "~ITransport",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Destructor"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "start",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Abstract"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "stop",
+          "return_type": "void",
+          "parameters": [],
+          "modifiers": [
+            "Virtual",
+            "Abstract"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/nest_namespace_class/transport.cpp",
+      "source_line": 19
+    }
+  },
+  "functions": []
+}

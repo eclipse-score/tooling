@@ -1,0 +1,77 @@
+{
+  "classes": {
+    "FixedBuffer": {
+      "id": "FixedBuffer",
+      "name": "FixedBuffer",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "push",
+          "return_type": "void",
+          "parameters": [
+            {
+              "name": "value",
+              "param_type": "const T &",
+              "is_variadic": false
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "pop",
+          "return_type": "T",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        },
+        {
+          "name": "convert",
+          "return_type": "U",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": [
+            "U"
+          ],
+          "visibility": "public"
+        },
+        {
+          "name": "capacity",
+          "return_type": "int",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [],
+      "template_parameters": [
+        "T",
+        "int N",
+        "T2"
+      ],
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "m_data",
+          "data_type": "T[N]",
+          "is_static": false,
+          "visibility": "private"
+        },
+        {
+          "name": "m_size",
+          "data_type": "int",
+          "is_static": false,
+          "visibility": "private"
+        }
+      ],
+      "source_file": "cpp/libclang/integration_test/cases/template_class/transport.cpp",
+      "source_line": 15
+    }
+  },
+  "functions": []
+}

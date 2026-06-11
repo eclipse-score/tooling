@@ -1,0 +1,118 @@
+{
+  "classes": {
+    "CarByParam": {
+      "id": "CarByParam",
+      "name": "CarByParam",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "setDriver",
+          "return_type": "void",
+          "parameters": [
+            {
+              "name": "driver",
+              "param_type": "Driver",
+              "is_variadic": false
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "CarByParam",
+          "target": "Driver",
+          "relation_type": "Association",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
+      "source_line": 22
+    },
+    "CarByReturn": {
+      "id": "CarByReturn",
+      "name": "CarByReturn",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "makeDriver",
+          "return_type": "Driver",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "CarByReturn",
+          "target": "Driver",
+          "relation_type": "Association",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
+      "source_line": 17
+    },
+    "CarByTemplateReturn": {
+      "id": "CarByTemplateReturn",
+      "name": "CarByTemplateReturn",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "allDrivers",
+          "return_type": "std::vector<Driver>",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "CarByTemplateReturn",
+          "target": "Driver",
+          "relation_type": "Association",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
+      "source_line": 27
+    },
+    "Driver": {
+      "id": "Driver",
+      "name": "Driver",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
+      "source_line": 15
+    }
+  },
+  "functions": []
+}

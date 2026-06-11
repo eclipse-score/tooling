@@ -1,0 +1,50 @@
+{
+  "classes": {
+    "Car": {
+      "id": "Car",
+      "name": "Car",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "Car",
+          "return_type": "void",
+          "parameters": [
+            {
+              "name": "name",
+              "param_type": "NameType",
+              "is_variadic": false
+            },
+            {
+              "name": "doors",
+              "param_type": "DoorCount",
+              "is_variadic": false
+            }
+          ],
+          "modifiers": [
+            "Constructor"
+          ],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [
+        {
+          "alias": "NameType",
+          "original_type": "const char *"
+        },
+        {
+          "alias": "DoorCount",
+          "original_type": "int"
+        }
+      ],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/type_alias/transport.cpp",
+      "source_line": 13
+    }
+  },
+  "functions": []
+}

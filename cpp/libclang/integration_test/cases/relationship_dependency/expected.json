@@ -1,0 +1,155 @@
+{
+  "classes": {
+    "CarDepByParamPtr": {
+      "id": "CarDepByParamPtr",
+      "name": "CarDepByParamPtr",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "log",
+          "return_type": "void",
+          "parameters": [
+            {
+              "name": "logger",
+              "param_type": "Logger *",
+              "is_variadic": false
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "CarDepByParamPtr",
+          "target": "Logger",
+          "relation_type": "Dependency",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
+      "source_line": 26
+    },
+    "CarDepByParamRef": {
+      "id": "CarDepByParamRef",
+      "name": "CarDepByParamRef",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "logRef",
+          "return_type": "void",
+          "parameters": [
+            {
+              "name": "logger",
+              "param_type": "Logger &",
+              "is_variadic": false
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "CarDepByParamRef",
+          "target": "Logger",
+          "relation_type": "Dependency",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
+      "source_line": 31
+    },
+    "CarDepByReturnPtr": {
+      "id": "CarDepByReturnPtr",
+      "name": "CarDepByReturnPtr",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "getLogger",
+          "return_type": "Logger *",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "CarDepByReturnPtr",
+          "target": "Logger",
+          "relation_type": "Dependency",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
+      "source_line": 16
+    },
+    "CarDepByReturnRef": {
+      "id": "CarDepByReturnRef",
+      "name": "CarDepByReturnRef",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "getLoggerRef",
+          "return_type": "Logger &",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "CarDepByReturnRef",
+          "target": "Logger",
+          "relation_type": "Dependency",
+          "source_multiplicity": null,
+          "target_multiplicity": null
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
+      "source_line": 21
+    },
+    "Logger": {
+      "id": "Logger",
+      "name": "Logger",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
+      "source_line": 14
+    }
+  },
+  "functions": []
+}
