@@ -1,0 +1,124 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package Tools
+import ToolQualification
+import UseCases
+
+section "Tool Requirements" {
+
+    section "Validation Core" {
+
+        section "Bazel Component Validator" {
+
+            ToolQualification.ToolRequirement BazelComponentDependableElementConsistency {
+                description = '''The validator shall report an error when a
+                Bazel `dependable_element` target exists without a
+                corresponding `package <<SEooC>>` in the PlantUML component
+                diagram, or when a `package <<SEooC>>` exists without a
+                corresponding Bazel `dependable_element` target.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement BazelComponentComponentConsistency {
+                description = '''The validator shall report an error when a
+                Bazel `component` target exists under a dependable element
+                without a corresponding `<<component>>` entity in PlantUML
+                under the same parent, or when a `<<component>>` entity
+                exists in PlantUML without a corresponding Bazel `component`
+                target under the expected parent.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement BazelComponentUnitConsistency {
+                description = '''The validator shall report an error when a
+                Bazel `unit` target exists under a component without a
+                corresponding `<<unit>>` entity in PlantUML under the same
+                parent component, or when a `<<unit>>` entity exists in
+                PlantUML without a corresponding Bazel `unit` target under
+                the expected parent.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement BazelComponentNameCaseInsensitive {
+                description = '''The validator shall match element names
+                between Bazel and PlantUML case-insensitively, using the
+                PlantUML alias when present, otherwise the PlantUML id, and
+                the Bazel target name on the Bazel side.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement BazelComponentParentContext {
+                description = '''The validator shall verify that each Bazel
+                element and its PlantUML counterpart share the same parent
+                context: components directly under a dependable element use
+                the dependable element as parent; more deeply nested
+                components use their immediate enclosing component as
+                parent.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+        }
+
+        section "Component Sequence Validator" {
+
+            ToolQualification.ToolRequirement ComponentSequenceAliasConsistency {
+                description = '''The validator shall report an error when a
+                unit alias defined in the component diagram does not appear
+                among the participants in any sequence diagram, or when a
+                participant alias in a sequence diagram does not match any
+                unit alias in the component diagram.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ComponentSequenceInterfaceConnectionConsistency {
+                description = '''The validator shall report an error when two
+                units are connected through an interface in the component
+                diagram but no function-call interaction between those units
+                appears in any sequence diagram, or when a cross-unit
+                function call appears in a sequence diagram but the component
+                diagram does not define a shared interface between those
+                units.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ComponentSequenceMethodNameConsistency {
+                description = '''When an internal API diagram is provided, the
+                validator shall report an error when a function used in a
+                sequence interaction is not declared in any shared interface
+                of the participating units as defined in the component
+                diagram.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ComponentSequenceInterfaceCoverage {
+                description = '''When an internal API diagram is provided, the
+                validator shall report an error when a function declared in a
+                validated interface is never called in any sequence
+                interaction. Self-calls count as valid usage.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+        }
+
+    }
+
+}

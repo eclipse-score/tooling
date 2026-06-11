@@ -65,4 +65,91 @@ section "Use Cases" {
         affected_tools = [Tools.PlantumlParser, Tools.Bazel]
     }
 
+    ToolQualification.UseCase Verify_Architecture_Conformance {
+        description = '''
+            As a software architect I want the implemented component and unit
+            structure to be checked against the static architecture diagrams
+            during the build so that the delivered code does not drift away
+            from the documented architecture.
+        '''
+        affected_tools = [Tools.Verifier, Tools.PlantumlParser, Tools.Bazel]
+    }
+
+    ToolQualification.UseCase Gate_Traceability_At_Test_Time {
+        description = '''
+            As a safety engineer I want a test that fails when the traceability
+            chain of a dependable element is incomplete so that an element with
+            unsatisfied traceability links cannot be released.
+        '''
+        affected_tools = [Tools.Lobster, Tools.Bazel]
+    }
+
+    ToolQualification.UseCase Trace_Failure_Modes_To_Interfaces {
+        description = '''
+            As a safety engineer I want failure modes to be traceable to the
+            public interface elements of the architecture so that every failure
+            mode is allocated to a concrete part of the design.
+        '''
+        affected_tools = [Tools.PlantumlParser, Tools.Lobster, Tools.Bazel]
+    }
+
+    ToolQualification.UseCase Aggregate_Safety_Analysis_Report {
+        description = '''
+            As a safety engineer I want failure modes, control measures and
+            fault-tree root causes to be aggregated into a single traceability
+            report so that the completeness of the safety analysis can be
+            assessed in one place.
+        '''
+        affected_tools = [Tools.Lobster, Tools.TRLC, Tools.Bazel]
+    }
+
+    ToolQualification.UseCase Enforce_Certified_Scope_And_Integrity {
+        description = '''
+            As a project lead I want the build to fail when a dependable element
+            pulls in implementation targets outside its certified scope or
+            depends on an element of lower integrity level so that certification
+            boundaries are enforced automatically.
+        '''
+        affected_tools = [Tools.Bazel]
+    }
+
+    ToolQualification.UseCase Author_Requirements_In_Rst_Or_Trlc {
+        description = '''
+            As a requirements engineer I want to author requirements either as
+            RST directives or as TRLC records so that existing RST requirement
+            sources can be integrated into the traceability chain without manual
+            rewriting.
+        '''
+        affected_tools = [Tools.TRLC, Tools.Bazel]
+    }
+
+    ToolQualification.UseCase Verify_Unit_Tests_Pass {
+        description = '''
+            As a software developer I want unit test results to be captured and
+            fed into the traceability report so that requirements are only
+            considered verified when their tests actually pass.
+        '''
+        affected_tools = [Tools.Lobster, Tools.Bazel]
+    }
+
+    ToolQualification.UseCase Merge_Cross_Module_Documentation {
+        description = '''
+            As a documentation author I want the HTML documentation of dependent
+            modules to be merged into a single navigable site with working
+            cross-references so that a dependable element and its sub-elements
+            are read as one document.
+        '''
+        affected_tools = [Tools.Docs, Tools.Bazel]
+    }
+
+    ToolQualification.UseCase Validate_Architecture_Specification_Documents {
+        description = '''
+            As a software architect I want the build to verify that architectural
+            specification documents (component and sequence diagrams) are consistent
+            with the implemented Bazel structure so that specification drift is
+            detected automatically during the build.
+        '''
+        affected_tools = [Tools.Verifier, Tools.PlantumlParser, Tools.Bazel]
+    }
+
 }

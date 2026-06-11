@@ -24,6 +24,12 @@ load(
     "manual_analysis_update_env_test",
 )
 
+filegroup(
+    name = "readme_md",
+    srcs = ["README.md"],
+    visibility = ["//visibility:public"],
+)
+
 context_from_filegroup_provider_test(
     name = "context_from_filegroup_provider_test",
     target_under_test = "//manual_analysis/example:manual_analysis_context_from_filegroup",

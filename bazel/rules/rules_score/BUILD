@@ -14,6 +14,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@pip_rules_score//:requirements.bzl", "requirement")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load(
     "//bazel/rules/rules_score:rules_score.bzl",
     "sphinx_module",
@@ -103,6 +104,30 @@ py_library(
     ],
 )
 
+# ---------------------------------------------------------------------------
+# Tool reference pages: each README.md is renamed to <name>.md via
+# renamed_srcs on sphinx_module. No sphinx_docs_library needed for renames —
+# sphinx_docs_library only strips/prepends directory segments and cannot rename
+# basenames.
+# ---------------------------------------------------------------------------
+
+# Assets referenced by ai_checker/README.md (relative ![](_assets/*.svg) links).
+# These need directory-prefix stripping, not renaming → sphinx_docs_library is correct here.
+sphinx_docs_library(
+    name = "tool_readme_ai_checker_assets",
+    srcs = ["//validation/ai_checker:doc_assets"],
+    prefix = "bazel/rules/rules_score/docs/tool_reference/",
+    strip_prefix = "validation/ai_checker/",
+)
+
+# Validation specifications — two files, same source dir, no rename needed.
+sphinx_docs_library(
+    name = "validation_specs",
+    srcs = ["//validation/core:specifications"],
+    prefix = "bazel/rules/rules_score/docs/tool_reference/specs/",
+    strip_prefix = "validation/core/docs/specifications/",
+)
+
 sphinx_module(
     name = "rules_score_doc",
     srcs = glob(
@@ -113,10 +138,24 @@ sphinx_module(
         ],
         allow_empty = True,
     ) + [
-        "//bazel/rules/rules_score/docs/requirements:requirements_rst",
+        "//bazel/rules/rules_score/docs/requirements:potential_errors_rst",
+        "//bazel/rules/rules_score/docs/requirements:tool_requirements_rst",
         "//bazel/rules/rules_score/docs/requirements:traceability_rst",
+        "//bazel/rules/rules_score/docs/requirements:use_cases_rst",
+    ],
+    docs_library_deps = [
+        ":tool_readme_ai_checker_assets",
+        ":validation_specs",
     ],
     index = "docs/index.rst",
+    renamed_srcs = {
+        "//plantuml/parser:readme_md": "bazel/rules/rules_score/docs/tool_reference/plantuml_parser.md",
+        "//validation/core:README.md": "bazel/rules/rules_score/docs/tool_reference/validation_core.md",
+        "//validation/ai_checker:readme_md": "bazel/rules/rules_score/docs/tool_reference/ai_checker.md",
+        "//plantuml/sphinx/clickable_plantuml:readme_md": "bazel/rules/rules_score/docs/tool_reference/clickable_plantuml.md",
+        "//lobster_bazel:readme_md": "bazel/rules/rules_score/docs/tool_reference/lobster_bazel.md",
+        "//manual_analysis:readme_md": "bazel/rules/rules_score/docs/tool_reference/manual_analysis.md",
+    },
     visibility = ["//visibility:public"],
 )
 

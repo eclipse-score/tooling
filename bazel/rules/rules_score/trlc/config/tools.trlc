@@ -69,4 +69,14 @@ section "Tools" {
         description = "AI-based Analysis Tool"
         classification = ToolQualification.Classification.None
     }
+
+    ToolQualification.Tool LobsterBazel {
+        description = "Source-code traceability tag extractor (Bazel)"
+        classification = ToolQualification.Classification.None
+    }
+
+    ToolQualification.Tool ManualAnalysis {
+        description = "Manual Analysis Framework"
+        classification = ToolQualification.Classification.None
+    }
 }

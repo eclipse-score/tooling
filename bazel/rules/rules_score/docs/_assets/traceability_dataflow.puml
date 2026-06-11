@@ -1,0 +1,69 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml traceability_dataflow
+
+' End-to-end traceability data flow: every artefact is normalised into a
+' .lobster file, aggregated against a generated lobster config, and gated by
+' lobster-ci-report at the dependable_element level.
+
+skinparam linetype ortho
+skinparam ArrowFontSize 10
+skinparam defaultTextAlignment center
+
+skinparam rectangle {
+    BackgroundColor<<src>> #EFF6FB
+    BorderColor<<src>> #0066B1
+    BackgroundColor<<lob>> #FFF3E0
+    BorderColor<<lob>> #EF6C00
+    BackgroundColor<<rep>> #E8F5E9
+    BorderColor<<rep>> #2E7D32
+}
+
+' ── Sources ───────────────────────────────────────────────────────────────────
+rectangle "Assumed System Req\nFeature Req\nComponent Req\n(.trlc)" <<src>> as reqs_in
+rectangle "public_api.puml\n(architectural_design)" <<src>> as api_in
+rectangle "failuremodes.trlc\ncontrolmeasures.trlc" <<src>> as fmcm_in
+rectangle "fta.puml" <<src>> as fta_in
+rectangle "Unit tests\n(cc_test / gtest)" <<src>> as test_in
+
+' ── Lobster artefacts (one per source kind) ───────────────────────────────────
+rectangle "requirements.lobster" <<lob>> as reqs_lob
+rectangle "public_api.lobster" <<lob>> as api_lob
+rectangle "failuremodes.lobster\ncontrolmeasures.lobster" <<lob>> as fmcm_lob
+rectangle "root_causes.lobster" <<lob>> as rc_lob
+rectangle "<unit>.lobster\n(test results)" <<lob>> as test_lob
+
+' ── Aggregation + gate ────────────────────────────────────────────────────────
+rectangle "lobster_de.conf\n(generated)" <<lob>> as conf
+rectangle "report.json" <<rep>> as json
+rectangle "report.html\n+ RST report" <<rep>> as html
+rectangle "PASS / FAIL\n(bazel test gate)" <<rep>> as gate
+
+reqs_in  --> reqs_lob  : lobster-trlc
+api_in   --> api_lob   : plantuml parser
+fmcm_in  --> fmcm_lob  : lobster-trlc
+fta_in   --> rc_lob    : safety_analysis_tools
+test_in  --> test_lob  : gtest_report
+
+reqs_lob --> conf
+api_lob  --> conf
+fmcm_lob --> conf
+rc_lob   --> conf
+test_lob --> conf
+
+conf --> json : lobster-report
+json --> html : lobster-html-report\nlobster-rst-report
+json --> gate : lobster-ci-report
+
+@enduml

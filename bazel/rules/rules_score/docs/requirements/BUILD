@@ -23,6 +23,7 @@ trlc_requirements(
     name = "use_cases",
     srcs = ["use_cases.trlc"],
     spec = ["//bazel/rules/rules_score/trlc/config:qualification_model"],
+    visibility = ["//visibility:public"],
     deps = ["//bazel/rules/rules_score/trlc/config:tools"],
 )
 
@@ -63,6 +64,30 @@ trlc_rst(
         ":tool_requirements",
     ],
     visibility = ["//bazel/rules/rules_score:__pkg__"],
+)
+
+trlc_rst(
+    name = "use_cases_rst",
+    reqs = [":use_cases"],
+    visibility = ["//bazel/rules/rules_score:__pkg__"],
+)
+
+trlc_rst(
+    name = "potential_errors_rst",
+    reqs = [":potential_errors"],
+    visibility = ["//bazel/rules/rules_score:__pkg__"],
+    deps = [":use_cases"],
+)
+
+trlc_rst(
+    name = "tool_requirements_rst",
+    reqs = [":tool_requirements"],
+    visibility = ["//bazel/rules/rules_score:__pkg__"],
+    deps = [
+        ":potential_errors",
+        ":use_cases",
+        "//bazel/rules/rules_score/trlc/config:tools",
+    ],
 )
 
 # ---------------------------------------------------------------------------

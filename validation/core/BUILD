@@ -12,6 +12,22 @@
 # *******************************************************************************
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
+exports_files(
+    [
+        "README.md",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "specifications",
+    srcs = [
+        "docs/specifications/bazel_component.md",
+        "docs/specifications/component_sequence.md",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 rust_library(
     name = "validation",
     srcs = [

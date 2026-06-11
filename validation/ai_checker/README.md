@@ -127,6 +127,7 @@ bazel test //path/to:requirements_ai_check --config=copilot --output_groups=debu
 cat bazel-bin/path/to/requirements_ai_check_debug.log
 ```
 
+(custom-ai-model)=
 ### Custom AI Model
 
 To use a provider other than GitHub Copilot, point `_custom_ai_model` at a
@@ -145,6 +146,7 @@ See the [Integration Guide](#integration-guide) for details on implementing a
 
 ---
 
+(integration-guide)=
 ## Integration Guide
 
 This section describes how to use the AI Checker from another Bazel repository

@@ -80,7 +80,7 @@ Sphinx build lifecycle                   clickable_plantuml hooks
 
 The `architectural_design()` rule invokes `//tools/plantuml/linker:linker` on all
 `.fbs.bin` FlatBuffers files produced by the PlantUML parser.  See
-[Link Generation by the Linker](#link-generation-by-the-linker) for a detailed
+[Link Mapping Format](#link-mapping-format) for a detailed
 description of which links are emitted.
 
 ### Algorithm
@@ -108,7 +108,7 @@ Given the set of `.fbs.bin` files for one `architectural_design()` target:
 
 ### Concrete Example
 
-```plantuml
+```text
 ' adas_overview.puml  — subsystem context
 @startuml
 component ADAS
@@ -119,7 +119,7 @@ ADAS --> LaneKeepAssist
 @enduml
 ```
 
-```plantuml
+```text
 ' brake_controller.puml  — component detail
 @startuml
 component BrakeController
@@ -155,6 +155,7 @@ clicking it in the detail diagram navigates back to the overview.
 `ADAS` and `LaneKeepAssist` appear as top-level only in `adas_overview.puml` and
 have no dedicated detail diagram, so **no links** are emitted for them.
 
+(link-mapping-format)=
 ## Link Mapping Format
 
 Place one or more `*plantuml_links.json` filesinside the Sphinx source directory:

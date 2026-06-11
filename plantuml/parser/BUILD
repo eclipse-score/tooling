@@ -10,6 +10,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+filegroup(
+    name = "readme_md",
+    srcs = ["README.md"],
+    visibility = ["//visibility:public"],
+)
+
 alias(
     name = "parser",
     actual = "//plantuml/parser/puml_cli:puml_cli",

@@ -22,10 +22,36 @@ safety analysis to the top-level SEooC assembly.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Overview
 
    overview
-   integration_guide
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Usage
+
    user_guide/index
    rule_reference
-   tool_qualification
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Validation
+
+   tool_reference/specs/bazel_component
+   tool_reference/specs/component_sequence
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Development
+
+   integration_guide
+   tooling_architecture
+   tool_reference/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Tool Qualification
+
+   Requirements <tool_qualification>
+   Traceability Report <requirements/traceability_rst/index>
    quality_report

@@ -10,6 +10,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+filegroup(
+    name = "readme_md",
+    srcs = ["README.md"],
+    visibility = ["//visibility:public"],
+)
+
 py_library(
     name = "clickable_plantuml",
     srcs = ["clickable_plantuml.py"],

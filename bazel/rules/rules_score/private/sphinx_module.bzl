@@ -196,6 +196,11 @@ def _score_html_impl(ctx):
             for original in entry.files:
                 new_path = entry.prefix + original.short_path.removeprefix(entry.strip_prefix)
                 _relocate(original, new_path)
+    for src_target, dest in ctx.attr.renamed_srcs.items():
+        src_files = src_target[DefaultInfo].files.to_list()
+        if len(src_files) != 1:
+            fail("renamed_srcs entry must be exactly 1 file, got %d files: %s" % (len(src_files), src_files))
+        _relocate(src_files[0], dest)
     config_file = _create_config_py(ctx)
 
     # Sphinx only accepts a single directory to read its doc sources from.
@@ -312,6 +317,12 @@ _score_html = rule(
         extra_opts = attr.string_list(
             doc = "Regular additional string options to pass onto Sphinx.",
         ),
+        renamed_srcs = attr.label_keyed_string_dict(
+            allow_files = True,
+            doc = "Doc source files that are renamed. Keys are file labels, values are " +
+                  "destination paths relative to the Sphinx source root. Exactly one " +
+                  "file per label. Mirrors sphinx_docs.renamed_srcs from rules_python.",
+        ),
     ),
     toolchains = ["//bazel/rules/rules_score:toolchain_type"],
 )
@@ -325,6 +336,7 @@ def sphinx_module(
         index,
         deps = [],
         docs_library_deps = [],
+        renamed_srcs = {},
         sphinx = Label("//bazel/rules/rules_score:score_build"),
         strip_prefix = "",
         extra_opts = [],
@@ -369,6 +381,7 @@ def sphinx_module(
         index = index,
         deps = deps,
         docs_library_deps = docs_library_deps,
+        renamed_srcs = renamed_srcs,
         needs = [d + "_needs" for d in deps],
         extra_opts = extra_opts,
         extra_opts_targets = extra_opts_targets,
