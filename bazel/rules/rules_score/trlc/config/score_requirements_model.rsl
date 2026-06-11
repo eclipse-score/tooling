@@ -70,9 +70,15 @@ tuple FeatReqId {
     version Integer
 }
 
+tuple CompReqSourceId {
+    item    [FeatReq, AssumedSystemReq]
+    separator @
+    version Integer
+}
+
 type CompReq "Component-level requirement allocated to a specific software component." extends RequirementSafety {
-    derived_from "Versioned references to the FeatReq items this component requirement is derived from. Omit only for component-internal requirements with no feature-level parent."
-                 optional FeatReqId[1 .. *]
+    derived_from "Versioned references to the FeatReq or AssumedSystemReq items this component requirement is derived from. Omit only for component-internal requirements with no feature-level parent."
+                 optional CompReqSourceId[1 .. *]
     mitigates    "Reference to the FailureMode or safety concern that this requirement mitigates."
                  optional String
 }
