@@ -203,7 +203,7 @@ impl ErrorView for ActivityParserError {
             ActivityParserError::Base(e) => e.project(base_dir),
             ActivityParserError::InvalidStatement(message) => {
                 let _ = base_dir;
-                ProjectedError::new("InvalidStatement").with_field("message", message.clone())
+                ProjectedError::new("InvalidStatement").with_field("message", message.to_string())
             }
         }
     }
@@ -251,34 +251,28 @@ impl ErrorView for ActivityResolverError {
                 context,
                 line,
                 column,
-            } => {
-                ProjectedError::new("UnexpectedEndOfInput")
-                    .with_field("context", context.to_string())
-                    .with_field("line", line.to_string())
-                    .with_field("column", column.to_string())
-            }
+            } => ProjectedError::new("UnexpectedEndOfInput")
+                .with_field("context", context.to_string())
+                .with_field("line", line.to_string())
+                .with_field("column", column.to_string()),
             ActivityResolverError::UnexpectedStatement {
                 context,
                 statement,
                 line,
                 column,
-            } => {
-                ProjectedError::new("UnexpectedStatement")
-                    .with_field("context", context.to_string())
-                    .with_field("statement", statement.to_string())
-                    .with_field("line", line.to_string())
-                    .with_field("column", column.to_string())
-            }
+            } => ProjectedError::new("UnexpectedStatement")
+                .with_field("context", context.to_string())
+                .with_field("statement", statement.to_string())
+                .with_field("line", line.to_string())
+                .with_field("column", column.to_string()),
             ActivityResolverError::UnsupportedStatement {
                 statement,
                 line,
                 column,
-            } => {
-                ProjectedError::new("UnsupportedStatement")
-                    .with_field("statement", statement.to_string())
-                    .with_field("line", line.to_string())
-                    .with_field("column", column.to_string())
-            }
+            } => ProjectedError::new("UnsupportedStatement")
+                .with_field("statement", statement.to_string())
+                .with_field("line", line.to_string())
+                .with_field("column", column.to_string()),
         }
     }
 }

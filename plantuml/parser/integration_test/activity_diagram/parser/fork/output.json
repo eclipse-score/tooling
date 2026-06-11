@@ -3,51 +3,106 @@
     "name": "fork",
     "statements": [
       {
-        "Start": null
-      },
-      {
-        "ForkStart": null
-      },
-      {
-        "Action": {
-          "label": "A"
+        "Start": {
+          "source": {
+            "start_line": 15,
+            "start_column": 1
+          }
         }
       },
       {
-        "ForkAgain": null
-      },
-      {
-        "Action": {
-          "label": "B"
+        "ForkStart": {
+          "source": {
+            "start_line": 16,
+            "start_column": 1
+          }
         }
       },
       {
-        "Stop": null
-      },
-      {
-        "ForkAgain": null
-      },
-      {
         "Action": {
-          "label": "C"
+          "label": "A",
+          "source": {
+            "start_line": 17,
+            "start_column": 3
+          }
         }
       },
       {
-        "ForkAgain": null
+        "ForkAgain": {
+          "source": {
+            "start_line": 18,
+            "start_column": 1
+          }
+        }
       },
       {
         "Action": {
-          "label": "D"
+          "label": "B",
+          "source": {
+            "start_line": 19,
+            "start_column": 3
+          }
+        }
+      },
+      {
+        "Stop": {
+          "source": {
+            "start_line": 20,
+            "start_column": 3
+          }
+        }
+      },
+      {
+        "ForkAgain": {
+          "source": {
+            "start_line": 21,
+            "start_column": 1
+          }
+        }
+      },
+      {
+        "Action": {
+          "label": "C",
+          "source": {
+            "start_line": 22,
+            "start_column": 3
+          }
+        }
+      },
+      {
+        "ForkAgain": {
+          "source": {
+            "start_line": 23,
+            "start_column": 1
+          }
+        }
+      },
+      {
+        "Action": {
+          "label": "D",
+          "source": {
+            "start_line": 24,
+            "start_column": 3
+          }
         }
       },
       {
         "ForkEnd": {
           "kind": "EndFork",
-          "modifier": null
+          "modifier": null,
+          "source": {
+            "start_line": 25,
+            "start_column": 1
+          }
         }
       },
       {
-        "Stop": null
+        "Stop": {
+          "source": {
+            "start_line": 26,
+            "start_column": 1
+          }
+        }
       }
     ]
   }

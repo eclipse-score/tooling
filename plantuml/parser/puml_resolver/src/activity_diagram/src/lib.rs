@@ -15,8 +15,7 @@ mod activity_logic;
 mod activity_resolver;
 
 pub use activity_logic::{
-    ActionNode, ActivityDiagram, ActivityStmt, BackwardNode, ControlKind,
-    ControlNode, IfDisplay, IfNode, LoopDisplay, RepeatWhileNode, TitleNode,
-    WhileNode,
+    ActionNode, ActivityDiagram, ActivityStmt, BackwardNode, ControlKind, ControlNode, IfDisplay,
+    IfNode, LoopDisplay, RepeatWhileNode, TitleNode, WhileNode,
 };
 pub use activity_resolver::{ActivityResolver, ActivityResolverError};

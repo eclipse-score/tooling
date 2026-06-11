@@ -4,17 +4,29 @@
     "statements": [
       {
         "Action": {
-          "label": "A1"
+          "label": "A1",
+          "source": {
+            "start_line": 15,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "A2"
+          "label": "A2",
+          "source": {
+            "start_line": 16,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "A3"
+          "label": "A3",
+          "source": {
+            "start_line": 17,
+            "start_column": 1
+          }
         }
       }
     ]

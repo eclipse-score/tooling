@@ -4,78 +4,145 @@
     "statements": [
       {
         "Swimlane": {
-          "name": "Actor_For_green"
+          "name": "Actor_For_green",
+          "source": {
+            "start_line": 15,
+            "start_column": 1
+          }
         }
       },
       {
-        "Start": null
+        "Start": {
+          "source": {
+            "start_line": 16,
+            "start_column": 1
+          }
+        }
       },
       {
         "IfStart": {
           "condition": "color?",
-          "label": "green"
+          "label": "green",
+          "source": {
+            "start_line": 17,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "action green"
+          "label": "action green",
+          "source": {
+            "start_line": 18,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "foo1"
+          "label": "foo1",
+          "source": {
+            "start_line": 19,
+            "start_column": 1
+          }
         }
       },
       {
         "Else": {
-          "label": "not green"
+          "label": "not green",
+          "source": {
+            "start_line": 20,
+            "start_column": 1
+          }
         }
       },
       {
         "Swimlane": {
-          "name": "Actor_For_no_green"
+          "name": "Actor_For_no_green",
+          "source": {
+            "start_line": 21,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "action not green"
+          "label": "action not green",
+          "source": {
+            "start_line": 22,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "foo2"
+          "label": "foo2",
+          "source": {
+            "start_line": 23,
+            "start_column": 1
+          }
         }
       },
       {
-        "EndIf": null
+        "EndIf": {
+          "source": {
+            "start_line": 24,
+            "start_column": 1
+          }
+        }
       },
       {
         "Swimlane": {
-          "name": "Next_Actor"
+          "name": "Next_Actor",
+          "source": {
+            "start_line": 25,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "foo3"
+          "label": "foo3",
+          "source": {
+            "start_line": 26,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "foo4"
+          "label": "foo4",
+          "source": {
+            "start_line": 27,
+            "start_column": 1
+          }
         }
       },
       {
         "Swimlane": {
-          "name": "Final_Actor"
+          "name": "Final_Actor",
+          "source": {
+            "start_line": 28,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "foo5"
+          "label": "foo5",
+          "source": {
+            "start_line": 29,
+            "start_column": 1
+          }
         }
       },
       {
-        "Stop": null
+        "Stop": {
+          "source": {
+            "start_line": 30,
+            "start_column": 1
+          }
+        }
       }
     ]
   }
