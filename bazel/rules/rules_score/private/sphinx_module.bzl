@@ -228,10 +228,35 @@ def _score_html_impl(ctx):
         "--log-level",
         get_log_level(ctx),
     ]
+
+    # Wire in the hermetic graphviz deb (dot_builtins + bundled shared libs).
+    # conf.template.py resolves all three env vars (GRAPHVIZ_DOT,
+    # LD_LIBRARY_PATH, LTDL_LIBRARY_PATH) from execroot-relative to absolute
+    # paths so dot_builtins can load its plugins without a system installation.
+    _dot_suffix = "/usr/bin/dot_builtins"
+    graphviz_files = ctx.files.graphviz
+    dot_binary = None
+    for f in graphviz_files:
+        if f.path.endswith(_dot_suffix):
+            dot_binary = f
+            break
+    if not dot_binary:
+        fail("graphviz target {} must provide usr/bin/dot_builtins".format(ctx.attr.graphviz.label))
+
+    graphviz_prefix = dot_binary.path[:-len(_dot_suffix)]
+    graphviz_env = {
+        "GRAPHVIZ_DOT": dot_binary.path,
+        "LD_LIBRARY_PATH": graphviz_prefix + "/usr/lib",
+        "LTDL_LIBRARY_PATH": graphviz_prefix + "/usr/lib/graphviz",
+    }
+    html_inputs = html_inputs + graphviz_files
+
     ctx.actions.run(
         inputs = html_inputs,
         outputs = [sphinx_html_output],
         arguments = html_args + [args],
+        env = graphviz_env,
+        use_default_shell_env = True,
         progress_message = "Building HTML: %s" % ctx.label.name,
         executable = sphinx_toolchain.sphinx.files_to_run.executable,
         tools = [
@@ -322,6 +347,12 @@ _score_html = rule(
             doc = "Doc source files that are renamed. Keys are file labels, values are " +
                   "destination paths relative to the Sphinx source root. Exactly one " +
                   "file per label. Mirrors sphinx_docs.renamed_srcs from rules_python.",
+        ),
+        graphviz = attr.label(
+            default = Label("@graphviz_deb//:all"),
+            allow_files = True,
+            doc = "Graphviz cmake-release deb files (dot_builtins binary + bundled libs). " +
+                  "Provides a hermetic 'dot' binary without requiring a system graphviz installation.",
         ),
     ),
     toolchains = ["//bazel/rules/rules_score:toolchain_type"],

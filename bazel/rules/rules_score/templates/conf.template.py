@@ -20,6 +20,7 @@ Template variables like {PROJECT_NAME} are replaced during Bazel build.
 
 import json
 import os
+import shutil as _shutil
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -29,6 +30,48 @@ from sphinx.util import logging
 
 # Create a logger with the Sphinx namespace
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Helpers: Bazel execroot path resolution
+# ---------------------------------------------------------------------------
+
+
+def _bazel_execroot() -> Path:
+    """Return the Bazel execroot directory inferred from this config file's path.
+
+    conf.py is generated into ``bazel-out/…/bin/…/conf.py``, so splitting on
+    ``/bazel-out/`` gives us the execroot prefix reliably.  Falls back to the
+    current working directory when the path pattern is not recognised (e.g.
+    during unit tests or IDE runs outside Bazel).
+    """
+    parts = str(Path(__file__).resolve()).split("/bazel-out/", 1)
+    return Path(parts[0]) if len(parts) == 2 else Path.cwd()
+
+
+# Computed once at import time so _resolve_execroot_path() doesn't repeat the
+# filesystem resolution on every call.
+_EXECROOT = _bazel_execroot()
+
+
+def _resolve_execroot_path(path_value: str) -> str:
+    """Resolve an execroot-relative path to an absolute filesystem path.
+
+    Bazel passes action inputs as paths relative to the execroot (e.g.
+    ``external/+_repo_rules2+graphviz_deb/usr/bin/dot_builtins``).  Those
+    paths are only valid when the process' cwd is the execroot — which is
+    not guaranteed once Sphinx changes directories during the build.
+
+    This function makes them absolute so they work regardless of cwd.
+    Absolute paths and plain command names (e.g. ``dot``) are returned
+    unchanged.
+    """
+    p = Path(path_value)
+    if p.is_absolute():
+        return str(p)
+    if path_value.startswith("external/") or path_value.startswith("bazel-out/"):
+        return str((_EXECROOT / p).resolve())
+    return path_value
+
 
 logger.debug("#" * 80)
 logger.debug("# READING CONF.PY")
@@ -55,6 +98,7 @@ extensions = [
     "sphinxcontrib.plantuml",
     "trlc",
     "clickable_plantuml",
+    "sphinx.ext.graphviz",
 ]
 
 # MyST parser extensions
@@ -153,9 +197,29 @@ if plantuml_path is None:
 plantuml = f"{plantuml_path} -Playout=smetana"
 plantuml_output_format = "svg_obj"
 
-import shutil as _shutil
+# ---------------------------------------------------------------------------
+# Graphviz (sphinx.ext.graphviz)
+# ---------------------------------------------------------------------------
+# GRAPHVIZ_DOT is set by the Bazel sphinx_module rule to point at the hermetic
+# dot_builtins binary from @graphviz_deb.  The path is execroot-relative, so
+# we resolve it to an absolute path here so it remains valid after any cwd
+# change that Sphinx may perform during the build.
+graphviz_dot = _resolve_execroot_path(
+    os.environ.get("GRAPHVIZ_DOT") or _shutil.which("dot") or "dot"
+)
 
-graphviz_dot = os.environ.get("GRAPHVIZ_DOT") or _shutil.which("dot") or "dot"
+# LD_LIBRARY_PATH and LTDL_LIBRARY_PATH are set by the Bazel rule as
+# execroot-relative paths.  We mutate os.environ (not just a local) because
+# sphinx.ext.graphviz spawns `dot` as a child process that inherits these
+# variables to locate the bundled shared libraries and plugins.  Each
+# component is resolved to absolute so it stays valid if Sphinx changes cwd
+# before spawning the dot subprocess.
+for _env_var in ("LD_LIBRARY_PATH", "LTDL_LIBRARY_PATH"):
+    _env_val = os.environ.get(_env_var, "")
+    if _env_val:
+        os.environ[_env_var] = ":".join(
+            _resolve_execroot_path(p) for p in _env_val.split(":")
+        )
 
 # HTML theme
 html_theme = "sphinx_rtd_theme"

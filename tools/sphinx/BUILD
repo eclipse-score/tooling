@@ -12,7 +12,6 @@
 # *******************************************************************************
 
 load("@pip_rules_score//:requirements.bzl", "requirement")
-load("@pip_tooling//:requirements.bzl", "requirement")
 load("@rules_java//java:defs.bzl", "java_binary")
 load("@rules_python//sphinxdocs:sphinx.bzl", "sphinx_build_binary")
 
