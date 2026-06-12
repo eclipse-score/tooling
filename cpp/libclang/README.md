@@ -38,6 +38,16 @@ Expected result:
 - Bazel creates parser output artifact:
   - `bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_result.json`
 
+## Configure debug logging
+
+To enable debug output for parser actions, set the Bazel build setting:
+
+```bash
+bazel build //cpp/libclang/integration_test/cases/include_3rdparty:parser --//cpp/libclang:log_level=debug
+```
+
+Accepted values are: `error`, `warn`, `info`, `debug`, `trace`.
+
 ## Quick check (optional)
 
 ```bash

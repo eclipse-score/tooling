@@ -10,7 +10,21 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+string_flag(
+    name = "log_level",
+    build_setting_default = "error",
+    values = [
+        "error",
+        "warn",
+        "info",
+        "debug",
+        "trace",
+    ],
+    visibility = ["//visibility:public"],
+)
 
 rust_binary(
     name = "clang_rs_parser",
@@ -23,9 +37,12 @@ rust_binary(
     },
     visibility = ["//visibility:public"],
     deps = [
+        "//cpp/libclang/src/utils",
         "//cpp/libclang/src/visitor:visit_tu",
         "@crates//:clang",
         "@crates//:clap",
+        "@crates//:env_logger",
+        "@crates//:log",
         "@crates//:serde_json",
     ],
 )
