@@ -10,6 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@rules_cc//cc:find_cc_toolchain.bzl", "find_cc_toolchain", "use_cc_toolchain")
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 
@@ -237,6 +238,7 @@ def _cpp_parser_impl(ctx):
         arguments = args,
         env = {
             "LIBCLANG_PATH": libclang.dirname,
+            "LIBCLANG_LOG": ctx.attr._log_level[BuildSettingInfo].value,
         },
         mnemonic = "CppAnalyze",
         # this is required to parse some system headers
@@ -278,6 +280,10 @@ cpp_parser = rule(
             default = "@llvm_toolchain_llvm//:extra_config_site",
             doc = "LLVM toolchain filegroup containing the arch-specific __config_site file " +
                   "(include/<triple>/c++/v1/__config_site) used to locate the ABI include path.",
+        ),
+        "_log_level": attr.label(
+            default = Label("//cpp/libclang:log_level"),
+            doc = "Build setting that controls clang_rs_parser log level.",
         ),
     },
     toolchains = use_cc_toolchain(),
