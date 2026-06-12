@@ -28,6 +28,7 @@ cc_library(
 
 cpp_parser(
     name = "parser",
+    emit_debug_json = True,
     extra_args = [
     ],
     target = ":complex_class",

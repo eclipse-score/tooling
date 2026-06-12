@@ -14,4 +14,4 @@ mod render;
 mod write;
 
 pub use render::render_entity_tree;
-pub use write::write_entity_tree;
+pub use write::{write_debug_json, write_entity_tree, write_fbs_output};

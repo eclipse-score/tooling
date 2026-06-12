@@ -23,5 +23,7 @@ rust_library(
     deps = [
         "@crates//:clang",
         "@crates//:log",
+        "@crates//:serde",
+        "@crates//:serde_json",
     ],
 )

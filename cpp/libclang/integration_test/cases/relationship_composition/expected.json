@@ -1,5 +1,5 @@
 {
-  "classes": {
+  "types": {
     "Car": {
       "id": "Car",
       "name": "Car",

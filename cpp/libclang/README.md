@@ -22,6 +22,7 @@ load("//cpp/libclang:cpp_parser.bzl", "cpp_parser")
 
 cpp_parser(
   name = "cpp_parser_include_3rdparty",
+  emit_debug_json = True,
   extra_args = [
   ],
   target = "//cpp/libclang/integration_test/cases/include_3rdparty",
@@ -32,11 +33,14 @@ cpp_parser(
 Where:
 
 - `target` is the Bazel target you want to parse.
+- `emit_debug_json` is optional and defaults to `False`. Enable it when you want the aggregated `debug.json` sidecar.
 
 Expected result:
 
 - Bazel creates parser output artifact:
-  - `bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_result.json`
+  - `bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_result.fbs.bin`
+- When `emit_debug_json = True`, the parser also writes:
+  - `bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_result/debug.json`
 
 ## Configure debug logging
 
@@ -51,4 +55,6 @@ Accepted values are: `error`, `warn`, `info`, `debug`, `trace`.
 ## Quick check (optional)
 
 ```bash
-ls -l bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_result.json
+ls -l bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_result.fbs.bin
+ls -l bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_result/debug.json
+```

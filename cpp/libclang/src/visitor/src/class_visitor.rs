@@ -47,11 +47,11 @@ impl AstVisitor for ClassVisitor {
 impl ClassVisitor {
     pub fn resolve_relationships(ctx: &mut VisitContext) {
         let builders = std::mem::take(&mut ctx.parsed_class_info);
-        let known_class_ids: HashSet<String> = ctx.types.keys().cloned().collect();
+        let known_type_ids: HashSet<String> = ctx.types.keys().cloned().collect();
 
         for builder in builders {
             build_relationships_for_class(ctx, &builder);
-            infer_relationships_from_builder(ctx, &builder, &known_class_ids);
+            infer_relationships_from_builder(ctx, &builder, &known_type_ids);
         }
     }
 
@@ -359,7 +359,7 @@ fn build_relationships_for_class(ctx: &mut VisitContext, builder: &ParsedClassIn
 
         let target_class = ctx.types.get(resolved_base).unwrap_or_else(|| {
             panic!(
-                "Resolved base type '{}' missing in class map for '{}'",
+                "Resolved base type '{}' missing in type map for '{}'",
                 resolved_base, builder.id
             )
         });

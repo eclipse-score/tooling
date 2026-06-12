@@ -15,7 +15,7 @@ use std::{path::PathBuf, str::FromStr};
 
 fn compare(expected_path: &str, output_path: &str) {
     let expected = PathBuf::from_str(expected_path).unwrap();
-    let output = PathBuf::from_str(output_path).unwrap();
+    let output = PathBuf::from_str(output_path).unwrap().join("debug.json");
 
     let expected_json: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(expected).unwrap()).unwrap();
