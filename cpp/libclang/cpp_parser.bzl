@@ -191,17 +191,20 @@ def _collect_required_llvm_include_args(cxx_builtin_include_files, extra_config_
     return result
 
 def _cpp_parser_impl(ctx):
-    output = ctx.actions.declare_file(
-        ctx.label.name + "_result.json",
+    output_dir = ctx.actions.declare_directory(
+        ctx.label.name + "_result",
     )
     libclang = ctx.file._libclang
 
     args = []
 
     args += [
-        "--output",
-        output.path,
+        "--output-dir",
+        output_dir.path,
     ]
+
+    if ctx.attr.emit_debug_json:
+        args.append("--json")
 
     target_compilation_flags_list = ctx.attr.target[CompilationFlagsInfo].flags.to_list()
 
@@ -232,7 +235,7 @@ def _cpp_parser_impl(ctx):
 
     ctx.actions.run(
         inputs = inputs,
-        outputs = [output],
+        outputs = [output_dir],
         executable = ctx.executable.tool,
         tools = [ctx.attr.tool[DefaultInfo].files_to_run],
         arguments = args,
@@ -249,7 +252,8 @@ def _cpp_parser_impl(ctx):
     )
 
     return DefaultInfo(
-        files = depset([output]),
+        files = depset([output_dir]),
+        runfiles = ctx.runfiles(files = [output_dir]),
     )
 
 cpp_parser = rule(
@@ -266,6 +270,10 @@ cpp_parser = rule(
         ),
         "extra_args": attr.string_list(
             default = [],
+        ),
+        "emit_debug_json": attr.bool(
+            default = False,
+            doc = "Emit debug.json alongside the FlatBuffer output. Intended for tests/debugging.",
         ),
         "_libclang": attr.label(
             allow_single_file = True,

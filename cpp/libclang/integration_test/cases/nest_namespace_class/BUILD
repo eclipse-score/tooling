@@ -27,6 +27,7 @@ cc_library(
 
 cpp_parser(
     name = "parser",
+    emit_debug_json = True,
     extra_args = [
     ],
     target = ":nest_namespace_class",

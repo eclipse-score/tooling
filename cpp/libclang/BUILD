@@ -39,6 +39,8 @@ rust_binary(
     deps = [
         "//cpp/libclang/src/utils",
         "//cpp/libclang/src/visitor:visit_tu",
+        "//tools/metamodel/class:class_diagram",
+        "//tools/serialization/flatbuffers/class:class_serializer",
         "@crates//:clang",
         "@crates//:clap",
         "@crates//:env_logger",

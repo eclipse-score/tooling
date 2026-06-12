@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-pub use activity_resolver::{ActivityResolverError, ActivityResolver};
+pub use activity_resolver::{ActivityResolver, ActivityResolverError};
 pub use class_resolver::{ClassPumlResolverError, ClassResolver};
 pub use component_resolver::{ComponentResolver, ComponentResolverError};
 pub use resolver_traits::DiagramResolver;

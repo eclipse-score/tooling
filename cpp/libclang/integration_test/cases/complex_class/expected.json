@@ -1,5 +1,5 @@
 {
-  "classes": {
+  "types": {
     "MyNamespace::MyNamespace2::Car": {
       "id": "MyNamespace::MyNamespace2::Car",
       "name": "Car",

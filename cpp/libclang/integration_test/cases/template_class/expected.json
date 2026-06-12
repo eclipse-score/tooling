@@ -1,5 +1,5 @@
 {
-  "classes": {
+  "types": {
     "FixedBuffer": {
       "id": "FixedBuffer",
       "name": "FixedBuffer",

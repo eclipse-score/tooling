@@ -13,14 +13,12 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub use class_diagram::SimpleEntity;
+use class_diagram::SimpleEntity;
 use sequence_logic::FunctionDef;
 
 use crate::class_parser_helper::ResolvedType;
 
-pub type TypeMapKey = String;
-pub type TypeMapValue = SimpleEntity;
-pub type TypeMap = HashMap<TypeMapKey, TypeMapValue>;
+pub type TypeMap = HashMap<String, SimpleEntity>;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct VisitContext {

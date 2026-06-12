@@ -1,5 +1,5 @@
 {
-  "classes": {
+  "types": {
     "Alpha::Engine": {
       "id": "Alpha::Engine",
       "name": "Engine",
