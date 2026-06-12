@@ -10,17 +10,17 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
-use flatbuffers::FlatBufferBuilder;
 /// Serializes the resolved component graph into a FlatBuffer binary format
+use flatbuffers::FlatBufferBuilder;
 use std::collections::HashMap;
 
+use component_diagram::{ComponentRelationType, ComponentType, EndpointRole, LogicComponent};
 use component_fbs::component as fb;
-use component_resolver::{ComponentRelationType, ElementType, EndpointRole, LogicElement};
 
 pub struct ComponentSerializer;
 
 impl ComponentSerializer {
-    pub fn serialize(elements: &HashMap<String, LogicElement>, source_file: &str) -> Vec<u8> {
+    pub fn serialize(elements: &HashMap<String, LogicComponent>, source_file: &str) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
 
         // --------------------------
@@ -110,30 +110,30 @@ impl ComponentSerializer {
         builder.finished_data().to_vec()
     }
 
-    fn convert_type(t: ElementType) -> fb::ComponentType {
+    fn convert_type(t: ComponentType) -> fb::ComponentType {
         match t {
-            ElementType::Artifact => fb::ComponentType::Artifact,
-            ElementType::Actor => fb::ComponentType::Actor,
-            ElementType::Agent => fb::ComponentType::Agent,
-            ElementType::Boundary => fb::ComponentType::Boundary,
-            ElementType::Card => fb::ComponentType::Card,
-            ElementType::Cloud => fb::ComponentType::Cloud,
-            ElementType::Component => fb::ComponentType::Component,
-            ElementType::Control => fb::ComponentType::Control,
-            ElementType::Database => fb::ComponentType::Database,
-            ElementType::Entity => fb::ComponentType::Entity,
-            ElementType::File => fb::ComponentType::File,
-            ElementType::Folder => fb::ComponentType::Folder,
-            ElementType::Frame => fb::ComponentType::Frame,
-            ElementType::Hexagon => fb::ComponentType::Hexagon,
-            ElementType::Interface => fb::ComponentType::Interface,
-            ElementType::Node => fb::ComponentType::Node,
-            ElementType::Package => fb::ComponentType::Package,
-            ElementType::Queue => fb::ComponentType::Queue,
-            ElementType::Rectangle => fb::ComponentType::Rectangle,
-            ElementType::Stack => fb::ComponentType::Stack,
-            ElementType::Storage => fb::ComponentType::Storage,
-            ElementType::Usecase => fb::ComponentType::Usecase,
+            ComponentType::Artifact => fb::ComponentType::Artifact,
+            ComponentType::Actor => fb::ComponentType::Actor,
+            ComponentType::Agent => fb::ComponentType::Agent,
+            ComponentType::Boundary => fb::ComponentType::Boundary,
+            ComponentType::Card => fb::ComponentType::Card,
+            ComponentType::Cloud => fb::ComponentType::Cloud,
+            ComponentType::Component => fb::ComponentType::Component,
+            ComponentType::Control => fb::ComponentType::Control,
+            ComponentType::Database => fb::ComponentType::Database,
+            ComponentType::Entity => fb::ComponentType::Entity,
+            ComponentType::File => fb::ComponentType::File,
+            ComponentType::Folder => fb::ComponentType::Folder,
+            ComponentType::Frame => fb::ComponentType::Frame,
+            ComponentType::Hexagon => fb::ComponentType::Hexagon,
+            ComponentType::Interface => fb::ComponentType::Interface,
+            ComponentType::Node => fb::ComponentType::Node,
+            ComponentType::Package => fb::ComponentType::Package,
+            ComponentType::Queue => fb::ComponentType::Queue,
+            ComponentType::Rectangle => fb::ComponentType::Rectangle,
+            ComponentType::Stack => fb::ComponentType::Stack,
+            ComponentType::Storage => fb::ComponentType::Storage,
+            ComponentType::Usecase => fb::ComponentType::Usecase,
         }
     }
 

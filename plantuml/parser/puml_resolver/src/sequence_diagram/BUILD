@@ -26,7 +26,7 @@ rust_library(
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_parser:sequence_diagram",
         "//plantuml/parser/puml_resolver:resolver_traits",
-        "//tools/metamodel:sequence_diagram",
+        "//tools/metamodel/sequence:sequence_diagram",
         "@crates//:serde",
         "@crates//:serde_json",
     ],
@@ -61,6 +61,7 @@ rust_test(
     deps = [
         ":puml_resolver_sequence",
         "//plantuml/parser/puml_parser:sequence_diagram",
+        "//tools/metamodel/sequence:sequence_diagram",
         "@crates//:serde",
         "@crates//:serde_json",
     ],

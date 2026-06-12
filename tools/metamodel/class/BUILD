@@ -10,24 +10,27 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
+package(default_visibility = ["//visibility:public"])
+
+# Class Diagram Metamodel Library (shared types for use by other tools)
 rust_library(
-    name = "test_framework",
-    srcs = [
-        "src/lib.rs",
-        "src/test_error_view.rs",
-        "src/test_framework.rs",
-    ],
-    crate_root = "src/lib.rs",
-    visibility = ["//plantuml/parser:__subpackages__"],
+    name = "class_diagram",
+    srcs = ["class_logic.rs"],
+    crate_name = "class_diagram",
+    crate_root = "class_logic.rs",
+    edition = "2021",
     deps = [
-        "//plantuml/parser/puml_parser",
-        "//plantuml/parser/puml_resolver",
-        "//plantuml/parser/puml_utils",
-        "//tools/metamodel/class:class_diagram",
         "@crates//:serde",
+        "@crates//:thiserror",
+    ],
+)
+
+rust_test(
+    name = "class_diagram_test",
+    crate = ":class_diagram",
+    deps = [
         "@crates//:serde_json",
-        "@crates//:serde_yaml",
     ],
 )
