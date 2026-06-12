@@ -17,7 +17,7 @@ use puml_parser::{
     ActivityParserError, BaseParseError, ClassError, IncludeExpandError, IncludeParseError,
     PreprocessError, ProcedureExpandError, ProcedureParseError,
 };
-use puml_resolver::{ActivityResolverError, ClassPumlResolverError, ElementResolverError};
+use puml_resolver::{ActivityResolverError, ClassPumlResolverError, ComponentResolverError};
 
 #[derive(Debug)]
 pub struct ProjectedError {
@@ -209,32 +209,32 @@ impl ErrorView for ActivityParserError {
     }
 }
 
-impl ErrorView for ElementResolverError {
+impl ErrorView for ComponentResolverError {
     fn project(&self, _base_dir: &Path) -> ProjectedError {
         match self {
-            ElementResolverError::UnresolvedReference { reference } => {
+            ComponentResolverError::UnresolvedReference { reference } => {
                 ProjectedError::new("UnresolvedReference")
                     .with_field("reference", reference.clone())
             }
 
-            ElementResolverError::DuplicateElement { element_id } => {
+            ComponentResolverError::DuplicateElement { element_id } => {
                 ProjectedError::new("DuplicateComponent")
                     .with_field("component_id", element_id.clone())
             }
 
-            ElementResolverError::UnknownElementType { element_type } => {
+            ComponentResolverError::UnknownElementType { element_type } => {
                 ProjectedError::new("UnknownComponentType")
                     .with_field("component_type", element_type.clone())
             }
 
-            ElementResolverError::InvalidRelationship { from, to, reason } => {
+            ComponentResolverError::InvalidRelationship { from, to, reason } => {
                 ProjectedError::new("InvalidRelationship")
                     .with_field("from", from.clone())
                     .with_field("to", to.clone())
                     .with_field("reason", reason.clone())
             }
 
-            ElementResolverError::AmbiguousReference {
+            ComponentResolverError::AmbiguousReference {
                 reference,
                 candidates,
             } => ProjectedError::new("AmbiguousReference")

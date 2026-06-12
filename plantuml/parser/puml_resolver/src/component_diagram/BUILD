@@ -15,7 +15,6 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 rust_library(
     name = "puml_resolver_component",
     srcs = [
-        "src/component_logic.rs",
         "src/component_resolver.rs",
         "src/lib.rs",
     ],
@@ -25,8 +24,8 @@ rust_library(
     deps = [
         "//plantuml/parser/puml_parser:component_diagram",
         "//plantuml/parser/puml_resolver:resolver_traits",
+        "//tools/metamodel/component:component_diagram",
         "@crates//:log",
-        "@crates//:serde",
         "@crates//:thiserror",
     ],
 )
@@ -49,8 +48,7 @@ rust_test(
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//plantuml/parser/puml_utils",
-        "@crates//:serde",
+        "//tools/metamodel/component:component_diagram",
         "@crates//:serde_json",
-        "@crates//:thiserror",
     ],
 )

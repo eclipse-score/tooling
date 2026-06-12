@@ -11,11 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-mod component_logic;
 mod component_resolver;
 
-pub use component_logic::{
-    ComponentRelationType, ComponentResolverError, ComponentType, ElementResolverError,
-    ElementType, EndpointRole, LogicComponent, LogicElement,
-};
-pub use component_resolver::{ComponentResolver, ElementResolver};
+pub use component_resolver::{ComponentResolver, ComponentResolverError};

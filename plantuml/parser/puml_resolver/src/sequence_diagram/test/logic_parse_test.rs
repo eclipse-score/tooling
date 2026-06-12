@@ -12,9 +12,9 @@
 // *******************************************************************************
 //! Logic parser test suite: Compare logic_parse output with expected JSON
 
+use sequence_logic::{ConditionType, Event};
 use sequence_parser::syntax_ast::Statement;
 use sequence_resolver::logic_parser::build_tree;
-use sequence_resolver::{ConditionType, Event};
 use std::fs;
 
 #[test]

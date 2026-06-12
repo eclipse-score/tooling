@@ -52,7 +52,9 @@ The AST is resolved into a logical model by the `ComponentResolver`:
 
 #### 4. Serialization Phase
 
-The resolved logical model is serialized to FlatBuffers binary format by `ComponentSerializer` for further downstream processing.
+The resolved logical model is serialized to FlatBuffers binary format for further downstream processing.
+The logical model types live under `tools/metamodel/{class,component,sequence}`,
+while the FlatBuffers schemas and serializers live under `tools/serialization/flatbuffers/{class,component,sequence}`.
 
 **Example input**
 
@@ -132,9 +134,15 @@ Interface(
 | `puml_utils` | Shared utilities: `LogLevel` enum, file writing helpers |
 | `puml_parser` | Preprocessor (include expansion) + Class / Component / Sequence diagram parsers |
 | `puml_resolver` | Resolves raw AST into logical model (`ComponentResolver`, `DiagramResolver` trait) |
-| `puml_serializer` | FlatBuffers serialization of the resolved model (`ComponentSerializer`) |
 | `puml_lobster` | Converts the resolved model to LOBSTER traceability JSON |
 | `puml_cli` | CLI argument parsing and orchestration of all phases |
+
+### Shared Dependencies
+
+| Module | Responsibility |
+|---|---|
+| `tools/metamodel` | Shared logical model crates for class/component/sequence diagrams, consumed by the PlantUML parser, validation, and C++ tooling |
+| `tools/serialization/flatbuffers` | FlatBuffers schemas and serializer crates for class/component/sequence models |
 
 ### Architecture Diagrams
 
