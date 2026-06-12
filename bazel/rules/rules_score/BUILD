@@ -22,6 +22,14 @@ load(
 load("//bazel/rules/rules_score:sphinx_toolchain.bzl", "sphinx_toolchain")
 load("//lobster_bazel:lobster_bazel.bzl", "lobster_linker")
 
+config_setting(
+    name = "linux_x86_64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
 exports_files([
     "src/bazel_sphinx_needs.py",
     "src/sphinx_wrapper.py",

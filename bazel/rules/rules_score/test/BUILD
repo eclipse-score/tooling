@@ -126,7 +126,16 @@ sphinx_module(
     ],
 )
 
-# Test 2: SEooC (Safety Element out of Context) Module
+# Test 2: Graphviz Rendering
+# Tests hermetic graphviz support via sphinx.ext.graphviz directive
+sphinx_module(
+    name = "graphviz_test_lib",
+    srcs = glob(["fixtures/graphviz_test/*.rst"]),
+    index = "fixtures/graphviz_test/index.rst",
+    sphinx = "@score_tooling//bazel/rules/rules_score:score_build",
+)
+
+# Test 3: SEooC (Safety Element out of Context) Module
 # Tests the score_component macro with S-CORE process artifacts
 
 # - Feature Requirements:     wp__requirements_feat
@@ -778,6 +787,14 @@ py_test(
     deps = ["@trlc//tools/trlc_rst:trlc_rst_lib"],
 )
 
+py_test(
+    name = "test_graphviz_rendering",
+    size = "small",
+    srcs = ["graphviz_render_test.py"],
+    data = [":graphviz_test_lib"],
+    main = "graphviz_render_test.py",
+)
+
 # Combined test suite for all tests
 test_suite(
     name = "all_tests",
@@ -787,6 +804,7 @@ test_suite(
         ":seooc_tests",
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",
+        ":test_graphviz_rendering",
         ":test_rst_to_trlc",
         ":test_safety_analysis_tools",
         ":test_trlc_rst_image_rendering",
