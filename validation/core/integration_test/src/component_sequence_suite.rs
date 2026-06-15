@@ -22,11 +22,16 @@ fn run_case_from_cli(
     case_dir: &str,
     component_fbs_paths: &[String],
     sequence_fbs_paths: &[String],
+    internal_api_fbs_paths: &[String],
 ) -> CliRunResult {
     let mut cli_args = vec!["--component-fbs".to_string()];
     cli_args.extend(component_fbs_paths.iter().cloned());
     cli_args.push("--sequence-fbs".to_string());
     cli_args.extend(sequence_fbs_paths.iter().cloned());
+    if !internal_api_fbs_paths.is_empty() {
+        cli_args.push("--internal-api-fbs".to_string());
+        cli_args.extend(internal_api_fbs_paths.iter().cloned());
+    }
 
     run_validation_cli(&format!("component_sequence_{case_dir}"), &cli_args)
 }
@@ -34,10 +39,16 @@ fn run_case_from_cli(
 fn assert_case(case_dir: &str) {
     let expected = load_expected_fixture(SUITE_DIR, case_dir);
     let component_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "component");
+    let internal_api_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "internal_api");
     let sequence_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "sequence");
 
     let result = if !component_fbs_paths.is_empty() && !sequence_fbs_paths.is_empty() {
-        run_case_from_cli(case_dir, &component_fbs_paths, &sequence_fbs_paths)
+        run_case_from_cli(
+            case_dir,
+            &component_fbs_paths,
+            &sequence_fbs_paths,
+            &internal_api_fbs_paths,
+        )
     } else {
         panic!(
             "missing generated FBS fixtures for {case_dir}: expected at least one component/*.fbs.bin and sequence/*.fbs.bin",
@@ -53,8 +64,48 @@ fn positive_exact_match_suite_case() {
 }
 
 #[test]
+fn negative_invalid_consumer_provider_direction_suite_case() {
+    assert_case("negative_invalid_consumer_provider_direction");
+}
+
+#[test]
+fn negative_invalid_self_call_consumer_provider_roles_suite_case() {
+    assert_case("negative_invalid_self_call_consumer_provider_roles");
+}
+
+#[test]
+fn negative_interface_function_not_exercised_suite_case() {
+    assert_case("negative_interface_function_not_exercised");
+}
+
+#[test]
 fn negative_missing_participant_suite_case() {
     assert_case("negative_missing_participant");
+}
+
+#[test]
+fn negative_method_missing_from_internal_api_suite_case() {
+    assert_case("negative_method_missing_from_internal_api");
+}
+
+#[test]
+fn negative_missing_method_in_related_interface_suite_case() {
+    assert_case("negative_missing_method_in_related_interface");
+}
+
+#[test]
+fn negative_missing_interface_connection_for_sequence_connected_units_suite_case() {
+    assert_case("negative_missing_interface_connection_for_sequence_connected_units");
+}
+
+#[test]
+fn negative_missing_sequence_interaction_for_interface_connected_units_suite_case() {
+    assert_case("negative_missing_sequence_interaction_for_interface_connected_units");
+}
+
+#[test]
+fn negative_missing_unit_interface_relation_suite_case() {
+    assert_case("negative_missing_unit_interface_relation");
 }
 
 #[test]
@@ -65,4 +116,14 @@ fn negative_orphan_participant_suite_case() {
 #[test]
 fn negative_mixed_mismatch_suite_case() {
     assert_case("negative_mixed_mismatch");
+}
+
+#[test]
+fn positive_internal_api_method_match_suite_case() {
+    assert_case("positive_internal_api_method_match");
+}
+
+#[test]
+fn positive_self_call_method_match_suite_case() {
+    assert_case("positive_self_call_method_match");
 }

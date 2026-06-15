@@ -1,0 +1,9 @@
+{
+  "should_pass": false,
+  "error_contains": [
+    "interface-connected units are missing a sequence function-call connection",
+    "\"unit_1\"",
+    "\"unit_2\"",
+    "\"package_a.InternalInterface\""
+  ]
+}

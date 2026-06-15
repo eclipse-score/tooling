@@ -20,7 +20,6 @@ package "Package A" as package_a {
     }
 
     interface "InternalInterface" as InternalInterface
-    unit_1 -( InternalInterface
     unit_2 )- InternalInterface
 }
 

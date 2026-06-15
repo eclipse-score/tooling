@@ -19,9 +19,10 @@ package "Package A" as package_a {
         component "Unit 2" as unit_2 <<unit>>
     }
 
-    interface "InternalInterface" as InternalInterface
-    unit_1 -( InternalInterface
-    unit_2 )- InternalInterface
+    interface "CallerInterface" as CallerInterface
+    interface "CalleeInterface" as CalleeInterface
+    unit_1 -( CallerInterface
+    unit_2 )- CalleeInterface
 }
 
 @enduml

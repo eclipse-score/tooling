@@ -42,10 +42,20 @@ filegroup(
 filegroup(
     name = "component_sequence_test_data",
     srcs = [
+        "//validation/core/integration_test/component_sequence/negative_interface_function_not_exercised:case_data",
+        "//validation/core/integration_test/component_sequence/negative_invalid_consumer_provider_direction:case_data",
+        "//validation/core/integration_test/component_sequence/negative_invalid_self_call_consumer_provider_roles:case_data",
+        "//validation/core/integration_test/component_sequence/negative_method_missing_from_internal_api:case_data",
+        "//validation/core/integration_test/component_sequence/negative_missing_interface_connection_for_sequence_connected_units:case_data",
+        "//validation/core/integration_test/component_sequence/negative_missing_method_in_related_interface:case_data",
         "//validation/core/integration_test/component_sequence/negative_missing_participant:case_data",
+        "//validation/core/integration_test/component_sequence/negative_missing_sequence_interaction_for_interface_connected_units:case_data",
+        "//validation/core/integration_test/component_sequence/negative_missing_unit_interface_relation:case_data",
         "//validation/core/integration_test/component_sequence/negative_mixed_mismatch:case_data",
         "//validation/core/integration_test/component_sequence/negative_orphan_participant:case_data",
         "//validation/core/integration_test/component_sequence/positive_exact_match:case_data",
+        "//validation/core/integration_test/component_sequence/positive_internal_api_method_match:case_data",
+        "//validation/core/integration_test/component_sequence/positive_self_call_method_match:case_data",
     ],
 )
 

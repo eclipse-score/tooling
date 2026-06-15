@@ -16,12 +16,11 @@
 package "Package A" as package_a {
     component "Component A" as component_a <<component>> {
         component "Unit 1" as unit_1 <<unit>>
-        component "Unit 2" as unit_2 <<unit>>
     }
 
     interface "InternalInterface" as InternalInterface
     unit_1 -( InternalInterface
-    unit_2 )- InternalInterface
+    unit_1 )- InternalInterface
 }
 
 @enduml

@@ -1,0 +1,9 @@
+{
+  "should_pass": false,
+  "error_contains": [
+    "sequence interaction does not match consumer/provider roles in the component diagram",
+    "\"unit_2\" -> \"unit_1\" : \"SendSignal\"",
+    "Caller consumes     : <none>",
+    "Callee provides     : <none>"
+  ]
+}
