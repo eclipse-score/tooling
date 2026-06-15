@@ -15,13 +15,32 @@ use std::collections::BTreeMap;
 
 use super::{EntityKey, Errors};
 
+/// Supported component-diagram entity kinds needed for validation.
+#[derive(Clone, PartialEq)]
+pub enum ComponentDiagramElementType {
+    Component,
+    Package,
+    Interface,
+}
+
+/// One relation attached to a component-diagram entity.
+#[derive(Clone)]
+pub struct ComponentDiagramRelation {
+    pub target: String,
+    pub annotation: Option<String>,
+    pub relation_type: Option<String>,
+    pub source_role: Option<String>,
+}
+
 /// A single component-level entity parsed from a PlantUML `.fbs.bin` file.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone)]
 pub struct ComponentDiagramInput {
     pub id: String,
     pub alias: Option<String>,
     pub parent_id: Option<String>,
+    pub element_type: ComponentDiagramElementType,
     pub stereotype: Option<String>,
+    pub relations: Vec<ComponentDiagramRelation>,
 }
 
 impl ComponentDiagramInput {
@@ -36,6 +55,10 @@ impl ComponentDiagramInput {
 
     pub fn is_unit(&self) -> bool {
         self.stereotype.as_deref() == Some("unit")
+    }
+
+    pub fn is_interface(&self) -> bool {
+        self.element_type == ComponentDiagramElementType::Interface
     }
 
     /// Returns `true` for `<<SEooC>>` package entities (dependable elements).
@@ -62,12 +85,13 @@ impl ComponentDiagramInputs {
 /// Indexed entity key-maps derived from the parsed PlantUML diagram entities.
 ///
 /// Built via [`ComponentDiagramInputs::to_diagram_architecture`].
-#[derive(Clone)]
 pub struct ComponentDiagramArchitecture {
     /// `<<SEooC>>` package entities, keyed with `parent = None`.
     pub seooc_set: BTreeMap<EntityKey, ComponentDiagramInput>,
     /// `<<component>>` entities, keyed with `parent = Some(..)`.
     pub comp_set: BTreeMap<EntityKey, ComponentDiagramInput>,
+    /// `Interface` entities keyed with `parent = Some(..)` or `None`.
+    pub interface_set: BTreeMap<EntityKey, ComponentDiagramInput>,
     pub unit_set: BTreeMap<EntityKey, ComponentDiagramInput>,
     /// Full raw entity list, kept for debug output.
     pub entities: Vec<ComponentDiagramInput>,
@@ -81,6 +105,7 @@ impl ComponentDiagramArchitecture {
     ///
     /// `<<SEooC>>` go into `seooc_set`;
     /// `<<component>>` go into `comp_set`;
+    /// `Interface` go into `interface_set`;
     /// `<<unit>>` go into `unit_set`.
     /// Duplicates (same [`EntityKey`]) are reported via `errors`.
     fn from_entities(entities: &[ComponentDiagramInput], errors: &mut Errors) -> Self {
@@ -107,6 +132,10 @@ impl ComponentDiagramArchitecture {
             .iter()
             .filter(|entity| entity.is_component())
             .collect();
+        let interfaces: Vec<&ComponentDiagramInput> = entities
+            .iter()
+            .filter(|entity| entity.is_interface())
+            .collect();
         let units: Vec<&ComponentDiagramInput> =
             entities.iter().filter(|entity| entity.is_unit()).collect();
 
@@ -116,11 +145,13 @@ impl ComponentDiagramArchitecture {
 
         let seooc_set = Self::build_set(&seoocs, &id_index, errors);
         let comp_set = Self::build_set(&components, &id_index, errors);
+        let interface_set = Self::build_set(&interfaces, &id_index, errors);
         let unit_set = Self::build_set(&units, &id_index, errors);
 
         Self {
             seooc_set,
             comp_set,
+            interface_set,
             unit_set,
             entities: entities.to_vec(),
             filtered_seooc_count,
@@ -164,5 +195,101 @@ impl ComponentDiagramArchitecture {
             }
         }
         set
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn relation(target: &str) -> ComponentDiagramRelation {
+        ComponentDiagramRelation {
+            target: target.to_string(),
+            annotation: None,
+            relation_type: Some("None".to_string()),
+            source_role: Some("None".to_string()),
+        }
+    }
+
+    fn entity(
+        id: &str,
+        alias: Option<&str>,
+        parent_id: Option<&str>,
+        element_type: ComponentDiagramElementType,
+        stereotype: Option<&str>,
+        relations: Vec<ComponentDiagramRelation>,
+    ) -> ComponentDiagramInput {
+        ComponentDiagramInput {
+            id: id.to_string(),
+            alias: alias.map(str::to_string),
+            parent_id: parent_id.map(str::to_string),
+            element_type,
+            stereotype: stereotype.map(str::to_string),
+            relations,
+        }
+    }
+
+    #[test]
+    fn interfaces_and_relations_are_indexed_for_future_sequence_validation() {
+        let inputs = ComponentDiagramInputs {
+            entities: vec![
+                entity(
+                    "safety_software_seooc_example",
+                    Some("safety_software_seooc_example"),
+                    None,
+                    ComponentDiagramElementType::Package,
+                    Some("SEooC"),
+                    Vec::new(),
+                ),
+                entity(
+                    "safety_software_seooc_example.component_example",
+                    Some("component_example"),
+                    Some("safety_software_seooc_example"),
+                    ComponentDiagramElementType::Component,
+                    Some("component"),
+                    Vec::new(),
+                ),
+                entity(
+                    "safety_software_seooc_example.InternalInterface",
+                    Some("InternalInterface"),
+                    Some("safety_software_seooc_example"),
+                    ComponentDiagramElementType::Interface,
+                    None,
+                    Vec::new(),
+                ),
+                entity(
+                    "safety_software_seooc_example.component_example.unit_1",
+                    Some("unit_1"),
+                    Some("safety_software_seooc_example.component_example"),
+                    ComponentDiagramElementType::Component,
+                    Some("unit"),
+                    vec![relation("safety_software_seooc_example.InternalInterface")],
+                ),
+            ],
+        };
+
+        let mut errors = Errors::default();
+        let architecture = inputs.to_diagram_architecture(&mut errors);
+
+        assert!(errors.is_empty());
+        assert_eq!(architecture.interface_set.len(), 1);
+        assert!(architecture
+            .entities
+            .iter()
+            .find(|entity| entity.id == "safety_software_seooc_example.InternalInterface")
+            .expect("expected interface entity")
+            .is_interface());
+        assert_eq!(
+            architecture
+                .entities
+                .iter()
+                .find(|entity| {
+                    entity.id == "safety_software_seooc_example.component_example.unit_1"
+                })
+                .expect("expected unit entity")
+                .relations[0]
+                .target,
+            "safety_software_seooc_example.InternalInterface"
+        );
     }
 }

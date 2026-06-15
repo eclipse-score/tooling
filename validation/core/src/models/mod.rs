@@ -28,7 +28,8 @@ pub use bazel_models::BazelInputEntry;
 pub use bazel_models::{BazelArchitecture, BazelInput};
 pub use class_diagram_models::{ClassDiagramIndex, ClassDiagramInputs};
 pub use component_diagram_models::{
-    ComponentDiagramArchitecture, ComponentDiagramInput, ComponentDiagramInputs,
+    ComponentDiagramArchitecture, ComponentDiagramElementType, ComponentDiagramInput,
+    ComponentDiagramInputs, ComponentDiagramRelation,
 };
 pub use error_models::Errors;
 pub use sequence_diagram_models::{
