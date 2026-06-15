@@ -471,9 +471,14 @@ impl ComponentResolver {
             });
         }
 
-        let decor_role = if line == "-" && left == ")" && middle.is_empty() && right.is_empty() {
+        // A lollipop line may carry a direction hint, which adds a second dash
+        // segment: `)-u-` or `-u-(`.  The line field then contains `"--"` instead
+        // of `"-"`.  Direction is visual-only and does not affect semantics.
+        let is_lollipop_line = line.chars().all(|c| c == '-') && !line.is_empty();
+
+        let decor_role = if is_lollipop_line && left == ")" && middle.is_empty() && right.is_empty() {
             Some(EndpointRole::Provided)
-        } else if line == "-"
+        } else if is_lollipop_line
             && left.is_empty()
             && ((middle == "(" && right.is_empty()) || (middle.is_empty() && right == "("))
         {
