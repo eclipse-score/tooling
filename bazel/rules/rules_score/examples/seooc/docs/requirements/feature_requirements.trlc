@@ -20,7 +20,7 @@ import ScoreReq
 ///////////////////////////////
 
 ScoreReq.FeatReq FEAT_001 {
-    description = "The component shall provide a numeric value management interface that returns a `uint8_t` value on every read access"
+    description = "The :term:`component` shall provide a numeric value management interface that returns a `uint8_t` value on every read access, aligned with the :term:`feature requirements`."
     safety = ScoreReq.Asil.B
     derived_from = [SampleSEooC.ASR_SAMPLE_001@1]
     version = 1

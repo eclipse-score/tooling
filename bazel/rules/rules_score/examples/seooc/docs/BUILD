@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test")
+load("//bazel/rules/rules_score:rules_score.bzl", "glossary")
 
 trlc_requirements(
     name = "aous",
@@ -28,5 +29,12 @@ trlc_requirements_test(
     reqs = [
         ":aous",
     ],
+    visibility = ["//visibility:public"],
+)
+
+glossary(
+    name = "glossary",
+    srcs = ["glossary.rst"],
+    tags = ["manual"],
     visibility = ["//visibility:public"],
 )

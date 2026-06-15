@@ -50,6 +50,10 @@ load(
     _feature_requirements = "feature_requirements",
 )
 load(
+    "//bazel/rules/rules_score/private:glossary.bzl",
+    _glossary = "glossary",
+)
+load(
     "//bazel/rules/rules_score/private:filter_execpath.bzl",
     _filter_execpath = "filter_execpath",
 )
@@ -76,6 +80,7 @@ assumed_system_requirements = _assumed_system_requirements
 component_requirements = _component_requirements
 dependability_analysis = _dependability_analysis
 feature_requirements = _feature_requirements
+glossary = _glossary
 filter_execpath = _filter_execpath
 fmea = _fmea
 sphinx_module = _sphinx_module

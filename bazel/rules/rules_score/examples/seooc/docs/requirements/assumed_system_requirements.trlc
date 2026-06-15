@@ -20,7 +20,7 @@ import ScoreReq
 ///////////////////////////////
 
 ScoreReq.AssumedSystemReq ASR_SAMPLE_001 {
-    description = "The system shall provide safe and reliable numeric value management through encapsulated classes"
+    description = "The system shall provide safe and reliable numeric value management through encapsulated classes, compliant with the selected :term:`integrity level`."
     safety = ScoreReq.Asil.B
     version = 1
     rationale = "System-level requirement for managing numeric values in a safety-critical context"

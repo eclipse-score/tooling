@@ -78,6 +78,15 @@ Checklists
 
    {checklists}
 
+Glossary
+--------
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Glossary
+
+   {glossary}
+
 Submodules
 ----------
 This module includes the following submodules:

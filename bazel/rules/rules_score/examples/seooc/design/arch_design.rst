@@ -17,6 +17,10 @@ Architectural Design
 
 This is the architectural design of the Safety Software SEooC Example:
 
+The :term:`Architectural Design` describes how each :term:`Component`
+contributes to fulfilling :term:`Feature Requirements` under the selected
+:term:`Integrity Level`.
+
 Static Architecture
 -------------------
 
