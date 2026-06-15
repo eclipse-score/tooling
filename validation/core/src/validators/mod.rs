@@ -24,6 +24,7 @@ pub enum RequiredInput {
     Component,
     Sequence,
     Class,
+    InternalApi,
 }
 
 /// Validators supported by the current CLI.
