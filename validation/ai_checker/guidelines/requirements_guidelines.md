@@ -11,59 +11,42 @@
   SPDX-License-Identifier: Apache-2.0
 ----------------------------------------------------------------------------- -->
 
-# Requirements Writing Guidelines
+# SCORE Project — Requirements Specification Conventions
 
-Guidelines for creating and formulating requirements, derived from the SCORE Requirements Engineering Process.
+Project-specific guidelines for the Eclipse SCORE project. Apply in conjunction with the general inspection guidelines.
+
+## Project Context
+
+- **Safety standard:** ISO 26262 (functional safety for road vehicles)
+- **Target platforms:** Linux, QNX (and potentially others defined at system level)
 
 ## Requirement Levels
 
 | Level | Scope | Derived From |
 |---|---|---|
 | **Stakeholder Requirement** | Platform-level functionality and safety mechanisms | Standards, customer needs |
-| **Feature Requirement** | Integration-level behaviour, independent of component decomposition | Stakeholder Requirements |
-| **Component Requirement** | Component-specific implementation details | Feature Requirements |
-| **Assumption of Use (AoU)** | Boundary conditions for using a software element (any level) | Safety analyses, architecture |
+| **Feature Requirement (FeatReq)** | Integration-level behaviour; may constrain architectural design | Stakeholder Requirements |
+| **Component Requirement** | Component-specific behaviour and internal design constraints | Feature Requirements |
+| **Assumption of Use (AoU)** | Boundary conditions imposed on the user of a software element | Safety analyses, architecture |
 
-## Sentence Template
+### Feature Requirements — Scope Rules
 
-Every requirement **shall** follow this structure:
+Feature Requirements **may** contain:
+- A named architectural element as the subject (e.g. "The message passing component shall…") when constraining an **architectural design decision**. This does not lower the requirement to Component level.
+- **High-level platform boundary conditions** (e.g. "under QNX", "on Linux") when they define the operating context, not the coding implementation.
+- **Architectural constraints on design patterns** (e.g. "shall not use singletons", "shall allow dependency injection") when these prohibit or mandate design approaches at architecture level, not at code level.
+- A reference to the applicable safety standard without repeating it (ISO 26262 applies project-wide).
 
-> **\<Subject\>** shall **\<main verb\>** **\<object\>** **\<parameter\>** **\<temporal/logical conjunction\>**
+Feature Requirements **shall not** contain:
+- Specific algorithms, data structures, or internal API signatures
+- Code organisation or module structure
+- Low-level implementation steps
 
-Of the last three parts (object, parameter, conjunction), at least one is mandatory — the others are optional.
+## Requirement Types
 
-### Examples
-
-| Subject | shall | Verb | Object | Parameter | Condition |
-|---|---|---|---|---|---|
-| The component | shall | detect | if a key-value pair got corrupted | and set its status to INVALID | during every restart of the SW platform. |
-| The software platform | shall | enable | users | to ensure the compatibility of application software | across vehicle variants and releases. |
-| The linter-tool | shall | check | correctness of .rst files format | | upon each commit. |
-
-## Quality Criteria
-
-A well-written requirement is:
-
-- **Unambiguous** — only one possible interpretation
-- **Verifiable** — can be tested or reviewed
-- **Atomic** — expresses a single need (one "shall" per requirement)
-- **Consistent** — no contradictions with other requirements
-- **Complete** — contains subject, verb, and at least one of: object, parameter, or condition
-- **Necessary** — traceable to a parent requirement or rationale
-
-### Avoid
-
-- Vague terms: *approximately*, *as appropriate*, *user-friendly*, *fast*, *efficient*
-- Unbounded lists: *etc.*, *and so on*, *such as* (without closing the list)
-- Compound requirements: multiple "shall" statements in one requirement
-- Implementation details in stakeholder/feature requirements
-- Missing conditions or parameters that leave behaviour undefined
-
-## Requirement Types Explained
-
-| Type | Meaning | Verification |
+| Type | Meaning | Typical Verification |
 |---|---|---|
-| **Functional** | Behaviour that can be observed | Unit/integration test |
-| **Interface** | API or protocol specification | Test or inspection |
-| **Non-Functional** | Quality attribute (performance, reliability) | Review/analysis |
-| **Process** | Process-related constraint | Process review |
+| **Functional** | Observable behaviour of the system or component | Unit / integration test |
+| **Interface** | API, protocol, or communication specification | Test or inspection |
+| **Non-Functional** | Quality attribute (performance, reliability, safety integrity) | Review / analysis / measurement |
+| **Process** | Constraint on a development or operational process | Process review |
