@@ -72,7 +72,10 @@ cross-module dependencies and automatic HTML merging.
      - no
      - Bazel visibility
 
-**Generated targets:** ``<name>`` — Sphinx build; output under ``bazel-bin/<name>/html/``
+**Generated targets:**
+
+- ``<name>`` — HTML output under ``bazel-bin/<name>/html/``; use in ``deps`` of other ``sphinx_module`` targets.
+- ``<name>_needs`` — ``needs.json`` produced by the needs builder; consumed transitively by downstream modules for cross-module ``{requirement:downstream-ref}`` resolution. See :ref:`two-phase-sphinx-build` for the full data-flow description.
 
 
 Artifact Rules
