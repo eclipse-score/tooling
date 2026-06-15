@@ -84,7 +84,15 @@ def _score_needs_impl(ctx):
     # Get config file (generate or use provided)
     config_file = _create_config_py(ctx)
 
-    # Phase 1: Build needs.json (without external needs)
+    # Phase 1: Build needs.json (without external needs).
+    # The needs builder (sphinx-needs NeedsBuilder) only collects `.. need::`
+    # directives — it is blind to the custom trlc `RequirementsDomain` and its
+    # `.. requirement:definition::` directives.  Generated/external files
+    # (renamed_srcs, docs_library_deps) are therefore not needed here.  Their
+    # toctree entries would produce toc.not_readable warnings because Sphinx's
+    # source root is the original docs/ checkout; those are suppressed in
+    # conf.template.py (safe: the HTML phase relocates everything so it never
+    # emits toc.not_readable).
     needs_inputs = ctx.files.srcs + [config_file]
     needs_args = [
         "--index_file",

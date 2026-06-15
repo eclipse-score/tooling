@@ -291,7 +291,7 @@ use_repo(pip, "manual_analysis_deps")
 bazel_dep(name = "trlc", version = "0.0.0")
 git_override(
     module_name = "trlc",
-    commit = "7f06d0396fd0e5f02b657d25700775af5113b7e0",
+    commit = "c4c531b9d667085daa09dfc1590edacc314bfda4",
     remote = "https://github.com/bmw-software-engineering/trlc.git",
 )
 
