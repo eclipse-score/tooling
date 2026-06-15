@@ -76,22 +76,26 @@ class TestImageRenderingIntegration(unittest.TestCase):
             return f.read()
 
     def test_image_directive_emitted(self):
-        """``.. image:: diagrams/overview.svg`` appears in the rendered RST."""
-        self.assertIn(".. image:: diagrams/overview.svg", self._render())
+        """Both SVG and PNG image directives appear in the rendered RST."""
+        rendered = self._render()
+        self.assertIn(".. image:: diagrams/overview.svg", rendered)
+        self.assertIn(".. image:: diagrams/overview.png", rendered)
 
     def test_alt_text_emitted(self):
         """The ``:alt:`` option is emitted with the Markdown alt text."""
-        self.assertIn(":alt: System overview", self._render())
+        rendered = self._render()
+        self.assertIn(":alt: System overview", rendered)
+        self.assertIn(":alt: System overview PNG", rendered)
 
     def test_markdown_syntax_not_in_output(self):
         """The raw ``![...]()`` Markdown syntax must not appear in the output."""
         self.assertNotIn("![", self._render())
 
     def test_requirement_without_image_unaffected(self):
-        """Requirements without an image render normally; exactly one image total."""
+        """Requirements without an image render normally; two images total."""
         content = self._render()
         self.assertIn("The system shall operate without images.", content)
-        self.assertEqual(content.count(".. image::"), 1)
+        self.assertEqual(content.count(".. image::"), 2)
 
 
 if __name__ == "__main__":

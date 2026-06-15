@@ -48,29 +48,24 @@ def _image_srcs_sphinx_sources_test_impl(ctx):
         str([f.basename for f in rst_files]),
     )
 
-    image_files = [f for f in sphinx_files if f.extension == "svg"]
+    image_files = [f for f in sphinx_files if f.extension in ("svg", "png")]
     asserts.true(
         env,
-        len(image_files) == 1,
-        "SphinxSourcesInfo.srcs should contain exactly one staged image file, got: " +
+        len(image_files) == 2,
+        "SphinxSourcesInfo.srcs should contain exactly two staged image files, got: " +
         str([f.basename for f in image_files]),
     )
 
-    asserts.equals(
-        env,
-        "arch.svg",
-        image_files[0].basename,
-        "Staged image should be named arch.svg",
-    )
+    basenames = sorted([f.basename for f in image_files])
+    asserts.equals(env, ["arch.png", "arch.svg"], basenames)
 
-    # Verify the image is staged at the package-relative path (diagrams/arch.svg)
-    # meaning its short_path ends with diagrams/arch.svg relative to the rule output dir.
-    image_short_path = image_files[0].short_path
+    # Verify images are staged at package-relative paths under diagrams/.
+    image_short_paths = sorted([f.short_path for f in image_files])
     asserts.true(
         env,
-        image_short_path.endswith("diagrams/arch.svg"),
-        "Staged image should preserve package-relative path (diagrams/arch.svg), got: " +
-        image_short_path,
+        image_short_paths[0].endswith("diagrams/arch.png") and image_short_paths[1].endswith("diagrams/arch.svg"),
+        "Staged images should preserve package-relative paths under diagrams/, got: " +
+        str(image_short_paths),
     )
 
     return analysistest.end(env)

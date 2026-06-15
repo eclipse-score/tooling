@@ -20,6 +20,14 @@ Requirement REQ_with_image {
     '''
 }
 
+Requirement REQ_with_png_image {
+    description = '''
+        The system shall support PNG image rendering in requirements.
+
+        ![System overview PNG](diagrams/overview.png)
+    '''
+}
+
 Requirement REQ_no_image {
     description = "The system shall operate without images."
 }

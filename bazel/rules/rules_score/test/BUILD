@@ -707,7 +707,10 @@ requirements_rst_test_suite(name = "requirements_rst_tests")
 feature_requirements(
     name = "feat_req_with_image",
     srcs = ["fixtures/seooc_test/feature_requirements.trlc"],
-    image_srcs = ["fixtures/image_srcs/diagrams/arch.svg"],
+    image_srcs = [
+        "fixtures/image_srcs/diagrams/arch.svg",
+        "fixtures/image_srcs/diagrams/arch.png",
+    ],
     deps = [":asr_trlc"],
 )
 
