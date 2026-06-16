@@ -108,6 +108,40 @@ immediate enclosing component alias as parent.
 | Missing unit in PlantUML | Unit Consistency |
 | Extra unit in PlantUML | Unit Consistency |
 
+## PlantUML Stereotype Reference
+
+The validator identifies elements by their **stereotype**, not by the PlantUML keyword. Both `package` and `component` keywords are accepted for each role.
+
+| Stereotype | Valid PlantUML keywords | Meaning | Bazel rule |
+|---|---|---|---|
+| `<<SEooC>>` | `package`, `component` | Safety Element out of Context boundary; may own `portin`/`portout` ports | `dependable_element` |
+| `<<component>>` | `component`, `package` | Architectural component; may own `portin`/`portout` ports | `component` |
+| `<<unit>>` | `component`, `package` | Leaf implementation unit | `unit` |
+
+### Port and Interface Binding
+
+Elements with stereotype `<<SEooC>>` or `<<component>>` may declare ports and bind them to interfaces:
+
+```text
+package "MySeooc" as MySeooc <<SEooC>> {
+    portin  " " as p_in   ' required interface port
+    portout " " as p_out  ' provided interface port
+}
+
+interface "IRequired" as IRequired
+interface "IProvided"  as IProvided
+
+p_in  -( IRequired : requires   ' required binding
+p_out )- IProvided : provides   ' provided binding
+```
+
+**Rules:**
+
+- `portin` / `portout` must be declared inside the `<<SEooC>>` or `<<component>>` element.
+- Use `-(` for required (incoming) and `)-` for provided (outgoing) interface bindings.
+- Plain `package` **without** a stereotype cannot carry interface bindings.
+- Elements with other stereotypes (e.g. `actor`, `database`) are not valid on the left side of a binding.
+
 ## Debug Output
 
 The validator emits debug output containing:

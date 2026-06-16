@@ -225,6 +225,21 @@ fn test_port_target_no_decor_no_mismatch() {
 }
 
 #[test]
+fn test_package_seooc_interface_binding() {
+    run_component_resolver_case("package_seooc_interface_binding");
+}
+
+#[test]
+fn test_package_component_interface_binding() {
+    run_component_resolver_case("package_component_interface_binding");
+}
+
+#[test]
+fn test_invalid_package_no_stereotype_binding() {
+    run_component_resolver_case("invalid_package_no_stereotype_binding");
+}
+
+#[test]
 fn test_deployment_diagram() {
     run_deployment_resolver_case("deployment_diagram_it");
 }
