@@ -20,16 +20,20 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use activity_diagram::ActivityDiagram;
+use activity_serializer::ActivitySerializer;
 use class_serializer::ClassSerializer;
 use component_serializer::ComponentSerializer;
 use sequence_serializer::SequenceSerializer;
 
 use puml_lobster::{write_lobster_to_file, LobsterModel};
 use puml_parser::{
-    DiagramParser, ErrorLocation, Preprocessor, PumlClassParser, PumlComponentParser,
-    PumlSequenceParser,
+    DiagramParser, ErrorLocation, Preprocessor, PumlActivityParser, PumlClassParser,
+    PumlComponentParser, PumlSequenceParser,
 };
-use puml_resolver::{ClassResolver, ComponentResolver, DiagramResolver, SequenceResolver};
+use puml_resolver::{
+    ActivityResolver, ClassResolver, ComponentResolver, DiagramResolver, SequenceResolver,
+};
 use puml_utils::{write_fbs_to_file, write_json_to_file, LogLevel};
 
 /// CLI wrapper for LogLevel that implements ValueEnum
@@ -99,6 +103,7 @@ struct Args {
 #[derive(Copy, Clone, ValueEnum, Debug)]
 enum DiagramType {
     None,
+    Activity,
     Component,
     Deployment,
     Class,
@@ -108,6 +113,7 @@ enum DiagramType {
 #[allow(dead_code)] // Class and Sequence variants are WIP
 #[derive(Debug, Serialize)]
 enum ParsedDiagram {
+    Activity(puml_parser::RawActivityDiagram),
     Component(puml_parser::CompPumlDocument),
     Class(puml_parser::ClassUmlFile),
     Sequence(puml_parser::SeqPumlDocument),
@@ -191,6 +197,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     let lobster_model = match &logic_result {
                         ResolvedDiagram::Component(model) => LobsterModel::Component(model),
                         ResolvedDiagram::Class(model) => LobsterModel::Class(model),
+                        ResolvedDiagram::Activity(_) => LobsterModel::Empty,
                         ResolvedDiagram::Sequence(_) => LobsterModel::Empty,
                     };
                     write_lobster_to_file(lobster_model, path, ldir)?;
@@ -208,6 +215,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
 fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram, source_file: &str) -> Vec<u8> {
     match resolved_content {
+        ResolvedDiagram::Activity(resolved_content) => {
+            ActivitySerializer::serialize(resolved_content, source_file)
+        }
         ResolvedDiagram::Component(resolved_content) => {
             ComponentSerializer::serialize(resolved_content, source_file)
         }
@@ -222,6 +232,7 @@ fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram, source_file: &
 
 #[derive(Debug, Serialize)]
 pub enum ResolvedDiagram {
+    Activity(ActivityDiagram),
     Component(HashMap<String, component_diagram::LogicComponent>),
     Class(class_diagram::ClassDiagram),
     Sequence(sequence_logic::SequenceTree),
@@ -231,6 +242,10 @@ fn resolve_parsed_diagram(
     parsed_content: ParsedDiagram,
 ) -> Result<ResolvedDiagram, Box<dyn std::error::Error>> {
     match parsed_content {
+        ParsedDiagram::Activity(parsed_content) => {
+            let mut resolver = ActivityResolver::new();
+            puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Activity)
+        }
         ParsedDiagram::Component(parsed_content) => {
             let mut resolver = ComponentResolver::new();
             puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Component)
@@ -289,6 +304,10 @@ fn parse_puml_file(
     diagram_type: DiagramType,
 ) -> Result<ParsedDiagram, Box<dyn std::error::Error>> {
     match diagram_type {
+        DiagramType::Activity => {
+            parse_with_parser(&mut PumlActivityParser, path, content, log_level)
+                .map(ParsedDiagram::Activity)
+        }
         DiagramType::Component | DiagramType::Deployment => {
             parse_with_parser(&mut PumlComponentParser, path, content, log_level)
                 .map(ParsedDiagram::Component)
@@ -323,6 +342,18 @@ fn parse_in_order(
             let loc = e.error_location();
             debug!("Component parser failed at {:?}: {}", loc, e);
             attempts.push(("Component", Box::new(e), loc));
+        }
+    }
+
+    match PumlActivityParser.parse_file(path, content, log_level) {
+        Ok(doc) => {
+            debug!("Successfully detected as Activity diagram");
+            return Ok(ParsedDiagram::Activity(doc));
+        }
+        Err(e) => {
+            let loc = e.error_location();
+            debug!("Activity parser failed at {:?}: {}", loc, e);
+            attempts.push(("Activity", Box::new(e), loc));
         }
     }
 
