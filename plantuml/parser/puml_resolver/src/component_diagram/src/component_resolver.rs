@@ -65,7 +65,7 @@ struct RelationValidationInput<'a> {
     has_interface_tokens: bool,
     src_is_interface: bool,
     tgt_is_interface: bool,
-    src_is_component: bool,
+    src_is_component_role: bool,
     decor_role: Option<EndpointRole>,
     src_port_role: Option<EndpointRole>,
 }
@@ -476,7 +476,8 @@ impl ComponentResolver {
         // of `"-"`.  Direction is visual-only and does not affect semantics.
         let is_lollipop_line = line.chars().all(|c| c == '-') && !line.is_empty();
 
-        let decor_role = if is_lollipop_line && left == ")" && middle.is_empty() && right.is_empty() {
+        let decor_role = if is_lollipop_line && left == ")" && middle.is_empty() && right.is_empty()
+        {
             Some(EndpointRole::Provided)
         } else if is_lollipop_line
             && left.is_empty()
@@ -575,13 +576,13 @@ impl ComponentResolver {
     ) -> Option<ComponentResolverError> {
         if input.has_interface_tokens
             && input.decor_role.is_some()
-            && (!input.src_is_component || !input.tgt_is_interface)
+            && (!input.src_is_component_role || !input.tgt_is_interface)
         {
             return Some(ComponentResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
                 reason:
-                    "Decorator binding only allows Component on the left and Interface on the right"
+                    "Decorator binding requires a Component or component-stereotyped element on the left and Interface on the right"
                         .to_string(),
             });
         }
@@ -641,6 +642,13 @@ impl ComponentResolver {
         let src_is_interface = matches!(src_type, Some(ComponentType::Interface));
         let tgt_is_interface = matches!(tgt_type, Some(ComponentType::Interface));
         let src_is_component = matches!(src_type, Some(ComponentType::Component));
+        let src_is_package = matches!(src_type, Some(ComponentType::Package));
+        let src_stereotype = self
+            .elements
+            .get(&src_fqn)
+            .and_then(|e| e.stereotype.as_deref());
+        let src_is_component_role = src_is_component
+            || (src_is_package && matches!(src_stereotype, Some("SEooC") | Some("component")));
 
         let validation_input = RelationValidationInput {
             relation,
@@ -648,7 +656,7 @@ impl ComponentResolver {
                 || parsed_arrow.has_required_token,
             src_is_interface,
             tgt_is_interface,
-            src_is_component,
+            src_is_component_role,
             decor_role: parsed_arrow.decor_role,
             src_port_role,
         };

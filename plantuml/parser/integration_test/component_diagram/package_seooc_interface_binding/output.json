@@ -1,0 +1,44 @@
+{
+  "package_seooc_interface_binding.puml": {
+    "MySeooc": {
+      "id": "MySeooc",
+      "name": "MySeooc",
+      "alias": "MySeooc",
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": "SEooC",
+      "relations": [
+        {
+          "target": "IRequired",
+          "annotation": "requires",
+          "relation_type": "InterfaceBinding",
+          "source_role": "Required"
+        },
+        {
+          "target": "IProvided",
+          "annotation": "provides",
+          "relation_type": "InterfaceBinding",
+          "source_role": "Provided"
+        }
+      ]
+    },
+    "IRequired": {
+      "id": "IRequired",
+      "name": "IRequired",
+      "alias": "IRequired",
+      "parent_id": null,
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": []
+    },
+    "IProvided": {
+      "id": "IProvided",
+      "name": "IProvided",
+      "alias": "IProvided",
+      "parent_id": null,
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": []
+    }
+  }
+}

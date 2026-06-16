@@ -16,4 +16,4 @@ invalid_interface_binding_non_component.puml:
     fields:
       from: "ActorA"
       to: "IService"
-      reason: "Decorator binding only allows Component on the left and Interface on the right"
+      reason: "Decorator binding requires a Component or component-stereotyped element on the left and Interface on the right"

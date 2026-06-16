@@ -10,10 +10,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-invalid_interface_left_decorator.puml:
+invalid_package_no_stereotype_binding.puml:
   error:
     type: "InvalidRelationship"
     fields:
-      from: "IProvided"
-      to: "A"
+      from: "Pkg"
+      to: "IService"
       reason: "Decorator binding requires a Component or component-stereotyped element on the left and Interface on the right"

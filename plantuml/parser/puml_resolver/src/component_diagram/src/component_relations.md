@@ -53,4 +53,5 @@ When interface bindings are used:
 - Exactly one endpoint must be an interface.
 - Interface-to-interface bindings are not allowed.
 - Interface-left decorator forms are rejected.
+- Only a `component` element or a `package` with stereotype `<<SEooC>>` or `<<component>>` is accepted on the left side.
 - Port role (`portin`/`portout`) must be consistent with decorator role.
