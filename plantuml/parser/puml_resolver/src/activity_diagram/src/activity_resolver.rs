@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use crate::activity_logic::{
+use activity_diagram::{
     ActionNode, ActivityDiagram, ActivityStmt, BackwardNode, ControlKind, ControlNode, IfDisplay,
     IfNode, LoopDisplay, RepeatWhileNode, TitleNode, WhileNode,
 };

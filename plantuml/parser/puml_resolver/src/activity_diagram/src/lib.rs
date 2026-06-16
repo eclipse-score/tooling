@@ -11,10 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-mod activity_logic;
 mod activity_resolver;
 
-pub use activity_logic::{
+pub use activity_diagram::{
     ActionNode, ActivityDiagram, ActivityStmt, BackwardNode, ControlKind, ControlNode, IfDisplay,
     IfNode, LoopDisplay, RepeatWhileNode, TitleNode, WhileNode,
 };

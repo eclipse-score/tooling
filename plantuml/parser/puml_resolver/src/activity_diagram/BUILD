@@ -15,7 +15,6 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 rust_library(
     name = "puml_resolver_activity",
     srcs = [
-        "src/activity_logic.rs",
         "src/activity_resolver.rs",
         "src/lib.rs",
     ],
@@ -25,6 +24,7 @@ rust_library(
     deps = [
         "//plantuml/parser/puml_parser:activity_diagram",
         "//plantuml/parser/puml_resolver:resolver_traits",
+        "//tools/metamodel/activity:activity_diagram",
         "@crates//:serde",
         "@crates//:thiserror",
     ],
@@ -47,5 +47,6 @@ rust_test(
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//plantuml/parser/puml_utils",
+        "//tools/metamodel/activity:activity_diagram",
     ],
 )

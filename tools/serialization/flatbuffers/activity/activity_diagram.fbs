@@ -1,0 +1,90 @@
+// *******************************************************************************
+// Copyright (c) 2026 Contributors to the Eclipse Foundation
+//
+// See the NOTICE file(s) distributed with this work for additional
+// information regarding copyright ownership.
+//
+// This program and the accompanying materials are made available under the
+// terms of the Apache License Version 2.0 which is available at
+// https://www.apache.org/licenses/LICENSE-2.0
+//
+// SPDX-License-Identifier: Apache-2.0
+// *******************************************************************************
+
+namespace activity;
+
+enum ControlKind:byte {
+  Stop,
+  Kill,
+  Detach,
+  Break,
+  Continue
+}
+
+table IfDisplay {
+  then_label:string;
+  else_label:string;
+}
+
+table LoopDisplay {
+  continue_label:string;
+  exit_label:string;
+}
+
+table TitleNode {
+  text:string;
+}
+
+table ActionNode {
+  label:string;
+}
+
+table BackwardNode {
+  label:string;
+}
+
+table ControlNode {
+  kind:ControlKind = Stop;
+}
+
+table IfNode {
+  condition:string;
+  body:[ActivityStmt];
+  else_branch:[ActivityStmt];
+  display:IfDisplay;
+}
+
+table WhileNode {
+  condition:string;
+  body:[ActivityStmt];
+  backward:BackwardNode;
+  display:LoopDisplay;
+}
+
+table RepeatWhileNode {
+  body:[ActivityStmt];
+  condition:string;
+  backward:BackwardNode;
+  display:LoopDisplay;
+}
+
+union ActivityStmtValue {
+  TitleNode,
+  ActionNode,
+  IfNode,
+  WhileNode,
+  RepeatWhileNode,
+  ControlNode
+}
+
+table ActivityStmt {
+  value:ActivityStmtValue;
+}
+
+table ActivityDiagram {
+  name:string;
+  statements:[ActivityStmt];
+  source_file:string;
+}
+
+root_type ActivityDiagram;
