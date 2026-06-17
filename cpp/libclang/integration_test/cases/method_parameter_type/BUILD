@@ -27,6 +27,7 @@ cc_library(
 
 cpp_parser(
     name = "parser",
+    emit_debug_json = True,
     extra_args = [],
     target = ":method_parameter_type",
     tool = "//cpp/libclang:clang_rs_parser",

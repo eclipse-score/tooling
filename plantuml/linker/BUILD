@@ -18,7 +18,7 @@ rust_binary(
     crate_root = "src/main.rs",
     visibility = ["//visibility:public"],
     deps = [
-        "//plantuml/parser/puml_serializer/src/fbs:component_fbs",
+        "//tools/serialization/flatbuffers/component:component_fbs",
         "@crates//:clap",
         "@crates//:env_logger",
         "@crates//:flatbuffers",

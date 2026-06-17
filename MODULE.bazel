@@ -291,14 +291,14 @@ use_repo(pip, "manual_analysis_deps")
 bazel_dep(name = "trlc", version = "0.0.0")
 git_override(
     module_name = "trlc",
-    commit = "7f06d0396fd0e5f02b657d25700775af5113b7e0",
+    commit = "c4c531b9d667085daa09dfc1590edacc314bfda4",
     remote = "https://github.com/bmw-software-engineering/trlc.git",
 )
 
 bazel_dep(name = "lobster", version = "0.0.0")
 git_override(
     module_name = "lobster",
-    commit = "9da4a491ef65c33f50e82d1e29346180dd5acc60",
+    commit = "2792e2daee2cf524fdc7b1545fd3537791ebc36c",
     remote = "https://github.com/bmw-software-engineering/lobster.git",
 )
 

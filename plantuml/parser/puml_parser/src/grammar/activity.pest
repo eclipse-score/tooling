@@ -45,6 +45,7 @@ statement = _{
     | while_start_stmt
 
       // base
+    | title_stmt
     | note_declaration
     | backward_stmt
     | arrow_stmt

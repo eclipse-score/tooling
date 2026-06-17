@@ -1,5 +1,5 @@
 {
-  "classes": {
+  "types": {
     "CarDepByParamPtr": {
       "id": "CarDepByParamPtr",
       "name": "CarDepByParamPtr",

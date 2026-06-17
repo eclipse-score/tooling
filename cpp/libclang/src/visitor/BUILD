@@ -25,8 +25,8 @@ rust_library(
     ],
     visibility = ["//cpp/libclang:__subpackages__"],
     deps = [
-        "//tools/metamodel:class_diagram",
-        "//tools/metamodel:sequence_diagram",
+        "//tools/metamodel/class:class_diagram",
+        "//tools/metamodel/sequence:sequence_diagram",
         "@crates//:clang",
         "@crates//:serde",
     ],

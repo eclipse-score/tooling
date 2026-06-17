@@ -12,9 +12,6 @@
 // *******************************************************************************
 
 pub mod logic_parser;
-pub mod sequence_resolver;
+mod sequence_resolver;
 
-pub use sequence_logic::{
-    Condition, ConditionType, Event, Interaction, Return, SequenceNode, SequenceTree,
-};
 pub use sequence_resolver::{SequenceResolver, SequenceResolverError};

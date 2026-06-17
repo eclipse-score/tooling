@@ -17,11 +17,18 @@ rust_library(
     srcs = ["src/lib.rs"],
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
+        ":activity_resolver",
         ":class_resolver",
         ":component_resolver",
         ":resolver_traits",
         ":sequence_resolver",
     ],
+)
+
+alias(
+    name = "activity_resolver",
+    actual = "//plantuml/parser/puml_resolver/src/activity_diagram:puml_resolver_activity",
+    visibility = ["//plantuml/parser:__subpackages__"],
 )
 
 alias(

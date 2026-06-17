@@ -18,8 +18,8 @@ rust_library(
     srcs = ["src/lib.rs"],
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
-        "//plantuml/parser/puml_resolver",
-        "//tools/metamodel:class_diagram",
+        "//tools/metamodel/class:class_diagram",
+        "//tools/metamodel/component:component_diagram",
         "@crates//:serde_json",
     ],
 )

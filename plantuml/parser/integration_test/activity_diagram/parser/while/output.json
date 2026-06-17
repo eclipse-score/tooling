@@ -3,45 +3,84 @@
     "name": "while",
     "statements": [
       {
-        "Start": null
+        "Start": {
+          "source": {
+            "start_line": 15,
+            "start_column": 1
+          }
+        }
       },
       {
         "WhileStart": {
           "condition": "check array length ?",
-          "label": "not 0"
+          "label": "not 0",
+          "source": {
+            "start_line": 17,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "get elements"
+          "label": "get elements",
+          "source": {
+            "start_line": 18,
+            "start_column": 3
+          }
         }
       },
       {
         "IfStart": {
           "condition": "elements is minus",
-          "label": "yes"
+          "label": "yes",
+          "source": {
+            "start_line": 19,
+            "start_column": 3
+          }
         }
       },
       {
         "Control": {
-          "kind": "Break"
+          "kind": "Break",
+          "source": {
+            "start_line": 20,
+            "start_column": 5
+          }
         }
       },
       {
-        "EndIf": null
+        "EndIf": {
+          "source": {
+            "start_line": 21,
+            "start_column": 3
+          }
+        }
       },
       {
         "EndWhile": {
-          "label": "is 0"
+          "label": "is 0",
+          "source": {
+            "start_line": 22,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "delete array"
+          "label": "delete array",
+          "source": {
+            "start_line": 23,
+            "start_column": 1
+          }
         }
       },
       {
-        "Stop": null
+        "Stop": {
+          "source": {
+            "start_line": 25,
+            "start_column": 1
+          }
+        }
       }
     ]
   }

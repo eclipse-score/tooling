@@ -1,5 +1,5 @@
 {
-  "classes": {
+  "types": {
     "MethodReturnTypeSample": {
       "enclosing_namespace_id": null,
       "entity_type": "Class",

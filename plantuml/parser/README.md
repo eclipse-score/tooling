@@ -86,4 +86,10 @@ Each diagram parser uses [pest](https://pest.rs/) PEG grammars to tokenize Plant
 then builds a typed AST. The CLI (`puml_cli`) dispatches to the appropriate parser based on
 `--diagram-type` or auto-detection.
 
+Shared model and serialization crates are split by responsibility:
+
+- `tools/metamodel/{class,component,sequence}` contains the logical model types.
+- `tools/serialization/flatbuffers/{class,component,sequence}` contains the FlatBuffers
+  schemas and serializer crates that produce `.fbs.bin` outputs.
+
 For the detailed design and users Guide, see `docs/README.md` in the source tree.

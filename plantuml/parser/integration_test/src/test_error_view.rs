@@ -17,7 +17,7 @@ use puml_parser::{
     ActivityParserError, BaseParseError, ClassError, IncludeExpandError, IncludeParseError,
     PreprocessError, ProcedureExpandError, ProcedureParseError,
 };
-use puml_resolver::{ClassPumlResolverError, ElementResolverError};
+use puml_resolver::{ActivityResolverError, ClassPumlResolverError, ComponentResolverError};
 
 #[derive(Debug)]
 pub struct ProjectedError {
@@ -203,43 +203,76 @@ impl ErrorView for ActivityParserError {
             ActivityParserError::Base(e) => e.project(base_dir),
             ActivityParserError::InvalidStatement(message) => {
                 let _ = base_dir;
-                ProjectedError::new("InvalidStatement").with_field("message", message.clone())
+                ProjectedError::new("InvalidStatement").with_field("message", message.to_string())
             }
         }
     }
 }
 
-impl ErrorView for ElementResolverError {
+impl ErrorView for ComponentResolverError {
     fn project(&self, _base_dir: &Path) -> ProjectedError {
         match self {
-            ElementResolverError::UnresolvedReference { reference } => {
+            ComponentResolverError::UnresolvedReference { reference } => {
                 ProjectedError::new("UnresolvedReference")
                     .with_field("reference", reference.clone())
             }
 
-            ElementResolverError::DuplicateElement { element_id } => {
+            ComponentResolverError::DuplicateElement { element_id } => {
                 ProjectedError::new("DuplicateComponent")
                     .with_field("component_id", element_id.clone())
             }
 
-            ElementResolverError::UnknownElementType { element_type } => {
+            ComponentResolverError::UnknownElementType { element_type } => {
                 ProjectedError::new("UnknownComponentType")
                     .with_field("component_type", element_type.clone())
             }
 
-            ElementResolverError::InvalidRelationship { from, to, reason } => {
+            ComponentResolverError::InvalidRelationship { from, to, reason } => {
                 ProjectedError::new("InvalidRelationship")
                     .with_field("from", from.clone())
                     .with_field("to", to.clone())
                     .with_field("reason", reason.clone())
             }
 
-            ElementResolverError::AmbiguousReference {
+            ComponentResolverError::AmbiguousReference {
                 reference,
                 candidates,
             } => ProjectedError::new("AmbiguousReference")
                 .with_field("reference", reference.clone())
                 .with_field("candidates", candidates.join(", ")),
+        }
+    }
+}
+
+impl ErrorView for ActivityResolverError {
+    fn project(&self, _base_dir: &Path) -> ProjectedError {
+        match self {
+            ActivityResolverError::UnexpectedEndOfInput {
+                context,
+                line,
+                column,
+            } => ProjectedError::new("UnexpectedEndOfInput")
+                .with_field("context", context.to_string())
+                .with_field("line", line.to_string())
+                .with_field("column", column.to_string()),
+            ActivityResolverError::UnexpectedStatement {
+                context,
+                statement,
+                line,
+                column,
+            } => ProjectedError::new("UnexpectedStatement")
+                .with_field("context", context.to_string())
+                .with_field("statement", statement.to_string())
+                .with_field("line", line.to_string())
+                .with_field("column", column.to_string()),
+            ActivityResolverError::UnsupportedStatement {
+                statement,
+                line,
+                column,
+            } => ProjectedError::new("UnsupportedStatement")
+                .with_field("statement", statement.to_string())
+                .with_field("line", line.to_string())
+                .with_field("column", column.to_string()),
         }
     }
 }

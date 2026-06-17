@@ -10,16 +10,21 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////////
-use clang::{Entity, EntityKind, EntityVisitResult};
 use clap::Parser as ClapParser;
+use env_logger::Builder;
+use log::{debug, error, LevelFilter};
 use std::collections::BTreeMap;
 use std::fs;
-use std::fs::OpenOptions;
-use std::io::{BufWriter, Write};
-use std::path::PathBuf;
-use visit_tu::context;
+use std::path::{Path, PathBuf};
+
+use class_diagram::{ClassDiagram, SimpleEntity};
+use class_serializer::ClassSerializer;
+
+use utils::{render_entity_tree, write_debug_json, write_entity_tree, write_fbs_output};
 use visit_tu::visitor;
 use visit_tu::{FunctionDef, VisitContext, Visitor};
+
+const CLASS_DIAGRAM_STEM: &str = "class_diagram";
 
 #[derive(ClapParser, Debug)]
 #[command(name = "cpp_parser")]
@@ -30,9 +35,9 @@ struct Args {
     /// Input C/C++ source files
     input: Vec<PathBuf>,
 
-    /// Output file path
+    /// Output directory path
     #[arg(short, long)]
-    output: PathBuf,
+    output_dir: PathBuf,
 
     /// Additional compiler arguments (e.g., -I/path/to/includes)
     #[arg(short = 'X', long = "extra-arg", allow_hyphen_values = true)]
@@ -41,25 +46,82 @@ struct Args {
     /// Output JSON format for debugging (internal use only)
     #[arg(long, hide = true)]
     json: bool,
+}
 
-    /// Print verbose output
-    #[arg(short, long)]
-    verbose: bool,
+#[derive(Default)]
+struct ParseOutputs {
+    types: BTreeMap<String, SimpleEntity>,
+    functions: Vec<FunctionDef>,
+}
+
+impl ParseOutputs {
+    fn extend_from_ctx(&mut self, ctx: VisitContext) {
+        debug!(
+            "Visited TU, extracted {} types, {} functions",
+            ctx.types.len(),
+            ctx.functions.len()
+        );
+
+        for (type_name, entity) in ctx.types {
+            debug!("Type {}:\n{:#?}", type_name, entity);
+            self.types.insert(type_name, entity);
+        }
+
+        self.functions.extend(ctx.functions);
+    }
+}
+
+fn init_logging() {
+    let log_level = std::env::var("LIBCLANG_LOG")
+        .ok()
+        .and_then(|value| value.parse::<LevelFilter>().ok())
+        .unwrap_or(LevelFilter::Error);
+
+    Builder::new().filter_level(log_level).init();
+}
+
+fn init_libclang() -> clang::Clang {
+    debug!("=== libclang Information ===");
+    debug!("Command line: {:?}", std::env::args().collect::<Vec<_>>());
+
+    if let Ok(path) = std::env::var("LIBCLANG_PATH") {
+        debug!("LIBCLANG_PATH: {}", path);
+    }
+
+    let clang = match clang::Clang::new() {
+        Ok(c) => {
+            debug!("Successfully loaded libclang");
+            c
+        }
+        Err(e) => {
+            error!("Failed to load libclang: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    debug!("libclang version: {}", clang::get_version());
+    debug!("Using Bazel's LLVM toolchain with clang-rs wrapper");
+    clang
+}
+
+fn init_clang_index(clang: &clang::Clang) -> clang::Index {
+    let index = clang::Index::new(clang, false, true);
+    debug!("Created clang index");
+    index
 }
 
 fn parse_file(
-    file: &PathBuf,
+    file: &Path,
     compilation_flags: &[String],
     index: &clang::Index,
-    ast_file_output_path: &PathBuf,
-    all_classes: &mut BTreeMap<String, context::TypeMapValue>,
-    all_functions: &mut Vec<FunctionDef>,
+    output_dir: &Path,
+    outputs: &mut ParseOutputs,
 ) {
-    println!("Parsing TU: {:?}", file);
+    debug!("Parsing TU: {:?}", file);
 
     if let Some(path_str) = file.to_str() {
         if visitor::is_external_dependency_path(path_str) {
-            println!("  Skipping external dependency file: {:?}", file);
+            debug!("Skipping external dependency file: {:?}", file);
             return;
         }
     };
@@ -68,72 +130,61 @@ fn parse_file(
 
     match parse_result {
         Ok(parsed) => {
-            println!("  Parsed successfully, parsed is {:?}", parsed);
-
             let diagnostics = parsed.get_diagnostics();
             if !diagnostics.is_empty() {
-                println!("  Diagnostics: {}", diagnostics.len());
+                debug!("Diagnostics: {}", diagnostics.len());
+                for diagnostic in &diagnostics {
+                    debug!("Diagnostic: {:?}", diagnostic);
+                }
             }
 
             let entity = parsed.get_entity();
-            print_entity(&entity, 0, PrintMode::File(ast_file_output_path));
-            print_entity(&entity, 0, PrintMode::Stdout);
+            debug!("Parsed {:?} successfully", parsed);
+            if log::log_enabled!(log::Level::Trace) {
+                let ast_file_output_path = output_dir.join("libclang_parsed_ast.txt");
+                let entity_tree = render_entity_tree(&entity, 0);
+                write_entity_tree(&ast_file_output_path, &entity_tree);
+            }
 
             let mut ctx = VisitContext::default();
             let mut visitor = Visitor::new(&mut ctx);
             visitor.visit(entity);
-            println!(
-                "  Visited TU, extracted {} classes, {} functions",
-                ctx.types.len(),
-                ctx.functions.len()
-            );
-            for (class_name, logic_class) in &ctx.types {
-                println!("  - class: {}", class_name);
-                println!("{:#?}", logic_class);
-                all_classes.insert(class_name.clone(), logic_class.clone());
-            }
-            all_functions.extend(ctx.functions);
+            outputs.extend_from_ctx(ctx);
         }
         Err(e) => {
-            eprintln!("  Failed to parse {:?}: {:?}", file, e);
+            error!("Failed to parse {:?}: {:?}", file, e);
         }
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("=== libclang Information ===\n");
-    println!("Command line: {:?}", std::env::args().collect::<Vec<_>>());
-
-    if let Ok(path) = std::env::var("LIBCLANG_PATH") {
-        println!("LIBCLANG_PATH: {}", path);
-    }
-
-    // Load clang - keep it alive for the entire scope
-    let clang = match clang::Clang::new() {
-        Ok(c) => {
-            println!("✓ Successfully loaded libclang\n");
-            c
-        }
-        Err(e) => {
-            eprintln!("Failed to load libclang: {}", e);
-            std::process::exit(1);
-        }
+fn serialize_class_diagram(
+    output_dir: &Path,
+    entities: BTreeMap<String, SimpleEntity>,
+) -> Result<(), std::io::Error> {
+    let entities: Vec<_> = entities.into_values().collect();
+    let class_diagram = ClassDiagram {
+        name: String::new(), // no name for c++ side
+        entities,
+        relationships: Vec::new(), // relationships are included at the entity level for c++
+        source_files: Vec::new(),  // source files are not tracked at the diagram level for c++
+        version: None,
     };
 
-    // All operations use the clang-rs wrapper API
-    let index = clang::Index::new(&clang, false, true);
-    println!("✓ Created clang index");
-    println!("libclang version: {}", clang::get_version());
+    let output_fbs = ClassSerializer::serialize(&class_diagram, "");
+    write_fbs_output(output_dir, CLASS_DIAGRAM_STEM, &output_fbs)?;
+
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    init_logging();
+    let clang = init_libclang();
+    let index = init_clang_index(&clang);
 
     let command_line_args = Args::parse();
-    let mut all_classes = BTreeMap::new();
-    let mut all_functions: Vec<FunctionDef> = Vec::new();
+    let mut outputs = ParseOutputs::default();
 
-    let ast_file_output_path = command_line_args
-        .output
-        .parent()
-        .ok_or("Output path must have a parent directory")?
-        .join("libclang_parsed_ast.txt");
+    fs::create_dir_all(&command_line_args.output_dir)?;
 
     for file in &command_line_args.input {
         let compilation_flags = &command_line_args.extra_args;
@@ -142,72 +193,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             file,
             compilation_flags,
             &index,
-            &ast_file_output_path,
-            &mut all_classes,
-            &mut all_functions,
+            &command_line_args.output_dir,
+            &mut outputs,
         );
     }
-    let mut output = serde_json::Map::new();
-    output.insert("classes".to_owned(), serde_json::to_value(&all_classes)?);
-    output.insert(
-        "functions".to_owned(),
-        serde_json::to_value(&all_functions)?,
-    );
-    let output_json = serde_json::to_string_pretty(&output)?;
-    fs::write(&command_line_args.output, output_json)?;
-    println!("Wrote AST JSON to {:?}", command_line_args.output);
-    println!("\n Using Bazel's LLVM toolchain with clang-rs wrapper!");
+
+    if command_line_args.json {
+        write_debug_json(
+            &command_line_args.output_dir,
+            &outputs.types,
+            &outputs.functions,
+        )?;
+    }
+
+    serialize_class_diagram(&command_line_args.output_dir, outputs.types)?;
 
     Ok(())
-}
-
-enum PrintMode<'a> {
-    Stdout,
-    File(&'a PathBuf),
-}
-
-fn print_entity(entity: &Entity, level: usize, print_mode: PrintMode) {
-    match print_mode {
-        PrintMode::Stdout => {
-            let mut stdout = std::io::stdout().lock();
-            print_entity_to(entity, level, &mut stdout)
-        }
-        PrintMode::File(path) => {
-            let file = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(path)
-                .unwrap_or_else(|e| {
-                    panic!("Failed to open file {:?} for writing: {}", path, e);
-                });
-            let mut file_out = BufWriter::new(file);
-            print_entity_to(entity, level, &mut file_out)
-        }
-    }
-}
-
-fn print_entity_to(entity: &Entity, level: usize, out: &mut dyn Write) {
-    let indent = "  ".repeat(level);
-    let kind = entity.get_kind();
-    let spelling = match kind {
-        EntityKind::AccessSpecifier => entity
-            .get_accessibility()
-            .map(|a| format!("{:?}", a).to_lowercase())
-            .unwrap_or_default(),
-        _ => entity.get_name().unwrap_or_default(),
-    };
-    let output = format!("{}{:?} | {}\n", indent, kind, spelling);
-
-    // we soft fail since this is just a diagnostic print and should not crush the main programm
-    out.write_all(output.as_bytes()).unwrap_or_else(|e| {
-        eprintln!("Failed to write entity info: {}", e);
-    });
-    out.flush().unwrap_or_else(|e| {
-        eprintln!("Failed to flush output: {}", e);
-    });
-
-    entity.visit_children(|child, _parent| {
-        print_entity_to(&child, level + 1, out);
-        EntityVisitResult::Continue
-    });
 }

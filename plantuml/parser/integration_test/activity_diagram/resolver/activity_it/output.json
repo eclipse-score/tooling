@@ -1,0 +1,194 @@
+{
+  "activity_diagram.puml": {
+    "name": "test_activity_beta_syntax",
+    "statements": [
+      {
+        "Title": {
+          "text": "Beta Activity Syntax Coverage"
+        }
+      },
+      {
+        "Action": {
+          "label": "Initialize parser context"
+        }
+      },
+      {
+        "If": {
+          "condition": "fatal configuration error?",
+          "body": [
+            {
+              "Control": {
+                "kind": "Stop"
+              }
+            }
+          ],
+          "else_branch": [
+            {
+              "If": {
+                "condition": "configuration warning?",
+                "body": [
+                  {
+                    "Action": {
+                      "label": "check warning"
+                    }
+                  }
+                ],
+                "else_branch": [
+                  {
+                    "Action": {
+                      "label": "Continue setup"
+                    }
+                  }
+                ],
+                "display": {
+                  "then_label": "yes",
+                  "else_label": "no"
+                }
+              }
+            }
+          ],
+          "display": {
+            "then_label": "yes",
+            "else_label": null
+          }
+        }
+      },
+      {
+        "If": {
+          "condition": "beta syntax enabled?",
+          "body": [
+            {
+              "Action": {
+                "label": "Enter beta flow"
+              }
+            },
+            {
+              "If": {
+                "condition": "extra validation needed?",
+                "body": [
+                  {
+                    "Action": {
+                      "label": "Run nested validation"
+                    }
+                  }
+                ],
+                "else_branch": [
+                  {
+                    "Action": {
+                      "label": "Skip nested validation"
+                    }
+                  }
+                ],
+                "display": {
+                  "then_label": "yes",
+                  "else_label": "no"
+                }
+              }
+            }
+          ],
+          "else_branch": [
+            {
+              "Action": {
+                "label": "Fallback configuration path"
+              }
+            }
+          ],
+          "display": {
+            "then_label": "yes",
+            "else_label": "no"
+          }
+        }
+      },
+      {
+        "While": {
+          "condition": "retry budget available?",
+          "body": [
+            {
+              "Action": {
+                "label": "Try parse step"
+              }
+            },
+            {
+              "If": {
+                "condition": "parse step succeeded?",
+                "body": [
+                  {
+                    "Control": {
+                      "kind": "Break"
+                    }
+                  }
+                ],
+                "else_branch": [
+                  {
+                    "Action": {
+                      "label": "Update retry state"
+                    }
+                  }
+                ],
+                "display": {
+                  "then_label": "yes",
+                  "else_label": "no"
+                }
+              }
+            }
+          ],
+          "backward": null,
+          "display": {
+            "continue_label": "yes",
+            "exit_label": null
+          }
+        }
+      },
+      {
+        "RepeatWhile": {
+          "body": [
+            {
+              "Action": {
+                "label": "Read next activity token"
+              }
+            },
+            {
+              "If": {
+                "condition": "token available?",
+                "body": [
+                  {
+                    "Action": {
+                      "label": "Consume token"
+                    }
+                  }
+                ],
+                "else_branch": [
+                  {
+                    "Control": {
+                      "kind": "Break"
+                    }
+                  }
+                ],
+                "display": {
+                  "then_label": "yes",
+                  "else_label": "no"
+                }
+              }
+            }
+          ],
+          "condition": "more tokens expected?",
+          "backward": null,
+          "display": {
+            "continue_label": "yes",
+            "exit_label": null
+          }
+        }
+      },
+      {
+        "Action": {
+          "label": "Finalize result"
+        }
+      },
+      {
+        "Control": {
+          "kind": "Stop"
+        }
+      }
+    ]
+  }
+}

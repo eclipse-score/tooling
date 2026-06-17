@@ -90,7 +90,7 @@ rust_test(
     ],
     deps = [
         ":test_framework",
-        "//tools/metamodel:class_diagram",
+        "//tools/metamodel/class:class_diagram",
         "//validation/core:validation",
         "@crates//:serde",
         "@crates//:serde_json",

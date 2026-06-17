@@ -123,11 +123,20 @@ are rendered under :doc:`tool_reference/index`.
    * - **Sphinx (Docs)**
      - ``score_build`` (``src/sphinx_wrapper.py``),
        ``html_merge_tool`` (``src/sphinx_html_merge.py``),
-       ``sphinx_module_ext`` / ``bazel_sphinx_needs``
+       ``sphinx_module_ext``,
+       ``trlc`` Sphinx extension (``@trlc``)
      - ``sphinx_module``, ``dependable_element``
-     - Two-phase documentation build: phase 1 emits ``needs.json`` for
-       sphinx-needs cross-referencing, phase 2 builds HTML and merges
-       dependency modules into one site.
+     - Two-phase documentation build: **phase 1** (``<name>_needs`` target)
+       runs Sphinx with ``--builder needs`` to emit ``needs.json`` containing
+       any native ``sphinx-needs`` (``.. need::``) directives found in the
+       sources.  **Phase 2** (``<name>`` target) runs Sphinx with
+       ``--builder html``, resolving ``trlc`` ``.. requirement:definition::``
+       cross-references within the relocated source tree and consuming
+       ``needs.json`` files of all ``deps`` via ``needs_external_needs_json``
+       for cross-module ``sphinx-needs`` links.
+       ``src/sphinx_html_merge.py`` then merges dependency HTML directories
+       into the final output site.
+       See :ref:`two-phase-sphinx-build` for details.
    * - **Lobster Bazel**
      - ``//lobster_bazel:lobster_linker`` (``parse_source_files.py``)
      - ``rules_score_impl`` (tool-qualification chain)
@@ -169,3 +178,86 @@ feed that pipeline:
 * **FMEA** (``failuremodes.trlc`` / ``controlmeasures.trlc``) → ``lobster-trlc``;
   **FTA** (``fta.puml``) → ``safety_analysis_tools`` → ``root_causes.lobster``.
 * **Unit tests** (gtest) → ``gtest_report`` → ``<unit>.lobster``.
+
+.. _two-phase-sphinx-build:
+
+Two-phase Sphinx build
+----------------------
+
+Every ``sphinx_module`` call expands into **two** Bazel targets that run
+sequentially:
+
+.. code-block:: text
+
+   <name>_needs  (phase 1 — needs builder)
+   <name>        (phase 2 — HTML builder)
+
+Phase 1 — ``<name>_needs``
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sphinx is invoked with ``--builder needs`` against the **static docs/ source
+tree** (only ``srcs`` files — the checked-in ``.rst``/``.md`` files plus the
+generated ``trlc_rst`` outputs that are listed as label targets in ``srcs``).
+Generated/external files from ``renamed_srcs`` and ``docs_library_deps`` are
+**not** included; their toctree entries produce ``toc.not_readable`` warnings
+that are suppressed in ``conf.template.py`` (see below for why this is safe).
+
+The needs builder scans every document for ``.. need::`` directives
+(``sphinx-needs`` native format) and writes them to a ``needs.json`` file.
+
+The ``toc.not_readable`` suppression in ``conf.template.py`` is safe for the
+HTML phase because that phase relocates every file into a staging directory, so
+it never encounters an unresolvable toctree entry.
+
+The resulting ``needs.json`` (empty for modules whose requirements are authored
+in TRLC rather than native ``sphinx-needs`` format) is wrapped in a
+``SphinxNeedsInfo`` provider and propagated transitively so that every
+downstream module can consume it.
+
+Phase 2 — ``<name>``
+~~~~~~~~~~~~~~~~~~~~
+
+Sphinx is invoked with ``--builder html`` against a **relocated copy** of all
+source files (``srcs``, ``renamed_srcs``, ``docs_library_deps``) symlinked into
+a unified staging directory under ``bazel-bin/``.
+
+This is also where ``.. requirement:definition::`` directives (from the ``trlc``
+Sphinx extension) are processed and cross-references resolved.  The raw
+requirement records come from ``.trlc`` source files compiled by the
+``trlc_rst`` Bazel rule into ``.rst`` files that contain the directives.  The
+chain is:
+
+.. code-block:: text
+
+   *.trlc
+     └─ trlc_rst  (Bazel rule, @trlc)
+          └─ requirements_rst.rst  (.. requirement:definition:: <ID> ...)
+               └─ Sphinx HTML builder  (resolves {requirement:downstream-ref})
+
+Before the HTML build starts, ``sphinx_module_ext.py`` reads the aggregated
+``needs_external_needs.json``
+(written by the Bazel rule from all incoming ``SphinxNeedsInfo`` providers) and
+populates the ``needs_external_needs`` Sphinx configuration key. This tells
+``sphinx-needs`` where to find the ``needs.json`` of each dependency and what
+base URL to use for generated hyperlinks, so a ``{requirement:downstream-ref}``
+role in a spec file can link directly to the requirement definition page in the
+dependency's HTML.
+
+After the HTML build, ``src/sphinx_html_merge.py`` copies each dependency's
+output directory into ``<name>/html/<dep-name>/`` so the final site is
+self-contained.
+
+.. code-block:: text
+
+   deps[*].needs.json  ──► needs_external_needs.json
+                                  │
+   sources (all relocated) ───────┤
+                                  ▼
+                           Sphinx HTML builder
+                                  │
+                           <name>/_html/  ──► sphinx_html_merge
+                                                     │
+                                              <name>/html/
+                                              ├── index.html
+                                              ├── dep1/     ← merged
+                                              └── dep2/     ← merged

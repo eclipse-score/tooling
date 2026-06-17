@@ -14,10 +14,10 @@
 //! Converts the resolved PlantUML logical model into a `lobster-imp-trace`
 //! JSON file compatible with the LOBSTER traceability toolchain.
 //!
-//! Only [`ElementType::Interface`] elements are emitted
+//! Only [`ComponentType::Interface`] elements are emitted
 
 use class_diagram::{ClassDiagram, EntityType};
-use puml_resolver::{ElementType, LogicElement};
+use component_diagram::{ComponentType, LogicComponent};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -26,7 +26,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 pub enum LobsterModel<'a> {
-    Component(&'a HashMap<String, LogicElement>),
+    Component(&'a HashMap<String, LogicComponent>),
     Class(&'a ClassDiagram),
     Empty,
 }
@@ -36,10 +36,10 @@ pub enum LobsterModel<'a> {
 ///
 /// `source_path` is embedded in the `location.file` field of every emitted
 /// item so that LOBSTER can trace items back to their source diagram.
-fn comp_model_to_lobster(model: &HashMap<String, LogicElement>, source_path: &str) -> Value {
+fn comp_model_to_lobster(model: &HashMap<String, LogicComponent>, source_path: &str) -> Value {
     let items: Vec<Value> = model
         .values()
-        .filter(|element| element.element_type == ElementType::Interface)
+        .filter(|element| element.element_type == ComponentType::Interface)
         .map(|element| build_lobster_item(&element.id, source_path, None, "Interface"))
         .collect();
 

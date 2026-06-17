@@ -71,6 +71,48 @@ package "MySeooc" as MySeooc <<SEooC>> {
 @enduml
 ```
 
+#### Valid PlantUML Definitions
+
+The validator identifies elements by their **stereotype**, not by the PlantUML keyword used. Both `package` and `component` keywords are accepted at each level.
+
+| Stereotype | Valid PlantUML keywords | Meaning | Bazel rule |
+|---|---|---|---|
+| `<<SEooC>>` | `package`, `component` | Safety Element out of Context boundary | `dependable_element` |
+| `<<component>>` | `component`, `package` | Architectural component | `component` |
+| `<<unit>>` | `component`, `package` | Leaf implementation unit | `unit` |
+
+#### Ports and Interface Bindings
+
+Elements with stereotype `<<SEooC>>` or `<<component>>` may declare ports and bind them to interfaces. This documents which external interfaces the element requires or provides.
+
+```text
+@startuml MySeooc_StaticDesign
+
+package "MySeooc" as MySeooc <<SEooC>> {
+    component "KvsComponent" as KvsComponent <<component>> {
+        component "KeyValueStore" as KeyValueStore <<unit>>
+    }
+
+    portin  " " as p_storage   ' required interface port
+    portout " " as p_api       ' provided interface port
+}
+
+interface "score::storage" as storage
+interface "kvsapi"         as kvsapi
+
+p_storage -( storage : requires
+p_api     )- kvsapi  : provides
+
+@enduml
+```
+
+**Rules:**
+
+- `portin` / `portout` are declared inside the `<<SEooC>>` or `<<component>>` element.
+- `-(` binds a required (incoming) interface; `)-` binds a provided (outgoing) interface.
+- The `--()` lollipop syntax (e.g. `port --() Interface`) is treated as a plain association and does **not** carry interface-binding semantics.
+- Plain `package` without a stereotype cannot carry interface bindings.
+
 ### Bazel
 
 The PlantUML diagrams capture *intended* structure; the Bazel rules model the *actual* implementation. Using the same example as the diagram above — SEooC `MySeooc` containing component `KvsComponent` with units `KeyValueStore` and `StorageBackend` — the three rules work together like this:

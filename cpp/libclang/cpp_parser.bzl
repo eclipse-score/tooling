@@ -10,6 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@rules_cc//cc:find_cc_toolchain.bzl", "find_cc_toolchain", "use_cc_toolchain")
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 
@@ -190,17 +191,20 @@ def _collect_required_llvm_include_args(cxx_builtin_include_files, extra_config_
     return result
 
 def _cpp_parser_impl(ctx):
-    output = ctx.actions.declare_file(
-        ctx.label.name + "_result.json",
+    output_dir = ctx.actions.declare_directory(
+        ctx.label.name + "_result",
     )
     libclang = ctx.file._libclang
 
     args = []
 
     args += [
-        "--output",
-        output.path,
+        "--output-dir",
+        output_dir.path,
     ]
+
+    if ctx.attr.emit_debug_json:
+        args.append("--json")
 
     target_compilation_flags_list = ctx.attr.target[CompilationFlagsInfo].flags.to_list()
 
@@ -231,12 +235,13 @@ def _cpp_parser_impl(ctx):
 
     ctx.actions.run(
         inputs = inputs,
-        outputs = [output],
+        outputs = [output_dir],
         executable = ctx.executable.tool,
         tools = [ctx.attr.tool[DefaultInfo].files_to_run],
         arguments = args,
         env = {
             "LIBCLANG_PATH": libclang.dirname,
+            "LIBCLANG_LOG": ctx.attr._log_level[BuildSettingInfo].value,
         },
         mnemonic = "CppAnalyze",
         # this is required to parse some system headers
@@ -247,7 +252,8 @@ def _cpp_parser_impl(ctx):
     )
 
     return DefaultInfo(
-        files = depset([output]),
+        files = depset([output_dir]),
+        runfiles = ctx.runfiles(files = [output_dir]),
     )
 
 cpp_parser = rule(
@@ -265,6 +271,10 @@ cpp_parser = rule(
         "extra_args": attr.string_list(
             default = [],
         ),
+        "emit_debug_json": attr.bool(
+            default = False,
+            doc = "Emit debug.json alongside the FlatBuffer output. Intended for tests/debugging.",
+        ),
         "_libclang": attr.label(
             allow_single_file = True,
             default = "@llvm_toolchain_llvm//:lib/libclang.so",
@@ -278,6 +288,10 @@ cpp_parser = rule(
             default = "@llvm_toolchain_llvm//:extra_config_site",
             doc = "LLVM toolchain filegroup containing the arch-specific __config_site file " +
                   "(include/<triple>/c++/v1/__config_site) used to locate the ABI include path.",
+        ),
+        "_log_level": attr.label(
+            default = Label("//cpp/libclang:log_level"),
+            doc = "Build setting that controls clang_rs_parser log level.",
         ),
     },
     toolchains = use_cc_toolchain(),

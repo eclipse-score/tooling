@@ -15,8 +15,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use component_diagram::LogicComponent;
 use component_parser::PumlComponentParser;
-use component_resolver::{ElementResolver, ElementResolverError, LogicElement};
+use component_resolver::{ComponentResolver, ComponentResolverError};
 use parser_core::DiagramParser;
 use puml_utils::LogLevel;
 use resolver_traits::DiagramResolver;
@@ -25,16 +26,16 @@ use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor};
 // ===== Component Resolver adapter DiagramProcessor =====
 struct ComponentResolverRunner;
 impl DiagramProcessor for ComponentResolverRunner {
-    type Output = HashMap<String, LogicElement>;
-    type Error = ElementResolverError;
+    type Output = HashMap<String, LogicComponent>;
+    type Error = ComponentResolverError;
 
     fn run(
         &self,
         files: &HashSet<Rc<PathBuf>>,
-    ) -> Result<HashMap<Rc<PathBuf>, HashMap<String, LogicElement>>, ElementResolverError> {
+    ) -> Result<HashMap<Rc<PathBuf>, HashMap<String, LogicComponent>>, ComponentResolverError> {
         let mut results = HashMap::new();
         let mut parser = PumlComponentParser;
-        let mut resolver = ElementResolver::new();
+        let mut resolver = ComponentResolver::new();
 
         for path in files {
             let puml_file = fs::read_to_string(&**path).expect("Failed to read test file");
@@ -221,6 +222,21 @@ fn test_port_deep_nesting() {
 #[test]
 fn test_port_target_no_decor_no_mismatch() {
     run_component_resolver_case("port_target_no_decor_no_mismatch");
+}
+
+#[test]
+fn test_package_seooc_interface_binding() {
+    run_component_resolver_case("package_seooc_interface_binding");
+}
+
+#[test]
+fn test_package_component_interface_binding() {
+    run_component_resolver_case("package_component_interface_binding");
+}
+
+#[test]
+fn test_invalid_package_no_stereotype_binding() {
+    run_component_resolver_case("invalid_package_no_stereotype_binding");
 }
 
 #[test]

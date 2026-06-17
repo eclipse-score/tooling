@@ -25,7 +25,7 @@ rust_library(
         "//plantuml/parser/puml_parser",
         "//plantuml/parser/puml_resolver",
         "//plantuml/parser/puml_utils",
-        "//tools/metamodel:class_diagram",
+        "//tools/metamodel/class:class_diagram",
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:serde_yaml",

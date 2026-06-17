@@ -69,6 +69,17 @@ exclude_patterns = [
     "**/*_design",
 ]
 
+# Suppress toctree warnings for documents absent from the needs builder's source
+# tree.  The needs builder runs against only the static docs/ checkout; generated
+# files (trlc_rst outputs, renamed_srcs, docs_library_deps) live in bazel-out/
+# and are invisible to it.  Their toctree references produce toc.not_readable
+# warnings that are cosmetic: the needs builder (sphinx-needs NeedsBuilder)
+# captures only `.. need::` directives, not trlc `.. requirement:definition::`
+# directives, so needs.json content is unaffected by missing files.
+# This suppression is safe for the HTML phase because that phase relocates every
+# file into a unified staging directory, so it never encounters toc.not_readable.
+suppress_warnings = ["toc.not_readable"]
+
 # Enable markdown rendering
 source_suffix = {
     ".rst": "restructuredtext",

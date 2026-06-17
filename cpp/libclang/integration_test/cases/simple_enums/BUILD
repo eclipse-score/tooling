@@ -28,6 +28,7 @@ cc_library(
 
 cpp_parser(
     name = "parser",
+    emit_debug_json = True,
     extra_args = [],
     target = ":simple_enums",
     tool = "//cpp/libclang:clang_rs_parser",

@@ -1,0 +1,95 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml activity_AST
+
+skinparam classAttributeIconSize 0
+hide empty members
+
+class ActivityDiagram {
+  +name: Option<String>
+  +statements: Vec<ActivityStmt>
+}
+
+class IfDisplay {
+  +then_label: Option<String>
+  +else_label: Option<String>
+}
+
+class LoopDisplay {
+  +continue_label: Option<String>
+  +exit_label: Option<String>
+}
+
+abstract class ActivityStmt
+
+class ActionNode {
+  +label: String
+}
+
+class IfNode {
+  +condition: String
+  +body: Vec<ActivityStmt>
+  +else_branch: Vec<ActivityStmt>
+  +display: Option<IfDisplay>
+}
+
+class WhileNode {
+  +condition: String
+  +body: Vec<ActivityStmt>
+  +backward: Option<BackwardNode>
+  +display: Option<LoopDisplay>
+}
+
+class RepeatWhileNode {
+  +body: Vec<ActivityStmt>
+  +condition: String
+  +backward: Option<BackwardNode>
+  +display: Option<LoopDisplay>
+}
+
+class BackwardNode {
+  +label: String
+}
+
+class ControlNode {
+  +kind: ControlKind
+}
+
+enum ControlKind {
+  Stop
+  Kill
+  Detach
+  Break
+  Continue
+}
+
+ActivityDiagram *-- "0..*" ActivityStmt : statements
+
+ActivityStmt <|-- ActionNode
+ActivityStmt <|-- IfNode
+ActivityStmt <|-- WhileNode
+ActivityStmt <|-- RepeatWhileNode
+ActivityStmt <|-- ControlNode
+
+IfNode *-- "0..*" ActivityStmt : body
+IfNode *-- "0..*" ActivityStmt : else_branch
+IfNode o-- "0..1" IfDisplay : display
+WhileNode *-- "0..*" ActivityStmt : body
+WhileNode o-- "0..1" BackwardNode : backward
+WhileNode o-- "0..1" LoopDisplay : display
+RepeatWhileNode *-- "0..*" ActivityStmt : body
+RepeatWhileNode o-- "0..1" BackwardNode : backward
+RepeatWhileNode o-- "0..1" LoopDisplay : display
+
+@enduml

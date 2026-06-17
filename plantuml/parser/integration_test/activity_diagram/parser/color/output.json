@@ -4,7 +4,11 @@
     "statements": [
       {
         "Action": {
-          "label": "Hello Activity Diagram"
+          "label": "Hello Activity Diagram",
+          "source": {
+            "start_line": 15,
+            "start_column": 1
+          }
         }
       }
     ]

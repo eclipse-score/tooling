@@ -4,71 +4,124 @@
     "statements": [
       {
         "Action": {
-          "label": "foo1"
+          "label": "foo1",
+          "source": {
+            "start_line": 15,
+            "start_column": 1
+          }
         }
       },
       {
         "Arrow": {
           "syntax": "->",
-          "label": "You can put text on arrows"
+          "label": "You can put text on arrows",
+          "source": {
+            "start_line": 16,
+            "start_column": 1
+          }
         }
       },
       {
         "IfStart": {
           "condition": "test",
-          "label": null
+          "label": null,
+          "source": {
+            "start_line": 17,
+            "start_column": 1
+          }
         }
       },
       {
         "Arrow": {
           "syntax": "-[#blue]->",
-          "label": null
+          "label": null,
+          "source": {
+            "start_line": 18,
+            "start_column": 3
+          }
         }
       },
       {
         "Action": {
-          "label": "foo2"
+          "label": "foo2",
+          "source": {
+            "start_line": 19,
+            "start_column": 3
+          }
         }
       },
       {
         "Arrow": {
           "syntax": "-[#green,dashed]->",
-          "label": "The text can\nalso be on several lines\nand very long..."
+          "label": "The text can\nalso be on several lines\nand very long...",
+          "source": {
+            "start_line": 20,
+            "start_column": 3
+          }
         }
       },
       {
         "Action": {
-          "label": "foo3"
+          "label": "foo3",
+          "source": {
+            "start_line": 23,
+            "start_column": 3
+          }
         }
       },
       {
         "Else": {
-          "label": null
+          "label": null,
+          "source": {
+            "start_line": 24,
+            "start_column": 1
+          }
         }
       },
       {
         "Arrow": {
           "syntax": "-[#black,dotted]->",
-          "label": null
+          "label": null,
+          "source": {
+            "start_line": 25,
+            "start_column": 3
+          }
         }
       },
       {
         "Action": {
-          "label": "foo4"
+          "label": "foo4",
+          "source": {
+            "start_line": 26,
+            "start_column": 3
+          }
         }
       },
       {
-        "EndIf": null
+        "EndIf": {
+          "source": {
+            "start_line": 27,
+            "start_column": 1
+          }
+        }
       },
       {
         "Arrow": {
           "syntax": "-[#gray,bold]->",
-          "label": null
+          "label": null,
+          "source": {
+            "start_line": 28,
+            "start_column": 1
+          }
         }
       },
       {
         "Action": {
-          "label": "foo5"
+          "label": "foo5",
+          "source": {
+            "start_line": 29,
+            "start_column": 1
+          }
         }
       }
     ]

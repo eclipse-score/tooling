@@ -14,12 +14,36 @@
 use log::error;
 use std::collections::{BTreeSet, HashMap};
 
-use crate::component_logic::{
-    ComponentRelationType, ElementResolverError, ElementType, EndpointRole, LogicElement,
-    LogicRelation,
+use component_diagram::{
+    ComponentRelationType, ComponentType, EndpointRole, LogicComponent, LogicRelation,
 };
 use component_parser::{Arrow, CompPumlDocument, Element, Port, PortType, Relation, Statement};
 use resolver_traits::DiagramResolver;
+
+#[derive(Debug, thiserror::Error)]
+pub enum ComponentResolverError {
+    #[error("Element Resolver: UnresolvedReference: {reference}")]
+    UnresolvedReference { reference: String },
+
+    #[error("Element Resolver: AmbiguousReference: {reference} -> {candidates:?}")]
+    AmbiguousReference {
+        reference: String,
+        candidates: Vec<String>,
+    },
+
+    #[error("Duplicate element id: {element_id}")]
+    DuplicateElement { element_id: String },
+
+    #[error("Unknown element type: {element_type}")]
+    UnknownElementType { element_type: String },
+
+    #[error("Invalid relationship: {from} -> {to}: {reason}")]
+    InvalidRelationship {
+        from: String,
+        to: String,
+        reason: String,
+    },
+}
 
 #[derive(Clone)]
 struct PendingRelation {
@@ -41,17 +65,17 @@ struct RelationValidationInput<'a> {
     has_interface_tokens: bool,
     src_is_interface: bool,
     tgt_is_interface: bool,
-    src_is_component: bool,
+    src_is_component_role: bool,
     decor_role: Option<EndpointRole>,
     src_port_role: Option<EndpointRole>,
 }
 
-type RelationValidationRule = fn(&RelationValidationInput<'_>) -> Option<ElementResolverError>;
+type RelationValidationRule = fn(&RelationValidationInput<'_>) -> Option<ComponentResolverError>;
 
 #[derive(Default)]
-pub struct ElementResolver {
-    pub scope: Vec<String>,                      // element id stack
-    pub elements: HashMap<String, LogicElement>, // FQN -> LogicElement
+pub struct ComponentResolver {
+    pub scope: Vec<String>,                        // element id stack
+    pub elements: HashMap<String, LogicComponent>, // FQN -> LogicComponent
     /// Maps parent FQN -> direct child element FQNs
     pub child_elements_by_parent: HashMap<Option<String>, Vec<String>>,
     /// Maps port FQN → parent element FQN (for relation lifting)
@@ -61,7 +85,7 @@ pub struct ElementResolver {
     pending_relations: Vec<PendingRelation>,
 }
 
-impl ElementResolver {
+impl ComponentResolver {
     pub fn new() -> Self {
         Self {
             scope: Vec::new(),
@@ -244,7 +268,7 @@ impl ElementResolver {
         &self,
         raw: &str,
         resolved: &str,
-    ) -> Result<Option<EndpointRole>, ElementResolverError> {
+    ) -> Result<Option<EndpointRole>, ComponentResolverError> {
         let candidates = self.collect_port_fqn_candidates_for_raw(raw);
 
         let mut matched: Option<&String> = None;
@@ -261,7 +285,7 @@ impl ElementResolver {
                 // Invariant: after aligning candidates to resolved endpoint identity, there should be at most one match.
                 // If multiple matches remain, this indicates inconsistent resolver state or unexpected duplicate-alignment; fail fast with AmbiguousReference instead of silently picking one.
                 if matched.is_some() {
-                    return Err(ElementResolverError::AmbiguousReference {
+                    return Err(ComponentResolverError::AmbiguousReference {
                         reference: raw.to_string(),
                         candidates,
                     });
@@ -297,8 +321,8 @@ impl ElementResolver {
     ///
     /// Ambiguity handling:
     /// - If any stage returns multiple valid candidates, return
-    ///   `ElementResolverError::AmbiguousReference` immediately.
-    pub fn resolve_ref(&self, raw: &str) -> Result<String, ElementResolverError> {
+    ///   `ComponentResolverError::AmbiguousReference` immediately.
+    pub fn resolve_ref(&self, raw: &str) -> Result<String, ComponentResolverError> {
         let parts: Vec<&str> = raw.split('.').collect();
 
         // 1. simple name
@@ -320,7 +344,7 @@ impl ElementResolver {
         }
 
         error!("Unresolved reference: {}", raw);
-        Err(ElementResolverError::UnresolvedReference {
+        Err(ComponentResolverError::UnresolvedReference {
             reference: raw.to_string(),
         })
     }
@@ -329,7 +353,7 @@ impl ElementResolver {
         &self,
         name: &str,
         raw: &str,
-    ) -> Result<Option<String>, ElementResolverError> {
+    ) -> Result<Option<String>, ComponentResolverError> {
         // 1) lexical element lookup
         if let Some(res) = self.walk_scopes_nearest_first(|scope| {
             let matches = self.collect_element_fqns_in_scope_or_children(scope, &[name]);
@@ -372,15 +396,18 @@ impl ElementResolver {
         Self::pick_unique(global, raw)
     }
 
-    fn resolve_relative(&self, parts: &[&str]) -> Result<Option<String>, ElementResolverError> {
+    fn resolve_relative(&self, parts: &[&str]) -> Result<Option<String>, ComponentResolverError> {
         let matches = self.collect_element_fqns_in_scope_or_children(&self.scope, parts);
 
         Self::pick_unique(matches, &parts.join("."))
     }
 
-    fn walk_scopes_nearest_first<F>(&self, mut f: F) -> Result<Option<String>, ElementResolverError>
+    fn walk_scopes_nearest_first<F>(
+        &self,
+        mut f: F,
+    ) -> Result<Option<String>, ComponentResolverError>
     where
-        F: FnMut(&[String]) -> Result<Option<String>, ElementResolverError>,
+        F: FnMut(&[String]) -> Result<Option<String>, ComponentResolverError>,
     {
         for i in (0..=self.scope.len()).rev() {
             let scope = &self.scope[..i];
@@ -394,7 +421,7 @@ impl ElementResolver {
     fn pick_unique(
         mut matches: Vec<String>,
         raw: &str,
-    ) -> Result<Option<String>, ElementResolverError> {
+    ) -> Result<Option<String>, ComponentResolverError> {
         if matches.is_empty() {
             return Ok(None);
         }
@@ -404,7 +431,7 @@ impl ElementResolver {
         }
 
         matches.sort();
-        Err(ElementResolverError::AmbiguousReference {
+        Err(ComponentResolverError::AmbiguousReference {
             reference: raw.to_string(),
             candidates: matches,
         })
@@ -412,7 +439,7 @@ impl ElementResolver {
 }
 
 // Resolve Relationship
-impl ElementResolver {
+impl ComponentResolver {
     fn arrow_parts(arrow: &Arrow) -> (&str, &str, &str) {
         let left = arrow.left.as_ref().map(|d| d.raw.as_str()).unwrap_or("");
         let right = arrow.right.as_ref().map(|d| d.raw.as_str()).unwrap_or("");
@@ -428,7 +455,7 @@ impl ElementResolver {
     // - Interface binding: `)-`, `-(`
     // - Directed: `-->`, `<--`, `..>`, `<..`
     // - Undirected: `--`, `..`
-    fn parse_arrow(relation: &Relation) -> Result<ArrowAnalysis, ElementResolverError> {
+    fn parse_arrow(relation: &Relation) -> Result<ArrowAnalysis, ComponentResolverError> {
         let (left, right, middle) = Self::arrow_parts(&relation.arrow);
         let line = relation.arrow.line.raw.as_str();
 
@@ -436,7 +463,7 @@ impl ElementResolver {
         let has_required_token = middle == "(" || right == "(";
 
         if has_provided_token && has_required_token {
-            return Err(ElementResolverError::InvalidRelationship {
+            return Err(ComponentResolverError::InvalidRelationship {
                 from: relation.lhs.clone(),
                 to: relation.rhs.clone(),
                 reason: "Mixed interface decorators are not allowed: cannot combine provided ')' with required '(' in one relation"
@@ -444,9 +471,15 @@ impl ElementResolver {
             });
         }
 
-        let decor_role = if line == "-" && left == ")" && middle.is_empty() && right.is_empty() {
+        // A lollipop line may carry a direction hint, which adds a second dash
+        // segment: `)-u-` or `-u-(`.  The line field then contains `"--"` instead
+        // of `"-"`.  Direction is visual-only and does not affect semantics.
+        let is_lollipop_line = line.chars().all(|c| c == '-') && !line.is_empty();
+
+        let decor_role = if is_lollipop_line && left == ")" && middle.is_empty() && right.is_empty()
+        {
             Some(EndpointRole::Provided)
-        } else if line == "-"
+        } else if is_lollipop_line
             && left.is_empty()
             && ((middle == "(" && right.is_empty()) || (middle.is_empty() && right == "("))
         {
@@ -480,7 +513,7 @@ impl ElementResolver {
     fn resolve_ref_with_metadata(
         &self,
         raw: &str,
-    ) -> Result<(String, Option<EndpointRole>, Option<ElementType>), ElementResolverError> {
+    ) -> Result<(String, Option<EndpointRole>, Option<ComponentType>), ComponentResolverError> {
         let resolved = self.resolve_ref(raw)?;
         let port_role_hint = self.resolve_port_role_hint_for_ref(raw, &resolved)?;
 
@@ -492,7 +525,7 @@ impl ElementResolver {
     fn validate_relation_constraints(
         &self,
         input: &RelationValidationInput<'_>,
-    ) -> Result<(), ElementResolverError> {
+    ) -> Result<(), ComponentResolverError> {
         let rules: [RelationValidationRule; 5] = [
             Self::rule_require_exactly_one_interface_endpoint,
             Self::rule_disallow_interface_to_interface,
@@ -512,9 +545,9 @@ impl ElementResolver {
 
     fn rule_require_exactly_one_interface_endpoint(
         input: &RelationValidationInput<'_>,
-    ) -> Option<ElementResolverError> {
+    ) -> Option<ComponentResolverError> {
         if input.has_interface_tokens && !input.src_is_interface && !input.tgt_is_interface {
-            return Some(ElementResolverError::InvalidRelationship {
+            return Some(ComponentResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
                 reason: "Interface decorators '-(' and ')-' require exactly one Interface endpoint"
@@ -526,9 +559,9 @@ impl ElementResolver {
 
     fn rule_disallow_interface_to_interface(
         input: &RelationValidationInput<'_>,
-    ) -> Option<ElementResolverError> {
+    ) -> Option<ComponentResolverError> {
         if input.has_interface_tokens && input.src_is_interface && input.tgt_is_interface {
-            return Some(ElementResolverError::InvalidRelationship {
+            return Some(ComponentResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
                 reason: "Interface decorators '-(' and ')-' are not allowed between two interfaces"
@@ -540,16 +573,16 @@ impl ElementResolver {
 
     fn rule_require_component_endpoint_for_binding(
         input: &RelationValidationInput<'_>,
-    ) -> Option<ElementResolverError> {
+    ) -> Option<ComponentResolverError> {
         if input.has_interface_tokens
             && input.decor_role.is_some()
-            && (!input.src_is_component || !input.tgt_is_interface)
+            && (!input.src_is_component_role || !input.tgt_is_interface)
         {
-            return Some(ElementResolverError::InvalidRelationship {
+            return Some(ComponentResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
                 reason:
-                    "Decorator binding only allows Component on the left and Interface on the right"
+                    "Decorator binding requires a Component or component-stereotyped element on the left and Interface on the right"
                         .to_string(),
             });
         }
@@ -558,12 +591,12 @@ impl ElementResolver {
 
     fn rule_disallow_generic_decor_with_direction(
         input: &RelationValidationInput<'_>,
-    ) -> Option<ElementResolverError> {
+    ) -> Option<ComponentResolverError> {
         if input.has_interface_tokens
             && input.decor_role.is_none()
             && (input.src_is_interface || input.tgt_is_interface)
         {
-            return Some(ElementResolverError::InvalidRelationship {
+            return Some(ComponentResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
                 reason: "Unsupported interface decorator syntax: only ')-' (Provided) and '-(' (Required) are supported"
@@ -575,10 +608,10 @@ impl ElementResolver {
 
     fn rule_port_role_consistency(
         input: &RelationValidationInput<'_>,
-    ) -> Option<ElementResolverError> {
+    ) -> Option<ComponentResolverError> {
         if let (Some(port_role), Some(decor_role)) = (input.src_port_role, input.decor_role) {
             if port_role != decor_role {
-                return Some(ElementResolverError::InvalidRelationship {
+                return Some(ComponentResolverError::InvalidRelationship {
                     from: input.relation.lhs.clone(),
                     to: input.relation.rhs.clone(),
                     reason: format!(
@@ -592,7 +625,7 @@ impl ElementResolver {
         None
     }
 
-    fn resolve_one_relation(&mut self, relation: &Relation) -> Result<(), ElementResolverError> {
+    fn resolve_one_relation(&mut self, relation: &Relation) -> Result<(), ComponentResolverError> {
         let (mut src_fqn, mut src_port_role, mut src_type) =
             self.resolve_ref_with_metadata(&relation.lhs)?;
 
@@ -606,9 +639,16 @@ impl ElementResolver {
             std::mem::swap(&mut src_type, &mut tgt_type);
         }
 
-        let src_is_interface = matches!(src_type, Some(ElementType::Interface));
-        let tgt_is_interface = matches!(tgt_type, Some(ElementType::Interface));
-        let src_is_component = matches!(src_type, Some(ElementType::Component));
+        let src_is_interface = matches!(src_type, Some(ComponentType::Interface));
+        let tgt_is_interface = matches!(tgt_type, Some(ComponentType::Interface));
+        let src_is_component = matches!(src_type, Some(ComponentType::Component));
+        let src_is_package = matches!(src_type, Some(ComponentType::Package));
+        let src_stereotype = self
+            .elements
+            .get(&src_fqn)
+            .and_then(|e| e.stereotype.as_deref());
+        let src_is_component_role = src_is_component
+            || (src_is_package && matches!(src_stereotype, Some("SEooC") | Some("component")));
 
         let validation_input = RelationValidationInput {
             relation,
@@ -616,7 +656,7 @@ impl ElementResolver {
                 || parsed_arrow.has_required_token,
             src_is_interface,
             tgt_is_interface,
-            src_is_component,
+            src_is_component_role,
             decor_role: parsed_arrow.decor_role,
             src_port_role,
         };
@@ -636,7 +676,7 @@ impl ElementResolver {
         };
 
         let source_element = self.elements.get_mut(&src_fqn).ok_or_else(|| {
-            ElementResolverError::UnresolvedReference {
+            ComponentResolverError::UnresolvedReference {
                 reference: src_fqn.clone(),
             }
         })?;
@@ -661,7 +701,7 @@ impl ElementResolver {
         Ok(())
     }
 
-    fn resolve_pending_relations(&mut self) -> Result<(), ElementResolverError> {
+    fn resolve_pending_relations(&mut self) -> Result<(), ComponentResolverError> {
         let pending_relations = std::mem::take(&mut self.pending_relations);
 
         for relation in pending_relations {
@@ -675,10 +715,10 @@ impl ElementResolver {
     }
 }
 
-impl DiagramResolver for ElementResolver {
+impl DiagramResolver for ComponentResolver {
     type Document = CompPumlDocument;
-    type Output = HashMap<String, LogicElement>;
-    type Error = ElementResolverError;
+    type Output = HashMap<String, LogicComponent>;
+    type Error = ComponentResolverError;
 
     fn resolve(&mut self, document: &CompPumlDocument) -> Result<Self::Output, Self::Error> {
         self.scope.clear();
@@ -698,8 +738,8 @@ impl DiagramResolver for ElementResolver {
     }
 }
 
-impl ElementResolver {
-    fn visit_statement(&mut self, statement: &Statement) -> Result<(), ElementResolverError> {
+impl ComponentResolver {
+    fn visit_statement(&mut self, statement: &Statement) -> Result<(), ComponentResolverError> {
         match statement {
             Statement::Element(element) => {
                 self.visit_element(element)?;
@@ -720,7 +760,7 @@ impl ElementResolver {
     }
 }
 
-impl ElementResolver {
+impl ComponentResolver {
     fn visit_port(&mut self, port: &Port) {
         let local_id = port.alias.as_deref().unwrap_or(&port.name);
         let fqn = self.make_fqn(local_id);
@@ -735,7 +775,7 @@ impl ElementResolver {
         }
     }
 
-    fn visit_element(&mut self, element: &Element) -> Result<(), ElementResolverError> {
+    fn visit_element(&mut self, element: &Element) -> Result<(), ComponentResolverError> {
         let local_id = element
             .alias
             .as_deref()
@@ -744,7 +784,7 @@ impl ElementResolver {
 
         let fqn = self.make_fqn(local_id);
         if self.elements.contains_key(&fqn) {
-            return Err(ElementResolverError::DuplicateElement { element_id: fqn });
+            return Err(ComponentResolverError::DuplicateElement { element_id: fqn });
         }
 
         let parent_id = if self.scope.is_empty() {
@@ -753,7 +793,7 @@ impl ElementResolver {
             Some(self.scope.join("."))
         };
 
-        let logic = LogicElement {
+        let logic = LogicComponent {
             id: fqn.clone(),
             name: element.name.clone(),
             alias: element.alias.clone(),
@@ -782,39 +822,37 @@ impl ElementResolver {
     }
 }
 
-const ELEMENT_TYPE_TABLE: &[(&str, ElementType)] = &[
-    ("artifact", ElementType::Artifact),
-    ("actor", ElementType::Actor),
-    ("agent", ElementType::Agent),
-    ("boundary", ElementType::Boundary),
-    ("card", ElementType::Card),
-    ("cloud", ElementType::Cloud),
-    ("component", ElementType::Component),
-    ("control", ElementType::Control),
-    ("database", ElementType::Database),
-    ("entity", ElementType::Entity),
-    ("file", ElementType::File),
-    ("folder", ElementType::Folder),
-    ("frame", ElementType::Frame),
-    ("hexagon", ElementType::Hexagon),
-    ("interface", ElementType::Interface),
-    ("node", ElementType::Node),
-    ("package", ElementType::Package),
-    ("queue", ElementType::Queue),
-    ("rectangle", ElementType::Rectangle),
-    ("stack", ElementType::Stack),
-    ("storage", ElementType::Storage),
-    ("usecase", ElementType::Usecase),
+const ELEMENT_TYPE_TABLE: &[(&str, ComponentType)] = &[
+    ("artifact", ComponentType::Artifact),
+    ("actor", ComponentType::Actor),
+    ("agent", ComponentType::Agent),
+    ("boundary", ComponentType::Boundary),
+    ("card", ComponentType::Card),
+    ("cloud", ComponentType::Cloud),
+    ("component", ComponentType::Component),
+    ("control", ComponentType::Control),
+    ("database", ComponentType::Database),
+    ("entity", ComponentType::Entity),
+    ("file", ComponentType::File),
+    ("folder", ComponentType::Folder),
+    ("frame", ComponentType::Frame),
+    ("hexagon", ComponentType::Hexagon),
+    ("interface", ComponentType::Interface),
+    ("node", ComponentType::Node),
+    ("package", ComponentType::Package),
+    ("queue", ComponentType::Queue),
+    ("rectangle", ComponentType::Rectangle),
+    ("stack", ComponentType::Stack),
+    ("storage", ComponentType::Storage),
+    ("usecase", ComponentType::Usecase),
 ];
 
-pub fn parse_kind(raw: &str) -> Result<ElementType, ElementResolverError> {
+pub fn parse_kind(raw: &str) -> Result<ComponentType, ComponentResolverError> {
     ELEMENT_TYPE_TABLE
         .iter()
         .find(|(k, _)| k.eq_ignore_ascii_case(raw))
         .map(|(_, v)| *v)
-        .ok_or_else(|| ElementResolverError::UnknownElementType {
+        .ok_or_else(|| ComponentResolverError::UnknownElementType {
             element_type: raw.into(),
         })
 }
-
-pub type ComponentResolver = ElementResolver;

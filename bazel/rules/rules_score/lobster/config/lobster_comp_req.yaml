@@ -18,6 +18,11 @@ to-string-rules:
     to-string:
       - $(item)@$(version)
       - $(item)
+  - package: ScoreReq
+    tuple-type: CompReqSourceId
+    to-string:
+      - $(item)@$(version)
+      - $(item)
 conversion-rules:
   - package: ScoreReq
     record-type: CompReq

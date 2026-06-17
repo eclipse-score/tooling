@@ -412,8 +412,8 @@ smmap==5.0.3 \
     --hash=sha256:4d9debb8b99007ae47165abc08670bd74cb74b5227dda7f643eccc4e9eb5642c \
     --hash=sha256:c106e05d5a61449cf6ba9a1e650227ecfb141590d2a98412103ff35d89fc7b2f
     # via gitdb
-trlc==2.0.3 \
-    --hash=sha256:86b4c8690239f7b993259b316b8d6079633e32dff8f8ddbae5ad61503ac9362d
+trlc==2.0.5 \
+    --hash=sha256:fc4e4e3a21980711e85426d840f4f7f2e6ebb29ce94d55004f7d8e5e4532426c
     # via bmw-lobster-tool-trlc
 urllib3==2.7.0 \
     --hash=sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c \

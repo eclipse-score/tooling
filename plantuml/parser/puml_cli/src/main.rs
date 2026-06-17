@@ -15,21 +15,21 @@ use clap::{ArgGroup, Parser, ValueEnum};
 use env_logger::Builder;
 use log::debug;
 use serde::Serialize;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+
+use class_serializer::ClassSerializer;
+use component_serializer::ComponentSerializer;
+use sequence_serializer::SequenceSerializer;
 
 use puml_lobster::{write_lobster_to_file, LobsterModel};
 use puml_parser::{
     DiagramParser, ErrorLocation, Preprocessor, PumlClassParser, PumlComponentParser,
     PumlSequenceParser,
 };
-use puml_resolver::{
-    ClassResolver, DiagramResolver, ElementResolver, LogicElement, SequenceResolver, SequenceTree,
-};
-use puml_serializer::{ClassSerializer, ComponentSerializer, SequenceSerializer};
+use puml_resolver::{ClassResolver, ComponentResolver, DiagramResolver, SequenceResolver};
 use puml_utils::{write_fbs_to_file, write_json_to_file, LogLevel};
 
 /// CLI wrapper for LogLevel that implements ValueEnum
@@ -222,9 +222,9 @@ fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram, source_file: &
 
 #[derive(Debug, Serialize)]
 pub enum ResolvedDiagram {
-    Component(HashMap<String, LogicElement>),
+    Component(HashMap<String, component_diagram::LogicComponent>),
     Class(class_diagram::ClassDiagram),
-    Sequence(SequenceTree),
+    Sequence(sequence_logic::SequenceTree),
 }
 
 fn resolve_parsed_diagram(
@@ -232,7 +232,7 @@ fn resolve_parsed_diagram(
 ) -> Result<ResolvedDiagram, Box<dyn std::error::Error>> {
     match parsed_content {
         ParsedDiagram::Component(parsed_content) => {
-            let mut resolver = ElementResolver::new();
+            let mut resolver = ComponentResolver::new();
             puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Component)
         }
         ParsedDiagram::Class(parsed_content) => {
