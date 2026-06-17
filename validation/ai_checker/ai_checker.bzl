@@ -23,19 +23,63 @@ load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo")
 # Shared implementation
 # ============================================================================
 
-def _run_ai_analysis(ctx, analysis_files, all_input_files, input_dirs, dep_dirs, req_files = None):
+# Default tags applied to every AI test. The AI analysis runs at test time and
+# performs a non-hermetic network call to GitHub Copilot using credentials from
+# the user's environment, so the test must escape Bazel's sandbox. "external"
+# prevents result caching (the AI response is non-deterministic).
+_AI_TEST_DEFAULT_TAGS = ["no-sandbox", "requires-network", "external"]
+
+# Environment variables the test inherits from the invoking client environment.
+# These are baked into the target via RunEnvironmentInfo so consumers do not
+# need a --config=copilot / --test_env flag. HOME is essential: the test runner
+# otherwise resets HOME to $TEST_TMPDIR (per the Bazel Test Encyclopedia),
+# which hides the Copilot CLI's ~/.copilot/config.json credentials. The proxy
+# variables are inherited so the call works behind a corporate proxy.
+_AI_TEST_INHERITED_ENV = [
+    "HOME",
+    "COPILOT_GITHUB_TOKEN",
+    "GH_TOKEN",
+    "GITHUB_TOKEN",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "no_proxy",
+]
+
+def _shell_quote(value):
+    if value == "":
+        return "''"
+    return "'" + value.replace("'", "'\"'\"'") + "'"
+
+def _short_dir(f):
+    """Return the runfiles-relative directory of a File (short_path dirname)."""
+    sp = f.short_path
+    if "/" in sp:
+        return sp.rsplit("/", 1)[0]
+    return "."
+
+def _run_ai_analysis(ctx, analysis_files, all_input_files, dep_dirs, req_files = None, artefact_type = "requirements"):
     """Common implementation for all AI artefact analysis test rules.
+
+    The AI analysis runs **at test time** (not as a build action): the test
+    executable launches the orchestrator from the runfiles tree, so the
+    non-hermetic network call and its credentials live in the test phase. The
+    required environment is inherited automatically via RunEnvironmentInfo, and
+    reports are written to the test's undeclared-outputs directory.
 
     Args:
         ctx: Rule context.
         analysis_files: Files to analyze (direct inputs).
-        all_input_files: All files needed as action inputs (incl. deps for resolution).
-        input_dirs: Dict of directories containing analysis files.
-        dep_dirs: Dict of dependency directories (for link resolution).
+        all_input_files: All files needed at runtime (incl. deps for resolution).
+        dep_dirs: Dict of runfiles-relative dependency directories (link resolution).
         req_files: Optional list of individual files to register with TRLC instead
             of scanning the entire input directory. When set, only these files are
-            parsed; other files present in the same directory are ignored. This
-            avoids picking up unreferenced files that may fail TRLC validation.
+            parsed and they also define the grading scope, so requirements spread
+            across several directories are all graded. Passing them explicitly
+            also avoids picking up unreferenced files that may fail TRLC validation.
+        artefact_type: "requirements" (TRLC) or "architecture" (raw PlantUML).
 
     Returns:
         List of providers (DefaultInfo).
@@ -43,133 +87,115 @@ def _run_ai_analysis(ctx, analysis_files, all_input_files, input_dirs, dep_dirs,
     if not analysis_files:
         fail("No artefact files found for analysis")
 
-    # Declare outputs
-    html_report = ctx.actions.declare_file("{}_analysis.html".format(ctx.attr.name))
-    json_report = ctx.actions.declare_file("{}_analysis.json".format(ctx.attr.name))
-    guidelines_output_dir = ctx.actions.declare_directory("guidelines")
-    debug_log = ctx.actions.declare_file("{}_debug.log".format(ctx.attr.name))
-
-    # Collect guideline files from the filegroup
+    # Collect guideline / context / project-guideline files.
     guideline_files = ctx.files.guidelines
+    context_files = ctx.files.context
+    project_guideline_files = ctx.files._project_guidelines
 
-    # Determine input and guidelines directories
-    input_dir = analysis_files[0].dirname
-    guidelines_dir = guideline_files[0].dirname if guideline_files else None
-
-    # Build arguments for the orchestrator
-    args = ctx.actions.args()
-    args.add("--input", input_dir)
+    # Build the orchestrator argument list. The orchestrator runs from the
+    # runfiles root at test time, so every file is referenced by its
+    # workspace-relative short_path.
+    args = ["--artefact-type", artefact_type]
 
     for dep_dir in dep_dirs.keys():
-        args.add("--deps", dep_dir)
+        args += ["--deps", dep_dir]
 
-    for extra_dir in input_dirs.keys():
-        if extra_dir != input_dir:
-            args.add("--deps", extra_dir)
-
-    # When individual req files are provided, pass them explicitly so the
-    # extractor registers only those files and ignores other files present in
-    # the same directory (e.g. files not declared in Bazel srcs that may fail
-    # TRLC validation).
+    # When individual req files are provided, pass them explicitly. The
+    # extractor then registers only those files (ignoring other files in the
+    # same directory that may fail TRLC validation) and grades exactly that
+    # set, so requirements located in different directories are all covered.
     if req_files:
         for f in req_files:
-            args.add("--req-file", f)
+            args += ["--req-file", f.short_path]
 
-    args.add("--output", json_report.path)
-    args.add("--html", html_report.path)
-    args.add("--guidelines-output", guidelines_output_dir.path)
+    # For architecture, pass the raw PlantUML source files explicitly (the
+    # orchestrator reads them as text).
+    if artefact_type == "architecture":
+        for f in analysis_files:
+            args += ["--puml-file", f.short_path]
 
-    if guidelines_dir:
-        args.add("--guidelines", guidelines_dir)
+    # Background context (markdown / plantuml) injected as read-only material.
+    for f in context_files:
+        args += ["--context-file", f.short_path]
+
+    # Project-specific guidelines (graded) layered on top of the general and
+    # type guidelines. Sourced from a label_flag so a consumer repo can set
+    # them once in .bazelrc instead of on every target.
+    for f in project_guideline_files:
+        args += ["--project-guidelines", f.short_path]
+
+    # Pass each guideline file explicitly rather than a directory: the default
+    # guideline sets span multiple directories (e.g. general.md plus a
+    # requirements/ or architecture/ subdirectory) and the orchestrator scans a
+    # guidelines directory non-recursively, so a single derived directory would
+    # silently drop guidelines from the other directories.
+    for f in guideline_files:
+        args += ["--guidelines-file", f.short_path]
 
     if ctx.attr.model:
-        args.add("--model", ctx.attr.model)
+        args += ["--model", ctx.attr.model]
 
     if ctx.attr.batch_size > 0:
-        args.add("--batch-size", str(ctx.attr.batch_size))
+        args += ["--batch-size", str(ctx.attr.batch_size)]
 
-    # NOTE: --cache is intentionally NOT passed.  Bazel actions are
-    # already cached by Bazel's action cache; an additional Python-level
-    # cache would break hermeticity.  The --cache flag is only available
-    # for direct CLI invocations (python orchestrator.py --cache <dir>).
+    # NOTE: --cache is intentionally NOT passed. The --cache flag is only
+    # available for direct CLI invocations (python orchestrator.py --cache).
 
-    # Prepare action inputs (include custom ai_model if provided)
-    action_inputs = all_input_files + guideline_files
-    if ctx.attr._custom_ai_model:
-        custom_ai_model_file = ctx.attr._custom_ai_model[DefaultInfo].files.to_list()
-        if custom_ai_model_file:
-            action_inputs.extend(custom_ai_model_file)
-            args.add("--custom-ai-model", custom_ai_model_file[0].path)
-
-    # Add debug log output for Bazel output_groups
-    args.add("--debug-log", debug_log.path)
-    args.add("--verbose")
-
-    ctx.actions.run(
-        executable = ctx.executable._orchestrator,
-        inputs = depset(direct = action_inputs),
-        outputs = [json_report, html_report, guidelines_output_dir, debug_log],
-        arguments = [args],
-        progress_message = "Analyzing artefacts with AI for {}".format(ctx.attr.name),
-        # NOTE: no-sandbox is required because the GitHub Copilot CLI needs
-        # outbound network access (api.github.com) and the user's $HOME
-        # directory (for stored OAuth credentials), both of which Bazel's
-        # sandbox blocks.  This is an inherent trade-off of using an external
-        # AI service from a Bazel action.  Hermeticity is partially preserved
-        # by Bazel's own action-cache keying on declared inputs.
-        execution_requirements = {"no-sandbox": "1"},
-        use_default_shell_env = True,
+    # Files that must be present in the test runfiles.
+    runtime_files = (
+        all_input_files + guideline_files + context_files + project_guideline_files
     )
 
-    # Test executable — validates the JSON report score against the threshold
-    test_executable = ctx.actions.declare_file("{}_test_executable".format(ctx.attr.name))
+    # Optional custom AI backend supplied by the consumer repo.
+    if ctx.attr._custom_ai_model:
+        custom_ai_model_files = ctx.attr._custom_ai_model[DefaultInfo].files.to_list()
+        if custom_ai_model_files:
+            runtime_files = runtime_files + custom_ai_model_files
+            args += ["--custom-ai-model", custom_ai_model_files[0].short_path]
 
-    command = """#!/bin/bash
-set -e
-set -o pipefail
+    # Generate the test launcher. Per the Bazel Test Encyclopedia, a test runs
+    # with its working directory set to $TEST_SRCDIR/$TEST_WORKSPACE (the
+    # runfiles root), so the workspace-relative artefact paths baked above
+    # resolve directly and no runfiles probing is required. The orchestrator
+    # writes its reports into $TEST_UNDECLARED_OUTPUTS_DIR itself, so the
+    # launcher only has to exec it with the computed arguments.
+    name = ctx.attr.name
+    launcher_content = (
+        "#!/usr/bin/env bash\n" +
+        "set -euo pipefail\n\n" +
+        "# A test starts in $TEST_SRCDIR/$TEST_WORKSPACE (the runfiles root), so\n" +
+        "# the workspace-relative paths baked below resolve as-is. The\n" +
+        "# orchestrator writes its reports into the test's undeclared-outputs\n" +
+        "# directory automatically (Bazel zips it into\n" +
+        "# bazel-testlogs/.../test.outputs/outputs.zip).\n" +
+        "exec \"./" + ctx.executable._orchestrator.short_path + "\" \\\n" +
+        "  " + " ".join([_shell_quote(a) for a in args]) + " \\\n" +
+        "  --verbose \\\n" +
+        "  --score-threshold " + _shell_quote(ctx.attr.score_threshold) + "\n"
+    )
 
-json_path="{json}"
-
-if [ ! -f "$json_path" ] || [ ! -s "$json_path" ]; then
-    echo "ERROR: JSON report was not generated or is empty"
-    exit 1
-fi
-
-average=$(python3 -c "
-import json, pathlib, sys
-data = json.loads(pathlib.Path(sys.argv[1]).read_text())
-scores = [a['score'] for a in data.get('analyses', [])]
-print(f'{{sum(scores)/len(scores):.2f}}' if scores else '0')
-" "$json_path")
-
-threshold="{threshold}"
-
-if (( $(echo "$average >= $threshold" | bc -l) )); then
-    echo "AI analysis complete. Average score: $average (threshold: $threshold)"
-    exit 0
-else
-    echo "ERROR: Average score $average is below threshold $threshold"
-    exit 1
-fi
-""".format(json = json_report.short_path, threshold = ctx.attr.score_threshold)
-
+    launcher = ctx.actions.declare_file("{}_ai_test.sh".format(name))
     ctx.actions.write(
-        output = test_executable,
-        content = command,
+        output = launcher,
+        content = launcher_content,
         is_executable = True,
     )
 
+    # Everything the orchestrator needs at test time travels in the runfiles:
+    # the orchestrator binary (+ its own runfiles) and all artefact / guideline
+    # inputs.
+    runfiles = ctx.runfiles(
+        files = [ctx.executable._orchestrator] + runtime_files,
+    ).merge(ctx.attr._orchestrator[DefaultInfo].default_runfiles)
+
     return [
         DefaultInfo(
-            runfiles = ctx.runfiles(
-                files = [json_report, html_report, guidelines_output_dir],
-            ),
-            files = depset([json_report, html_report, guidelines_output_dir]),
-            executable = test_executable,
+            executable = launcher,
+            runfiles = runfiles,
         ),
-        OutputGroupInfo(
-            debug = depset([debug_log]),
-        ),
+        # Bake the required environment-variable inheritance into the target so
+        # `bazel test //...` works without a --config=copilot / --test_env flag.
+        RunEnvironmentInfo(inherited_environment = _AI_TEST_INHERITED_ENV),
     ]
 
 # Attributes shared by all AI test rules
@@ -186,16 +212,22 @@ _COMMON_AI_TEST_ATTRS = {
         doc = "Number of artefacts to process per batch (0 = all at once).",
         default = 0,
     ),
+    "context": attr.label(
+        doc = "Optional filegroup of background-context files (.md / .puml) " +
+              "passed to the AI as read-only reference material.",
+        allow_files = [".md", ".puml"],
+        default = None,
+    ),
     "_custom_ai_model": attr.label(
         doc = "Custom ai_model.py file (optional, provided by consumer repo).",
         default = None,
         allow_single_file = [".py"],
     ),
     "_orchestrator": attr.label(
-        doc = "Orchestrator binary.",
+        doc = "Orchestrator binary (runs at test time, hence target config).",
         default = "//validation/ai_checker:orchestrator",
         executable = True,
-        cfg = "exec",
+        cfg = "target",
     ),
 }
 
@@ -207,7 +239,6 @@ def _trlc_requirements_ai_test_impl(ctx):
     """Extract TRLC artefacts from providers and delegate to shared analysis."""
     analysis_files = []
     all_files = []
-    input_dirs = {}
     dep_dirs = {}
 
     for req in ctx.attr.reqs:
@@ -215,18 +246,16 @@ def _trlc_requirements_ai_test_impl(ctx):
 
         direct_reqs = trlc_provider.reqs.to_list()
         analysis_files.extend(direct_reqs)
-        for f in direct_reqs:
-            input_dirs[f.dirname] = True
 
         dep_reqs = trlc_provider.deps.to_list()
         spec_files = trlc_provider.spec.to_list()
         all_files.extend(direct_reqs + dep_reqs + spec_files)
         for f in dep_reqs + spec_files:
-            dep_dirs[f.dirname] = True
+            dep_dirs[_short_dir(f)] = True
 
-    return _run_ai_analysis(ctx, analysis_files, all_files, input_dirs, dep_dirs, req_files = analysis_files)
+    return _run_ai_analysis(ctx, analysis_files, all_files, dep_dirs, req_files = analysis_files)
 
-trlc_requirements_ai_test = rule(
+_trlc_requirements_ai_test = rule(
     implementation = _trlc_requirements_ai_test_impl,
     attrs = dict(_COMMON_AI_TEST_ATTRS, **{
         "reqs": attr.label_list(
@@ -239,30 +268,61 @@ trlc_requirements_ai_test = rule(
             default = "//validation/ai_checker:default_guidelines",
             allow_files = True,
         ),
+        "_project_guidelines": attr.label(
+            doc = "Project-specific guideline files (graded), settable once via " +
+                  "the //validation/ai_checker:project_guidelines flag.",
+            default = "//validation/ai_checker:project_guidelines",
+            allow_files = True,
+        ),
     }),
     test = True,
     toolchains = [],
     fragments = ["platform"],
 )
 
+def trlc_requirements_ai_test(name, **kwargs):
+    """AI review of TRLC requirements (runs the analysis at test time).
+
+    The AI call is non-hermetic (network + credentials), so default tags mark
+    the test as un-sandboxed and network-dependent. Any caller-supplied tags
+    are merged on top.
+    """
+    tags = kwargs.pop("tags", [])
+    _trlc_requirements_ai_test(
+        name = name,
+        tags = _AI_TEST_DEFAULT_TAGS + [t for t in tags if t not in _AI_TEST_DEFAULT_TAGS],
+        **kwargs
+    )
+
 # ============================================================================
 # Architecture AI Test
 # ============================================================================
 
 def _architecture_ai_test_impl(ctx):
-    """Extract architecture artefacts from providers and delegate to shared analysis."""
+    """Extract architecture artefacts from providers and delegate to shared analysis.
+
+    Architecture review reads the raw PlantUML *source* (not the parsed
+    FlatBuffers binaries in ArchitecturalDesignInfo.static/dynamic). The design
+    target's DefaultInfo carries the raw .puml source files.
+    """
     analysis_files = []
-    input_dirs = {}
 
+    # The "designs" attr requires ArchitecturalDesignInfo, so only architectural
+    # designs are accepted; the AI reads the raw .puml sources from DefaultInfo.
     for design in ctx.attr.designs:
-        design_info = design[ArchitecturalDesignInfo]
-        for f in design_info.static.to_list() + design_info.dynamic.to_list():
-            analysis_files.append(f)
-            input_dirs[f.dirname] = True
+        for f in design[DefaultInfo].files.to_list():
+            if f.extension == "puml":
+                analysis_files.append(f)
 
-    return _run_ai_analysis(ctx, analysis_files, analysis_files, input_dirs, {})
+    return _run_ai_analysis(
+        ctx,
+        analysis_files,
+        analysis_files,
+        {},
+        artefact_type = "architecture",
+    )
 
-architecture_ai_test = rule(
+_architecture_ai_test = rule(
     implementation = _architecture_ai_test_impl,
     attrs = dict(_COMMON_AI_TEST_ATTRS, **{
         "designs": attr.label_list(
@@ -275,8 +335,28 @@ architecture_ai_test = rule(
             default = "//validation/ai_checker:default_architecture_guidelines",
             allow_files = True,
         ),
+        "_project_guidelines": attr.label(
+            doc = "Project-specific guideline files (graded), settable once via " +
+                  "the //validation/ai_checker:project_architecture_guidelines flag.",
+            default = "//validation/ai_checker:project_architecture_guidelines",
+            allow_files = True,
+        ),
     }),
     test = True,
     toolchains = [],
     fragments = ["platform"],
 )
+
+def architecture_ai_test(name, **kwargs):
+    """AI review of PlantUML architecture (runs the analysis at test time).
+
+    The AI call is non-hermetic (network + credentials), so default tags mark
+    the test as un-sandboxed and network-dependent. Any caller-supplied tags
+    are merged on top.
+    """
+    tags = kwargs.pop("tags", [])
+    _architecture_ai_test(
+        name = name,
+        tags = _AI_TEST_DEFAULT_TAGS + [t for t in tags if t not in _AI_TEST_DEFAULT_TAGS],
+        **kwargs
+    )

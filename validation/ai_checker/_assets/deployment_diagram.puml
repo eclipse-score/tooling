@@ -16,27 +16,29 @@
 skinparam packageStyle rectangle
 
 interface "TRLC Python API" as TRLCAPI
-interface "LangChain\nBaseChatModel" as LangChain
+interface "AnalysisAgent\n(interface)" as Agent
 
 package "Input Artifacts" {
     artifact "TRLC\nRequirements" as ReqFile
+    artifact "Architecture\n(PlantUML)" as PumlFile
     artifact "Guidelines\n(Markdown)" as GuideFile
+    artifact "Context\n(md / puml)" as ContextFile
 }
 
-package "src/ai_checker/ (Core Framework)" as CorePkg {
+package "src/ai_checker/ (Core Framework — no LangChain)" as CorePkg {
     component "Orchestrator\n(py_binary)" as Orchestrator
     component "AIChecker\n(Async)" as AIChecker
     component "Requirement\nExtractor" as Extractor
+    component "Architecture\nExtractor" as ArchExtractor
     component "Result\nFormatter" as Formatter
     component "Guidelines\nReader" as GReader
     component "Analysis\nCache" as Cache
 }
 
-package "src/copilot_adapter/ (LangChain Integration)" as LangChainPkg {
-    component "ChatCopilot\n(BaseChatModel)" as ChatCopilot
+package "src/ai_checker/agents/ (AI backends)" as AdapterPkg {
+    component "CopilotAgent\n(default, direct SDK)" as CopilotAgent
+    component "LangChainAgent\n(optional)" as LCAgent
 }
-
-
 
 package "Output Artifacts" {
     artifact "HTML\nReport" as HtmlReport
@@ -48,39 +50,42 @@ package "AI Services" {
     cloud "Custom AI Service\n(via ai_model.py)" as CustomCloud
 }
 
-package "Bazel Configuration" {
-    component "--config=copilot\n(.bazelrc.ai_checker)" as CopilotConfig
+package "Test Environment" {
+    component "RunEnvironmentInfo\n(inherited_environment)" as CopilotConfig
 }
 
 ReqFile --> TRLCAPI: parsed via
 TRLCAPI --> Extractor: symbol table
+PumlFile --> ArchExtractor: raw .puml text
 Extractor --> Orchestrator: artefacts\n(Dict format)
+ArchExtractor --> Orchestrator: artefacts\n(Dict format)
 GuideFile --> GReader: loads
-GReader --> Orchestrator: guidelines content
+ContextFile --> GReader: loads
+GReader --> Orchestrator: guidelines + context\n(system prompt)
 
 Orchestrator --> AIChecker: async analyze\nwith batches
 AIChecker --> Cache: optional\n(CLI only)
 
-AIChecker --> LangChain: async ainvoke\n(concurrent)
-ChatCopilot ..|> LangChain: implements
-ChatCopilot --> CopilotAPI: Copilot SDK\n(Node.js CLI)
+AIChecker --> Agent: analyze(system_prompt,\nartefacts)\n(concurrent)
+CopilotAgent ..|> Agent: implements
+LCAgent ..|> Agent: implements
+CopilotAgent --> CopilotAPI: Copilot SDK\n(Node.js CLI)
+LCAgent --> CustomCloud: any LangChain\nBaseChatModel
 
-LangChain --> CustomCloud: custom provider
-
-LangChain ..> AIChecker: structured output\n(AnalysisResults)
+Agent ..> AIChecker: AnalysisResults
 AIChecker ..> Orchestrator: AnalysisResults
 
 Orchestrator --> Formatter: pass results
 Formatter --> HtmlReport: generates
 Formatter --> JsonResults: generates
 
-CopilotConfig ..> ChatCopilot: env vars\n(auth + proxy)
+CopilotConfig ..> CopilotAgent: inherited env\n(auth + proxy)
 
-note right of ChatCopilot
-  LangChain BaseChatModel wrapper for
-  the GitHub Copilot SDK.
-  Supports: messages, tool calling,
-  structured output, async/sync.
+note right of CopilotAgent
+  Default backend. Talks to the
+  GitHub Copilot SDK directly,
+  no LangChain. Reports usage
+  (tokens / credits).
 end note
 
 note as N1

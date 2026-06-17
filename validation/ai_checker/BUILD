@@ -28,47 +28,127 @@ filegroup(
 # Default requirements engineering guidelines
 filegroup(
     name = "default_guidelines",
-    srcs = glob(["guidelines/*.md"]),
+    srcs = ["guidelines/general.md"] + glob(["guidelines/requirements/*.md"]),
     visibility = ["//visibility:public"],
 )
 
-# Core AI checker library (analysis framework)
+# Default architecture design guidelines
+filegroup(
+    name = "default_architecture_guidelines",
+    srcs = ["guidelines/general.md"] + glob(["guidelines/architecture/*.md"]),
+    visibility = ["//visibility:public"],
+)
+
+# Empty default for the project-guideline flags below. Consumer repos override
+# the flags in their .bazelrc to inject project-specific guidelines once,
+# instead of setting an attribute on every AI test target.
+filegroup(
+    name = "empty_guidelines",
+    srcs = [],
+    visibility = ["//visibility:public"],
+)
+
+# Project-specific requirement guidelines (graded). Override once via:
+#   build --//validation/ai_checker:project_guidelines=//path/to:my_guidelines
+label_flag(
+    name = "project_guidelines",
+    build_setting_default = ":empty_guidelines",
+    visibility = ["//visibility:public"],
+)
+
+# Project-specific architecture guidelines (graded). Override once via:
+#   build --//validation/ai_checker:project_architecture_guidelines=//path/to:my_guidelines
+label_flag(
+    name = "project_architecture_guidelines",
+    build_setting_default = ":empty_guidelines",
+    visibility = ["//visibility:public"],
+)
+
+# Example SCORE project guidelines, referenced by the flags above when a repo
+# opts into the SCORE process levels.
+filegroup(
+    name = "score_project_guidelines",
+    srcs = ["guidelines/project/score_requirement_levels.md"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "score_project_architecture_guidelines",
+    srcs = ["guidelines/project/score_architecture_levels.md"],
+    visibility = ["//visibility:public"],
+)
+
+# Core AI checker library (analysis framework).
+# Deliberately free of any AI-SDK / LangChain dependency: it depends only on
+# the AnalysisAgent interface, which concrete agents implement.
+# Core analysis framework + extractors + the AnalysisAgent interface.
+# No AI-SDK / LangChain dependency. The agents/ subpackage (concrete backends)
+# is intentionally excluded — those are separate libraries below.
 py_library(
     name = "ai_checker_core",
-    srcs = glob(["src/ai_checker/*.py"]),
+    srcs = glob([
+        "src/ai_checker/*.py",
+        "src/ai_checker/extractors/*.py",
+        "src/ai_checker/reports/*.py",
+    ]),
+    # Jinja2 report templates are loaded at runtime relative to the package,
+    # so they must travel in the library's runfiles.
+    data = glob(["src/ai_checker/reports/*.j2"]),
     imports = ["src"],
     visibility = ["//visibility:public"],
     deps = [
         "@trlc//trlc",
         requirement("bigtree"),
+        requirement("jinja2"),
+        requirement("markupsafe"),
         requirement("pydantic"),
         requirement("pydot"),
         requirement("pyyaml"),
     ],
 )
 
-# LangChain adapter for GitHub Copilot SDK
+# Default AI backend: GitHub Copilot SDK agent (no LangChain).
 py_library(
-    name = "copilot_langchain",
+    name = "copilot_agent",
     srcs = [
-        "src/copilot_adapter/__init__.py",
-        "src/copilot_adapter/_client_manager.py",
-        "src/copilot_adapter/_errors.py",
-        "src/copilot_adapter/_message_converter.py",
-        "src/copilot_adapter/_preflight.py",
-        "src/copilot_adapter/_tool_converter.py",
-        "src/copilot_adapter/copilot_langchain.py",
+        "src/ai_checker/agents/__init__.py",
+        "src/ai_checker/agents/_client_manager.py",
+        "src/ai_checker/agents/_errors.py",
+        "src/ai_checker/agents/_preflight.py",
+        "src/ai_checker/agents/copilot_agent.py",
     ],
     imports = ["src"],
     visibility = ["//visibility:public"],
     deps = [
-        requirement("langchain-core"),
+        ":ai_checker_core",
         requirement("github-copilot-sdk"),
         requirement("pydantic"),
     ],
 )
 
-# Default orchestrator (uses GitHub Copilot SDK as default AI backend)
+# Optional LangChain adapter: wraps any LangChain BaseChatModel (e.g. ChatOpenAI)
+# as an AnalysisAgent. Used only when a custom langchain model is supplied via a
+# custom ai_model target's create_agent().
+py_library(
+    name = "langchain_agent",
+    srcs = [
+        "src/ai_checker/agents/__init__.py",
+        "src/ai_checker/agents/_errors.py",
+        "src/ai_checker/agents/langchain_agent.py",
+    ],
+    imports = ["src"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ai_checker_core",
+        requirement("langchain-core"),
+    ],
+)
+
+# Default orchestrator (uses the Copilot SDK agent as default AI backend).
+# Intentionally does NOT depend on :langchain_agent — the default path is
+# LangChain-free. A consumer wanting the LangChain path supplies a custom
+# ai_model target whose create_agent() returns a LangChainAgent and which
+# depends on :langchain_agent itself.
 py_binary(
     name = "orchestrator",
     srcs = ["src/ai_checker/orchestrator.py"],
@@ -77,8 +157,7 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":ai_checker_core",
-        ":copilot_langchain",
-        requirement("langchain-core"),
+        ":copilot_agent",
     ],
 )
 

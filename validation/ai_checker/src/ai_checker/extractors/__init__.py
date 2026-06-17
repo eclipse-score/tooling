@@ -10,9 +10,4 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""Public API for the copilot_adapter package."""
-
-from .copilot_langchain import ChatCopilot
-from ._errors import CopilotSetupError
-
-__all__ = ["ChatCopilot", "CopilotSetupError"]
+"""Artefact extractors (TRLC requirements, raw PlantUML architecture)."""

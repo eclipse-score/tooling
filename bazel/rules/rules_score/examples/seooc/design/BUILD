@@ -14,6 +14,7 @@ load(
     "//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
 )
+load("//validation/ai_checker:ai_checker.bzl", "architecture_ai_test")
 
 architectural_design(
     name = "sample_seooc_design",
@@ -28,4 +29,17 @@ architectural_design(
         "arch_design.rst",
     ],
     visibility = ["//visibility:public"],
+)
+
+# Background context (read-only) for the AI architecture review.
+filegroup(
+    name = "design_context",
+    srcs = ["design_context.md"],
+)
+
+architecture_ai_test(
+    name = "sample_seooc_design_ai_test",
+    context = ":design_context",
+    designs = [":sample_seooc_design"],
+    tags = ["manual"],
 )

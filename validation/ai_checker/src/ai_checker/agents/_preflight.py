@@ -106,8 +106,9 @@ def check_auth_sources() -> list[str]:
         "    - $GH_TOKEN\n"
         "    - $GITHUB_TOKEN\n"
         "    - $HOME set so the CLI can read stored OAuth credentials\n"
-        "  Fix: add --action_env=COPILOT_GITHUB_TOKEN to .bazelrc.ai_checker\n"
-        "       and export COPILOT_GITHUB_TOKEN=<your-token> in your shell.\n"
+        "  Fix: export COPILOT_GITHUB_TOKEN=<your-token> in your shell before\n"
+        "       running the test. The AI test target inherits it automatically\n"
+        "       (RunEnvironmentInfo), so no Bazel flag is required.\n"
         "  See: https://github.com/github/copilot-sdk/blob/main/docs/auth/index.md"
     ]
 
@@ -120,8 +121,10 @@ def describe_auth_sources() -> str:
     for var in AUTH_ENV_VARS:
         val = os.environ.get(var)
         if val:
-            masked = val[:4] + "..." + val[-4:] if len(val) > 10 else "****"
-            lines.append(f"  [OK] ${var} = {masked}")
+            # Never echo any portion of a token: report only presence and
+            # length. These diagnostics are written to the debug log and the
+            # Bazel test.outputs, which are routinely archived and shared.
+            lines.append(f"  [OK] ${var} is set (length {len(val)})")
             found_any = True
         else:
             lines.append(f"  [  ] ${var} — not set")

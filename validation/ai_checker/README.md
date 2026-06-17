@@ -29,7 +29,7 @@ produces:
 - a list of **suggestions** for improvement
 - a numerical **quality score** from 0 to 10
 
-Results are written as a JSON file and, optionally, an HTML report.
+Results are written as a JSON envelope plus HTML and reStructuredText reports.
 
 ### Prerequisites
 
@@ -39,7 +39,9 @@ Results are written as a JSON file and, optionally, an HTML report.
 
 ### Running a Check
 
-Add a rule to your `BUILD` file and run it with `--config=copilot`:
+Add a rule to your `BUILD` file and run it like any other test — the rule bakes
+the required environment-variable inheritance (credentials + proxy) into the
+target, so no extra `--config` or `--test_env` flag is needed:
 
 ```starlark
 load("@score_tooling//validation/ai_checker:ai_checker.bzl", "trlc_requirements_ai_test")
@@ -53,7 +55,7 @@ trlc_requirements_ai_test(
 ```
 
 ```bash
-bazel test //path/to:requirements_ai_check --config=copilot
+bazel test //path/to:requirements_ai_check
 ```
 
 The `tags = ["manual"]` attribute is recommended to prevent the rule from
@@ -70,7 +72,7 @@ guidelines.
 trlc_requirements_ai_test(
     name = "requirements_ai_check",
     reqs = [":my_requirements"],           # required: targets providing TrlcProviderInfo
-    model = "anthropic/claude-sonnet-4-5", # optional: AI model to use
+    model = "claude-sonnet-4.6", # optional: AI model to use
     score_threshold = "6.0",              # optional: minimum average score to pass (0–10)
     guidelines = "//my/org:guidelines",   # optional: override default guideline filegroup
     tags = ["manual"],
@@ -80,9 +82,10 @@ trlc_requirements_ai_test(
 | Attribute | Description | Required | Default |
 |-----------|-------------|----------|---------|
 | `reqs` | Label list of targets providing `TrlcProviderInfo` | Yes | — |
-| `model` | AI model identifier | No | `"anthropic/claude-sonnet-4-5"` |
+| `model` | AI model identifier | No | `"claude-sonnet-4.6"` |
 | `score_threshold` | Minimum average score (0–10) to pass the test | No | `"0.0"` |
 | `guidelines` | Filegroup of guideline markdown files | No | `default_guidelines` |
+| `context` | Filegroup of background-context files (`.md` / `.puml`) injected as read-only reference material | No | — |
 
 #### `architecture_ai_test`
 
@@ -93,7 +96,7 @@ guidelines.
 architecture_ai_test(
     name = "architecture_ai_check",
     designs = [":my_architectural_design"],  # required: targets providing ArchitecturalDesignInfo
-    model = "anthropic/claude-sonnet-4-5",
+    model = "claude-sonnet-4.6",
     score_threshold = "6.0",
     tags = ["manual"],
 )
@@ -102,36 +105,57 @@ architecture_ai_test(
 | Attribute | Description | Required | Default |
 |-----------|-------------|----------|---------|
 | `designs` | Label list of targets providing `ArchitecturalDesignInfo` | Yes | — |
-| `model` | AI model identifier | No | `"anthropic/claude-sonnet-4-5"` |
+| `model` | AI model identifier | No | `"claude-sonnet-4.6"` |
 | `score_threshold` | Minimum average score (0–10) to pass the test | No | `"0.0"` |
 | `guidelines` | Filegroup of guideline markdown files | No | `default_architecture_guidelines` |
+| `context` | Filegroup of background-context files (`.md` / `.puml`) injected as read-only reference material | No | — |
+
+> Architecture review reads the **raw PlantUML source** of the design's
+> diagrams (not the parsed FlatBuffers binaries).
 
 ### Output
 
-Each test rule produces two output files:
+The AI analysis runs **at test time** (the test action launches the analysis),
+so the reports are written to the test's undeclared-outputs directory and packed
+into the test log archive. Each test produces three report files (one set per
+test, so the names are fixed rather than prefixed):
 
 | File | Content |
 |------|---------|
-| `<name>_analysis.json` | Machine-readable results (scores, findings, suggestions) |
-| `<name>_analysis.html` | Interactive HTML report |
+| `analysis.json` | Self-contained report envelope: `metadata`, `guidelines`, `analyses` (scores, findings, suggestions) |
+| `analysis.html` | Interactive HTML report |
+| `analysis.rst` | Standalone reStructuredText report |
 
 The HTML report shows a color-coded score card per artefact, linked guideline
-reference pages, and summary statistics.  Both files land in `bazel-bin/`.
+reference pages, and summary statistics. The JSON is a self-contained envelope
+(model/timestamp/git metadata + guideline texts + per-artefact analyses), so it
+fully captures the report.
+
+Retrieve the reports after a test run from the undeclared-outputs archive:
+
+```bash
+bazel test //path/to:requirements_ai_check
+unzip -o bazel-testlogs/path/to/requirements_ai_check/test.outputs/outputs.zip -d /tmp/ai_report
+```
 
 ### Debug Output
 
-To inspect the raw prompt sent to the AI model:
+A verbose debug log (`debug.log`) is always written alongside the reports
+in the same undeclared-outputs archive. It contains the raw prompt sent to the
+AI model and response timing. Extract it the same way:
 
 ```bash
-bazel test //path/to:requirements_ai_check --config=copilot --output_groups=debug
-cat bazel-bin/path/to/requirements_ai_check_debug.log
+bazel test //path/to:requirements_ai_check
+unzip -p bazel-testlogs/path/to/requirements_ai_check/test.outputs/outputs.zip \
+  debug.log
 ```
 
 (custom-ai-model)=
 ### Custom AI Model
 
-To use a provider other than GitHub Copilot, point `_custom_ai_model` at a
-`py_binary` or `py_library` target that exposes a `create_chat_model()` function:
+To use a provider other than the default Copilot SDK agent, point
+`_custom_ai_model` at a `py_binary` or `py_library` target that exposes a
+`create_agent()` function returning an `AnalysisAgent`:
 
 ```starlark
 trlc_requirements_ai_test(
@@ -141,8 +165,8 @@ trlc_requirements_ai_test(
 )
 ```
 
-See the [Integration Guide](#integration-guide) for details on implementing a
-[Integration Guide](#integration-guide) for full details.
+See the [Integration Guide](#integration-guide) for full details on implementing
+a custom agent.
 
 ---
 
@@ -153,40 +177,29 @@ This section describes how to use the AI Checker from another Bazel repository
 (e.g., a consumer workspace that references this repo via a Bazel registry or
 `git_repository`).
 
-### Step 1 — Import the Bazel Config
+### Step 1 — Provide Credentials
 
-Add this line to your root `.bazelrc` to pull in the Copilot environment
-configuration:
+The AI analysis runs at **test time**, and the test rules bake the required
+environment-variable inheritance into each target via `RunEnvironmentInfo`. When
+you run `bazel test`, the test inherits `HOME`, the GitHub tokens, and the proxy
+variables from your shell automatically — there is **no** `--config=copilot` or
+`--test_env` flag to set, and nothing to copy into your root `.bazelrc`.
+
+> `HOME` matters because the test runner otherwise resets it to a private temp
+> directory, which would hide the Copilot CLI's `~/.copilot/config.json`.
+
+Just make sure one credential source is present in your shell before running the
+test (see the table below).
+
+Optionally, import the bundled `.bazelrc.ai_checker` to enable the
+project-specific guideline flags (it contains **no** environment configuration):
 
 ```text
 try-import %workspace%/.bazelrc.ai_checker
 ```
 
-Copy `.bazelrc.ai_checker` from this repository into your workspace root.
-It forwards the authentication and proxy variables the Copilot CLI needs
-into Bazel's sandbox:
-
-```text
-build:copilot --action_env=HOME
-build:copilot --action_env=COPILOT_GITHUB_TOKEN
-build:copilot --action_env=GH_TOKEN
-build:copilot --action_env=GITHUB_TOKEN
-build:copilot --action_env=HTTP_PROXY
-build:copilot --action_env=HTTPS_PROXY
-build:copilot --action_env=NO_PROXY
-build:copilot --action_env=http_proxy
-build:copilot --action_env=https_proxy
-build:copilot --action_env=no_proxy
-```
-
-**Why `--config=copilot`?**
-Bazel sandboxes strip the host environment by default.  The Copilot SDK's
-Node.js CLI needs `HOME` (for stored OAuth tokens) and proxy variables (to
-reach `api.github.com`) to be explicitly forwarded.  These are scoped to
-`config:copilot` so they do not affect other build actions.
-
-**Authentication** — at least one of the following must be available inside
-the sandbox:
+**Authentication** — at least one of the following must be available in your
+environment:
 
 | Variable | Purpose |
 |----------|---------|
@@ -206,7 +219,7 @@ load("@score_tooling//validation/ai_checker:ai_checker.bzl",
 trlc_requirements_ai_test(
     name = "requirements_ai_check",
     reqs = [":my_requirements"],           # target providing TrlcProviderInfo
-    model = "anthropic/claude-sonnet-4-5",
+    model = "claude-sonnet-4.6",
     score_threshold = "6.0",              # fail if average score < 6.0
     tags = ["manual"],                    # recommended: exclude from //...
 )
@@ -215,7 +228,7 @@ trlc_requirements_ai_test(
 architecture_ai_test(
     name = "architecture_ai_check",
     designs = [":my_architectural_design"],  # target providing ArchitecturalDesignInfo
-    model = "anthropic/claude-sonnet-4-5",
+    model = "claude-sonnet-4.6",
     score_threshold = "6.0",
     tags = ["manual"],
 )
@@ -226,20 +239,29 @@ AI analysis runs during routine `bazel test //...` sweeps.  Run AI tests
 by targeting them explicitly:
 
 ```bash
-bazel test //path/to:requirements_ai_check --config=copilot
+bazel test //path/to:requirements_ai_check
 ```
 
 | Attribute | Description | Required | Default |
 |-----------|-------------|----------|---------|
 | `reqs` / `designs` | Targets providing `TrlcProviderInfo` or `ArchitecturalDesignInfo` | Yes | — |
-| `model` | AI model identifier | No | `"anthropic/claude-sonnet-4-5"` |
+| `model` | AI model identifier | No | `"claude-sonnet-4.6"` |
 | `score_threshold` | Minimum average score (0–10) to pass | No | `"0.0"` |
 | `guidelines` | Custom guideline filegroup | No | `default_guidelines` / `default_architecture_guidelines` |
+| `context` | Background-context filegroup (`.md` / `.puml`), read-only reference material | No | — |
 
-### Overriding Guidelines
+### Guidelines
 
-Each rule uses a default `guidelines` filegroup.  Override per target to
-supply organisation-specific rules:
+Guidelines are layered, so projects only supply what is specific to them:
+
+| Layer | Scope | Source |
+|-------|-------|--------|
+| **General** | Review methodology, scoring, result format — applies to every element type | `guidelines/general.md` |
+| **Type** | Generic rules for one element type (requirements *or* architecture) | `guidelines/requirements/` · `guidelines/architecture/` |
+| **Project** | Project-specific details (e.g. requirement levels, architecture levels) | Set via a flag — see below |
+
+The general and type layers are built in. To override them per target, set the
+`guidelines` attribute to your own filegroup:
 
 ```starlark
 trlc_requirements_ai_test(
@@ -248,6 +270,22 @@ trlc_requirements_ai_test(
     guidelines = "//my/org:custom_guidelines",
 )
 ```
+
+### Project-Specific Guidelines (set once)
+
+Project details are injected as **graded** rules via label flags, so you set
+them once in `.bazelrc` instead of on every target:
+
+```text
+build --//validation/ai_checker:project_guidelines=//my/org:my_req_guidelines
+build --//validation/ai_checker:project_architecture_guidelines=//my/org:my_arch_guidelines
+```
+
+Each flag points at a `filegroup` of `.md` files. Bundled SCORE examples are
+available as `//validation/ai_checker:score_project_guidelines` and
+`//validation/ai_checker:score_project_architecture_guidelines`. When unset, no
+project guidelines are added.
+
 
 ### Custom AI Model (Bazel)
 
@@ -262,15 +300,31 @@ trlc_requirements_ai_test(
 )
 ```
 
-The file must expose `create_chat_model(model_name, max_completion_tokens)`.
+The file must expose `create_agent(model_name) -> AnalysisAgent`. The agent
+implements a single async method:
+
+```python
+async def analyze(self, system_prompt: str, artefacts_text: str) -> AnalysisResults
+```
+
+To reuse a LangChain model, return the bundled `LangChainAgent` wrapper:
+
+```python
+from ai_checker.agents.langchain_agent import LangChainAgent
+
+def create_agent(model_name):
+    return LangChainAgent(MyLangChainChatModel(model=model_name))
+```
 
 ### Debug Output
 
-To inspect the raw input sent to the AI model and response timing:
+To inspect the raw input sent to the AI model and response timing, extract the
+always-on debug log from the test's undeclared-outputs archive:
 
 ```bash
-bazel build //path/to:requirements_ai_check --config=copilot --output_groups=debug
-cat bazel-bin/path/to/requirements_ai_check_debug.log
+bazel test //path/to:requirements_ai_check
+unzip -p bazel-testlogs/path/to/requirements_ai_check/test.outputs/outputs.zip \
+  debug.log
 ```
 
 The debug log contains:
@@ -283,99 +337,5 @@ The debug log contains:
 
 ## Developer Guide
 
-### Architecture
-
-The AI Checker is organized into two source layers and one extension point:
-
-| Directory | Purpose |
-|-----------|---------|
-| `src/ai_checker/` | Core analysis framework (extraction, scoring, caching, reporting). Depends on `langchain-core` for the `BaseChatModel` interface. |
-| `src/copilot_adapter/` | `ChatCopilot` — LangChain `BaseChatModel` wrapper for the GitHub Copilot SDK. |
-
-### Diagrams
-
-**Deployment overview:**
-
-![Deployment Diagram](_assets/deployment_diagram.svg)
-
-**Class relationships:**
-
-![Class Diagram](_assets/class_diagram.svg)
-
-### Key Components
-
-#### `AIChecker` (`src/ai_checker/ai_checker_core.py`)
-
-Performs the async AI analysis.  Responsibilities:
-
-- Splits artefacts into batches (by count via `--batch-size` and by total
-  character length via `--max-batch-chars`)
-- Processes batches concurrently, rate-limited by an `asyncio.Semaphore`
-- Calls `BaseChatModel.with_structured_output(AnalysisResults).ainvoke()`
-- Manages the optional result cache (`AnalysisCache`)
-
-#### `ChatCopilot` (`src/copilot_adapter/copilot_langchain.py`)
-
-A full `BaseChatModel` implementation backed by the GitHub Copilot SDK CLI
-(a Node.js binary).  Provides:
-
-- Standard LangChain message types (system, human, AI, tool)
-- Tool calling via `bind_tools()`
-- Structured output via `with_structured_output()`
-- Native async generation (`_agenerate`) and a sync bridge (`_generate`)
-- Pre-flight checks: CLI binary presence, executable bit, `HOME`, proxy vars
-- Post-start authentication verification via `get_auth_status()`
-
-**Why a separate adapter package?**
-The `rules_python` wheel packaging strips the executable bit from the
-Copilot CLI binary.  `ChatCopilot` locates the executable copy created by
-the `pip.whl_mods / copy_executables` mechanism and provides clear
-diagnostic messages when the environment is misconfigured.  The package is
-named `copilot_adapter` (not `langchain`) to avoid shadowing the real
-`langchain` PyPI package when `imports = ["src"]` is active in Bazel.
-
-#### `RequirementExtractor` (`src/ai_checker/requirement_extractor.py`)
-
-Parses TRLC files using the TRLC Python API and returns artefacts as
-`dict[str, dict[str, Any]]`.  Only objects whose source file resides under
-the `--input` directory are analyzed; objects from `--deps` directories are
-loaded solely for link resolution.
-
-#### `AnalysisOrchestrator` (`src/ai_checker/orchestrator.py`)
-
-Top-level coordinator.  Instantiates the extractor, guidelines reader, AI
-checker, and result formatter; wires them together; and exposes the CLI
-entry point (`main()`).
-
-#### `GuidelinesReader` (`src/ai_checker/guidelines_reader.py`)
-
-Reads all `*.md` files from a flat guidelines directory and concatenates
-them into the system-message string sent to the AI model.
-
-#### `ResultFormatter` (`src/ai_checker/result_formatter.py`)
-
-Formats `AnalysisResults` as JSON or HTML.  The HTML report generates
-per-guideline markdown subpages linked from the main report.
-
-### Caching Design
-
-`AnalysisCache` keys results by `SHA-256(artefacts_json + guidelines + model_name)`.
-It is **only** usable via the CLI `--cache` flag.  The Bazel rule deliberately
-omits `--cache` because Bazel's action cache provides equivalent re-use without
-breaking hermeticity.
-
-### Adding a New Artefact Type
-
-1. Subclass `ArtefactExtractor` (`src/ai_checker/artefact_extractor.py`) and
-   implement `extract() -> dict[str, dict[str, Any]]`.
-2. Instantiate your extractor in `AnalysisOrchestrator.analyze_directory()`
-   based on the input file types detected.
-3. Add a corresponding Bazel rule in `ai_checker.bzl` following the pattern of
-   `_trlc_requirements_ai_test_impl`.
-
-### Updating Python Dependencies
-
-```bash
-# Core + Copilot SDK dependencies
-bazel run //validation/ai_checker:requirements.update
-```
+Architecture, agent internals, the report pipeline, caching, and extension
+points are documented in [DEVELOPMENT.md](DEVELOPMENT.md).
