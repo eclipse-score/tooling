@@ -31,7 +31,7 @@ class RequirementAnalysis(BaseModel):
     score: float = Field(
         description="Numerical score from 0 to 10 representing analysis quality",
         ge=0.0,
-        le=10,
+        le=10.0,
     )
 
 

@@ -14,10 +14,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, Optional
 
-from copilot import CopilotClient, SubprocessConfig
+from copilot import CopilotClient, RuntimeConnection
 
 from ._errors import CopilotSetupError
 from ._preflight import (
@@ -49,6 +50,7 @@ class CopilotClientManager:
         self._options: dict[str, Any] = dict(copilot_client_options or {})
         self._client: Optional[CopilotClient] = None
         self._started: bool = False
+        self._lock: asyncio.Lock = asyncio.Lock()
 
     # ------------------------------------------------------------------
     # Public interface
@@ -58,7 +60,8 @@ class CopilotClientManager:
         """Return a started, authenticated CopilotClient.
 
         Creates and starts the client on the first call; subsequent calls
-        return the cached instance immediately.
+        return the cached instance immediately. Thread-safe: concurrent callers
+        wait on an asyncio.Lock so the CLI subprocess is started exactly once.
 
         Pre-flight sequence (runs once, before the CLI is spawned):
         1. Resolve the CLI binary path
@@ -72,11 +75,12 @@ class CopilotClientManager:
             CopilotSetupError: With a detailed, actionable message for any
                 failure that prevents the CLI from being used.
         """
-        if self._client is None:
-            self._client = self._create_client()
+        async with self._lock:
+            if self._client is None:
+                self._client = self._create_client()
 
-        if not self._started:
-            await self._start_and_verify()
+            if not self._started:
+                await self._start_and_verify()
 
         return self._client
 
@@ -138,28 +142,51 @@ class CopilotClientManager:
             )
 
         logger.info("Starting CopilotClient...\n%s", describe_auth_sources())
-        _subprocess_fields = frozenset(
-            {
-                "cli_path",
-                "cli_args",
-                "cwd",
-                "use_stdio",
-                "port",
-                "log_level",
-                "env",
-                "github_token",
-                "use_logged_in_user",
-                "telemetry",
-                "session_fs",
-                "session_idle_timeout_seconds",
-            }
-        )
-        subprocess_kwargs = {k: v for k, v in opts.items() if k in _subprocess_fields}
-        return CopilotClient(SubprocessConfig(**subprocess_kwargs))
+
+        # Map the legacy option keys onto the current SDK client API.
+        # Transport options (cli_path / cli_url / cli_args / port / use_stdio)
+        # are folded into a RuntimeConnection; the remaining process-management
+        # options are passed to CopilotClient directly.
+        cli_url = opts.get("cli_url")
+        cli_args = tuple(opts.get("cli_args") or ())
+        connection: RuntimeConnection | None
+        if cli_url:
+            connection = RuntimeConnection.for_uri(cli_url)
+        elif opts.get("use_stdio") is False or opts.get("port") is not None:
+            connection = RuntimeConnection.for_tcp(
+                port=opts.get("port") or 0,
+                path=cli_path,
+                args=cli_args,
+            )
+        elif cli_path:
+            connection = RuntimeConnection.for_stdio(path=cli_path, args=cli_args)
+        else:
+            connection = None
+
+        # Legacy SubprocessConfig key -> current CopilotClient kwarg.
+        _client_field_map = {
+            "cwd": "working_directory",
+            "log_level": "log_level",
+            "env": "env",
+            "telemetry": "telemetry",
+            "session_fs": "session_fs",
+            "session_idle_timeout_seconds": "session_idle_timeout_seconds",
+        }
+        client_kwargs: dict[str, Any] = {
+            new_key: opts[old_key]
+            for old_key, new_key in _client_field_map.items()
+            if old_key in opts
+        }
+        if connection is not None:
+            client_kwargs["connection"] = connection
+        return CopilotClient(**client_kwargs)
 
     async def _start_and_verify(self) -> None:
         """Start the CLI subprocess and verify authentication."""
-        assert self._client is not None
+        if self._client is None:
+            raise RuntimeError(
+                "_start_and_verify() called before the client was created"
+            )
 
         try:
             await self._client.start()
@@ -180,10 +207,11 @@ class CopilotClientManager:
                     + "\n\n"
                     "  Possible fixes:\n"
                     "  1. Run 'copilot' in a terminal and sign in interactively.\n"
-                    "  2. Set COPILOT_GITHUB_TOKEN (or GH_TOKEN / GITHUB_TOKEN)\n"
-                    "     and pass it via --action_env=COPILOT_GITHUB_TOKEN.\n"
-                    "  3. Ensure HOME is available in the action environment\n"
-                    "     (use_default_shell_env = True in the Bazel rule).\n"
+                    "  2. Export COPILOT_GITHUB_TOKEN (or GH_TOKEN / GITHUB_TOKEN)\n"
+                    "     in your shell; the AI test target inherits it via\n"
+                    "     RunEnvironmentInfo, so no Bazel flag is required.\n"
+                    "  3. Ensure HOME is set in your shell so the inherited HOME\n"
+                    "     lets the CLI read ~/.copilot/config.json.\n"
                     "  See: https://github.com/github/copilot-sdk/blob/main/docs/auth/index.md"
                 ) from exc
             raise
@@ -209,7 +237,8 @@ class CopilotClientManager:
         LLM call (send_and_wait) will fail with a clear error if auth is truly
         broken, so we demote this check to a warning-only diagnostic.
         """
-        assert self._client is not None
+        if self._client is None:
+            raise RuntimeError("_verify_auth() called before the client was created")
         try:
             auth_status = await self._client.get_auth_status()
             # The SDK uses camelCase on some versions, snake_case on others.

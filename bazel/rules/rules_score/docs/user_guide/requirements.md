@@ -199,7 +199,7 @@ The `tags = ["manual"]` attribute is strongly recommended to prevent the rule fr
 Run the check explicitly with:
 
 ```bash
-bazel test //my/package:feature_requirements_ai_check --config=copilot
+bazel test //my/package:feature_requirements_ai_check
 ```
 
 | Attribute | Type | Required | Description |
@@ -210,7 +210,9 @@ bazel test //my/package:feature_requirements_ai_check --config=copilot
 | `score_threshold` | string | no | Minimum average quality score from 0 to 10 to pass the test (default: `"0.0"`) |
 | `guidelines` | label | no | Filegroup of guideline Markdown files to override the built-in guidelines |
 
-**Output files** (written to `bazel-bin/`):
+**Output files** (the AI analysis runs at test time; reports are written to the
+test's undeclared-outputs archive at
+`bazel-testlogs/<package>/<name>/test.outputs/outputs.zip`):
 
 | File | Content |
 |---|---|
