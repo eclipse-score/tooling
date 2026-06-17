@@ -98,6 +98,8 @@ def _score_needs_impl(ctx):
         "--log-level",
         get_log_level(ctx),
     ]
+    for opt in ctx.attr.extra_opts:
+        needs_args.append(ctx.expand_location(opt, targets = ctx.attr.srcs))
     ctx.actions.run(
         inputs = needs_inputs,
         outputs = [needs_output],
@@ -277,7 +279,10 @@ def _score_html_impl(ctx):
 # ======================================================================================
 _score_needs = rule(
     implementation = _score_needs_impl,
-    attrs = sphinx_rule_attrs,
+    attrs = dict(
+        sphinx_rule_attrs,
+        extra_opts = attr.string_list(doc = "Regular additional string options to pass onto Sphinx."),
+    ),
     toolchains = ["//bazel/rules/rules_score:toolchain_type"],
 )
 _score_html = rule(
@@ -349,6 +354,7 @@ def sphinx_module(
         index = index,
         deps = [d + "_needs" for d in deps],
         testonly = testonly,
+        extra_opts = extra_opts,
         **kwargs
     )
     _score_html(

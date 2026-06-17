@@ -34,7 +34,6 @@ extensions = [
     "sphinx_needs",
     "sphinx_design",
     "myst_parser",
-    "sphinxcontrib.mermaid",
     "sphinxcontrib.plantuml",
     "score_plantuml",
     "score_metamodel",

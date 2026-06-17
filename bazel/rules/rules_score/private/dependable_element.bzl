@@ -1255,6 +1255,7 @@ def dependable_element(
         maturity = "release",
         sphinx = Label("//bazel/rules/rules_score:score_build"),
         testonly = True,
+        extra_opts = [],
         **kwargs):
     """Define a dependable element (Safety Element out of Context - SEooC) following S-CORE process guidelines.
 
@@ -1333,6 +1334,7 @@ def dependable_element(
         deps = [d + "_doc" for d in deps],
         sphinx = sphinx,
         testonly = testonly,
+        extra_opts = extra_opts,
         **kwargs
     )
 
