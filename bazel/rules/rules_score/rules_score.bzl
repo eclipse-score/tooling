@@ -50,16 +50,16 @@ load(
     _feature_requirements = "feature_requirements",
 )
 load(
-    "//bazel/rules/rules_score/private:glossary.bzl",
-    _glossary = "glossary",
-)
-load(
     "//bazel/rules/rules_score/private:filter_execpath.bzl",
     _filter_execpath = "filter_execpath",
 )
 load(
     "//bazel/rules/rules_score/private:fmea.bzl",
     _fmea = "fmea",
+)
+load(
+    "//bazel/rules/rules_score/private:glossary.bzl",
+    _glossary = "glossary",
 )
 load(
     "//bazel/rules/rules_score/private:sphinx_module.bzl",

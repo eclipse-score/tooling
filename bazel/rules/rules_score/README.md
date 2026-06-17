@@ -29,6 +29,7 @@ for safety related automotive software.
 | `unit` | `UnitInfo`, `CertifiedScope` |
 | `component` | `ComponentInfo` |
 | `fmea` | `AnalysisInfo` |
+| `glossary` | `SphinxSourcesInfo` |
 | `dependability_analysis` | `DependabilityAnalysisInfo` |
 | `dependable_element` | HTML documentation zip (Sphinx) |
 
@@ -152,6 +153,57 @@ by the wrapping `dependability_analysis` test.
 
 ---
 
+## `glossary`
+
+```starlark
+glossary(
+    name = "project_glossary",
+    srcs = ["docs/glossary.rst"],
+)
+```
+
+**`bazel build`** — collects glossary `.rst` sources and publishes them
+through `SphinxSourcesInfo` so `dependable_element` can include terminology
+sections in generated HTML documentation.
+
+Example glossary source (`.rst`):
+
+```rst
+Glossary
+========
+
+.. glossary::
+
+    integrity level
+        ASIL rating (QM, A, B, C, D) indicating required safety rigor.
+
+    component
+        Software unit with defined interfaces, implementation, and tests.
+```
+
+Example term usage in requirements (`.trlc`):
+
+```trlc
+ScoreReq.FeatReq FEAT_001 {
+    description = "The :term:`component` shall satisfy all :term:`feature requirements` assigned to integrity level B."
+    safety = ScoreReq.Asil.B
+    derived_from = [MyPkg.ASR_001@1]
+    version = 1
+}
+```
+
+Typical usage is to pass glossary targets into `dependable_element`:
+
+```starlark
+dependable_element(
+    name = "my_seooc",
+    # ...
+    glossary = [":project_glossary"],
+)
+```
+
+---
+
 ## `dependability_analysis`
 
 ```starlark
@@ -187,6 +239,7 @@ dependable_element(
     architectural_design = [":my_design"],
     dependability_analysis = [":my_da"],
     components = [":my_component"],
+    glossary = [":project_glossary"],
     assumptions_of_use = [],
     tests = [],
 )

@@ -254,6 +254,59 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
 
 **Generated targets:** ``<name>`` (documentation), ``<name>_test`` (TRLC validation)
 
+.. _rule-glossary:
+
+glossary
+~~~~~~~~
+
+Collects glossary pages for Sphinx and forwards them to downstream
+documentation assembly (for example through ``dependable_element``).
+
+.. code-block:: python
+
+  glossary(
+     name = "project_glossary",
+     srcs = ["docs/glossary.rst"],
+  )
+
+Example glossary source (``.rst``):
+
+.. code-block:: rst
+
+   Glossary
+   ========
+
+   .. glossary::
+
+      integrity level
+         ASIL rating (QM, A, B, C, D) indicating required safety rigor.
+
+      component
+         Software unit with defined interfaces, implementation, and tests.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``name``
+     - string
+     - yes
+     - Target name
+   * - ``srcs``
+     - label list
+     - yes
+     - ``.rst`` files containing glossary definitions
+   * - ``visibility``
+     - —
+     - no
+     - Bazel visibility
+
+**Generated targets:** ``<name>`` (documentation; no standalone test)
+
 .. _rule-arch-design:
 
 .. _rule-architectural-design:
