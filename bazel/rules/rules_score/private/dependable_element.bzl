@@ -999,7 +999,7 @@ def _dependable_element_index_impl(ctx):
     lobster_html_report = None
     lobster_rst_dir = None
     lobster_files = []
-    if feat_req_list and comp_req_list:
+    if feat_req_list:
         lobster_config = ctx.actions.declare_file(ctx.label.name + "/de_traceability_config")
         ctx.actions.expand_template(
             template = ctx.file._lobster_de_template,
@@ -1007,6 +1007,7 @@ def _dependable_element_index_impl(ctx):
             substitutions = {
                 "{FEAT_REQ_SOURCES}": format_lobster_sources(feat_req_list),
                 "{COMP_REQ_SOURCES}": format_lobster_sources(comp_req_list),
+                "{COMP_REQ_TRACE}": ("  trace to: \"Feature Requirements\";\n") if comp_req_list else "",
                 "{ARCH_SOURCES}": format_lobster_sources(comp_arch_list),
                 "{UNIT_TEST_SOURCES}": format_lobster_sources(comp_test_list),
                 "{PUBLIC_API_SOURCES}": format_lobster_sources(interface_req_list),
