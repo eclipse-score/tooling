@@ -13,7 +13,31 @@
 
 # Dependability Analysis
 
-The `dependability_analysis` rule is the top-level safety artifact in `rules_score`. It summarizes the dependability analyses (Safety / Security) which were performed for the dependable element.
+The `dependability_analysis` rule  summarizes the all the dependability analyses (Safety / Security) for a dependable element. A single element may have multiple dependability analyses.
+
+## Overview
+
+### Why safety analysis?
+
+Safety analysis is required to systematically identify failures that could violate safety goals and to demonstrate that appropriate countermeasures are in place. In ISO 26262 terms it provides the evidence that residual risk is acceptable.
+
+### How FMEA works
+
+A Failure Mode and Effects Analysis (FMEA) follows three steps for each public interface of the software module:
+
+1. **Identify failure modes** — apply structured fault models (see below) to each public interface to derive what can cause a violation of a overarching safety goal.
+2. **Analyse effects and causes** — document the effect on the system and decompose to root causes using a Fault Tree Analysis (FTA).
+3. **Define countermeasures** — for every root cause specify a `ControlMeasure` (or `PreventiveMeasure` / `Mitigation`) and trace it back through the FTA to the failure mode.
+
+### Fault models
+
+The failure modes to consider are defined by the SCORE process:
+
+> [FMEA Fault Models — Process Description](https://eclipse-score.github.io/process_description/main/process_areas/safety_analysis/guidance/fault_models_guideline.html#id1)
+
+The fault models cover three categories: **messages** (send/receive behaviour), **time constraints** (too early / too late), and **execution** (wrong result, loss, delay, corruption, non-determinism). The `GuideWord` enum in the `ScoreReq` model maps each category to a structured label used in the `FailureMode` records.
+
+The description below covers the FMEA-based **safety** analysis for a software module.
 
 ## Bazel Rule `dependability_analysis`
 
