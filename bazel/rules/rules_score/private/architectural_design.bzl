@@ -174,6 +174,7 @@ def _architectural_design_impl(ctx):
         SphinxSourcesInfo(
             srcs = sphinx_srcs,
             deps = sphinx_srcs,
+            aux_srcs = depset(),
         ),
     ]
 

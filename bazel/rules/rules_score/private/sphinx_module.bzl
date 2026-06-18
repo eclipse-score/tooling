@@ -167,6 +167,7 @@ def _score_html_impl(ctx):
                 "json_path": dep[SphinxNeedsInfo].needs_json_file.path,  # Use direct file
                 "id_prefix": "",
                 "css_class": "",
+                "version": "1.0",
             }
     for dep in ctx.attr.deps:
         if SphinxModuleInfo in dep:

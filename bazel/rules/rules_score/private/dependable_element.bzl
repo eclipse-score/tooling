@@ -254,16 +254,21 @@ def _process_artifact_files(ctx, artifact_name, label):
     all_files = _get_sphinx_files(label)
     doc_files = _filter_doc_files(all_files)
 
-    if not doc_files:
+    # aux_srcs are files to symlink but NOT add to the outer toctree index.
+    aux_files = []
+    if label[SphinxSourcesInfo].aux_srcs:
+        aux_files = label[SphinxSourcesInfo].aux_srcs.to_list()
+
+    if not doc_files and not aux_files:
         return (output_files, index_refs)
 
     # Build a lookup of srcs paths so we know which files are toctree entries.
     srcs_paths = {f.path: True for f in label[SphinxSourcesInfo].srcs.to_list()}
 
-    # Find common directory to preserve hierarchy
-    common_dir = _find_common_directory(doc_files)
+    # Find common directory across all files (regular + aux) to preserve hierarchy.
+    common_dir = _find_common_directory(doc_files + aux_files)
 
-    # Process each file
+    # Process regular deps files
     for artifact_file in doc_files:
         # Compute paths
         relative_path = _compute_relative_path(artifact_file, common_dir)
@@ -288,6 +293,17 @@ def _process_artifact_files(ctx, artifact_name, label):
                 .replace(".rst", "") \
                 .replace(".md", "")
             index_refs.append(doc_ref)
+
+    # Process aux_srcs: symlink without adding to outer toctree index.
+    for artifact_file in aux_files:
+        relative_path = _compute_relative_path(artifact_file, common_dir)
+        output_file = _create_artifact_symlink(
+            ctx,
+            artifact_name,
+            artifact_file,
+            relative_path,
+        )
+        output_files.append(output_file)
 
     return (output_files, index_refs)
 
