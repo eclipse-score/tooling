@@ -1,0 +1,88 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml safety_analysis_doc_pipeline
+
+' Data flow from safety analysis source files through Bazel rules into the
+' Sphinx staging tree.
+
+skinparam linetype ortho
+skinparam ArrowFontSize 10
+skinparam defaultTextAlignment center
+skinparam nodesep 40
+skinparam ranksep 50
+
+skinparam rectangle {
+    BackgroundColor<<src>>   #EFF6FB
+    BorderColor<<src>>       #0066B1
+    BackgroundColor<<gen>>   #FFF3E0
+    BorderColor<<gen>>       #EF6C00
+    BackgroundColor<<rule>>  #E8F5E9
+    BorderColor<<rule>>      #2E7D32
+    BackgroundColor<<stage>> #F3E5F5
+    BorderColor<<stage>>     #7B1FA2
+    BackgroundColor<<prov>>  #FFFDE7
+    BorderColor<<prov>>      #F9A825
+}
+
+' ── Inputs ────────────────────────────────────────────────────────────────────
+rectangle "failuremodes.trlc\ncontrolmeasures.trlc" <<src>> as trlc
+rectangle "fta_*.puml"                              <<src>> as fta
+rectangle "dfa.rst"                                 <<src>> as dfa
+
+' ── fmea rule ─────────────────────────────────────────────────────────────────
+rectangle "**fmea**"  <<rule>> as fmea
+
+' ── fmea generated files ──────────────────────────────────────────────────────
+rectangle "fmea.rst"               <<gen>> as fmea_rst
+rectangle "failuremodes.inc\ncontrolmeasures.inc" <<gen>> as inc_files
+rectangle "fta_*.puml (inlined)\nroot_causes.lobster" <<gen>> as puml_proc
+rectangle "detail_*.rst"          <<gen>> as detail_rst
+
+' ── fmea SphinxSourcesInfo ────────────────────────────────────────────────────
+rectangle "SphinxSourcesInfo\n──────────────────\nsrcs:     fmea.rst\ndeps:     fmea.rst + *.inc + *.puml\naux_srcs: detail_*.rst" <<prov>> as fmea_ssi
+
+' ── dependability_analysis rule ───────────────────────────────────────────────
+rectangle "**dependability_analysis**" <<rule>> as da
+
+' ── dependability_analysis SphinxSourcesInfo ─────────────────────────────────
+rectangle "SphinxSourcesInfo\n──────────────────\nsrcs:     dfa.rst + fmea.rst\ndeps:     + *.inc + *.puml\naux_srcs: detail_*.rst" <<prov>> as da_ssi
+
+' ── dependable_element rule ───────────────────────────────────────────────────
+rectangle "**dependable_element**" <<rule>> as de
+
+' ── Sphinx staging tree ───────────────────────────────────────────────────────
+rectangle "dependability_analysis/\n  dfa.rst            ← toctree\n  fmea.rst           ← toctree\n  failuremodes.inc\n  controlmeasures.inc\n  fta_*.puml\n  detail_*.rst       ← sub-pages" <<stage>> as stage
+
+' ── Edges ─────────────────────────────────────────────────────────────────────
+trlc --> fmea : trlc_rst\nlobster-trlc
+fta  --> fmea : safety_analysis_tools
+
+fmea --> fmea_rst
+fmea --> inc_files
+fmea --> puml_proc
+fmea --> detail_rst
+fmea_rst   --> fmea_ssi
+inc_files  --> fmea_ssi
+puml_proc  --> fmea_ssi
+detail_rst --> fmea_ssi
+
+dfa      --> da
+fmea_ssi --> da : merge
+
+da --> da_ssi
+
+da_ssi --> de : dependability_analysis attr
+de --> stage : symlink srcs+deps\nsymlink aux_srcs\n(no outer toctree entry)
+
+@enduml
