@@ -32,9 +32,6 @@ rust_binary(
     data = [
         "@llvm_toolchain_llvm//:libclang",
     ],
-    env = {
-        "LIBCLANG_PATH": "$(rootpath @llvm_toolchain_llvm//:libclang)",
-    },
     visibility = ["//visibility:public"],
     deps = [
         "//cpp/libclang/src/utils",

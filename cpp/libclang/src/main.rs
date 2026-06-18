@@ -24,8 +24,6 @@ use utils::{render_entity_tree, write_debug_json, write_entity_tree, write_fbs_o
 use visit_tu::visitor;
 use visit_tu::{FunctionDef, VisitContext, Visitor};
 
-const CLASS_DIAGRAM_STEM: &str = "class_diagram";
-
 #[derive(ClapParser, Debug)]
 #[command(name = "cpp_parser")]
 #[command(author = "Eclipse Foundation Contributors")]
@@ -33,19 +31,20 @@ const CLASS_DIAGRAM_STEM: &str = "class_diagram";
 #[command(about = "Parse C/C++ source files using libclang and extract AST info")]
 struct Args {
     /// Input C/C++ source files
+    #[arg(long, required = true, num_args = 1..)]
     input: Vec<PathBuf>,
 
-    /// Output directory path
-    #[arg(short, long)]
-    output_dir: PathBuf,
+    /// Class diagram FlatBuffer output path (internal use only)
+    #[arg(long, hide = true)]
+    class_fbs_output: PathBuf,
 
     /// Additional compiler arguments (e.g., -I/path/to/includes)
     #[arg(short = 'X', long = "extra-arg", allow_hyphen_values = true)]
     extra_args: Vec<String>,
 
-    /// Output JSON format for debugging (internal use only)
+    /// Debug JSON output path (internal use only)
     #[arg(long, hide = true)]
-    json: bool,
+    debug_json_output: Option<PathBuf>,
 }
 
 #[derive(Default)]
@@ -114,7 +113,7 @@ fn parse_file(
     file: &Path,
     compilation_flags: &[String],
     index: &clang::Index,
-    output_dir: &Path,
+    trace_output_dir: Option<&Path>,
     outputs: &mut ParseOutputs,
 ) {
     debug!("Parsing TU: {:?}", file);
@@ -141,9 +140,11 @@ fn parse_file(
             let entity = parsed.get_entity();
             debug!("Parsed {:?} successfully", parsed);
             if log::log_enabled!(log::Level::Trace) {
-                let ast_file_output_path = output_dir.join("libclang_parsed_ast.txt");
-                let entity_tree = render_entity_tree(&entity, 0);
-                write_entity_tree(&ast_file_output_path, &entity_tree);
+                if let Some(trace_output_dir) = trace_output_dir {
+                    let ast_file_output_path = trace_output_dir.join("libclang_parsed_ast.txt");
+                    let entity_tree = render_entity_tree(&entity, 0);
+                    write_entity_tree(&ast_file_output_path, &entity_tree);
+                }
             }
 
             let mut ctx = VisitContext::default();
@@ -158,7 +159,7 @@ fn parse_file(
 }
 
 fn serialize_class_diagram(
-    output_dir: &Path,
+    output_path: &Path,
     entities: BTreeMap<String, SimpleEntity>,
 ) -> Result<(), std::io::Error> {
     let entities: Vec<_> = entities.into_values().collect();
@@ -171,8 +172,15 @@ fn serialize_class_diagram(
     };
 
     let output_fbs = ClassSerializer::serialize(&class_diagram, "");
-    write_fbs_output(output_dir, CLASS_DIAGRAM_STEM, &output_fbs)?;
+    write_fbs_output(output_path, &output_fbs)?;
 
+    Ok(())
+}
+
+fn ensure_output_parent_exists(path: &Path) -> Result<(), std::io::Error> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
     Ok(())
 }
 
@@ -184,7 +192,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let command_line_args = Args::parse();
     let mut outputs = ParseOutputs::default();
 
-    fs::create_dir_all(&command_line_args.output_dir)?;
+    ensure_output_parent_exists(&command_line_args.class_fbs_output)?;
+    if let Some(debug_json_output) = &command_line_args.debug_json_output {
+        ensure_output_parent_exists(debug_json_output)?;
+    }
+
+    let trace_output_dir = command_line_args.class_fbs_output.parent().or_else(|| {
+        command_line_args
+            .debug_json_output
+            .as_deref()
+            .and_then(Path::parent)
+    });
 
     for file in &command_line_args.input {
         let compilation_flags = &command_line_args.extra_args;
@@ -193,20 +211,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             file,
             compilation_flags,
             &index,
-            &command_line_args.output_dir,
+            trace_output_dir,
             &mut outputs,
         );
     }
 
-    if command_line_args.json {
-        write_debug_json(
-            &command_line_args.output_dir,
-            &outputs.types,
-            &outputs.functions,
-        )?;
+    if let Some(debug_json_output) = &command_line_args.debug_json_output {
+        write_debug_json(debug_json_output, &outputs.types, &outputs.functions)?;
     }
 
-    serialize_class_diagram(&command_line_args.output_dir, outputs.types)?;
+    serialize_class_diagram(&command_line_args.class_fbs_output, outputs.types)?;
 
     Ok(())
 }
