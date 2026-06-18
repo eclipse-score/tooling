@@ -24,8 +24,16 @@ This directory contains integration tests for the C++ libclang parser and relate
 ## Test Workflow
 
 1. Each case directory contains C++ source files, headers, a BUILD file, and an `expected.json` golden output.
-2. The case `cpp_parser(...)` target must set `emit_debug_json = True` so the parser emits the aggregated `debug.json` sidecar required by the test harness.
-3. The Rust test framework reads `debug.json` from the parser output directory and compares it to `expected.json`.
+2. The case calls the shared integration test macro:
+   ```starlark
+   cpp_parser_integration_test(
+       name = "test_case_library",
+       target = ":case_library",
+       expected_output = ["expected.json"],
+   )
+   ```
+   The macro creates the expected output filegroup and parser target, exposes `CppParserInfo.debug_json` through the test-only debug JSON target, and wires the Rust comparison test.
+3. The Rust test framework receives that debug JSON path and compares it to `expected.json`.
 4. To batch test all cases:
 
 ```bash

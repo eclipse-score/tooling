@@ -352,6 +352,9 @@ def run_cpp_parser_action(
 # cpp_parser rule
 
 def _cpp_parser_impl(ctx):
+    if not has_cpp_parser_inputs(ctx.attr.target):
+        fail("cpp_parser requires a C/C++ target with non-empty parse inputs: %s" % ctx.attr.target)
+
     outputs = run_cpp_parser_action(
         ctx,
         target = ctx.attr.target,
