@@ -1,9 +1,0 @@
-{
-  "should_pass": false,
-  "error_contains": [
-    "self-call unit does not act as both consumer and provider of a referenced interface",
-    "\"unit_1\" -> \"unit_1\" : \"Poll\"",
-    "Unit requires       : \"package_a.InternalInterface\"",
-    "Unit provides       : <none>"
-  ]
-}

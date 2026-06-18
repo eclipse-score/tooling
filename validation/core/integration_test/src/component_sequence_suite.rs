@@ -69,11 +69,6 @@ fn negative_invalid_consumer_provider_direction_suite_case() {
 }
 
 #[test]
-fn negative_invalid_self_call_consumer_provider_roles_suite_case() {
-    assert_case("negative_invalid_self_call_consumer_provider_roles");
-}
-
-#[test]
 fn negative_interface_function_not_exercised_suite_case() {
     assert_case("negative_interface_function_not_exercised");
 }

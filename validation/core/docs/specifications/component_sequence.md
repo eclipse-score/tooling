@@ -52,7 +52,7 @@ must have at least one corresponding function-call interaction in the sequence
 diagrams, and every cross-unit function call in a sequence diagram must
 correspond to an interface connection in the component diagram. The caller
 shall be the consumer of the shared interface and the callee shall be the
-provider.
+provider. Self-calls are excluded from this check.
 *(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceInterfaceConnectionConsistency`)*
 
 ```text

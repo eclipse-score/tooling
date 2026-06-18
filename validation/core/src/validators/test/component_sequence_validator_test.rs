@@ -422,31 +422,12 @@ fn reports_cross_unit_sequence_call_with_invalid_consumer_provider_roles() {
         errors.messages[0].contains("sequence interaction does not match consumer/provider roles")
     );
     assert!(errors.messages[0].contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData()\""));
-    assert!(errors.messages[0].contains("Caller consumes     : <none>"));
-    assert!(errors.messages[0].contains("Callee provides     : <none>"));
-}
-
-#[test]
-fn reports_self_call_without_bidirectional_interface_roles() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit_with_interface_roles("u1", &["InternalInterface"], &[]),
-        interface("InternalInterface"),
-    ]);
-    let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
-
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
-
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
-
-    assert_eq!(errors.messages.len(), 1);
     assert!(errors.messages[0].contains(
-        "self-call unit does not act as both consumer and provider of a referenced interface"
+        "Expected caller role: \"u1\" should require shared interface(s) \"InternalInterface\""
     ));
-    assert!(errors.messages[0].contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData()\""));
-    assert!(errors.messages[0].contains("Unit requires       : \"InternalInterface\""));
-    assert!(errors.messages[0].contains("Unit provides       : <none>"));
+    assert!(errors.messages[0].contains(
+        "Expected callee role: \"u2\" should provide shared interface(s) \"InternalInterface\""
+    ));
 }
 
 #[test]
@@ -474,42 +455,6 @@ fn reports_sequence_function_missing_from_related_interface_methods() {
     assert!(errors.messages.iter().any(|message| {
         message.contains("sequence function name was not found in the related interface methods")
             && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
-            && message.contains("Shared interfaces   : \"InternalInterface\"")
-            && message.contains("\"GetData\"")
-    }));
-    assert!(errors.messages.iter().any(|message| {
-        message.contains("internal API interface functions are not exercised in sequence diagrams")
-            && message.contains("\"InternalInterface\"")
-            && message.contains("\"OtherMethod\"")
-    }));
-}
-
-#[test]
-fn reports_self_call_function_missing_from_unit_interfaces() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        interface("InternalInterface"),
-    ]);
-    let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
-    let internal_api = internal_api_index(vec![("InternalInterface", vec!["OtherMethod"])]);
-
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
-
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
-
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
-        message.contains("sequence function name was not found in the related interface methods")
-            && message.contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData\"")
-            && message.contains("Unit interfaces     : \"InternalInterface\"")
-            && message.contains("Method matches      : <none>")
     }));
     assert!(errors.messages.iter().any(|message| {
         message.contains("internal API interface functions are not exercised in sequence diagrams")
@@ -543,6 +488,37 @@ fn reports_interface_function_not_exercised_in_sequence_diagrams() {
     assert!(errors.messages[0]
         .contains("internal API interface functions are not exercised in sequence diagrams"));
     assert!(errors.messages[0].contains("\"InternalInterface\""));
+    assert!(errors.messages[0].contains("\"SetData\""));
+}
+
+#[test]
+fn reports_unreferenced_internal_api_interface_function_not_exercised_without_self_calls() {
+    let component_diagrams = component_diagrams_with_entities(vec![
+        unit("u1", &["InternalInterface"]),
+        unit("u2", &["InternalInterface"]),
+        interface("InternalInterface"),
+    ]);
+    let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
+    let internal_api = internal_api_index(vec![
+        ("InternalInterface", vec!["GetData"]),
+        ("OtherInterface", vec!["SetData"]),
+    ]);
+
+    let mut errors = Errors::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+
+    let errors = validate_component_sequence(
+        &component_arch,
+        &sequence_index,
+        Some(&internal_api),
+        errors,
+    );
+
+    assert_eq!(errors.messages.len(), 1);
+    assert!(errors.messages[0]
+        .contains("internal API interface functions are not exercised in sequence diagrams"));
+    assert!(errors.messages[0].contains("\"OtherInterface\""));
     assert!(errors.messages[0].contains("\"SetData\""));
 }
 
@@ -735,6 +711,38 @@ fn reports_missing_component_alias_for_sequence_method_validation() {
 }
 
 #[test]
+fn reports_self_call_method_mismatch_even_when_unit_has_missing_internal_api_interface() {
+    let component_diagrams = component_diagrams_with_entities(vec![
+        unit("u1", &["MissingInterface"]),
+        interface("MissingInterface"),
+    ]);
+    let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
+    let internal_api = internal_api_index(vec![]);
+
+    let mut errors = Errors::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+
+    let errors = validate_component_sequence(
+        &component_arch,
+        &sequence_index,
+        Some(&internal_api),
+        errors,
+    );
+
+    assert_eq!(errors.messages.len(), 2);
+    assert!(errors.messages.iter().any(|message| {
+        message.contains("Missing internal API interface")
+            && message.contains("Unit                : \"u1\"")
+            && message.contains("Missing interfaces  : \"MissingInterface\"")
+    }));
+    assert!(errors.messages.iter().any(|message| {
+        message.contains("sequence self-call function name was not found")
+            && message.contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData\"")
+    }));
+}
+
+#[test]
 fn passes_when_sequence_function_exists_on_related_interface() {
     let component_diagrams = component_diagrams_with_entities(vec![
         unit("u1", &["InternalInterface"]),
@@ -759,11 +767,37 @@ fn passes_when_sequence_function_exists_on_related_interface() {
 }
 
 #[test]
-fn passes_when_self_call_function_exists_on_unit_interface() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        interface("InternalInterface"),
-    ]);
+fn reports_self_call_function_missing_from_available_interfaces() {
+    let component_diagrams = component_diagrams(&["u1"]);
+    let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
+    let internal_api = internal_api_index(vec![("InternalInterface", vec!["OtherMethod"])]);
+
+    let mut errors = Errors::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+
+    let errors = validate_component_sequence(
+        &component_arch,
+        &sequence_index,
+        Some(&internal_api),
+        errors,
+    );
+
+    assert_eq!(errors.messages.len(), 2);
+    assert!(errors.messages.iter().any(|message| {
+        message.contains("sequence self-call function name was not found")
+            && message.contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData\"")
+    }));
+    assert!(errors.messages.iter().any(|message| {
+        message.contains("internal API interface functions are not exercised in sequence diagrams")
+            && message.contains("\"InternalInterface\"")
+            && message.contains("\"OtherMethod\"")
+    }));
+}
+
+#[test]
+fn passes_when_self_call_uses_internal_api_interface_without_component_interfaces() {
+    let component_diagrams = component_diagrams(&["u1"]);
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
 
@@ -805,6 +839,28 @@ fn passes_when_all_interface_functions_are_exercised_by_self_calls() {
 }
 
 #[test]
+fn reports_self_call_without_any_available_interfaces() {
+    let component_diagrams = component_diagrams(&["u1"]);
+    let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
+    let internal_api = internal_api_index(vec![]);
+
+    let mut errors = Errors::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+
+    let errors = validate_component_sequence(
+        &component_arch,
+        &sequence_index,
+        Some(&internal_api),
+        errors,
+    );
+
+    assert_eq!(errors.messages.len(), 1);
+    assert!(errors.messages[0].contains("sequence self-call function name was not found"));
+    assert!(errors.messages[0].contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData\""));
+}
+
+#[test]
 fn reports_method_declared_only_on_caller_side_interfaces() {
     let component_diagrams = component_diagrams_with_entities(vec![
         unit("u1", &["SharedInterface", "CallerOnlyInterface"]),
@@ -832,8 +888,7 @@ fn reports_method_declared_only_on_caller_side_interfaces() {
     assert_eq!(errors.messages.len(), 2);
     assert!(errors.messages.iter().any(|message| {
         message.contains("sequence function name was not found in the related interface methods")
-            && message.contains("\"CallerOnlyInterface\"")
-            && message.contains("<none>")
+            && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
     }));
     assert!(errors.messages.iter().any(|message| {
         message.contains("internal API interface functions are not exercised in sequence diagrams")
@@ -874,8 +929,7 @@ fn reports_method_declared_only_on_callee_side_interfaces() {
     assert_eq!(errors.messages.len(), 2);
     assert!(errors.messages.iter().any(|message| {
         message.contains("sequence function name was not found in the related interface methods")
-            && message.contains("\"CalleeOnlyInterface\"")
-            && message.contains("<none>")
+            && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
     }));
     assert!(errors.messages.iter().any(|message| {
         message.contains("internal API interface functions are not exercised in sequence diagrams")
@@ -918,9 +972,7 @@ fn reports_method_declared_on_both_sides_but_not_on_shared_interface() {
     assert_eq!(errors.messages.len(), 2);
     assert!(errors.messages.iter().any(|message| {
         message.contains("sequence function name was not found in the related interface methods")
-            && message.contains("\"CallerOnlyInterface\"")
-            && message.contains("\"CalleeOnlyInterface\"")
-            && message.contains("\"SharedInterface\"")
+            && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
     }));
     assert!(errors.messages.iter().any(|message| {
         message.contains("internal API interface functions are not exercised in sequence diagrams")

@@ -2,8 +2,8 @@
   "should_pass": false,
   "error_contains": [
     "sequence interaction does not match consumer/provider roles in the component diagram",
-    "\"unit_2\" -> \"unit_1\" : \"SendSignal\"",
-    "Caller consumes     : <none>",
-    "Callee provides     : <none>"
+    "Sequence call       : \"unit_2\" -> \"unit_1\" : \"SendSignal\"",
+    "Expected caller role: \"unit_2\" should require shared interface(s) \"package_a.InternalInterface\"",
+    "Expected callee role: \"unit_1\" should provide shared interface(s) \"package_a.InternalInterface\""
   ]
 }

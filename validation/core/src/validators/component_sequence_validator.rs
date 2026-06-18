@@ -42,6 +42,7 @@ struct ComponentSequenceValidator<'a> {
     observed_call_contexts: Vec<SequenceCallContext<'a>>,
     connected_unit_pairs: BTreeMap<(String, String), BTreeSet<String>>,
     unit_bindings: BTreeMap<String, UnitInterfaces>,
+    all_interfaces: BTreeSet<String>,
     internal_api_interfaces_by_id: Option<BTreeMap<String, &'a InternalApiInterface>>,
     errors: Errors,
 }
@@ -107,6 +108,8 @@ impl<'a> ComponentSequenceValidator<'a> {
         errors: Errors,
     ) -> Self {
         let unit_bindings = build_unit_bindings(component_diagram);
+        let all_interfaces =
+            build_all_interfaces(component_diagram, &unit_bindings, internal_api_diagram);
         let observed_call_contexts =
             build_observed_call_contexts(sequence_diagram.observed_calls(), &unit_bindings);
 
@@ -115,6 +118,7 @@ impl<'a> ComponentSequenceValidator<'a> {
             observed_call_contexts,
             connected_unit_pairs: build_connected_unit_pairs(&unit_bindings),
             unit_bindings,
+            all_interfaces,
             internal_api_interfaces_by_id: build_internal_api_interfaces_by_id(
                 internal_api_diagram,
             ),
@@ -157,19 +161,14 @@ impl<'a> ComponentSequenceValidator<'a> {
             ));
         }
 
+        log.push_str(&format!(
+            "DEBUG: All interfaces for self-call validation:\n  {}\n",
+            format_interface_names(&self.all_interfaces)
+        ));
+
         if let Some(internal_api_interfaces_by_id) = self.internal_api_interfaces_by_id.as_ref() {
             log.push_str("DEBUG: Internal API interfaces checked for method validation:\n");
-            let mut interface_ids = BTreeSet::new();
-            for bindings in self.unit_bindings.values() {
-                for interface in &bindings.all_interfaces {
-                    if has_matching_internal_api_reference(internal_api_interfaces_by_id, interface)
-                    {
-                        interface_ids.insert(interface.clone());
-                    }
-                }
-            }
-
-            for interface_id in interface_ids {
+            for interface_id in internal_api_interfaces_by_id.keys() {
                 log.push_str(&format!("  {interface_id}\n"));
             }
         }
@@ -270,14 +269,14 @@ impl<'a> ComponentSequenceValidator<'a> {
 
             self.errors.push(format!(
                 "Interface consistency violation: sequence-connected units have no corresponding shared interface connection in the component diagram:\n\
-                                    Unit pair          : {unit_pair}\n\
-                                    Interfaces for \"{left_unit}\"  : {left_interfaces}\n\
-                                    Interfaces for \"{right_unit}\" : {right_interfaces}\n\
-                  Action             : Add a shared interface relation between these units in the component diagram",
-                                unit_pair = format_unit_pair(
-                                        call_context.normalized_left_unit(),
-                                        call_context.normalized_right_unit(),
-                                ),
+                  Unit pair          : {unit_pair}\n\
+                  Interfaces for \"{left_unit}\"  : {left_interfaces}\n\
+                  Interfaces for \"{right_unit}\" : {right_interfaces}\n\
+                Action             : Add a shared interface relation between these units in the component diagram",
+                unit_pair = format_unit_pair(
+                    call_context.normalized_left_unit(),
+                    call_context.normalized_right_unit(),
+                ),
                 left_unit = call_context.normalized_left_unit(),
                 right_unit = call_context.normalized_right_unit(),
                 left_interfaces = format_interface_names(&left_interfaces),
@@ -300,6 +299,10 @@ impl<'a> ComponentSequenceValidator<'a> {
                 continue;
             }
 
+            if call_context.caller_unit == call_context.callee_unit {
+                continue;
+            }
+
             if !seen_interactions.insert((
                 call_context.caller_unit.to_string(),
                 call_context.callee_unit.to_string(),
@@ -309,24 +312,6 @@ impl<'a> ComponentSequenceValidator<'a> {
 
             let caller_bindings =
                 unit_bindings_for_alias(&self.unit_bindings, call_context.caller_unit);
-
-            if call_context.caller_unit == call_context.callee_unit {
-                let bidirectional_interfaces = intersect_interfaces(
-                    &caller_bindings.required_interfaces,
-                    &caller_bindings.provided_interfaces,
-                );
-
-                if !bidirectional_interfaces.is_empty() {
-                    continue;
-                }
-
-                self.errors.push(format_sequence_role_consistency_error(
-                    call_context,
-                    &caller_bindings.required_interfaces,
-                    &caller_bindings.provided_interfaces,
-                ));
-                continue;
-            }
 
             if !call_context.has_shared_interfaces() {
                 continue;
@@ -386,16 +371,33 @@ impl<'a> ComponentSequenceValidator<'a> {
                 continue;
             }
 
-            if !is_self_call && !call_context.has_shared_interfaces() {
+            if is_self_call {
+                let matching_interfaces = matching_interfaces_with_method(
+                    internal_api_interfaces_by_id,
+                    &self.all_interfaces,
+                    method_name,
+                );
+
+                if matching_interfaces.is_empty() {
+                    self.errors.push(format_sequence_method_consistency_error(
+                        call_context,
+                        method_name,
+                        "sequence self-call function name was not found in available interface methods",
+                        "Declare this method on one of the available interfaces in the internal API diagram",
+                    ));
+                }
+
+                continue;
+            }
+
+            if !call_context.has_shared_interfaces() {
                 // The structural interface check above already reported that this
                 // cross-unit call has no usable shared interface relation.
                 continue;
             }
 
             if missing_internal_api_interfaces_by_unit.contains_key(call_context.caller_unit)
-                || (!is_self_call
-                    && missing_internal_api_interfaces_by_unit
-                        .contains_key(call_context.callee_unit))
+                || missing_internal_api_interfaces_by_unit.contains_key(call_context.callee_unit)
             {
                 continue;
             }
@@ -417,18 +419,11 @@ impl<'a> ComponentSequenceValidator<'a> {
                 continue;
             }
 
-            let action = if is_self_call {
-                "Declare this method on an interface referenced by this unit in the internal API diagram"
-            } else {
-                "Declare this method on a shared interface referenced by both participating units in the internal API diagram"
-            };
-
             self.errors.push(format_sequence_method_consistency_error(
                 &call_context,
                 method_name,
-                &caller_matching_interfaces,
-                &callee_matching_interfaces,
-                action,
+                "sequence function name was not found in the related interface methods",
+                "Declare this method on a shared interface referenced by both participating units in the internal API diagram",
             ));
         }
     }
@@ -439,20 +434,12 @@ impl<'a> ComponentSequenceValidator<'a> {
             return;
         };
 
-        let validated_interfaces =
-            self.collect_validated_internal_api_interfaces(internal_api_interfaces_by_id);
-        let exercised_methods =
-            self.collect_exercised_methods_by_interface(internal_api_interfaces_by_id);
+        let exercised_method_names = self.collect_exercised_method_names();
 
-        for interface in validated_interfaces {
-            let empty_methods = BTreeSet::new();
+        for interface in internal_api_interfaces_by_id.values().copied() {
             let missing_methods: BTreeSet<String> = interface
                 .method_names
-                .difference(
-                    exercised_methods
-                        .get(&interface.id)
-                        .unwrap_or(&empty_methods),
-                )
+                .difference(&exercised_method_names)
                 .cloned()
                 .collect();
 
@@ -469,35 +456,6 @@ impl<'a> ComponentSequenceValidator<'a> {
                 missing_functions = format_name_list(&missing_methods),
             ));
         }
-    }
-
-    fn collect_validated_internal_api_interfaces(
-        &self,
-        internal_api_interfaces_by_id: &BTreeMap<String, &'a InternalApiInterface>,
-    ) -> Vec<&'a InternalApiInterface> {
-        let mut validated_interfaces = Vec::new();
-        let mut seen_interfaces = BTreeSet::new();
-
-        for bindings in self.unit_bindings.values() {
-            for interface_reference in &bindings.all_interfaces {
-                for interface_id in matching_internal_api_interface_ids(
-                    internal_api_interfaces_by_id,
-                    interface_reference,
-                ) {
-                    let interface = internal_api_interfaces_by_id
-                        .get(&interface_id)
-                        .copied()
-                        .expect("validator lookup should contain all internal API interface ids");
-                    if !seen_interfaces.insert(interface.id.clone()) {
-                        continue;
-                    }
-
-                    validated_interfaces.push(interface);
-                }
-            }
-        }
-
-        validated_interfaces
     }
 
     fn collect_missing_internal_api_interfaces_by_unit(
@@ -521,11 +479,8 @@ impl<'a> ComponentSequenceValidator<'a> {
             .collect()
     }
 
-    fn collect_exercised_methods_by_interface(
-        &self,
-        internal_api_interfaces_by_id: &BTreeMap<String, &'a InternalApiInterface>,
-    ) -> BTreeMap<String, BTreeSet<String>> {
-        let mut exercised_methods = BTreeMap::new();
+    fn collect_exercised_method_names(&self) -> BTreeSet<String> {
+        let mut exercised_method_names = BTreeSet::new();
 
         for call_context in &self.observed_call_contexts {
             let method_name = extract_method_name(call_context.method);
@@ -533,39 +488,10 @@ impl<'a> ComponentSequenceValidator<'a> {
                 continue;
             }
 
-            let relevant_interfaces: BTreeSet<String> =
-                if call_context.caller_unit == call_context.callee_unit {
-                    call_context.caller_interfaces.clone()
-                } else {
-                    call_context
-                        .caller_interfaces
-                        .union(&call_context.callee_interfaces)
-                        .cloned()
-                        .collect()
-                };
-
-            for interface_reference in &relevant_interfaces {
-                for interface_id in matching_internal_api_interface_ids(
-                    internal_api_interfaces_by_id,
-                    interface_reference,
-                ) {
-                    let interface = internal_api_interfaces_by_id
-                        .get(&interface_id)
-                        .copied()
-                        .expect("validator lookup should contain all internal API interface ids");
-                    if !interface.method_names.contains(method_name) {
-                        continue;
-                    }
-
-                    exercised_methods
-                        .entry(interface.id.clone())
-                        .or_insert_with(BTreeSet::new)
-                        .insert(method_name.to_string());
-                }
-            }
+            exercised_method_names.insert(method_name.to_string());
         }
 
-        exercised_methods
+        exercised_method_names
     }
 }
 
@@ -640,6 +566,33 @@ fn build_unit_bindings(
     }
 
     unit_bindings
+}
+
+fn build_all_interfaces(
+    component_diagram: &ComponentDiagramArchitecture,
+    unit_bindings: &BTreeMap<String, UnitInterfaces>,
+    internal_api_diagram: Option<&InternalApiIndex>,
+) -> BTreeSet<String> {
+    let mut interface_ids: BTreeSet<String> = component_diagram
+        .entities
+        .iter()
+        .filter(|entity| entity.is_interface())
+        .map(|entity| entity.id.clone())
+        .collect();
+
+    if let Some(internal_api_diagram) = internal_api_diagram {
+        interface_ids.extend(
+            internal_api_diagram
+                .interfaces()
+                .map(|interface| interface.id.clone()),
+        );
+    }
+
+    for bindings in unit_bindings.values() {
+        interface_ids.extend(bindings.all_interfaces.iter().cloned());
+    }
+
+    interface_ids
 }
 
 fn all_interfaces_for_alias(
@@ -770,35 +723,33 @@ fn format_sequence_role_consistency_error(
         call_context.callee_unit,
         call_context.method,
     );
+    let shared_interfaces = intersect_interfaces(
+        &call_context.caller_interfaces,
+        &call_context.callee_interfaces,
+    );
 
-    if call_context.caller_unit == call_context.callee_unit {
-        return format!(
-            "Interface consistency violation: self-call unit does not act as both consumer and provider of a referenced interface in the component diagram:\n\
-              Sequence call       : {sequence_call}\n\
-              Unit requires       : {required_interfaces}\n\
-              Unit provides       : {provided_interfaces}\n\
-              Action              : Add both required and provided bindings for at least one referenced interface on this unit in the component diagram",
-            required_interfaces = format_interface_names(caller_required_interfaces),
-            provided_interfaces = format_interface_names(callee_provided_interfaces),
-        );
-    }
+    let expected_interfaces = if shared_interfaces.is_empty() {
+        intersect_interfaces(caller_required_interfaces, callee_provided_interfaces)
+    } else {
+        shared_interfaces
+    };
 
     format!(
         "Interface consistency violation: sequence interaction does not match consumer/provider roles in the component diagram:\n\
           Sequence call       : {sequence_call}\n\
-          Caller consumes     : {caller_required_interfaces}\n\
-          Callee provides     : {callee_provided_interfaces}\n\
-          Action              : Align the sequence call direction with required/provided interface bindings in the component diagram",
-        caller_required_interfaces = format_interface_names(caller_required_interfaces),
-        callee_provided_interfaces = format_interface_names(callee_provided_interfaces),
+          Expected caller role: \"{caller_unit}\" should require shared interface(s) {expected_interfaces}\n\
+          Expected callee role: \"{callee_unit}\" should provide shared interface(s) {expected_interfaces}\n\
+          Action              : Reverse the sequence call or align the required/provided interface bindings in the component diagram",
+        caller_unit = call_context.caller_unit,
+        callee_unit = call_context.callee_unit,
+        expected_interfaces = format_interface_names(&expected_interfaces),
     )
 }
 
 fn format_sequence_method_consistency_error(
     call_context: &SequenceCallContext<'_>,
     method_name: &str,
-    caller_matching_interfaces: &BTreeSet<String>,
-    callee_matching_interfaces: &BTreeSet<String>,
+    description: &str,
     action: &str,
 ) -> String {
     let sequence_call = format_sequence_call(
@@ -807,33 +758,10 @@ fn format_sequence_method_consistency_error(
         method_name,
     );
 
-    if call_context.caller_unit == call_context.callee_unit {
-        return format!(
-            "Method consistency violation: sequence function name was not found in the related interface methods:\n\
-              Sequence call       : {sequence_call}\n\
-              Unit interfaces     : {unit_interfaces}\n\
-              Method matches      : {method_matches}\n\
-              Action              : {action}",
-            unit_interfaces = format_interface_names(&call_context.caller_interfaces),
-            method_matches = format_interface_names(caller_matching_interfaces),
-        );
-    }
-
-    let shared_interfaces = intersect_interfaces(
-        &call_context.caller_interfaces,
-        &call_context.callee_interfaces,
-    );
-
     format!(
-        "Method consistency violation: sequence function name was not found in the related interface methods:\n\
+        "Method consistency violation: {description}:\n\
           Sequence call       : {sequence_call}\n\
-          Shared interfaces   : {shared_interfaces}\n\
-          Method on caller    : {caller_matches}\n\
-          Method on callee    : {callee_matches}\n\
           Action              : {action}",
-        shared_interfaces = format_interface_names(&shared_interfaces),
-        caller_matches = format_interface_names(caller_matching_interfaces),
-        callee_matches = format_interface_names(callee_matching_interfaces),
     )
 }
 

@@ -44,7 +44,6 @@ filegroup(
     srcs = [
         "//validation/core/integration_test/component_sequence/negative_interface_function_not_exercised:case_data",
         "//validation/core/integration_test/component_sequence/negative_invalid_consumer_provider_direction:case_data",
-        "//validation/core/integration_test/component_sequence/negative_invalid_self_call_consumer_provider_roles:case_data",
         "//validation/core/integration_test/component_sequence/negative_method_missing_from_internal_api:case_data",
         "//validation/core/integration_test/component_sequence/negative_missing_interface_connection_for_sequence_connected_units:case_data",
         "//validation/core/integration_test/component_sequence/negative_missing_method_in_related_interface:case_data",
