@@ -78,9 +78,6 @@ Checklists
 
    {checklists}
 
-Glossary
---------
-
 .. toctree::
    :maxdepth: 2
    :caption: Glossary

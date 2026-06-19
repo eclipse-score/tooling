@@ -35,6 +35,5 @@ trlc_requirements_test(
 glossary(
     name = "glossary",
     srcs = ["glossary.rst"],
-    tags = ["manual"],
     visibility = ["//visibility:public"],
 )

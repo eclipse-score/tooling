@@ -44,6 +44,7 @@ def _glossary_impl(ctx):
         SphinxSourcesInfo(
             srcs = source_files,
             deps = source_files,
+            aux_srcs = depset(),
         ),
     ]
 
