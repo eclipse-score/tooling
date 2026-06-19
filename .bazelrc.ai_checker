@@ -12,27 +12,28 @@
 # *******************************************************************************
 
 ###############################################################################
-## GitHub Copilot SDK - Environment (config:copilot)
+## GitHub Copilot SDK - Environment
 ###############################################################################
-# The Copilot CLI needs HOME (for stored OAuth credentials) and proxy vars
-# (to reach api.github.com behind a corporate proxy).
+# No environment configuration is required here. The AI analysis runs at TEST
+# time and the AI test rules bake the required environment-variable inheritance
+# (HOME, the GitHub tokens, and proxy variables) into each target via
+# RunEnvironmentInfo. Running `bazel test //path/to:my_ai_check` inherits those
+# variables from your shell automatically — no --config or --test_env needed.
 #
-# These are scoped to --config=copilot so they don't affect other builds.
-# The AI checker BUILD target applies this config automatically via a
-# test --config=copilot line below.
+# Provide credentials by exporting one of COPILOT_GITHUB_TOKEN / GH_TOKEN /
+# GITHUB_TOKEN, or by logging in via the Copilot CLI (writes ~/.copilot/config.json).
 #
 # Auth docs: https://github.com/github/copilot-sdk/blob/main/docs/auth/index.md
 
-# Auth
-build:copilot --action_env=HOME
-build:copilot --action_env=COPILOT_GITHUB_TOKEN
-build:copilot --action_env=GH_TOKEN
-build:copilot --action_env=GITHUB_TOKEN
-
-# Proxy (Node.js checks both upper and lowercase)
-build:copilot --action_env=HTTP_PROXY
-build:copilot --action_env=HTTPS_PROXY
-build:copilot --action_env=NO_PROXY
-build:copilot --action_env=http_proxy
-build:copilot --action_env=https_proxy
-build:copilot --action_env=no_proxy
+###############################################################################
+## Project-specific guidelines (optional)
+###############################################################################
+# General + element-type guidelines are built in. Project-specific details
+# (e.g. requirement levels, architecture levels) are injected as graded rules
+# via label flags, set once here instead of on every AI test target.
+#
+# Point them at your own filegroup of .md files, or reuse the bundled SCORE
+# examples shown below.
+#
+# build --//validation/ai_checker:project_guidelines=//validation/ai_checker:score_project_guidelines
+# build --//validation/ai_checker:project_architecture_guidelines=//validation/ai_checker:score_project_architecture_guidelines

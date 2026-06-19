@@ -24,10 +24,9 @@ import sys
 import time
 from typing import Any
 
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import ValidationError
 
+from ai_checker.analysis_agent import AnalysisAgent
 from ai_checker.analysis_cache import AnalysisCache
 from ai_checker.analysis_models import AnalysisResults
 from ai_checker.constants import DEFAULT_MODEL
@@ -70,8 +69,12 @@ class AIChecker:
         self._max_batch_chars = max_batch_chars
         self._semaphore = asyncio.Semaphore(max_concurrent_requests)
 
-        # Set up logger (use fixed name to prevent handler leaks across instances)
-        self._logger = logging.getLogger(f"{__name__}.AIChecker")
+        # Set up a per-instance logger. Using id(self) in the name keeps each
+        # AIChecker's handlers isolated, so two instances with different
+        # debug_log paths do not clobber each other's file handler (a shared
+        # fixed name would). One instance is created per CLI run, so the
+        # logger-registry growth is negligible.
+        self._logger = logging.getLogger(f"{__name__}.AIChecker.{id(self)}")
         self._logger.setLevel(logging.DEBUG)
         self._logger.propagate = False
         self._logger.handlers.clear()
@@ -106,7 +109,11 @@ class AIChecker:
         """
         # Create a deterministic string representation of artefacts
         artefact_data = json.dumps(artefacts, sort_keys=True)
-        combined = f"{artefact_data}:{guidelines_content}:{self._model_name}"
+        # Include the output schema: the agent embeds it in the request (e.g.
+        # CopilotAgent's JSON instruction), so a schema change must invalidate
+        # cached results rather than relying on validation to reject them.
+        schema = json.dumps(AnalysisResults.model_json_schema(), sort_keys=True)
+        combined = f"{artefact_data}:{guidelines_content}:{self._model_name}:{schema}"
         return hashlib.sha256(combined.encode("utf-8")).hexdigest()
 
     def _format_artefacts_for_analysis(
@@ -180,18 +187,19 @@ class AIChecker:
     async def analyze(
         self,
         artefacts: dict[str, dict[str, Any]],
-        guidelines_content: str,
-        chat_model: BaseChatModel,
+        system_prompt: str,
+        agent: AnalysisAgent,
     ) -> AnalysisResults:
         """
-        Analyze artefacts using the chat model with structured output.
+        Analyze artefacts using the agent with structured output.
         Uses async processing with rate limiting for concurrent requests.
         Uses caching if enabled to avoid redundant API calls.
 
         Args:
             artefacts: Dictionary mapping artefact IDs to their metadata
-            guidelines_content: Combined content of all guidelines
-            chat_model: BaseChatModel instance for AI analysis
+            system_prompt: Combined system instructions — guidelines plus any
+                background context — used as the system message
+            agent: AnalysisAgent instance for AI analysis
 
         Returns:
             AnalysisResults containing structured analyses for each artefact
@@ -217,7 +225,7 @@ class AIChecker:
 
         # Create tasks for all batches to process concurrently
         batch_tasks = [
-            self._analyze_batch_async(i + 1, batch, guidelines_content, chat_model)
+            self._analyze_batch_async(i + 1, batch, system_prompt, agent)
             for i, batch in enumerate(batches)
         ]
 
@@ -227,27 +235,29 @@ class AIChecker:
 
         # Flatten results from all batches, handling exceptions
         all_analyses = []
-        failed_batches = 0
+        failed_batch_numbers = []
         for i, batch_results in enumerate(all_batch_results):
             if isinstance(batch_results, Exception):
-                failed_batches += 1
-                self._logger.warning(
-                    f"--> WARNING: Batch {i + 1} failed with error: "
+                failed_batch_numbers.append(i + 1)
+                self._logger.error(
+                    f"--> Batch {i + 1} failed: "
                     f"{type(batch_results).__name__}: {str(batch_results)}"
                 )
             else:
                 all_analyses.extend(batch_results)
 
-        if failed_batches > 0:
-            self._logger.warning(
-                f"--> WARNING: {failed_batches} out of {num_batches} batches failed. "
-                f"Successfully analyzed {len(all_analyses)} requirement(s)."
+        if failed_batch_numbers:
+            failed_list = ", ".join(str(n) for n in failed_batch_numbers)
+            raise RuntimeError(
+                f"{len(failed_batch_numbers)} of {num_batches} batches failed "
+                f"(batch number(s): {failed_list}). "
+                f"Analyzed {len(all_analyses)} requirement(s) in the "
+                f"{num_batches - len(failed_batch_numbers)} successful batch(es). "
+                "See log output above for the per-batch errors."
             )
 
         # Calculate final statistics
-        current_total_cost = 0.0
-        if chat_model and hasattr(chat_model, "total_costs"):
-            current_total_cost = getattr(chat_model, "total_costs", 0.0)
+        usage = agent.get_usage()
 
         # Log final statistics
         total_elapsed = time.time() - total_start_time
@@ -255,7 +265,15 @@ class AIChecker:
         average_score = sum(all_scores) / len(all_scores) if all_scores else 0.0
 
         self._logger.info(f"--> Execution time: {total_elapsed:.2f}s")
-        self._logger.info(f"--> Total costs: ${current_total_cost:.4f} USD")
+        if usage.is_empty:
+            self._logger.info("--> Usage not reported by SDK")
+        else:
+            if usage.cost_usd:
+                self._logger.info(f"--> Total cost: ${usage.cost_usd:.4f} USD")
+            if usage.ai_credits:
+                self._logger.info(f"--> Total AI credits: {usage.ai_credits:.4f} AIU")
+            if usage.tokens:
+                self._logger.info(f"--> Total tokens: {usage.tokens}")
         self._logger.info(f"--> Overall average score: {average_score:.2f}")
 
         return AnalysisResults(analyses=all_analyses)
@@ -264,8 +282,8 @@ class AIChecker:
         self,
         batch_number: int,
         artefacts: dict[str, dict[str, Any]],
-        guidelines_content: str,
-        chat_model: BaseChatModel,
+        system_prompt: str,
+        agent: AnalysisAgent,
     ) -> list[Any]:
         """
         Analyze a batch of artefacts using async with rate limiting.
@@ -273,8 +291,8 @@ class AIChecker:
         Args:
             batch_number: The batch number (1-indexed) for logging
             artefacts: Dictionary mapping artefact IDs to their metadata
-            guidelines_content: Combined content of all guidelines
-            chat_model: BaseChatModel instance for AI analysis
+            system_prompt: Combined system instructions (guidelines + context)
+            agent: AnalysisAgent instance for AI analysis
 
         Returns:
             List of analysis results for all artefacts in the batch
@@ -288,12 +306,10 @@ class AIChecker:
         self._logger.debug(
             f"Batch {batch_number} contains artefact IDs: {', '.join(artefacts.keys())}"
         )
-        self._logger.debug(
-            f"Guidelines content length: {len(guidelines_content)} characters"
-        )
+        self._logger.debug(f"System prompt length: {len(system_prompt)} characters")
 
         # Check cache first
-        cache_hash = self._generate_cache_key(artefacts, guidelines_content)
+        cache_hash = self._generate_cache_key(artefacts, system_prompt)
         cached_result = self._cache.get(cache_hash)
         if cached_result is not None:
             self._logger.info(f"--> Batch {batch_number}: Completed (from cache)")
@@ -302,16 +318,6 @@ class AIChecker:
         # Use semaphore for rate limiting
         async with self._semaphore:
             try:
-                self._logger.debug(
-                    f"Batch {batch_number}: Creating structured chat model..."
-                )
-
-                # Create structured chat model
-                structured_chat = chat_model.with_structured_output(AnalysisResults)
-
-                # Prepare system message with guidelines
-                system_message = SystemMessage(content=guidelines_content)
-
                 # Format requirements for analysis
                 formatted_artefacts = self._format_artefacts_for_analysis(artefacts)
 
@@ -323,13 +329,11 @@ class AIChecker:
                     f"Batch {batch_number}: ===== RAW AI MODEL INPUT ====="
                 )
                 self._logger.debug(
-                    f"Batch {batch_number}: System Message (Guidelines):"
+                    f"Batch {batch_number}: System Prompt (Guidelines + Context):"
                 )
-                self._logger.debug(guidelines_content)
+                self._logger.debug(system_prompt)
                 self._logger.debug(f"Batch {batch_number}: ---")
-                self._logger.debug(
-                    f"Batch {batch_number}: Human Message (Requirements):"
-                )
+                self._logger.debug(f"Batch {batch_number}: Human Message (Artefacts):")
                 self._logger.debug(formatted_artefacts)
                 self._logger.debug(
                     f"Batch {batch_number}: ===== END RAW AI MODEL INPUT ====="
@@ -339,13 +343,9 @@ class AIChecker:
                     f"({self._model_name})..."
                 )
 
-                analysis_prompt = HumanMessage(content=formatted_artefacts)
-
-                # Call async invoke
+                # Call the agent (single structured-output request)
                 start_time = time.time()
-                response = await structured_chat.ainvoke(
-                    [system_message, analysis_prompt]
-                )
+                response = await agent.analyze(system_prompt, formatted_artefacts)
                 elapsed = time.time() - start_time
 
                 self._logger.debug(

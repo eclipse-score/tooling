@@ -89,6 +89,7 @@ def _assumptions_of_use_impl(ctx):
         SphinxSourcesInfo(
             srcs = all_srcs,
             deps = depset(transitive = transitive),
+            aux_srcs = depset(),
         ),
     ]
 

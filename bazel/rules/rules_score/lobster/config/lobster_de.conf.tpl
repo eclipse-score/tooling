@@ -3,9 +3,7 @@ requirements "Feature Requirements" {
 }
 
 requirements "Component Requirements" {
-{COMP_REQ_SOURCES}
-  trace to: "Feature Requirements";
-}
+{COMP_REQ_SOURCES}{COMP_REQ_TRACE}}
 
 activity "Unit Test" {
 {UNIT_TEST_SOURCES}

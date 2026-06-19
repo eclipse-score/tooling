@@ -261,3 +261,32 @@ self-contained.
                                               ├── index.html
                                               ├── dep1/     ← merged
                                               └── dep2/     ← merged
+
+.. _safety-analysis-doc-pipeline:
+
+Safety analysis document pipeline
+----------------------------------
+
+The diagram below shows how FMEA and FTA source files travel through the three
+rules (``fmea`` → ``dependability_analysis`` → ``dependable_element``) and land
+in the Sphinx staging tree.  Blue boxes are source files authored by the
+component team; orange boxes are generated files; yellow boxes are the
+``SphinxSourcesInfo`` provider payloads; the purple box is the final staging
+directory consumed by Sphinx.
+
+.. uml:: _assets/safety_analysis_doc_pipeline.puml
+   :align: center
+   :alt: Safety analysis document pipeline
+   :width: 100%
+
+``SphinxSourcesInfo`` carries three depsets:
+
+- **srcs** — files that become top-level toctree entries in the enclosing
+  document section (``fmea.rst``, ``dfa.rst``).
+- **deps** — all files that must be present in the staging directory: own
+  ``srcs`` plus ``.inc`` rendered sections and preprocessed ``.puml`` diagrams
+  that ``fmea.rst`` pulls in via ``.. include::`` / ``.. uml::``.
+- **aux_srcs** — files to symlink alongside ``srcs``/``deps`` but **not** added
+  to the outer index toctree.  ``fmea`` uses this for the ``detail_*.rst``
+  sub-pages, which are referenced from the inner ``.. toctree::`` inside
+  ``fmea.rst`` rather than from the section index.

@@ -17,7 +17,7 @@ This module provides functionality to parse TRLC requirement files and extract
 requirement metadata into a structured format suitable for AI analysis.
 """
 
-import argparse
+import logging
 import os
 from typing import Any
 
@@ -25,7 +25,9 @@ import trlc.ast
 from trlc.errors import Message_Handler
 from trlc.trlc import Source_Manager
 
-from ai_checker.artefact_extractor import ArtefactExtractor
+from ai_checker.extractors.base import ArtefactExtractor, unique_key
+
+logger = logging.getLogger(__name__)
 
 
 class RequirementExtractor(ArtefactExtractor):
@@ -33,7 +35,7 @@ class RequirementExtractor(ArtefactExtractor):
 
     def __init__(
         self,
-        input_directory: str,
+        input_directory: str | None = None,
         dependency_directories: list[str] | None = None,
         req_files: list[str] | None = None,
     ):
@@ -41,21 +43,28 @@ class RequirementExtractor(ArtefactExtractor):
         Initialize the RequirementExtractor with directory paths.
 
         Args:
-            input_directory: Path to directory containing TRLC files to
-                analyze
+            input_directory: Optional path to a directory containing TRLC
+                files to analyze. When ``req_files`` is given this is not
+                required: the explicit files then define both what is parsed
+                and the grading scope.
             dependency_directories: Optional list of additional
                 directories for link resolution
             req_files: Optional list of individual TRLC files to register
                 instead of scanning the entire input directory. When set,
-                only these files are registered so that other files present
-                in the same directory (e.g. files not declared in Bazel
-                srcs) are not picked up by TRLC.
+                only these files are registered (so other files present in
+                the same directory are not picked up by TRLC) and exactly
+                these files form the grading scope.
         """
-        self.input_directory = os.path.abspath(input_directory)
+        # Use realpath (not abspath) so the scope check in
+        # extract_requirements_data() is symlink-safe: a symlinked source file
+        # is compared on its resolved path against the resolved scope.
+        self.input_directory = (
+            os.path.realpath(input_directory) if input_directory else None
+        )
         self.dependency_directories = [
-            os.path.abspath(d) for d in (dependency_directories or [])
+            os.path.realpath(d) for d in (dependency_directories or [])
         ]
-        self.req_files = [os.path.abspath(f) for f in (req_files or [])]
+        self.req_files = [os.path.realpath(f) for f in (req_files or [])]
         self.symbols: trlc.ast.Symbol_Table | None = None
 
     def parse_trlc_files(self) -> trlc.ast.Symbol_Table:
@@ -92,7 +101,9 @@ class RequirementExtractor(ArtefactExtractor):
         else:
             # Original behaviour: register all directories (input + deps).
             # Collect all directories and filter out overlapping ones.
-            all_dirs = [self.input_directory] + self.dependency_directories
+            all_dirs = (
+                [self.input_directory] if self.input_directory else []
+            ) + self.dependency_directories
 
             # Remove duplicates and filter out directories that are
             # subdirectories of others
@@ -180,8 +191,10 @@ class RequirementExtractor(ArtefactExtractor):
         """
         Extract structured requirement data from TRLC symbol table.
 
-        Only extracts requirements from the input_directory, not from
-        dependency directories.
+        The grading scope is, in order of precedence, the explicit ``req_files``
+        (directory-independent), then the ``input_directory`` prefix, then all
+        parsed objects. Objects outside the scope (e.g. dependencies) are used
+        for link resolution only and are not graded.
 
         Returns:
             List of dictionaries, each containing:
@@ -195,13 +208,23 @@ class RequirementExtractor(ArtefactExtractor):
 
         requirements = []
 
+        # Determine the grading scope. When explicit req files are given they
+        # define the scope exactly (directory-independent, so requirements
+        # spread across several directories are all graded). Otherwise fall
+        # back to the input directory prefix, and if neither is set grade every
+        # parsed object.
+        req_file_scope = set(self.req_files)
+
         for obj in self.symbols.iter_record_objects():
-            # Only extract requirements from the input directory (not dependencies).
-            # Use `+ os.sep` to avoid false-positive prefix matches
-            # (e.g. /foo/bar matching /foo/barbaz).
-            obj_file_path = os.path.abspath(obj.location.file_name)
-            if not obj_file_path.startswith(self.input_directory + os.sep):
-                continue
+            obj_file_path = os.path.realpath(obj.location.file_name)
+            if req_file_scope:
+                if obj_file_path not in req_file_scope:
+                    continue
+            elif self.input_directory is not None:
+                # Use `+ os.sep` to avoid false-positive prefix matches
+                # (e.g. /foo/bar matching /foo/barbaz).
+                if not obj_file_path.startswith(self.input_directory + os.sep):
+                    continue
 
             unique_id = obj.fully_qualified_name()
 
@@ -262,31 +285,21 @@ class RequirementExtractor(ArtefactExtractor):
             if parent is not None and not isinstance(parent, str):
                 parent = "[not resolved]"
 
-            artefacts[req_id] = {
+            # Guard against duplicate fully-qualified names: disambiguate with a
+            # suffix instead of letting a later object silently overwrite (and
+            # drop) an earlier requirement from the graded set.
+            key = unique_key(artefacts, req_id)
+            if key != req_id:
+                logger.warning(
+                    "Duplicate requirement ID %r — grading the duplicate as %r.",
+                    req_id,
+                    key,
+                )
+
+            artefacts[key] = {
                 "description": req["description"],
                 "parent": parent,
                 "type": req["requirement_type"],
             }
 
         return artefacts
-
-
-# CLI interface - for direct command-line usage only
-def argument_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", required=True)
-
-    return parser
-
-
-def main() -> None:
-    parser = argument_parser()
-    args = parser.parse_args()
-
-    extractor = RequirementExtractor(args.input)
-    testfiles = extractor.extract()
-    print(testfiles)
-
-
-if __name__ == "__main__":
-    main()

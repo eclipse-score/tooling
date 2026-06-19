@@ -22,6 +22,8 @@ import logging
 import os
 from typing import Optional
 
+from pydantic import ValidationError
+
 from ai_checker.analysis_models import AnalysisResults
 
 logger = logging.getLogger(__name__)
@@ -63,9 +65,13 @@ class AnalysisCache:
                 with open(cache_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 return AnalysisResults.model_validate(data)
-            except Exception as exc:
+            except (OSError, json.JSONDecodeError, ValidationError) as exc:
+                # Corrupt/unreadable cache entry — treat as a miss and re-run.
+                # Narrow to expected I/O and parse/validation errors so an
+                # unexpected programming error still surfaces instead of being
+                # silently swallowed as a cache miss.
                 logger.warning(
-                    "Failed to read cache file %s: %s: %s",
+                    "Ignoring unusable cache file %s: %s: %s",
                     cache_file,
                     type(exc).__name__,
                     exc,
@@ -88,19 +94,13 @@ class AnalysisCache:
         try:
             with open(cache_file, "w", encoding="utf-8") as f:
                 f.write(results.model_dump_json(indent=2))
-        except Exception as exc:
+        except OSError as exc:
+            # A failed cache write is non-fatal (the result is still returned
+            # to the caller); log it so a full disk / permission problem is
+            # visible rather than silently degrading every run to no-cache.
             logger.warning(
                 "Failed to write cache file %s: %s: %s",
                 cache_file,
                 type(exc).__name__,
                 exc,
             )
-
-    def is_enabled(self) -> bool:
-        """
-        Check if caching is enabled.
-
-        Returns:
-            True if cache directory is configured, False otherwise
-        """
-        return self._cache_dir is not None
