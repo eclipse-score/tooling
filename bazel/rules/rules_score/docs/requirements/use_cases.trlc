@@ -142,6 +142,17 @@ section "Use Cases" {
         affected_tools = [Tools.Docs, Tools.Bazel]
     }
 
+    ToolQualification.UseCase Forward_AoU_To_Dependees {
+        description = '''
+            As a system integrator I want assumptions of use defined by a
+            dependable element to be automatically forwarded to the elements
+            that depend on it so that the integrating project is made aware
+            of all conditions it must satisfy — including those originating
+            from transitive dependencies.
+        '''
+        affected_tools = [Tools.Bazel, Tools.Lobster]
+    }
+
     ToolQualification.UseCase Validate_Architecture_Specification_Documents {
         description = '''
             As a software architect I want the build to verify that architectural

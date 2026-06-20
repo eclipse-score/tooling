@@ -625,6 +625,10 @@ and scope checks at build/test time.
      - label list
      - no
      - Other ``dependable_element`` targets for cross-referencing and HTML merging (default ``[]``)
+   * - ``aou_forwarding``
+     - label
+     - no
+     - A YAML file selecting which *received* AoUs to chain-forward to elements that depend on this one. Each entry requires an ``aou_id`` and a ``justification``. Own AoUs (from ``assumptions_of_use``) are always forwarded automatically.
    * - ``maturity``
      - string
      - no
