@@ -10,9 +10,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+load("@trlc//:trlc.bzl", "trlc_requirements")
 load(
     "//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
+    "assumptions_of_use",
     "component",
     "dependable_element",
     "unit",
@@ -23,6 +25,17 @@ architectural_design(
     static = [
         "static_design.puml",
     ],
+)
+
+trlc_requirements(
+    name = "aous_trlc",
+    srcs = ["aous.trlc"],
+    spec = ["@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model"],
+)
+
+assumptions_of_use(
+    name = "other_library_aous",
+    srcs = [":aous_trlc"],
 )
 
 unit(
@@ -48,7 +61,7 @@ component(
 dependable_element(
     name = "other_seooc",
     architectural_design = [":sample_seooc_design"],
-    assumptions_of_use = [],
+    assumptions_of_use = [":other_library_aous"],
     components = [":component_example"],
     dependability_analysis = [],
     integrity_level = "D",
