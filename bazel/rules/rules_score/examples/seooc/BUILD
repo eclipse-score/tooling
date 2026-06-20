@@ -49,8 +49,11 @@ dependability_analysis(
 
 dependable_element(
     name = "safety_software_seooc_example",
+    # Chain-forward received AoUs that this element cannot handle itself.
+    # TimingConstraint from other_seooc is forwarded to dependees (integrator).
+    aou_forwarding = "aou_forwarding.yaml",
     architectural_design = ["//bazel/rules/rules_score/examples/seooc/design:sample_seooc_design"],
-    assumptions_of_use = [],
+    assumptions_of_use = ["//bazel/rules/rules_score/examples/seooc/docs:sample_aous"],
     components = [":component_example"],
     dependability_analysis = [
         ":sample_dependability_analysis",
@@ -60,5 +63,6 @@ dependable_element(
         "//bazel/rules/rules_score/examples/seooc/docs/requirements:feature_requirements",
     ],
     tests = [],
+    visibility = ["//:__subpackages__"],
     deps = ["//bazel/rules/rules_score/examples/some_other_library:other_seooc"],
 )

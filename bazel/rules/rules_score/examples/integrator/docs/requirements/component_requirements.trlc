@@ -1,0 +1,44 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package IntegratorComponent
+
+import ScoreReq
+import Integrator
+
+ScoreReq.CompReq COMP_INT_001 {
+    description = "The startup module shall call the SEooC initialization routine before entering the main loop"
+    safety = ScoreReq.Asil.B
+    derived_from = [Integrator.FEAT_INT_001@1]
+    version = 1
+}
+
+ScoreReq.CompReq COMP_INT_002 {
+    description = "The cyclic task shall invoke the validation interface every 10ms using a hardware timer interrupt"
+    safety = ScoreReq.Asil.B
+    derived_from = [Integrator.FEAT_INT_002@1]
+    version = 1
+}
+
+ScoreReq.CompReq COMP_INT_003 {
+    description = "The fault handler shall assert the safe-state output within 50ms of receiving a validation failure"
+    safety = ScoreReq.Asil.B
+    derived_from = [Integrator.FEAT_INT_003@1]
+    version = 1
+}
+
+ScoreReq.CompReq COMP_INT_004 {
+    description = "The diagnostic reporter shall provide a health status register readable via the diagnostic interface"
+    safety = ScoreReq.Asil.B
+    derived_from = [Integrator.FEAT_INT_004@1]
+    version = 1
+}
