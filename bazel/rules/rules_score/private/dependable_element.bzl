@@ -29,12 +29,14 @@ load(
     "//bazel/rules/rules_score:providers.bzl",
     "ArchitecturalDesignInfo",
     "AssumedSystemRequirementsInfo",
+    "AssumptionsOfUseInfo",
     "CertifiedScope",
     "ComponentInfo",
     "DependabilityAnalysisInfo",
     "DependableElementInfo",
     "DependableElementLobsterInfo",
     "FeatureRequirementsInfo",
+    "ForwardedAoUInfo",
     "SphinxIndexFileInfo",
     "SphinxModuleInfo",
     "SphinxNeedsInfo",
@@ -1011,19 +1013,70 @@ def _dependable_element_index_impl(ctx):
     cm_list = [sa_lobster_files["controlmeasures.lobster"]] if "controlmeasures.lobster" in sa_lobster_files else []
     rc_list = [sa_lobster_files["root_causes.lobster"]] if "root_causes.lobster" in sa_lobster_files else []
 
+    # =========================================================================
+    # AoU Forwarding: collect own AoUs and received AoUs from deps
+    # =========================================================================
+
+    # Collect own AoU lobster files from assumptions_of_use targets
+    own_aou_lobster_files = []
+    for aou_target in ctx.attr.assumptions_of_use:
+        if AssumptionsOfUseInfo in aou_target:
+            own_aou_lobster_files.append(aou_target[AssumptionsOfUseInfo].aou_lobster)
+
+    own_aou_lobster_depset = depset(transitive = own_aou_lobster_files)
+
+    # Collect forwarded AoU lobster files from deps (received AoUs)
+    received_aou_lobster_files = []
+    for dep in ctx.attr.processed_deps:
+        if ForwardedAoUInfo in dep:
+            fwd_info = dep[ForwardedAoUInfo]
+            received_aou_lobster_files.append(fwd_info.own_aou_lobster)
+            received_aou_lobster_files.append(fwd_info.chain_forwarded_lobster)
+
+    received_aou_lobster_depset = depset(transitive = received_aou_lobster_files)
+    received_aou_list = received_aou_lobster_depset.to_list()
+
+    # Chain-forwarding: if aou_forwarding YAML is provided, filter received AoUs
+    chain_forwarded_lobster_depset = depset()
+    if ctx.file.aou_forwarding and received_aou_list:
+        chain_forwarded_lobster_file = ctx.actions.declare_file(
+            ctx.label.name + "/chain_forwarded_aous.lobster",
+        )
+        fwd_args = ctx.actions.args()
+        fwd_args.add("--yaml", ctx.file.aou_forwarding)
+        fwd_args.add("--output", chain_forwarded_lobster_file)
+        fwd_args.add("--input-lobster")
+        fwd_args.add_all(received_aou_list)
+        ctx.actions.run(
+            inputs = [ctx.file.aou_forwarding] + received_aou_list,
+            outputs = [chain_forwarded_lobster_file],
+            executable = ctx.executable._aou_forwarding_tool,
+            arguments = [fwd_args],
+            progress_message = "Filtering chain-forwarded AoUs for %s" % ctx.label.name,
+            mnemonic = "AoUForwarding",
+        )
+        chain_forwarded_lobster_depset = depset([chain_forwarded_lobster_file])
+        output_files.append(chain_forwarded_lobster_file)
+
     lobster_report_file = None
     lobster_html_report = None
     lobster_rst_dir = None
     lobster_files = []
     if feat_req_list:
+        # Build comp_req trace-to lines (Feature Requirements + optionally Forwarded AoUs)
+        comp_req_trace_lines = ""
+        if comp_req_list:
+            comp_req_trace_lines = "  trace to: \"Feature Requirements\";\n"
+
         lobster_config = ctx.actions.declare_file(ctx.label.name + "/de_traceability_config")
         ctx.actions.expand_template(
             template = ctx.file._lobster_de_template,
             output = lobster_config,
             substitutions = {
                 "{FEAT_REQ_SOURCES}": format_lobster_sources(feat_req_list),
+                "{FORWARDED_AOU_SOURCES}": format_lobster_sources(received_aou_list),
                 "{COMP_REQ_SOURCES}": format_lobster_sources(comp_req_list),
-                "{COMP_REQ_TRACE}": ("  trace to: \"Feature Requirements\";\n") if comp_req_list else "",
+                "{COMP_REQ_TRACE}": comp_req_trace_lines,
                 "{ARCH_SOURCES}": format_lobster_sources(comp_arch_list),
                 "{UNIT_TEST_SOURCES}": format_lobster_sources(comp_test_list),
                 "{PUBLIC_API_SOURCES}": format_lobster_sources(interface_req_list),
@@ -1033,7 +1086,7 @@ def _dependable_element_index_impl(ctx):
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list
+        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_html_report = subrule_lobster_html_report(lobster_report_file)
 
@@ -1076,6 +1129,10 @@ def _dependable_element_index_impl(ctx):
             lobster_report = lobster_report_file,
             lobster_html_report = lobster_html_report,
             lobster_rst_dir = lobster_rst_dir,
+        ),
+        ForwardedAoUInfo(
+            own_aou_lobster = own_aou_lobster_depset,
+            chain_forwarded_lobster = chain_forwarded_lobster_depset,
         ),
         OutputGroupInfo(debug = depset([validation_log])),
     ]
@@ -1132,6 +1189,11 @@ _dependable_element_index = rule(
                 default = [],
                 doc = "Dependencies on other dependable element modules (submodules).",
             ),
+            "aou_forwarding": attr.label(
+                allow_single_file = [".yaml", ".yml"],
+                default = None,
+                doc = "Optional YAML file listing received AoU IDs to further-forward to this element's own dependees. Only needed for chain-forwarding.",
+            ),
             "integrity_level": attr.string(
                 mandatory = True,
                 values = _INTEGRITY_LEVELS,
@@ -1158,6 +1220,12 @@ _dependable_element_index = rule(
                 executable = True,
                 cfg = "exec",
                 doc = "Lobster RST report tool for generating the multi-page Sphinx traceability report.",
+            ),
+            "_aou_forwarding_tool": attr.label(
+                default = Label("//bazel/rules/rules_score:aou_forwarding_to_lobster"),
+                executable = True,
+                cfg = "exec",
+                doc = "Tool for filtering received AoU lobster entries based on chain-forwarding YAML.",
             ),
         },
         **VERBOSITY_ATTR
@@ -1272,6 +1340,7 @@ def dependable_element(
         integrity_level,
         checklists = [],
         deps = [],
+        aou_forwarding = None,
         maturity = "release",
         sphinx = Label("//bazel/rules/rules_score:score_build"),
         testonly = True,
@@ -1308,6 +1377,9 @@ def dependable_element(
             safety checklists and verification documents.
         deps: Optional list of other module targets this element depends on.
             Cross-references will work automatically.
+        aou_forwarding: Optional label to a YAML file listing received AoU IDs
+            to further-forward to this element's own dependees. Only needed for
+            chain-forwarding received AoUs that this element cannot handle.
         sphinx: Label to sphinx build binary. Default: //bazel/rules/rules_score:score_build
         testonly: If True, only testonly targets can depend on this target.
 
@@ -1337,6 +1409,7 @@ def dependable_element(
         tests = tests,
         deps = deps,
         processed_deps = processed_deps,
+        aou_forwarding = aou_forwarding,
         integrity_level = integrity_level,
         maturity = maturity,
         testonly = testonly,
