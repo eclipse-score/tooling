@@ -2,6 +2,10 @@ requirements "Feature Requirements" {
 {FEAT_REQ_SOURCES}
 }
 
+requirements "Forwarded AoUs" {
+{FORWARDED_AOU_SOURCES}
+}
+
 requirements "Component Requirements" {
 {COMP_REQ_SOURCES}{COMP_REQ_TRACE}}
 
