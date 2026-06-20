@@ -123,4 +123,57 @@ section "Tool Requirements" {
 
     }
 
+    section "AoU Forwarding" {
+
+        ToolQualification.ToolRequirement Forward_Own_AoUs_To_Dependees {
+            description = '''
+                The dependable_element rule shall automatically include lobster
+                traceability entries for all assumptions of use defined by its
+                direct dependencies in the dependee's traceability report as
+                a "Forwarded AoUs" tier.
+            '''
+            mitigates = [AoU_Silently_Dropped]
+            derived_from = [Forward_AoU_To_Dependees]
+            satisfied_by = Tools.Bazel
+        }
+
+        ToolQualification.ToolRequirement Chain_Forward_Received_AoUs {
+            description = '''
+                The dependable_element rule shall support an aou_forwarding
+                attribute pointing to a YAML file that selects which received
+                AoUs are forwarded further to elements that depend on this
+                element. Each entry in the YAML shall require a mandatory
+                justification field.
+            '''
+            mitigates = [AoU_Silently_Dropped]
+            derived_from = [Forward_AoU_To_Dependees]
+            satisfied_by = Tools.Bazel
+        }
+
+        ToolQualification.ToolRequirement Reject_Unknown_AoU_In_Forwarding_YAML {
+            description = '''
+                The AoU forwarding tool shall exit with a non-zero return code
+                when the forwarding YAML references an AoU identifier that does
+                not exist in the set of received AoUs, preventing silent
+                misconfiguration.
+            '''
+            mitigates = [Invalid_Forwarding_YAML_Accepted]
+            derived_from = [Forward_AoU_To_Dependees]
+            satisfied_by = Tools.Bazel
+        }
+
+        ToolQualification.ToolRequirement Include_Forwarded_AoUs_In_Traceability {
+            description = '''
+                The lobster traceability report of a dependee shall include
+                forwarded AoUs as traceable items so that the existing
+                lobster-ci-report test fails when forwarded AoUs are not
+                handled (linked to a requirement, test, or justification).
+            '''
+            mitigates = [AoU_Silently_Dropped]
+            derived_from = [Forward_AoU_To_Dependees, Gate_Traceability_At_Test_Time]
+            satisfied_by = Tools.Lobster
+        }
+
+    }
+
 }
