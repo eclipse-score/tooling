@@ -44,7 +44,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 # Merge into a rule's attrs dict with ``**VERBOSITY_ATTR``.
 VERBOSITY_ATTR = {
     "_verbosity": attr.label(
-        default = Label("//bazel/rules/rules_score:verbosity"),
+        default = Label("@score_tooling//bazel/rules/rules_score:verbosity"),
         doc = "Verbosity level build setting (warn/info/debug).",
     ),
 }

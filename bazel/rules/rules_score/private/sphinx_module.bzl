@@ -414,12 +414,6 @@ def sphinx_module(
                     extension will not be available).
         visibility: Bazel visibility
     """
-    if graphviz == None:
-        graphviz = select({
-            "//bazel/rules/rules_score:linux_x86_64": "@graphviz_deb//:all",
-            "//conditions:default": None,
-        })
-
     _score_needs(
         name = name + "_needs",
         srcs = srcs,

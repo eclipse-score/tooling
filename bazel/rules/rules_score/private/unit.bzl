@@ -25,7 +25,7 @@ load("@rules_cc//cc:find_cc_toolchain.bzl", "use_cc_toolchain")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", "rust_common")
 load("//bazel/rules/rules_score:providers.bzl", "CcDependencyInfo", "CertifiedScope", "SphinxSourcesInfo", "UnitDesignInfo", "UnitInfo")
-load("//cpp/libclang:cpp_parser.bzl", "cpp_parser_action_internal_attrs", "cpp_parser_target_aspects", "has_cpp_parser_inputs", "run_cpp_parser_action")
+load("//cpp/libclang:cpp_parser.bzl", "cpp_parser_action_internal_attrs", "cpp_parser_action_toolchains", "cpp_parser_target_aspects", "has_cpp_parser_inputs", "run_cpp_parser_action")
 load(":cc_dependency_aspect.bzl", "cc_dependencies_aspect")
 
 def _run_implementation_cpp_parser(ctx, impl, output_prefix):
@@ -34,9 +34,6 @@ def _run_implementation_cpp_parser(ctx, impl, output_prefix):
         target = impl,
         output_prefix = output_prefix,
         tool = ctx.attr._tool,
-        libclang = ctx.file._libclang,
-        llvm_cxx_builtin_include = ctx.attr._llvm_cxx_builtin_include,
-        llvm_extra_config_site = ctx.attr._llvm_extra_config_site,
         log_level = ctx.attr._log_level[BuildSettingInfo].value,
     )
 
@@ -167,7 +164,7 @@ _unit = rule(
     doc = "Defines a software unit with design, implementation, and tests for S-CORE process compliance",
     subrules = [subrule_gtest_report],
     attrs = _unit_attrs,
-    toolchains = use_cc_toolchain(),
+    toolchains = cpp_parser_action_toolchains() + use_cc_toolchain(),
     fragments = ["cpp"],
 )
 
