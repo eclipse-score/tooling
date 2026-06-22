@@ -752,6 +752,13 @@ py_test(
 )
 
 py_test(
+    name = "test_aou_forwarding_to_lobster",
+    size = "small",
+    srcs = ["test_aou_forwarding_to_lobster.py"],
+    deps = ["//bazel/rules/rules_score:aou_forwarding_to_lobster"],
+)
+
+py_test(
     name = "test_rst_to_trlc",
     size = "small",
     srcs = ["rst_to_trlc_test.py"],
@@ -779,6 +786,7 @@ test_suite(
         ":requirements_rst_tests",
         ":seooc_tests",
         ":sphinx_module_tests",
+        ":test_aou_forwarding_to_lobster",
         ":test_rst_to_trlc",
         ":test_safety_analysis_tools",
         ":test_trlc_rst_image_rendering",

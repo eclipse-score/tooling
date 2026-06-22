@@ -10,40 +10,35 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test")
-load(
-    "//bazel/rules/rules_score:rules_score.bzl",
-    "assumptions_of_use",
-    "glossary",
-)
 
-trlc_requirements(
-    name = "aous",
+load("//bazel/rules/rules_score:rules_score.bzl", "assumed_system_requirements", "component_requirements", "feature_requirements")
+
+assumed_system_requirements(
+    name = "assumed_system_requirements",
     srcs = [
-        "aous.trlc",
-    ],
-    spec = [
-        "@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model",
+        "assumed_system_requirements.trlc",
     ],
     visibility = ["//visibility:public"],
 )
 
-assumptions_of_use(
-    name = "sample_aous",
-    srcs = [":aous"],
-    visibility = ["//visibility:public"],
-)
-
-trlc_requirements_test(
-    name = "aous_test",
-    reqs = [
-        ":aous",
+feature_requirements(
+    name = "feature_requirements",
+    srcs = [
+        "feature_requirements.trlc",
     ],
     visibility = ["//visibility:public"],
+    deps = [
+        ":assumed_system_requirements",
+    ],
 )
 
-glossary(
-    name = "glossary",
-    srcs = ["glossary.rst"],
+component_requirements(
+    name = "component_requirements",
+    srcs = [
+        "component_requirements.trlc",
+    ],
     visibility = ["//visibility:public"],
+    deps = [
+        ":feature_requirements",
+    ],
 )

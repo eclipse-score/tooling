@@ -26,6 +26,7 @@ A *dependable element* is the top-level unit of certification work. It bundles:
 | Assumed System Requirements | System-level requirements given as constraints from the surrounding context |
 | Feature Requirements | Functional and safety requirements for this element |
 | Assumptions of Use | Conditions the integrating project must satisfy |
+| Forwarded AoUs | Assumptions of use received from dependencies that must be handled or forwarded further |
 | Architectural Design | Software Architectural Design in PlantUML |
 | Software Units and Components | Implementation targets linked to their design |
 | Dependability Analysis | FMEA, FTA diagrams and control measures |
@@ -60,6 +61,7 @@ dependable_element(
     name = "safety_software_seooc_example",
     architectural_design = ["//bazel/rules/rules_score/examples/seooc/design:sample_seooc_design"],
     assumptions_of_use = [],
+    aou_forwarding = "aou_forwarding.yaml",  # chain-forward selected received AoUs
     components = [":component_example"],
     dependability_analysis = [":sample_dependability_analysis"],
     integrity_level = "B",

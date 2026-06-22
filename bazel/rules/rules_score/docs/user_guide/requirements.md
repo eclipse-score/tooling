@@ -129,6 +129,59 @@ ScoreReq.AoU AOU_001 {
 }
 ```
 
+### AoU Forwarding
+
+When a dependable element depends on another via `deps`, all **assumptions of use** defined by the dependency are automatically forwarded to the dependee. This ensures the integrating project is made aware of every condition it must satisfy — even those originating from transitive dependencies.
+
+There are two forwarding mechanisms:
+
+**Automatic forwarding (own AoUs)**
+All AoUs declared in a dependable element's `assumptions_of_use` attribute are automatically forwarded to every element that lists it in `deps`. No configuration is needed.
+
+**Chain-forwarding (received AoUs)**
+When a dependable element receives forwarded AoUs from its own dependencies, it can selectively forward them further by providing an `aou_forwarding` YAML file. Each entry requires a mandatory justification explaining *why* this AoU is forwarded rather than handled locally:
+
+```yaml
+# aou_forwarding.yaml
+forwarded_aous:
+  - aou_id: "OtherLibrary.TimingConstraint"
+    justification: >
+      This timing constraint originates from the underlying library and
+      must be satisfied by the final system integrator who controls scheduling.
+```
+
+**Handling forwarded AoUs in the dependee**
+Forwarded AoUs appear as a "Forwarded AoUs" tier in the dependee's lobster traceability report. The dependee must handle each forwarded AoU by one of:
+
+- Linking it to a component requirement that addresses the assumption
+- Linking it to a test that verifies the assumption is met
+- Chain-forwarding it further (with justification) to its own dependees
+
+If a forwarded AoU is not handled, the `bazel test` traceability check will fail.
+
+**Example: three-level forwarding chain**
+
+```
+other_seooc              → defines AoU: TimingConstraint
+    ↑ (deps)
+middle_seooc             → auto-forwards TimingConstraint
+    - also chain-forwards it via aou_forwarding.yaml
+    ↑ (deps)
+integrator_seooc         → receives TimingConstraint, must handle it
+```
+
+```{code-block} starlark
+:caption: middle_seooc/BUILD
+
+dependable_element(
+    name = "middle_seooc",
+    assumptions_of_use = [":my_aous"],
+    aou_forwarding = "aou_forwarding.yaml",
+    deps = ["//other:other_seooc"],
+    ...
+)
+```
+
 ## Allocation of Requirements to Architectural Elements
 
 Requirements are allocated to architectural elements differently depending on their level:
