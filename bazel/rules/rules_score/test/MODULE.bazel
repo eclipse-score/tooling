@@ -55,6 +55,8 @@ pip.parse(
 use_repo(pip, "pip_tooling_test")
 
 bazel_dep(name = "score_docs_as_code", version = "3.0.1", dev_dependency = True)
+
+bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
 # bazel_dep(name = "score_platform", version = "0.5.0")
 # bazel_dep(name = "score_process", version = "1.3.2")
 
@@ -68,16 +70,40 @@ register_toolchains(
     "//:score_toolchain",
 )
 
+###############################################################################
+# LLVM Toolchain (provides libclang for the score libclang toolchain below)
+#
+# As an integrating repository, this module supplies its own libclang/C++
+# toolchain instead of relying on score_tooling's (score_tooling declares LLVM
+# only as a dev dependency and does not register a libclang toolchain for
+# consumers).
+###############################################################################
+bazel_dep(name = "toolchains_llvm", version = "1.6.0")
+
+llvm = use_extension(
+    "@toolchains_llvm//toolchain/extensions:llvm.bzl",
+    "llvm",
+)
+llvm.toolchain(
+    cxx_standard = {"": "c++17"},
+    llvm_version = "19.1.7",
+)
+use_repo(llvm, "llvm_toolchain", "llvm_toolchain_llvm")
+
+register_toolchains(
+    "//:test_libclang_toolchain",
+)
+
 bazel_dep(name = "trlc", version = "0.0.0")
 git_override(
     module_name = "trlc",
-    commit = "7f06d0396fd0e5f02b657d25700775af5113b7e0",
+    commit = "c4c531b9d667085daa09dfc1590edacc314bfda4",
     remote = "https://github.com/bmw-software-engineering/trlc.git",
 )
 
 bazel_dep(name = "lobster", version = "0.0.0")
 git_override(
     module_name = "lobster",
-    commit = "56881461f9d3fde2918d1731aa5937aaf64cd67c",
+    commit = "2792e2daee2cf524fdc7b1545fd3537791ebc36c",
     remote = "https://github.com/bmw-software-engineering/lobster.git",
 )

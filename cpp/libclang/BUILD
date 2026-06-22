@@ -12,6 +12,7 @@
 # *******************************************************************************
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
+load(":libclang_toolchain.bzl", "libclang_toolchain")
 
 string_flag(
     name = "log_level",
@@ -26,12 +27,37 @@ string_flag(
     visibility = ["//visibility:public"],
 )
 
+# Toolchain type that supplies libclang + the C++ include paths to the parser.
+# score_tooling does not register a libclang toolchain for consumers; each
+# integrating repository registers its own so it controls which libclang and
+# C++ standard library the parser resolves against.
+toolchain_type(
+    name = "libclang_toolchain_type",
+    visibility = ["//visibility:public"],
+)
+
+# Default libclang toolchain used by score_tooling's own build. It wraps the
+# LLVM installation that score_tooling declares as a dev dependency and is
+# registered via score_tooling's .bazelrc (--extra_toolchains), so it is NOT
+# inherited by repositories that depend on score_tooling.
+libclang_toolchain(
+    name = "score_tooling_libclang",
+    cxx_builtin_include = "@llvm_toolchain_llvm//:cxx_builtin_include",
+    extra_config_site = "@llvm_toolchain_llvm//:extra_config_site",
+    libclang = "@llvm_toolchain_llvm//:lib/libclang.so",
+    visibility = ["//visibility:public"],
+)
+
+toolchain(
+    name = "score_tooling_libclang_toolchain",
+    toolchain = ":score_tooling_libclang",
+    toolchain_type = ":libclang_toolchain_type",
+    visibility = ["//visibility:public"],
+)
+
 rust_binary(
     name = "clang_rs_parser",
     srcs = ["src/main.rs"],
-    data = [
-        "@llvm_toolchain_llvm//:libclang",
-    ],
     visibility = ["//visibility:public"],
     deps = [
         "//cpp/libclang/src/utils",

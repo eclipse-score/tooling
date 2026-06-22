@@ -14,6 +14,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@rules_cc//cc:find_cc_toolchain.bzl", "find_cc_toolchain", "use_cc_toolchain")
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
+load(":libclang_toolchain.bzl", "LIBCLANG_TOOLCHAIN_TYPE")
 
 # Providers and aspects used to adapt C/C++ targets for the parser action.
 
@@ -145,25 +146,20 @@ def cpp_parser_action_internal_attrs():
             cfg = "exec",
             doc = "Internal libclang-based parser backend.",
         ),
-        "_libclang": attr.label(
-            allow_single_file = True,
-            default = "@llvm_toolchain_llvm//:lib/libclang.so",
-        ),
-        "_llvm_cxx_builtin_include": attr.label(
-            default = "@llvm_toolchain_llvm//:cxx_builtin_include",
-            doc = "LLVM toolchain filegroup containing the libc++ header directory (include/c++) " +
-                  "and the clang resource include directory (lib/clang/<version>/include).",
-        ),
-        "_llvm_extra_config_site": attr.label(
-            default = "@llvm_toolchain_llvm//:extra_config_site",
-            doc = "LLVM toolchain filegroup containing the arch-specific __config_site file " +
-                  "(include/<triple>/c++/v1/__config_site) used to locate the ABI include path.",
-        ),
         "_log_level": attr.label(
             default = Label("//cpp/libclang:log_level"),
             doc = "Build setting that controls clang_rs_parser log level.",
         ),
     }
+
+def cpp_parser_action_toolchains():
+    """Return toolchain types required by run_cpp_parser_action callers.
+
+    Rules that call run_cpp_parser_action must declare these toolchains so the
+    integrating repository's libclang toolchain is resolved for the action.
+    """
+
+    return [LIBCLANG_TOOLCHAIN_TYPE]
 
 # Parser action implementation.
 
@@ -260,9 +256,6 @@ def run_cpp_parser_action(
         target,
         output_prefix,
         tool,
-        libclang,
-        llvm_cxx_builtin_include,
-        llvm_extra_config_site,
         log_level,
         extra_args = [],
         emit_debug_json = False):
@@ -270,8 +263,12 @@ def run_cpp_parser_action(
 
     The target must be analyzed with cpp_parser_target_aspects() before this
     helper is called. Use has_cpp_parser_inputs() when the caller accepts mixed
-    implementation target types.
+    implementation target types. The calling rule must declare the toolchains
+    returned by cpp_parser_action_toolchains().
     """
+
+    libclang_info = ctx.toolchains[LIBCLANG_TOOLCHAIN_TYPE].libclang_info
+    libclang = libclang_info.libclang
 
     class_fbs_output = ctx.actions.declare_file(
         "{}_{}".format(output_prefix, "class_diagram.fbs.bin"),
@@ -299,8 +296,8 @@ def run_cpp_parser_action(
 
     target_compilation_flags_list = target[CompilationFlagsInfo].flags.to_list()
 
-    cxx_builtin_include_files = llvm_cxx_builtin_include.files.to_list()
-    extra_config_site_files = llvm_extra_config_site.files.to_list()
+    cxx_builtin_include_files = libclang_info.cxx_builtin_include.to_list()
+    extra_config_site_files = libclang_info.extra_config_site.to_list()
     llvm_include_args = _collect_required_llvm_include_args(cxx_builtin_include_files, extra_config_site_files)
 
     parser_extra_args = [
@@ -360,9 +357,6 @@ def _cpp_parser_impl(ctx):
         target = ctx.attr.target,
         output_prefix = ctx.label.name,
         tool = ctx.attr._tool,
-        libclang = ctx.file._libclang,
-        llvm_cxx_builtin_include = ctx.attr._llvm_cxx_builtin_include,
-        llvm_extra_config_site = ctx.attr._llvm_extra_config_site,
         log_level = ctx.attr._log_level[BuildSettingInfo].value,
         extra_args = ctx.attr.extra_args,
         emit_debug_json = ctx.attr.emit_debug_json,
@@ -403,6 +397,6 @@ _cpp_parser_attrs.update(cpp_parser_action_internal_attrs())
 cpp_parser = rule(
     implementation = _cpp_parser_impl,
     attrs = _cpp_parser_attrs,
-    toolchains = use_cc_toolchain(),
+    toolchains = cpp_parser_action_toolchains() + use_cc_toolchain(),
     fragments = ["cpp"],
 )
