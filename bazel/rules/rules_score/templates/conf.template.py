@@ -22,13 +22,58 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import List
 
 from python.runfiles import Runfiles
 from sphinx.util import logging
 
 # Create a logger with the Sphinx namespace
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Helpers: Bazel execroot path resolution
+# ---------------------------------------------------------------------------
+
+
+# Capture the current working directory at module import time.
+# In Bazel action context, cwd == execroot. In IDE/non-Bazel runs, cwd is
+# the current directory. This is captured once to avoid repeated resolution.
+_EXECROOT = Path.cwd()
+
+
+def _resolve_execroot_path(path_value: str) -> str:
+    """Resolve an execroot-relative path to an absolute filesystem path.
+
+    Bazel passes action inputs as paths relative to the execroot (e.g.
+    ``external/+_repo_rules2+graphviz_deb/usr/bin/dot_builtins``).  Those
+    paths are only valid when the process' cwd is the execroot — which is
+    not guaranteed once Sphinx changes directories during the build.
+
+    This function makes them absolute so they work regardless of cwd.
+    Absolute paths and plain command names (e.g. ``dot``) are returned
+    unchanged.
+    """
+    p = Path(path_value)
+    if p.is_absolute():
+        return str(p)
+    if path_value.startswith("external/") or path_value.startswith("bazel-out/"):
+        # First try cwd-as-execroot (fast path).
+        candidate = (_EXECROOT / p).resolve()
+        if candidate.exists():
+            return str(candidate)
+
+        # If cwd is nested under bazel-out, walk upward and locate the first
+        # parent that contains the requested relative path.
+        for parent in [_EXECROOT, *_EXECROOT.parents]:
+            candidate = (parent / p).resolve()
+            if candidate.exists():
+                return str(candidate)
+
+        # Fallback: preserve previous behavior even if the file does not exist
+        # yet (keeps logging/debug output deterministic).
+        return str((_EXECROOT / p).resolve())
+    return path_value
+
 
 logger.debug("#" * 80)
 logger.debug("# READING CONF.PY")
@@ -55,6 +100,7 @@ extensions = [
     "sphinxcontrib.plantuml",
     "trlc",
     "clickable_plantuml",
+    "sphinx.ext.graphviz",
 ]
 
 # MyST parser extensions
@@ -164,9 +210,33 @@ if plantuml_path is None:
 plantuml = f"{plantuml_path} -Playout=smetana"
 plantuml_output_format = "svg_obj"
 
-import shutil as _shutil
+# ---------------------------------------------------------------------------
+# Graphviz (sphinx.ext.graphviz)
+# ---------------------------------------------------------------------------
+# GRAPHVIZ_DOT is set by the Bazel sphinx_module rule to point at the hermetic
+# dot_builtins binary from @graphviz_deb.  The path is execroot-relative, so
+# we resolve it to an absolute path here so it remains valid after any cwd
+# change that Sphinx may perform during the build.
+# If GRAPHVIZ_DOT is absent, force a known-invalid dot path so Sphinx fails
+# clearly on graphviz directives instead of silently using host-installed dot.
+if "GRAPHVIZ_DOT" in os.environ:
+    graphviz_dot = _resolve_execroot_path(os.environ["GRAPHVIZ_DOT"])
+    graphviz_output_format = "svg"
 
-graphviz_dot = os.environ.get("GRAPHVIZ_DOT") or _shutil.which("dot") or "dot"
+    # LD_LIBRARY_PATH and LTDL_LIBRARY_PATH are set by the Bazel rule as
+    # execroot-relative paths.  We mutate os.environ (not just a local) because
+    # sphinx.ext.graphviz spawns `dot` as a child process that inherits these
+    # variables to locate the bundled shared libraries and plugins.  Each
+    # component is resolved to absolute so it stays valid if Sphinx changes cwd
+    # before spawning the dot subprocess.
+    for _env_var in ("LD_LIBRARY_PATH", "LTDL_LIBRARY_PATH"):
+        _env_val = os.environ.get(_env_var, "")
+        if _env_val:
+            os.environ[_env_var] = ":".join(
+                _resolve_execroot_path(p) for p in _env_val.split(":")
+            )
+else:
+    graphviz_dot = "/__hermetic_graphviz_not_configured__/dot"
 
 # HTML theme
 html_theme = "sphinx_rtd_theme"
