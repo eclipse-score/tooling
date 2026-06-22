@@ -97,4 +97,30 @@ section "Potential Errors" {
 
     }
 
+    section "AoU Forwarding" {
+
+        ToolQualification.PotentialError AoU_Silently_Dropped {
+            description = '''
+                An assumption of use defined by a dependency is not forwarded
+                to the dependee, causing the integrating project to be unaware
+                of a condition it must satisfy.
+            '''
+            impacts = ["Safety-relevant assumption not communicated to integrator"]
+            affects = [Forward_AoU_To_Dependees, Gate_Traceability_At_Test_Time]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
+        ToolQualification.PotentialError Invalid_Forwarding_YAML_Accepted {
+            description = '''
+                A chain-forwarding YAML file that references a non-existent
+                AoU identifier is accepted without error, causing the build to
+                succeed while the intended forwarding does not take effect.
+            '''
+            impacts = ["Chain-forwarded AoU missing from traceability report"]
+            affects = [Forward_AoU_To_Dependees]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
+    }
+
 }

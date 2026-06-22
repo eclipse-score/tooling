@@ -1,0 +1,23 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+#
+# Chain-forwarding configuration for safety_software_seooc_example.
+#
+# This SEooC depends on other_seooc (some_other_library) and receives its AoU
+# "OtherLibrary.TimingConstraint". Since this element cannot satisfy the timing
+# constraint itself (it is a library, not a runtime scheduler), it forwards the
+# AoU to its own dependees — the system integrator.
+#
+forwarded_aous:
+  - aou_id: "OtherLibrary.TimingConstraint"
+    justification: "This SEooC is a library component and has no control over the invocation cycle time. The system integrator must ensure that calls to the library do not exceed the 10ms cycle time constraint imposed by the underlying other_seooc dependency."

@@ -19,6 +19,7 @@ following S-CORE process guidelines. Assumptions of Use define the safety-releva
 operating conditions and constraints for a Safety Element out of Context (SEooC).
 """
 
+load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo", "trlc_requirements_test")
 load("//bazel/rules/rules_score:providers.bzl", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_srcs_to_trlc")
@@ -61,6 +62,14 @@ def _assumptions_of_use_impl(ctx):
 
     all_srcs = depset(rendered_files)
 
+    # Generate lobster file from AoU TRLC sources for traceability forwarding
+    all_trlc_files = []
+    for src in ctx.attr.srcs:
+        all_trlc_files.extend(src[DefaultInfo].files.to_list())
+    aou_lobster_file = None
+    if all_trlc_files and ctx.file.lobster_config:
+        aou_lobster_file, _ = subrule_lobster_trlc(all_trlc_files, ctx.file.lobster_config)
+
     # Collect requirements providers and lobster files
     reqs = []
     lobster_files = []
@@ -84,11 +93,13 @@ def _assumptions_of_use_impl(ctx):
         DefaultInfo(files = all_srcs),
         AssumptionsOfUseInfo(
             srcs = depset(transitive = lobster_files),
+            aou_lobster = depset([aou_lobster_file] if aou_lobster_file else []),
             name = ctx.label.name,
         ),
         SphinxSourcesInfo(
             srcs = all_srcs,
             deps = depset(transitive = transitive),
+            aux_srcs = depset(),
         ),
     ]
 
@@ -110,6 +121,11 @@ _assumptions_of_use = rule(
             mandatory = False,
             doc = "List of feature or component requirements targets that these Assumptions of Use trace to",
         ),
+        "lobster_config": attr.label(
+            allow_single_file = True,
+            mandatory = True,
+            doc = "Lobster YAML configuration file for AoU traceability extraction.",
+        ),
         "_renderer": attr.label(
             default = Label("@trlc//tools/trlc_rst:trlc_rst"),
             executable = True,
@@ -117,6 +133,7 @@ _assumptions_of_use = rule(
             cfg = "exec",
         ),
     },
+    subrules = [subrule_lobster_trlc],
 )
 
 # ============================================================================
@@ -128,6 +145,7 @@ def assumptions_of_use(
         srcs,
         requirements = [],
         ref_package = None,
+        lobster_config = Label("//bazel/rules/rules_score/lobster/config:aou_config"),
         **kwargs):
     """Define Assumptions of Use following S-CORE process guidelines.
 
@@ -148,6 +166,8 @@ def assumptions_of_use(
             traceability as defined in the S-CORE process.
         ref_package: Optional TRLC package prefix used for ``derived_from``
             cross-references when converting RST sources.
+        lobster_config: Lobster YAML configuration for AoU traceability
+            extraction. Defaults to the standard S-CORE AoU config.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -178,6 +198,7 @@ def assumptions_of_use(
         name = name,
         srcs = trlc_srcs,
         requirements = requirements,
+        lobster_config = lobster_config,
         **kwargs
     )
     trlc_requirements_test(

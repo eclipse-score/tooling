@@ -76,6 +76,18 @@ py_binary(
     visibility = ["//visibility:public"],
 )
 
+# AoU forwarding filter: filters received AoU lobster entries for chain-forwarding
+py_binary(
+    name = "aou_forwarding_to_lobster",
+    srcs = ["src/aou_forwarding_to_lobster.py"],
+    imports = ["src"],
+    main = "src/aou_forwarding_to_lobster.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        requirement("pyyaml"),
+    ],
+)
+
 # HTML merge tool
 py_binary(
     name = "sphinx_html_merge",

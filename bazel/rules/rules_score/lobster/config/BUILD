@@ -44,6 +44,12 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "aou_config",
+    srcs = ["lobster_aou.yaml"],
+    visibility = ["//visibility:public"],
+)
+
 # ---------------------------------------------------------------------------
 # Lobster report config templates: static structure with {PLACEHOLDER} markers
 # for source file lists. Used by rules_score to generate per-target configs
