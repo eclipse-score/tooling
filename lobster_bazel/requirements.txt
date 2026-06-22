@@ -4,11 +4,11 @@
 #
 #    bazel run //lobster_bazel/private:requirements.update
 #
-bmw-lobster==1.0.2 \
-    --hash=sha256:74125e835a3e913935693517795fd819282796bb12bfc32a63a97ca39abfaf60
-    # via -r requirements.in
-bmw-lobster-core==1.0.2 \
-    --hash=sha256:fbbc359e6e46f5e9bbbef32844bd2aed42ec6180c9f4c636350393f96c48da43
+bmw-lobster==1.0.3 \
+    --hash=sha256:ed3e84938971180212f774809c72ba4abf0ae2cbf900b76ee4710dbe45b4a494
+    # via -r lobster_bazel/requirements.in
+bmw-lobster-core==1.0.3 \
+    --hash=sha256:a42608dcf05364b1c8c1248dd5ec5d93f8b80f8910724c668b0ca2dbeadfe23a
     # via
     #   bmw-lobster
     #   bmw-lobster-tool-codebeamer
@@ -18,26 +18,26 @@ bmw-lobster-core==1.0.2 \
     #   bmw-lobster-tool-json
     #   bmw-lobster-tool-python
     #   bmw-lobster-tool-trlc
-bmw-lobster-tool-codebeamer==1.0.2 \
-    --hash=sha256:864ae2d04f78f6f6750c5adff39c965dd48c369eefcb18b39cabf8acb125f3a7
+bmw-lobster-tool-codebeamer==1.0.3 \
+    --hash=sha256:2128ba9148f8357e3cdb281601b76579e8d097e50830281b8a9915b6999b7478
     # via bmw-lobster
-bmw-lobster-tool-cpp==1.0.2 \
-    --hash=sha256:cc3acc929f8cc45ec909885d4fa95218cc9ca8022d30d7bfe7214fb28210f644
+bmw-lobster-tool-cpp==1.0.3 \
+    --hash=sha256:de32fc5cf1e0b0623272560432fbb7e5dd7ca2cd5aa812600b280ce171517e61
     # via bmw-lobster
-bmw-lobster-tool-cpptest==1.0.2 \
-    --hash=sha256:8d405d647768668a25be0bdeeaeff7300bb95a5cfdc1fa9c2039edb2259842c9
+bmw-lobster-tool-cpptest==1.0.3 \
+    --hash=sha256:95e060d969e4e54a06f9f535380e25ce833b98faeaa72fde17c8b82545a16e69
     # via bmw-lobster
-bmw-lobster-tool-gtest==1.0.2 \
-    --hash=sha256:aac8f38cfea1290fa1eed596a4ebaf6db4571a3f67435824e27843513b0e05a6
+bmw-lobster-tool-gtest==1.0.3 \
+    --hash=sha256:40c6c8e234178b6beb25606ab6248c3a30f621ccf9590c7cfa16aa73d6f35ce4
     # via bmw-lobster
-bmw-lobster-tool-json==1.0.2 \
-    --hash=sha256:99019a8ec986f1cd3f92190f2572e41578f973b1563dc104e25e89b1dd7b832f
+bmw-lobster-tool-json==1.0.3 \
+    --hash=sha256:e2d432fd4c1e0a05319589424ce63caf35a34e81d8505580a375569a679ec12e
     # via bmw-lobster
-bmw-lobster-tool-python==1.0.2 \
-    --hash=sha256:3b85c5b2142ddbae79d16ac2464f005d5f4baba2a94397301ac60e3a3af7e460
+bmw-lobster-tool-python==1.0.3 \
+    --hash=sha256:ca6d79904d01d2b4de16d041d4019a726426992e733a5497c623138cfee98860
     # via bmw-lobster
-bmw-lobster-tool-trlc==1.0.2 \
-    --hash=sha256:4c5f0c52a3b395e3a2923455e16066217ebbcca60f2ce34cb77c1c90152b2363
+bmw-lobster-tool-trlc==1.0.3 \
+    --hash=sha256:b3ac7a7b9194846e0ce8128b773816b19b3bc12e75cc8d72bdef69aaca6b54db
     # via bmw-lobster
 certifi==2026.2.25 \
     --hash=sha256:027692e4402ad994f1c42e52a4997a9763c646b73e4096e4d5d6db8af1d6f0fa \
