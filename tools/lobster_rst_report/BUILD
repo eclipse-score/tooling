@@ -19,7 +19,6 @@ py_library(
         "__init__.py",
         "_helpers.py",
         "_renderers.py",
-        "graphviz_utils.py",
         "rst_report.py",
     ],
     imports = [".."],

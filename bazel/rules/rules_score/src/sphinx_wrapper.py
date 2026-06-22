@@ -284,6 +284,12 @@ def main() -> int:
         Exit code (0 for success, non-zero for failure)
     """
     try:
+        # Capture the Bazel execroot (the action's cwd) before Sphinx changes
+        # into the generated source tree. conf.template.py reads
+        # SPHINX_BAZEL_EXECROOT to resolve execroot-relative tool paths (e.g.
+        # the hermetic graphviz dot binary) to absolute paths that stay valid
+        # after Sphinx chdirs.
+        os.environ["SPHINX_BAZEL_EXECROOT"] = os.getcwd()
         args, extra_args = parse_arguments()
         logging.basicConfig(
             level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s"

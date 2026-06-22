@@ -126,12 +126,13 @@ sphinx_module(
     ],
 )
 
-# Test 2: Graphviz Rendering
-# Tests hermetic graphviz support via sphinx.ext.graphviz directive
+# Test 2: PlantUML dot rendering
+# Tests that the hermetic dot binary is wired to PlantUML via -graphvizdot
+# and that @startdot content in a .. uml:: directive renders to SVG.
 sphinx_module(
-    name = "graphviz_test_lib",
-    srcs = glob(["fixtures/graphviz_test/*.rst"]),
-    index = "fixtures/graphviz_test/index.rst",
+    name = "plantuml_dot_test_lib",
+    srcs = glob(["fixtures/plantuml_dot_test/*.rst"]),
+    index = "fixtures/plantuml_dot_test/index.rst",
     sphinx = "@score_tooling//bazel/rules/rules_score:score_build",
 )
 
@@ -788,11 +789,11 @@ py_test(
 )
 
 py_test(
-    name = "test_graphviz_rendering",
+    name = "test_plantuml_dot_rendering",
     size = "small",
-    srcs = ["graphviz_render_test.py"],
-    data = [":graphviz_test_lib"],
-    main = "graphviz_render_test.py",
+    srcs = ["plantuml_dot_render_test.py"],
+    data = [":plantuml_dot_test_lib"],
+    main = "plantuml_dot_render_test.py",
 )
 
 # Combined test suite for all tests
@@ -805,6 +806,7 @@ test_suite(
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",
         ":test_graphviz_rendering",
+        ":test_plantuml_dot_rendering",
         ":test_rst_to_trlc",
         ":test_safety_analysis_tools",
         ":test_trlc_rst_image_rendering",

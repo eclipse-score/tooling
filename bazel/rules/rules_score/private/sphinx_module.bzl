@@ -238,29 +238,15 @@ def _score_html_impl(ctx):
         get_log_level(ctx),
     ]
 
-    # Wire in the hermetic graphviz deb (dot_builtins + bundled shared libs) if provided.
-    # conf.template.py resolves all three env vars (GRAPHVIZ_DOT,
-    # LD_LIBRARY_PATH, LTDL_LIBRARY_PATH) from execroot-relative to absolute
-    # paths so dot_builtins can load its plugins without a system installation.
+    # Wire in the hermetic graphviz deb if provided.  GRAPHVIZ_DOT points at
+    # dot_builtins; conf.template.py resolves it to an absolute path and derives
+    # LD_LIBRARY_PATH / LTDL_LIBRARY_PATH from it using stdlib Path.parent so
+    # the rule itself needs no knowledge of the deb's directory layout.
     graphviz_env = {}
-    graphviz_files = ctx.files.graphviz
-    if graphviz_files:
-        _dot_suffix = "/usr/bin/dot_builtins"
-        dot_binary = None
-        for f in graphviz_files:
-            if f.path.endswith(_dot_suffix):
-                dot_binary = f
-                break
-        if not dot_binary:
-            fail("graphviz target {} must provide usr/bin/dot_builtins".format(ctx.attr.graphviz))
-
-        graphviz_prefix = dot_binary.path[:-len(_dot_suffix)]
-        graphviz_env = {
-            "GRAPHVIZ_DOT": dot_binary.path,
-            "LD_LIBRARY_PATH": graphviz_prefix + "/usr/lib",
-            "LTDL_LIBRARY_PATH": graphviz_prefix + "/usr/lib/graphviz",
-        }
-        html_inputs = html_inputs + graphviz_files
+    dot_binary = ctx.file.graphviz_dot
+    if dot_binary:
+        graphviz_env = {"GRAPHVIZ_DOT": dot_binary.path}
+        html_inputs = html_inputs + [dot_binary] + ctx.files.graphviz_all
 
     ctx.actions.run(
         inputs = html_inputs,
@@ -358,12 +344,20 @@ _score_html = rule(
                   "destination paths relative to the Sphinx source root. Exactly one " +
                   "file per label. Mirrors sphinx_docs.renamed_srcs from rules_python.",
         ),
-        graphviz = attr.label(
+        graphviz_dot = attr.label(
+            default = None,
+            allow_single_file = True,
+            doc = "Hermetic 'dot_builtins' binary from @graphviz_deb (e.g. @graphviz_deb//:dot_binary). " +
+                  "When set, PlantUML uses it via -graphvizdot for native Graphviz layout quality. " +
+                  "Only available on Linux x86_64; other platforms fall back to Smetana.",
+        ),
+        graphviz_all = attr.label(
             default = None,
             allow_files = True,
-            doc = "Graphviz cmake-release deb files (dot_builtins binary + bundled libs). " +
-                  "Only available on Linux x86_64; provides a hermetic 'dot' binary without requiring a system graphviz installation. " +
-                  "Defaults to @graphviz_deb//:all on Linux x86_64.",
+            doc = "All Graphviz files from @graphviz_deb (e.g. @graphviz_deb//:all): the dot_builtins " +
+                  "binary, core shared libraries, and plugin shared libraries. These are staged into " +
+                  "the sandbox as action inputs; library directories are derived from graphviz_dot's " +
+                  "path using the standard FHS layout (usr/lib, usr/lib/graphviz).",
         ),
     ),
     toolchains = ["//bazel/rules/rules_score:toolchain_type"],
@@ -408,14 +402,21 @@ def sphinx_module(
         extra_opts_targets: {type}`list[label]` Label targets that resolve to extra Sphinx
                     arguments at analysis time. Each target must provide FilteredExecpathInfo
                     (e.g. filter_execpath targets).
-        graphviz: Graphviz cmake-release deb files (dot_builtins + bundled libs). On Linux x86_64,
-                    defaults to @graphviz_deb//:all for hermetic graphviz support. On other platforms
-                    or if explicitly set to None, no graphviz support is provided (the sphinx.ext.graphviz
-                    extension will not be available).
+        graphviz: Controls hermetic dot support for PlantUML layout. `None` (default)
+                    auto-enables it on linux_x86_64 using @graphviz_deb (dot_builtins + bundled libs)
+                    so PlantUML uses native Graphviz layout quality. On other platforms PlantUML
+                    falls back to Smetana. Pass `False` to disable hermetic dot wiring entirely.
         visibility: Bazel visibility
     """
-    if graphviz == None:
-        graphviz = select({
+    if graphviz == False:
+        graphviz_dot = None
+        graphviz_all = None
+    else:
+        graphviz_dot = select({
+            "//bazel/rules/rules_score:linux_x86_64": "@graphviz_deb//:dot_binary",
+            "//conditions:default": None,
+        })
+        graphviz_all = select({
             "//bazel/rules/rules_score:linux_x86_64": "@graphviz_deb//:all",
             "//conditions:default": None,
         })
@@ -438,7 +439,8 @@ def sphinx_module(
         needs = [d + "_needs" for d in deps],
         extra_opts = extra_opts,
         extra_opts_targets = extra_opts_targets,
-        graphviz = graphviz,
+        graphviz_dot = graphviz_dot,
+        graphviz_all = graphviz_all,
         testonly = testonly,
         **kwargs
     )

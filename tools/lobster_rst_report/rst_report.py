@@ -40,8 +40,6 @@ from lobster.common.io import ensure_output_directory
 from lobster.common.meta_data_tool_base import MetaDataToolBase
 from lobster.common.exceptions import LOBSTER_Exception
 from lobster.common.errors import LOBSTER_Error
-from .graphviz_utils import is_dot_available
-
 from ._helpers import RstUtils, ItemNaming, PolicyDiagramBuilder
 from ._renderers import (
     _KIND_ORDER,
@@ -361,13 +359,6 @@ class RstReportTool(MetaDataToolBase):
         except LOBSTER_Exception as err:
             err.dump()
             return 1
-
-        if not is_dot_available():
-            print(
-                "warning: dot utility not found, report will not include "
-                "the tracing policy visualisation"
-            )
-            print("> please install Graphviz (https://graphviz.org)")
 
         # lobster-trace: UseCases.RST_Output
         # lobster-trace: rst_req.RST_Report_Multi_Page

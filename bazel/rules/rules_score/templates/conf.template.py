@@ -35,21 +35,23 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-# Capture the current working directory at module import time.
-# In Bazel action context, cwd == execroot. In IDE/non-Bazel runs, cwd is
-# the current directory. This is captured once to avoid repeated resolution.
-_EXECROOT = Path.cwd()
+# Resolve execroot-relative paths against the Bazel execroot.  sphinx_wrapper.py
+# exports SPHINX_BAZEL_EXECROOT (the action cwd captured before Sphinx changes
+# into the generated source tree).  Fall back to the current cwd for non-Bazel
+# / IDE runs where the variable is absent.
+_EXECROOT = Path(os.environ.get("SPHINX_BAZEL_EXECROOT", "") or Path.cwd())
 
 
 def _resolve_execroot_path(path_value: str) -> str:
     """Resolve an execroot-relative path to an absolute filesystem path.
 
     Bazel passes action inputs as paths relative to the execroot (e.g.
-    ``external/+_repo_rules2+graphviz_deb/usr/bin/dot_builtins``).  Those
-    paths are only valid when the process' cwd is the execroot — which is
-    not guaranteed once Sphinx changes directories during the build.
+    ``external/+_repo_rules+graphviz_deb/usr/bin/dot_builtins``).  Sphinx changes
+    into the generated source tree before importing conf.py, so the process cwd
+    is no longer the execroot.  We resolve against ``_EXECROOT`` (captured by the
+    wrapper before that chdir) so the paths stay valid for the ``dot``
+    subprocess.
 
-    This function makes them absolute so they work regardless of cwd.
     Absolute paths and plain command names (e.g. ``dot``) are returned
     unchanged.
     """
@@ -57,20 +59,6 @@ def _resolve_execroot_path(path_value: str) -> str:
     if p.is_absolute():
         return str(p)
     if path_value.startswith("external/") or path_value.startswith("bazel-out/"):
-        # First try cwd-as-execroot (fast path).
-        candidate = (_EXECROOT / p).resolve()
-        if candidate.exists():
-            return str(candidate)
-
-        # If cwd is nested under bazel-out, walk upward and locate the first
-        # parent that contains the requested relative path.
-        for parent in [_EXECROOT, *_EXECROOT.parents]:
-            candidate = (parent / p).resolve()
-            if candidate.exists():
-                return str(candidate)
-
-        # Fallback: preserve previous behavior even if the file does not exist
-        # yet (keeps logging/debug output deterministic).
         return str((_EXECROOT / p).resolve())
     return path_value
 
@@ -100,7 +88,6 @@ extensions = [
     "sphinxcontrib.plantuml",
     "trlc",
     "clickable_plantuml",
-    "sphinx.ext.graphviz",
 ]
 
 # MyST parser extensions
@@ -205,38 +192,36 @@ if plantuml_path is None:
         f"Could not find plantuml binary via runfiles lookup. Searched: {searched}."
     )
 
-# Use PlantUML's built-in Smetana layout engine (Java port of Graphviz).
-# This avoids requiring an external dot binary in the Bazel sandbox.
-plantuml = f"{plantuml_path} -Playout=smetana"
-plantuml_output_format = "svg_obj"
-
 # ---------------------------------------------------------------------------
-# Graphviz (sphinx.ext.graphviz)
+# PlantUML + hermetic dot
 # ---------------------------------------------------------------------------
-# GRAPHVIZ_DOT is set by the Bazel sphinx_module rule to point at the hermetic
-# dot_builtins binary from @graphviz_deb.  The path is execroot-relative, so
-# we resolve it to an absolute path here so it remains valid after any cwd
-# change that Sphinx may perform during the build.
-# If GRAPHVIZ_DOT is absent, force a known-invalid dot path so Sphinx fails
-# clearly on graphviz directives instead of silently using host-installed dot.
+# GRAPHVIZ_DOT is set by sphinx_module on linux_x86_64 to the hermetic
+# dot_builtins binary from @graphviz_deb.  When present, PlantUML is told to
+# use it directly via -graphvizdot, giving native Graphviz layout quality for
+# all UML diagram types.  LD_LIBRARY_PATH / LTDL_LIBRARY_PATH are resolved to
+# absolute paths here so they remain valid in the dot_builtins subprocess that
+# PlantUML spawns (Sphinx may have chdir'd before then).
+# On other platforms (e.g. arm64, macOS) GRAPHVIZ_DOT is absent and PlantUML
+# falls back to its built-in Smetana layout engine (pure-Java, no dot needed).
 if "GRAPHVIZ_DOT" in os.environ:
-    graphviz_dot = _resolve_execroot_path(os.environ["GRAPHVIZ_DOT"])
-    graphviz_output_format = "svg"
-
-    # LD_LIBRARY_PATH and LTDL_LIBRARY_PATH are set by the Bazel rule as
-    # execroot-relative paths.  We mutate os.environ (not just a local) because
-    # sphinx.ext.graphviz spawns `dot` as a child process that inherits these
-    # variables to locate the bundled shared libraries and plugins.  Each
-    # component is resolved to absolute so it stays valid if Sphinx changes cwd
-    # before spawning the dot subprocess.
-    for _env_var in ("LD_LIBRARY_PATH", "LTDL_LIBRARY_PATH"):
-        _env_val = os.environ.get(_env_var, "")
-        if _env_val:
-            os.environ[_env_var] = ":".join(
-                _resolve_execroot_path(p) for p in _env_val.split(":")
-            )
+    _dot_path = Path(_resolve_execroot_path(os.environ["GRAPHVIZ_DOT"]))
+    # Derive library search paths from the binary location so the rule passes
+    # only GRAPHVIZ_DOT and conf.py stays self-contained.
+    # The graphviz cmake deb installs:
+    #   usr/bin/dot_builtins       ← GRAPHVIZ_DOT points here
+    #   usr/lib/*.so*              ← LD_LIBRARY_PATH (core shared libs)
+    #   usr/lib/graphviz/*.so*     ← LTDL_LIBRARY_PATH (layout/render plugins)
+    _usr_dir = _dot_path.parent.parent  # usr/bin → parent → usr
+    os.environ["LD_LIBRARY_PATH"] = str(_usr_dir / "lib")
+    os.environ["LTDL_LIBRARY_PATH"] = str(_usr_dir / "lib" / "graphviz")
+    plantuml = f"{plantuml_path} -graphvizdot {_dot_path}"
 else:
-    graphviz_dot = "/__hermetic_graphviz_not_configured__/dot"
+    logger.warning(
+        "GRAPHVIZ_DOT not set; PlantUML falling back to Smetana layout engine. "
+        "Hermetic dot (@graphviz_deb) is only available on linux_x86_64."
+    )
+    plantuml = f"{plantuml_path} -Playout=smetana"
+plantuml_output_format = "svg_obj"
 
 # HTML theme
 html_theme = "sphinx_rtd_theme"

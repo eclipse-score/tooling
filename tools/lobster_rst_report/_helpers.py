@@ -19,12 +19,10 @@ Organised into four static-method classes with focused concerns:
 * :class:`RstUtils`            -- RST text escaping and heading generation
 * :class:`ItemNaming`          -- label, page-name, and kind-string derivation
 * :class:`TracingClassifier`   -- message classification and status-to-CSS mapping
-* :class:`PolicyDiagramBuilder`-- Graphviz DOT generation for the tracing policy
+* :class:`PolicyDiagramBuilder`-- PlantUML @startdot diagram for the tracing policy
 """
 
 from typing import Dict, Tuple
-
-import os
 
 from lobster.common.report import Report
 from lobster.common.location import (
@@ -34,7 +32,6 @@ from lobster.common.location import (
     Codebeamer_Reference,
 )
 from lobster.common.items import Item, Requirement, Implementation, Activity
-from .graphviz_utils import is_dot_available
 
 
 class RstUtils:
@@ -313,7 +310,7 @@ class TracingClassifier:
 
 
 class PolicyDiagramBuilder:
-    """Build a Graphviz DOT diagram representing the configured tracing policy.
+    """Build a PlantUML @startdot diagram representing the configured tracing policy.
 
     Nodes represent tracing levels, coloured by kind:
 
@@ -323,6 +320,11 @@ class PolicyDiagramBuilder:
 
     Directed edges follow the ``traces`` relationship (level A → level B means
     A must be traceable to B).
+
+    The diagram is emitted as a ``.. uml::`` directive with an inline
+    ``@startdot ... @enddot`` block so ``sphinxcontrib.plantuml`` renders it
+    via the hermetic ``dot`` binary (or Smetana fallback) without requiring
+    ``sphinx.ext.graphviz``.
     """
 
     #: Fill and font colour pairs keyed by level kind.
@@ -371,11 +373,10 @@ class PolicyDiagramBuilder:
     def build(cls, report: Report, indent: int = 0) -> list:
         """Return RST lines for the tracing-policy diagram.
 
-        When Graphviz ``dot`` is available, emits a ``.. graphviz::`` directive
-        that Sphinx renders as an image.  When ``dot`` is not found, emits a
-        ``.. note::`` explaining how to install Graphviz together with the raw
-        DOT source in a ``.. code-block::`` so the diagram can still be
-        visualised manually.
+        Emits a ``.. uml::`` directive with an inline ``@startdot ... @enddot``
+        block.  ``sphinxcontrib.plantuml`` passes the body to PlantUML which
+        renders it via the hermetic ``dot`` binary (or Smetana on platforms
+        without native dot).
 
         Args:
             report: The loaded LOBSTER report whose ``config`` provides level
@@ -392,32 +393,12 @@ class PolicyDiagramBuilder:
         nested_indent = indent_str + "   "
         dot_lines = cls._build_dot_lines(report)
 
-        # Respect an explicit GRAPHVIZ_DOT env var set by the build system
-        # (e.g. via --action_env=GRAPHVIZ_DOT=/usr/bin/dot in CI).
-        dot_bin = os.environ.get("GRAPHVIZ_DOT") or None
-        if is_dot_available(dot_bin):
-            out = []
-            out.append(f"{indent_str}.. graphviz::")
-            out.append("")
-            for dot_line in dot_lines:
-                out.append(f"{nested_indent}{dot_line}")
-            out.append("")
-            return out
         out = []
-        out.append(f"{indent_str}.. note::")
+        out.append(f"{indent_str}.. uml::")
         out.append("")
-        out.append(
-            f"{nested_indent}The tracing-policy diagram below could not be rendered "
-            f"because the Graphviz ``dot`` utility was not found."
-        )
-        out.append(
-            f"{nested_indent}Install `Graphviz <https://graphviz.org>`__ and rebuild "
-            f"to see the diagram as an image."
-        )
-        out.append("")
-        out.append(f"{nested_indent}.. code-block:: dot")
-        out.append("")
+        out.append(f"{nested_indent}@startdot")
         for dot_line in dot_lines:
-            out.append(f"{nested_indent}   {dot_line}")
+            out.append(f"{nested_indent}{dot_line}")
+        out.append(f"{nested_indent}@enddot")
         out.append("")
         return out
