@@ -1,3 +1,5 @@
+load("@aspect_rules_py//py:defs.bzl", "py_binary")
+
 # *******************************************************************************
 # Copyright (c) 2025 Contributors to the Eclipse Foundation
 #
@@ -26,6 +28,8 @@ load(
     "unit",
     "unit_design",
 )
+load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "sphinx_toolchain")
+load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test")
 load(
     ":html_generation_test.bzl",
@@ -94,6 +98,56 @@ load(
 package(default_visibility = ["//visibility:public"])
 
 # ============================================================================
+# Sphinx Toolchain — uses score_docs_as_code so score_metamodel is importable
+# ============================================================================
+
+exports_files(["template/conf.template.py"])
+
+py_binary(
+    name = "score_build",
+    srcs = ["@score_tooling//bazel/rules/rules_score:src/sphinx_wrapper.py"],
+    main = "@score_tooling//bazel/rules/rules_score:src/sphinx_wrapper.py",
+    package_collisions = "warning",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@score_docs_as_code//src:plantuml_for_python",
+        "@score_docs_as_code//src/extensions/score_sphinx_bundle",
+        "@score_tooling//bazel/rules/rules_score:bazel_sphinx_needs",
+        "@score_tooling//bazel/rules/rules_score:sphinx_module_ext",
+    ],
+)
+
+sphinx_toolchain(
+    name = "score_sphinx_toolchain",
+    conf_template = "//:template/conf.template.py",
+    html_merge_tool = "@score_tooling//bazel/rules/rules_score:sphinx_html_merge",
+    sphinx = ":score_build",
+)
+
+toolchain(
+    name = "score_toolchain",
+    toolchain = ":score_sphinx_toolchain",
+    toolchain_type = "@score_tooling//bazel/rules/rules_score:toolchain_type",
+)
+
+# ============================================================================
+# libclang Toolchain — this integrating repo supplies its own libclang/C++
+# toolchain for the score libclang-based C/C++ parser.
+# ============================================================================
+libclang_toolchain(
+    name = "test_libclang",
+    cxx_builtin_include = "@llvm_toolchain_llvm//:cxx_builtin_include",
+    extra_config_site = "@llvm_toolchain_llvm//:extra_config_site",
+    libclang = "@llvm_toolchain_llvm//:lib/libclang.so",
+)
+
+toolchain(
+    name = "test_libclang_toolchain",
+    toolchain = ":test_libclang",
+    toolchain_type = "@score_tooling//cpp/libclang:libclang_toolchain_type",
+)
+
+# ============================================================================
 # Test Fixtures - Module Definitions
 # ============================================================================
 
@@ -126,7 +180,7 @@ sphinx_module(
     ],
 )
 
-# Test 2: SEooC (Safety Element out of Context) Module
+# Test 3: SEooC (Safety Element out of Context) Module
 # Tests the score_component macro with S-CORE process artifacts
 
 # - Feature Requirements:     wp__requirements_feat
@@ -274,7 +328,7 @@ unit_design(
 unit(
     name = "test_unit",
     testonly = True,
-    scope = ["//bazel/rules/rules_score/test:mock_lib1"],
+    scope = ["//:mock_lib1"],
     tests = [":test_unit_tests"],
     unit_design = [":test_unit_design"],
     implementation = [
@@ -700,26 +754,11 @@ aous_rst_sphinx_test(
 requirements_rst_test_suite(name = "requirements_rst_tests")
 
 # ============================================================================
-# Image srcs Tests
+# Image srcs Tests (defined in sub-package to avoid workspace-root edge case)
 # ============================================================================
-
-# Fixture: feature_requirements with image_srcs
-feature_requirements(
-    name = "feat_req_with_image",
-    srcs = ["fixtures/seooc_test/feature_requirements.trlc"],
-    image_srcs = [
-        "fixtures/image_srcs/diagrams/arch.svg",
-        "fixtures/image_srcs/diagrams/arch.png",
-    ],
-    deps = [":asr_trlc"],
-)
-
-image_srcs_sphinx_sources_test(
-    name = "image_srcs_sphinx_sources_test",
-    target_under_test = ":feat_req_with_image",
-)
-
-requirements_image_test_suite(name = "requirements_image_tests")
+# feat_req_with_image and image_srcs_sphinx_sources_test live in
+# //fixtures/image_srcs so that ctx.label.package is non-empty and
+# subrule_trlc_image_stage can strip the prefix correctly.
 
 # ============================================================================
 # Combined Test Suite
@@ -736,7 +775,7 @@ requirements_image_test_suite(name = "requirements_image_tests")
 trlc_requirements(
     name = "safety_measures_fixtures",
     srcs = ["fixtures/seooc_test/safety_measures_fixtures.trlc"],
-    spec = ["//bazel/rules/rules_score/trlc/config:score_requirements_model"],
+    spec = ["@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model"],
 )
 
 trlc_requirements_test(
@@ -748,14 +787,14 @@ py_test(
     name = "test_safety_analysis_tools",
     size = "small",
     srcs = ["test_safety_analysis_tools.py"],
-    deps = ["//bazel/rules/rules_score:safety_analysis_tools"],
+    deps = ["@score_tooling//bazel/rules/rules_score:safety_analysis_tools"],
 )
 
 py_test(
     name = "test_aou_forwarding_to_lobster",
     size = "small",
     srcs = ["test_aou_forwarding_to_lobster.py"],
-    deps = ["//bazel/rules/rules_score:aou_forwarding_to_lobster"],
+    deps = ["@score_tooling//bazel/rules/rules_score:aou_forwarding_to_lobster"],
 )
 
 py_test(
@@ -763,7 +802,7 @@ py_test(
     size = "small",
     srcs = ["rst_to_trlc_test.py"],
     main = "rst_to_trlc_test.py",
-    deps = ["//bazel/rules/rules_score:rst_to_trlc_lib"],
+    deps = ["@score_tooling//bazel/rules/rules_score:rst_to_trlc_lib"],
 )
 
 py_test(
@@ -782,7 +821,6 @@ py_test(
 test_suite(
     name = "all_tests",
     tests = [
-        ":requirements_image_tests",
         ":requirements_rst_tests",
         ":seooc_tests",
         ":sphinx_module_tests",
@@ -791,5 +829,6 @@ test_suite(
         ":test_safety_analysis_tools",
         ":test_trlc_rst_image_rendering",
         ":unit_component_tests",
+        "//fixtures/image_srcs:requirements_image_tests",
     ],
 )

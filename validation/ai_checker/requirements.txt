@@ -201,9 +201,9 @@ langchain-protocol==0.0.17 \
     --hash=sha256:982a08fe152586ed10d4ff3d538c2e0b5766e5f307cdea325e10be3f2c17cae6 \
     --hash=sha256:e7cbe58c205df4b4fd87dc6d5bb23f10e13b236d0e2e1b0b9d05bc2b648f3eea
     # via langchain-core
-langsmith==0.8.16 \
-    --hash=sha256:081e57c0175d142192683288740a796eb0eb32d9e703b4bf9133678ceefe3286 \
-    --hash=sha256:8c943f0c9185fe2a9637b5b442828b7efd823b1de28d50d14c136c79660f909b
+langsmith==0.8.18 \
+    --hash=sha256:32dde9c0e67e053e0fb738921fc8ced768af7b8fa83d7a0e3fd63597cf8776dd \
+    --hash=sha256:3940183349993faef48e6c7d08e4822ee9cefd906b362d0e3c2d650314d2f282
     # via langchain-core
 markupsafe==3.0.3 \
     --hash=sha256:0303439a41979d9e74d18ff5e2dd8c43ed6c6001fd40e5bf2e43f7bd9bbc523f \

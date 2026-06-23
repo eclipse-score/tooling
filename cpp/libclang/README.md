@@ -26,7 +26,6 @@ cpp_parser(
   extra_args = [
   ],
   target = "//cpp/libclang/integration_test/cases/include_3rdparty",
-  tool = ":clang_rs_parser",
 )
 ```
 
@@ -38,9 +37,9 @@ Where:
 Expected result:
 
 - Bazel creates parser output artifact:
-  - `bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_result.fbs.bin`
+  - `bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_class_diagram.fbs.bin`
 - When `emit_debug_json = True`, the parser also writes:
-  - `bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_result/debug.json`
+  - `bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_debug.json`
 
 ## Configure debug logging
 
@@ -55,6 +54,6 @@ Accepted values are: `error`, `warn`, `info`, `debug`, `trace`.
 ## Quick check (optional)
 
 ```bash
-ls -l bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_result.fbs.bin
-ls -l bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_result/debug.json
+ls -l bazel-bin/cpp/libclang/integration_test/cases/include_3rdparty/parser_class_diagram.fbs.bin
+ls -l bazel-bin/cpp/libclang/integration_test/cases/include_3rdparty/parser_debug.json
 ```

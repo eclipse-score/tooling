@@ -10,14 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//cpp/libclang:cpp_parser.bzl", "cpp_parser")
-
-filegroup(
-    name = "expected_output",
-    srcs = ["expected.json"],
-    visibility = ["//cpp/libclang/integration_test:__subpackages__"],
-)
+load("//cpp/libclang/integration_test:test_rules.bzl", "cpp_parser_integration_test")
 
 cc_library(
     name = "relationship_dependency",
@@ -25,31 +18,8 @@ cc_library(
     visibility = ["//cpp/libclang:__subpackages__"],
 )
 
-cpp_parser(
-    name = "parser",
-    emit_debug_json = True,
-    extra_args = [
-    ],
+cpp_parser_integration_test(
+    name = "test_relationship_dependency",
+    expected_output = ["expected.json"],
     target = ":relationship_dependency",
-    tool = "//cpp/libclang:clang_rs_parser",
-    visibility = ["//cpp/libclang/integration_test:__pkg__"],
-)
-
-rust_test(
-    name = "test_libclang_parser",
-    srcs = [
-        "run_test.rs",
-    ],
-    data = [
-        ":expected_output",
-        ":parser",
-    ],
-    env = {
-        "TEST_OUTPUT_PATH": "$(rootpath :parser)",
-        "EXPECTED_OUTPUT_PATH": "$(rootpath :expected_output)",
-    },
-    visibility = ["//cpp/libclang:__pkg__"],
-    deps = [
-        "//cpp/libclang/integration_test:libclang_test_framework",
-    ],
 )

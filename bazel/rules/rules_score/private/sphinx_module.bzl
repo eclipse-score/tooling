@@ -237,10 +237,36 @@ def _score_html_impl(ctx):
         "--log-level",
         get_log_level(ctx),
     ]
+
+    # Wire in the hermetic graphviz deb (dot_builtins + bundled shared libs) if provided.
+    # conf.template.py resolves all three env vars (GRAPHVIZ_DOT,
+    # LD_LIBRARY_PATH, LTDL_LIBRARY_PATH) from execroot-relative to absolute
+    # paths so dot_builtins can load its plugins without a system installation.
+    graphviz_env = {}
+    graphviz_files = ctx.files.graphviz
+    if graphviz_files:
+        _dot_suffix = "/usr/bin/dot_builtins"
+        dot_binary = None
+        for f in graphviz_files:
+            if f.path.endswith(_dot_suffix):
+                dot_binary = f
+                break
+        if not dot_binary:
+            fail("graphviz target {} must provide usr/bin/dot_builtins".format(ctx.attr.graphviz))
+
+        graphviz_prefix = dot_binary.path[:-len(_dot_suffix)]
+        graphviz_env = {
+            "GRAPHVIZ_DOT": dot_binary.path,
+            "LD_LIBRARY_PATH": graphviz_prefix + "/usr/lib",
+            "LTDL_LIBRARY_PATH": graphviz_prefix + "/usr/lib/graphviz",
+        }
+        html_inputs = html_inputs + graphviz_files
+
     ctx.actions.run(
         inputs = html_inputs,
         outputs = [sphinx_html_output],
         arguments = html_args + [args],
+        env = graphviz_env,
         progress_message = "Building HTML: %s" % ctx.label.name,
         executable = sphinx_toolchain.sphinx.files_to_run.executable,
         tools = [
@@ -332,6 +358,13 @@ _score_html = rule(
                   "destination paths relative to the Sphinx source root. Exactly one " +
                   "file per label. Mirrors sphinx_docs.renamed_srcs from rules_python.",
         ),
+        graphviz = attr.label(
+            default = None,
+            allow_files = True,
+            doc = "Graphviz cmake-release deb files (dot_builtins binary + bundled libs). " +
+                  "Only available on Linux x86_64; provides a hermetic 'dot' binary without requiring a system graphviz installation. " +
+                  "Defaults to @graphviz_deb//:all on Linux x86_64.",
+        ),
     ),
     toolchains = ["//bazel/rules/rules_score:toolchain_type"],
 )
@@ -350,6 +383,7 @@ def sphinx_module(
         strip_prefix = "",
         extra_opts = [],
         extra_opts_targets = [],
+        graphviz = None,
         testonly = False,
         **kwargs):
     """Build a Sphinx module with transitive HTML dependencies.
@@ -374,6 +408,10 @@ def sphinx_module(
         extra_opts_targets: {type}`list[label]` Label targets that resolve to extra Sphinx
                     arguments at analysis time. Each target must provide FilteredExecpathInfo
                     (e.g. filter_execpath targets).
+        graphviz: Graphviz cmake-release deb files (dot_builtins + bundled libs). On Linux x86_64,
+                    defaults to @graphviz_deb//:all for hermetic graphviz support. On other platforms
+                    or if explicitly set to None, no graphviz support is provided (the sphinx.ext.graphviz
+                    extension will not be available).
         visibility: Bazel visibility
     """
     _score_needs(
@@ -394,6 +432,7 @@ def sphinx_module(
         needs = [d + "_needs" for d in deps],
         extra_opts = extra_opts,
         extra_opts_targets = extra_opts_targets,
+        graphviz = graphviz,
         testonly = testonly,
         **kwargs
     )

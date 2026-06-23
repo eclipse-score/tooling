@@ -34,6 +34,11 @@ bazel_dep(name = "bazel_skylib", version = "1.7.1")
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2")
 bazel_dep(name = "flatbuffers", version = "25.9.23")
 bazel_dep(name = "download_utils", version = "1.2.2")
+git_override(
+    module_name = "download_utils",
+    commit = "3b96912fb6622dda83f25efd1f8ae596fc4a63a6",
+    remote = "https://gitlab.arm.com/bazel/download_utils.git",
+)
 
 # flatbuffers depends on this transitively, but older grpc-java version
 # The main problem is that there the command `bazel mod deps` is broken, which
@@ -252,6 +257,19 @@ deb(
     name = "lcov_deb",
     integrity = "sha256-Ip14IkKavqBtkQ7mh6AXzr/6YyHpvSAZ0veMmw1+N80=",
     urls = ["https://archive.ubuntu.com/ubuntu/pool/universe/l/lcov/lcov_2.0-4ubuntu2_all.deb"],
+)
+
+###############################################################################
+# Graphviz deb package (cmake release; bundles all graphviz .so files so
+# dot_builtins runs without system graphviz installation)
+# Uses download_deb from @download_utils at a commit that includes
+# data.tar.gz support in download/deb/repository.bzl.
+###############################################################################
+deb(
+    name = "graphviz_deb",
+    build = "//third_party/graphviz:graphviz.BUILD",
+    integrity = "sha256-Jk5gSqo8l0INoY+kr1ZAsi2WhZY8LlAFlEag54H3Q2Q=",
+    urls = ["https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/12.2.1/ubuntu_24.04_graphviz-12.2.1-cmake.deb"],
 )
 
 register_toolchains(

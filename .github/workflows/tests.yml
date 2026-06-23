@@ -14,34 +14,36 @@ name: Run Python Basics Integration and Unit Tests
 on:
   pull_request:
     types: [opened, reopened, synchronize]
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+env:
+  ANDROID_HOME: ""
+  ANDROID_SDK_ROOT: ""
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
-  code:
-    runs-on: ubuntu-latest
+  root_workspace_tests:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.3
-      - name: Install Missing Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcairo2-dev
-      - name: Run python_basics integration tests
-        run: |
-          cd python_basics/integration_tests
-          bazel test //...
-      - name: Run starpls integration tests
-        run: |
-          cd starpls/integration_tests
-          bazel test //...
-      - name: Run cr_checker unit tests
-        run: |
-          cd cr_checker/tests
-          bazel test //...
+        uses: actions/checkout@v7.0.0
+      - name: Free Disk Space (Ubuntu)
+        uses: eclipse-score/more-disk-space@v1
+        with:
+          level: 4
+      - uses: castler/setup-bazel@cache-optimized
+        with:
+          bazelisk-cache: true
+          disk-cache: root_workspace_tests
+          repository-cache: true
+          cache-optimized: true
+          cache-save: ${{ github.ref == 'refs/heads/main' }}
       - name: Run coverage module tests
         run: |
           bazel test //coverage/tests:all
-      - name: Run rules_score tests
-        run: |
-          bazel test //bazel/rules/rules_score/...
       - name: Run Plantuml Tooling clippy
         run: |
           bazel build //plantuml/... --config=clippy
@@ -63,3 +65,61 @@ jobs:
       - name: Run Libclang Parser Tooling tests
         run: |
           bazel test //cpp/libclang/...
+  integration_tests:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+      - name: Free Disk Space (Ubuntu)
+        uses: eclipse-score/more-disk-space@v1
+        with:
+          level: 4
+      - uses: castler/setup-bazel@cache-optimized
+        with:
+          bazelisk-cache: true
+          disk-cache: integration_tests
+          repository-cache: true
+          cache-optimized: true
+          cache-save: ${{ github.ref == 'refs/heads/main' }}
+      - name: Run python_basics integration tests
+        run: |
+          cd python_basics/integration_tests
+          bazel test //...
+      - name: Run starpls integration tests
+        run: |
+          cd starpls/integration_tests
+          bazel test //...
+      - name: Run cr_checker unit tests
+        run: |
+          cd cr_checker/tests
+          bazel test //...
+  rules_score_tests:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+      - name: Free Disk Space (Ubuntu)
+        uses: eclipse-score/more-disk-space@v1
+        with:
+          level: 4
+      - uses: castler/setup-bazel@cache-optimized
+        with:
+          bazelisk-cache: true
+          disk-cache: rules_score_tests
+          repository-cache: true
+          cache-optimized: true
+          cache-save: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install Missing Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev
+      - name: Run rules_score tests
+        run: |
+          cd bazel/rules/rules_score/test
+          bazel test //...

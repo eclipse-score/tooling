@@ -1,5 +1,5 @@
 # *******************************************************************************
-# Copyright (c) 2026 Contributors to the Eclipse Foundation
+# Copyright (c) 2025 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -10,16 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("//cpp/libclang/integration_test:test_rules.bzl", "cpp_parser_integration_test")
 
-cc_library(
-    name = "relationship_inheritance",
-    srcs = ["inheritance.cpp"],
-    visibility = ["//cpp/libclang:__subpackages__"],
-)
-
-cpp_parser_integration_test(
-    name = "test_relationship_inheritance",
-    expected_output = ["expected.json"],
-    target = ":relationship_inheritance",
-)
+# This package hosts the BUILD file used by the @graphviz_deb external repository.
+# The download_deb rule from @download_utils extracts the Graphviz cmake
+# release .deb and uses graphviz.BUILD as its top-level BUILD file.

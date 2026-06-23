@@ -48,19 +48,11 @@ class TestImageRenderingIntegration(unittest.TestCase):
         self._tmpdir = tempfile.mkdtemp()
         self._out = os.path.join(self._tmpdir, "output.rst")
         self._fixture_trlc = _runfile(
-            "bazel",
-            "rules",
-            "rules_score",
-            "test",
             "fixtures",
             "image_requirements",
             "image_requirements.trlc",
         )
         self._fixture_rsl = _runfile(
-            "bazel",
-            "rules",
-            "rules_score",
-            "test",
             "fixtures",
             "image_requirements",
             "schema.rsl",

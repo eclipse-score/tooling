@@ -10,16 +10,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("//cpp/libclang/integration_test:test_rules.bzl", "cpp_parser_integration_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
-cc_library(
-    name = "relationship_inheritance",
-    srcs = ["inheritance.cpp"],
-    visibility = ["//cpp/libclang:__subpackages__"],
-)
+package(default_visibility = ["//visibility:public"])
 
-cpp_parser_integration_test(
-    name = "test_relationship_inheritance",
-    expected_output = ["expected.json"],
-    target = ":relationship_inheritance",
+rust_library(
+    name = "activity_diagram",
+    srcs = ["activity_logic.rs"],
+    crate_name = "activity_diagram",
+    crate_root = "activity_logic.rs",
+    edition = "2021",
+    deps = [
+        "@crates//:serde",
+    ],
 )
