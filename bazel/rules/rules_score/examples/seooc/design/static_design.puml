@@ -18,6 +18,9 @@ package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC
         component "Unit 1" as unit_1 <<unit>>
         component "Unit 2" as unit_2 <<unit>>
     }
+    interface "InternalInterface" as InternalInterface
+    unit_1 -( InternalInterface
+    unit_2 )- InternalInterface
 }
 
 package "SampleLibraryAPI" as SampleLibraryAPI

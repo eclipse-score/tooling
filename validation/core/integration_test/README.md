@@ -1,4 +1,4 @@
-<!--
+<!-- ----------------------------------------------------------------------------
   Copyright (c) 2026 Contributors to the Eclipse Foundation
 
   See the NOTICE file(s) distributed with this work for additional
@@ -9,7 +9,7 @@
   https://www.apache.org/licenses/LICENSE-2.0
 
   SPDX-License-Identifier: Apache-2.0
--->
+----------------------------------------------------------------------------- -->
 
 # Validation Integration Tests
 
@@ -44,7 +44,7 @@ The output is exposed through providers:
 
 | Rule | Provider | Fields used |
 |------|----------|-------------|
-| `architectural_design` | `ArchitecturalDesignInfo` | `static` (component), `dynamic` (sequence) |
+| `architectural_design` | `ArchitecturalDesignInfo` | `static` (component), `dynamic` (sequence), `internal_api` (internal API) |
 | `unit_design` | `UnitDesignInfo` | `static` (class), `dynamic` (sequence) |
 
 ### Layer 2 — Fixture preparation (`puml_fixture.bzl`)
@@ -55,9 +55,10 @@ navigate at runtime:
 
 ```
 fbs/
-├── component/   ← from ArchitecturalDesignInfo.static
-├── class/       ← from UnitDesignInfo.static
-└── sequence/    ← from ArchitecturalDesignInfo.dynamic + UnitDesignInfo.dynamic
+├── component/    ← from ArchitecturalDesignInfo.static
+├── class/        ← from UnitDesignInfo.static
+├── internal_api/ ← from ArchitecturalDesignInfo.internal_api, when present
+└── sequence/     ← from ArchitecturalDesignInfo.dynamic + UnitDesignInfo.dynamic
 ```
 
 Each file in these directories is a **symlink** to the canonical `.fbs.bin`
@@ -67,6 +68,10 @@ action cache entry is reused.
 A `filegroup` named `case_data` then bundles the `fbs` target together with the
 static fixture files (`architecture.json`, `expected.json`), making the whole
 case available as a single Bazel dependency.
+
+For `ComponentSequence` cases that exercise method-level validation, the suite
+also reads `internal_api/*.fbs.bin` and forwards those files to the CLI as
+`--internal-api-fbs`.
 
 ### Layer 3 — CLI invocation (Rust test binary)
 
@@ -119,6 +124,12 @@ bazel_component_integration_test
 PASS / FAIL
 ```
 
+`ComponentSequence` method-validation cases follow the same flow for
+`internal_api_diagram.puml`: the `architectural_design` rule produces
+`internal_api/*.fbs.bin`, `provider_fbs_fixture_bundle` materializes those
+files under `fbs/internal_api/`, and the suite passes them to `validation_cli`
+with `--internal-api-fbs`.
+
 ## Test case anatomy
 
 Each test case is a self-contained directory. The exact files required depend on
@@ -148,9 +159,10 @@ the validator under test.
 
 ```
 <case>/
-├── BUILD                 # architectural_design (static + dynamic) + provider_fbs_fixture_bundle + case_data
+├── BUILD                 # architectural_design (static + dynamic, plus optional internal_api) + provider_fbs_fixture_bundle + case_data
 ├── component_diagram.puml
 ├── sequence_diagram.puml
+├── internal_api_diagram.puml  # optional; include when the case exercises method-level validation
 └── expected.json
 ```
 

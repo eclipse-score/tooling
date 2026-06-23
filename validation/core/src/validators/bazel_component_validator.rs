@@ -226,7 +226,8 @@ impl<'a> BazelComponentValidator<'a> {
 mod tests {
     use super::*;
     use crate::models::{
-        BazelInput, BazelInputEntry, ComponentDiagramInput, ComponentDiagramInputs,
+        BazelInput, BazelInputEntry, ComponentDiagramElementType, ComponentDiagramInput,
+        ComponentDiagramInputs,
     };
     use std::collections::BTreeMap;
 
@@ -250,11 +251,19 @@ mod tests {
         parent_id: Option<&str>,
         stereotype: Option<&str>,
     ) -> ComponentDiagramInput {
+        let element_type = if stereotype == Some("SEooC") {
+            ComponentDiagramElementType::Package
+        } else {
+            ComponentDiagramElementType::Component
+        };
+
         ComponentDiagramInput {
             id: id.to_string(),
             alias: alias.map(|s| s.to_string()),
             parent_id: parent_id.map(|s| s.to_string()),
+            element_type,
             stereotype: stereotype.map(|s| s.to_string()),
+            relations: Vec::new(),
         }
     }
 

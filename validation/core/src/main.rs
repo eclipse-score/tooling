@@ -26,8 +26,8 @@ use validation::{
     validate_bazel_component, validate_component_class, validate_component_sequence,
     BazelArchitecture, BazelInput, BazelReader, ClassDiagramIndex, ClassDiagramInputs,
     ClassDiagramReader, ComponentDiagramArchitecture, ComponentDiagramInputs,
-    ComponentDiagramReader, Errors, Reader, RequiredInput, SelectedValidator, SequenceDiagramIndex,
-    SequenceDiagramInputs, SequenceDiagramReader, ALL_VALIDATORS,
+    ComponentDiagramReader, Errors, InternalApiIndex, Reader, RequiredInput, SelectedValidator,
+    SequenceDiagramIndex, SequenceDiagramInputs, SequenceDiagramReader, ALL_VALIDATORS,
 };
 
 /// CLI-visible log level (mirrors the parser/linker convention).
@@ -69,6 +69,9 @@ struct Args {
     #[arg(long = "class-fbs", num_args = 1..)]
     class_fbs: Option<Vec<String>>,
 
+    #[arg(long = "internal-api-fbs", num_args = 1..)]
+    internal_api_fbs: Option<Vec<String>>,
+
     #[arg(long)]
     output: Option<String>,
 
@@ -87,6 +90,7 @@ struct ValidationCliInputs {
     component_fbs: Vec<String>,
     sequence_fbs: Vec<String>,
     class_fbs: Vec<String>,
+    internal_api_fbs: Vec<String>,
 }
 
 struct ValidationContext {
@@ -95,6 +99,7 @@ struct ValidationContext {
     component: Option<ComponentDiagramArchitecture>,
     sequence: Option<SequenceDiagramIndex>,
     class: Option<ClassDiagramIndex>,
+    internal_api: Option<InternalApiIndex>,
 }
 
 impl ValidationContext {
@@ -104,6 +109,7 @@ impl ValidationContext {
             RequiredInput::Component => self.component.is_some(),
             RequiredInput::Sequence => self.sequence.is_some(),
             RequiredInput::Class => self.class.is_some(),
+            RequiredInput::InternalApi => self.internal_api.is_some(),
         }
     }
 
@@ -122,6 +128,7 @@ impl ValidationContext {
             SelectedValidator::ComponentSequence => validate_component_sequence(
                 self.component.as_ref().unwrap(),
                 self.sequence.as_ref().unwrap(),
+                self.internal_api.as_ref(),
                 Errors::default(),
             ),
         }
@@ -150,6 +157,7 @@ fn run(args: Args) -> Result<(), String> {
         component_fbs: args.component_fbs.unwrap_or_default(),
         sequence_fbs: args.sequence_fbs.unwrap_or_default(),
         class_fbs: args.class_fbs.unwrap_or_default(),
+        internal_api_fbs: args.internal_api_fbs.unwrap_or_default(),
     };
 
     let mut context = build_validation_context(inputs)?;
@@ -220,6 +228,11 @@ fn build_validation_context(inputs: ValidationCliInputs) -> Result<ValidationCon
         &mut errors,
         |raw: ClassDiagramInputs, errs| ClassDiagramIndex::build_index(&raw, errs),
     )?;
+    let internal_api = read_and_convert::<ClassDiagramReader, InternalApiIndex>(
+        inputs.internal_api_fbs.as_slice(),
+        &mut errors,
+        |raw: ClassDiagramInputs, errs| InternalApiIndex::build_index(&raw, errs),
+    )?;
 
     Ok(ValidationContext {
         base_errors: errors,
@@ -227,6 +240,7 @@ fn build_validation_context(inputs: ValidationCliInputs) -> Result<ValidationCon
         component,
         sequence,
         class,
+        internal_api,
     })
 }
 
