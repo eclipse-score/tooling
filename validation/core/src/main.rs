@@ -13,22 +13,14 @@
 
 //! Validation CLI entrypoint.
 //!
-//! Supports architecture and design validations inferred from provided
-//! input types.
-
-use std::fs;
-use std::mem;
-use std::process;
+//! Supports architecture and design validations selected by validation profile.
+mod report;
 
 use clap::{Parser, ValueEnum};
 use env_logger::Builder;
-use validation::{
-    validate_bazel_component, validate_component_class, validate_component_sequence,
-    BazelArchitecture, BazelInput, BazelReader, ClassDiagramIndex, ClassDiagramInputs,
-    ClassDiagramReader, ComponentDiagramArchitecture, ComponentDiagramInputs,
-    ComponentDiagramReader, Errors, InternalApiIndex, Reader, RequiredInput, SelectedValidator,
-    SequenceDiagramIndex, SequenceDiagramInputs, SequenceDiagramReader, ALL_VALIDATORS,
-};
+use std::process;
+
+use validation::{read_profile_inputs, run_profile, Profile};
 
 /// CLI-visible log level (mirrors the parser/linker convention).
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -57,20 +49,13 @@ impl CliLogLevel {
 #[command(version = "1.0")]
 #[command(about = "Validate architecture and design consistency from PlantUML exports")]
 struct Args {
+    /// Validation profile. Profiles select the validators to run.
+    #[arg(long, value_enum)]
+    profile: Profile,
+
+    /// JSON file containing input paths for the selected validation profile.
     #[arg(long)]
-    architecture_json: Option<String>,
-
-    #[arg(long = "component-fbs", num_args = 1..)]
-    component_fbs: Option<Vec<String>>,
-
-    #[arg(long = "sequence-fbs", num_args = 1..)]
-    sequence_fbs: Option<Vec<String>>,
-
-    #[arg(long = "class-fbs", num_args = 1..)]
-    class_fbs: Option<Vec<String>>,
-
-    #[arg(long = "internal-api-fbs", num_args = 1..)]
-    internal_api_fbs: Option<Vec<String>>,
+    inputs: String,
 
     #[arg(long)]
     output: Option<String>,
@@ -85,229 +70,15 @@ struct Args {
     log_level: CliLogLevel,
 }
 
-struct ValidationCliInputs {
-    architecture_json: Option<String>,
-    component_fbs: Vec<String>,
-    sequence_fbs: Vec<String>,
-    class_fbs: Vec<String>,
-    internal_api_fbs: Vec<String>,
-}
-
-struct ValidationContext {
-    base_errors: Errors,
-    bazel: Option<BazelArchitecture>,
-    component: Option<ComponentDiagramArchitecture>,
-    sequence: Option<SequenceDiagramIndex>,
-    class: Option<ClassDiagramIndex>,
-    internal_api: Option<InternalApiIndex>,
-}
-
-impl ValidationContext {
-    fn has_input(&self, input: RequiredInput) -> bool {
-        match input {
-            RequiredInput::Bazel => self.bazel.is_some(),
-            RequiredInput::Component => self.component.is_some(),
-            RequiredInput::Sequence => self.sequence.is_some(),
-            RequiredInput::Class => self.class.is_some(),
-            RequiredInput::InternalApi => self.internal_api.is_some(),
-        }
-    }
-
-    fn run_validator(&self, validator: SelectedValidator) -> Errors {
-        match validator {
-            SelectedValidator::BazelComponent => validate_bazel_component(
-                self.bazel.as_ref().unwrap(),
-                self.component.as_ref().unwrap(),
-                Errors::default(),
-            ),
-            SelectedValidator::ComponentClass => validate_component_class(
-                self.component.as_ref().unwrap(),
-                self.class.as_ref().unwrap(),
-                Errors::default(),
-            ),
-            SelectedValidator::ComponentSequence => validate_component_sequence(
-                self.component.as_ref().unwrap(),
-                self.sequence.as_ref().unwrap(),
-                self.internal_api.as_ref(),
-                Errors::default(),
-            ),
-        }
-    }
-}
-
-fn read_and_convert<R, O>(
-    input: &R::Input,
-    errors: &mut Errors,
-    convert: impl Fn(R::Raw, &mut Errors) -> O,
-) -> Result<Option<O>, String>
-where
-    R: Reader,
-{
-    if !R::is_present(input) {
-        return Ok(None);
-    }
-
-    let raw = R::read(input).map_err(|e| e.to_string())?;
-    Ok(Some(convert(raw, errors)))
-}
-
 fn run(args: Args) -> Result<(), String> {
-    let inputs = ValidationCliInputs {
-        architecture_json: args.architecture_json,
-        component_fbs: args.component_fbs.unwrap_or_default(),
-        sequence_fbs: args.sequence_fbs.unwrap_or_default(),
-        class_fbs: args.class_fbs.unwrap_or_default(),
-        internal_api_fbs: args.internal_api_fbs.unwrap_or_default(),
-    };
-
-    let mut context = build_validation_context(inputs)?;
-    let validators = resolve_validators(&context)?;
-
-    run_selected_validators(
+    let inputs = read_profile_inputs(args.profile, &args.inputs)?;
+    let profile_run = run_profile(args.profile, &inputs)?;
+    report::finish_profile_validation(
         args.output.as_deref(),
         args.warn_on_errors,
-        &validators,
-        &mut context,
+        args.profile,
+        &profile_run,
     )
-}
-
-fn resolve_validators(context: &ValidationContext) -> Result<Vec<SelectedValidator>, String> {
-    let inferred = ALL_VALIDATORS
-        .iter()
-        .copied()
-        .filter(|validator| validator.can_run(|input| context.has_input(input)))
-        .collect::<Vec<_>>();
-
-    if inferred.is_empty() {
-        Err(
-            "Unable to infer any validation to run from inputs. Provide compatible input files (for example: --architecture-json with --component-fbs, --component-fbs with --class-fbs, or --component-fbs with --sequence-fbs)."
-                .to_string(),
-        )
-    } else {
-        Ok(inferred)
-    }
-}
-
-fn run_selected_validators(
-    output_path: Option<&str>,
-    warn_on_errors: bool,
-    validators: &[SelectedValidator],
-    context: &mut ValidationContext,
-) -> Result<(), String> {
-    let mut errors = mem::take(&mut context.base_errors);
-
-    for validator in validators {
-        merge_errors(&mut errors, context.run_validator(*validator));
-    }
-
-    finish_validation(output_path, warn_on_errors, &errors)
-}
-
-fn build_validation_context(inputs: ValidationCliInputs) -> Result<ValidationContext, String> {
-    let mut errors = Errors::default();
-    let bazel = match inputs.architecture_json.as_deref() {
-        Some(path) => read_and_convert::<BazelReader, BazelArchitecture>(
-            path,
-            &mut errors,
-            |raw: BazelInput, errs| raw.to_bazel_architecture(errs),
-        )?,
-        None => None,
-    };
-    let component = read_and_convert::<ComponentDiagramReader, ComponentDiagramArchitecture>(
-        inputs.component_fbs.as_slice(),
-        &mut errors,
-        |raw: ComponentDiagramInputs, errs| raw.to_diagram_architecture(errs),
-    )?;
-    let sequence = read_and_convert::<SequenceDiagramReader, SequenceDiagramIndex>(
-        inputs.sequence_fbs.as_slice(),
-        &mut errors,
-        |raw: SequenceDiagramInputs, errs| raw.to_sequence_diagram_index(errs),
-    )?;
-    let class = read_and_convert::<ClassDiagramReader, ClassDiagramIndex>(
-        inputs.class_fbs.as_slice(),
-        &mut errors,
-        |raw: ClassDiagramInputs, errs| ClassDiagramIndex::build_index(&raw, errs),
-    )?;
-    let internal_api = read_and_convert::<ClassDiagramReader, InternalApiIndex>(
-        inputs.internal_api_fbs.as_slice(),
-        &mut errors,
-        |raw: ClassDiagramInputs, errs| InternalApiIndex::build_index(&raw, errs),
-    )?;
-
-    Ok(ValidationContext {
-        base_errors: errors,
-        bazel,
-        component,
-        sequence,
-        class,
-        internal_api,
-    })
-}
-
-fn merge_errors(target: &mut Errors, incoming: Errors) {
-    target.messages.extend(incoming.messages);
-    if !incoming.debug_output.is_empty() {
-        if !target.debug_output.is_empty() {
-            target.debug_output.push_str("\n\n");
-        }
-        target.debug_output.push_str(&incoming.debug_output);
-    }
-}
-
-fn finish_validation(
-    output_path: Option<&str>,
-    warn_on_errors: bool,
-    errors: &Errors,
-) -> Result<(), String> {
-    if let Some(path) = output_path {
-        write_log(path, errors)?;
-    }
-
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        let details = errors
-            .messages
-            .iter()
-            .enumerate()
-            .map(|(i, msg)| format!("  [{}] {}", i + 1, msg))
-            .collect::<Vec<_>>()
-            .join("\n\n");
-        let output = format!(
-            "Verification FAILED ({} error(s)):\n\n{}",
-            errors.messages.len(),
-            details
-        );
-        if warn_on_errors {
-            log::warn!("{}", output);
-            Ok(())
-        } else {
-            Err(output)
-        }
-    }
-}
-
-fn write_log(path: &str, errors: &Errors) -> Result<(), String> {
-    let content = if errors.is_empty() {
-        format!("PASS\n\n{}", errors.debug_output)
-    } else {
-        let details = errors
-            .messages
-            .iter()
-            .enumerate()
-            .map(|(i, msg)| format!("[{}] {}", i + 1, msg))
-            .collect::<Vec<_>>()
-            .join("\n\n");
-        let mut s = format!(
-            "FAILED ({} error(s)):\n\n{}",
-            errors.messages.len(),
-            details
-        );
-        s.push_str("\n--- Debug Information ---\n\n");
-        s.push_str(&errors.debug_output);
-        s
-    };
-    fs::write(path, content).map_err(|e| format!("Failed to write output file {path}: {e}"))
 }
 
 fn main() {
