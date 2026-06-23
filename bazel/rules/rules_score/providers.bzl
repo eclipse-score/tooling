@@ -188,6 +188,7 @@ ArchitecturalDesignInfo = provider(
         "internal_api": "Depset of FlatBuffers binaries for internal API diagrams (class diagrams, etc.)",
         "name": "Name of the architectural design target",
         "public_api_lobster_files": "Depset of .lobster traceability files generated from public_api diagrams.",
+        "validation_logs": "List of validation log entries produced by this architectural design target. Each entry has file and name fields.",
     },
 )
 

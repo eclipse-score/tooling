@@ -53,6 +53,7 @@ load(
     "format_lobster_sources",
 )
 load("//bazel/rules/rules_score/private:sphinx_module.bzl", "sphinx_module")
+load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 # ============================================================================
@@ -652,50 +653,43 @@ def _collect_architecture_components(ctx):
 
     return all_components
 
-def _run_validation(ctx, arch_json, static_fbs_files, dynamic_fbs_files, internal_api_fbs_files, unit_static_fbs_files):
-    """Run the architecture verifier tool against a pre-built JSON file.
+def _run_validation(ctx, arch_json, static_fbs_files):
+    """Run the dependable-element validation profile.
 
     Args:
         ctx: Rule context
         arch_json: The architecture JSON File object (already declared and written)
-        static_fbs_files: List of static component-diagram FlatBuffer files
-        dynamic_fbs_files: List of dynamic component-diagram FlatBuffer files
-        internal_api_fbs_files: List of internal-API FlatBuffer files
-        unit_static_fbs_files: List of static class-diagram FlatBuffer files
-
+        static_fbs_files: Component-diagram FlatBuffer files from architectural_design targets.
     Returns:
         validation_log File object
     """
 
-    validation_log = ctx.actions.declare_file(ctx.label.name + "/validation.log")
-
-    validation_args = ctx.actions.args()
-    validation_args.add("--architecture-json", arch_json)
-    if static_fbs_files:
-        validation_args.add_all("--component-fbs", static_fbs_files)
-    if dynamic_fbs_files:
-        validation_args.add_all("--sequence-fbs", dynamic_fbs_files)
-    if internal_api_fbs_files:
-        validation_args.add_all("--internal-api-fbs", internal_api_fbs_files)
-
-    # if unit_static_fbs_files:
-    #     validation_args.add_all("--class-fbs", unit_static_fbs_files)
-    validation_args.add("--output", validation_log)
-    validation_args.add("--log-level", get_log_level(ctx))
-    if ctx.attr.maturity == "development":
-        validation_args.add("--warn-on-errors")
-
-    # ctx.actions.run will fail the build if validation_cli returns non-zero exit code
-    ctx.actions.run(
-        inputs = [arch_json] + static_fbs_files + dynamic_fbs_files + internal_api_fbs_files + unit_static_fbs_files,
-        outputs = [validation_log],
-        executable = ctx.executable._validation_cli,
-        arguments = [validation_args],
-        progress_message = "Running validation: %s" % ctx.label.name,
-        mnemonic = "ArchitectureValidate",
+    return run_validation(
+        ctx = ctx,
+        validation_cli = ctx.executable._validation_cli,
+        profile = PROFILES.DEPENDABLE_ELEMENT,
+        input_bundle = {
+            "architecture": arch_json.path,
+            "component_diagrams": [f.path for f in static_fbs_files],
+        },
+        inputs = [arch_json] + static_fbs_files,
+        mnemonic = "DependableElementValidate",
+        maturity = ctx.attr.maturity,
+        log_level = get_log_level(ctx),
     )
 
-    return validation_log
+def _symlink_validation_log(ctx, validation_log):
+    """Expose a validation log under the dependable-element validation folder."""
+    output_log = ctx.actions.declare_file(
+        ctx.attr.module_name + "_validation/" + validation_log.name,
+    )
+
+    ctx.actions.symlink(
+        output = output_log,
+        target_file = validation_log.file,
+    )
+
+    return output_log
 
 # ============================================================================
 # Index Generation Rule Implementation
@@ -868,34 +862,23 @@ def _dependable_element_index_impl(ctx):
     # Collect static FlatBuffers from architectural_design targets (the expected
     # static architecture) and verify them against the current architecture.
     static_fbs_files = []
-    dynamic_fbs_files = []
-    internal_api_fbs_files = []
+    validation_logs = []
     for ad in ctx.attr.architectural_design:
         if ArchitecturalDesignInfo in ad:
             static_fbs_files.extend(ad[ArchitecturalDesignInfo].static.to_list())
-            dynamic_fbs_files.extend(ad[ArchitecturalDesignInfo].dynamic.to_list())
-            internal_api_fbs_files.extend(ad[ArchitecturalDesignInfo].internal_api.to_list())
-
-    # Collect class-diagram FBS files produced by unit_design targets.
-    unit_static_fbs_files = []
-    for unit_target in all_units.values():
-        unit_info = unit_target[UnitInfo]
-        unit_static_fbs_files.extend(unit_info.unit_design_static_fbs.to_list())
+            validation_logs.extend(ad[ArchitecturalDesignInfo].validation_logs)
 
     # Run validation; build fails automatically on non-zero exit
-    validation_log = _run_validation(
-        ctx,
-        arch_json,
-        static_fbs_files,
-        dynamic_fbs_files,
-        internal_api_fbs_files,
-        unit_static_fbs_files,
-    )
+    validation_logs.append(_run_validation(ctx, arch_json, static_fbs_files))
+
+    validation_output_files = []
+    for log in validation_logs:
+        validation_output_files.append(_symlink_validation_log(ctx, log))
 
     # Both outputs are included so validation always runs in a default build.
-    # validation_log is also exposed in the debug output group for explicit access.
+    # Aggregated validation logs are also exposed in the debug output group for explicit access.
     output_files.append(arch_json)
-    output_files.append(validation_log)
+    output_files.extend(validation_output_files)
 
     # =========================================================================
     # Safety Certification Validation: certified scope and integrity level checks
@@ -1148,106 +1131,103 @@ def _dependable_element_index_impl(ctx):
             own_aou_lobster = own_aou_lobster_depset,
             chain_forwarded_lobster = chain_forwarded_lobster_depset,
         ),
-        OutputGroupInfo(debug = depset([validation_log])),
+        OutputGroupInfo(debug = depset(validation_output_files)),
     ]
+
+def _dependable_element_index_attrs():
+    attrs = {
+        "module_name": attr.string(
+            mandatory = True,
+            doc = "Name of the dependable element module (used as document title)",
+        ),
+        "assumptions_of_use": attr.label_list(
+            mandatory = True,
+            doc = "Assumptions of Use targets or files.",
+        ),
+        "requirements": attr.label_list(
+            mandatory = True,
+            providers = [[FeatureRequirementsInfo], [AssumedSystemRequirementsInfo]],
+            doc = "Feature or assumed system requirements targets.",
+        ),
+        "architectural_design": attr.label_list(
+            mandatory = True,
+            doc = "Architectural design targets or files.",
+        ),
+        "dependability_analysis": attr.label_list(
+            mandatory = True,
+            doc = "Dependability analysis targets or files.",
+        ),
+        "components": attr.label_list(
+            mandatory = True,
+            aspects = [collect_current_architecture_aspect],
+            doc = "Component targets (aspect is applied here and passed to subrule).",
+        ),
+        "tests": attr.label_list(
+            default = [],
+            doc = "Integration tests for the dependable element.",
+        ),
+        "checklists": attr.label_list(
+            default = [],
+            doc = "Safety checklists targets or files.",
+        ),
+        "glossary": attr.label_list(
+            default = [],
+            doc = "Glossary targets or files defining terminology and definitions.",
+        ),
+        "template": attr.label(
+            allow_single_file = [".rst"],
+            mandatory = True,
+            doc = "Template file for generating index.rst",
+        ),
+        "deps": attr.label_list(
+            default = [],
+            doc = "Dependencies on other dependable element modules (submodules).",
+        ),
+        "processed_deps": attr.label_list(
+            default = [],
+            doc = "Dependencies on other dependable element modules (submodules).",
+        ),
+        "aou_forwarding": attr.label(
+            allow_single_file = [".yaml", ".yml"],
+            default = None,
+            doc = "Optional YAML file listing received AoU IDs to further-forward to this element's own dependees. Only needed for chain-forwarding.",
+        ),
+        "integrity_level": attr.string(
+            mandatory = True,
+            values = _INTEGRITY_LEVELS,
+            doc = "Integrity level of the dependable element. Allowed values: 'A', 'B', 'C', 'D' (D > C > B > A).",
+        ),
+        "maturity": attr.string(
+            default = "release",
+            values = ["release", "development"],
+            doc = "Maturity level of the dependable element. 'release' (default) treats certified scope violations as errors; 'development' emits warnings and continues.",
+        ),
+        "_lobster_de_template": attr.label(
+            default = Label("//bazel/rules/rules_score/lobster/config:lobster_de_template"),
+            allow_single_file = True,
+            doc = "Lobster config template for dependable element traceability.",
+        ),
+        "_lobster_rst_report": attr.label(
+            default = Label("//tools/lobster_rst_report:lobster-rst-report"),
+            executable = True,
+            cfg = "exec",
+            doc = "Lobster RST report tool for generating the multi-page Sphinx traceability report.",
+        ),
+        "_aou_forwarding_tool": attr.label(
+            default = Label("//bazel/rules/rules_score:aou_forwarding_to_lobster"),
+            executable = True,
+            cfg = "exec",
+            doc = "Tool for filtering received AoU lobster entries based on chain-forwarding YAML.",
+        ),
+    }
+    attrs.update(VALIDATION_ATTRS)
+    attrs.update(VERBOSITY_ATTR)
+    return attrs
 
 _dependable_element_index = rule(
     implementation = _dependable_element_index_impl,
     doc = "Generates index.rst file with references to dependable element artifacts",
-    attrs = dict(
-        {
-            "module_name": attr.string(
-                mandatory = True,
-                doc = "Name of the dependable element module (used as document title)",
-            ),
-            "assumptions_of_use": attr.label_list(
-                mandatory = True,
-                doc = "Assumptions of Use targets or files.",
-            ),
-            "requirements": attr.label_list(
-                mandatory = True,
-                providers = [[FeatureRequirementsInfo], [AssumedSystemRequirementsInfo]],
-                doc = "Feature or assumed system requirements targets.",
-            ),
-            "architectural_design": attr.label_list(
-                mandatory = True,
-                doc = "Architectural design targets or files.",
-            ),
-            "dependability_analysis": attr.label_list(
-                mandatory = True,
-                doc = "Dependability analysis targets or files.",
-            ),
-            "components": attr.label_list(
-                mandatory = True,
-                aspects = [collect_current_architecture_aspect],
-                doc = "Component targets (aspect is applied here and passed to subrule).",
-            ),
-            "tests": attr.label_list(
-                default = [],
-                doc = "Integration tests for the dependable element.",
-            ),
-            "checklists": attr.label_list(
-                default = [],
-                doc = "Safety checklists targets or files.",
-            ),
-            "glossary": attr.label_list(
-                default = [],
-                doc = "Glossary targets or files defining terminology and definitions.",
-            ),
-            "template": attr.label(
-                allow_single_file = [".rst"],
-                mandatory = True,
-                doc = "Template file for generating index.rst",
-            ),
-            "deps": attr.label_list(
-                default = [],
-                doc = "Dependencies on other dependable element modules (submodules).",
-            ),
-            "processed_deps": attr.label_list(
-                default = [],
-                doc = "Dependencies on other dependable element modules (submodules).",
-            ),
-            "aou_forwarding": attr.label(
-                allow_single_file = [".yaml", ".yml"],
-                default = None,
-                doc = "Optional YAML file listing received AoU IDs to further-forward to this element's own dependees. Only needed for chain-forwarding.",
-            ),
-            "integrity_level": attr.string(
-                mandatory = True,
-                values = _INTEGRITY_LEVELS,
-                doc = "Integrity level of the dependable element. Allowed values: 'A', 'B', 'C', 'D' (D > C > B > A).",
-            ),
-            "maturity": attr.string(
-                default = "release",
-                values = ["release", "development"],
-                doc = "Maturity level of the dependable element. 'release' (default) treats certified scope violations as errors; 'development' emits warnings and continues.",
-            ),
-            "_validation_cli": attr.label(
-                default = Label("//validation/core:validation_cli"),
-                executable = True,
-                cfg = "exec",
-                doc = "Validation CLI tool",
-            ),
-            "_lobster_de_template": attr.label(
-                default = Label("//bazel/rules/rules_score/lobster/config:lobster_de_template"),
-                allow_single_file = True,
-                doc = "Lobster config template for dependable element traceability.",
-            ),
-            "_lobster_rst_report": attr.label(
-                default = Label("//tools/lobster_rst_report:lobster-rst-report"),
-                executable = True,
-                cfg = "exec",
-                doc = "Lobster RST report tool for generating the multi-page Sphinx traceability report.",
-            ),
-            "_aou_forwarding_tool": attr.label(
-                default = Label("//bazel/rules/rules_score:aou_forwarding_to_lobster"),
-                executable = True,
-                cfg = "exec",
-                doc = "Tool for filtering received AoU lobster entries based on chain-forwarding YAML.",
-            ),
-        },
-        **VERBOSITY_ATTR
-    ),
+    attrs = _dependable_element_index_attrs(),
     subrules = [subrule_lobster_report, subrule_lobster_html_report],
 )
 
