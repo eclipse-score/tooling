@@ -279,8 +279,8 @@ impl<'a> ComponentSequenceValidator<'a> {
                 ),
                 left_unit = call_context.normalized_left_unit(),
                 right_unit = call_context.normalized_right_unit(),
-                left_interfaces = format_interface_names(&left_interfaces),
-                right_interfaces = format_interface_names(&right_interfaces),
+                left_interfaces = format_interface_names(left_interfaces),
+                right_interfaces = format_interface_names(right_interfaces),
             ));
         }
     }
@@ -420,7 +420,7 @@ impl<'a> ComponentSequenceValidator<'a> {
             }
 
             self.errors.push(format_sequence_method_consistency_error(
-                &call_context,
+                call_context,
                 method_name,
                 "sequence function name was not found in the related interface methods",
                 "Declare this method on a shared interface referenced by both participating units in the internal API diagram",
@@ -664,14 +664,12 @@ fn matching_interfaces_with_method(
         .collect()
 }
 
-fn build_internal_api_interfaces_by_id<'a>(
-    internal_api_diagram: Option<&'a InternalApiIndex>,
-) -> Option<BTreeMap<String, &'a InternalApiInterface>> {
+fn build_internal_api_interfaces_by_id(
+    internal_api_diagram: Option<&InternalApiIndex>,
+) -> Option<BTreeMap<String, &InternalApiInterface>> {
     let mut interfaces_by_id = BTreeMap::new();
 
-    let Some(internal_api_diagram) = internal_api_diagram else {
-        return None;
-    };
+    let internal_api_diagram = internal_api_diagram?;
 
     for interface in internal_api_diagram.interfaces() {
         interfaces_by_id.insert(interface.id.clone(), interface);
