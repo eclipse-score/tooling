@@ -12,7 +12,7 @@
 // *******************************************************************************
 
 use test_framework::{
-    assert_cli_result, collect_case_fbs_files, load_expected_fixture, run_validation_cli,
+    assert_cli_result, collect_case_fbs_files, load_expected_fixture, run_validation_profile,
     CliRunResult,
 };
 
@@ -24,16 +24,15 @@ fn run_case_from_cli(
     sequence_fbs_paths: &[String],
     internal_api_fbs_paths: &[String],
 ) -> CliRunResult {
-    let mut cli_args = vec!["--component-fbs".to_string()];
-    cli_args.extend(component_fbs_paths.iter().cloned());
-    cli_args.push("--sequence-fbs".to_string());
-    cli_args.extend(sequence_fbs_paths.iter().cloned());
-    if !internal_api_fbs_paths.is_empty() {
-        cli_args.push("--internal-api-fbs".to_string());
-        cli_args.extend(internal_api_fbs_paths.iter().cloned());
-    }
-
-    run_validation_cli(&format!("component_sequence_{case_dir}"), &cli_args)
+    run_validation_profile(
+        &format!("component_sequence_{case_dir}"),
+        "architectural-design",
+        serde_json::json!({
+            "component_diagrams": component_fbs_paths,
+            "sequence_diagrams": sequence_fbs_paths,
+            "internal_api_diagrams": internal_api_fbs_paths,
+        }),
+    )
 }
 
 fn assert_case(case_dir: &str) {

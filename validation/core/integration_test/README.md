@@ -85,7 +85,7 @@ The shared `test_framework` library provides the following helpers:
 |--------|-------------|
 | `collect_case_fbs_files(suite, case, category)` | Returns sorted absolute paths to every `.fbs.bin` in a category subdirectory |
 | `load_expected_fixture(suite, case)` | Deserialises `expected.json` into `ExpectedFixture` |
-| `run_validation_cli(case_name, cli_args)` | Spawns the CLI binary, writes its log to `TEST_TMPDIR`, returns `CliRunResult` |
+| `run_validation_profile(case_name, profile, input_bundle)` | Writes a profile-owned input bundle, spawns the CLI binary, and returns `CliRunResult` |
 | `assert_cli_result(case, expected, result)` | Asserts exit code and checks each string in `error_contains` against the log |
 
 Each `#[test]` function calls an `assert_case(case_dir)` helper that wires these
@@ -118,7 +118,7 @@ bazel_component_integration_test
         │
         │  collect_case_fbs_files()  → absolute paths to .fbs.bin files
         │  load_expected_fixture()   → ExpectedFixture
-        │  run_validation_cli()      → spawns validation_cli --output <log>
+        │  run_validation_profile()  → writes inputs and spawns validation_cli
         │  assert_cli_result()       → checks pass/fail + error substrings
         ▼
 PASS / FAIL

@@ -12,6 +12,7 @@
 // *******************************************************************************
 
 use serde::Deserialize;
+use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -43,7 +44,7 @@ pub fn case_file_path(relative_path: &str) -> PathBuf {
         .join(relative_path)
 }
 
-pub fn read_case_file(relative_path: &str) -> String {
+fn read_case_file(relative_path: &str) -> String {
     let path = case_file_path(relative_path);
 
     fs::read_to_string(&path)
@@ -113,10 +114,14 @@ pub fn assert_cli_result(case_dir: &str, expected: &ExpectedFixture, result: &Cl
     }
 }
 
-pub fn run_validation_cli(case_name: &str, cli_args: &[String]) -> CliRunResult {
+fn test_tmp_file_path(case_name: &str, suffix: &str) -> PathBuf {
     let sanitized_case_name = case_name.replace(['/', ' '], "_");
     let test_tmpdir = std::env::var("TEST_TMPDIR").expect("TEST_TMPDIR is not set");
-    let log_path = PathBuf::from(test_tmpdir).join(format!("{sanitized_case_name}.log"));
+    PathBuf::from(test_tmpdir).join(format!("{sanitized_case_name}{suffix}"))
+}
+
+fn run_validation_cli(case_name: &str, cli_args: &[String]) -> CliRunResult {
+    let log_path = test_tmp_file_path(case_name, ".log");
 
     let validation_cli = case_file_path("validation/core/validation_cli");
     let output = Command::new(validation_cli)
@@ -140,4 +145,28 @@ pub fn run_validation_cli(case_name: &str, cli_args: &[String]) -> CliRunResult 
         stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
         log_contents,
     }
+}
+
+pub fn run_validation_profile(case_name: &str, profile: &str, input_bundle: Value) -> CliRunResult {
+    let inputs_path = test_tmp_file_path(case_name, "_inputs.json");
+    fs::write(
+        &inputs_path,
+        serde_json::to_string_pretty(&input_bundle).expect("failed to serialize validation inputs"),
+    )
+    .unwrap_or_else(|error| {
+        panic!(
+            "failed to write validation input bundle {}: {error}",
+            inputs_path.display()
+        )
+    });
+
+    run_validation_cli(
+        case_name,
+        &[
+            "--profile".to_string(),
+            profile.to_string(),
+            "--inputs".to_string(),
+            inputs_path.display().to_string(),
+        ],
+    )
 }

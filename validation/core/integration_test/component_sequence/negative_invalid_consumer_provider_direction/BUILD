@@ -17,6 +17,7 @@ load("//validation/core/integration_test:puml_fixture.bzl", "provider_fbs_fixtur
 architectural_design(
     name = "design",
     dynamic = ["sequence_diagram.puml"],
+    maturity = "development",
     static = ["component_diagram.puml"],
     visibility = ["//visibility:private"],
 )

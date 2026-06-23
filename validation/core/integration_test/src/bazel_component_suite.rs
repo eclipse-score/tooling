@@ -13,7 +13,7 @@
 
 use test_framework::{
     assert_cli_result, case_file_path, collect_case_fbs_files, load_expected_fixture,
-    run_validation_cli, CliRunResult,
+    run_validation_profile, CliRunResult,
 };
 
 const SUITE_DIR: &str = "bazel_component";
@@ -23,14 +23,14 @@ fn run_case_from_cli(
     architecture_json_path: &str,
     component_fbs_paths: &[String],
 ) -> CliRunResult {
-    let mut cli_args = vec![
-        "--architecture-json".to_string(),
-        case_file_path(architecture_json_path).display().to_string(),
-        "--component-fbs".to_string(),
-    ];
-    cli_args.extend(component_fbs_paths.iter().cloned());
-
-    run_validation_cli(&format!("bazel_component_{case_dir}"), &cli_args)
+    run_validation_profile(
+        &format!("bazel_component_{case_dir}"),
+        "dependable-element",
+        serde_json::json!({
+            "architecture": case_file_path(architecture_json_path).display().to_string(),
+            "component_diagrams": component_fbs_paths,
+        }),
+    )
 }
 
 fn assert_case(case_dir: &str) {
