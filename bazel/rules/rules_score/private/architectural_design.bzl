@@ -120,7 +120,6 @@ def _architectural_design_impl(ctx):
     dynamic_fbs = depset(dynamic_fbs_list)
     public_api_fbs = depset(public_api_fbs_list)
     internal_api_fbs = depset(internal_api_fbs_list)
-    all_lobster = depset(static_lobster_list + dynamic_lobster_list + public_api_lobster_list)
     public_api_lobster = depset(public_api_lobster_list)
 
     # Source files for SphinxSourcesInfo (sphinx documentation pipeline)
@@ -171,7 +170,6 @@ def _architectural_design_impl(ctx):
             dynamic = dynamic_fbs,
             internal_api = internal_api_fbs,
             name = ctx.label.name,
-            lobster_files = all_lobster,
             public_api_lobster_files = public_api_lobster,
         ),
         # Source diagram files + plantuml_links.json for the sphinx documentation build

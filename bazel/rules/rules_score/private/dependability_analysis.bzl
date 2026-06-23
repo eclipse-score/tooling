@@ -112,7 +112,7 @@ def _dependability_analysis_impl(ctx):
     report_files = []
 
     all_lobster_file_objects = lobster_files.values()
-    arch_lobster_files = arch_design_info.lobster_files.to_list() if arch_design_info else []
+    arch_lobster_files = arch_design_info.public_api_lobster_files.to_list() if arch_design_info else []
     all_lobster_file_objects = list(all_lobster_file_objects) + arch_lobster_files
     if all_lobster_file_objects:
         lobster_config = ctx.actions.declare_file(
