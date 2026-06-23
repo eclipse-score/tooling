@@ -1,0 +1,8 @@
+{
+  "should_pass": false,
+  "error_contains": [
+    "sequence-connected units have no corresponding shared interface connection in the component diagram",
+    "\"package_a.CallerInterface\"",
+    "\"package_a.CalleeInterface\""
+  ]
+}

@@ -18,10 +18,55 @@ use std::fs;
 
 use component_fbs::component as fb_component;
 
-use crate::models::{ComponentDiagramInput, ComponentDiagramInputs};
+use crate::models::{
+    ComponentDiagramElementType, ComponentDiagramInput, ComponentDiagramInputs,
+    ComponentDiagramRelation,
+};
 use crate::readers::Reader;
 
 pub struct ComponentDiagramReader;
+
+fn map_element_type(value: fb_component::ComponentType) -> Option<ComponentDiagramElementType> {
+    match value {
+        fb_component::ComponentType::Component => Some(ComponentDiagramElementType::Component),
+        fb_component::ComponentType::Package => Some(ComponentDiagramElementType::Package),
+        fb_component::ComponentType::Interface => Some(ComponentDiagramElementType::Interface),
+        _ => None,
+    }
+}
+
+fn read_relations(
+    component: &fb_component::LogicComponent<'_>,
+    context: &str,
+) -> Result<Vec<ComponentDiagramRelation>, String> {
+    component
+        .relations()
+        .map(|relations| {
+            relations
+                .iter()
+                .map(|relation| {
+                    let target = relation
+                        .target()
+                        .ok_or_else(|| format!("Component relation missing target in {context}"))?;
+
+                    Ok(ComponentDiagramRelation {
+                        target: target.to_string(),
+                        annotation: relation.annotation().map(|value| value.to_string()),
+                        relation_type: relation
+                            .relation_type()
+                            .variant_name()
+                            .map(|value| value.to_string()),
+                        source_role: relation
+                            .source_role()
+                            .variant_name()
+                            .map(|value| value.to_string()),
+                    })
+                })
+                .collect::<Result<Vec<_>, String>>()
+        })
+        .transpose()
+        .map(|relations| relations.unwrap_or_default())
+}
 
 impl ComponentDiagramReader {
     /// Read all `Component` and `Package` entities from the given FlatBuffers
@@ -56,20 +101,17 @@ impl ComponentDiagramReader {
             if let Some(entries) = graph.components() {
                 for entry in entries.iter() {
                     if let Some(comp) = entry.value() {
-                        match comp.comp_type() {
-                            fb_component::ComponentType::Component
-                            | fb_component::ComponentType::Package => {
-                                out.push(ComponentDiagramInput {
-                                    id: comp.id().unwrap_or_default().to_string(),
-                                    alias: comp.alias().map(|s| s.to_string()),
-                                    parent_id: comp.parent_id().map(|s| s.to_string()),
-                                    stereotype: comp.stereotype().map(|s| s.to_string()),
-                                });
-                            }
-                            // Other diagram entity types (Artifact, Database,
-                            // etc.) are not relevant for architecture
-                            // verification.
-                            _ => {}
+                        if let Some(element_type) = map_element_type(comp.comp_type()) {
+                            let context =
+                                format!("{path}:component:{}", comp.id().unwrap_or_default());
+                            out.push(ComponentDiagramInput {
+                                id: comp.id().unwrap_or_default().to_string(),
+                                alias: comp.alias().map(|s| s.to_string()),
+                                parent_id: comp.parent_id().map(|s| s.to_string()),
+                                element_type,
+                                stereotype: comp.stereotype().map(|s| s.to_string()),
+                                relations: read_relations(&comp, &context)?,
+                            });
                         }
                     } else {
                         return Err(format!(

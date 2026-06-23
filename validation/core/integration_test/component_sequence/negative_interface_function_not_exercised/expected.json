@@ -1,0 +1,8 @@
+{
+  "should_pass": false,
+  "error_contains": [
+    "internal API interface functions are not exercised in sequence diagrams",
+    "\"package_a.InternalInterface\"",
+    "\"SetData\""
+  ]
+}

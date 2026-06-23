@@ -48,6 +48,7 @@ rust_library(
         "src/validators/component_class_validator.rs",
         "src/validators/component_sequence_validator.rs",
         "src/validators/mod.rs",
+        "src/validators/test/component_sequence_validator_test.rs",
     ],
     crate_root = "src/lib.rs",
     visibility = ["//visibility:public"],

@@ -22,8 +22,8 @@ mod validators;
 
 pub use models::{
     BazelArchitecture, BazelInput, ClassDiagramIndex, ClassDiagramInputs,
-    ComponentDiagramArchitecture, ComponentDiagramInputs, Errors, SequenceDiagramIndex,
-    SequenceDiagramInputs,
+    ComponentDiagramArchitecture, ComponentDiagramInputs, Errors, InternalApiIndex,
+    SequenceDiagramIndex, SequenceDiagramInputs,
 };
 
 pub use readers::{
