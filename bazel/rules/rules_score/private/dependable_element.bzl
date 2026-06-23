@@ -729,6 +729,7 @@ def _dependable_element_index_impl(ctx):
         "architectural_design",
         "dependability_analysis",
         "checklists",
+        "glossary",
     ]
 
     artifacts_by_type = {}
@@ -844,6 +845,7 @@ def _dependable_element_index_impl(ctx):
             "{architectural_design}": "\n   ".join(artifacts_by_type["architectural_design"]),
             "{dependability_analysis}": "\n   ".join(artifacts_by_type["dependability_analysis"]),
             "{checklists}": "\n   ".join(artifacts_by_type["checklists"]),
+            "{glossary}": "\n   ".join(artifacts_by_type["glossary"]),
             "{submodules}": deps_links,
             "{traceability_report}": traceability_report,
         },
@@ -1188,6 +1190,10 @@ _dependable_element_index = rule(
                 default = [],
                 doc = "Safety checklists targets or files.",
             ),
+            "glossary": attr.label_list(
+                default = [],
+                doc = "Glossary targets or files defining terminology and definitions.",
+            ),
             "template": attr.label(
                 allow_single_file = [".rst"],
                 mandatory = True,
@@ -1351,6 +1357,7 @@ def dependable_element(
         tests,
         integrity_level,
         checklists = [],
+        glossary = [],
         deps = [],
         aou_forwarding = None,
         maturity = "release",
@@ -1387,6 +1394,8 @@ def dependable_element(
             depend on elements with a lower integrity level than its own.
         checklists: Optional list of labels to .rst or .md files containing
             safety checklists and verification documents.
+        glossary: Optional list of labels to .rst files containing
+            terminology and definitions for the dependable element.
         deps: Optional list of other module targets this element depends on.
             Cross-references will work automatically.
         aou_forwarding: Optional label to a YAML file listing received AoU IDs
@@ -1418,6 +1427,7 @@ def dependable_element(
         architectural_design = architectural_design,
         dependability_analysis = dependability_analysis,
         checklists = checklists,
+        glossary = glossary,
         tests = tests,
         deps = deps,
         processed_deps = processed_deps,

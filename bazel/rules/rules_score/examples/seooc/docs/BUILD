@@ -14,6 +14,7 @@ load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test")
 load(
     "//bazel/rules/rules_score:rules_score.bzl",
     "assumptions_of_use",
+    "glossary",
 )
 
 trlc_requirements(
@@ -38,5 +39,11 @@ trlc_requirements_test(
     reqs = [
         ":aous",
     ],
+    visibility = ["//visibility:public"],
+)
+
+glossary(
+    name = "glossary",
+    srcs = ["glossary.rst"],
     visibility = ["//visibility:public"],
 )

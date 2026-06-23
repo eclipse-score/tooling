@@ -58,6 +58,7 @@ dependable_element(
     dependability_analysis = [
         ":sample_dependability_analysis",
     ],
+    glossary = ["//bazel/rules/rules_score/examples/seooc/docs:glossary"],
     integrity_level = "B",
     requirements = [
         "//bazel/rules/rules_score/examples/seooc/docs/requirements:feature_requirements",
