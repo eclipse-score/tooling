@@ -12,28 +12,29 @@
 ' *******************************************************************************
 
 @startuml validation_core_overview
-title Validation Core — Component Overview
+title Validation Core - Component Overview
 
 skinparam packageStyle rectangle
 skinparam shadowing false
 skinparam defaultTextAlignment center
 skinparam componentStyle rectangle
 
-' ── External input artifacts ──────────────────────────────────────────────────
-
-rectangle "Input Artifacts" as Inputs {
-  file "architecture.json\n(Bazel build graph)" as FBazel
-  file "*.component.fbs\n(PlantUML export)" as FComp
-  file "*.sequence.fbs\n(PlantUML export)" as FSeq
-  file "*.class.fbs\n(PlantUML export)" as FClass
-}
-
-' ── validation/core library ───────────────────────────────────────────────────
+' Input bundle: external contract for profile-owned artifact paths
+file "validation_inputs.json\n(profile-owned artifact paths)" as InputBundle
 
 package "validation/core" {
+  ' Profiles: select validation scope and own input schemas
+  package "Profile Layer" as ProfileLayer {
+    component "ValidationProfile" as Profile
+    component "Profile-owned input schemas" as Schemas
+    package "Profile runners" as Runners {
+      component "architectural-design runner" as ADRunner
+      component "dependable-element runner" as DERunner
+    }
+  }
 
   ' Readers: parse raw file formats into typed raw models
-  package "Readers  [Reader trait]" as ReadLayer {
+  package "Artifact Reader Layer" as ReaderLayer {
     component "BazelReader" as BR
     component "ComponentDiagramReader" as CDR
     component "SequenceDiagramReader" as SDR
@@ -41,44 +42,41 @@ package "validation/core" {
   }
 
   ' Models: indexed, query-ready in-memory representations
-  package "Models" as ModelLayer {
+  package "Domain Model Layer" as ModelLayer {
     component "BazelArchitecture\n(SEooC / component / unit sets)" as MBazel
     component "ComponentDiagramArchitecture\n(entities by stereotype)" as MComp
     component "SequenceDiagramIndex\n(used participant set)" as MSeq
     component "ClassDiagramIndex\n(enclosing namespace set)" as MClass
   }
 
-  ' Validators: stateless pure functions; auto-selected by available inputs
-  package "Validators  [auto-selected by available inputs]" as ValLayer {
-    component "validate_bazel_component\nBuild graph ↔ Architecture diagram" as VBC
-    component "validate_component_class\nUnit IDs ↔ Namespace IDs" as VCC
-    component "validate_component_sequence\nUnit aliases ↔ Sequence participants" as VCS
+  ' Validators: compare domain models and return accumulated findings
+  package "Validator Layer" as ValidatorLayer {
+    component "validate_bazel_component()" as VBC
+    component "validate_component_class()" as VCC
+    component "validate_component_sequence()" as VCS
   }
 
+  ' Reporting: collect findings and write validation reports
   component "Errors" as Err
-
-  component "CLI Orchestrator\n(main.rs)\n\n① Parse CLI args\n② Drive Readers → build ValidationContext\n③ Auto-select Validators\n④ Merge errors → write report" as CLI
-
+  component "Report writer" as ReportWriter
 }
 
-' ── Output ────────────────────────────────────────────────────────────────────
-file "Validation Report\n(JSON log + exit code)" as Report
+file "validation.log\nPASS / FAILED / SKIPPED" as Report
 
-' ── Connections ───────────────────────────────────────────────────────────────
+' Profile runners: orchestrate readers, model conversion, and validators
+InputBundle --> Profile : selects profile
+InputBundle --> Schemas : deserializes input bundle
+Profile --> Runners : selects runner
+Schemas --> Runners : typed artifact paths
 
-' Inputs feed Readers
-FBazel --> BR
-FComp  --> CDR
-FSeq   --> SDR
-FClass --> ClDR
+' Model conversion: convert typed raw models into validation domain models
+Runners --> ReaderLayer : calls artifact readers
+BR --> MBazel : converts
+CDR --> MComp : converts
+SDR --> MSeq : converts
+ClDR --> MClass : converts
 
-' Readers produce Models (parse + index)
-BR  --> MBazel
-CDR --> MComp
-SDR --> MSeq
-ClDR --> MClass
-
-' Component diagram is the shared reference hub for all validators
+' Validator inputs: consume only the domain models required by each rule
 MBazel --> VBC
 MComp  --> VBC
 MComp  --> VCC
@@ -86,27 +84,29 @@ MComp  --> VCS
 MClass --> VCC
 MSeq   --> VCS
 
-' Validators accumulate into Errors
-VBC --> Err
-VCC --> Err
-VCS --> Err
+' Findings: merge reader and validator findings into one report
+VBC --> Err : findings
+VCS --> Err : findings
+VCC --> Err : findings
+ReaderLayer --> Err : parse/index findings
+Err --> ReportWriter : final status
+ReportWriter --> Report
 
-' CLI orchestrates Readers and Validators
-CLI ..> ReadLayer : drives
-CLI ..> ValLayer  : selects & runs
-
-' Final output
-Err --> Report : CLI writes
-
-note right of ValLayer
-  Each validator requires a specific pair of models.
-  Validators not meeting their input requirements
-  are silently skipped (no error).
+note right of Schemas
+  The selected profile defines which
+  artifact paths are accepted. Unknown
+  fields are rejected by the schema.
 end note
 
-note right of MComp
-  ComponentDiagramArchitecture is the
-  shared reference across all three validators.
+note right of Runners
+  Runners bind schemas to readers,
+  domain model conversion, and the
+  validators that belong to the profile.
+end note
+
+note bottom of ReportWriter
+  Profiles with no selected validator
+  write a SKIPPED report.
 end note
 
 @enduml

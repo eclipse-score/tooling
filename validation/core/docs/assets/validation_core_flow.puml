@@ -19,66 +19,86 @@ participant "BazelReader" as bazel_reader
 participant "ComponentDiagramReader" as component_reader
 participant "SequenceDiagramReader" as sequence_reader
 participant "ClassDiagramReader" as class_reader
-participant "ValidationContext" as context
 participant "validate_bazel_component()" as bazel_validator
 participant "validate_component_sequence()" as sequence_validator
 participant "validate_component_class()" as class_validator
 participant "Errors" as errors
+participant "Report writer" as report_writer
 
 cli -> cli: parse Args
-cli -> cli: build ValidationCliInputs
+cli -> cli: dispatch to run_*_profile()
 
-opt architecture json provided
-  cli -> bazel_reader: read(path)
+alt architectural-design profile
+  cli -> cli: read ArchitecturalDesignInputs
+
+  opt component_diagrams provided
+    cli -> component_reader: read(component_diagrams)
+    component_reader --> cli: ComponentDiagramInputs
+    cli -> cli: to_diagram_architecture(&mut errors)
+  end
+
+  opt sequence_diagrams provided
+    cli -> sequence_reader: read(sequence_diagrams)
+    sequence_reader --> cli: SequenceDiagramInputs
+    cli -> cli: to_sequence_diagram_index(&mut errors)
+  end
+
+  opt internal_api or public_api provided (planned)
+    cli -> class_reader: read(internal_api + public_api)
+    class_reader --> cli: ClassDiagramInputs
+    cli -> cli: ClassDiagramIndex::build_index(&mut errors)
+  end
+
+  opt component + class available (planned)
+    cli -> class_validator: validate_component_class(..., Errors::default())
+    class_validator --> cli: Errors
+    cli -> errors: merge_errors(...)
+  end
+
+  opt component + sequence available
+    cli -> sequence_validator: validate_component_sequence(..., Errors::default())
+    sequence_validator --> cli: Errors
+    cli -> errors: merge_errors(...)
+  end
+
+else dependable-element profile
+  cli -> cli: read DependableElementInputs
+
+  cli -> bazel_reader: read(architecture)
   bazel_reader --> cli: BazelInput
-  cli -> cli: to_bazel_architecture(&mut base_errors)
+  cli -> cli: to_bazel_architecture(&mut errors)
+
+  opt component_diagrams provided
+    cli -> component_reader: read(component_diagrams)
+    component_reader --> cli: ComponentDiagramInputs
+    cli -> cli: to_diagram_architecture(&mut errors)
+  end
+
+  opt bazel + component available
+    cli -> bazel_validator: validate_bazel_component(..., Errors::default())
+    bazel_validator --> cli: Errors
+    cli -> errors: merge_errors(...)
+  end
+
+else unit profile
+  cli -> cli: no validators selected
 end
 
-opt component fbs provided
-  cli -> component_reader: read(paths)
-  component_reader --> cli: ComponentDiagramInputs
-  cli -> cli: to_diagram_architecture(&mut base_errors)
-end
+cli -> cli: finish_profile_validation(ran_validator, &errors)
 
-opt sequence fbs provided
-  cli -> sequence_reader: read(paths)
-  sequence_reader --> cli: SequenceDiagramInputs
-  cli -> cli: to_sequence_diagram_index(&mut base_errors)
-end
+alt no validator ran
+  cli -> report_writer: write_skipped_log(output_path, profile)
+  report_writer --> cli: SKIPPED
+else validator ran
+  cli -> report_writer: finish_validation(output_path, warn_on_errors, &errors)
 
-opt class fbs provided
-  cli -> class_reader: read(paths)
-  class_reader --> cli: ClassDiagramInputs
-  cli -> cli: to_class_diagram_index(&mut base_errors)
-end
-
-cli -> context: assemble ValidationContext
-cli -> cli: resolve_validators(context)
-
-opt bazel + component available
-  cli -> bazel_validator: validate_bazel_component(..., Errors::default())
-  bazel_validator --> cli: Errors
-  cli -> errors: merge_errors(...)
-end
-
-opt component + sequence available
-  cli -> sequence_validator: validate_component_sequence(..., Errors::default())
-  sequence_validator --> cli: Errors
-  cli -> errors: merge_errors(...)
-end
-
-opt component + class available
-  cli -> class_validator: validate_component_class(..., Errors::default())
-  class_validator --> cli: Errors
-  cli -> errors: merge_errors(...)
-end
-
-cli -> cli: finish_validation(output_path, &errors)
-
-alt no errors
-  cli --> cli: return Ok(())
-else errors found
-  cli --> cli: return Err(formatted report)
+  alt no findings
+    report_writer --> cli: PASS report
+  else findings and warn_on_errors
+    report_writer --> cli: FAILED report, continue
+  else findings
+    report_writer --> cli: FAILED report, fail validation
+  end
 end
 
 @enduml
