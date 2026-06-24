@@ -32,7 +32,7 @@
 Defines the main macro to use in projects:
 
 ```python
-def use_format_targets(fix_name = "format.fix", check_name = "format.check"):
+def use_format_targets(fix_name = "format.fix", check_name = "format.check", languages = None):
     ...
 ```
 
@@ -40,6 +40,19 @@ This sets up:
 
 - `format.fix` — a multi-run rule that applies formatting tools
 - `format.check` — a test rule that checks formatting
+
+The `languages` parameter selects which formatters are wired up. Supported values:
+
+| Language   | Formatter                                              |
+| ---------- | ------------------------------------------------------ |
+| `python`   | `@aspect_rules_lint//format:ruff`                      |
+| `rust`     | `@score_tooling//format_checker:rustfmt_with_policies` |
+| `starlark` | `@buildifier_prebuilt//:buildifier`                    |
+| `yaml`     | `@aspect_rules_lint//format:yamlfmt`                   |
+| `cpp`      | `@llvm_toolchain//:clang-format`                       |
+
+When `languages` is omitted, every language except `cpp` is enabled. C++ is
+opt-in so that projects without C++ code do not depend on the LLVM toolchain.
 
 ### `MODULE.bazel`
 
@@ -87,6 +100,13 @@ This will register two Bazel targets:
 - `bazel run //:format.fix` — fixes format issues
 - `bazel test //:format.check` — fails on unformatted files
 
+To control which formatters run, pass an explicit `languages` list:
+
+```python
+# Only check Python and Starlark.
+use_format_targets(languages = ["python", "starlark"])
+```
+
 ### 3️⃣ In VS Code settings:
 
 ⚠️ First formatting run can be slow!
@@ -113,6 +133,23 @@ bazel run @score_tooling//format_checker:rustfmt_with_policies
 
 - Default formatter label: `@score_tooling//format_checker:rustfmt_with_policies`, which wraps the
   upstream `rustfmt` binary with the shared `rustfmt.toml` policies from `score_rust_policies`.
+
+---
+
+## C++ support
+
+C++ formatting is opt-in. Enable it by adding `cpp` to the `languages` list:
+
+```python
+use_format_targets(languages = ["python", "rust", "starlark", "yaml", "cpp"])
+```
+
+- Formatter label: `@llvm_toolchain//:clang-format`, which requires the LLVM
+  toolchain (`toolchains_llvm`) to be available in the consuming module.
+- clang-format runs with `--style=file`, so a `.clang-format` configuration file
+  is expected in the repository tree.
+- Because enabling `cpp` introduces the LLVM dependency, it is excluded from the
+  default language set.
 
 ---
 
