@@ -27,16 +27,6 @@ Because these two views are authored independently, they can drift apart. Theref
 Overview and Hierarchy
 ------------------------
 
-- **Static** — the structural organisation: which components and units exist, how they nest, and how they depend on each other. Validated against the Bazel model at build time.
-- **Dynamic** — behavioural sequences, state transitions, and activity flows. Documentation only, not validated against Bazel targets.
-- **Public API** — the interfaces the SEooC exposes to its environment, linked to safety analysis via ``FailureMode.interface``.
-- **Internal API** — interfaces exposed between components inside the SEooC that are not part of the public boundary.
-
-Static Architecture
---------------------
-
-The static view describes the **structural organisation** of your software: what components and units exist, how they relate to each other, and which dependencies they carry. It is the primary input for the architecture consistency check.
-
 Software in ``rules_score`` is structured in three levels:
 
 ::
@@ -51,6 +41,116 @@ Two rules apply:
 
 - ``unit`` targets must always be wrapped in a ``component`` — they cannot be placed directly under ``dependable_element``.
 - ``component`` targets can be nested: a component may contain other components as well as units, allowing arbitrary depth.
+
+Below the different levels there are multiple views which present the architecture from different perspectives:
+
+- **Static** — the structural organisation: which components and units exist, how they nest, and how they depend on each other. Validated against the Bazel model at build time.
+- **Dynamic** — behavioural sequences, state transitions, and activity flows. Documentation only, not validated against Bazel targets.
+- **Public API** — the interfaces the SEooC exposes to its environment, linked to safety analysis via ``FailureMode.interface``.
+- **Internal API** — interfaces exposed between components inside the SEooC that are not part of the public boundary.
+
+
+Determining Components and Units
+--------------------------------
+
+The Bazel rules and the consistency check only verify that your declared and
+implemented structure *match* — they cannot tell you whether the structure is
+*good*. Deciding what becomes a ``component`` and what becomes a ``unit`` is a
+design activity.
+
+Start from the requirements and the public interface, then decompose top-down:
+the ``dependable_element`` is fixed by the SEooC boundary (its public API), and
+you refine it into components and units until every leaf is small enough to be
+implemented and tested by one owner.
+
+What makes a unit
+~~~~~~~~~~~~~~~~~~
+
+A **unit** is the smallest architectural element that is *independently
+verifiable*. Model something as a unit when it satisfies all of the following:
+
+- **Single responsibility** — it does one thing; you can state its purpose in a
+  single sentence without using "and".
+- **Independently verifiable** — its behaviour can be fully covered by unit
+  tests through a narrow interface, without standing up the rest of the SEooC.
+- **Cohesive implementation** — its source files (the ``cc_library`` behind
+  ``unit.implementation``) change together and share the same data.
+- **One owner** — a single team/person is responsible for its design and tests.
+- **Backed by a unit design** — its internal class structure is documented and
+  validated against the code via :doc:`unit_design`.
+
+If a unit's class diagram grows several unrelated clusters of classes, or its
+unit tests split into groups that never share fixtures, it is really two units.
+
+What makes a component
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+A **component** *groups* units (and possibly sub-components) that collaborate to
+deliver a coherent piece of feature behaviour. Introduce a component when:
+
+- Several units together realise **one feature** or provide **one internal
+  interface** to the rest of the SEooC.
+- The grouping owns behaviour that only emerges from unit *interaction* —
+  captured by **component-level integration tests** and **component
+  requirements** (``CompReq``).
+- It gives you a stable boundary you can allocate requirements to and reason
+  about in the safety analysis.
+
+Nest a component inside another component only when the inner grouping has its
+own meaningful interface and requirements; do not nest purely to mirror source
+folders.
+
+Deciding the boundaries
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use these heuristics — most are the classic **high-cohesion / low-coupling**
+rules applied to the ``rules_score`` element levels:
+
+- **Cohesion first** — put things that change together and share data in the
+  same element; split things that change for different reasons.
+- **Minimise the interface** — prefer a decomposition that yields the *fewest,
+  narrowest* interfaces between elements. A boundary that needs a wide,
+  chatty interface is usually in the wrong place.
+- **Follow the requirement allocation** — a ``CompReq`` is allocated to exactly
+  one component. If a candidate requirement naturally splits across two groups,
+  that is a component boundary; if it lands entirely inside one group, keep it
+  together.
+- **Match the failure-containment goal** — a component/unit boundary is also a
+  boundary for the safety analysis. Draw boundaries so that a failure can be
+  argued about, and a control measure placed, at a single element (see
+  :doc:`dependability_analysis`).
+- **Keep units testable in isolation** — if you cannot unit-test a candidate
+  unit without a second unit present, either merge them or introduce an
+  interface (internal API) so the dependency can be substituted.
+
+Public vs. internal interfaces
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- An interface is **public API** when it is part of the SEooC's contract with
+  its environment — it is bound from the ``<<SEooC>>`` element and feeds
+  ``FailureMode.interface`` traceability. Keep the public API as small as the
+  requirements allow; every public method is a contract with the user and a safety-analysis
+  entry point.
+- An interface is **internal API** when it exists only *between* components/units
+  inside the SEooC. Model it inside the owning element's namespace. Promote an
+  interface from internal to public only when an external requirement forces it.
+
+Common anti-patterns
+~~~~~~~~~~~~~~~~~~~~~~
+
+- **Folder-driven decomposition** — creating a component per source directory
+  instead of per feature/interface. Structure follows responsibility, not layout.
+- **God unit** — one unit that accumulates unrelated responsibilities because it
+  was the first one created. Split as soon as a second responsibility appears.
+- **Anaemic component** — a component that only forwards calls and owns no
+  integration tests or requirements. Either give it a real boundary or flatten it.
+- **Leaky public API** — exposing an interface publicly for convenience. It then
+  drags in unnecessary failure modes and AoUs.
+
+Static Architecture
+--------------------
+
+The static view describes the **structural organisation** of your software: what components and units exist, how they relate to each other, and which dependencies they carry. It is the primary input for the architecture consistency check.
 
 PlantUML
 ~~~~~~~~~

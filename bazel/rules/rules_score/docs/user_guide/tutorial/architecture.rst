@@ -21,7 +21,7 @@ Once the requirements are in place, add a static architecture diagram that names
 - its components, and
 - its units
 
-During the build process every plantuml diagram will be parsed and checked for consistency
+This PlantUML Diagram represents the targetted architecture. During the build process every PlantUML diagram will be parsed and checked for consistency
 with the implemented architecture / design. To enable this certain rules and guidelines have
 to be followed while implementing the architecture diagram.
 
