@@ -62,6 +62,77 @@ It includes also (manual) version pinning (e.g. ``@1``) of requirements, which e
 that when a parent requirement changes its content (and thus version), all downstream
 references must be explicitly updated.
 
+Writing Good Requirements
+-------------------------
+
+The rules only check that requirements are *well-formed and traceable* — not that
+they are *well-written*. The authoritative writing rules live in the
+`Requirements Writing Guidelines <https://github.com/eclipse-score/tooling/blob/main/validation/ai_checker/guidelines/requirements/requirements_guidelines.md>`_
+(the same guidelines the AI quality check applies) and the S-CORE
+`Requirements Engineering process area <https://eclipse-score.github.io/process_description/main/process_areas/requirements_engineering/index.html>`_.
+
+The guideline document defines: a mandatory **sentence template** for every requirement; a set
+of **quality criteria** (unambiguous, verifiable, atomic, consistent, complete, necessary) with
+terms and patterns to avoid; a short explanation of the **requirement types** (functional,
+interface, non-functional, process) and how each is verified; and a list of **pre-flight checks**
+that the AI quality check applies before raising a finding (e.g. not flagging formally defined
+domain terms as vague, or intentional design constraints as level mismatches). The essentials are
+distilled below.
+
+Sentence template
+~~~~~~~~~~~~~~~~~~
+
+Every requirement follows one structure — **subject** *shall* **verb** [*object*]
+[*parameter*] [*condition*] — with at least one of object / parameter / condition present:
+
+    The component *shall* detect if a key-value pair got corrupted and set its status to
+    ``INVALID`` during every restart of the SW platform.
+
+Quality criteria
+~~~~~~~~~~~~~~~~~~
+
+- **Unambiguous** — one interpretation. Prefer ``:term:`` glossary nouns over pronouns and
+  vague words (*fast*, *efficient*, *as appropriate*).
+- **Verifiable** — a test or review can objectively pass or fail it.
+- **Atomic** — one ``shall``; split "and"/"or" and unbounded lists (*etc.*, *and so on*).
+- **Consistent** — no contradiction with other requirements.
+- **Complete** — has subject + verb + at least one of object/parameter/condition, and fully
+  specifies behaviour *at its own level* without pre-empting lower-level detail.
+- **Necessary** — traces to a parent or a ``rationale``.
+
+Use *shall* for obligations; put non-normative notes in the ``note`` field, not
+``description``. Keep implementation detail out of system/feature requirements — but an
+*intentional* design constraint (mandating a transport, mechanism, or safety property) is a
+legitimate requirement, not a level violation.
+
+Choosing the level
+~~~~~~~~~~~~~~~~~~~~
+
+Levels differ by **scope and observer**, not wording:
+
+- **AssumedSystemReq** — the need comes from *outside* the SEooC; describes it as a black box.
+- **FeatReq** — spans **several** components on one feature; phrased against the public
+  interface, solution-neutral.
+- **CompReq** — fully implementable and testable **inside one component**.
+
+If the level is unclear, discuss the boundary with the requirements owner — it drives
+allocation and traceability.
+
+Refining a parent into children
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``derived_from`` is a refinement claim: each child is a narrower, consistent refinement; the
+children together must be **sufficient** to satisfy the parent; a child inherits the parent's
+``safety`` level unless a lower one is justified. On any content change, bump ``version`` and
+re-pin every child (``@1`` → ``@2``).
+
+.. code-block:: text
+
+    # Weak — unverifiable, multi-concern, leaks implementation
+    "The manager should quickly handle values and store them efficiently in a hash map."
+    # Better — atomic, verifiable, follows the template
+    "The numeric value manager shall return the most recently stored uint8_t value on every read access."
+
 Modeling Requirements
 ---------------------
 
