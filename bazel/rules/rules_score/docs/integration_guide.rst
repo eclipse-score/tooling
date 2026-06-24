@@ -175,3 +175,120 @@ Design Rationale
 6. **Build System Integration** — Bazel ensures reproducible, cacheable documentation builds
 
 Reference implementation: `examples/seooc <https://github.com/eclipse-score/score-tooling/tree/main/bazel/rules/rules_score/examples/seooc>`_ in the score-tooling repository.
+
+---
+
+.. _sphinx-hermetic-tool-setup:
+
+Hermetic Diagram Tools (Graphviz and PlantUML)
+----------------------------------------------
+
+The Sphinx HTML action shells out to two diagram tools at **runtime** (inside
+Bazel actions): ``dot`` from Graphviz and PlantUML.  Both are hermetic —
+i.e.\ no host installation required.  The two tools use different
+delivery mechanisms, described below.
+
+Graphviz / ``dot``
+~~~~~~~~~~~~~~~~~~
+
+**Source and packaging**
+
+Graphviz now comes directly from the docs runtime sysroot
+(``@docs_runtime//:flat``), built with ``rules_distroless`` from
+``//third_party/docs_runtime/docs_runtime.yaml``.  The Sphinx action does not
+call ``dot`` directly; it uses ``//third_party/docs_runtime:dot`` — an
+``exec_in_sysroot`` wrapper that unpacks the sysroot archive and runs
+``/usr/bin/dot`` inside it through ``fakechroot``.
+
+**Where the files land (execroot-relative paths)**
+
+.. code-block:: text
+
+   bazel-bin/third_party/docs_runtime/dot          ← GRAPHVIZ_DOT env var
+   bazel-bin/third_party/docs_runtime/dot_sysroot/ ← unpacked docs_runtime rootfs
+     usr/bin/dot
+     usr/lib/graphviz/...
+     usr/bin/fakechroot
+
+**Wiring into the Sphinx action**
+
+The Bazel rule sets one variable:
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Env var
+     - Content
+   * - ``GRAPHVIZ_DOT``
+     - Path to the ``dot`` binary
+The value points to the hermetic wrapper executable.  The wrapper resolves and
+executes graphviz from the sysroot itself, so no custom ``LD_LIBRARY_PATH`` /
+``GVBINDIR`` wiring is required in the Sphinx action.
+
+**Resolving paths in conf.py**
+
+``GRAPHVIZ_DOT`` is set as an *execroot-relative* path.  Because Sphinx changes
+the process working directory during the build, these paths would break if
+used as-is.  ``conf.template.py`` therefore:
+
+1. Captures ``_EXECROOT = Path.cwd()`` at **module import time** (cwd is still
+   the execroot at that point).
+2. Calls ``_resolve_execroot_path()`` on the value to prepend ``_EXECROOT``
+   and produce absolute paths.
+
+PlantUML
+~~~~~~~~
+
+**Source and packaging**
+
+PlantUML is fetched from **Maven Central** via ``rules_jvm_external``
+(declared in ``MODULE.bazel``).  It is wrapped as a ``java_binary`` at
+``//tools/sphinx:plantuml`` in ``tools/sphinx/BUILD``.
+
+The PlantUML target is added to the sphinx-build binary (``raw_build``) as a
+``data`` dependency, making it a **runfile** of that binary — not an
+independent action input.
+
+**Where the file lands (runfiles-relative path)**
+
+.. code-block:: text
+
+   {sphinx_build_binary}.runfiles/
+     {repo_name}/tools/sphinx/plantuml   ← wrapper script (absolute path via Runfiles API)
+
+The ``{repo_name}`` prefix depends on the Bzlmod configuration:
+
+- ``_main`` — when score_tooling is the root module (e.g.\ building within
+  the score-tooling repo itself)
+- ``score_tooling`` / ``score_tooling+`` / ``score_tooling~`` — when
+  score_tooling is an external dependency of another project
+
+**Discovering the binary in conf.py**
+
+Because the repo name varies, ``conf.template.py`` uses two-stage discovery:
+
+1. **Manifest scan (primary):** Read ``RUNFILES_MANIFEST_FILE`` and search
+   for any entry whose runfiles path ends in ``/tools/sphinx/plantuml``.  This
+   requires no knowledge of the repo name prefix.
+2. **Runfiles API fallback:** If no manifest file is available (directory-based
+   runfiles trees on some platforms), fall back to
+   ``Runfiles.Create().Rlocation()`` with a list of known repo-name candidates
+   (``_main``, ``score_tooling``, ``score_tooling+``, …).
+
+The Runfiles API returns an **absolute path** directly, so no
+``_resolve_execroot_path()`` is required for PlantUML.
+
+**Connecting PlantUML to Graphviz**
+
+Once both paths are resolved, ``conf.template.py`` assembles the PlantUML
+command:
+
+.. code-block:: python
+
+   plantuml = f"{plantuml_path} -graphvizdot {graphviz_dot}"
+
+The ``-graphvizdot`` flag makes PlantUML use the hermetic ``dot`` binary for
+diagram layout instead of its bundled Java port (Smetana).  This ensures that
+the graphviz version is identical for both ``sphinx.ext.graphviz`` directives
+and PlantUML diagrams.

@@ -20,6 +20,13 @@ module(
 ###############################################################################
 # Core Dependencies
 ###############################################################################
+bazel_dep(name = "download_utils", version = "1.2.2")
+git_override(
+    module_name = "download_utils",
+    commit = "3b96912fb6622dda83f25efd1f8ae596fc4a63a6",
+    remote = "https://gitlab.arm.com/bazel/download_utils.git",
+)
+
 bazel_dep(name = "rules_python", version = "1.4.1")
 bazel_dep(name = "rules_cc", version = "0.2.17")
 bazel_dep(name = "aspect_rules_py", version = "1.4.0")

@@ -260,17 +260,24 @@ deb(
 )
 
 ###############################################################################
-# Graphviz deb package (cmake release; bundles all graphviz .so files so
-# dot_builtins runs without system graphviz installation)
-# Uses download_deb from @download_utils at a commit that includes
-# data.tar.gz support in download/deb/repository.bzl.
+# Hermetic doc-tool sysroot (docs_runtime)
+#
+# Distroless rootfs providing graphviz + fakechroot for hermetic dot execution
+# via //third_party/docs_runtime:dot (exec_in_sysroot).
 ###############################################################################
-deb(
-    name = "graphviz_deb",
-    build = "//third_party/graphviz:graphviz.BUILD",
-    integrity = "sha256-Jk5gSqo8l0INoY+kr1ZAsi2WhZY8LlAFlEag54H3Q2Q=",
-    urls = ["https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/12.2.1/ubuntu_24.04_graphviz-12.2.1-cmake.deb"],
+bazel_dep(name = "rules_distroless", version = "0.6.2")
+
+# bsdtar (used by //bazel/rules/exec_in_sysroot to extract sysroot archives).
+bazel_dep(name = "tar.bzl", version = "0.6.0")
+
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.install(
+    name = "docs_runtime",
+    lock = "//third_party/docs_runtime:docs_runtime.lock.json",
+    manifest = "//third_party/docs_runtime:docs_runtime.yaml",
+    mergedusr = True,
 )
+use_repo(apt, "docs_runtime")
 
 register_toolchains(
     "//bazel/rules/rules_score:sphinx_default_toolchain",
