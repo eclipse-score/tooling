@@ -144,7 +144,7 @@ sphinx_docs_library(
     strip_prefix = "validation/ai_checker/",
 )
 
-# Validation specifications — two files, same source dir, no rename needed.
+# Validation specifications — same source dir, no rename needed.
 sphinx_docs_library(
     name = "validation_specs",
     srcs = ["//validation/core:specifications"],

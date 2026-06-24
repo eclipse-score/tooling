@@ -46,14 +46,17 @@ package "validation/core" {
     component "BazelArchitecture\n(SEooC / component / unit sets)" as MBazel
     component "ComponentDiagramArchitecture\n(entities by stereotype)" as MComp
     component "SequenceDiagramIndex\n(used participant set)" as MSeq
-    component "ClassDiagramIndex\n(enclosing namespace set)" as MClass
+    component "ClassDiagramIndex (planned)\n(enclosing namespace set)" as MClass
+    component "InternalApiIndex\n(interface methods)" as MInternalApi
   }
 
   ' Validators: compare domain models and return accumulated findings
   package "Validator Layer" as ValidatorLayer {
     component "validate_bazel_component()" as VBC
-    component "validate_component_class()" as VCC
+    component "validate_component_class() (planned)" as VCC
+    component "validate_component_internal_api()" as VCIA
     component "validate_component_sequence()" as VCS
+    component "validate_sequence_internal_api()" as VSIA
   }
 
   ' Reporting: collect findings and write validation reports
@@ -75,19 +78,27 @@ BR --> MBazel : converts
 CDR --> MComp : converts
 SDR --> MSeq : converts
 ClDR --> MClass : converts
+ClDR --> MInternalApi : converts
 
 ' Validator inputs: consume only the domain models required by each rule
 MBazel --> VBC
 MComp  --> VBC
 MComp  --> VCC
+MComp  --> VCIA
 MComp  --> VCS
+MComp  ..> VSIA : optional context
 MClass --> VCC
 MSeq   --> VCS
+MSeq   --> VSIA
+MInternalApi --> VCIA
+MInternalApi --> VSIA
 
 ' Findings: merge reader and validator findings into one report
 VBC --> Err : findings
-VCS --> Err : findings
 VCC --> Err : findings
+VCIA --> Err : findings
+VCS --> Err : findings
+VSIA --> Err : findings
 ReaderLayer --> Err : parse/index findings
 Err --> ReportWriter : final status
 ReportWriter --> Report

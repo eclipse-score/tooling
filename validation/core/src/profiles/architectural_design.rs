@@ -16,7 +16,9 @@ use crate::models::{
     SequenceDiagramIndex, SequenceDiagramInputs,
 };
 use crate::readers::{ClassDiagramReader, ComponentDiagramReader, SequenceDiagramReader};
-use crate::validators::validate_component_sequence;
+use crate::validators::{
+    validate_component_internal_api, validate_component_sequence, validate_sequence_internal_api,
+};
 use crate::ValidationResult;
 use serde::Deserialize;
 
@@ -52,8 +54,27 @@ pub fn run(inputs: &ArchitecturalDesignInputs) -> Result<ProfileRun, String> {
     let mut ran_validator = false;
     if let (Some(component), Some(sequence)) = (component.as_ref(), sequence.as_ref()) {
         merge_results(
-            &mut result,
-            validate_component_sequence(component, sequence, internal_api.as_ref()),
+            &mut results,
+            validate_component_sequence(component, sequence, Errors::default()),
+        );
+        ran_validator = true;
+    }
+    if let (Some(component), Some(internal_api)) = (component.as_ref(), internal_api.as_ref()) {
+        merge_results(
+            &mut results,
+            validate_component_internal_api(component, internal_api, Errors::default()),
+        );
+        ran_validator = true;
+    }
+    if let (Some(sequence), Some(internal_api)) = (sequence.as_ref(), internal_api.as_ref()) {
+        merge_results(
+            &mut results,
+            validate_sequence_internal_api(
+                sequence,
+                internal_api,
+                component.as_ref(),
+                Errors::default(),
+            ),
         );
         ran_validator = true;
     }
