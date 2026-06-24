@@ -23,8 +23,8 @@ pub fn finish_profile_validation(
 ) -> Result<(), String> {
     if !profile_run.ran_validator {
         log::info!(
-            "Skipping validation profile {:?}: no selected validators have their required inputs.",
-            profile
+            "Skipping validation profile {}: no selected validators have their required inputs.",
+            profile.as_str()
         );
         write_skipped_log(output_path, profile)?;
         return Ok(());
@@ -63,8 +63,8 @@ fn finish_validation(
 fn write_skipped_log(path: Option<&str>, profile: Profile) -> Result<(), String> {
     if let Some(path) = path {
         let content = format!(
-            "SKIPPED\n\nNo validators ran for profile {:?}: required inputs were not present.\n",
-            profile
+            "SKIPPED\n\nNo validators ran for profile {}: required inputs were not present.\n",
+            profile.as_str()
         );
         fs::write(path, content).map_err(|e| format!("Failed to write output file {path}: {e}"))?;
     }

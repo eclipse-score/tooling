@@ -14,9 +14,7 @@
 //! Validator entrypoints for architecture checks.
 
 mod bazel_component_validator;
-mod component_class_validator;
 mod component_sequence_validator;
 
 pub use bazel_component_validator::validate_bazel_component;
-pub use component_class_validator::validate_component_class;
 pub use component_sequence_validator::validate_component_sequence;

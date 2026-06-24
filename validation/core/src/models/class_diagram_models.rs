@@ -22,11 +22,6 @@ use super::Errors;
 /// Collection of class diagrams loaded from one or more FlatBuffer files.
 pub type ClassDiagramInputs = Vec<ClassDiagramInput>;
 
-/// Indexed class-diagram data prepared for validators.
-pub struct ClassDiagramIndex {
-    observed_enclosing_namespace_ids: BTreeSet<String>,
-}
-
 /// Indexed internal-API data prepared for interface and method validators.
 pub struct InternalApiInterface {
     pub id: String,
@@ -36,26 +31,6 @@ pub struct InternalApiInterface {
 /// Indexed internal-API data prepared for validators.
 pub struct InternalApiIndex {
     interfaces: Vec<InternalApiInterface>,
-}
-
-impl ClassDiagramIndex {
-    /// Build a [`ClassDiagramIndex`] from class diagram inputs.
-    pub fn build_index(diagrams: &[ClassDiagramInput], _errors: &mut Errors) -> Self {
-        let observed_enclosing_namespace_ids = diagrams
-            .iter()
-            .flat_map(|diagram| diagram.entities.iter())
-            .filter_map(|entity| entity.enclosing_namespace_id.clone())
-            .filter(|namespace_id| !namespace_id.is_empty())
-            .collect();
-
-        Self {
-            observed_enclosing_namespace_ids,
-        }
-    }
-
-    pub fn enclosing_namespace_ids(&self) -> &BTreeSet<String> {
-        &self.observed_enclosing_namespace_ids
-    }
 }
 
 impl InternalApiIndex {

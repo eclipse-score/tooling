@@ -49,7 +49,6 @@ rust_library(
         "src/readers/mod.rs",
         "src/readers/sequence_diagram_reader.rs",
         "src/validators/bazel_component_validator.rs",
-        "src/validators/component_class_validator.rs",
         "src/validators/component_sequence_validator.rs",
         "src/validators/mod.rs",
         "src/validators/test/component_sequence_validator_test.rs",

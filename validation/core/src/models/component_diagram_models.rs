@@ -27,7 +27,9 @@ pub enum ComponentDiagramElementType {
 #[derive(Clone)]
 pub struct ComponentDiagramRelation {
     pub target: String,
+    #[allow(dead_code)]
     pub annotation: Option<String>,
+    #[allow(dead_code)]
     pub relation_type: Option<String>,
     pub source_role: Option<String>,
 }
@@ -90,8 +92,6 @@ pub struct ComponentDiagramArchitecture {
     pub seooc_set: BTreeMap<EntityKey, ComponentDiagramInput>,
     /// `<<component>>` entities, keyed with `parent = Some(..)`.
     pub comp_set: BTreeMap<EntityKey, ComponentDiagramInput>,
-    /// `Interface` entities keyed with `parent = Some(..)` or `None`.
-    pub interface_set: BTreeMap<EntityKey, ComponentDiagramInput>,
     pub unit_set: BTreeMap<EntityKey, ComponentDiagramInput>,
     /// Full raw entity list, kept for debug output.
     pub entities: Vec<ComponentDiagramInput>,
@@ -105,7 +105,6 @@ impl ComponentDiagramArchitecture {
     ///
     /// `<<SEooC>>` go into `seooc_set`;
     /// `<<component>>` go into `comp_set`;
-    /// `Interface` go into `interface_set`;
     /// `<<unit>>` go into `unit_set`.
     /// Duplicates (same [`EntityKey`]) are reported via `errors`.
     fn from_entities(entities: &[ComponentDiagramInput], errors: &mut Errors) -> Self {
@@ -132,10 +131,6 @@ impl ComponentDiagramArchitecture {
             .iter()
             .filter(|entity| entity.is_component())
             .collect();
-        let interfaces: Vec<&ComponentDiagramInput> = entities
-            .iter()
-            .filter(|entity| entity.is_interface())
-            .collect();
         let units: Vec<&ComponentDiagramInput> =
             entities.iter().filter(|entity| entity.is_unit()).collect();
 
@@ -145,13 +140,11 @@ impl ComponentDiagramArchitecture {
 
         let seooc_set = Self::build_set(&seoocs, &id_index, errors);
         let comp_set = Self::build_set(&components, &id_index, errors);
-        let interface_set = Self::build_set(&interfaces, &id_index, errors);
         let unit_set = Self::build_set(&units, &id_index, errors);
 
         Self {
             seooc_set,
             comp_set,
-            interface_set,
             unit_set,
             entities: entities.to_vec(),
             filtered_seooc_count,
@@ -272,7 +265,6 @@ mod tests {
         let architecture = inputs.to_diagram_architecture(&mut errors);
 
         assert!(errors.is_empty());
-        assert_eq!(architecture.interface_set.len(), 1);
         assert!(architecture
             .entities
             .iter()
