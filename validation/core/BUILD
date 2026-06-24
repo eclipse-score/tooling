@@ -24,7 +24,9 @@ filegroup(
     srcs = [
         "docs/specifications/bazel_component.md",
         "docs/specifications/class_design_implementation.md",
+        "docs/specifications/component_internal_api.md",
         "docs/specifications/component_sequence.md",
+        "docs/specifications/sequence_internal_api.md",
     ],
     visibility = ["//visibility:public"],
 )
@@ -51,9 +53,13 @@ rust_library(
         "src/results/diagnostics.rs",
         "src/results/mod.rs",
         "src/validators/bazel_component_validator.rs",
+        "src/validators/component_internal_api_validator.rs",
         "src/validators/component_sequence_validator.rs",
         "src/validators/mod.rs",
+        "src/validators/sequence_internal_api_validator.rs",
+        "src/validators/test/component_internal_api_validator_test.rs",
         "src/validators/test/component_sequence_validator_test.rs",
+        "src/validators/test/sequence_internal_api_validator_test.rs",
     ],
     crate_root = "src/lib.rs",
     visibility = ["//visibility:public"],

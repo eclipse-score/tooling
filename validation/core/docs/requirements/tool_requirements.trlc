@@ -98,21 +98,47 @@ section "Tool Requirements" {
                 satisfied_by = Verifier
             }
 
+        }
+
+        section "Sequence Internal API Validator" {
+
             ToolQualification.ToolRequirement ComponentSequenceMethodNameConsistency {
-                description = '''When an internal API diagram is provided, the
-                validator shall report an error when a function used in a
-                sequence interaction is not declared in any shared interface
-                of the participating units as defined in the component
-                diagram.'''
+                description = '''When component, sequence, and internal API
+                diagrams are provided, the validator shall report an error
+                when a function used in a sequence interaction is not declared
+                in any shared interface of the participating units as defined
+                in the component diagram.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement SequenceInternalApiInterfaceCoverage {
+                description = '''When sequence and internal API diagrams are
+                provided, the validator shall report an error when a function
+                declared in an internal API interface is never called in any
+                sequence interaction. Self-calls count as valid usage.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
             ToolQualification.ToolRequirement ComponentSequenceInterfaceCoverage {
-                description = '''When an internal API diagram is provided, the
-                validator shall report an error when a function declared in a
-                validated interface is never called in any sequence
-                interaction. Self-calls count as valid usage.'''
+                description = '''When component, sequence, and internal API
+                diagrams are provided, the validator shall report an error
+                when a function declared in a validated interface is never
+                called in any sequence interaction. Self-calls count as valid
+                usage.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+        }
+
+        section "Component Internal API Validator" {
+
+            ToolQualification.ToolRequirement ComponentInternalApiInterfaceDeclarationConsistency {
+                description = '''The validator shall report an error when an
+                interface declared in the component diagram is not declared as
+                an interface in the internal API diagram.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }

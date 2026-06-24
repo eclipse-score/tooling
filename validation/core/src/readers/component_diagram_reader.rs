@@ -19,26 +19,46 @@ use std::fs;
 use component_fbs::component as fb_component;
 
 use crate::models::{
-    ComponentDiagramElementType, ComponentDiagramInput, ComponentDiagramInputs,
-    ComponentDiagramRelation,
+    ComponentDiagramInputs, ComponentRelationType, ComponentType, EndpointRole, LogicComponent,
+    LogicRelation,
 };
 use crate::readers::Reader;
 
 pub struct ComponentDiagramReader;
 
-fn map_element_type(value: fb_component::ComponentType) -> Option<ComponentDiagramElementType> {
+fn map_element_type(value: fb_component::ComponentType) -> Option<ComponentType> {
     match value {
-        fb_component::ComponentType::Component => Some(ComponentDiagramElementType::Component),
-        fb_component::ComponentType::Package => Some(ComponentDiagramElementType::Package),
-        fb_component::ComponentType::Interface => Some(ComponentDiagramElementType::Interface),
+        fb_component::ComponentType::Component => Some(ComponentType::Component),
+        fb_component::ComponentType::Package => Some(ComponentType::Package),
+        fb_component::ComponentType::Interface => Some(ComponentType::Interface),
         _ => None,
+    }
+}
+
+fn map_relation_type(value: fb_component::ComponentRelationType) -> ComponentRelationType {
+    match value {
+        fb_component::ComponentRelationType::Association => ComponentRelationType::Association,
+        fb_component::ComponentRelationType::Dependency => ComponentRelationType::Dependency,
+        fb_component::ComponentRelationType::InterfaceBinding => {
+            ComponentRelationType::InterfaceBinding
+        }
+        _ => ComponentRelationType::Association,
+    }
+}
+
+fn map_endpoint_role(value: fb_component::EndpointRole) -> EndpointRole {
+    match value {
+        fb_component::EndpointRole::None => EndpointRole::None,
+        fb_component::EndpointRole::Provided => EndpointRole::Provided,
+        fb_component::EndpointRole::Required => EndpointRole::Required,
+        _ => EndpointRole::None,
     }
 }
 
 fn read_relations(
     component: &fb_component::LogicComponent<'_>,
     context: &str,
-) -> Result<Vec<ComponentDiagramRelation>, String> {
+) -> Result<Vec<LogicRelation>, String> {
     component
         .relations()
         .map(|relations| {
@@ -49,17 +69,11 @@ fn read_relations(
                         .target()
                         .ok_or_else(|| format!("Component relation missing target in {context}"))?;
 
-                    Ok(ComponentDiagramRelation {
+                    Ok(LogicRelation {
                         target: target.to_string(),
                         annotation: relation.annotation().map(|value| value.to_string()),
-                        relation_type: relation
-                            .relation_type()
-                            .variant_name()
-                            .map(|value| value.to_string()),
-                        source_role: relation
-                            .source_role()
-                            .variant_name()
-                            .map(|value| value.to_string()),
+                        relation_type: map_relation_type(relation.relation_type()),
+                        source_role: map_endpoint_role(relation.source_role()),
                     })
                 })
                 .collect::<Result<Vec<_>, String>>()
@@ -104,8 +118,9 @@ impl ComponentDiagramReader {
                         if let Some(element_type) = map_element_type(comp.comp_type()) {
                             let context =
                                 format!("{path}:component:{}", comp.id().unwrap_or_default());
-                            out.push(ComponentDiagramInput {
+                            out.push(LogicComponent {
                                 id: comp.id().unwrap_or_default().to_string(),
+                                name: comp.name().map(|s| s.to_string()),
                                 alias: comp.alias().map(|s| s.to_string()),
                                 parent_id: comp.parent_id().map(|s| s.to_string()),
                                 element_type,

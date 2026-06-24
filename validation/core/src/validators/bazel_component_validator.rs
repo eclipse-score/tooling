@@ -227,8 +227,7 @@ fn append_debug_log(
 mod tests {
     use super::*;
     use crate::models::{
-        BazelInput, BazelInputEntry, ComponentDiagramElementType, ComponentDiagramInput,
-        ComponentDiagramInputs,
+        BazelInput, BazelInputEntry, ComponentDiagramInputs, ComponentType, LogicComponent,
     };
     use std::collections::BTreeMap;
 
@@ -251,15 +250,16 @@ mod tests {
         alias: Option<&str>,
         parent_id: Option<&str>,
         stereotype: Option<&str>,
-    ) -> ComponentDiagramInput {
+    ) -> LogicComponent {
         let element_type = if stereotype == Some("SEooC") {
-            ComponentDiagramElementType::Package
+            ComponentType::Package
         } else {
-            ComponentDiagramElementType::Component
+            ComponentType::Component
         };
 
-        ComponentDiagramInput {
+        LogicComponent {
             id: id.to_string(),
+            name: alias.map(|s| s.to_string()),
             alias: alias.map(|s| s.to_string()),
             parent_id: parent_id.map(|s| s.to_string()),
             element_type,
@@ -268,7 +268,7 @@ mod tests {
         }
     }
 
-    fn diagram(entities: Vec<ComponentDiagramInput>) -> ComponentDiagramInputs {
+    fn diagram(entities: Vec<LogicComponent>) -> ComponentDiagramInputs {
         ComponentDiagramInputs { entities }
     }
 

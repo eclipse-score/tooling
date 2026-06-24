@@ -19,18 +19,9 @@ use sequence_logic::{Event, SequenceNode, SequenceTree};
 
 use crate::ValidationResult;
 
-/// One parsed sequence diagram from a FlatBuffer file.
-pub struct SequenceDiagramInput {
-    pub tree: SequenceTree,
-    #[allow(dead_code)]
-    pub source_files: Vec<String>,
-    #[allow(dead_code)]
-    pub version: Option<String>,
-}
-
 /// Collection of sequence diagrams loaded from one or more FlatBuffer files.
 pub struct SequenceDiagramInputs {
-    pub diagrams: Vec<SequenceDiagramInput>,
+    pub diagrams: Vec<SequenceTree>,
 }
 
 /// One function-call interaction observed in a sequence diagram.
@@ -54,12 +45,12 @@ pub struct SequenceDiagramIndex {
 }
 
 impl SequenceDiagramIndex {
-    fn from_diagrams(diagrams: &[SequenceDiagramInput], result: &mut ValidationResult) -> Self {
+    fn from_diagrams(diagrams: &[SequenceTree], result: &mut ValidationResult) -> Self {
         let mut used_participants = BTreeSet::new();
         let mut observed_calls = Vec::new();
 
         for diagram in diagrams {
-            for node in &diagram.tree.root_interactions {
+            for node in &diagram.root_interactions {
                 collect_sequence_data(node, &mut used_participants, &mut observed_calls, result);
             }
         }
@@ -201,21 +192,17 @@ mod tests {
     #[test]
     fn sequence_index_collects_calls_and_used_participants_recursively() {
         let inputs = SequenceDiagramInputs {
-            diagrams: vec![SequenceDiagramInput {
-                tree: SequenceTree {
-                    name: Some("seq".to_string()),
-                    root_interactions: vec![interaction(
-                        "unit_1",
-                        "unit_2",
-                        "GetData()",
-                        vec![
-                            ret("unit_1", "unit_2"),
-                            interaction("unit_2", "unit_3", "Forward()", Vec::new()),
-                        ],
-                    )],
-                },
-                source_files: Vec::new(),
-                version: None,
+            diagrams: vec![SequenceTree {
+                name: Some("seq".to_string()),
+                root_interactions: vec![interaction(
+                    "unit_1",
+                    "unit_2",
+                    "GetData()",
+                    vec![
+                        ret("unit_1", "unit_2"),
+                        interaction("unit_2", "unit_3", "Forward()", Vec::new()),
+                    ],
+                )],
             }],
         };
 
@@ -243,13 +230,9 @@ mod tests {
     #[test]
     fn sequence_index_reports_interaction_with_missing_required_endpoints() {
         let inputs = SequenceDiagramInputs {
-            diagrams: vec![SequenceDiagramInput {
-                tree: SequenceTree {
-                    name: Some("seq".to_string()),
-                    root_interactions: vec![interaction("", "unit_2", "GetData()", Vec::new())],
-                },
-                source_files: Vec::new(),
-                version: None,
+            diagrams: vec![SequenceTree {
+                name: Some("seq".to_string()),
+                root_interactions: vec![interaction("", "unit_2", "GetData()", Vec::new())],
             }],
         };
 
@@ -266,13 +249,9 @@ mod tests {
     #[test]
     fn sequence_index_reports_interaction_with_missing_callee() {
         let inputs = SequenceDiagramInputs {
-            diagrams: vec![SequenceDiagramInput {
-                tree: SequenceTree {
-                    name: Some("seq".to_string()),
-                    root_interactions: vec![interaction("unit_1", "", "GetData()", Vec::new())],
-                },
-                source_files: Vec::new(),
-                version: None,
+            diagrams: vec![SequenceTree {
+                name: Some("seq".to_string()),
+                root_interactions: vec![interaction("unit_1", "", "GetData()", Vec::new())],
             }],
         };
 
