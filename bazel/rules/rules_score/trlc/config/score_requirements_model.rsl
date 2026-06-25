@@ -28,7 +28,7 @@ enum Status {
 ///////////////////////////////
 
 abstract type Requirement "Base type for all S-CORE requirements." {
-    description "The normative requirement text. Must express an obligation (shall/should)."
+    description "Detailed description of this element."
                 Markup_String
     version     "Monotonically increasing version counter. Increment on every content change."
                 Integer
@@ -93,7 +93,7 @@ tuple CompReqId {
 // Safety Analyses
 ///////////////////////////////
 
-enum GuideWord "HAZOP-style guide words used to categorize failure mode." {
+enum guidewords "HAZOP-style guide words used to categorize failure mode." {
 
     // -------------------------------------------------------------------------
     // Message fault models  (MF_01_xx)
@@ -145,14 +145,12 @@ enum GuideWord "HAZOP-style guide words used to categorize failure mode." {
 
 }
 
-type FailureMode "A potential failure of a system function, described using a HAZOP guide word." extends ScoreReq.RequirementSafety {
-    guideword      "HAZOP guide word classifying the nature of this failure."
-                   GuideWord
+type FailureMode "A potential failure of a system function, described using one or more HAZOP guide words." extends ScoreReq.RequirementSafety {
+    guidewords      "One or more HAZOP guide words classifying the nature of this failure."
+                   guidewords[1 .. *]
     failureeffect  "Description of the consequence of this failure mode on the system or its users."
                    String
     rationale      "Explanation of why this failure mode is considered relevant."
-                   optional String
-    potentialcause "Description of the root cause or triggering condition for this failure mode."
                    optional String
     interface      "The system interface or signal that is affected by this failure mode."
                    optional String
@@ -181,22 +179,3 @@ type AoU "Assumption of Use — a safety-relevant condition that a caller must f
 
 // abstract type StdReq extends Requirement {
 // }
-
-
-///////////////////////////////
-// Checks
-///////////////////////////////
-
-checks Requirement {
-
-    not matches(description, "(shall|should)"),
-        warning "The description must include (shall|should)",
-	    description
-
-}
-
-checks AssumedSystemReq {
-
-    rationale != null implies len(rationale) >= 5, "rationale too short"
-
-}

@@ -35,7 +35,7 @@ The failure modes to consider are defined by the SCORE process:
 
 > [FMEA Fault Models — Process Description](https://eclipse-score.github.io/process_description/main/process_areas/safety_analysis/guidance/fault_models_guideline.html#id1)
 
-The fault models cover three categories: **messages** (send/receive behaviour), **time constraints** (too early / too late), and **execution** (wrong result, loss, delay, corruption, non-determinism). The `GuideWord` enum in the `ScoreReq` model maps each category to a structured label used in the `FailureMode` records.
+The fault models cover three categories: **messages** (send/receive behaviour), **time constraints** (too early / too late), and **execution** (wrong result, loss, delay, corruption, non-determinism). The `guidewords` enum in the `ScoreReq` model maps each category to a structured label used in the `FailureMode` records.
 
 The description below covers the FMEA-based **safety** analysis for a software module.
 
@@ -78,7 +78,7 @@ package MySeooc
 import ScoreReq
 
 ScoreReq.FailureMode FM_001 {
-    guideword     = ScoreReq.GuideWord.LossOfFunction
+    guidewords     = [ScoreReq.guidewords.LossOfFunction]
     description   = "Key-value store returns stale data after power loss"
     failureeffect = "Incorrect system state at startup"
     safety        = ScoreReq.Asil.B
