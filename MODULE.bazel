@@ -284,9 +284,14 @@ bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
 ###############################################################################
 # Blueprint Maven
 ###############################################################################
-bazel_dep(name = "rules_jvm_external", version = "6.10", dev_dependency = True)
+# WARNING: rules_jvm_external 6.10 depends on the Android SDK, which is removed
+#          from Github Actions runners by https://github.com/eclipse-score/more-disk-space
+#          When upgrading rules_jvm_external, make sure to check if the Android
+#          SDK is still required and if so, add it back to the Github Actions
+#          runners.
+bazel_dep(name = "rules_jvm_external", version = "6.9")
 
-maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven", dev_dependency = True)
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.install(
     name = "blueprint_maven_dependencies",
     artifacts = [
