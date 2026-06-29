@@ -40,35 +40,61 @@ def _setup_block(sysroot_dir, host_setup_commands, sysroot_setup_commands):
 
     host_setup_commands run in the outer shell with $SYSROOT set to sysroot_dir.
 
-    sysroot_setup_commands run inside a temporary /bin/sh script with
-    LD_PRELOAD=libfakechroot.so + FAKECHROOT_BASE=sysroot_dir, so absolute-path
-    accesses are transparently redirected into the sysroot.
+    sysroot_setup_commands are invoked directly via the sysroot's own ELF
+    interpreter (ld-linux.so) with --library-path pointing at the sysroot's
+    /usr/lib tree.  This gives each command a fully consistent single-libc
+    environment (all of the binary's dependencies — including libc.so.6 itself —
+    come from the sysroot).  LD_PRELOAD=libfakechroot.so + FAKECHROOT_BASE are
+    still set so that glibc-level filesystem calls inside the command (e.g.
+    writing the graphviz config6 file to /usr/lib/…) are transparently
+    redirected into the sysroot.
+
+    Each entry in sysroot_setup_commands must be a space-separated ELF binary
+    invocation starting with an absolute sysroot path, e.g. "/usr/bin/dot -c".
+    Shell metacharacters (pipes, redirects, etc.) are not supported.
     """
     block = ""
     if host_setup_commands:
         block += "SYSROOT=\"" + sysroot_dir + "\"\n"
         block += "\n".join(host_setup_commands) + "\n"
     if sysroot_setup_commands:
-        script_lines = ["#!/bin/sh", "set -eu"] + sysroot_setup_commands
-        printf_calls = "\n".join([
-            "printf '%s\\n' '" + line.replace("'", "'\\''") + "' >> \"$_FC_SCRIPT\""
-            for line in script_lines
-        ])
         block += (
             "_FC_LIB=\"$(find \"" + sysroot_dir + "/usr/lib\" -path '*/fakechroot/libfakechroot.so' -type f 2>/dev/null | head -1 || true)\"\n" +
             "if [ -z \"$_FC_LIB\" ]; then\n" +
             "  echo \"ERROR: sysroot_setup_commands require fakechroot, but libfakechroot.so was not found under " + sysroot_dir + "/usr/lib\" >&2\n" +
             "  exit 1\n" +
             "fi\n" +
-            "_FC_SCRIPT=\"$(mktemp \"${TMPDIR:-/tmp}/_prepare_sysroot_setup_XXXXXX.sh\")\"\n" +
-            printf_calls + "\n" +
-            "chmod +x \"$_FC_SCRIPT\"\n" +
-            "LD_PRELOAD=\"$_FC_LIB\" " +
-            "LD_LIBRARY_PATH=\"$(dirname \"$_FC_LIB\")${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}\" " +
-            "FAKECHROOT_BASE=\"" + sysroot_dir + "\" " +
-            "FAKECHROOT_EXCLUDE_PATH=\"$_FC_SCRIPT\" \"$_FC_SCRIPT\" 2>&1\n" +
-            "rm -f \"$_FC_SCRIPT\"\n"
+            # Use the sysroot's own ELF interpreter with an explicit --library-path
+            # so each command loads all dependencies from the sysroot's /usr/lib tree.
+            # Use well-known Debian multiarch paths instead of a fragile glob search.
+            # Running via the HOST ld-linux.so + LD_LIBRARY_PATH would load the
+            # sysroot's libc.so.6 alongside the host's already-loaded libc (two libc
+            # instances in one process → segfault).  The sysroot's own interpreter
+            # gives a single coherent libc.
+            "if [ -f \"" + sysroot_dir + "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2\" ]; then\n" +
+            "  _SYSROOT_INTERP=\"" + sysroot_dir + "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2\"\n" +
+            "  _SYSROOT_LIBPATH=\"" + sysroot_dir + "/usr/lib/x86_64-linux-gnu:" + sysroot_dir + "/usr/lib\"\n" +
+            "elif [ -f \"" + sysroot_dir + "/usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1\" ]; then\n" +
+            "  _SYSROOT_INTERP=\"" + sysroot_dir + "/usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1\"\n" +
+            "  _SYSROOT_LIBPATH=\"" + sysroot_dir + "/usr/lib/aarch64-linux-gnu:" + sysroot_dir + "/usr/lib\"\n" +
+            "else\n" +
+            "  echo \"ERROR: sysroot ELF interpreter not found (tried x86_64 and aarch64 paths)\" >&2\n" +
+            "  exit 1\n" +
+            "fi\n"
         )
+        for cmd in sysroot_setup_commands:
+            parts = cmd.split(" ")
+            binary = parts[0]
+            args = parts[1:]
+            args_shell = " ".join(['"' + a + '"' for a in args])
+            block += (
+                "LD_PRELOAD=\"$_FC_LIB\" " +
+                "FAKECHROOT_BASE=\"" + sysroot_dir + "\" " +
+                "\"$_SYSROOT_INTERP\" --library-path \"$_SYSROOT_LIBPATH\" " +
+                "\"" + sysroot_dir + binary + "\"" +
+                (" " + args_shell if args_shell else "") +
+                "\n"
+            )
     return block
 
 def _prepare_sysroot_impl(ctx):
@@ -117,12 +143,16 @@ prepare_sysroot = rule(
         ),
         "sysroot_setup_commands": attr.string_list(
             default = [],
-            doc = "Shell lines run inside the sysroot via LD_PRELOAD=libfakechroot.so " +
-                  "+ FAKECHROOT_BASE after host_setup_commands complete.  All absolute " +
-                  "path accesses are redirected into the sysroot.  Use this for post-" +
-                  "install steps that need the sysroot's own binaries (e.g. " +
-                  "'/usr/bin/dot -c' to regenerate the graphviz plugin manifest).  " +
-                  "Requires fakechroot to be present in the sysroot.",
+            doc = "Shell lines run inside the sysroot after host_setup_commands " +
+                  "complete.  Each entry must be a space-separated ELF binary " +
+                  "invocation with an absolute sysroot path (e.g. '/usr/bin/dot -c'). " +
+                  "Shell metacharacters (pipes, redirects) are not supported. " +
+                  "The binary is executed via the sysroot's own ld-linux.so with " +
+                  "--library-path pointing at the sysroot's /usr/lib tree, giving a " +
+                  "fully consistent single-libc environment.  LD_PRELOAD=libfakechroot " +
+                  "+ FAKECHROOT_BASE are still active so glibc-level filesystem calls " +
+                  "(e.g. writing config6) are transparently redirected into the sysroot. " +
+                  "Requires fakechroot and ld-linux.so to be present in the sysroot.",
         ),
     },
     toolchains = [_TAR_TOOLCHAIN_TYPE],

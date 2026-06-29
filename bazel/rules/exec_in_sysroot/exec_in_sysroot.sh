@@ -51,6 +51,25 @@ fi
 
 FAKECHROOT_LIB_DIR="$(dirname "${FAKECHROOT_LIB}")"
 
+# Determine the sysroot's ELF interpreter (ld-linux.so) and the arch-specific
+# library search path using well-known Debian multiarch paths rather than a
+# fragile glob search.  These are exported so that the wrapped executable can
+# invoke sysroot ELF binaries via the sysroot's own dynamic linker — avoiding
+# loading the sysroot's libc.so.6 alongside the host's already-loaded libc
+# (two libc instances → segfault on systems without host graphviz installed).
+# See third_party/docs_runtime/dot.sh for the usage pattern.
+if [ -f "${SYSROOT_DIR}/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2" ]; then
+  SYSROOT_INTERP="${SYSROOT_DIR}/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2"
+  SYSROOT_LIBPATH="${SYSROOT_DIR}/usr/lib/x86_64-linux-gnu:${SYSROOT_DIR}/usr/lib"
+elif [ -f "${SYSROOT_DIR}/usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1" ]; then
+  SYSROOT_INTERP="${SYSROOT_DIR}/usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1"
+  SYSROOT_LIBPATH="${SYSROOT_DIR}/usr/lib/aarch64-linux-gnu:${SYSROOT_DIR}/usr/lib"
+else
+  echo "ERROR: sysroot ELF interpreter not found (tried x86_64 and aarch64 paths)" >&2
+  exit 1
+fi
+export SYSROOT_INTERP SYSROOT_LIBPATH
+
 # Build the exclude paths list.
 # Always exclude BUILD_WORKSPACE_DIRECTORY so workspace operations stay on host.
 EXCLUDE_PATHS=""
@@ -67,6 +86,21 @@ if [ -n "${FAKECHROOT_EXCLUDE_PATH:-}" ]; then
   fi
 fi
 
+# Exclude SYSROOT_INTERP (the sysroot's ld-linux.so) so fakechroot does not
+# intercept its execution.  When a sysroot binary is launched via
+#   exec "$SYSROOT_INTERP" --library-path "$SYSROOT_LIBPATH" "$SYSROOT_DIR/bin"
+# the path "$SYSROOT_DIR/…/ld-linux.so.2" starts with FAKECHROOT_BASE.
+# Fakechroot would translate it to a sysroot-relative path and fail to exec it
+# (the kernel reports ENOENT).  Listing the full path here tells fakechroot to
+# pass the execve through unchanged.
+if [ -n "${SYSROOT_INTERP}" ]; then
+  if [ -n "${EXCLUDE_PATHS}" ]; then
+    EXCLUDE_PATHS="${EXCLUDE_PATHS}:${SYSROOT_INTERP}"
+  else
+    EXCLUDE_PATHS="${SYSROOT_INTERP}"
+  fi
+fi
+
 if [ -n "${EXCLUDE_PATHS}" ]; then
   export FAKECHROOT_EXCLUDE_PATH="${EXCLUDE_PATHS}"
 fi
@@ -75,11 +109,6 @@ fi
 # directory.  All absolute file-system calls (open, stat, execve, …) inside the
 # launched process are transparently redirected to SYSROOT_DIR/<path> unless the
 # path is listed in FAKECHROOT_EXCLUDE_PATH.
-#
-# Only the fakechroot-lib directory is added to LD_LIBRARY_PATH; adding the full
-# sysroot lib tree would make the host linker pick up sysroot-snapshot versions of
-# libgvc/libc/… which may differ from the build the sysroot binary was built with
-# and cause crashes.
 export FAKECHROOT_BASE="${SYSROOT_DIR}"
 export LD_PRELOAD="${FAKECHROOT_LIB}${LD_PRELOAD:+:${LD_PRELOAD}}"
 export LD_LIBRARY_PATH="${FAKECHROOT_LIB_DIR}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"

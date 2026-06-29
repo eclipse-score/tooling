@@ -116,13 +116,24 @@ def _score_needs_impl(ctx):
         "--log-level",
         get_log_level(ctx),
     ]
+
+    # Compute analysis-time-stable rlocation keys from short_path (no exec-config
+    # hash, no parent-directory walking). These are passed to conf.py for
+    # diagnostic logging and as the canonical Bazel identity of each tool.
+    # See docs/tooling_architecture.rst §"Hermetic tool path resolution".
+    _gv_short = ctx.executable._graphviz.short_path
+    _graphviz_rloc = _gv_short[3:] if _gv_short.startswith("../") else ctx.workspace_name + "/" + _gv_short
+    _pl_short = ctx.executable._plantuml.short_path
+    _plantuml_rloc = _pl_short[3:] if _pl_short.startswith("../") else ctx.workspace_name + "/" + _pl_short
     ctx.actions.run(
         inputs = needs_inputs,
         outputs = [needs_output],
         arguments = needs_args,
         env = {
             "PLANTUML_BIN": ctx.executable._plantuml.path,
+            "PLANTUML_BIN_RLOC": _plantuml_rloc,
             "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
+            "GRAPHVIZ_DOT_RLOC": _graphviz_rloc,
         },
         progress_message = "Generating needs.json for: %s" % ctx.label.name,
         executable = sphinx_toolchain.sphinx.files_to_run.executable,
@@ -256,9 +267,18 @@ def _score_html_impl(ctx):
 
     # Use the hermetic graphviz wrapper that executes `/usr/bin/dot` inside the
     # docs_runtime sysroot via exec_in_sysroot.
+    # Compute analysis-time-stable rlocation keys from short_path (no exec-config
+    # hash, no parent-directory walking). See docs/tooling_architecture.rst
+    # §"Hermetic tool path resolution".
+    _gv_short = ctx.executable._graphviz.short_path
+    _graphviz_rloc = _gv_short[3:] if _gv_short.startswith("../") else ctx.workspace_name + "/" + _gv_short
+    _pl_short = ctx.executable._plantuml.short_path
+    _plantuml_rloc = _pl_short[3:] if _pl_short.startswith("../") else ctx.workspace_name + "/" + _pl_short
     action_env = {
         "PLANTUML_BIN": ctx.executable._plantuml.path,
+        "PLANTUML_BIN_RLOC": _plantuml_rloc,
         "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
+        "GRAPHVIZ_DOT_RLOC": _graphviz_rloc,
     }
 
     ctx.actions.run(

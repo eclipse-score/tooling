@@ -28,50 +28,6 @@ from sphinx.util import logging
 # Create a logger with the Sphinx namespace
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Helpers: Bazel execroot path resolution
-# ---------------------------------------------------------------------------
-
-
-# Capture the current working directory at module import time.
-# In Bazel action context, cwd == execroot. In IDE/non-Bazel runs, cwd is
-# the current directory. This is captured once to avoid repeated resolution.
-_EXECROOT = Path.cwd()
-
-
-def _resolve_execroot_path(path_value: str) -> str:
-    """Resolve an execroot-relative path to an absolute filesystem path.
-
-    Bazel passes action inputs as paths relative to the execroot (e.g.
-    ``bazel-bin/third_party/docs_runtime/dot``).  Those paths are only valid
-    when the process' cwd is the execroot — which is not guaranteed once
-    Sphinx changes directories during the build.
-
-    This function makes them absolute so they work regardless of cwd.
-    Absolute paths and plain command names (e.g. ``dot``) are returned
-    unchanged.
-    """
-    p = Path(path_value)
-    if p.is_absolute():
-        return str(p)
-    if path_value.startswith("external/") or path_value.startswith("bazel-out/"):
-        # First try cwd-as-execroot (fast path).
-        candidate = (_EXECROOT / p).resolve()
-        if candidate.exists():
-            return str(candidate)
-
-        # If cwd is nested under bazel-out, walk upward and locate the first
-        # parent that contains the requested relative path.
-        for parent in [_EXECROOT, *_EXECROOT.parents]:
-            candidate = (parent / p).resolve()
-            if candidate.exists():
-                return str(candidate)
-
-        # Fallback: preserve previous behavior even if the file does not exist
-        # yet (keeps logging/debug output deterministic).
-        return str((_EXECROOT / p).resolve())
-    return path_value
-
 
 logger.debug("#" * 80)
 logger.debug("# READING CONF.PY")
@@ -170,8 +126,22 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # PlantUML binary discovery
 # ---------------------------------------------------------------------------
-# PLANTUML_BIN is set by the Bazel sphinx_module rule to the explicit execroot-
-# relative path of the //third_party/plantuml:plantuml java_binary launcher script.
+# PLANTUML_BIN     — execroot-relative path of //third_party/plantuml:plantuml
+#                    (a rules_java java_binary launcher script), injected by the
+#                    sphinx_module Bazel rule via the action env.
+# PLANTUML_BIN_RLOC — analysis-time-stable Bazel rlocation key derived from the
+#                    target's short_path (no exec-config hash); used only for
+#                    diagnostic logging here.
+#
+# Path resolution rationale (applies to all hermetic tool paths in this file):
+# os.path.abspath() converts the execroot-relative path to an absolute path
+# using the process's current working directory.  Bazel guarantees that the
+# action's cwd equals the execroot at process start.  conf.py is loaded during
+# Sphinx initialisation — before Sphinx can perform any os.chdir() — so the
+# abspath() call is stable for the entire action lifetime.  This replaces the
+# previous _resolve_execroot_path() which walked parent directories as a
+# fallback, a pattern that is fragile and wrong when nested under bazel-out/.
+# See docs/tooling_architecture.rst §"Hermetic tool path resolution".
 _plantuml_bin = os.environ.get("PLANTUML_BIN")
 if not _plantuml_bin:
     raise ValueError(
@@ -180,34 +150,73 @@ if not _plantuml_bin:
         "sphinx_module Bazel rule. If you are invoking Sphinx outside that rule, "
         "set PLANTUML_BIN to the plantuml binary path."
     )
-plantuml_path = _resolve_execroot_path(_plantuml_bin)
+plantuml_path = os.path.abspath(_plantuml_bin)
+logger.debug(
+    f"plantuml resolved: {plantuml_path} "
+    f"(rloc: {os.environ.get('PLANTUML_BIN_RLOC', 'n/a')})"
+)
 
 plantuml_output_format = "svg_obj"
-# `plantuml` is defined below, after graphviz_dot is resolved, so PlantUML can
-# render with the same hermetic Graphviz dot (see end of the Graphviz section).
+# `plantuml` command is assembled below, after graphviz_dot is resolved, so
+# PlantUML can use the same hermetic Graphviz dot (see Graphviz section).
 
 # ---------------------------------------------------------------------------
 # Graphviz (sphinx.ext.graphviz)
 # ---------------------------------------------------------------------------
-# GRAPHVIZ_DOT is set by the Bazel sphinx_module rule to point at the
-# exec_in_sysroot wrapper from //third_party/docs_runtime:dot.
-# The wrapper executes /usr/bin/dot inside the hermetic docs_runtime sysroot.
-# Paths are passed execroot-relative, so resolve to absolute for robustness if
-# Sphinx changes cwd before spawning dot.
-# If GRAPHVIZ_DOT is absent, force a known-invalid dot path so Sphinx fails
-# clearly on graphviz directives instead of silently using host-installed dot.
-if "GRAPHVIZ_DOT" in os.environ:
-    graphviz_dot = _resolve_execroot_path(os.environ["GRAPHVIZ_DOT"])
+# GRAPHVIZ_DOT      — execroot-relative path of //third_party/docs_runtime:dot
+#                     (the exec_in_sysroot bash wrapper), injected by the
+#                     sphinx_module Bazel rule.
+# GRAPHVIZ_DOT_RLOC — analysis-time-stable rlocation key; logged only.
+#
+# Path resolution: same os.path.abspath() rationale as PLANTUML_BIN above.
+#
+# The exec_in_sysroot wrapper is a runfiles-aware bash script that bootstraps
+# its own runfiles via the standard $0.runfiles/ Bazel convention (identical
+# to the runfiles.bash init block).  Passing the ABSOLUTE path ensures $0 is
+# absolute, so $0.runfiles/ resolves to the correct companion directory even
+# when the wrapper is called as a subprocess from inside the Sphinx Python
+# process (which carries its own RUNFILES_DIR pointing at the sphinx tool's
+# runfiles, not the dot wrapper's runfiles).
+#
+# If GRAPHVIZ_DOT is absent a known-invalid sentinel is used so that
+# sphinx.ext.graphviz fails loudly on any .. graphviz:: directive rather than
+# silently using a host-installed dot binary.
+_graphviz_dot_path = os.environ.get("GRAPHVIZ_DOT", "")
+_graphviz_dot_rloc = os.environ.get("GRAPHVIZ_DOT_RLOC", "")
+if _graphviz_dot_path:
+    graphviz_dot = os.path.abspath(_graphviz_dot_path)
     graphviz_output_format = "svg"
+    logger.debug(
+        f"graphviz dot resolved: {graphviz_dot} (rloc: {_graphviz_dot_rloc or 'n/a'})"
+    )
 else:
     graphviz_dot = "/__hermetic_graphviz_not_configured__/dot"
 
-# Render PlantUML diagrams with the real (hermetic) Graphviz dot resolved above,
-# giving reference Graphviz layout. Smetana (PlantUML's bundled Java port) was
-# previously used only to avoid an external dot in the sandbox; the hermetic dot
-# removes that constraint. Swap back to `-Playout=smetana` if the per-diagram dot
-# subprocess regresses build time.
-plantuml = f"{plantuml_path} -graphvizdot {graphviz_dot}"
+# ---------------------------------------------------------------------------
+# PlantUML layout engine: hermetic dot or Smetana fallback
+# ---------------------------------------------------------------------------
+# Wire PlantUML to the hermetic dot via -graphvizdot when the wrapper is
+# accessible; otherwise fall back to PlantUML's built-in Smetana layout
+# engine (a pure-Java re-implementation of Graphviz) with a warning.
+# The hermetic dot is the reference rendering path; Smetana output may differ
+# visually (different edge routing, node spacing).
+# Note: the smetana fallback only affects PlantUML diagrams.  sphinx.ext.graphviz
+# directives always use graphviz_dot; they will fail if it is the sentinel.
+_dot_available = (
+    graphviz_dot != "/__hermetic_graphviz_not_configured__/dot"
+    and Path(graphviz_dot).is_file()
+)
+if _dot_available:
+    plantuml = f"{plantuml_path} -graphvizdot {graphviz_dot}"
+else:
+    logger.warning(
+        f"Hermetic Graphviz dot is not available at {graphviz_dot!r}. "
+        "PlantUML is falling back to the built-in Smetana layout engine. "
+        "Diagrams may differ from the reference output produced by the "
+        "hermetic Bazel build. Ensure GRAPHVIZ_DOT / GRAPHVIZ_DOT_RLOC are "
+        "set correctly when invoking the sphinx_module rule."
+    )
+    plantuml = f"{plantuml_path} -Playout=smetana"
 
 # HTML theme
 html_theme = "sphinx_rtd_theme"

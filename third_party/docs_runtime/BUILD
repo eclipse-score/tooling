@@ -66,6 +66,11 @@ prepare_sysroot(
 # Hermetic graphviz dot executable used by doc actions.
 exec_in_sysroot(
     name = "dot",
+    # /tmp must not be chrooted so that PlantUML's per-diagram .dot / .svg temp
+    # files (written to the real /tmp) are accessible to dot without being
+    # redirected into the sysroot.  Graphviz-internal paths (/usr/lib/…/graphviz,
+    # /usr/share/fonts, …) are still correctly redirected by fakechroot.
+    exclude_paths = ["/tmp"],
     # fakechroot + the x86_64 sysroot binaries only run on a linux/x86_64 host.
     exec_compatible_with = [
         "@platforms//cpu:x86_64",
