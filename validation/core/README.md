@@ -21,29 +21,28 @@ The package contains two public targets:
 | Target | Kind | Purpose |
 |--------|------|---------|
 | `//validation/core:validation` | `rust_library` | Shared readers, models, and validators |
-| `//validation/core:validation_cli` | `rust_binary` | CLI entrypoint that infers which validations can run from supplied inputs |
+| `//validation/core:validation_cli` | `rust_binary` | CLI entrypoint that dispatches the selected validation profile |
 
 ## What It Validates
 
-The current implementation supports three validation flows:
+The current implementation supports these validation flows:
 
 1. `BazelComponent`: compares the indexed Bazel build graph with the indexed
    PlantUML component-diagram structure.
-2. `ComponentClass`: compares component-diagram unit IDs with enclosing
-  namespace IDs observed in class diagrams using boundary-aware suffix
-  matching.
-3. `ComponentSequence`: checks that component-diagram unit aliases, shared
+
+2. `ComponentSequence`: checks that component-diagram unit aliases, shared
   interface relations, and sequence-diagram function-call connections stay in
   sync. When internal API diagrams are provided, it also checks that each
   sequence function name is declared on a shared interface referenced by both
   participating units.
 
-Internal API diagrams are handled separately from regular class diagrams.
-If no `--internal-api-fbs` inputs are provided, `ComponentSequence` still runs
-the alias and interface-connection checks and skips method-level validation.
+  Internal API diagrams are handled separately from regular class diagrams.
+  If no `--internal-api-fbs` inputs are provided, `ComponentSequence` still runs
+  the alias and interface-connection checks and skips method-level validation.
 
-The CLI inspects the provided inputs, determines which validations can run,
-and executes all compatible checks in one pass.
+The CLI dispatches to the selected validation profile. Each profile owns its
+input schema, reads the models it needs, and runs the validators that are
+available for those profile inputs.
 
 ## Layering
 
@@ -55,34 +54,76 @@ The crate is intentionally split into three layers:
 - `validators/`: compare prepared model/index structures and accumulate
   `Errors`.
 
-`src/main.rs` is the orchestration boundary. It reads CLI arguments, builds the
-shared `ValidationContext`, selects runnable validators, merges their results,
-and optionally writes a validation log.
+`src/main.rs` is the orchestration boundary. It reads CLI arguments, dispatches
+to the selected profile, merges validator results, and optionally writes a
+validation log.
 
 This keeps validators focused on comparison logic instead of file loading or
 model construction.
 
 ## Inputs
 
-The CLI accepts the following input families:
+The CLI accepts a validation profile and a JSON input bundle:
 
-- `--architecture-json`: Bazel architecture export
-- `--component-fbs`: one or more component-diagram FlatBuffers files
-- `--sequence-fbs`: one or more sequence-diagram FlatBuffers files
-- `--class-fbs`: one or more class-diagram FlatBuffers files
-- `--internal-api-fbs`: optional internal-API FlatBuffers files for the
-  `ComponentSequence` validator
+- `--profile`: validation scenario to run. Named profiles such as `architectural-design` select validators in the Rust validation layer.
+- `--inputs`: JSON file containing the input paths for the selected profile.
 
-The current inference rules are:
+Supported profiles:
 
-- `--architecture-json` + `--component-fbs` enables `BazelComponent`
-- `--component-fbs` + `--class-fbs` enables `ComponentClass`
-- `--component-fbs` + `--sequence-fbs` enables `ComponentSequence`
+| Profile | Status | Input schema | Validation scope |
+|---------|--------|--------------|------------------|
+| `architectural-design` | Supported | `ArchitecturalDesignInputs` | Design consistency |
+| `dependable-element` | Supported | `DependableElementInputs` | Bazel architecture consistency |
+| `unit` | Placeholder | not read | none; writes `SKIPPED` |
 
-`--internal-api-fbs` is an optional additional input for
-`ComponentSequence`. It does not enable a validator on its own.
+Profile validators:
 
-If multiple combinations are present, all compatible validators are executed.
+`architectural-design`:
+- `validate_component_sequence`
+
+`dependable-element`:
+- `validate_bazel_component`
+- `validate_component_class` (pending)
+
+`unit`:
+- placeholder
+
+Each profile owns its own input schema.
+
+`dependable-element`:
+
+```json
+{
+  "architecture": "path/to/architecture.json",
+  "component_diagrams": ["path/to/component.fbs.bin"]
+}
+```
+
+`architectural-design`:
+
+```json
+{
+  "component_diagrams": ["path/to/component.fbs.bin"],
+  "sequence_diagrams": ["path/to/sequence.fbs.bin"],
+  "internal_api": ["path/to/internal_api.fbs.bin"],
+  "public_api": ["path/to/public_api.fbs.bin"]
+}
+```
+
+`unit`:
+
+```json
+{
+  "design_classes": ["path/to/design_class.fbs.bin"],
+  "design_sequences": ["path/to/design_sequence.fbs.bin"],
+  "implementation_classes": ["path/to/implementation_class.fbs.bin"],
+  "implementation_sequences": ["path/to/implementation_sequence.fbs.bin"]
+}
+```
+
+Bazel rules declare the profile and provide the input bundle. The Rust
+validation layer decides which validators belong to the selected profile and
+maps the profile inputs to those validators.
 
 ## Run
 
@@ -96,11 +137,8 @@ Run it directly:
 
 ```bash
 bazel run //validation/core:validation_cli -- \
-    --architecture-json path/to/architecture.json \
-    --component-fbs path/to/component.fbs.bin \
-    --sequence-fbs path/to/sequence.fbs.bin \
-    --class-fbs path/to/class.fbs.bin \
-    --internal-api-fbs path/to/internal_api.fbs.bin \
+    --profile dependable-element \
+    --inputs path/to/validation_inputs.json \
     --output path/to/validation.log
 ```
 

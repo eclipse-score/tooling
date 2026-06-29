@@ -26,9 +26,7 @@ use shared::EntityKey;
 #[cfg(test)]
 pub use bazel_models::BazelInputEntry;
 pub use bazel_models::{BazelArchitecture, BazelInput};
-pub use class_diagram_models::{
-    ClassDiagramIndex, ClassDiagramInputs, InternalApiIndex, InternalApiInterface,
-};
+pub use class_diagram_models::{ClassDiagramInputs, InternalApiIndex, InternalApiInterface};
 pub use component_diagram_models::{
     ComponentDiagramArchitecture, ComponentDiagramElementType, ComponentDiagramInput,
     ComponentDiagramInputs, ComponentDiagramRelation,

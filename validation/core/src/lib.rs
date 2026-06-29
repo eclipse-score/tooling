@@ -17,20 +17,8 @@
 //! CLI entrypoints for architecture and design verification.
 
 mod models;
+mod profiles;
 mod readers;
 mod validators;
 
-pub use models::{
-    BazelArchitecture, BazelInput, ClassDiagramIndex, ClassDiagramInputs,
-    ComponentDiagramArchitecture, ComponentDiagramInputs, Errors, InternalApiIndex,
-    SequenceDiagramIndex, SequenceDiagramInputs,
-};
-
-pub use readers::{
-    BazelReader, ClassDiagramReader, ComponentDiagramReader, Reader, SequenceDiagramReader,
-};
-
-pub use validators::{
-    validate_bazel_component, validate_component_class, validate_component_sequence, RequiredInput,
-    SelectedValidator, ALL_VALIDATORS,
-};
+pub use profiles::{read_profile_inputs, run_profile, Profile, ProfileInputs, ProfileRun};

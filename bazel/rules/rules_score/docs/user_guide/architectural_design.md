@@ -127,6 +127,7 @@ load("@score_tooling//bazel/rules/rules_score:rules_score.bzl", "architectural_d
 architectural_design(
     name   = "my_arch",
     static = ["static_design.puml"],  # the MySeooc_StaticDesign diagram above
+    dynamic = ["sequence_design.puml"],
 )
 ```
 

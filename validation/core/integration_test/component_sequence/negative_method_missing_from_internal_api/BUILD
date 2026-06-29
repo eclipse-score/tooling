@@ -18,6 +18,7 @@ architectural_design(
     name = "design",
     dynamic = ["sequence_diagram.puml"],
     internal_api = ["internal_api_diagram.puml"],
+    maturity = "development",
     static = ["component_diagram.puml"],
     visibility = ["//visibility:private"],
 )

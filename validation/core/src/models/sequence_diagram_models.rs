@@ -22,7 +22,9 @@ use super::Errors;
 /// One parsed sequence diagram from a FlatBuffer file.
 pub struct SequenceDiagramInput {
     pub tree: SequenceTree,
+    #[allow(dead_code)]
     pub source_files: Vec<String>,
+    #[allow(dead_code)]
     pub version: Option<String>,
 }
 

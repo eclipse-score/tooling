@@ -24,6 +24,7 @@ to produce FlatBuffers binary representations of the parsed diagrams.
 
 load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:puml_utils.bzl", "make_puml_rst_wrappers")
+load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 # ============================================================================
@@ -90,6 +91,33 @@ def _parse_puml_diagrams(ctx, files):
             fbs_outputs.append(fbs)
             lobster_outputs.append(lobster)
     return fbs_outputs, lobster_outputs
+
+def _run_validation(ctx, component_fbs_files, sequence_fbs_files, internal_api_fbs_files):
+    """Run the architectural-design validation profile.
+
+    Args:
+        ctx: Rule context
+        component_fbs_files: Component-diagram FlatBuffer files generated from this target's static inputs.
+        sequence_fbs_files: Sequence-diagram FlatBuffer files generated from this target's dynamic inputs.
+        internal_api_fbs_files: List of internal-API FlatBuffer files generated from this target's internal_api inputs.
+    Returns:
+        Struct with file and name fields describing the validation log entry.
+    """
+
+    return run_validation(
+        ctx = ctx,
+        validation_cli = ctx.executable._validation_cli,
+        profile = PROFILES.ARCHITECTURAL_DESIGN,
+        input_bundle = {
+            "component_diagrams": [f.path for f in component_fbs_files],
+            "sequence_diagrams": [f.path for f in sequence_fbs_files],
+            "internal_api_diagrams": [f.path for f in internal_api_fbs_files],
+        },
+        inputs = component_fbs_files + sequence_fbs_files + internal_api_fbs_files,
+        mnemonic = "ArchitecturalDesignValidate",
+        maturity = ctx.attr.maturity,
+        log_level = get_log_level(ctx),
+    )
 
 def _architectural_design_impl(ctx):
     """Implementation for architectural_design rule.
@@ -161,16 +189,24 @@ def _architectural_design_impl(ctx):
         ctx.file._puml_rst_template,
     )
 
+    validation_log = _run_validation(
+        ctx,
+        static_fbs_list,
+        dynamic_fbs_list,
+        internal_api_fbs_list,
+    )
+
     sphinx_srcs = depset(rst_wrappers, transitive = [sphinx_files])
 
     return [
-        DefaultInfo(files = all_source_files),
+        DefaultInfo(files = depset([validation_log.file], transitive = [all_source_files])),
         ArchitecturalDesignInfo(
             static = static_fbs,
             dynamic = dynamic_fbs,
             internal_api = internal_api_fbs,
             name = ctx.label.name,
             public_api_lobster_files = public_api_lobster,
+            validation_logs = [validation_log],
         ),
         # Source diagram files + plantuml_links.json for the sphinx documentation build
         SphinxSourcesInfo(
@@ -184,57 +220,65 @@ def _architectural_design_impl(ctx):
 # Rule Definition
 # ============================================================================
 
+def _architectural_design_attrs():
+    attrs = {
+        "static": attr.label_list(
+            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+            mandatory = False,
+            doc = "Static architecture diagrams (class diagrams, component diagrams, etc.)",
+        ),
+        "dynamic": attr.label_list(
+            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+            mandatory = False,
+            doc = "Dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
+        ),
+        "public_api": attr.label_list(
+            allow_files = [".puml", ".plantuml"],
+            mandatory = False,
+            doc = "Public API diagrams (parsed identically to static/dynamic). " +
+                  "Classified separately so their lobster items are exposed via " +
+                  "public_api_lobster_files, enabling failure-mode-to-interface " +
+                  "traceability at the dependable element level.",
+        ),
+        "internal_api": attr.label_list(
+            allow_files = [".puml", ".plantuml"],
+            mandatory = False,
+            doc = "Internal API diagrams (class diagrams). " +
+                  "Classified separately so their FlatBuffers outputs are exposed via " +
+                  "ArchitecturalDesignInfo.internal_api for downstream validation.",
+        ),
+        "maturity": attr.string(
+            default = "release",
+            values = ["release", "development"],
+            doc = "Maturity level of the architectural design. 'release' treats validation findings as errors; 'development' emits warnings and continues.",
+        ),
+        "_puml_parser": attr.label(
+            default = Label("@score_tooling//plantuml/parser:parser"),
+            executable = True,
+            cfg = "exec",
+            doc = "PlantUML parser tool that generates FlatBuffers from .puml files",
+        ),
+        "_linker": attr.label(
+            default = Label("@score_tooling//plantuml/parser:linker"),
+            executable = True,
+            cfg = "exec",
+            doc = "Tool that generates plantuml_links.json from FlatBuffers diagram outputs",
+        ),
+        "_puml_rst_template": attr.label(
+            default = Label("//bazel/rules/rules_score:templates/puml_diagram.template.rst"),
+            allow_single_file = True,
+            doc = "RST template for PlantUML diagram wrapper pages.",
+        ),
+    }
+    attrs.update(VALIDATION_ATTRS)
+    attrs.update(VERBOSITY_ATTR)
+    return attrs
+
 _architectural_design = rule(
     implementation = _architectural_design_impl,
     doc = "Collects architectural design documents and diagrams for S-CORE process compliance. " +
           "Automatically parses PlantUML files to produce FlatBuffers binary representations.",
-    attrs = dict(
-        {
-            "static": attr.label_list(
-                allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
-                mandatory = False,
-                doc = "Static architecture diagrams (class diagrams, component diagrams, etc.)",
-            ),
-            "dynamic": attr.label_list(
-                allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
-                mandatory = False,
-                doc = "Dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
-            ),
-            "public_api": attr.label_list(
-                allow_files = [".puml", ".plantuml"],
-                mandatory = False,
-                doc = "Public API diagrams (parsed identically to static/dynamic). " +
-                      "Classified separately so their lobster items are exposed via " +
-                      "public_api_lobster_files, enabling failure-mode-to-interface " +
-                      "traceability at the dependable element level.",
-            ),
-            "internal_api": attr.label_list(
-                allow_files = [".puml", ".plantuml"],
-                mandatory = False,
-                doc = "Internal API diagrams (class diagrams). " +
-                      "Classified separately so their FlatBuffers outputs are exposed via " +
-                      "ArchitecturalDesignInfo.internal_api for downstream validation.",
-            ),
-            "_puml_parser": attr.label(
-                default = Label("@score_tooling//plantuml/parser:parser"),
-                executable = True,
-                cfg = "exec",
-                doc = "PlantUML parser tool that generates FlatBuffers from .puml files",
-            ),
-            "_linker": attr.label(
-                default = Label("@score_tooling//plantuml/parser:linker"),
-                executable = True,
-                cfg = "exec",
-                doc = "Tool that generates plantuml_links.json from FlatBuffers diagram outputs",
-            ),
-            "_puml_rst_template": attr.label(
-                default = Label("//bazel/rules/rules_score:templates/puml_diagram.template.rst"),
-                allow_single_file = True,
-                doc = "RST template for PlantUML diagram wrapper pages.",
-            ),
-        },
-        **VERBOSITY_ATTR
-    ),
+    attrs = _architectural_design_attrs(),
 )
 
 # ============================================================================
@@ -247,6 +291,7 @@ def architectural_design(
         dynamic = [],
         public_api = [],
         internal_api = [],
+        maturity = "release",
         **kwargs):
     """Define architectural design following S-CORE process guidelines.
 
@@ -276,6 +321,9 @@ def architectural_design(
             static/dynamic diagrams but classified separately so their
             FlatBuffers outputs are exposed via ArchitecturalDesignInfo.
             internal_api for downstream validation.
+        maturity: Maturity level of the architectural design. Use
+            "development" to write validation findings without failing the
+            Bazel action.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -305,5 +353,6 @@ def architectural_design(
         dynamic = dynamic,
         public_api = public_api,
         internal_api = internal_api,
+        maturity = maturity,
         **kwargs
     )

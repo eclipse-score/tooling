@@ -39,13 +39,16 @@ rust_library(
         "src/models/mod.rs",
         "src/models/sequence_diagram_models.rs",
         "src/models/shared.rs",
+        "src/profiles/architectural_design.rs",
+        "src/profiles/dependable_element.rs",
+        "src/profiles/mod.rs",
+        "src/profiles/profile.rs",
         "src/readers/bazel_reader.rs",
         "src/readers/class_diagram_reader.rs",
         "src/readers/component_diagram_reader.rs",
         "src/readers/mod.rs",
         "src/readers/sequence_diagram_reader.rs",
         "src/validators/bazel_component_validator.rs",
-        "src/validators/component_class_validator.rs",
         "src/validators/component_sequence_validator.rs",
         "src/validators/mod.rs",
         "src/validators/test/component_sequence_validator_test.rs",
@@ -59,6 +62,7 @@ rust_library(
         "//tools/serialization/flatbuffers/class:class_fbs",
         "//tools/serialization/flatbuffers/component:component_fbs",
         "//tools/serialization/flatbuffers/sequence:sequence_fbs",
+        "@crates//:clap",
         "@crates//:flatbuffers",
         "@crates//:serde",
         "@crates//:serde_json",
@@ -67,7 +71,10 @@ rust_library(
 
 rust_binary(
     name = "validation_cli",
-    srcs = ["src/main.rs"],
+    srcs = [
+        "src/main.rs",
+        "src/report.rs",
+    ],
     crate_root = "src/main.rs",
     visibility = ["//visibility:public"],
     deps = [
@@ -75,6 +82,8 @@ rust_binary(
         "@crates//:clap",
         "@crates//:env_logger",
         "@crates//:log",
+        "@crates//:serde",
+        "@crates//:serde_json",
     ],
 )
 
