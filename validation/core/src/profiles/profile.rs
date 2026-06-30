@@ -15,8 +15,8 @@ use clap::ValueEnum;
 use serde::de::DeserializeOwned;
 use std::fs;
 
-use crate::models::Errors;
 use crate::readers::Reader;
+use crate::ValidationResult;
 
 #[derive(Copy, Clone, ValueEnum, Debug, PartialEq, Eq)]
 pub enum Profile {
@@ -41,7 +41,7 @@ impl Profile {
 
 pub struct ProfileRun {
     pub ran_validator: bool,
-    pub errors: Errors,
+    pub result: ValidationResult,
 }
 
 pub(super) fn read_input_bundle<T>(path: &str) -> Result<T, String>
@@ -56,8 +56,8 @@ where
 
 pub(super) fn read_and_convert<R, O>(
     input: &R::Input,
-    errors: &mut Errors,
-    convert: impl Fn(R::Raw, &mut Errors) -> O,
+    result: &mut ValidationResult,
+    convert: impl Fn(R::Raw, &mut ValidationResult) -> O,
 ) -> Result<Option<O>, String>
 where
     R: Reader,
@@ -67,15 +67,9 @@ where
     }
 
     let raw = R::read(input).map_err(|e| e.to_string())?;
-    Ok(Some(convert(raw, errors)))
+    Ok(Some(convert(raw, result)))
 }
 
-pub(super) fn merge_errors(target: &mut Errors, incoming: Errors) {
-    target.messages.extend(incoming.messages);
-    if !incoming.debug_output.is_empty() {
-        if !target.debug_output.is_empty() {
-            target.debug_output.push_str("\n\n");
-        }
-        target.debug_output.push_str(&incoming.debug_output);
-    }
+pub(super) fn merge_results(target: &mut ValidationResult, incoming: ValidationResult) {
+    target.merge(incoming);
 }

@@ -12,14 +12,15 @@
 // *******************************************************************************
 
 use crate::models::{
-    ClassDiagramInputs, ComponentDiagramArchitecture, ComponentDiagramInputs, Errors,
-    InternalApiIndex, SequenceDiagramIndex, SequenceDiagramInputs,
+    ClassDiagramInputs, ComponentDiagramArchitecture, ComponentDiagramInputs, InternalApiIndex,
+    SequenceDiagramIndex, SequenceDiagramInputs,
 };
 use crate::readers::{ClassDiagramReader, ComponentDiagramReader, SequenceDiagramReader};
 use crate::validators::validate_component_sequence;
+use crate::ValidationResult;
 use serde::Deserialize;
 
-use super::profile::{merge_errors, read_and_convert, ProfileRun};
+use super::profile::{merge_results, read_and_convert, ProfileRun};
 
 #[derive(Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -31,39 +32,34 @@ pub struct ArchitecturalDesignInputs {
 }
 
 pub fn run(inputs: &ArchitecturalDesignInputs) -> Result<ProfileRun, String> {
-    let mut errors = Errors::default();
+    let mut result = ValidationResult::default();
     let component = read_and_convert::<ComponentDiagramReader, ComponentDiagramArchitecture>(
         inputs.component_diagrams.as_slice(),
-        &mut errors,
+        &mut result,
         |raw: ComponentDiagramInputs, errs| raw.to_diagram_architecture(errs),
     )?;
     let sequence = read_and_convert::<SequenceDiagramReader, SequenceDiagramIndex>(
         inputs.sequence_diagrams.as_slice(),
-        &mut errors,
+        &mut result,
         |raw: SequenceDiagramInputs, errs| raw.to_sequence_diagram_index(errs),
     )?;
     let internal_api = read_and_convert::<ClassDiagramReader, InternalApiIndex>(
         inputs.internal_api_diagrams.as_slice(),
-        &mut errors,
+        &mut result,
         |raw: ClassDiagramInputs, errs| InternalApiIndex::build_index(&raw, errs),
     )?;
 
     let mut ran_validator = false;
     if let (Some(component), Some(sequence)) = (component.as_ref(), sequence.as_ref()) {
-        merge_errors(
-            &mut errors,
-            validate_component_sequence(
-                component,
-                sequence,
-                internal_api.as_ref(),
-                Errors::default(),
-            ),
+        merge_results(
+            &mut result,
+            validate_component_sequence(component, sequence, internal_api.as_ref()),
         );
         ran_validator = true;
     }
 
     Ok(ProfileRun {
         ran_validator,
-        errors,
+        result,
     })
 }

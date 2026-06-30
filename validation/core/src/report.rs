@@ -38,17 +38,17 @@ fn finish_validation(
     warn_on_errors: bool,
     profile_run: &ProfileRun,
 ) -> Result<(), String> {
-    let errors = &profile_run.errors;
+    let result = &profile_run.result;
     if let Some(path) = output_path {
         write_log(path, profile_run)?;
     }
 
-    if errors.is_empty() {
+    if result.is_empty() {
         Ok(())
     } else {
         let output = format!(
             "Verification FAILED ({} error(s)):\n\n{}",
-            errors.messages.len(),
+            result.failures.len(),
             format_error_details(profile_run, "  ")
         );
         if warn_on_errors {
@@ -72,26 +72,35 @@ fn write_skipped_log(path: Option<&str>, profile: Profile) -> Result<(), String>
 }
 
 fn write_log(path: &str, profile_run: &ProfileRun) -> Result<(), String> {
-    let errors = &profile_run.errors;
-    let content = if errors.is_empty() {
-        format!("PASS\n\n{}", errors.debug_output)
+    let result = &profile_run.result;
+    let content = if result.is_empty() {
+        if result.diagnostics.is_empty() {
+            "PASS\n".to_string()
+        } else {
+            let mut output = "PASS\n\n".to_string();
+            output.push_str("\n--- Diagnostic Information ---\n\n");
+            output.push_str(&result.diagnostics.render());
+            output
+        }
     } else {
-        let mut s = format!(
-            "FAILED ({} error(s)):\n\n{}",
-            errors.messages.len(),
+        let mut output = format!(
+            "FAILED ({} error(s)):\n\n{}\n\n",
+            result.failures.len(),
             format_error_details(profile_run, "")
         );
-        s.push_str("\n--- Debug Information ---\n\n");
-        s.push_str(&errors.debug_output);
-        s
+        if !result.diagnostics.is_empty() {
+            output.push_str("\n--- Diagnostic Information ---\n\n");
+            output.push_str(&result.diagnostics.render());
+        }
+        output
     };
     fs::write(path, content).map_err(|e| format!("Failed to write output file {path}: {e}"))
 }
 
 fn format_error_details(profile_run: &ProfileRun, prefix: &str) -> String {
     profile_run
-        .errors
-        .messages
+        .result
+        .failures
         .iter()
         .enumerate()
         .map(|(i, msg)| format!("{}[{}] {}", prefix, i + 1, msg))

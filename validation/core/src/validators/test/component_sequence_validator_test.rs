@@ -139,9 +139,9 @@ fn internal_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> InternalApiIndex {
         version: None,
     }];
 
-    let mut errors = Errors::default();
-    let index = InternalApiIndex::build_index(&diagrams, &mut errors);
-    assert!(errors.is_empty());
+    let mut setup_result = ValidationResult::default();
+    let index = InternalApiIndex::build_index(&diagrams, &mut setup_result);
+    assert!(setup_result.is_empty());
     index
 }
 
@@ -182,12 +182,13 @@ fn passes_when_aliases_and_participants_are_identical() {
     let component_diagrams = component_diagrams(&["unit_1", "unit_2"]);
     let sequence_diagrams = sequence_diagrams(&["unit_1", "unit_2"]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
-    assert!(errors.is_empty());
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
+    assert!(validation_result.is_empty());
 }
 
 #[test]
@@ -195,22 +196,23 @@ fn reports_missing_and_extra() {
     let component_diagrams = component_diagrams(&["unit_1", "unit_2", "unit_3"]);
     let sequence_diagrams = sequence_diagrams(&["unit_2", "unit_4"]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
 
-    assert!(!errors.is_empty());
-    assert_eq!(errors.messages.len(), 3);
+    assert!(!validation_result.is_empty());
+    assert_eq!(validation_result.failures.len(), 3);
 
-    let missing_count = errors
-        .messages
+    let missing_count = validation_result
+        .failures
         .iter()
         .filter(|msg| msg.contains("unit alias not found in sequence participants"))
         .count();
-    let unexpected_count = errors
-        .messages
+    let unexpected_count = validation_result
+        .failures
         .iter()
         .filter(|msg| msg.contains("sequence participant not found in component unit aliases"))
         .count();
@@ -233,12 +235,13 @@ fn units_without_alias_are_ignored() {
     };
     let sequence_diagrams = sequence_diagrams(&[]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
-    assert!(errors.is_empty());
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
+    assert!(validation_result.is_empty());
 }
 
 #[test]
@@ -246,13 +249,14 @@ fn reports_alias_missing_from_participants() {
     let component_diagrams = component_diagrams(&["u1", "u2"]);
     let sequence_diagrams = sequence_diagrams(&["u1"]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
-    assert_eq!(errors.messages.len(), 1);
-    assert!(errors.messages[0].contains("\"u2\""));
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0].contains("\"u2\""));
 }
 
 #[test]
@@ -260,13 +264,14 @@ fn reports_participant_not_in_aliases() {
     let component_diagrams = component_diagrams(&["u1"]);
     let sequence_diagrams = sequence_diagrams(&["u1", "orphan"]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
-    assert_eq!(errors.messages.len(), 1);
-    assert!(errors.messages[0].contains("\"orphan\""));
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0].contains("\"orphan\""));
 }
 
 #[test]
@@ -277,18 +282,19 @@ fn reports_missing_component_alias_and_interface_connection_for_sequence_call() 
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "orphan", "GetData()")]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
 
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("sequence participant not found in component unit aliases")
             && message.contains("\"orphan\"")
     }));
-    assert!(errors.messages.iter().any(|message| {
+    assert!(validation_result.failures.iter().any(|message| {
         message
             .contains("sequence-connected units have no corresponding shared interface connection")
             && message.contains("\"u1\"")
@@ -306,16 +312,17 @@ fn reports_missing_sequence_call_for_interface_connected_units() {
     ]);
     let sequence_diagrams = sequence_diagrams(&["u1", "u2"]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
 
-    assert_eq!(errors.messages.len(), 1);
-    assert!(errors.messages[0]
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0]
         .contains("interface-connected units are missing a sequence function-call connection"));
-    assert!(errors.messages[0].contains("\"InternalInterface\""));
+    assert!(validation_result.failures[0].contains("\"InternalInterface\""));
 }
 
 #[test]
@@ -327,18 +334,19 @@ fn reports_missing_participant_and_missing_sequence_call_for_interface_connected
     ]);
     let sequence_diagrams = sequence_diagrams(&["u1"]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
 
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("component unit alias not found in sequence participants")
             && message.contains("\"u2\"")
     }));
-    assert!(errors.messages.iter().any(|message| {
+    assert!(validation_result.failures.iter().any(|message| {
         message
             .contains("interface-connected units are missing a sequence function-call connection")
             && message.contains("\"InternalInterface\"")
@@ -355,17 +363,18 @@ fn reports_sequence_call_without_corresponding_shared_interface_connection() {
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
 
-    assert_eq!(errors.messages.len(), 1);
-    assert!(errors.messages[0]
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0]
         .contains("sequence-connected units have no corresponding shared interface connection"));
-    assert!(errors.messages[0].contains("\"CallerInterface\""));
-    assert!(errors.messages[0].contains("\"CalleeInterface\""));
+    assert!(validation_result.failures[0].contains("\"CallerInterface\""));
+    assert!(validation_result.failures[0].contains("\"CalleeInterface\""));
 }
 
 #[test]
@@ -377,12 +386,13 @@ fn passes_when_interface_connected_units_have_sequence_call() {
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
-    assert!(errors.is_empty());
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
+    assert!(validation_result.is_empty());
 }
 
 #[test]
@@ -394,12 +404,13 @@ fn passes_when_sequence_call_matches_consumer_provider_roles() {
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
-    assert!(errors.is_empty());
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
+    assert!(validation_result.is_empty());
 }
 
 #[test]
@@ -411,21 +422,22 @@ fn reports_cross_unit_sequence_call_with_invalid_consumer_provider_roles() {
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(&component_arch, &sequence_index, None, errors);
+    let validation_result = validate_component_sequence(&component_arch, &sequence_index, None);
 
-    assert_eq!(errors.messages.len(), 1);
-    assert!(
-        errors.messages[0].contains("sequence interaction does not match consumer/provider roles")
-    );
-    assert!(errors.messages[0].contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData()\""));
-    assert!(errors.messages[0].contains(
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0]
+        .contains("sequence interaction does not match consumer/provider roles"));
+    assert!(validation_result.failures[0]
+        .contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData()\""));
+    assert!(validation_result.failures[0].contains(
         "Expected caller role: \"u1\" should require shared interface(s) \"InternalInterface\""
     ));
-    assert!(errors.messages[0].contains(
+    assert!(validation_result.failures[0].contains(
         "Expected callee role: \"u2\" should provide shared interface(s) \"InternalInterface\""
     ));
 }
@@ -440,23 +452,20 @@ fn reports_sequence_function_missing_from_related_interface_methods() {
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["OtherMethod"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("sequence function name was not found in the related interface methods")
             && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
     }));
-    assert!(errors.messages.iter().any(|message| {
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("internal API interface functions are not exercised in sequence diagrams")
             && message.contains("\"InternalInterface\"")
             && message.contains("\"OtherMethod\"")
@@ -473,22 +482,19 @@ fn reports_interface_function_not_exercised_in_sequence_diagrams() {
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData", "SetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 1);
-    assert!(errors.messages[0]
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0]
         .contains("internal API interface functions are not exercised in sequence diagrams"));
-    assert!(errors.messages[0].contains("\"InternalInterface\""));
-    assert!(errors.messages[0].contains("\"SetData\""));
+    assert!(validation_result.failures[0].contains("\"InternalInterface\""));
+    assert!(validation_result.failures[0].contains("\"SetData\""));
 }
 
 #[test]
@@ -504,22 +510,19 @@ fn reports_unreferenced_internal_api_interface_function_not_exercised_without_se
         ("OtherInterface", vec!["SetData"]),
     ]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 1);
-    assert!(errors.messages[0]
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0]
         .contains("internal API interface functions are not exercised in sequence diagrams"));
-    assert!(errors.messages[0].contains("\"OtherInterface\""));
-    assert!(errors.messages[0].contains("\"SetData\""));
+    assert!(validation_result.failures[0].contains("\"OtherInterface\""));
+    assert!(validation_result.failures[0].contains("\"SetData\""));
 }
 
 #[test]
@@ -532,24 +535,21 @@ fn reports_missing_internal_api_interface_for_related_interfaces() {
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
     let internal_api = internal_api_index(vec![("OtherInterface", vec!["GetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("Missing internal API interface")
             && message.contains("Unit                : \"u1\"")
             && message.contains("Missing interfaces  : \"InternalInterface\"")
     }));
-    assert!(errors.messages.iter().any(|message| {
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("Missing internal API interface")
             && message.contains("Unit                : \"u2\"")
             && message.contains("Missing interfaces  : \"InternalInterface\"")
@@ -567,21 +567,18 @@ fn reports_missing_internal_api_interface_for_caller_only() {
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 1);
-    assert!(errors.messages[0].contains("Missing internal API interface"));
-    assert!(errors.messages[0].contains("Unit                : \"u1\""));
-    assert!(errors.messages[0].contains("Missing interfaces  : \"InternalInterface1\""));
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0].contains("Missing internal API interface"));
+    assert!(validation_result.failures[0].contains("Unit                : \"u1\""));
+    assert!(validation_result.failures[0].contains("Missing interfaces  : \"InternalInterface1\""));
 }
 
 #[test]
@@ -595,21 +592,18 @@ fn reports_missing_internal_api_interface_for_callee_only() {
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 1);
-    assert!(errors.messages[0].contains("Missing internal API interface"));
-    assert!(errors.messages[0].contains("Unit                : \"u2\""));
-    assert!(errors.messages[0].contains("Missing interfaces  : \"InternalInterface1\""));
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0].contains("Missing internal API interface"));
+    assert!(validation_result.failures[0].contains("Unit                : \"u2\""));
+    assert!(validation_result.failures[0].contains("Missing interfaces  : \"InternalInterface1\""));
 }
 
 #[test]
@@ -624,19 +618,16 @@ fn reports_missing_internal_api_interface_for_unit_only_once_across_call_roles()
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()"), ("u3", "u1", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    let missing_internal_api_errors: Vec<&String> = errors
-        .messages
+    let missing_internal_api_errors: Vec<&String> = validation_result
+        .failures
         .iter()
         .filter(|message| message.contains("Missing internal API interface"))
         .collect();
@@ -655,19 +646,16 @@ fn reports_missing_internal_api_interface_without_sequence_method_call() {
     let sequence_diagrams = sequence_diagrams(&["u1"]);
     let internal_api = internal_api_index(vec![("OtherInterface", vec!["GetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    let missing_internal_api_errors: Vec<&String> = errors
-        .messages
+    let missing_internal_api_errors: Vec<&String> = validation_result
+        .failures
         .iter()
         .filter(|message| message.contains("Missing internal API interface"))
         .collect();
@@ -686,23 +674,20 @@ fn reports_missing_component_alias_for_sequence_method_validation() {
     let sequence_diagrams = sequence_calls(&[("u1", "orphan", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("sequence participant not found in component unit aliases")
             && message.contains("\"orphan\"")
     }));
-    assert!(errors.messages.iter().any(|message| {
+    assert!(validation_result.failures.iter().any(|message| {
         message
             .contains("sequence-connected units have no corresponding shared interface connection")
             && message.contains("\"u1\"")
@@ -719,24 +704,21 @@ fn reports_self_call_method_mismatch_even_when_unit_has_missing_internal_api_int
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
     let internal_api = internal_api_index(vec![]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("Missing internal API interface")
             && message.contains("Unit                : \"u1\"")
             && message.contains("Missing interfaces  : \"MissingInterface\"")
     }));
-    assert!(errors.messages.iter().any(|message| {
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("sequence self-call function name was not found")
             && message.contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData\"")
     }));
@@ -752,18 +734,15 @@ fn passes_when_sequence_function_exists_on_related_interface() {
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert!(errors.is_empty());
+    assert!(validation_result.is_empty());
 }
 
 #[test]
@@ -772,23 +751,20 @@ fn reports_self_call_function_missing_from_available_interfaces() {
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["OtherMethod"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("sequence self-call function name was not found")
             && message.contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData\"")
     }));
-    assert!(errors.messages.iter().any(|message| {
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("internal API interface functions are not exercised in sequence diagrams")
             && message.contains("\"InternalInterface\"")
             && message.contains("\"OtherMethod\"")
@@ -801,18 +777,15 @@ fn passes_when_self_call_uses_internal_api_interface_without_component_interface
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert!(errors.is_empty());
+    assert!(validation_result.is_empty());
 }
 
 #[test]
@@ -824,18 +797,15 @@ fn passes_when_all_interface_functions_are_exercised_by_self_calls() {
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()"), ("u1", "u1", "SetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData", "SetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert!(errors.is_empty());
+    assert!(validation_result.is_empty());
 }
 
 #[test]
@@ -844,20 +814,20 @@ fn reports_self_call_without_any_available_interfaces() {
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
     let internal_api = internal_api_index(vec![]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
+
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(
+        validation_result.failures[0].contains("sequence self-call function name was not found")
     );
-
-    assert_eq!(errors.messages.len(), 1);
-    assert!(errors.messages[0].contains("sequence self-call function name was not found"));
-    assert!(errors.messages[0].contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData\""));
+    assert!(validation_result.failures[0]
+        .contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData\""));
 }
 
 #[test]
@@ -874,29 +844,26 @@ fn reports_method_declared_only_on_caller_side_interfaces() {
         ("CallerOnlyInterface", vec!["GetData"]),
     ]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("sequence function name was not found in the related interface methods")
             && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
     }));
-    assert!(errors.messages.iter().any(|message| {
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("internal API interface functions are not exercised in sequence diagrams")
             && message.contains("\"SharedInterface\"")
             && message.contains("\"OtherMethod\"")
     }));
-    assert!(errors
-        .messages
+    assert!(validation_result
+        .failures
         .iter()
         .all(|message| !message.contains("Missing functions   : \"GetData\"")));
 }
@@ -915,29 +882,26 @@ fn reports_method_declared_only_on_callee_side_interfaces() {
         ("CalleeOnlyInterface", vec!["GetData"]),
     ]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("sequence function name was not found in the related interface methods")
             && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
     }));
-    assert!(errors.messages.iter().any(|message| {
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("internal API interface functions are not exercised in sequence diagrams")
             && message.contains("\"SharedInterface\"")
             && message.contains("\"OtherMethod\"")
     }));
-    assert!(errors
-        .messages
+    assert!(validation_result
+        .failures
         .iter()
         .all(|message| !message.contains("Missing functions   : \"GetData\"")));
 }
@@ -958,29 +922,26 @@ fn reports_method_declared_on_both_sides_but_not_on_shared_interface() {
         ("CalleeOnlyInterface", vec!["GetData"]),
     ]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("sequence function name was not found in the related interface methods")
             && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
     }));
-    assert!(errors.messages.iter().any(|message| {
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("internal API interface functions are not exercised in sequence diagrams")
             && message.contains("\"SharedInterface\"")
             && message.contains("\"OtherMethod\"")
     }));
-    assert!(errors
-        .messages
+    assert!(validation_result
+        .failures
         .iter()
         .all(|message| !message.contains("Missing functions   : \"GetData\"")));
 }
@@ -995,24 +956,21 @@ fn reports_case_mismatch_between_component_and_internal_api_interface_names() {
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
     let internal_api = internal_api_index(vec![("internalinterface", vec!["GetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert_eq!(errors.messages.len(), 2);
-    assert!(errors.messages.iter().any(|message| {
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("Missing internal API interface")
             && message.contains("Unit                : \"u1\"")
             && message.contains("Missing interfaces  : \"InternalInterface\"")
     }));
-    assert!(errors.messages.iter().any(|message| {
+    assert!(validation_result.failures.iter().any(|message| {
         message.contains("Missing internal API interface")
             && message.contains("Unit                : \"u2\"")
             && message.contains("Missing interfaces  : \"InternalInterface\"")
@@ -1029,16 +987,13 @@ fn matches_internal_api_by_component_interface_id_when_alias_differs() {
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
     let internal_api = internal_api_index(vec![("pkg.InternalInterface", vec!["GetData"])]);
 
-    let mut errors = Errors::default();
-    let component_arch = component_diagrams.to_diagram_architecture(&mut errors);
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut errors);
+    let mut setup_result = ValidationResult::default();
+    let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(setup_result.is_empty());
 
-    let errors = validate_component_sequence(
-        &component_arch,
-        &sequence_index,
-        Some(&internal_api),
-        errors,
-    );
+    let validation_result =
+        validate_component_sequence(&component_arch, &sequence_index, Some(&internal_api));
 
-    assert!(errors.is_empty());
+    assert!(validation_result.is_empty());
 }

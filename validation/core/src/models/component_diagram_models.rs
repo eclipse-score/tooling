@@ -13,7 +13,8 @@
 
 use std::collections::BTreeMap;
 
-use super::{EntityKey, Errors};
+use super::EntityKey;
+use crate::ValidationResult;
 
 /// Supported component-diagram entity kinds needed for validation.
 #[derive(Clone, PartialEq)]
@@ -79,8 +80,11 @@ pub struct ComponentDiagramInputs {
 
 impl ComponentDiagramInputs {
     /// Build a [`ComponentDiagramArchitecture`] index from these diagram inputs.
-    pub fn to_diagram_architecture(&self, errors: &mut Errors) -> ComponentDiagramArchitecture {
-        ComponentDiagramArchitecture::from_entities(&self.entities, errors)
+    pub fn to_diagram_architecture(
+        &self,
+        result: &mut ValidationResult,
+    ) -> ComponentDiagramArchitecture {
+        ComponentDiagramArchitecture::from_entities(&self.entities, result)
     }
 }
 
@@ -106,15 +110,15 @@ impl ComponentDiagramArchitecture {
     /// `<<SEooC>>` go into `seooc_set`;
     /// `<<component>>` go into `comp_set`;
     /// `<<unit>>` go into `unit_set`.
-    /// Duplicates (same [`EntityKey`]) are reported via `errors`.
-    fn from_entities(entities: &[ComponentDiagramInput], errors: &mut Errors) -> Self {
+    /// Duplicates (same [`EntityKey`]) are reported via `result`.
+    fn from_entities(entities: &[ComponentDiagramInput], result: &mut ValidationResult) -> Self {
         // Index by raw id for parent resolution; PlantUML nesting uses id,
         // not alias.
         let mut id_index: BTreeMap<String, &ComponentDiagramInput> = BTreeMap::new();
         for entity in entities {
             let key = entity.id.to_lowercase();
             if let Some(prev) = id_index.insert(key.clone(), entity) {
-                errors.push(format!(
+                result.add_failure(format!(
                     "Duplicate entity ID in PlantUML diagram (case-insensitive):\n\
                        ID : {key:?}\n\
                        IDs: {} and {}",
@@ -138,9 +142,9 @@ impl ComponentDiagramArchitecture {
         let filtered_component_count = components.len();
         let filtered_unit_count = units.len();
 
-        let seooc_set = Self::build_set(&seoocs, &id_index, errors);
-        let comp_set = Self::build_set(&components, &id_index, errors);
-        let unit_set = Self::build_set(&units, &id_index, errors);
+        let seooc_set = Self::build_set(&seoocs, &id_index, result);
+        let comp_set = Self::build_set(&components, &id_index, result);
+        let unit_set = Self::build_set(&units, &id_index, result);
 
         Self {
             seooc_set,
@@ -156,7 +160,7 @@ impl ComponentDiagramArchitecture {
     fn build_set(
         items: &[&ComponentDiagramInput],
         id_index: &BTreeMap<String, &ComponentDiagramInput>,
-        errors: &mut Errors,
+        result: &mut ValidationResult,
     ) -> BTreeMap<EntityKey, ComponentDiagramInput> {
         let mut set = BTreeMap::new();
         for entity in items {
@@ -165,7 +169,7 @@ impl ComponentDiagramArchitecture {
                 Some(parent_id) => match id_index.get(&parent_id.to_lowercase()) {
                     Some(parent) => Some(parent.match_key()),
                     None => {
-                        errors.push(format!(
+                        result.add_failure(format!(
                             "Unresolved parent_id in PlantUML diagram:\n\
                                Entity ID : {}\n\
                                Parent ID : {}\n\
@@ -179,7 +183,7 @@ impl ComponentDiagramArchitecture {
             };
             let key = (alias, parent_alias);
             if let Some(prev) = set.insert(key.clone(), (*entity).clone()) {
-                errors.push(format!(
+                result.add_failure(format!(
                     "Duplicate entity in PlantUML diagram:\n\
                        Key: {:?}\n\
                        IDs: {} and {}",
@@ -261,10 +265,10 @@ mod tests {
             ],
         };
 
-        let mut errors = Errors::default();
-        let architecture = inputs.to_diagram_architecture(&mut errors);
+        let mut result = ValidationResult::default();
+        let architecture = inputs.to_diagram_architecture(&mut result);
 
-        assert!(errors.is_empty());
+        assert!(result.is_empty());
         assert!(architecture
             .entities
             .iter()

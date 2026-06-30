@@ -276,6 +276,7 @@ string_flag(
         "warn",
         "info",
         "debug",
+        "trace",
     ],
     visibility = ["//visibility:public"],
 )

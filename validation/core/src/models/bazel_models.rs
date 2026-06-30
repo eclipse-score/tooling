@@ -16,7 +16,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::Deserialize;
 
 use super::shared::label_short_name;
-use super::{EntityKey, Errors};
+use super::EntityKey;
+use crate::ValidationResult;
 
 // ---------------------------------------------------------------------------
 /// Bazel architecture JSON model produced by the dependable element rule.
@@ -36,7 +37,7 @@ impl BazelInput {
     /// for child-suppression - preventing a top-level component from being
     /// silently treated as nested just because another target in a different
     /// package shares the same short name.
-    pub fn to_bazel_architecture(&self, errors: &mut Errors) -> BazelArchitecture {
+    pub fn to_bazel_architecture(&self, result: &mut ValidationResult) -> BazelArchitecture {
         let mut seooc_set = BTreeMap::new();
         let mut comp_set = BTreeMap::new();
         let mut unit_set = BTreeMap::new();
@@ -52,7 +53,7 @@ impl BazelInput {
             let comp_key = match label_short_name(comp_label) {
                 Ok(name) => name.to_lowercase(),
                 Err(msg) => {
-                    errors.push(msg);
+                    result.add_failure(msg);
                     continue;
                 }
             };
@@ -61,7 +62,7 @@ impl BazelInput {
                 // Top-level entries are dependable elements (SEooC).
                 let key = (comp_key.clone(), None);
                 if let Some(prev) = seooc_set.insert(key.clone(), comp_label.clone()) {
-                    errors.push(format!(
+                    result.add_failure(format!(
                         "Duplicate dependable element key in Bazel build graph:\n\
                            Key   : {:?}\n\
                            Labels: {} and {}",
@@ -74,13 +75,13 @@ impl BazelInput {
                 let unit_key = match label_short_name(unit_label) {
                     Ok(name) => name.to_lowercase(),
                     Err(msg) => {
-                        errors.push(msg);
+                        result.add_failure(msg);
                         continue;
                     }
                 };
                 let key = (unit_key, Some(comp_key.clone()));
                 if let Some(prev) = unit_set.insert(key.clone(), unit_label.clone()) {
-                    errors.push(format!(
+                    result.add_failure(format!(
                         "Duplicate unit key in Bazel build graph:\n\
                            Key   : {:?}\n\
                            Labels: {} and {}",
@@ -93,13 +94,13 @@ impl BazelInput {
                 let component_key = match label_short_name(component_label) {
                     Ok(name) => name.to_lowercase(),
                     Err(msg) => {
-                        errors.push(msg);
+                        result.add_failure(msg);
                         continue;
                     }
                 };
                 let key = (component_key, Some(comp_key.clone()));
                 if let Some(prev) = comp_set.insert(key.clone(), component_label.clone()) {
-                    errors.push(format!(
+                    result.add_failure(format!(
                         "Duplicate component key in Bazel build graph:\n\
                            Key   : {:?}\n\
                            Labels: {} and {}",
