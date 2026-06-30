@@ -1,7 +1,7 @@
 {
   "should_pass": false,
   "error_contains": [
-    "Method consistency violation: Missing internal API interface",
+    "Method consistency failure: Missing internal API interface",
     "\"package_a.InternalInterface\""
   ]
 }

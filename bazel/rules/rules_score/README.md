@@ -261,3 +261,18 @@ and all component / unit tests transitively.
 bazel build //examples/seooc:safety_software_seooc_example   # HTML zip
 bazel test  //examples/seooc:safety_software_seooc_example   # all tests
 ```
+
+---
+
+## Build-Time Verbosity
+
+Rules that invoke rules_score tools read the shared `verbosity` build setting.
+Pass it as a Bazel flag after the build target:
+
+```bash
+bazel build //bazel/rules/rules_score/examples/seooc/design:sample_seooc_design \
+    --//bazel/rules/rules_score:verbosity=trace
+```
+
+Supported values are `warn`, `info`, `debug`, and `trace`. The default is
+`warn`.

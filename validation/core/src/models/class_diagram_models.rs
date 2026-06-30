@@ -17,7 +17,7 @@ use std::collections::BTreeSet;
 
 use class_diagram::{ClassDiagram as ClassDiagramInput, EntityType};
 
-use super::Errors;
+use crate::ValidationResult;
 
 /// Collection of class diagrams loaded from one or more FlatBuffer files.
 pub type ClassDiagramInputs = Vec<ClassDiagramInput>;
@@ -35,7 +35,7 @@ pub struct InternalApiIndex {
 
 impl InternalApiIndex {
     /// Build an [`InternalApiIndex`] from internal-API diagram inputs.
-    pub fn build_index(diagrams: &[ClassDiagramInput], _errors: &mut Errors) -> Self {
+    pub fn build_index(diagrams: &[ClassDiagramInput], _result: &mut ValidationResult) -> Self {
         let mut interfaces = Vec::new();
 
         for diagram in diagrams {
@@ -121,10 +121,10 @@ mod tests {
             version: None,
         }];
 
-        let mut errors = Errors::default();
-        let index = InternalApiIndex::build_index(&diagrams, &mut errors);
+        let mut result = ValidationResult::default();
+        let index = InternalApiIndex::build_index(&diagrams, &mut result);
 
-        assert!(errors.is_empty());
+        assert!(result.is_empty());
         assert!(index
             .interfaces()
             .find(|interface| interface.id == "InternalAPI.InternalInterface")
@@ -175,10 +175,10 @@ mod tests {
             version: None,
         }];
 
-        let mut errors = Errors::default();
-        let index = InternalApiIndex::build_index(&diagrams, &mut errors);
+        let mut result = ValidationResult::default();
+        let index = InternalApiIndex::build_index(&diagrams, &mut result);
 
-        assert!(errors.is_empty());
+        assert!(result.is_empty());
         let interface_ids: BTreeSet<&str> = index
             .interfaces()
             .map(|interface| interface.id.as_str())

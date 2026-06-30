@@ -17,7 +17,7 @@ use std::collections::BTreeSet;
 
 use sequence_logic::{Event, SequenceNode, SequenceTree};
 
-use super::Errors;
+use crate::ValidationResult;
 
 /// One parsed sequence diagram from a FlatBuffer file.
 pub struct SequenceDiagramInput {
@@ -42,8 +42,8 @@ pub struct ObservedSequenceCall {
 
 impl SequenceDiagramInputs {
     /// Build a [`SequenceDiagramIndex`] from sequence diagram inputs.
-    pub fn to_sequence_diagram_index(&self, errors: &mut Errors) -> SequenceDiagramIndex {
-        SequenceDiagramIndex::from_diagrams(&self.diagrams, errors)
+    pub fn to_sequence_diagram_index(&self, result: &mut ValidationResult) -> SequenceDiagramIndex {
+        SequenceDiagramIndex::from_diagrams(&self.diagrams, result)
     }
 }
 
@@ -54,13 +54,13 @@ pub struct SequenceDiagramIndex {
 }
 
 impl SequenceDiagramIndex {
-    fn from_diagrams(diagrams: &[SequenceDiagramInput], errors: &mut Errors) -> Self {
+    fn from_diagrams(diagrams: &[SequenceDiagramInput], result: &mut ValidationResult) -> Self {
         let mut used_participants = BTreeSet::new();
         let mut observed_calls = Vec::new();
 
         for diagram in diagrams {
             for node in &diagram.tree.root_interactions {
-                collect_sequence_data(node, &mut used_participants, &mut observed_calls, errors);
+                collect_sequence_data(node, &mut used_participants, &mut observed_calls, result);
             }
         }
 
@@ -83,12 +83,12 @@ fn collect_sequence_data(
     node: &SequenceNode,
     used_participants: &mut BTreeSet<String>,
     observed_calls: &mut Vec<ObservedSequenceCall>,
-    errors: &mut Errors,
+    result: &mut ValidationResult,
 ) {
     match &node.event {
         Event::Interaction(interaction) => {
             validate_required_endpoints(
-                errors,
+                result,
                 "sequence function-call connection",
                 interaction.caller.as_str(),
                 interaction.callee.as_str(),
@@ -112,7 +112,7 @@ fn collect_sequence_data(
         }
         Event::Return(ret) => {
             validate_required_endpoints(
-                errors,
+                result,
                 "sequence return connection",
                 ret.caller.as_str(),
                 ret.callee.as_str(),
@@ -132,12 +132,12 @@ fn collect_sequence_data(
     }
 
     for child in &node.branches_node {
-        collect_sequence_data(child, used_participants, observed_calls, errors);
+        collect_sequence_data(child, used_participants, observed_calls, result);
     }
 }
 
 fn validate_required_endpoints(
-    errors: &mut Errors,
+    result: &mut ValidationResult,
     connection_kind: &str,
     caller: &str,
     callee: &str,
@@ -156,8 +156,8 @@ fn validate_required_endpoints(
         (false, false) => unreachable!(),
     };
 
-    errors.push(format!(
-        "Sequence validity violation: {connection_kind} is missing required endpoints:\n\
+    result.add_failure(format!(
+        "Sequence validity failure: {connection_kind} is missing required endpoints:\n\
            Missing endpoints  : \"{missing_endpoints}\"\n\
            Caller unit        : \"{caller}\"\n\
            Callee unit        : \"{callee}\"\n\
@@ -219,10 +219,10 @@ mod tests {
             }],
         };
 
-        let mut errors = Errors::default();
-        let index = inputs.to_sequence_diagram_index(&mut errors);
+        let mut result = ValidationResult::default();
+        let index = inputs.to_sequence_diagram_index(&mut result);
 
-        assert!(errors.is_empty());
+        assert!(result.is_empty());
         assert_eq!(
             index.used_participants(),
             &BTreeSet::from([
@@ -253,14 +253,14 @@ mod tests {
             }],
         };
 
-        let mut errors = Errors::default();
-        let _index = inputs.to_sequence_diagram_index(&mut errors);
+        let mut result = ValidationResult::default();
+        let _index = inputs.to_sequence_diagram_index(&mut result);
 
-        assert_eq!(errors.messages.len(), 1);
-        assert!(errors.messages[0]
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0]
             .contains("sequence function-call connection is missing required endpoints"));
-        assert!(errors.messages[0].contains("\"caller\""));
-        assert!(errors.messages[0].contains("\"unit_2\""));
+        assert!(result.failures[0].contains("\"caller\""));
+        assert!(result.failures[0].contains("\"unit_2\""));
     }
 
     #[test]
@@ -276,13 +276,13 @@ mod tests {
             }],
         };
 
-        let mut errors = Errors::default();
-        let _index = inputs.to_sequence_diagram_index(&mut errors);
+        let mut result = ValidationResult::default();
+        let _index = inputs.to_sequence_diagram_index(&mut result);
 
-        assert_eq!(errors.messages.len(), 1);
-        assert!(errors.messages[0]
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0]
             .contains("sequence function-call connection is missing required endpoints"));
-        assert!(errors.messages[0].contains("\"callee\""));
-        assert!(errors.messages[0].contains("\"unit_1\""));
+        assert!(result.failures[0].contains("\"callee\""));
+        assert!(result.failures[0].contains("\"unit_1\""));
     }
 }

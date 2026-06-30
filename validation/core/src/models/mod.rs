@@ -11,13 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-//! Shared data models for validation inputs, indexed architectures, and error
-//! accumulation.
+//! Shared data models for validation inputs and indexed architectures.
 
 mod bazel_models;
 mod class_diagram_models;
 mod component_diagram_models;
-mod error_models;
 mod sequence_diagram_models;
 mod shared;
 
@@ -31,7 +29,6 @@ pub use component_diagram_models::{
     ComponentDiagramArchitecture, ComponentDiagramElementType, ComponentDiagramInput,
     ComponentDiagramInputs, ComponentDiagramRelation,
 };
-pub use error_models::Errors;
 pub use sequence_diagram_models::{
     ObservedSequenceCall, SequenceDiagramIndex, SequenceDiagramInput, SequenceDiagramInputs,
 };

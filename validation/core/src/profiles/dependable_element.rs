@@ -12,13 +12,14 @@
 // *******************************************************************************
 
 use crate::models::{
-    BazelArchitecture, BazelInput, ComponentDiagramArchitecture, ComponentDiagramInputs, Errors,
+    BazelArchitecture, BazelInput, ComponentDiagramArchitecture, ComponentDiagramInputs,
 };
 use crate::readers::{BazelReader, ComponentDiagramReader};
 use crate::validators::validate_bazel_component;
+use crate::ValidationResult;
 use serde::Deserialize;
 
-use super::profile::{merge_errors, read_and_convert, ProfileRun};
+use super::profile::{merge_results, read_and_convert, ProfileRun};
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -29,29 +30,26 @@ pub struct DependableElementInputs {
 }
 
 pub fn run(inputs: &DependableElementInputs) -> Result<ProfileRun, String> {
-    let mut errors = Errors::default();
+    let mut result = ValidationResult::default();
     let bazel = read_and_convert::<BazelReader, BazelArchitecture>(
         &inputs.architecture,
-        &mut errors,
+        &mut result,
         |raw: BazelInput, errs| raw.to_bazel_architecture(errs),
     )?;
     let component = read_and_convert::<ComponentDiagramReader, ComponentDiagramArchitecture>(
         inputs.component_diagrams.as_slice(),
-        &mut errors,
+        &mut result,
         |raw: ComponentDiagramInputs, errs| raw.to_diagram_architecture(errs),
     )?;
 
     let mut ran_validator = false;
     if let (Some(bazel), Some(component)) = (bazel.as_ref(), component.as_ref()) {
-        merge_errors(
-            &mut errors,
-            validate_bazel_component(bazel, component, Errors::default()),
-        );
+        merge_results(&mut result, validate_bazel_component(bazel, component));
         ran_validator = true;
     }
 
     Ok(ProfileRun {
         ran_validator,
-        errors,
+        result,
     })
 }
