@@ -12,11 +12,4 @@
    # SPDX-License-Identifier: Apache-2.0
    # *******************************************************************************
 
-{title}
-{underline}
-
-{failure_modes_section}
-
-{root_causes_section}
-
-{control_measures_section}
+{body}

@@ -14,35 +14,39 @@
 """
 FMEA (Failure Mode and Effects Analysis) build rules for S-CORE projects.
 
-The rule generates a single ``fmea.rst`` page (expanded from a
-template) with three inline sections:
+The rule generates a single, failure-mode-centric ``fmea.rst`` page: an
+overview summary table followed by one section per failure mode.  Each section
+carries the full failure-mode safety attributes, the fault-tree diagram inline
+(``.. uml::``), and a "Control Measures" subsection holding only that chain's
+basic events.  Failure modes and control measures not referenced by any fault
+tree are appended under trailing "Unlinked …" sections.
 
-  1. **Failure Modes** – TRLC failure-mode targets are rendered to ``.inc``
-     files by trlc_rst and pulled in via ``.. include::``.
-  2. **Control Measures** – TRLC control-measure targets rendered to ``.inc``
-     the same way as failure modes.
-  3. **Root Causes** – optional FTA PlantUML diagrams (``.puml`` /
-     ``.plantuml``) given via the ``root_causes`` attribute.  Each diagram
-     is preprocessed to inline ``fta_metamodel.puml`` (making it
-     self-contained) and then referenced via ``.. uml::`` inside the page.
-     Lobster traceability items are extracted to ``{label}/root_causes.lobster``.
+Pipeline:
 
-Using ``.inc`` (not ``.rst``) for the helper include files keeps them out of
-the Sphinx toctree (``_is_document_file`` only matches ``.rst``/``.md``) while
-``_filter_doc_files`` in ``dependable_element.bzl`` still symlinks them
-alongside ``fmea.rst`` so ``.. include::`` resolves at build time.
+  1. **FTA** (``puml_cli`` in ``--fta-output-dir`` mode) – inlines
+     ``fta_metamodel.puml`` into each ``root_causes`` diagram and emits the
+     metamodel-inlined ``.puml`` (for ``.. uml::``), ``root_causes.lobster``
+     (``lobster-act-trace``) and ``fta_chains.json`` (the ordered per-failure
+     mode chains).
+  2. **Assembly** (``fmea_assembler``) – a single in-process TRLC parse via the
+     extended ``TRLCRST`` library renders the overview table and every chain
+     section into ``fmea.rst``.
+  3. **Lobster** (``lobster-trlc``) – FailureMode and ControlMeasure
+     traceability files, unchanged.
+
+The metamodel-inlined ``.puml`` diagrams travel as ``aux_srcs`` so Sphinx can
+resolve ``.. uml::`` without adding them to the toctree.
 
 ``AnalysisInfo`` carries all lobster traceability files (failuremodes,
-controlmeasures, and root_causes if present) as a ``lobster_files`` dict
-keyed by canonical filename (e.g. ``{"failuremodes.lobster": File, ...}``).
-All Sphinx source files travel via ``SphinxSourcesInfo``.
+controlmeasures, and root_causes if present) as a ``lobster_files`` dict keyed
+by canonical filename.  All Sphinx source files travel via
+``SphinxSourcesInfo``.
 
-This is a **build-only** rule.  The combined traceability *test* is owned
-by the ``dependability_analysis`` rule which wraps this one.
+This is a **build-only** rule.  The combined traceability *test* is owned by the
+``dependability_analysis`` rule which wraps this one.
 """
 
 load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:puml_utils.bzl", "make_puml_rst_wrappers")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 # ============================================================================
@@ -50,120 +54,85 @@ load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_l
 # ============================================================================
 
 def _process_root_causes(ctx):
-    """Preprocess FTA diagrams (inline metamodel) and extract lobster items in one action.
+    """Extract FTA traceability + chains and stage the diagrams for rendering.
 
-    Args:
-        ctx: Rule context.  Reads ``ctx.files.root_causes``,
-             ``ctx.file._fta_metamodel``, and
-             ``ctx.executable._safety_analysis_tools``.
+    ``puml_cli`` (FTA mode) parses the ``$TopEvent``/``$BasicEvent``/gate macro
+    calls straight from each diagram and emits, into ``{label}/``:
+
+      * ``root_causes.lobster`` (``lobster-act-trace`` traceability), and
+      * ``fta_chains.json`` (the ordered per-failure-mode chains).
+
+    The diagrams are *not* rewritten: each source ``.puml`` is symlinked next to
+    ``fmea.rst`` so ``.. uml:: <basename>`` resolves to the authored diagram.
+    Its ``!include fta_metamodel.puml`` is resolved at render time via the docs
+    toolchain's global PlantUML include path (the metamodel is shipped with
+    ``//tools/sphinx:sphinx-build``), so the metamodel is not staged here.
 
     Returns:
-        Tuple ``(preprocessed_diagrams, detail_rsts, [root_causes_lobster], rst_section_text)``.
-        All lists are empty and the section text is ``""`` when there are no
-        PlantUML root-cause inputs.
+        Tuple ``(diagram_aux_files, root_causes_lobster_or_None, chains_json)``.
+        ``diagram_aux_files`` (the staged ``.puml`` diagrams) is empty when there
+        are no PlantUML inputs; ``chains_json`` is always a File (an empty ``[]``
+        array when there are no diagrams).
     """
     puml_inputs = [
         f
         for f in ctx.files.root_causes
         if f.extension in ("puml", "plantuml")
     ]
+
+    chains_json = ctx.actions.declare_file("{}/fta_chains.json".format(ctx.label.name))
+
     if not puml_inputs:
-        return [], [], [], ""
+        # No fault trees: emit an empty chains file so the assembler still runs
+        # (rendering every failure mode without an FTA).
+        ctx.actions.write(chains_json, "[]\n")
+        return [], None, chains_json
 
-    # Declare one preprocessed output per input diagram (same directory).
-    preprocessed_diagrams = [
-        ctx.actions.declare_file("{}/{}".format(ctx.label.name, src.basename))
-        for src in puml_inputs
-    ]
-    root_causes_lobster = ctx.actions.declare_file(
-        "{}/root_causes.lobster".format(ctx.label.name),
-    )
+    # Symlink each authored diagram next to fmea.rst so ``.. uml:: <basename>``
+    # resolves in the Sphinx tree.
+    diagram_aux_files = []
+    for src in puml_inputs:
+        staged = ctx.actions.declare_file("{}/{}".format(ctx.label.name, src.basename))
+        ctx.actions.symlink(output = staged, target_file = src)
+        diagram_aux_files.append(staged)
 
-    # Single action: preprocess every diagram and extract lobster traceability.
-    output_dir = preprocessed_diagrams[0].dirname
+    root_causes_lobster = ctx.actions.declare_file("{}/root_causes.lobster".format(ctx.label.name))
+
     args = ctx.actions.args()
-    args.add("--metamodel", ctx.file._fta_metamodel)
-    args.add("--output-dir", output_dir)
-    args.add("--lobster", root_causes_lobster)
+    for src in puml_inputs:
+        args.add("--file", src.path)
+    args.add("--fta-output-dir", root_causes_lobster.dirname)
     args.add("--log-level", get_log_level(ctx))
-    args.add_all(puml_inputs)
     ctx.actions.run(
-        inputs = puml_inputs + [ctx.file._fta_metamodel],
-        outputs = preprocessed_diagrams + [root_causes_lobster],
-        executable = ctx.executable._safety_analysis_tools,
+        inputs = puml_inputs,
+        outputs = [root_causes_lobster, chains_json],
+        executable = ctx.executable._puml_cli,
         arguments = [args],
         progress_message = "Processing root cause FTA diagrams for %s" % ctx.label.name,
     )
 
-    # Generate one detail RST per preprocessed FTA diagram via the shared
-    # puml_diagram template.  The "fta_" prefix is stripped from the stem so
-    # the page is titled e.g. "Server Not Listening" instead of
-    # "Fta Server Not Listening".
-    detail_rsts = make_puml_rst_wrappers(
-        ctx,
-        preprocessed_diagrams,
-        ctx.label.name,
-        ctx.file._puml_rst_template,
-        strip_prefix = "fta_",
-        filename_prefix = "detail_",
-    )
-
-    # Build toctree entries directly from the declared RST wrapper filenames so
-    # the toctree is always consistent with what make_puml_rst_wrappers produces,
-    # regardless of any prefix convention on the input files.
-    toctree_entries = [
-        "   " + rst.basename[:-4]  # strip ".rst"
-        for rst in detail_rsts
-    ]
-
-    root_causes_rst_section = (
-        "Root Cause Analysis\n-------------------\n\n" +
-        ".. toctree::\n   :maxdepth: 1\n\n" +
-        "\n".join(toctree_entries) + "\n"
-    )
-
-    return preprocessed_diagrams, detail_rsts, [root_causes_lobster], root_causes_rst_section
+    return diagram_aux_files, root_causes_lobster, chains_json
 
 # ============================================================================
-# Private Helpers
+# Lobster (TRLC traceability) helper
 # ============================================================================
 
-def _render_trlc_inc(ctx, trlc_files, spec_files, out_name):
-    """Render a list of ``.trlc`` source files to an ``.inc`` file via trlc_rst.
-
-    The ``.inc`` extension means the file is symlinked into the output
-    directory (via ``_filter_doc_files``) but is NOT added to any Sphinx
-    toctree (``_is_document_file`` only matches ``.rst`` / ``.md``).
-
-    Args:
-        ctx:        Rule context.
-        trlc_files: List of ``.trlc`` File objects to render.
-        spec_files: List of ``.rsl`` spec File objects needed for TRLC import
-                    resolution (passed as sandbox inputs only).
-        out_name:   Output filename (e.g. ``"failuremodes.inc"``).
-
-    Returns:
-        Declared ``.inc`` output File inside ``{label.name}/``, or ``None``
-        when ``trlc_files`` is empty.
-    """
+def _lobster_trlc(ctx, trlc_files, config, out_name):
+    """Run ``lobster-trlc`` over *trlc_files* producing ``{label}/<out_name>``."""
     if not trlc_files:
         return None
-    rendered = ctx.actions.declare_file(
-        "{}/{}".format(ctx.label.name, out_name),
-    )
+    out = ctx.actions.declare_file("{}/{}".format(ctx.label.name, out_name))
     args = ctx.actions.args()
-    args.add("--output", rendered.path)
-    args.add("--input-dir", ".")
-    args.add("--title", "")
-    args.add("--source-files")
-    args.add_all(trlc_files)
+    args.add("--config", config.path)
+    args.add("--out", out.path)
     ctx.actions.run(
-        inputs = trlc_files + spec_files,
-        outputs = [rendered],
+        inputs = trlc_files + ctx.files.spec + [config],
+        outputs = [out],
+        executable = ctx.executable._lobster_trlc,
         arguments = [args],
-        executable = ctx.executable._renderer,
+        progress_message = "lobster-trlc {}".format(out.path),
     )
-    return rendered
+    return out
 
 # ============================================================================
 # Private Rule Implementation
@@ -172,141 +141,73 @@ def _render_trlc_inc(ctx, trlc_files, spec_files, out_name):
 def _fmea_impl(ctx):
     output_files = []
 
-    # -------------------------------------------------------------------------
-    # 0. Process root causes (FTA diagrams) if provided
-    # -------------------------------------------------------------------------
-    preprocessed_diagrams, detail_rsts, root_cause_lobster_files, root_causes_rst_section = _process_root_causes(ctx)
-    output_files.extend(preprocessed_diagrams)
-    output_files.extend(detail_rsts)
+    # 0. FTA: extract chains/lobster + stage diagrams (and metamodel) for rendering.
+    diagram_aux_files, root_causes_lobster, chains_json = _process_root_causes(ctx)
+    output_files.extend(diagram_aux_files)
 
-    # -------------------------------------------------------------------------
-    # 1. Render failure modes: TRLC -> .inc via trlc_rst
-    # -------------------------------------------------------------------------
-    spec_files = ctx.files.spec
-    fm_inc = _render_trlc_inc(ctx, ctx.files.failuremodes, spec_files, "failuremodes.inc")
-    failuremodes_inc = [fm_inc] if fm_inc else []
-    output_files.extend(failuremodes_inc)
-
-    # -------------------------------------------------------------------------
-    # 2. Render control measures: TRLC -> .inc via trlc_rst
-    # -------------------------------------------------------------------------
-    cm_inc = _render_trlc_inc(ctx, ctx.files.controlmeasures, spec_files, "controlmeasures.inc")
-    controlmeasures_inc = [cm_inc] if cm_inc else []
-    output_files.extend(controlmeasures_inc)
-
-    # -------------------------------------------------------------------------
-    # 3. Run lobster-trlc on TRLC sources -> lobster files.
-    #    Spec files must be sandbox inputs so the TRLC parser can resolve
-    #    ``import ScoreReq`` etc.
-    # -------------------------------------------------------------------------
-    failuremodes_lobster_files = []
-    if ctx.files.failuremodes:
-        failuremodes_lobster = ctx.actions.declare_file(
-            "{}/failuremodes.lobster".format(ctx.label.name),
-        )
-        args = ctx.actions.args()
-        args.add("--config", ctx.file._fm_lobster_config.path)
-        args.add("--out", failuremodes_lobster.path)
-        ctx.actions.run(
-            inputs = ctx.files.failuremodes + spec_files + [ctx.file._fm_lobster_config],
-            outputs = [failuremodes_lobster],
-            executable = ctx.executable._lobster_trlc,
-            arguments = [args],
-            progress_message = "lobster-trlc {}".format(failuremodes_lobster.path),
-        )
-        failuremodes_lobster_files.append(failuremodes_lobster)
-
-    controlmeasures_lobster_files = []
-    if ctx.files.controlmeasures:
-        controlmeasures_lobster = ctx.actions.declare_file(
-            "{}/controlmeasures.lobster".format(ctx.label.name),
-        )
-        args = ctx.actions.args()
-        args.add("--config", ctx.file._cm_lobster_config.path)
-        args.add("--out", controlmeasures_lobster.path)
-        ctx.actions.run(
-            inputs = ctx.files.controlmeasures + spec_files + [ctx.file._cm_lobster_config],
-            outputs = [controlmeasures_lobster],
-            executable = ctx.executable._lobster_trlc,
-            arguments = [args],
-            progress_message = "lobster-trlc {}".format(controlmeasures_lobster.path),
-        )
-        controlmeasures_lobster_files.append(controlmeasures_lobster)
-
-    # -------------------------------------------------------------------------
-    # 4. Generate fmea.rst via expand_template
-    # -------------------------------------------------------------------------
-    fmea_rst = ctx.actions.declare_file(
-        "{}/fmea.rst".format(ctx.label.name),
-    )
-
+    # 1. Assemble fmea.rst from the chains + TRLC records (single in-process parse).
+    fmea_rst = ctx.actions.declare_file("{}/fmea.rst".format(ctx.label.name))
     title = ctx.label.name
 
-    failure_modes_rst_includes = "\n\n".join(
-        [".. include:: " + f.basename for f in failuremodes_inc],
-    )
-    control_measures_rst_includes = "\n\n".join(
-        [".. include:: " + f.basename for f in controlmeasures_inc],
-    )
-
-    failure_modes_section = ""
-    if failuremodes_inc:
-        failure_modes_section = "Failure Modes\n-------------\n\n" + failure_modes_rst_includes
-
-    control_measures_section = ""
-    if controlmeasures_inc:
-        control_measures_section = "Control Measures\n----------------\n\n" + control_measures_rst_includes
-
-    ctx.actions.expand_template(
-        template = ctx.file._template,
-        output = fmea_rst,
-        substitutions = {
-            "{title}": title,
-            "{underline}": "=" * len(title),
-            "{failure_modes_section}": failure_modes_section,
-            "{control_measures_section}": control_measures_section,
-            "{root_causes_section}": root_causes_rst_section,
-        },
+    args = ctx.actions.args()
+    args.add("--output", fmea_rst.path)
+    args.add("--template", ctx.file._template.path)
+    args.add("--title", title)
+    args.add("--chains", chains_json.path)
+    args.add("--log-level", get_log_level(ctx))
+    if ctx.files.failuremodes:
+        args.add("--failuremodes")
+        args.add_all(ctx.files.failuremodes)
+    if ctx.files.controlmeasures:
+        args.add("--controlmeasures")
+        args.add_all(ctx.files.controlmeasures)
+    if ctx.files.spec:
+        args.add("--spec")
+        args.add_all(ctx.files.spec)
+    ctx.actions.run(
+        inputs = (
+            ctx.files.failuremodes +
+            ctx.files.controlmeasures +
+            ctx.files.spec +
+            [chains_json, ctx.file._template]
+        ),
+        outputs = [fmea_rst],
+        executable = ctx.executable._fmea_assembler,
+        arguments = [args],
+        progress_message = "Assembling FMEA page for %s" % ctx.label.name,
     )
     output_files.append(fmea_rst)
 
-    # -------------------------------------------------------------------------
-    # 5. Build providers
-    # -------------------------------------------------------------------------
+    # 2. lobster-trlc traceability for FailureMode / ControlMeasure records.
+    fm_lobster = _lobster_trlc(ctx, ctx.files.failuremodes, ctx.file._fm_lobster_config, "failuremodes.lobster")
+    cm_lobster = _lobster_trlc(ctx, ctx.files.controlmeasures, ctx.file._cm_lobster_config, "controlmeasures.lobster")
+
+    # 3. Providers.
     lobster_files = {}
-    for f in failuremodes_lobster_files:
-        lobster_files["failuremodes.lobster"] = f
-    for f in controlmeasures_lobster_files:
-        lobster_files["controlmeasures.lobster"] = f
-    for f in root_cause_lobster_files:
-        lobster_files["root_causes.lobster"] = f
+    if fm_lobster:
+        lobster_files["failuremodes.lobster"] = fm_lobster
+    if cm_lobster:
+        lobster_files["controlmeasures.lobster"] = cm_lobster
+    if root_causes_lobster:
+        lobster_files["root_causes.lobster"] = root_causes_lobster
 
-    # detail_rsts are NOT top-level toctree entries (they live in sub-toctrees
-    # within fmea.rst), but they must be symlinked alongside fmea.rst so Sphinx
-    # can resolve the toctree references. They go into aux_srcs so that
-    # dependable_element symlinks them without adding them to the outer index.
-    toctree_files = [f for f in output_files if f not in detail_rsts]
-    all_sphinx_srcs = depset(toctree_files)
-
-    # Only include fmea's own generated files in the sphinx deps.  arch_design
-    # files are handled separately by dependable_element via its
-    # architectural_design attribute, so omitting them here avoids their RST
-    # wrappers being symlinked into the dependability_analysis/ section as
-    # orphaned documents.
-    sphinx_deps = [all_sphinx_srcs]
+    # The preprocessed .puml diagrams are referenced inline via ``.. uml::`` but
+    # must not be toctree documents, so they travel as aux_srcs (symlinked
+    # alongside fmea.rst by dependable_element without being indexed).
+    sphinx_srcs = depset([fmea_rst])
 
     return [
         DefaultInfo(
-            files = depset(output_files),
+            files = depset(output_files + [v for v in lobster_files.values()]),
         ),
         AnalysisInfo(
             name = ctx.label.name,
             lobster_files = lobster_files,
         ),
         SphinxSourcesInfo(
-            srcs = all_sphinx_srcs,
-            deps = depset(transitive = sphinx_deps),
-            aux_srcs = depset(detail_rsts),
+            srcs = sphinx_srcs,
+            deps = depset(transitive = [sphinx_srcs]),
+            aux_srcs = depset(diagram_aux_files),
         ),
     ]
 
@@ -316,7 +217,8 @@ def _fmea_impl(ctx):
 
 _fmea = rule(
     implementation = _fmea_impl,
-    doc = "Renders FMEA TRLC sources to .inc files and generates lobster traceability files. " +
+    doc = "Renders a failure-mode-centric FMEA page (overview table + one chain " +
+          "section per failure mode) and lobster traceability files. " +
           "Build-only rule; traceability testing is owned by dependability_analysis.",
     attrs = dict(
         {
@@ -348,23 +250,20 @@ _fmea = rule(
                 mandatory = False,
                 doc = "Reference to architectural_design target for traceability.",
             ),
-            "_safety_analysis_tools": attr.label(
-                default = Label("//bazel/rules/rules_score:safety_analysis_tools"),
+            "_puml_cli": attr.label(
+                default = Label("//plantuml/parser/puml_cli:puml_cli"),
                 executable = True,
                 allow_files = True,
                 cfg = "exec",
-                doc = "safety_analysis_tools binary: preprocess and extract subcommands.",
+                doc = "puml_cli binary used in FTA mode to inline the metamodel and " +
+                      "extract root_causes.lobster + fta_chains.json.",
             ),
-            "_fta_metamodel": attr.label(
-                default = Label("//plantuml:fta_metamodel"),
-                allow_single_file = True,
-                doc = "fta_metamodel.puml whose content is inlined into root cause diagrams.",
-            ),
-            "_renderer": attr.label(
-                default = Label("@trlc//tools/trlc_rst:trlc_rst"),
+            "_fmea_assembler": attr.label(
+                default = Label("//bazel/rules/rules_score:fmea_assembler"),
                 executable = True,
                 allow_files = True,
                 cfg = "exec",
+                doc = "FMEA page assembler (imports the extended TRLCRST library).",
             ),
             "_lobster_trlc": attr.label(
                 default = Label("@lobster//:lobster-trlc"),
@@ -386,12 +285,7 @@ _fmea = rule(
             "_template": attr.label(
                 default = Label("//bazel/rules/rules_score:templates/fmea.template.rst"),
                 allow_single_file = True,
-                doc = "RST template for the FMEA page.",
-            ),
-            "_puml_rst_template": attr.label(
-                default = Label("//bazel/rules/rules_score:templates/puml_diagram.template.rst"),
-                allow_single_file = True,
-                doc = "RST template for PlantUML diagram wrapper pages.",
+                doc = "RST template for the FMEA page (single ``{body}`` placeholder).",
             ),
         },
         **VERBOSITY_ATTR
@@ -412,9 +306,9 @@ def fmea(
         **kwargs):
     """Define FMEA (Failure Mode and Effects Analysis) following S-CORE process guidelines.
 
-    Generates a single ``fmea.rst`` page with up to three sections:
-    Failure Modes (TRLC), Control Measures (TRLC), and optionally a
-    Root Causes section with FTA PlantUML diagrams.
+    Generates a single, failure-mode-centric ``fmea.rst`` page: an overview
+    summary table followed by one section per failure mode (failure-mode detail,
+    the fault tree inline, and that chain's control measures).
 
     FTA diagrams passed via ``root_causes`` are preprocessed to inline
     ``fta_metamodel.puml`` (hermetic, no ``!include`` at render time) and
@@ -434,8 +328,7 @@ def fmea(
         root_causes: Optional FTA PlantUML diagram files (``.puml`` /
             ``.plantuml``) representing the root causes of failure modes.
         arch_design: Optional ``architectural_design`` target for traceability.
-        visibility: Bazel visibility.
-        tags: Additional Bazel tags.
+        **kwargs: Additional arguments (e.g. ``visibility``, ``tags``).
     """
     _fmea(
         name = name,

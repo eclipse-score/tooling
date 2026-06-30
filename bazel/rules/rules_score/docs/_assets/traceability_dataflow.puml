@@ -53,7 +53,7 @@ rectangle "PASS / FAIL\n(bazel test gate)" <<rep>> as gate
 reqs_in  --> reqs_lob  : lobster-trlc
 api_in   --> api_lob   : plantuml parser
 fmcm_in  --> fmcm_lob  : lobster-trlc
-fta_in   --> rc_lob    : safety_analysis_tools
+fta_in   --> rc_lob    : puml_cli (FTA mode)
 test_in  --> test_lob  : gtest_report
 
 reqs_lob --> conf

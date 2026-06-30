@@ -22,6 +22,7 @@ filegroup(
     name = "sample_fta",
     srcs = [
         "sample_fta.puml",
+        "sample_fta2.puml",
     ],
     visibility = ["//visibility:public"],
 )

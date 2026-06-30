@@ -18,6 +18,7 @@ rust_binary(
     crate_root = "src/main.rs",
     visibility = ["//visibility:public"],
     deps = [
+        "//plantuml/parser/puml_fta",
         "//plantuml/parser/puml_lobster",
         "//plantuml/parser/puml_parser",
         "//plantuml/parser/puml_resolver",
@@ -34,6 +35,7 @@ rust_binary(
         "@crates//:env_logger",
         "@crates//:log",
         "@crates//:serde",
+        "@crates//:serde_json",
     ],
 )
 
@@ -42,6 +44,7 @@ rust_test(
     srcs = ["src/main.rs"],
     crate_root = "src/main.rs",
     deps = [
+        "//plantuml/parser/puml_fta",
         "//plantuml/parser/puml_lobster",
         "//plantuml/parser/puml_parser",
         "//plantuml/parser/puml_resolver",
@@ -58,5 +61,6 @@ rust_test(
         "@crates//:env_logger",
         "@crates//:log",
         "@crates//:serde",
+        "@crates//:serde_json",
     ],
 )

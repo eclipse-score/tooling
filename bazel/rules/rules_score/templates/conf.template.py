@@ -205,9 +205,38 @@ if plantuml_path is None:
         f"Could not find plantuml binary via runfiles lookup. Searched: {searched}."
     )
 
+# Locate the FTA metamodel in the docs-build runfiles (shipped via
+# //tools/sphinx:sphinx-build data) so it can be put on PlantUML's include path.
+# FTA diagrams keep their ``!include fta_metamodel.puml``; sphinxcontrib-plantuml
+# renders via ``-pipe`` (no source-file dir), so a relative include only resolves
+# through ``plantuml.include.path``.
+fta_metamodel_dir = ""
+for repo_name in plantuml_repo_candidates:
+    candidate = r.Rlocation(f"{repo_name}/plantuml/fta_metamodel.puml", source_repo="")
+    if candidate and Path(candidate).exists():
+        fta_metamodel_dir = str(Path(candidate).parent)
+        logger.info(f"Found fta_metamodel.puml on include path: {candidate}")
+        break
+
+if not fta_metamodel_dir:
+    logger.warning(
+        "fta_metamodel.puml not found in runfiles — FTA diagrams using "
+        "!include fta_metamodel.puml will fail to render. "
+        f"Searched repo candidates: {plantuml_repo_candidates}"
+    )
+
 # Use PlantUML's built-in Smetana layout engine (Java port of Graphviz).
 # This avoids requiring an external dot binary in the Bazel sandbox.
-plantuml = f"{plantuml_path} -Playout=smetana"
+# ``--jvm_flag`` is consumed by the java_binary launcher and sets the JVM system
+# property PlantUML reads for its include search path.  It must precede the
+# program args (``-Playout`` etc.), or the launcher forwards it to PlantUML
+# (which ignores it) instead of the JVM.
+_include_flag = (
+    f" --jvm_flag=-Dplantuml.include.path={fta_metamodel_dir}"
+    if fta_metamodel_dir
+    else ""
+)
+plantuml = f"{plantuml_path}{_include_flag} -Playout=smetana"
 plantuml_output_format = "svg_obj"
 
 # ---------------------------------------------------------------------------
