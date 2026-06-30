@@ -17,6 +17,10 @@ build --tool_java_language_version=17
 build --java_runtime_version=remotejdk_17
 build --tool_java_runtime_version=remotejdk_17
 
+# Use GNU ld (bfd) as the Rust linker; avoids the deprecation warning that
+# newer Rust emits when it detects the system default linker is gold.
+build --@rules_rust//rust/settings:extra_rustc_flag=-Clink-arg=-fuse-ld=bfd
+
 # Rust clippy linter
 build:clippy --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect
 build:clippy --output_groups=+clippy_checks
