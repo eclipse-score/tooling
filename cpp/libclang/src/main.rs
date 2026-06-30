@@ -103,7 +103,7 @@ fn init_libclang() -> clang::Clang {
     clang
 }
 
-fn init_clang_index(clang: &clang::Clang) -> clang::Index {
+fn init_clang_index(clang: &clang::Clang) -> clang::Index<'_> {
     let index = clang::Index::new(clang, false, true);
     debug!("Created clang index");
     index

@@ -190,7 +190,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     debug!("Parsing started");
     for (path, content) in &preprocessed_files {
         let parsed_content = parse_puml_file(path, content, log_level, args.diagram_type)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
         if emit_debug_json {
             if let Some(ref dir) = fbs_output_dir {
                 write_json_to_file(&parsed_content, path, dir, "raw.ast")?;
