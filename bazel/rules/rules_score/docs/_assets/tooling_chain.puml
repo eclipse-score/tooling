@@ -40,10 +40,11 @@ rectangle "dependable_element" <<rule>> as de
 rectangle "sphinx_module" <<rule>> as sphinx
 
 ' ── Tools ─────────────────────────────────────────────────────────────────────
-rectangle "**TRLC**\ntrlc parser + trlc_rst\n(.trlc/.rsl -> .rst/.inc)" <<tool>> as trlc
+rectangle "**TRLC**\ntrlc parser + trlc_rst\n(.trlc/.rsl -> .rst; TRLCRST lib)" <<tool>> as trlc
 rectangle "**rst_to_trlc**\n(.rst -> .trlc)" <<own>> as r2t
 rectangle "**PlantUML Parser**\nparser + linker (Rust)\n(.puml -> .fbs.bin + .lobster)" <<tool>> as puml
-rectangle "**safety_analysis_tools**\nFTA preprocess + lobster\n(.puml -> root_causes.lobster)" <<own>> as sat
+rectangle "**puml_cli** (FTA mode)\ninline metamodel + extract\n(.puml -> inlined .puml +\nfta_chains.json + root_causes.lobster)" <<own>> as fta
+rectangle "**fmea_assembler**\nTRLCRST page build\n(.trlc + chains -> fmea.rst)" <<own>> as asm
 rectangle "**Lobster**\nlobster-trlc / -report /\n-ci-report / gtest_report" <<tool>> as lob
 rectangle "**Architecture Verifier**\nvalidation_cli\n(arch.json + .fbs.bin)" <<tool>> as verifier
 rectangle "**Sphinx**\nscore_build + html_merge\n(.rst -> needs.json + HTML)" <<tool>> as docs
@@ -57,8 +58,9 @@ req --> trlc  : render + typecheck
 req --> lob   : lobster-trlc
 
 arch --> puml : parse diagrams
-fmea --> trlc : render FM/CM
-fmea --> sat  : FTA root causes
+fmea --> fta  : FTA root causes
+fmea --> asm  : assemble fmea.rst
+asm  ..> trlc : TRLCRST lib
 fmea --> lob  : lobster-trlc
 unit --> lob  : gtest_report
 

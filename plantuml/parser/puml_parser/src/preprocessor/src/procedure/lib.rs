@@ -15,5 +15,8 @@ mod procedure_ast;
 mod procedure_expander;
 mod procedure_parser;
 
+pub use procedure_ast::{
+    Arg, BodyNode, MacroCallDef, ProcedureDef, ProcedureFile, Statement, TextPart,
+};
 pub use procedure_expander::{ProcedureExpandError, ProcedureExpander};
-pub use procedure_parser::ProcedureParseError;
+pub use procedure_parser::{ProcedureParseError, ProcedureParserService};

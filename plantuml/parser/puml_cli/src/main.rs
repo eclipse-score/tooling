@@ -26,10 +26,11 @@ use class_serializer::ClassSerializer;
 use component_serializer::ComponentSerializer;
 use sequence_serializer::SequenceSerializer;
 
+use puml_fta::{lobster_document, FtaChain, FtaModel};
 use puml_lobster::{write_lobster_to_file, LobsterModel};
 use puml_parser::{
-    DiagramParser, ErrorLocation, Preprocessor, PumlActivityParser, PumlClassParser,
-    PumlComponentParser, PumlSequenceParser,
+    DiagramParser, ErrorLocation, Preprocessor, ProcedureParserService, PumlActivityParser,
+    PumlClassParser, PumlComponentParser, PumlSequenceParser,
 };
 use puml_resolver::{
     ActivityResolver, ClassResolver, ComponentResolver, DiagramResolver, SequenceResolver,
@@ -98,6 +99,16 @@ struct Args {
     /// build output set is always complete.
     #[arg(long)]
     lobster_output_dir: Option<String>,
+
+    /// Output directory for Fault-Tree-Analysis artifacts (optional).
+    /// When set, every input diagram is treated as an FTA: its
+    /// ``fta_metamodel.puml`` include is inlined and the metamodel-inlined
+    /// ``.puml`` is written to this directory, alongside an aggregated
+    /// ``root_causes.lobster`` (lobster-act-trace) and ``fta_chains.json``
+    /// describing the per-failure-mode chains.  No FlatBuffers / component
+    /// processing is performed in this mode.
+    #[arg(long)]
+    fta_output_dir: Option<String>,
 }
 
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -132,6 +143,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     Builder::new()
         .filter_level(log_level.to_level_filter())
         .init();
+    if let Some(dir) = &args.fta_output_dir {
+        // FTA mode is a self-contained pipeline that short-circuits the normal
+        // FlatBuffers/lobster passes; reject co-specified output modes rather
+        // than silently ignoring them.
+        if args.fbs_output_dir.is_some() || args.lobster_output_dir.is_some() {
+            return Err(
+                "--fta-output-dir cannot be combined with --fbs-output-dir or \
+                        --lobster-output-dir"
+                    .into(),
+            );
+        }
+        return run_fta(&args, dir, log_level);
+    }
+
     let emit_debug_json = log_level.to_level_filter() >= log::LevelFilter::Debug;
 
     let fbs_output_dir: Option<PathBuf> = if let Some(dir) = &args.fbs_output_dir {
@@ -210,6 +235,78 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     debug!("Parsing completed");
+    Ok(())
+}
+
+/// FTA processing pipeline: inline the metamodel, parse the fault-tree macro
+/// calls, and emit the metamodel-inlined `.puml`, an aggregated
+/// `root_causes.lobster`, and `fta_chains.json`.
+fn run_fta(
+    args: &Args,
+    output_dir: &str,
+    log_level: LogLevel,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let out = PathBuf::from(output_dir);
+    fs::create_dir_all(&out)?;
+
+    let inputs = collect_files_from_args(args)?;
+    if inputs.is_empty() {
+        return Err("No valid PUML files found.".into());
+    }
+
+    // Process inputs in a deterministic order for reproducible output.
+    let mut sorted: Vec<Rc<PathBuf>> = inputs.into_iter().collect();
+    sorted.sort();
+
+    let mut all_items: Vec<serde_json::Value> = Vec::new();
+    let mut all_chains: Vec<FtaChain> = Vec::new();
+    // Chains/lobster items reference each diagram by basename; two inputs sharing
+    // a basename (in different directories) would be indistinguishable downstream.
+    let mut seen_basenames: HashSet<String> = HashSet::new();
+
+    for file in &sorted {
+        let basename = file.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
+            format!(
+                "input path has no valid UTF-8 file name: {}",
+                file.display()
+            )
+        })?;
+        // The metamodel carries only `!procedure` definitions, no fault tree.
+        if basename == "fta_metamodel.puml" {
+            continue;
+        }
+        if !seen_basenames.insert(basename.to_string()) {
+            return Err(format!(
+                "duplicate FTA diagram basename {:?}: inputs in different directories \
+                 would be indistinguishable in {}",
+                basename, output_dir,
+            )
+            .into());
+        }
+
+        // Analysis only: the fault-tree topology comes entirely from the
+        // `$TopEvent(...)` / `$BasicEvent(...)` / gate macro *calls*, which the
+        // procedure parser reads straight from the source (the `!include
+        // fta_metamodel.puml` line is inert text).  The diagram is rendered
+        // as-authored by Sphinx/PlantUML, which finds the metamodel via the
+        // toolchain's global `plantuml.include.path`.
+        let source = fs::read_to_string(file.as_path())?;
+        let parsed = ProcedureParserService.parse_file(file, &source, log_level)?;
+        let model = FtaModel::from_procedure_file(&parsed)?;
+        all_items.extend(model.lobster_items(basename));
+        all_chains.extend(model.chains(basename));
+        debug!("Processed FTA diagram: {}", file.display());
+    }
+
+    let lobster = lobster_document(all_items);
+    fs::write(
+        out.join("root_causes.lobster"),
+        serde_json::to_string_pretty(&lobster)? + "\n",
+    )?;
+    fs::write(
+        out.join("fta_chains.json"),
+        serde_json::to_string_pretty(&all_chains)? + "\n",
+    )?;
     Ok(())
 }
 
@@ -526,5 +623,150 @@ B --> A : reply
             "sequence diagram must resolve without error; got: {:?}",
             resolved.err()
         );
+    }
+}
+
+#[cfg(test)]
+mod fta_pipeline_tests {
+    use super::*;
+    use clap::Parser;
+    use puml_utils::LogLevel;
+
+    // Minimal metamodel: just enough procedure definitions for the include
+    // expander to inline.  Topology is read from the original macro calls, so
+    // the bodies are irrelevant.
+    const TEST_METAMODEL: &str = "@startuml\n\
+        !procedure $TopEvent($name, $alias)\n\
+        rectangle \"$name\" as $alias\n\
+        !endprocedure\n\
+        !procedure $OrGate($alias, $connection)\n\
+        rectangle \" \" as $alias\n\
+        !endprocedure\n\
+        !procedure $BasicEvent($name, $alias, $connection)\n\
+        usecase \"$name\" as $alias\n\
+        !endprocedure\n\
+        @enduml\n";
+
+    fn unique_dir(tag: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir =
+            std::env::temp_dir().join(format!("puml_fta_{}_{}_{}", tag, std::process::id(), nanos));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn write(path: &Path, content: &str) {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        fs::write(path, content).unwrap();
+    }
+
+    fn diagram(fm_name: &str, fm_fqn: &str, cm_fqn: &str) -> String {
+        format!(
+            "@startuml\n!include fta_metamodel.puml\n\
+             $TopEvent(\"{fm_name}\", \"{fm_fqn}\")\n\
+             $OrGate(\"OG\", \"{fm_fqn}\")\n\
+             $BasicEvent(\"a control measure\", \"{cm_fqn}\", \"OG\")\n@enduml\n",
+        )
+    }
+
+    fn args_for(out: &Path, files: &[&Path]) -> Args {
+        let mut argv: Vec<String> = vec!["puml_cli".to_string()];
+        for f in files {
+            argv.push("--file".to_string());
+            argv.push(f.to_str().unwrap().to_string());
+        }
+        argv.push("--fta-output-dir".to_string());
+        argv.push(out.to_str().unwrap().to_string());
+        Args::parse_from(argv)
+    }
+
+    #[test]
+    fn run_fta_emits_lobster_and_chains_without_rewriting_diagram() {
+        let dir = unique_dir("emit");
+        write(&dir.join("fta_metamodel.puml"), TEST_METAMODEL);
+        let a = dir.join("a.puml");
+        write(&a, &diagram("FM A", "Lib.FmA", "Lib.CmA"));
+        let out = dir.join("out");
+
+        let args = args_for(&out, &[&a]);
+        run_fta(&args, out.to_str().unwrap(), LogLevel::Warn).expect("run_fta");
+
+        // FTA mode is analysis-only: it does not rewrite or emit the diagram
+        // (Sphinx/PlantUML renders the authored .puml, resolving the metamodel
+        // via the global include path).
+        assert!(!out.join("a.puml").exists());
+
+        // Lobster: act-trace envelope with a top + basic event.
+        let lobster: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(out.join("root_causes.lobster")).unwrap())
+                .unwrap();
+        assert_eq!(lobster["schema"], "lobster-act-trace");
+        let data = lobster["data"].as_array().unwrap();
+        assert_eq!(data.len(), 2);
+
+        // Chains: one failure-mode chain carrying its control measure.
+        let chains: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(out.join("fta_chains.json")).unwrap())
+                .unwrap();
+        let chains = chains.as_array().unwrap();
+        assert_eq!(chains.len(), 1);
+        assert_eq!(chains[0]["fm_fqn"], "Lib.FmA");
+        assert_eq!(chains[0]["control_measures"][0], "Lib.CmA");
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn run_fta_aggregates_multiple_diagrams() {
+        let dir = unique_dir("multi");
+        write(&dir.join("fta_metamodel.puml"), TEST_METAMODEL);
+        let a = dir.join("a.puml");
+        let b = dir.join("b.puml");
+        write(&a, &diagram("FM A", "Lib.FmA", "Lib.CmA"));
+        write(&b, &diagram("FM B", "Lib.FmB", "Lib.CmB"));
+        let out = dir.join("out");
+
+        let args = args_for(&out, &[&a, &b]);
+        run_fta(&args, out.to_str().unwrap(), LogLevel::Warn).expect("run_fta");
+
+        let chains: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(out.join("fta_chains.json")).unwrap())
+                .unwrap();
+        let fqns: Vec<&str> = chains
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["fm_fqn"].as_str().unwrap())
+            .collect();
+        assert!(fqns.contains(&"Lib.FmA"));
+        assert!(fqns.contains(&"Lib.FmB"));
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn run_fta_rejects_basename_collision() {
+        let dir = unique_dir("collision");
+        // Same basename "fta.puml" under two sub-directories.
+        let d1 = dir.join("d1");
+        let d2 = dir.join("d2");
+        write(&d1.join("fta_metamodel.puml"), TEST_METAMODEL);
+        write(&d2.join("fta_metamodel.puml"), TEST_METAMODEL);
+        let f1 = d1.join("fta.puml");
+        let f2 = d2.join("fta.puml");
+        write(&f1, &diagram("FM A", "Lib.FmA", "Lib.CmA"));
+        write(&f2, &diagram("FM B", "Lib.FmB", "Lib.CmB"));
+        let out = dir.join("out");
+
+        let args = args_for(&out, &[&f1, &f2]);
+        let err = run_fta(&args, out.to_str().unwrap(), LogLevel::Warn).unwrap_err();
+        assert!(err.to_string().contains("duplicate FTA diagram basename"));
+
+        fs::remove_dir_all(&dir).ok();
     }
 }

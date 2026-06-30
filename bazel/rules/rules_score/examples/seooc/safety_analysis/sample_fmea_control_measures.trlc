@@ -31,3 +31,15 @@ ScoreReq.ControlMeasure NoMoreCoffee{
     description = "We shall keep a coffee reserve for emergencies"
     version = 1
 }
+
+ScoreReq.ControlMeasure WatchdogTimer{
+    safety = ScoreReq.Asil.D
+    description = "A watchdog shall detect overruns and force a safe state"
+    version = 1
+}
+
+ScoreReq.ControlMeasure DeadlineMonitor{
+    safety = ScoreReq.Asil.D
+    description = "Per-request deadline monitoring shall flag late responses"
+    version = 1
+}

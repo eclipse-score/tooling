@@ -784,10 +784,10 @@ trlc_requirements_test(
 )
 
 py_test(
-    name = "test_safety_analysis_tools",
+    name = "test_fmea_assembler",
     size = "small",
-    srcs = ["test_safety_analysis_tools.py"],
-    deps = ["@score_tooling//bazel/rules/rules_score:safety_analysis_tools"],
+    srcs = ["test_fmea_assembler.py"],
+    deps = ["@score_tooling//bazel/rules/rules_score:fmea_assembler"],
 )
 
 py_test(
@@ -825,8 +825,8 @@ test_suite(
         ":seooc_tests",
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",
+        ":test_fmea_assembler",
         ":test_rst_to_trlc",
-        ":test_safety_analysis_tools",
         ":test_trlc_rst_image_rendering",
         ":unit_component_tests",
         "//fixtures/image_srcs:requirements_image_tests",
