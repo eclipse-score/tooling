@@ -15,10 +15,19 @@ package SampleLibrary
 import ScoreReq
 
 ScoreReq.FailureMode SampleFailureMode{
-    guideword = ScoreReq.GuideWord.LossOfFunction
+    guidewords = [ScoreReq.guidewords.LossOfFunction]
     description = "SampleFailureMode takes over the world"
     failureeffect = "The world as we know it will end"
     version = 1
     safety = ScoreReq.Asil.B
+    interface = "SampleLibraryAPI.GetNumber"
+}
+
+ScoreReq.FailureMode SampleFailureMode2{
+    guideword = ScoreReq.GuideWord.TooLate
+    description = "SampleFailureMode2 responds too late"
+    failureeffect = "Downstream consumers time out"
+    version = 1
+    safety = ScoreReq.Asil.D
     interface = "SampleLibraryAPI.GetNumber"
 }

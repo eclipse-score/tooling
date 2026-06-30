@@ -28,6 +28,10 @@ pub enum Statement {
 pub struct MacroCallDef {
     pub name: String,
     pub args: Vec<Arg>,
+    /// 1-based line number of the call in its source file.
+    /// `None` when the line is unavailable (e.g. synthesised nodes).
+    #[serde(default)]
+    pub line: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

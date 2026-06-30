@@ -112,6 +112,7 @@ fn parse_body(pair: pest::iterators::Pair<Rule>) -> Vec<BodyNode> {
 }
 
 fn parse_macro_call(pair: pest::iterators::Pair<Rule>) -> MacroCallDef {
+    let (line, _col) = pair.line_col();
     let mut name = String::new();
     let mut args = Vec::new();
 
@@ -127,7 +128,11 @@ fn parse_macro_call(pair: pest::iterators::Pair<Rule>) -> MacroCallDef {
         }
     }
 
-    MacroCallDef { name, args }
+    MacroCallDef {
+        name,
+        args,
+        line: Some(line),
+    }
 }
 
 fn parse_arg_list(pair: Pair<Rule>) -> Vec<Arg> {

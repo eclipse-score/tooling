@@ -75,13 +75,17 @@ py_binary(
     visibility = ["//visibility:public"],
 )
 
-# Safety analysis tools (preprocess FTA PlantUML + extract lobster traceability items)
+# FMEA page assembler: builds the failure-mode-centric fmea.rst body in-process
+# via the extended TRLCRST library and the FTA chains JSON from puml_cli.
 py_binary(
-    name = "safety_analysis_tools",
-    srcs = ["src/safety_analysis_tools.py"],
+    name = "fmea_assembler",
+    srcs = ["src/fmea_assembler.py"],
     imports = ["src"],
-    main = "src/safety_analysis_tools.py",
+    main = "src/fmea_assembler.py",
     visibility = ["//visibility:public"],
+    deps = [
+        "@trlc//tools/trlc_rst:trlc_rst_lib",
+    ],
 )
 
 # AoU forwarding filter: filters received AoU lobster entries for chain-forwarding
@@ -187,6 +191,10 @@ py_binary(
     srcs = ["src/sphinx_wrapper.py"],
     data = [
         "//tools/sphinx:plantuml",
+        # Ship the FTA metamodel in the docs-build runfiles so conf.py can put it
+        # on PlantUML's include path; FTA diagrams keep ``!include
+        # fta_metamodel.puml`` and resolve it even under -pipe rendering.
+        "//plantuml:fta_metamodel",
     ],
     env = {
         "SOURCE_DIRECTORY": "",
