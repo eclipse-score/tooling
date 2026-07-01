@@ -1,0 +1,17 @@
+{
+  "long_description.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "kind": "component",
+          "name": "diagnostic_bundle",
+          "alias": null,
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      }
+    ]
+  }
+}

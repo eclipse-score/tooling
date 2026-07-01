@@ -22,6 +22,9 @@ filegroup(
 
 filegroup(
     name = "component_integration_test_files",
-    srcs = glob(["plantuml/*.puml"]),
+    srcs = glob([
+        "plantuml/**/*.json",
+        "plantuml/**/*.puml",
+    ]),
     visibility = ["//visibility:public"],
 )

@@ -1,0 +1,57 @@
+{
+  "interfaces.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "kind": "interface",
+          "name": "\"Command Intake\"",
+          "alias": null,
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "interface",
+          "name": "\"Status Broadcast\"",
+          "alias": "StatusOut",
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "interface",
+          "name": "MaintenanceHook",
+          "alias": null,
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "interface",
+          "name": "Safety\\nfeedback",
+          "alias": "SafetyFeedback",
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "kind": "component",
+          "name": "telemetry_gateway",
+          "alias": null,
+          "stereotype": null,
+          "style": null,
+          "statements": []
+        }
+      }
+    ]
+  }
+}
