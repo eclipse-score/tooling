@@ -529,6 +529,14 @@ seooc_artifacts_copied_test(
     target_under_test = ":seooc_test_lib_index",
 )
 
+# Regression test: generated submodule links must point to <dep>_doc/index.html.
+sh_test(
+    name = "seooc_tests_dep_links_use_doc_dir",
+    srcs = ["check_seooc_dep_links.sh"],
+    args = ["$(rootpaths :seooc_test_lib_index)"],
+    data = [":seooc_test_lib_index"],
+)
+
 # Test that sphinx_module is generated with correct providers
 seooc_sphinx_module_generated_test(
     name = "seooc_tests_sphinx_module_generated",
@@ -633,6 +641,7 @@ test_suite(
     tests = [
         ":seooc_tests_all_sources_relocated",
         ":seooc_tests_artifacts_copied",
+        ":seooc_tests_dep_links_use_doc_dir",
         ":seooc_tests_index_file_provider",
         ":seooc_tests_index_generation",
         ":seooc_tests_multi_index_files_exist",

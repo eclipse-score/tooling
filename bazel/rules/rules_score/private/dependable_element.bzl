@@ -109,6 +109,9 @@ _COMPONENT_TEMPLATE = """
 
 {requirements_section}{units_section}{implementation_section}{tests_section}"""
 
+# Suffix used by dependable_element to name the internal sphinx_module target.
+_DOC_TARGET_SUFFIX = "_doc"
+
 # ============================================================================
 # Integrity Level Definitions
 # ============================================================================
@@ -359,11 +362,19 @@ def _process_deps(ctx):
     for dep in ctx.attr.deps:
         dep_name = dep.label.name
 
-        # Create a link to the index.html that will be merged
-        # Format: * `Module Name <module_name/index.html>`_
+        # Create a link to the merged HTML index directory.
+        # The merge step uses the sphinx_module target label name as directory,
+        # i.e. "<module_name>" + _DOC_TARGET_SUFFIX for dependable_element deps.
         # Use underscores in name for readability, convert to spaces for display
         display_name = dep_name.replace("_", " ").title()
-        links.append("* `{} <{}/index.html>`_".format(display_name, dep_name))
+        links.append(
+            "* `{} <{}{}{}>`_".format(
+                display_name,
+                dep_name,
+                _DOC_TARGET_SUFFIX,
+                "/index.html",
+            ),
+        )
 
     return "\n".join(links)
 
@@ -1425,7 +1436,7 @@ def dependable_element(
         name = name + "_doc",
         srcs = [":" + name + "_index"],
         index = ":" + name + "_index",
-        deps = [d + "_doc" for d in deps],
+        deps = [d + _DOC_TARGET_SUFFIX for d in deps],
         sphinx = sphinx,
         testonly = testonly,
         **kwargs

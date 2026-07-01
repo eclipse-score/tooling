@@ -136,12 +136,12 @@ def _unit_impl(ctx):
 
 _unit_attrs = {
     "unit_design": attr.label_list(
-        mandatory = True,
+        default = [],
         providers = [UnitDesignInfo],
         doc = "Unit design artifacts (unit_design targets only)",
     ),
     "implementation": attr.label_list(
-        mandatory = True,
+        default = [],
         providers = [[CcInfo], [rust_common.crate_info]],
         aspects = [cc_dependencies_aspect] + cpp_parser_target_aspects(),
         doc = "Implementation targets (cc_library, cc_binary, rust_library, rust_binary, etc.).",
@@ -151,7 +151,7 @@ _unit_attrs = {
         doc = "Additional not explicitly named targets which are needed for the unit implementation",
     ),
     "tests": attr.label_list(
-        mandatory = True,
+        default = [],
         cfg = "exec",
         doc = "Test targets that verify the unit (cc_test, py_test, rust_test, etc.)",
     ),

@@ -220,7 +220,7 @@ _component_test = rule(
     doc = "Defines a software component composed of multiple units for S-CORE process compliance",
     attrs = {
         "requirements": attr.label_list(
-            mandatory = True,
+            default = [],
             providers = [[ComponentRequirementsInfo], [FeatureRequirementsInfo]],
             doc = "Component requirements artifacts (component_requirements or feature_requirements targets)",
         ),
@@ -229,7 +229,7 @@ _component_test = rule(
             doc = "Nested component or unit targets (components can contain both components and units)",
         ),
         "tests": attr.label_list(
-            mandatory = True,
+            default = [],
             doc = "Component-level integration test targets",
         ),
         "_lobster_ci_report": attr.label(
