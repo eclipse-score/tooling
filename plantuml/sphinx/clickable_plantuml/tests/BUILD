@@ -10,25 +10,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+load("@pip_rules_score//:requirements.bzl", "requirement")
+load("@score_tooling//python_basics:defs.bzl", "score_py_pytest")
 
-rust_binary(
-    name = "linker",
-    srcs = ["src/main.rs"],
-    crate_root = "src/main.rs",
-    visibility = ["//visibility:public"],
+score_py_pytest(
+    name = "unit_tests",
+    srcs = ["test_clickable_plantuml.py"],
     deps = [
-        "//tools/serialization/flatbuffers/component:component_fbs",
-        "@crates//:clap",
-        "@crates//:env_logger",
-        "@crates//:flatbuffers",
-        "@crates//:log",
-        "@crates//:serde",
-        "@crates//:serde_json",
+        "//plantuml/sphinx/clickable_plantuml",
+        requirement("docutils"),
+        requirement("sphinx"),
     ],
-)
-
-rust_test(
-    name = "linker_test",
-    crate = ":linker",
 )

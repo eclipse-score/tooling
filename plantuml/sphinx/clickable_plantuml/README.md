@@ -16,19 +16,22 @@ Sphinx extension that makes PlantUML diagrams clickable by injecting hyperlinks 
 
 ## Sphinx Integration
 
-The extension hooks into the native Sphinx build lifecycle.  URLs are computed by
-`app.builder.get_relative_uri()`, which works for any builder and
-output directory layout.
+The extension hooks into the native Sphinx build lifecycle.  URL computation
+depends on the configured `plantuml_output_format`: in `svg_obj` mode the
+rendered SVG lives in `_images/`, so links are made relative to that directory
+(`os.path.relpath(target_uri, imagedir)`); for inline `svg`/`png` the link is
+relative to the containing HTML page via
+`app.builder.get_relative_uri(from_docname, to_docname)`.
 
 ```
 Sphinx build lifecycle                   clickable_plantuml hooks
 ═══════════════════════════════════      ═══════════════════════════════════════
 
   builder-inited                   ───► on_builder_inited()
-  │  (one-time setup)                     Load all *plantuml_links.json files
-  │                                       from srcdir (recursive).
-  │                                       Store {puml_basename → alias_map}
-  │                                       in app.env.
+  │  (one-time setup)                     Load all *.idmap.json files from
+  │                                       srcdir (recursive).
+  │                                       Build definition index:
+  │                                       {alias|id → [definer source paths]}.
   │
   ├─ READ PHASE ──────────────────────────────────────────────────────────────
   │  for each document:
@@ -40,10 +43,9 @@ Sphinx build lifecycle                   clickable_plantuml hooks
   │    │
   │    doctree-read                ───► on_doctree_read()
   │       (per document)                 Traverse the parsed doctree.
-  │                                      For every plantuml node that has a
-  │                                      filename attribute, record
-  │                                      {puml_basename → docname} in app.env.
-  │                                      Warn on basename collisions.
+  │                                      For every plantuml node, record
+  │                                      {normalized_source_path → docname}
+  │                                      in app.env (path identity, not basename).
   │
   │  env-merge-info                ───► on_env_merge_info()
   │  (parallel builds only)              Merge puml→docname maps gathered
@@ -55,119 +57,181 @@ Sphinx build lifecycle                   clickable_plantuml hooks
   │    post-transform / resolve
   │    │
   │    doctree-resolved            ───► on_doctree_resolved()
-  │       (per document)                 For each plantuml node, look up the
-  │                                      alias_map from app.env.
-  │                                      Resolve target .puml → docname, then
-  │                                      call app.builder.get_relative_uri()
-  │                                      to get the correct relative URL.
-  │                                      Append  url of <alias> is [[url]]
-  │                                      directives to node['uml'] before
-  │                                      sphinxcontrib-plantuml renders it.
+  │       (per document)                 For each plantuml node, load its idmap.
+  │                                      For each reference entry, look up the
+  │                                      definition index (FQN first, then alias).
+  │                                      Apply proximity tiebreak on ambiguity.
+  │                                      Build the URL (relative to _images/ in
+  │                                      svg_obj mode, else page-relative via
+  │                                      get_relative_uri), then append
+  │                                      url of <alias> is [[url]] directives to
+  │                                      node['uml'] before rendering.
   │
   build-finished
 ```
 
 ## How It Works
 
-1. **Link discovery** (`builder-inited`) – Scans for `*plantuml_links.json` files in the Sphinx source directory.
-2. **Diagram location mapping** (`doctree-read`) – As Sphinx reads each document, the extension traverses the parsed doctree to record which `docname` contains which `.puml` diagram (keyed by basename). Basename collisions across documents are reported as warnings.
-3. **URL resolution & link injection** (`doctree-resolved`) – For each plantuml node, resolves target `.puml` references to the docname that contains the target diagram, generates a relative URL via `app.builder.get_relative_uri()`, and appends `url of <alias> is [[url]]` directives to the PlantUML source before rendering.
-4. **Incremental / parallel support** – `env-purge-doc` removes stale entries when a document is re-read; `env-merge-info` merges state from parallel worker processes.
+1. **idmap discovery** (`builder-inited`) – Scans for `*.idmap.json` files in
+   the Sphinx source directory.  Each sidecar records *defines* (elements
+   elaborated in that diagram, i.e. with children/members) and *references*
+   (leaf mentions and relation endpoints).  A global definition index maps
+   each alias/FQN to the set of diagrams that elaborate it.
 
-## Automatic JSON Generation (Bazel)
+2. **Diagram location mapping** (`doctree-read`) – Records which `docname`
+   contains which `.puml` diagram, keyed by the canonical workspace-relative
+   path.  A node's identity is recovered by normalising its absolute path
+   (`srcdir` + the node's `incdir` + `filename`) and matching it against the
+   idmap `source` keys by exact *full-path suffix* — so two same-basename
+   diagrams in different packages never collide, and neither a `srcdir` that
+   is a workspace sub-directory nor symlinked staging can break the mapping.
 
-`plantuml_links.json` is generated by the `architectural_design()` rule.
+3. **URL resolution & link injection** (`doctree-resolved`) – For each
+   reference in a diagram's idmap, resolves the unique definer via the index.
+   When multiple diagrams define the same element, a *proximity tiebreak*
+   selects the definer sharing the longest common path prefix with the source
+   diagram.  On a genuine tie, no link is emitted (safe over wrong).  URLs are
+   built relative to `_images/` in `svg_obj` mode (else page-relative via
+   `app.builder.get_relative_uri()`) and percent-encoded before injection.
 
-The `architectural_design()` rule invokes `//tools/plantuml/linker:linker` on all
-`.fbs.bin` FlatBuffers files produced by the PlantUML parser.  See
-[Link Mapping Format](#link-mapping-format) for a detailed
-description of which links are emitted.
+4. **Incremental / parallel support** – `env-purge-doc` removes stale entries
+   when a document is re-read; `env-merge-info` merges state from parallel
+   worker processes.
 
-### Algorithm
+## Invariants
 
-Given the set of `.fbs.bin` files for one `architectural_design()` target:
+The extension relies on two invariants held by the idmap producer
+(`architectural_design()` / `puml_cli`):
 
-1. **Build a top-level index** – For each diagram, collect every component whose
-   `parent_id` is `None` (i.e. it is not nested inside another component).
-   The index maps `alias → diagram file`.
+1. **The idmap `source` must be the diagram's stable, unique
+   workspace-relative path.**  This value is the canonical key used for all
+   matching: a plantuml node resolves to the idmap whose `source` is an exact
+   full-path suffix of the node's absolute path.  In Bazel this must match the
+   staged source's workspace-relative path under `srcdir`; the rule passes
+   `puml_file.short_path` to satisfy that invariant regardless of how Sphinx
+   roots `srcdir` or how Bazel symlinks the staged sources.  Non-unique
+   `source` values fail the build: two idmaps normalising to the same
+   canonical key raise an `ExtensionError` rather than silently mislinking.
 
-2. **Emit links** – For every component in every diagram, look up its alias in
-   the top-level index.  If a *different* diagram defines that alias as a
-   top-level component, emit a link entry:
+2. **PlantUML basenames (file stems) must be unique within a single
+   `architectural_design` target.**  Each `.idmap.json` is written as
+   `<file_stem>.idmap.json` under the target's output directory, so two
+   diagrams sharing a stem in one target would collide on output.  Same
+   basenames across *different* targets/packages are fine — exact canonical-key
+   matching keeps them independent.
 
-   ```
-   source_file = diagram that contains the reference
-   source_id   = alias of the component
-   target_file = diagram that defines it as a top-level component
-   ```
+## Automatic idmap Generation (Bazel)
 
-3. **Deduplicate** – Sort and deduplicate so that each `(source_file, source_id)`
-   pair has exactly one target (first alphabetically).  Duplicate `source_id`
-   entries within the same source diagram are removed because PlantUML's
-   `url of X is [[…]]` directive supports only one URL per alias.
+`.idmap.json` sidecars are produced by the `architectural_design()` rule.
 
-### Concrete Example
+The rule passes `--source-name <puml_file.short_path>` and
+`--idmap-output-dir` to `puml_cli` for every `.puml` file.  The
+`source` field in the resulting idmap is a stable, workspace-relative path
+(e.g. `score/mw/com/proxy_detail.puml`), which is used as the diagram's
+identity key throughout the extension.
+
+### Role detection algorithm
+
+Given the resolved model of one `.puml` diagram:
+
+1. **defines** – An element is a *define* when:
+   - At least one other element lists it as its `parent_id` (component
+     diagrams); or it has member variables / methods (class diagrams).
+2. **references** – All remaining elements: top-level leaf boxes, relation
+   endpoints (component), and sequence participants.
+
+### Concrete example
 
 ```text
-' adas_overview.puml  — subsystem context
+' overview.puml — top-level leaves are REFERENCES
 @startuml
-component ADAS
-component BrakeController
-component LaneKeepAssist
-ADAS --> BrakeController
-ADAS --> LaneKeepAssist
+[Gateway] --> [Proxy]
 @enduml
 ```
 
 ```text
-' brake_controller.puml  — component detail
+' proxy_detail.puml — Proxy has a child → DEFINE
 @startuml
-component BrakeController
-interface BrakeDemandIF
-interface WheelSpeedIF
-BrakeController --> BrakeDemandIF
-BrakeController <-- WheelSpeedIF
+package Proxy { [RequestHandler] }
 @enduml
 ```
 
-Generated links — one in each direction:
+`proxy_detail.idmap.json`:
+```json
+{ "source": "score/mw/com/proxy_detail.puml",
+  "defines":    [{ "alias": "Proxy",          "id": "Proxy" }],
+  "references": [{ "alias": "RequestHandler", "id": "Proxy.RequestHandler" }] }
+```
+
+`overview.idmap.json`:
+```json
+{ "source": "score/overview.puml",
+  "defines":    [],
+  "references": [{ "alias": "Gateway", "id": "Gateway" },
+                 { "alias": "Proxy",   "id": "Proxy"   }] }
+```
+
+Result: `Proxy` in `overview.puml` links to `proxy_detail.puml`.
+`Gateway` has no definer → no link.
+
+## idmap Format
+
+`.idmap.json` files are written by the parser and read by this extension.
+They are not intended to be authored manually.
 
 ```json
 {
-  "links": [
-    {
-      "source_file": "adas_overview.puml",
-      "source_id":   "BrakeController",
-      "target_file": "brake_controller.puml"
-    },
-    {
-      "source_file": "brake_controller.puml",
-      "source_id":   "BrakeController",
-      "target_file": "adas_overview.puml"
-    }
+  "source": "path/to/diagram.puml",
+  "defines": [
+    { "alias": "ComponentName", "id": "fully.qualified.Name" }
+  ],
+  "references": [
+    { "alias": "OtherComponent", "id": "OtherComponent" }
   ]
 }
 ```
 
-Clicking `BrakeController` in the overview navigates to its detail diagram;
-clicking it in the detail diagram navigates back to the overview.
+## End-to-End Clickable Diagram Example
 
-`ADAS` and `LaneKeepAssist` appear as top-level only in `adas_overview.puml` and
-have no dedicated detail diagram, so **no links** are emitted for them.
+This minimal example shows what users should create in docs to get a clickable
+diagram:
 
-(link-mapping-format)=
-## Link Mapping Format
-
-Place one or more `*plantuml_links.json` filesinside the Sphinx source directory:
-
-```json
-{
-  "links": [
-    {
-      "source_file": "my_diagram.puml",
-      "source_id": "ComponentA",
-      "target_file": "other_diagram.puml"
-    }
-  ]
-}
+`docs/arch/overview.puml`
+```text
+@startuml
+[Gateway] --> [Proxy]
+@enduml
 ```
+
+`docs/arch/proxy_detail.puml`
+```text
+@startuml
+package Proxy {
+   [RequestHandler]
+}
+@enduml
+```
+
+`docs/arch/overview.rst`
+```rst
+Overview
+========
+
+.. uml:: overview.puml
+```
+
+`docs/arch/proxy_detail.rst`
+```rst
+Proxy Detail
+============
+
+.. uml:: proxy_detail.puml
+```
+
+When the idmaps contain:
+
+- `overview.puml` references `Proxy`
+- `proxy_detail.puml` defines `Proxy`
+
+the rendered `Proxy` element in `overview.puml` becomes clickable and opens
+the page containing `proxy_detail.puml`.

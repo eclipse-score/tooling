@@ -24,7 +24,7 @@ ScoreReq.FailureMode SampleFailureMode{
 }
 
 ScoreReq.FailureMode SampleFailureMode2{
-    guideword = ScoreReq.GuideWord.TooLate
+    guidewords = [ScoreReq.guidewords.TooLate]
     description = "SampleFailureMode2 responds too late"
     failureeffect = "Downstream consumers time out"
     version = 1
