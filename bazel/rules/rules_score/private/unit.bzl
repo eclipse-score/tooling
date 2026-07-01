@@ -27,6 +27,8 @@ load("@rules_rust//rust:defs.bzl", "rust_common")
 load("//bazel/rules/rules_score:providers.bzl", "CcDependencyInfo", "CertifiedScope", "SphinxSourcesInfo", "UnitDesignInfo", "UnitInfo")
 load("//cpp/libclang:cpp_parser.bzl", "cpp_parser_action_internal_attrs", "cpp_parser_action_toolchains", "cpp_parser_target_aspects", "has_cpp_parser_inputs", "run_cpp_parser_action")
 load(":cc_dependency_aspect.bzl", "cc_dependencies_aspect")
+load(":validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
+load(":verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 def _run_implementation_cpp_parser(ctx, impl, output_prefix):
     return run_cpp_parser_action(
@@ -41,6 +43,21 @@ def _target_output_prefix(ctx, target):
     package_name = target.label.package.replace("/", "_")
     target_name = target.label.name.replace("/", "_")
     return "{}_{}_{}".format(ctx.label.name, package_name, target_name)
+
+def _run_validation(ctx, design_class_fbs, implementation_class_fbs):
+    return run_validation(
+        ctx = ctx,
+        validation_cli = ctx.executable._validation_cli,
+        profile = PROFILES.UNIT,
+        input_bundle = {
+            "design_classes": [f.path for f in design_class_fbs],
+            "implementation_classes": [f.path for f in implementation_class_fbs],
+        },
+        inputs = design_class_fbs + implementation_class_fbs,
+        mnemonic = "UnitValidate",
+        maturity = ctx.attr.maturity,
+        log_level = get_log_level(ctx),
+    )
 
 # ============================================================================
 # Private Rule Implementation
@@ -105,9 +122,15 @@ def _unit_impl(ctx):
 
     tests_depset = depset(xml_files)
 
+    validation_log = _run_validation(
+        ctx,
+        design_static_fbs_depset.to_list(),
+        implementation_class_fbs,
+    )
+
     # Combine all files for DefaultInfo
     all_files = depset(
-        xml_files + implementation_class_fbs,
+        xml_files + implementation_class_fbs + [validation_log.file],
         transitive = [design_depset],
     )
 
@@ -119,6 +142,8 @@ def _unit_impl(ctx):
             unit_design = design_depset,
             unit_design_static_fbs = design_static_fbs_depset,
             unit_design_dynamic_fbs = design_dynamic_fbs_depset,
+            implementation_class_fbs = depset(implementation_class_fbs),
+            implementation_sequence_fbs = depset(),
             implementation = depset(ctx.attr.implementation),
             tests = tests_depset,
             dependent_labels = depset(transitive = collected_dependent_labels),
@@ -155,9 +180,16 @@ _unit_attrs = {
         cfg = "exec",
         doc = "Test targets that verify the unit (cc_test, py_test, rust_test, etc.)",
     ),
+    "maturity": attr.string(
+        default = "release",
+        values = ["release", "development"],
+        doc = "Maturity level of the unit. 'release' treats validation findings as errors; 'development' emits warnings and continues.",
+    ),
 }
 
 _unit_attrs.update(cpp_parser_action_internal_attrs())
+_unit_attrs.update(VALIDATION_ATTRS)
+_unit_attrs.update(VERBOSITY_ATTR)
 
 _unit = rule(
     implementation = _unit_impl,

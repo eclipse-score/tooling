@@ -25,7 +25,7 @@ namespace unit_2 {
 // SampleComponent.REQ_COMP_005
 class Bar final {
 public:
-  explicit Bar(std::unique_ptr<unit_1::Foo>);
+  explicit Bar(std::unique_ptr<unit_1::Foo> foo);
   bool AssertNumber() const;
 
 private:
