@@ -334,3 +334,146 @@ The ``fmea`` rule drives three actions, all reading the input artifacts above:
 The lobster outputs travel separately on ``AnalysisInfo.lobster_files``
 (``failuremodes.lobster``, ``controlmeasures.lobster``, ``root_causes.lobster``)
 into the ``dependability_analysis`` traceability report.
+  to the outer index toctree.  ``fmea`` uses this for the ``detail_*.rst``
+  sub-pages, which are referenced from the inner ``.. toctree::`` inside
+  ``fmea.rst`` rather than from the section index.
+
+.. _hermetic-tool-path-resolution:
+
+Hermetic tool path resolution
+----------------
+
+Background: Bazel action environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Paths available at **analysis time** (Starlark ``ctx.executable.foo.path``,
+``ctx.executable.foo.short_path``) are always relative to the *execroot* —
+the per-action working directory Bazel creates under the output base.  Two
+variants exist:
+
+- ``file.path`` — ``bazel-out/<config-hash>/bin/third_party/docs_runtime/dot``.
+  Contains the exec-configuration hash; valid only at action run-time as a
+  path relative to ``cwd``.
+- ``file.short_path`` — ``third_party/docs_runtime/dot`` (or
+  ``../external_repo/…``).  Hash-free; stable across rebuilds; the canonical
+  **rlocation key** after stripping a leading ``../``.
+
+What the rule passes
+~~~~~~~~~~~~~~~~~~~~~
+
+For each tool ``sphinx_module.bzl`` computes both variants and injects them as
+environment variables:
+
+.. code-block:: text
+
+   PLANTUML_BIN      = ctx.executable._plantuml.path      (execroot-relative)
+   PLANTUML_BIN_RLOC = ctx.executable._plantuml.short_path (rlocation key)
+   GRAPHVIZ_DOT      = ctx.executable._graphviz.path      (execroot-relative)
+   GRAPHVIZ_DOT_RLOC = ctx.executable._graphviz.short_path (rlocation key)
+
+The rlocation keys (``*_RLOC``) are computed once at analysis time:
+
+.. code-block:: python
+
+   _gv_short = ctx.executable._graphviz.short_path
+   _graphviz_rloc = (
+       _gv_short[3:]                                    # strip "../"
+       if _gv_short.startswith("../")
+       else ctx.workspace_name + "/" + _gv_short
+   )
+
+This matches the Bazel runfiles convention used internally by the
+``exec_in_sysroot`` wrapper itself (``rlocation
+'<workspace>/third_party/docs_runtime/dot'``).
+
+How conf.template.py resolves the paths
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``conf.py`` is loaded during **Sphinx initialisation**, before Sphinx performs
+any ``os.chdir()``.  Bazel guarantees that the action's ``cwd`` equals the
+execroot at process start.  Therefore a single ``os.path.abspath()`` call
+converts the execroot-relative ``*_BIN`` / ``*_DOT`` value to a stable
+absolute path for the entire action lifetime:
+
+.. code-block:: python
+
+   plantuml_path = os.path.abspath(os.environ["PLANTUML_BIN"])
+   graphviz_dot  = os.path.abspath(os.environ["GRAPHVIZ_DOT"])
+
+
+Why rlocation alone cannot resolve the binary
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A natural question is: why not call
+``python.runfiles.Runfiles.Create().Rlocation(graphviz_rloc_key)`` directly and
+skip the ``abspath`` step?
+
+Two reasons make this impractical:
+
+1. **Wrong ``RUNFILES_DIR``.**  The Sphinx Python process inherits
+   ``RUNFILES_DIR`` pointing to the *sphinx tool's* own runfiles tree (set by
+   the ``rules_python`` ``py_binary`` launcher).  The Graphviz and PlantUML
+   tools are in ``tools=`` of the action, which makes their files available in
+   the sandbox but does **not** merge them into the sphinx binary's runfiles.
+   Calling ``Runfiles.Create()`` without an override therefore searches the
+   wrong tree and returns ``None`` for both tool keys.
+
+2. **The symlink-path problem.**  As a workaround one could construct
+   ``Runfiles.Create({"RUNFILES_DIR": abspath_dot + ".runfiles"})`` (the
+   companion runfiles directory Bazel creates for every executable).  The dot
+   wrapper *is* a member of its own runfiles tree (``exec_in_sysroot`` adds
+   the generated script to ``ctx.runfiles(files=[out, …])`` so the smoke test
+   can resolve it via ``rlocation``).  However, ``Runfiles.Rlocation()``
+   returns the path **inside the symlink forest**, not the real binary path.
+   Passing that symlink path to a subprocess means ``$0`` is the symlink, so
+   ``$0.runfiles/`` does not exist and the wrapper's runfiles bootstrap falls
+   back to ``RUNFILES_DIR`` — which still points to the sphinx binary's
+   runfiles.  The wrapper fails to find ``SYSROOT_DIR`` and ``FAKECHROOT_WRAPPER``
+   and exits with an error.
+
+The ``os.path.abspath()`` approach avoids both issues: it yields the real
+binary path (not a symlink in a runfiles forest), so ``$0.runfiles/``
+bootstrapping in the wrapper works correctly.
+
+The exec_in_sysroot wrapper's own runfiles bootstrap
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The generated wrapper produced by ``exec_in_sysroot`` is a POSIX-``sh`` script
+that contains an inline runfiles initialisation block (no ``bash`` and no
+``runfiles.bash`` dependency):
+
+.. code-block:: sh
+
+   if [ ! -d "${RUNFILES_DIR:-/dev/null}" ] && \
+      [ ! -f "${RUNFILES_MANIFEST_FILE:-/dev/null}" ]; then
+     if [ -f "$0.runfiles_manifest" ]; then
+       RUNFILES_MANIFEST_FILE="$0.runfiles_manifest"; export RUNFILES_MANIFEST_FILE
+     elif [ -f "$0.runfiles/MANIFEST" ]; then
+       RUNFILES_MANIFEST_FILE="$0.runfiles/MANIFEST"; export RUNFILES_MANIFEST_FILE
+     elif [ -d "$0.runfiles" ]; then
+       RUNFILES_DIR="$0.runfiles"; export RUNFILES_DIR
+     fi
+   fi
+
+Because ``graphviz_dot`` is the **absolute** path to the real binary (not a
+symlink), ``$0`` equals that absolute path, and ``$0.runfiles/`` is the actual
+companion runfiles directory Bazel created for the binary.  The block resolves
+``RUNFILES_DIR`` (or ``RUNFILES_MANIFEST_FILE``) from ``$0.runfiles/``, and a
+small inline ``rlocation`` helper then looks up ``SYSROOT_DIR`` and the
+fakechroot wrapper — regardless of what ``RUNFILES_DIR`` the parent process
+(Sphinx/Python) has set in its environment.
+
+PlantUML and the hermetic dot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``sphinxcontrib.plantuml`` invokes PlantUML via
+``shlex.split(app.config.plantuml)``.  The ``plantuml`` config value always
+points at the hermetic dot (there is no fallback):
+
+.. code-block:: text
+
+   <abs_plantuml_path> -graphvizdot <abs_graphviz_dot>
+
+This tells PlantUML to use the hermetic dot for its internal layout calls
+(PlantUML generates a ``.dot`` intermediate for class/component/sequence
+diagrams and hands it to graphviz for layout).

@@ -69,6 +69,16 @@ sphinx_rule_attrs = dict(
         "deps": attr.label_list(
             doc = "List of other sphinx_module targets this module depends on for intersphinx.",
         ),
+        "_plantuml": attr.label(
+            default = Label("//third_party/plantuml:plantuml"),
+            executable = True,
+            cfg = "exec",
+        ),
+        "_graphviz": attr.label(
+            default = Label("//third_party/docs_runtime:dot"),
+            executable = True,
+            cfg = "exec",
+        ),
     },
     **VERBOSITY_ATTR
 )
@@ -106,14 +116,31 @@ def _score_needs_impl(ctx):
         "--log-level",
         get_log_level(ctx),
     ]
+
+    # Compute analysis-time-stable rlocation keys from short_path (no exec-config
+    # hash, no parent-directory walking). These are passed to conf.py for
+    # diagnostic logging and as the canonical Bazel identity of each tool.
+    # See docs/tooling_architecture.rst §"Hermetic tool path resolution".
+    _gv_short = ctx.executable._graphviz.short_path
+    _graphviz_rloc = _gv_short[3:] if _gv_short.startswith("../") else ctx.workspace_name + "/" + _gv_short
+    _pl_short = ctx.executable._plantuml.short_path
+    _plantuml_rloc = _pl_short[3:] if _pl_short.startswith("../") else ctx.workspace_name + "/" + _pl_short
     ctx.actions.run(
         inputs = needs_inputs,
         outputs = [needs_output],
         arguments = needs_args,
+        env = {
+            "PLANTUML_BIN": ctx.executable._plantuml.path,
+            "PLANTUML_BIN_RLOC": _plantuml_rloc,
+            "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
+            "GRAPHVIZ_DOT_RLOC": _graphviz_rloc,
+        },
         progress_message = "Generating needs.json for: %s" % ctx.label.name,
         executable = sphinx_toolchain.sphinx.files_to_run.executable,
         tools = [
             sphinx_toolchain.sphinx.files_to_run,
+            ctx.attr._plantuml.files_to_run,
+            ctx.attr._graphviz.files_to_run,
         ],
     )
     transitive_needs = [dep[SphinxNeedsInfo].needs_json_files for dep in ctx.attr.deps if SphinxNeedsInfo in dep]
@@ -238,39 +265,33 @@ def _score_html_impl(ctx):
         get_log_level(ctx),
     ]
 
-    # Wire in the hermetic graphviz deb (dot_builtins + bundled shared libs) if provided.
-    # conf.template.py resolves all three env vars (GRAPHVIZ_DOT,
-    # LD_LIBRARY_PATH, LTDL_LIBRARY_PATH) from execroot-relative to absolute
-    # paths so dot_builtins can load its plugins without a system installation.
-    graphviz_env = {}
-    graphviz_files = ctx.files.graphviz
-    if graphviz_files:
-        _dot_suffix = "/usr/bin/dot_builtins"
-        dot_binary = None
-        for f in graphviz_files:
-            if f.path.endswith(_dot_suffix):
-                dot_binary = f
-                break
-        if not dot_binary:
-            fail("graphviz target {} must provide usr/bin/dot_builtins".format(ctx.attr.graphviz))
-
-        graphviz_prefix = dot_binary.path[:-len(_dot_suffix)]
-        graphviz_env = {
-            "GRAPHVIZ_DOT": dot_binary.path,
-            "LD_LIBRARY_PATH": graphviz_prefix + "/usr/lib",
-            "LTDL_LIBRARY_PATH": graphviz_prefix + "/usr/lib/graphviz",
-        }
-        html_inputs = html_inputs + graphviz_files
+    # Use the hermetic graphviz wrapper that executes `/usr/bin/dot` inside the
+    # docs_runtime sysroot via exec_in_sysroot.
+    # Compute analysis-time-stable rlocation keys from short_path (no exec-config
+    # hash, no parent-directory walking). See docs/tooling_architecture.rst
+    # §"Hermetic tool path resolution".
+    _gv_short = ctx.executable._graphviz.short_path
+    _graphviz_rloc = _gv_short[3:] if _gv_short.startswith("../") else ctx.workspace_name + "/" + _gv_short
+    _pl_short = ctx.executable._plantuml.short_path
+    _plantuml_rloc = _pl_short[3:] if _pl_short.startswith("../") else ctx.workspace_name + "/" + _pl_short
+    action_env = {
+        "PLANTUML_BIN": ctx.executable._plantuml.path,
+        "PLANTUML_BIN_RLOC": _plantuml_rloc,
+        "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
+        "GRAPHVIZ_DOT_RLOC": _graphviz_rloc,
+    }
 
     ctx.actions.run(
         inputs = html_inputs,
         outputs = [sphinx_html_output],
         arguments = html_args + [args],
-        env = graphviz_env,
+        env = action_env,
         progress_message = "Building HTML: %s" % ctx.label.name,
         executable = sphinx_toolchain.sphinx.files_to_run.executable,
         tools = [
             sphinx_toolchain.sphinx.files_to_run,
+            ctx.attr._plantuml.files_to_run,
+            ctx.attr._graphviz.files_to_run,
         ],
     )
 
@@ -358,13 +379,6 @@ _score_html = rule(
                   "destination paths relative to the Sphinx source root. Exactly one " +
                   "file per label. Mirrors sphinx_docs.renamed_srcs from rules_python.",
         ),
-        graphviz = attr.label(
-            default = None,
-            allow_files = True,
-            doc = "Graphviz cmake-release deb files (dot_builtins binary + bundled libs). " +
-                  "Only available on Linux x86_64; provides a hermetic 'dot' binary without requiring a system graphviz installation. " +
-                  "Defaults to @graphviz_deb//:all on Linux x86_64.",
-        ),
     ),
     toolchains = ["//bazel/rules/rules_score:toolchain_type"],
 )
@@ -383,7 +397,6 @@ def sphinx_module(
         strip_prefix = "",
         extra_opts = [],
         extra_opts_targets = [],
-        graphviz = None,
         testonly = False,
         **kwargs):
     """Build a Sphinx module with transitive HTML dependencies.
@@ -408,10 +421,6 @@ def sphinx_module(
         extra_opts_targets: {type}`list[label]` Label targets that resolve to extra Sphinx
                     arguments at analysis time. Each target must provide FilteredExecpathInfo
                     (e.g. filter_execpath targets).
-        graphviz: Graphviz cmake-release deb files (dot_builtins + bundled libs). On Linux x86_64,
-                    defaults to @graphviz_deb//:all for hermetic graphviz support. On other platforms
-                    or if explicitly set to None, no graphviz support is provided (the sphinx.ext.graphviz
-                    extension will not be available).
         visibility: Bazel visibility
     """
     _score_needs(
@@ -432,7 +441,6 @@ def sphinx_module(
         needs = [d + "_needs" for d in deps],
         extra_opts = extra_opts,
         extra_opts_targets = extra_opts_targets,
-        graphviz = graphviz,
         testonly = testonly,
         **kwargs
     )

@@ -1,5 +1,5 @@
 # *******************************************************************************
-# Copyright (c) 2025 Contributors to the Eclipse Foundation
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -11,6 +11,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-# This package hosts the BUILD file used by the @graphviz_deb external repository.
-# The download_deb rule from @download_utils extracts the Graphviz cmake
-# release .deb and uses graphviz.BUILD as its top-level BUILD file.
+load("@rules_java//java:defs.bzl", "java_binary")
+
+java_binary(
+    name = "plantuml",
+    main_class = "net.sourceforge.plantuml.Run",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        "@blueprint_maven_dependencies//:net_sourceforge_plantuml_plantuml",
+    ],
+)

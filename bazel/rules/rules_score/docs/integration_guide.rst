@@ -175,3 +175,115 @@ Design Rationale
 6. **Build System Integration** — Bazel ensures reproducible, cacheable documentation builds
 
 Reference implementation: `examples/seooc <https://github.com/eclipse-score/score-tooling/tree/main/bazel/rules/rules_score/examples/seooc>`_ in the score-tooling repository.
+
+---
+
+.. _sphinx-hermetic-tool-setup:
+
+Hermetic Diagram Tools (Graphviz and PlantUML)
+----------------------------------------------
+
+The Sphinx HTML action shells out to two diagram tools at **runtime** (inside
+Bazel actions): ``dot`` from Graphviz and PlantUML.  Both are hermetic —
+i.e.\ no host installation required.  The two tools use different
+delivery mechanisms, described below.
+
+Graphviz / ``dot``
+~~~~~~~~~~~~~~~~~~
+
+**Source and packaging**
+
+Graphviz now comes directly from the docs runtime sysroot
+(``@docs_runtime//:flat``), built with ``rules_distroless`` from
+``//third_party/docs_runtime/docs_runtime.yaml``.  The Sphinx action does not
+call ``dot`` directly; it uses ``//third_party/docs_runtime:dot`` — an
+``exec_in_sysroot`` wrapper that unpacks the sysroot archive and runs
+``/usr/bin/dot`` inside it through ``fakechroot``.
+
+**Where the files land (execroot-relative paths)**
+
+.. code-block:: text
+
+   bazel-bin/third_party/docs_runtime/dot          ← GRAPHVIZ_DOT env var
+   bazel-bin/third_party/docs_runtime/dot_sysroot/ ← unpacked docs_runtime rootfs
+     usr/bin/dot
+     usr/lib/graphviz/...
+     usr/bin/fakechroot
+
+**Wiring into the Sphinx action**
+
+The Bazel rule sets one variable:
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Env var
+     - Content
+   * - ``GRAPHVIZ_DOT``
+     - Path to the ``dot`` binary
+The value points to the hermetic wrapper executable.  The wrapper resolves and
+executes graphviz from the sysroot itself, so no custom ``LD_LIBRARY_PATH`` /
+``GVBINDIR`` wiring is required in the Sphinx action.
+
+**Resolving paths in conf.py**
+
+``GRAPHVIZ_DOT`` is set as an *execroot-relative* path.  Because Sphinx changes
+the process working directory during the build, it would break if used as-is.
+``conf.template.py`` converts it to a stable absolute path with a single
+``os.path.abspath()`` call at **module import time**, when Bazel guarantees the
+action's cwd still equals the execroot (before Sphinx performs any
+``os.chdir()``).  See :doc:`tooling_architecture` §"Hermetic tool path
+resolution" for the full rationale.
+
+PlantUML
+~~~~~~~~
+
+**Source and packaging**
+
+PlantUML is fetched from **Maven Central** via ``rules_jvm_external``
+(declared in ``MODULE.bazel``).  It is wrapped as a ``java_binary`` at
+``//third_party/plantuml:plantuml`` in ``third_party/plantuml/BUILD``.
+
+The ``sphinx_module`` rule passes the target as an action **tool**
+(``attr.label(executable = True, cfg = "exec")``), exactly like the hermetic
+graphviz dot.  It is not a runfile of the sphinx-build binary.
+
+**Wiring into the Sphinx action**
+
+The Bazel rule sets one variable (mirroring ``GRAPHVIZ_DOT``):
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Env var
+     - Content
+   * - ``PLANTUML_BIN``
+     - Execroot-relative path to the ``plantuml`` ``java_binary`` launcher
+
+``PLANTUML_BIN_RLOC`` (the ``short_path`` rlocation key) is also set, but is
+used only for diagnostic logging.
+
+**Resolving the path in conf.py**
+
+``PLANTUML_BIN`` is an *execroot-relative* path.  As with ``GRAPHVIZ_DOT``,
+``conf.template.py`` converts it to an absolute path with a single
+``os.path.abspath()`` call — Bazel guarantees the action's cwd equals the
+execroot when ``conf.py`` is imported, before Sphinx performs any
+``os.chdir()``.
+
+**Connecting PlantUML to Graphviz**
+
+Once both paths are resolved, ``conf.template.py`` assembles the PlantUML
+command:
+
+.. code-block:: python
+
+   plantuml = f"{plantuml_path} -graphvizdot {graphviz_dot}"
+
+The ``-graphvizdot`` flag makes PlantUML use the hermetic ``dot`` binary for
+diagram layout instead of its bundled Java port (Smetana).  This ensures the
+graphviz version is identical for both ``sphinx.ext.graphviz`` directives and
+PlantUML diagrams.  There is no Smetana fallback: the hermetic dot is the
+single rendering path.
