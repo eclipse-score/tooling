@@ -14,7 +14,6 @@
 # Hermetic doc-tool runtime rootfs. The @docs_runtime repo (rules_distroless
 # apt.install) is defined in //MODULE.bazel; its manifest + lock live here.
 
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//bazel/rules/exec_in_sysroot:exec_in_sysroot.bzl", "exec_in_sysroot", "prepare_sysroot")
 
 package(default_visibility = ["//visibility:public"])
@@ -23,12 +22,6 @@ exports_files([
     "docs_runtime.yaml",
     "docs_runtime.lock.json",
 ])
-
-# Host-side launcher that resolves `/usr/bin/dot` inside the fakechroot sysroot.
-sh_binary(
-    name = "dot_in_sysroot",
-    srcs = ["dot.sh"],
-)
 
 # Rework the distroless rootfs once into a cached `dot`-ready sysroot archive.
 # The apt graphviz package ships /usr/bin/dot as a symlink to
@@ -39,7 +32,6 @@ sh_binary(
 # re-run when only the wrapped executable / exclude_paths change).
 prepare_sysroot(
     name = "dot_sysroot",
-    # fakechroot + the x86_64 sysroot binaries only run on a linux/x86_64 host.
     exec_compatible_with = [
         "@platforms//cpu:x86_64",
         "@platforms//os:linux",
@@ -71,11 +63,10 @@ exec_in_sysroot(
     # redirected into the sysroot.  Graphviz-internal paths (/usr/lib/…/graphviz,
     # /usr/share/fonts, …) are still correctly redirected by fakechroot.
     exclude_paths = ["/tmp"],
-    # fakechroot + the x86_64 sysroot binaries only run on a linux/x86_64 host.
     exec_compatible_with = [
         "@platforms//cpu:x86_64",
         "@platforms//os:linux",
     ],
-    executable = ":dot_in_sysroot",
     sysroot = ":dot_sysroot",
+    sysroot_binary = "/usr/bin/dot",
 )

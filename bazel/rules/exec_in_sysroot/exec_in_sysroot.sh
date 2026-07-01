@@ -20,18 +20,17 @@
 # script to be found at its real location.
 #
 # Usage:
-#   exec_in_sysroot.sh <host-executable> [arguments...]
+#   exec_in_sysroot.sh <sysroot-binary-path> [arguments...]
 #
 # Environment variables (set by the generated exec_in_sysroot wrapper):
 #   SYSROOT_DIR             - Path to the extracted sysroot directory (required)
-#   FAKECHROOT_EXCLUDE_PATH - Colon-separated paths NOT to redirect (the host
-#                             executable and its runfiles dir are pre-excluded)
+#   FAKECHROOT_EXCLUDE_PATH - Colon-separated paths NOT to redirect (optional)
 #   BUILD_WORKSPACE_DIRECTORY - Workspace root, automatically excluded (optional)
 
 set -eu
 
 COMMAND_IN_SYSROOT="${1:?Command must be provided as first argument}"
-shift || true
+shift
 
 SYSROOT_DIR="${SYSROOT_DIR:?SYSROOT_DIR must be set}"
 
@@ -42,10 +41,7 @@ elif [ -f "${SYSROOT_DIR}/usr/lib/aarch64-linux-gnu/fakechroot/libfakechroot.so"
   FAKECHROOT_LIB="${SYSROOT_DIR}/usr/lib/aarch64-linux-gnu/fakechroot/libfakechroot.so"
 fi
 if [ -z "${FAKECHROOT_LIB}" ]; then
-  FAKECHROOT_LIB="$(find "${SYSROOT_DIR}/usr/lib" -path '*/fakechroot/libfakechroot.so' -type f | head -1 || true)"
-fi
-if [ -z "${FAKECHROOT_LIB}" ]; then
-  echo "ERROR: libfakechroot.so not found in sysroot" >&2
+  echo "ERROR: libfakechroot.so not found in sysroot (tried x86_64 and aarch64 multiarch paths)" >&2
   exit 1
 fi
 
@@ -53,11 +49,10 @@ FAKECHROOT_LIB_DIR="$(dirname "${FAKECHROOT_LIB}")"
 
 # Determine the sysroot's ELF interpreter (ld-linux.so) and the arch-specific
 # library search path using well-known Debian multiarch paths rather than a
-# fragile glob search.  These are exported so that the wrapped executable can
-# invoke sysroot ELF binaries via the sysroot's own dynamic linker — avoiding
-# loading the sysroot's libc.so.6 alongside the host's already-loaded libc
-# (two libc instances → segfault on systems without host graphviz installed).
-# See third_party/docs_runtime/dot.sh for the usage pattern.
+# fragile glob search.  The sysroot binary is always executed via SYSROOT_INTERP
+# so all of its dependencies (including libc.so.6) come from the sysroot —
+# avoiding loading the sysroot's libc alongside the host's (two libc instances
+# → segfault).
 if [ -f "${SYSROOT_DIR}/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2" ]; then
   SYSROOT_INTERP="${SYSROOT_DIR}/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2"
   SYSROOT_LIBPATH="${SYSROOT_DIR}/usr/lib/x86_64-linux-gnu:${SYSROOT_DIR}/usr/lib"
@@ -68,7 +63,6 @@ else
   echo "ERROR: sysroot ELF interpreter not found (tried x86_64 and aarch64 paths)" >&2
   exit 1
 fi
-export SYSROOT_INTERP SYSROOT_LIBPATH
 
 # Build the exclude paths list.
 # Always exclude BUILD_WORKSPACE_DIRECTORY so workspace operations stay on host.
@@ -111,6 +105,8 @@ fi
 # path is listed in FAKECHROOT_EXCLUDE_PATH.
 export FAKECHROOT_BASE="${SYSROOT_DIR}"
 export LD_PRELOAD="${FAKECHROOT_LIB}${LD_PRELOAD:+:${LD_PRELOAD}}"
+# Add the fakechroot library directory to LD_LIBRARY_PATH so fakechroot's own
+# shared dependencies are resolved without falling back to host libraries.
 export LD_LIBRARY_PATH="${FAKECHROOT_LIB_DIR}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
-exec "${COMMAND_IN_SYSROOT}" "$@"
+exec "${SYSROOT_INTERP}" --library-path "${SYSROOT_LIBPATH}" "${SYSROOT_DIR}${COMMAND_IN_SYSROOT}" "$@"

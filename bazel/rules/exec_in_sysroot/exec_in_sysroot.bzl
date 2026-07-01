@@ -29,25 +29,25 @@ def _extract_and_clean(tar_bin, src, dest):
     """
     return (
         "mkdir -p \"" + dest + "\"\n" +
-        tar_bin + " -xf " + src + " -C \"" + dest + "\"\n" +
+        "\"" + tar_bin + "\" -xf \"" + src + "\" -C \"" + dest + "\"\n" +
         "find \"" + dest + "\" -type l -lname '.' -delete\n" +
         "find \"" + dest + "\" -xtype l -delete\n"
     )
 
-def _setup_block(sysroot_dir, host_setup_commands, sysroot_setup_commands):
+def _setup_block(sysroot_dir, exec_wrapper, host_setup_commands, sysroot_setup_commands):
     """POSIX-sh snippet running the optional post-extract setup against
     `sysroot_dir` (an unquoted shell path expression) while it is still writable.
 
     host_setup_commands run in the outer shell with $SYSROOT set to sysroot_dir.
+    Use them for pure filesystem edits that only need the host shell.
 
-    sysroot_setup_commands are invoked directly via the sysroot's own ELF
-    interpreter (ld-linux.so) with --library-path pointing at the sysroot's
-    /usr/lib tree.  This gives each command a fully consistent single-libc
-    environment (all of the binary's dependencies — including libc.so.6 itself —
-    come from the sysroot).  LD_PRELOAD=libfakechroot.so + FAKECHROOT_BASE are
-    still set so that glibc-level filesystem calls inside the command (e.g.
-    writing the graphviz config6 file to /usr/lib/…) are transparently
-    redirected into the sysroot.
+    sysroot_setup_commands are each executed inside the sysroot by delegating to
+    the shared `exec_in_sysroot.sh` launcher (`exec_wrapper`) with SYSROOT_DIR
+    set to sysroot_dir.  This is the *same* launcher exec_in_sysroot uses at
+    runtime, so build-time setup and runtime execution share a single
+    implementation of "run a binary inside the sysroot" (the sysroot's own
+    ld-linux.so + --library-path + LD_PRELOAD=libfakechroot.so + FAKECHROOT_BASE,
+    giving a fully consistent single-libc environment).
 
     Each entry in sysroot_setup_commands must be a space-separated ELF binary
     invocation starting with an absolute sysroot path, e.g. "/usr/bin/dot -c".
@@ -57,44 +57,14 @@ def _setup_block(sysroot_dir, host_setup_commands, sysroot_setup_commands):
     if host_setup_commands:
         block += "SYSROOT=\"" + sysroot_dir + "\"\n"
         block += "\n".join(host_setup_commands) + "\n"
-    if sysroot_setup_commands:
+    for cmd in sysroot_setup_commands:
+        # Delegate to the shared launcher.  `cmd` is intentionally left unquoted
+        # so the shell word-splits "<binary> <args...>" into the launcher's
+        # positional parameters (the space-separated contract documented above).
         block += (
-            "_FC_LIB=\"$(find \"" + sysroot_dir + "/usr/lib\" -path '*/fakechroot/libfakechroot.so' -type f 2>/dev/null | head -1 || true)\"\n" +
-            "if [ -z \"$_FC_LIB\" ]; then\n" +
-            "  echo \"ERROR: sysroot_setup_commands require fakechroot, but libfakechroot.so was not found under " + sysroot_dir + "/usr/lib\" >&2\n" +
-            "  exit 1\n" +
-            "fi\n" +
-            # Use the sysroot's own ELF interpreter with an explicit --library-path
-            # so each command loads all dependencies from the sysroot's /usr/lib tree.
-            # Use well-known Debian multiarch paths instead of a fragile glob search.
-            # Running via the HOST ld-linux.so + LD_LIBRARY_PATH would load the
-            # sysroot's libc.so.6 alongside the host's already-loaded libc (two libc
-            # instances in one process → segfault).  The sysroot's own interpreter
-            # gives a single coherent libc.
-            "if [ -f \"" + sysroot_dir + "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2\" ]; then\n" +
-            "  _SYSROOT_INTERP=\"" + sysroot_dir + "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2\"\n" +
-            "  _SYSROOT_LIBPATH=\"" + sysroot_dir + "/usr/lib/x86_64-linux-gnu:" + sysroot_dir + "/usr/lib\"\n" +
-            "elif [ -f \"" + sysroot_dir + "/usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1\" ]; then\n" +
-            "  _SYSROOT_INTERP=\"" + sysroot_dir + "/usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1\"\n" +
-            "  _SYSROOT_LIBPATH=\"" + sysroot_dir + "/usr/lib/aarch64-linux-gnu:" + sysroot_dir + "/usr/lib\"\n" +
-            "else\n" +
-            "  echo \"ERROR: sysroot ELF interpreter not found (tried x86_64 and aarch64 paths)\" >&2\n" +
-            "  exit 1\n" +
-            "fi\n"
+            "SYSROOT_DIR=\"" + sysroot_dir + "\" " +
+            "sh \"" + exec_wrapper + "\" " + cmd + "\n"
         )
-        for cmd in sysroot_setup_commands:
-            parts = cmd.split(" ")
-            binary = parts[0]
-            args = parts[1:]
-            args_shell = " ".join(['"' + a + '"' for a in args])
-            block += (
-                "LD_PRELOAD=\"$_FC_LIB\" " +
-                "FAKECHROOT_BASE=\"" + sysroot_dir + "\" " +
-                "\"$_SYSROOT_INTERP\" --library-path \"$_SYSROOT_LIBPATH\" " +
-                "\"" + sysroot_dir + binary + "\"" +
-                (" " + args_shell if args_shell else "") +
-                "\n"
-            )
     return block
 
 def _prepare_sysroot_impl(ctx):
@@ -104,20 +74,19 @@ def _prepare_sysroot_impl(ctx):
     sysroot_archive = ctx.files.sysroot[0]
     bsdtar = ctx.toolchains[_TAR_TOOLCHAIN_TYPE]
     out_archive = ctx.actions.declare_file(ctx.label.name + ".tar")
-    work = out_archive.path + ".work"
     tar_bin = bsdtar.tarinfo.binary.path
 
     command = (
         "set -eu\n" +
-        "rm -rf \"" + work + "\"\n" +
-        _extract_and_clean(tar_bin, sysroot_archive.path, work) +
-        _setup_block(work, ctx.attr.host_setup_commands, ctx.attr.sysroot_setup_commands) +
-        tar_bin + " -cf " + out_archive.path + " -C \"" + work + "\" .\n" +
-        "rm -rf \"" + work + "\"\n"
+        "work=\"$(mktemp -d)\"\n" +
+        "trap 'rm -rf \"$work\"' EXIT\n" +
+        _extract_and_clean(tar_bin, sysroot_archive.path, "$work") +
+        _setup_block("$work", ctx.file._exec_wrapper.path, ctx.attr.host_setup_commands, ctx.attr.sysroot_setup_commands) +
+        "\"" + tar_bin + "\" -cf \"" + out_archive.path + "\" -C \"$work\" .\n"
     )
 
     ctx.actions.run_shell(
-        inputs = [sysroot_archive],
+        inputs = [sysroot_archive, ctx.file._exec_wrapper],
         outputs = [out_archive],
         tools = [bsdtar.default.files],
         command = command,
@@ -143,16 +112,24 @@ prepare_sysroot = rule(
         ),
         "sysroot_setup_commands": attr.string_list(
             default = [],
-            doc = "Shell lines run inside the sysroot after host_setup_commands " +
-                  "complete.  Each entry must be a space-separated ELF binary " +
-                  "invocation with an absolute sysroot path (e.g. '/usr/bin/dot -c'). " +
-                  "Shell metacharacters (pipes, redirects) are not supported. " +
-                  "The binary is executed via the sysroot's own ld-linux.so with " +
-                  "--library-path pointing at the sysroot's /usr/lib tree, giving a " +
-                  "fully consistent single-libc environment.  LD_PRELOAD=libfakechroot " +
-                  "+ FAKECHROOT_BASE are still active so glibc-level filesystem calls " +
-                  "(e.g. writing config6) are transparently redirected into the sysroot. " +
-                  "Requires fakechroot and ld-linux.so to be present in the sysroot.",
+            doc = "ELF binary invocations run inside the sysroot after " +
+                  "host_setup_commands complete.  Each entry is word-split by the " +
+                  "shell to separate the binary path from its arguments; entries must " +
+                  "not contain arguments with embedded spaces, and shell metacharacters " +
+                  "(pipes, redirects) are not supported.  The binary path must be " +
+                  "absolute within the sysroot (e.g. '/usr/bin/dot -c').  The binary " +
+                  "is executed via the sysroot's own ld-linux.so with --library-path " +
+                  "pointing at the sysroot's /usr/lib tree, giving a fully consistent " +
+                  "single-libc environment.  LD_PRELOAD=libfakechroot + FAKECHROOT_BASE " +
+                  "are still active so glibc-level filesystem calls (e.g. writing config6) " +
+                  "are transparently redirected into the sysroot.  Requires fakechroot and " +
+                  "ld-linux.so to be present in the sysroot.",
+        ),
+        "_exec_wrapper": attr.label(
+            default = Label("//bazel/rules/exec_in_sysroot:exec_in_sysroot.sh"),
+            allow_single_file = True,
+            doc = "Shared sysroot launcher reused to run sysroot_setup_commands, " +
+                  "so build-time setup and runtime execution use one implementation.",
         ),
     },
     toolchains = [_TAR_TOOLCHAIN_TYPE],
@@ -161,6 +138,7 @@ prepare_sysroot = rule(
     validation, runs optional host/sysroot setup commands while the tree is
     writable, and repackages the result into a single `<name>.tar` archive.
 
+    Requires a Debian/Ubuntu multiarch sysroot (x86_64 or aarch64).
     """,
 )
 
@@ -196,96 +174,27 @@ def _exec_in_sysroot_impl(ctx):
     else:
         sysroot_runfiles_path = ctx.workspace_name + "/" + sysroot_short_path
 
-    executable_file = ctx.executable.executable
-    if executable_file == None:
-        fail("executable must provide a runnable target")
-    executable_short_path = executable_file.short_path
-    if executable_short_path.startswith("../"):
-        executable_runfiles_path = executable_short_path[3:]
-    else:
-        executable_runfiles_path = ctx.workspace_name + "/" + executable_short_path
-
     out = ctx.actions.declare_file(ctx.label.name)
 
     # Build exclude paths string - colon-separated list
     exclude_paths = ":".join(ctx.attr.exclude_paths) if ctx.attr.exclude_paths else ""
 
-    wrapper_script = """#!/usr/bin/env bash
-set -euo pipefail
-
-# --- begin runfiles.bash initialization ---
-if [[ ! -d "${{RUNFILES_DIR:-/dev/null}}" && ! -f "${{RUNFILES_MANIFEST_FILE:-/dev/null}}" ]]; then
-  if [[ -f "$0.runfiles_manifest" ]]; then
-    export RUNFILES_MANIFEST_FILE="$0.runfiles_manifest"
-  elif [[ -f "$0.runfiles/MANIFEST" ]]; then
-    export RUNFILES_MANIFEST_FILE="$0.runfiles/MANIFEST"
-  elif [[ -f "$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash" ]]; then
-    export RUNFILES_DIR="$0.runfiles"
-  fi
-fi
-if [[ -f "${{RUNFILES_DIR:-/dev/null}}/bazel_tools/tools/bash/runfiles/runfiles.bash" ]]; then
-  source "${{RUNFILES_DIR}}/bazel_tools/tools/bash/runfiles/runfiles.bash"
-elif [[ -f "${{RUNFILES_MANIFEST_FILE:-/dev/null}}" ]]; then
-  source "$(grep -m1 '^bazel_tools/tools/bash/runfiles/runfiles.bash ' "$RUNFILES_MANIFEST_FILE" | cut -d ' ' -f 2-)"
-else
-  echo >&2 "ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash"
-  exit 1
-fi
-# --- end runfiles.bash initialization ---
-
-FAKECHROOT_WRAPPER="$(rlocation '{wrapper_short_path}')"
-SYSROOT_DIR="$(rlocation '{sysroot_short_path}')"
-EXECUTABLE_FILE="$(rlocation '{executable_runfiles_path}')"
-
-if [[ -z "${{FAKECHROOT_WRAPPER}}" || ! -x "${{FAKECHROOT_WRAPPER}}" ]]; then
-  echo "ERROR: could not resolve fakechroot wrapper: {wrapper_short_path}" >&2
-  exit 1
-fi
-
-if [[ -z "${{SYSROOT_DIR}}" || ! -d "${{SYSROOT_DIR}}" ]]; then
-  echo "ERROR: could not resolve sysroot directory: {sysroot_short_path}" >&2
-  exit 1
-fi
-
-if [[ ! -x "${{SYSROOT_DIR}}/usr/bin/fakechroot" ]]; then
-  echo "ERROR: sysroot does not provide /usr/bin/fakechroot: ${{SYSROOT_DIR}}" >&2
-  exit 1
-fi
-
-if [[ -z "${{EXECUTABLE_FILE}}" || ! -f "${{EXECUTABLE_FILE}}" ]]; then
-  echo "ERROR: could not resolve executable target: {executable_runfiles_path}" >&2
-  exit 1
-fi
-
-export SYSROOT_DIR
-if [[ -n "{exclude_paths}" ]]; then
-  export FAKECHROOT_EXCLUDE_PATH="{exclude_paths}"
-fi
-
-# The executable lives in host runfiles, not in the sysroot. Exclude its path
-# so fakechroot does not redirect accesses to it into the sysroot.
-EXECUTABLE_DIR="$(dirname "${{EXECUTABLE_FILE}}")"
-if [[ -n "${{FAKECHROOT_EXCLUDE_PATH:-}}" ]]; then
-  export FAKECHROOT_EXCLUDE_PATH="${{EXECUTABLE_DIR}}:${{EXECUTABLE_FILE}}:${{FAKECHROOT_EXCLUDE_PATH}}"
-else
-  export FAKECHROOT_EXCLUDE_PATH="${{EXECUTABLE_DIR}}:${{EXECUTABLE_FILE}}"
-fi
-
-exec "${{FAKECHROOT_WRAPPER}}" "${{EXECUTABLE_FILE}}" "$@"
-""".format(
-        wrapper_short_path = ctx.workspace_name + "/" + ctx.executable._fakechroot_wrapper.short_path,
-        sysroot_short_path = sysroot_runfiles_path,
-        executable_runfiles_path = executable_runfiles_path,
-        exclude_paths = exclude_paths,
+    ctx.actions.expand_template(
+        template = ctx.file._launcher_template,
+        output = out,
+        is_executable = True,
+        substitutions = {
+            "{{WRAPPER_SHORT_PATH}}": ctx.workspace_name + "/" + ctx.executable._fakechroot_wrapper.short_path,
+            "{{SYSROOT_SHORT_PATH}}": sysroot_runfiles_path,
+            "{{SYSROOT_BINARY}}": ctx.attr.sysroot_binary,
+            "{{EXCLUDE_PATHS}}": exclude_paths,
+        },
     )
-    ctx.actions.write(output = out, content = wrapper_script, is_executable = True)
 
     runfiles = ctx.runfiles(
-        files = [out, ctx.executable._fakechroot_wrapper, sysroot, executable_file] + ctx.files._bash_runfiles,
+        files = [ctx.executable._fakechroot_wrapper, sysroot],
     )
-    runfiles = _merge_default_and_data_runfiles(ctx.attr.executable, runfiles)
     runfiles = _merge_default_and_data_runfiles(ctx.attr._fakechroot_wrapper, runfiles)
-    runfiles = _merge_default_and_data_runfiles(ctx.attr._bash_runfiles, runfiles)
     runfiles = _merge_default_and_data_runfiles(ctx.attr.sysroot, runfiles)
 
     return [DefaultInfo(
@@ -298,30 +207,39 @@ exec_in_sysroot = rule(
     implementation = _exec_in_sysroot_impl,
     executable = True,
     attrs = {
-        "executable": attr.label(mandatory = True, executable = True, cfg = "exec"),
-        "sysroot": attr.label(mandatory = True, allow_single_file = True),
+        "sysroot_binary": attr.string(
+            mandatory = True,
+            doc = "Sysroot-relative path of the ELF binary to execute, e.g. '/usr/bin/dot'.",
+        ),
+        "sysroot": attr.label(
+            mandatory = True,
+            allow_single_file = True,
+            doc = "Prepared sysroot archive, typically the output of a prepare_sysroot rule.",
+        ),
         "exclude_paths": attr.string_list(
             default = [],
-            doc = "Paths to exclude from fakechroot path-redirection (colon-separated).",
-        ),
-        "_bash_runfiles": attr.label(
-            default = Label("@bazel_tools//tools/bash/runfiles"),
-            allow_files = True,
+            doc = "List of paths to exclude from fakechroot path-redirection.",
         ),
         "_fakechroot_wrapper": attr.label(
             default = Label("//bazel/rules/exec_in_sysroot"),
             executable = True,
             cfg = "exec",
+            doc = "Shared sysroot launcher (exec_in_sysroot.sh) invoked at runtime.",
+        ),
+        "_launcher_template": attr.label(
+            default = Label("//bazel/rules/exec_in_sysroot:exec_in_sysroot_launcher.sh.tpl"),
+            allow_single_file = True,
         ),
     },
     toolchains = [_TAR_TOOLCHAIN_TYPE],
     doc = """
-    Produces an executable wrapper that runs a given executable target using the
-    supplied sysroot archive.  The archive is unpacked in-rule and the wrapped
-    executable runs within fakechroot via LD_PRELOAD, allowing access to sysroot
-    tools and libraries hermetically.
+    Produces an executable wrapper that runs a sysroot ELF binary via the
+    sysroot's own ld-linux.so (SYSROOT_INTERP) and fakechroot (LD_PRELOAD),
+    giving the binary a hermetic single-libc environment backed by the sysroot.
 
-    The archive is expected to be a reworked sysroot (see prepare_sysroot), which
-    performs plugin pruning / post-install setup once and caches the result.
+    The sysroot archive is expected to be prepared by a prepare_sysroot rule,
+    which performs plugin pruning / post-install setup once and caches the result.
+
+    Requires a Debian/Ubuntu multiarch sysroot (x86_64 or aarch64).
     """,
 )

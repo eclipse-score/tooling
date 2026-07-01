@@ -34,11 +34,6 @@ bazel_dep(name = "bazel_skylib", version = "1.7.1")
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2")
 bazel_dep(name = "flatbuffers", version = "25.9.23")
 bazel_dep(name = "download_utils", version = "1.2.2")
-git_override(
-    module_name = "download_utils",
-    commit = "3b96912fb6622dda83f25efd1f8ae596fc4a63a6",
-    remote = "https://gitlab.arm.com/bazel/download_utils.git",
-)
 
 # flatbuffers depends on this transitively, but older grpc-java version
 # The main problem is that there the command `bazel mod deps` is broken, which

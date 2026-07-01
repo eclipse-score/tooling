@@ -21,7 +21,6 @@ Template variables like {PROJECT_NAME} are replaced during Bazel build.
 import json
 import os
 import sys
-from pathlib import Path
 
 from sphinx.util import logging
 
@@ -164,59 +163,45 @@ plantuml_output_format = "svg_obj"
 # Graphviz (sphinx.ext.graphviz)
 # ---------------------------------------------------------------------------
 # GRAPHVIZ_DOT      — execroot-relative path of //third_party/docs_runtime:dot
-#                     (the exec_in_sysroot bash wrapper), injected by the
+#                     (the exec_in_sysroot POSIX-sh wrapper), injected by the
 #                     sphinx_module Bazel rule.
 # GRAPHVIZ_DOT_RLOC — analysis-time-stable rlocation key; logged only.
 #
 # Path resolution: same os.path.abspath() rationale as PLANTUML_BIN above.
 #
-# The exec_in_sysroot wrapper is a runfiles-aware bash script that bootstraps
-# its own runfiles via the standard $0.runfiles/ Bazel convention (identical
-# to the runfiles.bash init block).  Passing the ABSOLUTE path ensures $0 is
-# absolute, so $0.runfiles/ resolves to the correct companion directory even
-# when the wrapper is called as a subprocess from inside the Sphinx Python
-# process (which carries its own RUNFILES_DIR pointing at the sphinx tool's
-# runfiles, not the dot wrapper's runfiles).
+# The exec_in_sysroot wrapper is a runfiles-aware POSIX-sh script that
+# bootstraps its own runfiles via the standard $0.runfiles/ Bazel convention.
+# Passing the ABSOLUTE path ensures $0 is absolute, so $0.runfiles/ resolves to
+# the correct companion directory even when the wrapper is called as a
+# subprocess from inside the Sphinx Python process (which carries its own
+# RUNFILES_DIR pointing at the sphinx tool's runfiles, not the dot wrapper's
+# runfiles).
 #
-# If GRAPHVIZ_DOT is absent a known-invalid sentinel is used so that
-# sphinx.ext.graphviz fails loudly on any .. graphviz:: directive rather than
-# silently using a host-installed dot binary.
-_graphviz_dot_path = os.environ.get("GRAPHVIZ_DOT", "")
-_graphviz_dot_rloc = os.environ.get("GRAPHVIZ_DOT_RLOC", "")
-if _graphviz_dot_path:
-    graphviz_dot = os.path.abspath(_graphviz_dot_path)
-    graphviz_output_format = "svg"
-    logger.debug(
-        f"graphviz dot resolved: {graphviz_dot} (rloc: {_graphviz_dot_rloc or 'n/a'})"
+# GRAPHVIZ_DOT is mandatory: the sphinx_module rule always provides the hermetic
+# wrapper, so if it is missing conf.py fails loudly rather than silently using a
+# host-installed dot binary.
+_graphviz_dot_path = os.environ.get("GRAPHVIZ_DOT")
+if not _graphviz_dot_path:
+    raise ValueError(
+        "GRAPHVIZ_DOT environment variable is not set. It must point at the "
+        "//third_party/docs_runtime:dot hermetic wrapper and is normally provided "
+        "by the sphinx_module Bazel rule. If you are invoking Sphinx outside that "
+        "rule, set GRAPHVIZ_DOT to the hermetic dot wrapper path."
     )
-else:
-    graphviz_dot = "/__hermetic_graphviz_not_configured__/dot"
+_graphviz_dot_rloc = os.environ.get("GRAPHVIZ_DOT_RLOC", "")
+graphviz_dot = os.path.abspath(_graphviz_dot_path)
+graphviz_output_format = "svg"
+logger.debug(
+    f"graphviz dot resolved: {graphviz_dot} (rloc: {_graphviz_dot_rloc or 'n/a'})"
+)
 
 # ---------------------------------------------------------------------------
-# PlantUML layout engine: hermetic dot or Smetana fallback
+# PlantUML layout engine: hermetic dot
 # ---------------------------------------------------------------------------
-# Wire PlantUML to the hermetic dot via -graphvizdot when the wrapper is
-# accessible; otherwise fall back to PlantUML's built-in Smetana layout
-# engine (a pure-Java re-implementation of Graphviz) with a warning.
-# The hermetic dot is the reference rendering path; Smetana output may differ
-# visually (different edge routing, node spacing).
-# Note: the smetana fallback only affects PlantUML diagrams.  sphinx.ext.graphviz
-# directives always use graphviz_dot; they will fail if it is the sentinel.
-_dot_available = (
-    graphviz_dot != "/__hermetic_graphviz_not_configured__/dot"
-    and Path(graphviz_dot).is_file()
-)
-if _dot_available:
-    plantuml = f"{plantuml_path} -graphvizdot {graphviz_dot}"
-else:
-    logger.warning(
-        f"Hermetic Graphviz dot is not available at {graphviz_dot!r}. "
-        "PlantUML is falling back to the built-in Smetana layout engine. "
-        "Diagrams may differ from the reference output produced by the "
-        "hermetic Bazel build. Ensure GRAPHVIZ_DOT / GRAPHVIZ_DOT_RLOC are "
-        "set correctly when invoking the sphinx_module rule."
-    )
-    plantuml = f"{plantuml_path} -Playout=smetana"
+# PlantUML uses the same hermetic Graphviz dot as sphinx.ext.graphviz for its
+# internal layout calls, via the -graphvizdot flag.  There is no fallback: the
+# hermetic dot is the single reference rendering path for both.
+plantuml = f"{plantuml_path} -graphvizdot {graphviz_dot}"
 
 # HTML theme
 html_theme = "sphinx_rtd_theme"
