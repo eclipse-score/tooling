@@ -357,12 +357,17 @@ fn build_relationships_for_class(ctx: &mut VisitContext, builder: &ParsedClassIn
             )
         });
 
-        let target_class = ctx.types.get(resolved_base).unwrap_or_else(|| {
-            panic!(
-                "Resolved base type '{}' missing in type map for '{}'",
+        let Some(target_class) = ctx.types.get(resolved_base) else {
+            // Base type is not in the type map — it is likely an external dependency
+            // that was filtered out during the visit phase. Skip the relationship
+            // rather than panicking so analysis of workspace classes can proceed.
+            eprintln!(
+                "Warning: base type '{}' not found in type map for '{}'; \
+                 skipping inheritance relationship (external dependency?)",
                 resolved_base, builder.id
-            )
-        });
+            );
+            continue;
+        };
 
         let relation_type = if target_class.entity_type == EntityType::Interface {
             RelationType::Implementation

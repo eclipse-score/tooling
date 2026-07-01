@@ -1,0 +1,26 @@
+{
+    "types": {
+        "my_ns::MyNativeObject": {
+            "id": "my_ns::MyNativeObject",
+            "name": "MyNativeObject",
+            "enclosing_namespace_id": "my_ns",
+            "entity_type": "Class",
+            "enum_literals": [],
+            "methods": [],
+            "relationships": [],
+            "template_parameters": null,
+            "type_aliases": [],
+            "variables": [
+                {
+                    "name": "value",
+                    "data_type": "int",
+                    "is_static": false,
+                    "visibility": "public"
+                }
+            ],
+            "source_file": "cpp/libclang/integration_test/cases/inherit_external_base/inherit_external.cpp",
+            "source_line": 23
+        }
+    },
+    "functions": []
+}
