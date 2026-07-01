@@ -108,6 +108,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "alias_package.puml"
   }
 }

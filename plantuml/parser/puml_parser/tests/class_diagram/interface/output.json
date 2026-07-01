@@ -28,6 +28,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "interface.puml"
   }
 }

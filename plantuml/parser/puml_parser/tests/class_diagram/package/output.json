@@ -91,6 +91,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "package.puml"
   }
 }

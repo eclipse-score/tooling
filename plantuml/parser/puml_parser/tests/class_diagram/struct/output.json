@@ -89,6 +89,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "struct.puml"
   }
 }

@@ -11,7 +11,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 25,
         "variables": [
           {
@@ -38,7 +38,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 30,
         "variables": [
           {
@@ -78,7 +78,7 @@
             "value": 2
           }
         ],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 35,
         "variables": [],
         "relationships": [
@@ -117,7 +117,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 41,
         "variables": [],
         "relationships": [
@@ -155,7 +155,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 46,
         "variables": [],
         "relationships": []
@@ -192,7 +192,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 50,
         "variables": [
           {
@@ -230,7 +230,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 59,
         "variables": [
           {
@@ -281,7 +281,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 65,
         "variables": [
           {
@@ -323,7 +323,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 75,
         "variables": [
           {
@@ -369,7 +369,7 @@
             "value": 3
           }
         ],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 83,
         "variables": [],
         "relationships": []
@@ -403,7 +403,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 90,
         "variables": [],
         "relationships": []
@@ -426,7 +426,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_positive_test",
+        "source_file": "class_diagram_positive.puml",
         "source_line": 98,
         "variables": [],
         "relationships": [
@@ -513,7 +513,7 @@
       }
     ],
     "source_files": [
-      "class_positive_test"
+      "class_diagram_positive.puml"
     ],
     "version": null
   }

@@ -11,7 +11,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants",
+        "source_file": "class_diagram_relationship_variants.puml",
         "source_line": 18,
         "variables": [],
         "relationships": []
@@ -25,7 +25,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants",
+        "source_file": "class_diagram_relationship_variants.puml",
         "source_line": 19,
         "variables": [],
         "relationships": [
@@ -47,7 +47,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants",
+        "source_file": "class_diagram_relationship_variants.puml",
         "source_line": 21,
         "variables": [],
         "relationships": [
@@ -69,7 +69,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants",
+        "source_file": "class_diagram_relationship_variants.puml",
         "source_line": 23,
         "variables": [
           {
@@ -107,7 +107,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants",
+        "source_file": "class_diagram_relationship_variants.puml",
         "source_line": 27,
         "variables": [],
         "relationships": []
@@ -121,7 +121,7 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants",
+        "source_file": "class_diagram_relationship_variants.puml",
         "source_line": 31,
         "variables": [],
         "relationships": [
@@ -180,7 +180,7 @@
       }
     ],
     "source_files": [
-      "class_diagram_relationship_variants"
+      "class_diagram_relationship_variants.puml"
     ],
     "version": null
   }

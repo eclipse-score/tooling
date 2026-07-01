@@ -52,6 +52,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "namespace_3.puml"
   }
 }

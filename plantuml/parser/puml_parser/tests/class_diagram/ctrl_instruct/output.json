@@ -59,6 +59,7 @@
         },
         "label": null
       }
-    ]
+    ],
+    "source_file": "ctrl_instruct.puml"
   }
 }

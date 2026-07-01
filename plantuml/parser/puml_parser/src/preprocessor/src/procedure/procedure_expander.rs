@@ -74,6 +74,10 @@ impl ProcedureExpander {
         content: &str,
         log_level: LogLevel,
     ) -> Result<String, ProcedureExpandError> {
+        if !has_procedure_definition(content) {
+            return Ok(content.to_string());
+        }
+
         let mut out = String::new();
         let mut stack = Vec::new();
 
@@ -275,4 +279,10 @@ impl ProcedureExpander {
 
         Ok(out)
     }
+}
+
+fn has_procedure_definition(content: &str) -> bool {
+    content
+        .lines()
+        .any(|line| line.trim_start().starts_with("!procedure"))
 }

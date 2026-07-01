@@ -31,6 +31,7 @@
 
 use log::debug;
 use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 use thiserror::Error;
@@ -228,10 +229,19 @@ impl IncludeExpander {
 
         ctx.push_stack(file)?;
 
+        let original_content =
+            fs::read_to_string(file.as_ref()).map_err(|_| IncludeExpandError::FileNotFound {
+                file: Rc::clone(file),
+            })?;
+
+        if file_list.len() == 1 && !has_include_or_subblock_directive(&original_content) {
+            ctx.pop_stack();
+            return Ok(original_content);
+        }
+
         let stmts_ast = self.load_ast(file)?;
         let expanded_ast = self.expand_stmts(&stmts_ast, file, ctx, file_list)?;
         let rendered = render_stmts(expanded_ast);
-
         ctx.pop_stack();
         Ok(rendered)
     }
@@ -364,6 +374,16 @@ impl IncludeExpander {
             }
         }
     }
+}
+
+fn has_include_or_subblock_directive(content: &str) -> bool {
+    content.lines().any(|line| {
+        let trimmed = line.trim_start();
+        trimmed.starts_with("!include")
+            || trimmed.starts_with("!includesub")
+            || trimmed.starts_with("!startsub")
+            || trimmed.starts_with("!endsub")
+    })
 }
 
 /// Renders AST statements into PlantUML text.

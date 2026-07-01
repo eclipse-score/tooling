@@ -2,6 +2,7 @@
   "empty.puml": {
     "name": "",
     "elements": [],
-    "relationships": []
+    "relationships": [],
+    "source_file": "empty.puml"
   }
 }
