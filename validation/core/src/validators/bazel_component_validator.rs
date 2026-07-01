@@ -17,104 +17,53 @@
 //! [`BazelComponentValidator`] performs a two-way set-difference between a
 //! [`BazelArchitecture`] and a [`ComponentDiagramArchitecture`].
 
-use crate::models::{BazelArchitecture, ComponentDiagramArchitecture, Errors};
+use crate::models::{BazelArchitecture, ComponentDiagramArchitecture};
+use crate::{Diagnostics, ValidationResult};
 
 /// Run bazel-vs-component architecture validation using indexed inputs.
 pub fn validate_bazel_component(
     bazel: &BazelArchitecture,
     diagram: &ComponentDiagramArchitecture,
-    errors: Errors,
-) -> Errors {
-    BazelComponentValidator::new(bazel, diagram, errors).run()
+) -> ValidationResult {
+    BazelComponentValidator::new().run(bazel, diagram)
 }
 
 /// Compares a [`BazelArchitecture`] and a [`ComponentDiagramArchitecture`],
-/// accumulating mismatches into [`Errors`].
-pub struct BazelComponentValidator<'a> {
-    bazel: &'a BazelArchitecture,
-    diagram: &'a ComponentDiagramArchitecture,
-    errors: Errors,
+/// accumulating mismatches into [`ValidationResult`].
+pub struct BazelComponentValidator {
+    result: ValidationResult,
 }
 
-impl<'a> BazelComponentValidator<'a> {
+impl BazelComponentValidator {
     /// Create a new [`BazelComponentValidator`] from pre-built sets and already
-    /// accumulated indexing errors.
-    pub fn new(
-        bazel: &'a BazelArchitecture,
-        diagram: &'a ComponentDiagramArchitecture,
-        errors: Errors,
-    ) -> Self {
+    /// accumulated indexing result.
+    pub fn new() -> Self {
         Self {
-            bazel,
-            diagram,
-            errors,
+            result: ValidationResult::default(),
         }
     }
 
     /// Run the two-way set-difference comparison and return all accumulated
-    /// errors.
+    /// result.
     ///
-    /// The debug log is always built and stored in `errors.debug_output`.
-    pub fn run(mut self) -> Errors {
-        self.errors.debug_output.push_str(&self.build_debug_log());
-        self.check_seooc();
-        self.check_components();
-        self.check_units();
-        self.errors
+    pub fn run(
+        mut self,
+        bazel: &BazelArchitecture,
+        diagram: &ComponentDiagramArchitecture,
+    ) -> ValidationResult {
+        append_debug_log(&mut self.result.diagnostics, bazel, diagram);
+        self.check_seooc(bazel, diagram);
+        self.check_components(bazel, diagram);
+        self.check_units(bazel, diagram);
+        self.result
     }
 
-    fn build_debug_log(&self) -> String {
-        let mut log = String::new();
-
-        log.push_str(&format!(
-            "DEBUG: Found {} total diagram entities\n",
-            self.diagram.entities.len()
-        ));
-        for entity in &self.diagram.entities {
-            log.push_str(&format!(
-                "  Entity: id={:?}, alias={:?}, stereotype={:?}\n",
-                entity.id, entity.alias, entity.stereotype
-            ));
-        }
-        log.push_str(&format!(
-            "DEBUG: Filtered to {} SEooC packages, {} components and {} units\n",
-            self.diagram.filtered_seooc_count,
-            self.diagram.filtered_component_count,
-            self.diagram.filtered_unit_count
-        ));
-        log.push_str("DEBUG: PlantUML SEooC set:\n");
-        for key in self.diagram.seooc_set.keys() {
-            log.push_str(&format!("  {:?}\n", key));
-        }
-        log.push_str("DEBUG: PlantUML component set:\n");
-        for key in self.diagram.comp_set.keys() {
-            log.push_str(&format!("  {:?}\n", key));
-        }
-        log.push_str("DEBUG: PlantUML unit set:\n");
-        for key in self.diagram.unit_set.keys() {
-            log.push_str(&format!("  {:?}\n", key));
-        }
-        log.push_str("DEBUG: Bazel SEooC set:\n");
-        for (key, label) in &self.bazel.seooc_set {
-            log.push_str(&format!("  {:?} -> {}\n", key, label));
-        }
-        log.push_str("DEBUG: Bazel component set:\n");
-        for (key, label) in &self.bazel.comp_set {
-            log.push_str(&format!("  {:?} -> {}\n", key, label));
-        }
-        log.push_str("DEBUG: Bazel unit set:\n");
-        for (key, label) in &self.bazel.unit_set {
-            log.push_str(&format!("  {:?} -> {}\n", key, label));
-        }
-        log
-    }
-
-    fn check_seooc(&mut self) {
+    fn check_seooc(&mut self, bazel: &BazelArchitecture, diagram: &ComponentDiagramArchitecture) {
         // In Bazel but not in PlantUML -> MISSING.
-        for (key, label) in &self.bazel.seooc_set {
-            if !self.diagram.seooc_set.contains_key(key) {
+        for (key, label) in &bazel.seooc_set {
+            if !diagram.seooc_set.contains_key(key) {
                 let (name, _) = key;
-                self.errors.push(Self::format_missing(
+                self.result.add_failure(Self::format_missing(
                     "package",
                     "SEooC",
                     name,
@@ -125,24 +74,28 @@ impl<'a> BazelComponentValidator<'a> {
         }
 
         // In PlantUML but not in Bazel -> EXTRA.
-        for key in self.diagram.seooc_set.keys() {
-            if !self.bazel.seooc_set.contains_key(key) {
+        for key in diagram.seooc_set.keys() {
+            if !bazel.seooc_set.contains_key(key) {
                 let (name, _) = key;
-                self.errors
-                    .push(Self::format_extra("package", name, "(top-level)"));
+                self.result
+                    .add_failure(Self::format_extra("package", name, "(top-level)"));
             }
         }
     }
 
-    fn check_components(&mut self) {
+    fn check_components(
+        &mut self,
+        bazel: &BazelArchitecture,
+        diagram: &ComponentDiagramArchitecture,
+    ) {
         // In Bazel but not in PlantUML -> MISSING.
-        for (key, label) in &self.bazel.comp_set {
-            if !self.diagram.comp_set.contains_key(key) {
+        for (key, label) in &bazel.comp_set {
+            if !diagram.comp_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = parent
                     .as_ref()
                     .map_or("(top-level)".to_string(), |value| value.clone());
-                self.errors.push(Self::format_missing(
+                self.result.add_failure(Self::format_missing(
                     "component",
                     "component",
                     name,
@@ -153,27 +106,27 @@ impl<'a> BazelComponentValidator<'a> {
         }
 
         // In PlantUML but not in Bazel -> EXTRA.
-        for key in self.diagram.comp_set.keys() {
-            if !self.bazel.comp_set.contains_key(key) {
+        for key in diagram.comp_set.keys() {
+            if !bazel.comp_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = parent
                     .as_ref()
                     .map_or("(top-level)".to_string(), |value| value.clone());
-                self.errors
-                    .push(Self::format_extra("component", name, &parent_str));
+                self.result
+                    .add_failure(Self::format_extra("component", name, &parent_str));
             }
         }
     }
 
-    fn check_units(&mut self) {
+    fn check_units(&mut self, bazel: &BazelArchitecture, diagram: &ComponentDiagramArchitecture) {
         // In Bazel but not in PlantUML -> MISSING.
-        for (key, label) in &self.bazel.unit_set {
-            if !self.diagram.unit_set.contains_key(key) {
+        for (key, label) in &bazel.unit_set {
+            if !diagram.unit_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = parent
                     .as_ref()
                     .map_or("(no parent?)".to_string(), |value| value.clone());
-                self.errors.push(Self::format_missing(
+                self.result.add_failure(Self::format_missing(
                     "unit",
                     "unit",
                     name,
@@ -184,14 +137,14 @@ impl<'a> BazelComponentValidator<'a> {
         }
 
         // In PlantUML but not in Bazel -> EXTRA.
-        for key in self.diagram.unit_set.keys() {
-            if !self.bazel.unit_set.contains_key(key) {
+        for key in diagram.unit_set.keys() {
+            if !bazel.unit_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = parent
                     .as_ref()
                     .map_or("(no parent?)".to_string(), |value| value.clone());
-                self.errors
-                    .push(Self::format_extra("unit", name, &parent_str));
+                self.result
+                    .add_failure(Self::format_extra("unit", name, &parent_str));
             }
         }
     }
@@ -219,6 +172,54 @@ impl<'a> BazelComponentValidator<'a> {
                Parent         : {parent_str}\n\
                Action         : Remove this {entity_type} or add to Bazel",
         )
+    }
+}
+
+fn append_debug_log(
+    diagnostics: &mut Diagnostics,
+    bazel: &BazelArchitecture,
+    diagram: &ComponentDiagramArchitecture,
+) {
+    diagnostics.debug(|| format!("Found {} total diagram entities", diagram.entities.len()));
+    for entity in &diagram.entities {
+        diagnostics.debug(|| {
+            format!(
+                "Entity: id={:?}, alias={:?}, stereotype={:?}",
+                entity.id, entity.alias, entity.stereotype
+            )
+        });
+    }
+    diagnostics.debug(|| {
+        format!(
+            "Filtered to {} SEooC packages, {} components and {} units",
+            diagram.filtered_seooc_count,
+            diagram.filtered_component_count,
+            diagram.filtered_unit_count
+        )
+    });
+    diagnostics.debug(|| "PlantUML SEooC set:".to_string());
+    for key in diagram.seooc_set.keys() {
+        diagnostics.debug(|| format!("  {:?}", key));
+    }
+    diagnostics.debug(|| "PlantUML component set:".to_string());
+    for key in diagram.comp_set.keys() {
+        diagnostics.debug(|| format!("  {:?}", key));
+    }
+    diagnostics.debug(|| "PlantUML unit set:".to_string());
+    for key in diagram.unit_set.keys() {
+        diagnostics.debug(|| format!("  {:?}", key));
+    }
+    diagnostics.debug(|| "Bazel SEooC set:".to_string());
+    for (key, label) in &bazel.seooc_set {
+        diagnostics.debug(|| format!("  {:?} -> {}", key, label));
+    }
+    diagnostics.debug(|| "Bazel component set:".to_string());
+    for (key, label) in &bazel.comp_set {
+        diagnostics.debug(|| format!("  {:?} -> {}", key, label));
+    }
+    diagnostics.debug(|| "Bazel unit set:".to_string());
+    for (key, label) in &bazel.unit_set {
+        diagnostics.debug(|| format!("  {:?} -> {}", key, label));
     }
 }
 
@@ -271,11 +272,15 @@ mod tests {
         ComponentDiagramInputs { entities }
     }
 
-    fn run_arch_validation(arch: &BazelInput, diagram: &ComponentDiagramInputs) -> Errors {
-        let mut errors = Errors::default();
-        let bazel = arch.to_bazel_architecture(&mut errors);
-        let diag = diagram.to_diagram_architecture(&mut errors);
-        validate_bazel_component(&bazel, &diag, errors)
+    fn run_arch_validation(
+        arch: &BazelInput,
+        diagram: &ComponentDiagramInputs,
+    ) -> ValidationResult {
+        let mut result = ValidationResult::default();
+        let bazel = arch.to_bazel_architecture(&mut result);
+        let diag = diagram.to_diagram_architecture(&mut result);
+        result.merge(validate_bazel_component(&bazel, &diag));
+        result
     }
 
     #[test]
@@ -290,7 +295,7 @@ mod tests {
             entity("CompA.Unit1", Some("unit_1"), Some("CompA"), Some("unit")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
-        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.messages);
+        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
     }
 
     #[test]
@@ -337,7 +342,7 @@ mod tests {
             ),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
-        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.messages);
+        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
     }
 
     #[test]
@@ -357,7 +362,7 @@ mod tests {
             entity("CompA.Unit2", Some("unit_2"), Some("CompA"), Some("unit")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
-        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.messages);
+        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
     }
 
     #[test]
@@ -377,7 +382,7 @@ mod tests {
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
-        assert!(errs.messages.iter().any(|m| m.contains("Missing unit")));
+        assert!(errs.failures.iter().any(|m| m.contains("Missing unit")));
     }
 
     #[test]
@@ -390,9 +395,9 @@ mod tests {
         let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
         assert!(
-            errs.messages.iter().any(|m| m.contains("Duplicate")),
+            errs.failures.iter().any(|m| m.contains("Duplicate")),
             "Expected duplicate error, got: {:?}",
-            errs.messages
+            errs.failures
         );
     }
 
@@ -412,7 +417,7 @@ mod tests {
         let arch = make_arch(vec![("my_de", vec![], vec![])]);
         let errs = run_arch_validation(&arch, &diagram(vec![]));
         assert!(!errs.is_empty());
-        let msg = &errs.messages[0];
+        let msg = &errs.failures[0];
         assert!(
             msg.contains("SEooC"),
             "Expected error to mention SEooC stereotype, got: {msg}"
@@ -434,9 +439,9 @@ mod tests {
         let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
         assert!(
-            errs.messages.iter().any(|m| m.contains("Extra component")),
+            errs.failures.iter().any(|m| m.contains("Extra component")),
             "Expected extra component error, got: {:?}",
-            errs.messages
+            errs.failures
         );
     }
 
@@ -454,9 +459,9 @@ mod tests {
         let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
         assert!(
-            errs.messages.iter().any(|m| m.contains("Extra unit")),
+            errs.failures.iter().any(|m| m.contains("Extra unit")),
             "Expected extra unit error, got: {:?}",
-            errs.messages
+            errs.failures
         );
     }
 
@@ -470,9 +475,9 @@ mod tests {
             "<<component>> should not satisfy <<SEooC>> requirement"
         );
         assert!(
-            errs.messages.iter().any(|m| m.contains("Missing package")),
+            errs.failures.iter().any(|m| m.contains("Missing package")),
             "Expected missing package error, got: {:?}",
-            errs.messages
+            errs.failures
         );
     }
 
@@ -492,11 +497,11 @@ mod tests {
             "<<SEooC>> should not satisfy <<component>> requirement"
         );
         assert!(
-            errs.messages
+            errs.failures
                 .iter()
                 .any(|m| m.contains("Missing component")),
             "Expected missing component error, got: {:?}",
-            errs.messages
+            errs.failures
         );
     }
 
@@ -508,10 +513,10 @@ mod tests {
         ]);
         let errs = run_arch_validation(&arch, &diagram(vec![]));
         assert_eq!(
-            errs.messages.len(),
+            errs.failures.len(),
             3,
             "Expected 3 errors (seooc + comp + unit), got: {:?}",
-            errs.messages
+            errs.failures
         );
     }
 
@@ -527,7 +532,7 @@ mod tests {
             entity("Unit1", Some("UNIT_1"), Some("CompA"), Some("unit")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
-        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.messages);
+        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
     }
 
     #[test]
@@ -541,7 +546,7 @@ mod tests {
             entity("comp_a", None, Some("my_de"), Some("component")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
-        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.messages);
+        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
     }
 
     #[test]
@@ -553,11 +558,11 @@ mod tests {
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(
-            errs.messages
+            errs.failures
                 .iter()
                 .any(|m| m.contains("Duplicate entity ID")),
             "Expected duplicate ID error, got: {:?}",
-            errs.messages
+            errs.failures
         );
     }
 
@@ -575,11 +580,11 @@ mod tests {
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(
-            errs.messages
+            errs.failures
                 .iter()
                 .any(|m| m.contains("Unresolved parent_id")),
             "Expected unresolved parent error, got: {:?}",
-            errs.messages
+            errs.failures
         );
     }
 }

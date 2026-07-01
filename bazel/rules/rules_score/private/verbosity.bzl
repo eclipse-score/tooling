@@ -31,7 +31,7 @@ Usage in a rule definition::
     )
 
     def _impl(ctx):
-        log_level = get_log_level(ctx)  # returns "warn", "info", or "debug"
+        log_level = get_log_level(ctx)  # returns "warn", "info", "debug", or "trace"
         ctx.actions.run(
             ...,
             arguments = ["--log-level", log_level, ...],
@@ -45,7 +45,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 VERBOSITY_ATTR = {
     "_verbosity": attr.label(
         default = Label("@score_tooling//bazel/rules/rules_score:verbosity"),
-        doc = "Verbosity level build setting (warn/info/debug).",
+        doc = "Verbosity level build setting (warn/info/debug/trace).",
     ),
 }
 
@@ -56,6 +56,6 @@ def get_log_level(ctx):
         ctx: Rule context (must have ``_verbosity`` in its attrs).
 
     Returns:
-        One of ``"warn"``, ``"info"``, or ``"debug"``.
+        One of ``"warn"``, ``"info"``, ``"debug"``, or ``"trace"``.
     """
     return ctx.attr._verbosity[BuildSettingInfo].value

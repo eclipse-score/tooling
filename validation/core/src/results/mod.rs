@@ -11,19 +11,29 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-/// Accumulates validation messages together with optional debug output.
+//! Validation execution results.
+
+mod diagnostics;
+
+pub use diagnostics::Diagnostics;
+
 #[derive(Debug, Default)]
-pub struct Errors {
-    pub messages: Vec<String>,
-    pub debug_output: String,
+pub struct ValidationResult {
+    pub failures: Vec<String>,
+    pub diagnostics: Diagnostics,
 }
 
-impl Errors {
-    pub fn push(&mut self, message: String) {
-        self.messages.push(message);
+impl ValidationResult {
+    pub fn add_failure(&mut self, failure: String) {
+        self.failures.push(failure);
     }
 
     pub fn is_empty(&self) -> bool {
-        self.messages.is_empty()
+        self.failures.is_empty()
+    }
+
+    pub fn merge(&mut self, incoming: Self) {
+        self.failures.extend(incoming.failures);
+        self.diagnostics.append(incoming.diagnostics);
     }
 }
