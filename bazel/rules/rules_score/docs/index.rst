@@ -39,6 +39,7 @@ safety analysis to the top-level SEooC assembly.
 
    tool_reference/specs/bazel_component
    tool_reference/specs/component_sequence
+   tool_reference/specs/class_design_implementation
 
 .. toctree::
    :maxdepth: 2

@@ -119,6 +119,90 @@ section "Tool Requirements" {
 
         }
 
+        section "Class Design Implementation Validator" {
+
+            ToolQualification.ToolRequirement ClassDesignImplementationEntityConsistency {
+                description = '''The validator shall report an error when an
+                entity modeled in the unit design class diagram has no
+                corresponding entity in the implementation class diagram, or
+                when the matching implementation entity differs in entity
+                type. Consistency of type aliases, variables, methods, enum
+                literals, relationships, and template parameters is specified
+                by the dedicated requirements below.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ClassDesignImplementationTemplateParameterConsistency {
+                description = '''The validator shall report an error when
+                template parameters modeled on a unit design entity or method
+                differ from the template parameters on the matching
+                implementation entity or method.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ClassDesignImplementationTypeAliasConsistency {
+                description = '''The validator shall report an error when a
+                type alias modeled in a unit design entity is missing from the
+                matching implementation entity, or when the matching
+                implementation type alias differs in original type.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ClassDesignImplementationVariableConsistency {
+                description = '''The validator shall report an error when a
+                variable modeled in a unit design entity is missing from the
+                matching implementation entity, or when the matching
+                implementation variable differs in data type, visibility, or
+                static flag.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ClassDesignImplementationMethodConsistency {
+                description = '''The validator shall report an error when a
+                method modeled in a unit design entity is missing from the
+                matching implementation entity, or when the matching
+                implementation method differs in return type, visibility,
+                parameters, or method modifiers (`static`, `virtual`,
+                `abstract`, `override`, constructor, destructor, or
+                `noexcept`).'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ClassDesignImplementationEnumLiteralConsistency {
+                description = '''The validator shall report an error when an
+                enum literal modeled in a unit design enum is missing from the
+                matching implementation enum, or when the matching
+                implementation enum literal data differs from the unit design.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ClassDesignImplementationRelationshipConsistency {
+                description = '''The validator shall report an error when a
+                relationship modeled in a unit design entity is missing from
+                the matching implementation entity, or when the matching
+                implementation relationship differs in source, target, or
+                relationship type.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ClassDesignImplementationTypeNormalization {
+                description = '''The validator shall normalize namespace
+                separators, the `std::` type prefix, and pointer or reference
+                spacing before comparing entity references and type names
+                between unit design and implementation class diagrams.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+        }
+
     }
 
 }
