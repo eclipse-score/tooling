@@ -10,21 +10,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-
-load("@rules_rust//rust:defs.bzl", "rust_library")
-
-rust_library(
-    name = "test_framework",
-    srcs = [
-        "src/lib.rs",
-        "src/test_framework.rs",
-    ],
-    crate_root = "src/lib.rs",
-    visibility = ["//validation/core:__subpackages__"],
-    deps = [
-        "//validation/core:validation",
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:serde_yaml",
-    ],
-)
+should_pass: false
+error_contains: |
+  Missing implementation type_alias for unit design entity:
+  Entity ID          : Engine
+  Member             : Speed
+  Design source file : class_diagram.puml
+  Design source line : 6
+  Required Action    : Implement the member or update the unit design

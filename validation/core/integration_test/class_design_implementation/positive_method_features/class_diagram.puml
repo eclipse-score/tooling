@@ -1,0 +1,17 @@
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+' SPDX-License-Identifier: Apache-2.0
+
+@startuml
+
+struct Engine {
+    + Engine()
+    + ~Engine()
+    + build<Payload>() : bool
+    ' + run(mode: int, payload: int, ...) : bool
+    + select(mode: int) : int
+    + select(mode: int, force: int) : int
+    {static} + Create(name: const char*) : Engine*
+    - reset(reason: int) : void
+}
+
+@enduml

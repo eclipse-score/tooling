@@ -1,0 +1,34 @@
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+' SPDX-License-Identifier: Apache-2.0
+
+@startuml
+
+package vehicle {
+    struct Manufacturer {
+        + id : int
+    }
+
+    enum Mode {
+        Off = 0
+        On = 1
+    }
+
+    class Box<T>
+
+    struct Engine {
+        using Speed = std::uint8_t;
+        + speed : int
+        - status : int
+        {static} + instance_count : int
+        --
+        + start(mode : int) : void
+        + configure(mode : int, force : int) : void
+        + current_speed() : vehicle::Engine::Speed
+        - calibrate() : void
+        {static} + Reset() : void
+    }
+
+    Manufacturer *-- Engine
+}
+
+@enduml

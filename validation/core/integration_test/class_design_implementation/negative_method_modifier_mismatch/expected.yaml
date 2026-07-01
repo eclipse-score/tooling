@@ -1,0 +1,15 @@
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# SPDX-License-Identifier: Apache-2.0
+should_pass: false
+error_contains: |
+  Implementation class data differs from unit design entity:
+  Entity ID             : Engine
+  Field                 : method "stop" modifiers
+  Design value          : []
+  Design source file    : class_diagram.puml
+  Design source line    : 6
+  Implement value       : [Static]
+  Implement source file : validation/core/integration_test/class_design_implementation/negative_method_modifier_mismatch/transport.cpp
+  Implement source line : 6
+  Required Action       : Align the implementation with the unit design or update the unit design
