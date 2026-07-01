@@ -30,6 +30,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "only_attribute.puml"
   }
 }

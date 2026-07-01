@@ -189,6 +189,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "full_features.puml"
   }
 }

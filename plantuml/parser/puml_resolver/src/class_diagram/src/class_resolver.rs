@@ -158,11 +158,11 @@ impl ClassResolver {
     }
 
     fn current_source_file(&self) -> Option<String> {
-        if self.logic.name.is_empty() {
-            None
-        } else {
-            Some(self.logic.name.clone())
-        }
+        self.logic
+            .source_files
+            .first()
+            .filter(|source_file| !source_file.is_empty())
+            .cloned()
     }
 
     fn register_entity_names(&mut self, name: &Name, id: &str) {
@@ -717,7 +717,7 @@ impl DiagramResolver for ClassResolver {
         self.name_map.clear();
 
         self.logic.name = document.name.clone();
-        self.logic.source_files.push(document.name.clone());
+        self.logic.source_files.push(document.source_file.clone());
 
         self.analyze(document)?;
 
@@ -1053,6 +1053,7 @@ mod tests {
 
         let file = ClassUmlFile {
             name: "test".to_string(),
+            source_file: "test.puml".to_string(),
             elements: vec![ClassUmlTopLevel::Types(make_class("User"))],
             relationships: vec![],
         };
@@ -1062,7 +1063,7 @@ mod tests {
         assert_eq!(logic.entities.len(), 1);
         assert_eq!(logic.entities[0].id, "User");
         assert!(logic.entities[0].relationships.is_empty());
-        assert_eq!(logic.entities[0].source_file.as_deref(), Some("test"));
+        assert_eq!(logic.entities[0].source_file.as_deref(), Some("test.puml"));
     }
 
     // ----------------------------

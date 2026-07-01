@@ -41,6 +41,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "color.puml"
   }
 }

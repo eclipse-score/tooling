@@ -57,6 +57,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "class_merge.puml"
   }
 }

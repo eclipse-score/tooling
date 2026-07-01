@@ -115,7 +115,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_cpp_members",
+        "source_file": "class_diagram_cpp_members.puml",
         "source_line": 16,
         "variables": [],
         "relationships": []
@@ -123,7 +123,7 @@
     ],
     "relationships": [],
     "source_files": [
-      "class_diagram_cpp_members"
+      "class_diagram_cpp_members.puml"
     ],
     "version": null
   }

@@ -33,6 +33,7 @@
         },
         "label": null
       }
-    ]
+    ],
+    "source_file": "relationship_mix_inher.puml"
   }
 }

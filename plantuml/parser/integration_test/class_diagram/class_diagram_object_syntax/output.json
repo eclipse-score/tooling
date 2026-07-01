@@ -20,7 +20,7 @@
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_object_syntax",
+        "source_file": "class_diagram_object_syntax.puml",
         "source_line": 20,
         "variables": [],
         "relationships": []
@@ -28,7 +28,7 @@
     ],
     "relationships": [],
     "source_files": [
-      "class_diagram_object_syntax"
+      "class_diagram_object_syntax.puml"
     ],
     "version": null
   }

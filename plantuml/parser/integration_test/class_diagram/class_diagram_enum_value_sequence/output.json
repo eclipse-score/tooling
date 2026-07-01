@@ -36,7 +36,7 @@
             "value": 11
           }
         ],
-        "source_file": "class_diagram_enum_value_sequence",
+        "source_file": "class_diagram_enum_value_sequence.puml",
         "source_line": 17,
         "variables": [],
         "relationships": []
@@ -67,7 +67,7 @@
             "value": 11
           }
         ],
-        "source_file": "class_diagram_enum_value_sequence",
+        "source_file": "class_diagram_enum_value_sequence.puml",
         "source_line": 29,
         "variables": [],
         "relationships": []
@@ -102,7 +102,7 @@
             "value": 2
           }
         ],
-        "source_file": "class_diagram_enum_value_sequence",
+        "source_file": "class_diagram_enum_value_sequence.puml",
         "source_line": 39,
         "variables": [],
         "relationships": []
@@ -110,7 +110,7 @@
     ],
     "relationships": [],
     "source_files": [
-      "class_diagram_enum_value_sequence"
+      "class_diagram_enum_value_sequence.puml"
     ],
     "version": null
   }

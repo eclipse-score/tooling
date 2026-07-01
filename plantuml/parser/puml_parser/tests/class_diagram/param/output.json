@@ -43,6 +43,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "param.puml"
   }
 }

@@ -59,6 +59,7 @@
         },
         "label": "<<DependsOn>>"
       }
-    ]
+    ],
+    "source_file": "stereotype_relationship.puml"
   }
 }

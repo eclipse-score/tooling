@@ -23,6 +23,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "one_class.puml"
   }
 }

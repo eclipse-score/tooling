@@ -276,6 +276,7 @@ pub struct Package {
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct ClassUmlFile {
     pub name: String,
+    pub source_file: String,
     pub elements: Vec<ClassUmlTopLevel>,
     pub relationships: Vec<Relationship>,
 }
@@ -659,6 +660,7 @@ mod tests {
     fn test_class_uml_file_is_empty_for_empty_named_file() {
         let file = ClassUmlFile {
             name: "x".into(),
+            source_file: "x.puml".into(),
             elements: vec![],
             relationships: vec![],
         };

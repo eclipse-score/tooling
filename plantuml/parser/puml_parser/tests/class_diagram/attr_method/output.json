@@ -45,6 +45,7 @@
         }
       }
     ],
-    "relationships": []
+    "relationships": [],
+    "source_file": "attr_method.puml"
   }
 }

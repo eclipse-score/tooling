@@ -1055,7 +1055,14 @@ impl DiagramParser for PumlClassParser {
             );
         }
 
-        let mut uml_file = ClassUmlFile::default();
+        let mut uml_file = ClassUmlFile {
+            source_file: path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_default()
+                .to_string(),
+            ..Default::default()
+        };
         let mut ignored_objects = IgnoredObjectRegistry::default();
         let mut relationships = Vec::new();
 
