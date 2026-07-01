@@ -73,7 +73,7 @@ Supported profiles:
 |---------|--------|--------------|------------------|
 | `architectural-design` | Supported | `ArchitecturalDesignInputs` | Design consistency |
 | `dependable-element` | Supported | `DependableElementInputs` | Bazel architecture consistency |
-| `unit` | Placeholder | not read | none; writes `SKIPPED` |
+| `unit` | Supported | `UnitInputs` | Unit design/implementation consistency |
 
 Profile validators:
 
@@ -85,7 +85,7 @@ Profile validators:
 - `validate_component_class` (pending)
 
 `unit`:
-- placeholder
+- `validate_class_implementation`
 
 Each profile owns its own input schema.
 

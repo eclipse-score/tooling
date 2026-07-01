@@ -16,14 +16,17 @@
 mod architectural_design;
 mod dependable_element;
 mod profile;
+mod unit;
 
 pub use architectural_design::ArchitecturalDesignInputs;
 pub use dependable_element::DependableElementInputs;
 pub use profile::{Profile, ProfileRun};
+pub use unit::UnitInputs;
 
 pub enum ProfileInputs {
     ArchitecturalDesign(ArchitecturalDesignInputs),
     DependableElement(DependableElementInputs),
+    Unit(UnitInputs),
 }
 
 pub fn read_profile_inputs(profile: Profile, path: &str) -> Result<ProfileInputs, String> {
@@ -34,6 +37,7 @@ pub fn read_profile_inputs(profile: Profile, path: &str) -> Result<ProfileInputs
         Profile::DependableElement => {
             profile::read_input_bundle(path).map(ProfileInputs::DependableElement)
         }
+        Profile::Unit => profile::read_input_bundle(path).map(ProfileInputs::Unit),
     }
 }
 
@@ -45,6 +49,7 @@ pub fn run_profile(profile: Profile, inputs: &ProfileInputs) -> Result<ProfileRu
         (Profile::DependableElement, ProfileInputs::DependableElement(inputs)) => {
             dependable_element::run(inputs)
         }
+        (Profile::Unit, ProfileInputs::Unit(inputs)) => unit::run(inputs),
         _ => Err(format!(
             "Input bundle does not match validation profile {}",
             profile.as_str()

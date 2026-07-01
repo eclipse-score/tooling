@@ -24,6 +24,8 @@ pub enum Profile {
     ArchitecturalDesign,
     #[value(name = "dependable-element")]
     DependableElement,
+    #[value(name = "unit")]
+    Unit,
 }
 
 impl Profile {
@@ -31,11 +33,16 @@ impl Profile {
         match self {
             Self::ArchitecturalDesign => "architectural-design",
             Self::DependableElement => "dependable-element",
+            Self::Unit => "unit",
         }
     }
 
     pub fn all() -> &'static [Self] {
-        &[Self::ArchitecturalDesign, Self::DependableElement]
+        &[
+            Self::ArchitecturalDesign,
+            Self::DependableElement,
+            Self::Unit,
+        ]
     }
 }
 
