@@ -13,7 +13,19 @@
 
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
+package(default_visibility = ["//visibility:public"])
+
 sh_binary(
     name = "exec_in_sysroot",
     srcs = ["exec_in_sysroot.sh"],
 )
+
+# Referenced as implicit deps by the exec_in_sysroot / prepare_sysroot rules:
+#   exec_in_sysroot.sh            - shared sysroot launcher (also reused by
+#                                   prepare_sysroot for sysroot_setup_commands).
+#   exec_in_sysroot_launcher.sh.tpl - template for the generated runfiles-aware
+#                                   launcher emitted by exec_in_sysroot.
+exports_files([
+    "exec_in_sysroot.sh",
+    "exec_in_sysroot_launcher.sh.tpl",
+])

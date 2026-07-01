@@ -26,8 +26,8 @@ and PlantUML `-graphvizdot`). This package makes that use hermetic:
    generate the plugin manifest, and repackages the result as a single cached
    archive.
 3. `//third_party/docs_runtime:dot` (an `exec_in_sysroot` rule) extracts the
-   prepared archive at build time and wraps `dot.sh` so that `/usr/bin/dot`
-   inside the sysroot is invoked via `LD_PRELOAD=libfakechroot.so`.
+   prepared archive at build time and wraps `exec_in_sysroot.sh` so that
+   `/usr/bin/dot` inside the sysroot is invoked via `LD_PRELOAD=libfakechroot.so`.
 
 Rules that need graphviz use `//third_party/docs_runtime:dot` as the executable
 and receive its path via the `GRAPHVIZ_DOT` environment variable.
@@ -37,18 +37,17 @@ and receive its path via the `GRAPHVIZ_DOT` environment variable.
 This setup is reproducible but not *fully* hermetic — two host dependencies
 remain:
 
-1. **Host glibc / ld.so ABI compatibility.** `exec_in_sysroot` runs `dot` via
-   `LD_PRELOAD=libfakechroot.so` rather than a real chroot, so the kernel still
-   launches the sysroot's `dot` with the *host* ELF interpreter (`ld.so`), which
-   then loads the sysroot's glibc. The sysroot is pinned to Ubuntu 24.04 (glibc
-   2.39); on a build host whose glibc is older than the sysroot's, `dot` can
-   fail to start with `GLIBC_2.xx not found`. Build hosts therefore need a glibc
-   at least as new as the pinned sysroot.
+1. **Host kernel ABI.** `exec_in_sysroot` runs `dot` through the sysroot's own
+   ELF interpreter (`ld-linux.so`) with `LD_PRELOAD=libfakechroot.so` rather
+   than a real chroot. All shared libraries — including `libc.so.6` — are loaded
+   from the sysroot, so the *host* glibc version does not matter. The one host
+   dependency that remains is the Linux kernel: the sysroot's glibc (Ubuntu
+   24.04, glibc 2.39) requires a kernel at least as new as its minimum supported
+   version, so build hosts need a sufficiently recent kernel.
 2. **Host shell tools.** The sysroot-rework and extraction actions run under a
-   POSIX `sh` and use standard coreutils (`find`, `mktemp`, `chmod`, `rm`),
-   assumed present in the build environment. The generated `dot` launcher itself
-   requires `bash`, because it sources Bazel's `runfiles.bash` library (there is
-   no POSIX-`sh` runfiles equivalent in `@bazel_tools`).
+   POSIX `sh` and use standard coreutils (`mkdir`, `find`, `rm`) plus `tar`,
+   assumed present in the build environment. The generated `dot` launcher and
+   the smoke test are plain POSIX `sh` scripts with an inline runfiles lookup
 
 ## Updating packages
 

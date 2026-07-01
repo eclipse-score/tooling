@@ -229,13 +229,12 @@ executes graphviz from the sysroot itself, so no custom ``LD_LIBRARY_PATH`` /
 **Resolving paths in conf.py**
 
 ``GRAPHVIZ_DOT`` is set as an *execroot-relative* path.  Because Sphinx changes
-the process working directory during the build, these paths would break if
-used as-is.  ``conf.template.py`` therefore:
-
-1. Captures ``_EXECROOT = Path.cwd()`` at **module import time** (cwd is still
-   the execroot at that point).
-2. Calls ``_resolve_execroot_path()`` on the value to prepend ``_EXECROOT``
-   and produce absolute paths.
+the process working directory during the build, it would break if used as-is.
+``conf.template.py`` converts it to a stable absolute path with a single
+``os.path.abspath()`` call at **module import time**, when Bazel guarantees the
+action's cwd still equals the execroot (before Sphinx performs any
+``os.chdir()``).  See :doc:`tooling_architecture` §"Hermetic tool path
+resolution" for the full rationale.
 
 PlantUML
 ~~~~~~~~
@@ -244,40 +243,35 @@ PlantUML
 
 PlantUML is fetched from **Maven Central** via ``rules_jvm_external``
 (declared in ``MODULE.bazel``).  It is wrapped as a ``java_binary`` at
-``//tools/sphinx:plantuml`` in ``tools/sphinx/BUILD``.
+``//third_party/plantuml:plantuml`` in ``third_party/plantuml/BUILD``.
 
-The PlantUML target is added to the sphinx-build binary (``raw_build``) as a
-``data`` dependency, making it a **runfile** of that binary — not an
-independent action input.
+The ``sphinx_module`` rule passes the target as an action **tool**
+(``attr.label(executable = True, cfg = "exec")``), exactly like the hermetic
+graphviz dot.  It is not a runfile of the sphinx-build binary.
 
-**Where the file lands (runfiles-relative path)**
+**Wiring into the Sphinx action**
 
-.. code-block:: text
+The Bazel rule sets one variable (mirroring ``GRAPHVIZ_DOT``):
 
-   {sphinx_build_binary}.runfiles/
-     {repo_name}/tools/sphinx/plantuml   ← wrapper script (absolute path via Runfiles API)
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-The ``{repo_name}`` prefix depends on the Bzlmod configuration:
+   * - Env var
+     - Content
+   * - ``PLANTUML_BIN``
+     - Execroot-relative path to the ``plantuml`` ``java_binary`` launcher
 
-- ``_main`` — when score_tooling is the root module (e.g.\ building within
-  the score-tooling repo itself)
-- ``score_tooling`` / ``score_tooling+`` / ``score_tooling~`` — when
-  score_tooling is an external dependency of another project
+``PLANTUML_BIN_RLOC`` (the ``short_path`` rlocation key) is also set, but is
+used only for diagnostic logging.
 
-**Discovering the binary in conf.py**
+**Resolving the path in conf.py**
 
-Because the repo name varies, ``conf.template.py`` uses two-stage discovery:
-
-1. **Manifest scan (primary):** Read ``RUNFILES_MANIFEST_FILE`` and search
-   for any entry whose runfiles path ends in ``/tools/sphinx/plantuml``.  This
-   requires no knowledge of the repo name prefix.
-2. **Runfiles API fallback:** If no manifest file is available (directory-based
-   runfiles trees on some platforms), fall back to
-   ``Runfiles.Create().Rlocation()`` with a list of known repo-name candidates
-   (``_main``, ``score_tooling``, ``score_tooling+``, …).
-
-The Runfiles API returns an **absolute path** directly, so no
-``_resolve_execroot_path()`` is required for PlantUML.
+``PLANTUML_BIN`` is an *execroot-relative* path.  As with ``GRAPHVIZ_DOT``,
+``conf.template.py`` converts it to an absolute path with a single
+``os.path.abspath()`` call — Bazel guarantees the action's cwd equals the
+execroot when ``conf.py`` is imported, before Sphinx performs any
+``os.chdir()``.
 
 **Connecting PlantUML to Graphviz**
 
@@ -289,6 +283,7 @@ command:
    plantuml = f"{plantuml_path} -graphvizdot {graphviz_dot}"
 
 The ``-graphvizdot`` flag makes PlantUML use the hermetic ``dot`` binary for
-diagram layout instead of its bundled Java port (Smetana).  This ensures that
-the graphviz version is identical for both ``sphinx.ext.graphviz`` directives
-and PlantUML diagrams.
+diagram layout instead of its bundled Java port (Smetana).  This ensures the
+graphviz version is identical for both ``sphinx.ext.graphviz`` directives and
+PlantUML diagrams.  There is no Smetana fallback: the hermetic dot is the
+single rendering path.

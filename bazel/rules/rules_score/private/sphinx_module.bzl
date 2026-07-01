@@ -79,6 +79,12 @@ sphinx_rule_attrs = dict(
             executable = True,
             cfg = "exec",
         ),
+        "_fta_metamodel": attr.label(
+            default = Label("//plantuml:fta_metamodel"),
+            allow_files = True,
+            doc = "Directory containing fta_metamodel.puml, passed to PlantUML via " +
+                  "-Dplantuml.include.path so FTA diagrams can resolve !include fta_metamodel.puml.",
+        ),
     },
     **VERBOSITY_ATTR
 )
@@ -125,8 +131,10 @@ def _score_needs_impl(ctx):
     _graphviz_rloc = _gv_short[3:] if _gv_short.startswith("../") else ctx.workspace_name + "/" + _gv_short
     _pl_short = ctx.executable._plantuml.short_path
     _plantuml_rloc = _pl_short[3:] if _pl_short.startswith("../") else ctx.workspace_name + "/" + _pl_short
+    fta_metamodel_files = ctx.files._fta_metamodel
+    fta_metamodel_dir = fta_metamodel_files[0].dirname if fta_metamodel_files else ""
     ctx.actions.run(
-        inputs = needs_inputs,
+        inputs = needs_inputs + fta_metamodel_files,
         outputs = [needs_output],
         arguments = needs_args,
         env = {
@@ -134,6 +142,7 @@ def _score_needs_impl(ctx):
             "PLANTUML_BIN_RLOC": _plantuml_rloc,
             "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
             "GRAPHVIZ_DOT_RLOC": _graphviz_rloc,
+            "FTA_METAMODEL_DIR": fta_metamodel_dir,
         },
         progress_message = "Generating needs.json for: %s" % ctx.label.name,
         executable = sphinx_toolchain.sphinx.files_to_run.executable,
@@ -274,15 +283,18 @@ def _score_html_impl(ctx):
     _graphviz_rloc = _gv_short[3:] if _gv_short.startswith("../") else ctx.workspace_name + "/" + _gv_short
     _pl_short = ctx.executable._plantuml.short_path
     _plantuml_rloc = _pl_short[3:] if _pl_short.startswith("../") else ctx.workspace_name + "/" + _pl_short
+    fta_metamodel_files = ctx.files._fta_metamodel
+    fta_metamodel_dir = fta_metamodel_files[0].dirname if fta_metamodel_files else ""
     action_env = {
         "PLANTUML_BIN": ctx.executable._plantuml.path,
         "PLANTUML_BIN_RLOC": _plantuml_rloc,
         "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
         "GRAPHVIZ_DOT_RLOC": _graphviz_rloc,
+        "FTA_METAMODEL_DIR": fta_metamodel_dir,
     }
 
     ctx.actions.run(
-        inputs = html_inputs,
+        inputs = html_inputs + fta_metamodel_files,
         outputs = [sphinx_html_output],
         arguments = html_args + [args],
         env = action_env,

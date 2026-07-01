@@ -382,7 +382,7 @@ The rlocation keys (``*_RLOC``) are computed once at analysis time:
        else ctx.workspace_name + "/" + _gv_short
    )
 
-This matches the Bazel bash-runfiles convention used internally by the
+This matches the Bazel runfiles convention used internally by the
 ``exec_in_sysroot`` wrapper itself (``rlocation
 '<workspace>/third_party/docs_runtime/dot'``).
 
@@ -428,8 +428,8 @@ Two reasons make this impractical:
    Passing that symlink path to a subprocess means ``$0`` is the symlink, so
    ``$0.runfiles/`` does not exist and the wrapper's runfiles bootstrap falls
    back to ``RUNFILES_DIR`` — which still points to the sphinx binary's
-   runfiles.  The wrapper fails to find ``SYSROOT_DIR``, ``FAKECHROOT_WRAPPER``,
-   and ``EXECUTABLE_FILE`` and exits with an error.
+   runfiles.  The wrapper fails to find ``SYSROOT_DIR`` and ``FAKECHROOT_WRAPPER``
+   and exits with an error.
 
 The ``os.path.abspath()`` approach avoids both issues: it yields the real
 binary path (not a symlink in a runfiles forest), so ``$0.runfiles/``
@@ -438,36 +438,37 @@ bootstrapping in the wrapper works correctly.
 The exec_in_sysroot wrapper's own runfiles bootstrap
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The generated wrapper produced by ``exec_in_sysroot`` contains the standard
-Bazel bash-runfiles initialisation block:
+The generated wrapper produced by ``exec_in_sysroot`` is a POSIX-``sh`` script
+that contains an inline runfiles initialisation block (no ``bash`` and no
+``runfiles.bash`` dependency):
 
-.. code-block:: bash
+.. code-block:: sh
 
-   if [[ ! -d "${RUNFILES_DIR:-/dev/null}" && \
-         ! -f "${RUNFILES_MANIFEST_FILE:-/dev/null}" ]]; then
-     if   [[ -f "$0.runfiles_manifest" ]]; then
-       export RUNFILES_MANIFEST_FILE="$0.runfiles_manifest"
-     elif [[ -f "$0.runfiles/MANIFEST" ]]; then
-       export RUNFILES_MANIFEST_FILE="$0.runfiles/MANIFEST"
-     elif [[ -f "$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash" ]]; then
-       export RUNFILES_DIR="$0.runfiles"
+   if [ ! -d "${RUNFILES_DIR:-/dev/null}" ] && \
+      [ ! -f "${RUNFILES_MANIFEST_FILE:-/dev/null}" ]; then
+     if [ -f "$0.runfiles_manifest" ]; then
+       RUNFILES_MANIFEST_FILE="$0.runfiles_manifest"; export RUNFILES_MANIFEST_FILE
+     elif [ -f "$0.runfiles/MANIFEST" ]; then
+       RUNFILES_MANIFEST_FILE="$0.runfiles/MANIFEST"; export RUNFILES_MANIFEST_FILE
+     elif [ -d "$0.runfiles" ]; then
+       RUNFILES_DIR="$0.runfiles"; export RUNFILES_DIR
      fi
    fi
 
 Because ``graphviz_dot`` is the **absolute** path to the real binary (not a
 symlink), ``$0`` equals that absolute path, and ``$0.runfiles/`` is the actual
-companion runfiles directory Bazel created for the binary.  The block finds
-``bazel_tools/tools/bash/runfiles/runfiles.bash`` there and correctly
-bootstraps ``RUNFILES_DIR`` to the dot wrapper's own runfiles — regardless of
-what ``RUNFILES_DIR`` the parent process (Sphinx/Python) has set in its
-environment.
+companion runfiles directory Bazel created for the binary.  The block resolves
+``RUNFILES_DIR`` (or ``RUNFILES_MANIFEST_FILE``) from ``$0.runfiles/``, and a
+small inline ``rlocation`` helper then looks up ``SYSROOT_DIR`` and the
+fakechroot wrapper — regardless of what ``RUNFILES_DIR`` the parent process
+(Sphinx/Python) has set in its environment.
 
-PlantUML and the Smetana fallback
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+PlantUML and the hermetic dot
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``sphinxcontrib.plantuml`` invokes PlantUML via
-``shlex.split(app.config.plantuml)``.  When the hermetic dot is available the
-``plantuml`` config value is:
+``shlex.split(app.config.plantuml)``.  The ``plantuml`` config value always
+points at the hermetic dot (there is no fallback):
 
 .. code-block:: text
 
