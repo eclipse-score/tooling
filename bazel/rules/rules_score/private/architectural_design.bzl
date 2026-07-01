@@ -53,10 +53,13 @@ def _run_puml_parser(ctx, puml_file):
     lobster_output = ctx.actions.declare_file(
         "{}/{}.lobster".format(ctx.label.name, file_stem),
     )
+    json_output = ctx.actions.declare_file(
+        "{}/{}.logic.ast.json".format(ctx.label.name, file_stem),
+    )
 
     ctx.actions.run(
         inputs = [puml_file],
-        outputs = [fbs_output, lobster_output],
+        outputs = [fbs_output, lobster_output, json_output],
         executable = ctx.executable._puml_parser,
         arguments = [
             "--file",
@@ -66,12 +69,14 @@ def _run_puml_parser(ctx, puml_file):
             "--lobster-output-dir",
             lobster_output.dirname,
             "--log-level",
-            get_log_level(ctx),
+            # gToDo: log level needs to be debug for ast.json to be generated
+            "debug",
+            # get_log_level(ctx),
         ],
         progress_message = "Parsing PlantUML diagram: %s" % puml_file.short_path,
     )
 
-    return fbs_output, lobster_output
+    return fbs_output, lobster_output, json_output
 
 def _parse_puml_diagrams(ctx, files):
     """Run the PlantUML parser on all .puml/.plantuml files in a list.
@@ -279,6 +284,38 @@ _architectural_design = rule(
     doc = "Collects architectural design documents and diagrams for S-CORE process compliance. " +
           "Automatically parses PlantUML files to produce FlatBuffers binary representations.",
     attrs = _architectural_design_attrs(),
+)
+def _parse_puml_diagrams_impl(ctx):
+    print(ctx.attr.files)
+    print(ctx.files.files[0])
+    # gToDo: shaky mit [0]
+    fbs_output, lobster_output, json_output = _run_puml_parser(ctx, ctx.files.files[0])
+    return [
+        DefaultInfo(
+            files = depset([fbs_output, lobster_output, json_output]),
+        ),
+    ]
+
+parse_puml_diagrams = rule(
+    implementation = _parse_puml_diagrams_impl,
+    doc = "Helper rule to run the PlantUML parser on a list of .puml files and produce FlatBuffers binaries and lobster files.",
+    attrs = {
+        "files": attr.label(
+            mandatory = True,
+            doc = "List of .puml/.plantuml files to parse",
+            allow_single_file = True,
+        ),
+        "_puml_parser": attr.label(
+            default = Label("@score_tooling//plantuml/parser:parser"),
+            executable = True,
+            cfg = "exec",
+            doc = "PlantUML parser tool that generates FlatBuffers from .puml files",
+        ),
+        "_verbosity": attr.label(
+            default = Label("//bazel/rules/rules_score:verbosity"),
+            doc = "Verbosity level build setting (warn/info/debug).",
+        ),
+    },
 )
 
 # ============================================================================
