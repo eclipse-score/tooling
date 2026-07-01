@@ -14,6 +14,7 @@
 //! Validator entrypoints for architecture checks.
 
 mod bazel_component_validator;
+mod class_design_implementation_validator;
 mod component_internal_api_validator;
 mod component_sequence_validator;
 mod sequence_internal_api_validator;
@@ -24,6 +25,7 @@ mod shared;
 pub(crate) mod fixtures;
 
 pub use bazel_component_validator::validate_bazel_component;
+pub use class_design_implementation_validator::validate_class_design_implementation;
 pub use component_internal_api_validator::validate_component_internal_api;
 pub use component_sequence_validator::validate_component_sequence;
 pub use sequence_internal_api_validator::validate_sequence_internal_api;

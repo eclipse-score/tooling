@@ -13,14 +13,66 @@
 
 //! Models for class-diagram and internal-API FlatBuffer inputs
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
-use class_diagram::{ClassDiagram as ClassDiagramInput, EntityType};
+use class_diagram::{ClassDiagram as ClassDiagramInput, EntityType, SimpleEntity};
 
 use crate::ValidationResult;
 
 /// Collection of class diagrams loaded from one or more FlatBuffer files.
 pub type ClassDiagramInputs = Vec<ClassDiagramInput>;
+
+/// Class-like entities from one or more class diagrams, keyed by lower-case id.
+pub struct ClassEntityIndex {
+    entities: BTreeMap<String, SimpleEntity>,
+}
+
+impl ClassEntityIndex {
+    /// Build an index from class diagrams for class implementation validation.
+    pub fn build_index(diagrams: &[ClassDiagramInput], result: &mut ValidationResult) -> Self {
+        let mut entities = BTreeMap::new();
+
+        for diagram in diagrams {
+            for entity in &diagram.entities {
+                let indexed_entity = entity.clone();
+
+                let key = indexed_entity.id.to_lowercase();
+                if let Some(prev) = entities.get(&key) {
+                    result.add_failure(format!(
+                        "Duplicate class entity in validation input:\n\
+                           Key             : {key}\n\
+                           First location  : {}\n\
+                           Second location : {}",
+                        entity_location(prev),
+                        entity_location(&indexed_entity)
+                    ));
+                } else {
+                    entities.insert(key, indexed_entity);
+                }
+            }
+        }
+
+        Self { entities }
+    }
+
+    pub fn entities(&self) -> impl Iterator<Item = &SimpleEntity> + '_ {
+        self.entities.values()
+    }
+
+    pub fn find_by_id(&self, id: &str) -> Option<&SimpleEntity> {
+        self.entities.get(&id.to_lowercase())
+    }
+}
+
+fn entity_location(entity: &SimpleEntity) -> String {
+    let source_file = entity.source_file.as_deref().unwrap_or("unknown-file");
+    let source_line = entity
+        .source_line
+        .map(|line| line.to_string())
+        .unwrap_or_else(|| "unknown-line".to_string());
+
+    format!("{source_file}:{source_line}")
+}
 
 /// Indexed internal-API data prepared for interface and method validators.
 pub struct InternalApiInterface {
@@ -80,6 +132,66 @@ mod tests {
             template_parameters: None,
             modifiers: Vec::new(),
         }
+    }
+
+    fn entity(id: &str, source_file: Option<&str>, source_line: Option<u32>) -> SimpleEntity {
+        SimpleEntity {
+            id: id.to_string(),
+            name: id.rsplit('.').next().unwrap_or(id).to_string(),
+            enclosing_namespace_id: None,
+            entity_type: EntityType::Class,
+            type_aliases: Vec::new(),
+            variables: Vec::new(),
+            methods: Vec::new(),
+            template_parameters: None,
+            enum_literals: Vec::new(),
+            relationships: Vec::new(),
+            source_file: source_file.map(str::to_string),
+            source_line,
+        }
+    }
+
+    #[test]
+    fn class_entity_index_reports_duplicate_source_locations() {
+        let diagrams = vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities: vec![
+                entity("Unit.Sample", Some("design_a.puml"), Some(12)),
+                entity("unit.sample", Some("design_b.puml"), Some(34)),
+            ],
+            relationships: Vec::new(),
+            source_files: Vec::new(),
+            version: None,
+        }];
+
+        let mut result = ValidationResult::default();
+        let _index = ClassEntityIndex::build_index(&diagrams, &mut result);
+
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0].contains("Key             : unit.sample"));
+        assert!(result.failures[0].contains("First location  : design_a.puml:12"));
+        assert!(result.failures[0].contains("Second location : design_b.puml:34"));
+    }
+
+    #[test]
+    fn class_entity_index_reports_unknown_duplicate_source_locations() {
+        let diagrams = vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities: vec![
+                entity("Unit.Sample", None, Some(12)),
+                entity("unit.sample", Some("design_b.puml"), None),
+            ],
+            relationships: Vec::new(),
+            source_files: Vec::new(),
+            version: None,
+        }];
+
+        let mut result = ValidationResult::default();
+        let _index = ClassEntityIndex::build_index(&diagrams, &mut result);
+
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0].contains("First location  : unknown-file:12"));
+        assert!(result.failures[0].contains("Second location : design_b.puml:unknown-line"));
     }
 
     #[test]
