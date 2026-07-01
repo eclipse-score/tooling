@@ -14,8 +14,7 @@
 @startuml unit_2_class_diagram
 
 namespace unit_1 {
-    class Foo {
-        {final}
+    class Foo <<final>>{
         --
         + GetNumber() : uint8_t
         + SetNumber(value : uint8_t) : void
@@ -23,8 +22,7 @@ namespace unit_1 {
 }
 
 namespace unit_2 {
-    class Bar {
-        {final}
+    class Bar <<final>>{
         --
         - foo_ : unique_ptr<unit_1::Foo>
         --

@@ -16,6 +16,7 @@
 PROFILES = struct(
     ARCHITECTURAL_DESIGN = "architectural-design",
     DEPENDABLE_ELEMENT = "dependable-element",
+    UNIT = "unit",
 )
 
 VALIDATION_ATTRS = {

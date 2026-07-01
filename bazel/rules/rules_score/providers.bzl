@@ -79,6 +79,8 @@ UnitInfo = provider(
         "unit_design": "Depset of design artifact files (PlantUML diagrams, RST documents, etc.).",
         "unit_design_static_fbs": "Depset of FlatBuffers binaries generated from static unit_design diagrams.",
         "unit_design_dynamic_fbs": "Depset of FlatBuffers binaries generated from dynamic unit_design diagrams.",
+        "implementation_class_fbs": "Depset of FlatBuffers binaries generated from implementation class diagrams.",
+        "implementation_sequence_fbs": "Depset of FlatBuffers binaries generated from implementation sequence diagrams.",
         "implementation": "Depset of implementation targets (cc_library, rust_library, etc.).",
         "tests": "Depset of test targets (cc_test, rust_test, etc.).",
         "dependent_labels": "Depset of Labels that this unit's implementation depends on transitively (used for certification scope validation).",
