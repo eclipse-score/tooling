@@ -237,7 +237,7 @@ _include_flag = (
     else ""
 )
 plantuml = f"{plantuml_path}{_include_flag} -Playout=smetana"
-plantuml_output_format = "svg_obj"
+plantuml_output_format = "svg_img"
 
 # ---------------------------------------------------------------------------
 # Graphviz (sphinx.ext.graphviz)
