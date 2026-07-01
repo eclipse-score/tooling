@@ -1,0 +1,18 @@
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+' SPDX-License-Identifier: Apache-2.0
+
+@startuml
+
+skinparam classAttributeIconSize 0
+
+struct Engine {
+    + cylinders : int
+    + displacement : double
+    + speed : uint8_t
+    + manufacturer : char[32]
+    + model : const char *
+    {static} + instance_count : int
+    - status : int
+}
+
+@enduml

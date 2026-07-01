@@ -17,14 +17,18 @@ load(
     "//bazel/rules/rules_score:providers.bzl",
     "ArchitecturalDesignInfo",
     "UnitDesignInfo",
+    "UnitInfo",
 )
 
 def _collect_fbs_files(deps):
     files_by_category = {
         "component": [],
-        "class": [],
         "internal_api": [],
         "sequence": [],
+        "unit_design_class": [],
+        "unit_design_sequence": [],
+        "unit_implementation_class": [],
+        "unit_implementation_sequence": [],
     }
 
     for dep in deps:
@@ -41,8 +45,16 @@ def _collect_fbs_files(deps):
             class_files = dep[UnitDesignInfo].static.to_list()
             unit_dynamic_files = dep[UnitDesignInfo].dynamic.to_list()
 
-            files_by_category["class"].extend(class_files)
-            files_by_category["sequence"].extend(unit_dynamic_files)
+            files_by_category["unit_design_class"].extend(class_files)
+            files_by_category["unit_design_sequence"].extend(unit_dynamic_files)
+
+        if UnitInfo in dep:
+            files_by_category["unit_implementation_class"].extend(
+                dep[UnitInfo].implementation_class_fbs.to_list(),
+            )
+            files_by_category["unit_implementation_sequence"].extend(
+                dep[UnitInfo].implementation_sequence_fbs.to_list(),
+            )
 
     return files_by_category
 
@@ -77,9 +89,12 @@ def _provider_fbs_fixture_bundle_impl(ctx):
             generated.append(out)
 
     _materialize_category("component")
-    _materialize_category("class")
     _materialize_category("internal_api")
     _materialize_category("sequence")
+    _materialize_category("unit_design_class")
+    _materialize_category("unit_design_sequence")
+    _materialize_category("unit_implementation_class")
+    _materialize_category("unit_implementation_sequence")
 
     return [DefaultInfo(files = depset(generated))]
 

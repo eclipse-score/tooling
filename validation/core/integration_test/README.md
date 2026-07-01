@@ -15,25 +15,23 @@
 
 End-to-end tests for the `validation_cli` binary. Each test case feeds real
 PlantUML diagrams through the full pipeline — PlantUML parser → FlatBuffers
-binary → validation CLI — and asserts the outcome against a JSON fixture.
+binary → validation CLI — and asserts the outcome against a JSON/YAML fixture.
 
 ## Directory structure
 
 ```
 integration_test/
-├── BUILD                        # test binaries + aggregated filegroups
+├── BUILD                        # shared Rust test framework library
 ├── puml_fixture.bzl             # Starlark rule: provider → category dirs
-├── component_sequence/          # ComponentSequence cases
+├── bazel_component/             # BazelComponent suite, cases, and test binary
+├── component_class/             # ComponentClass suite, cases, and test binary
+├── component_sequence/          # ComponentSequence suite, cases, and test binary
 ├── component_internal_api/      # ComponentInternalApi cases
 ├── sequence_internal_api/       # SequenceInternalApi cases
-├── src/
+├── class_design_implementation/ # ClassDesignImplementation suite, cases, and test binary
+├── src/                         # Rust crate sources for shared test_framework
 │   ├── lib.rs                   # re-exports from test_framework
-│   ├── test_framework.rs        # shared helpers (CLI runner, assertions)
-│   ├── bazel_component_suite.rs # tests for BazelComponent validator
-│   ├── component_class_suite.rs # tests for ComponentClass validator
-│   ├── component_sequence_suite.rs # tests for ComponentSequence validator
-│   ├── component_internal_api_suite.rs # tests for ComponentInternalApi validator
-│   └── sequence_internal_api_suite.rs # tests for SequenceInternalApi validator
+│   └── test_framework.rs        # shared helpers (CLI runner, assertions)
 ```
 
 ## How it works
@@ -42,15 +40,16 @@ The framework has three layers.
 
 ### Layer 1 — PlantUML parsing (Bazel rules)
 
-Each test case BUILD calls the real production rules (`architectural_design`,
-`unit_design`) on its `.puml` source files. Bazel runs the `puml_parser` binary
-as a cached action and stores the result as a FlatBuffers binary (`.fbs.bin`).
-The output is exposed through providers:
+Each test case BUILD calls the real production rules, such as
+`architectural_design`, `unit_design`, or `unit`, on its source files. Bazel
+runs the parser actions and stores the result as FlatBuffers binaries
+(`.fbs.bin`). The output is exposed through providers:
 
 | Rule | Provider | Fields used |
 |------|----------|-------------|
 | `architectural_design` | `ArchitecturalDesignInfo` | `static` (component), `dynamic` (sequence), `internal_api` (internal API) |
-| `unit_design` | `UnitDesignInfo` | `static` (class), `dynamic` (sequence) |
+| `unit_design` | `UnitDesignInfo` | `static` (unit design class), `dynamic` (unit design sequence) |
+| `unit` | `UnitInfo` | `implementation_class_fbs`, `implementation_sequence_fbs` |
 
 ### Layer 2 — Fixture preparation (`puml_fixture.bzl`)
 
@@ -58,38 +57,47 @@ The `provider_fbs_fixture_bundle` rule reads the provider fields from its `deps`
 and creates a predictable directory layout that the Rust test binary can
 navigate at runtime:
 
-```
-fbs/
-├── component/    ← from ArchitecturalDesignInfo.static
-├── class/        ← from UnitDesignInfo.static
-├── internal_api/ ← from ArchitecturalDesignInfo.internal_api, when present
-└── sequence/     ← from ArchitecturalDesignInfo.dynamic + UnitDesignInfo.dynamic
-```
+| Category | Source provider field |
+|----------|-----------------------|
+| `component/` | `ArchitecturalDesignInfo.static` |
+| `internal_api/` | `ArchitecturalDesignInfo.internal_api`, when present |
+| `sequence/` | `ArchitecturalDesignInfo.dynamic` |
+| `unit_design_class/` | `UnitDesignInfo.static` |
+| `unit_design_sequence/` | `UnitDesignInfo.dynamic` |
+| `unit_implementation_class/` | `UnitInfo.implementation_class_fbs` |
+| `unit_implementation_sequence/` | `UnitInfo.implementation_sequence_fbs` |
 
 Each file in these directories is a **symlink** to the canonical `.fbs.bin`
 produced in layer 1. No copying or re-parsing occurs; the underlying Bazel
 action cache entry is reused.
 
 A `filegroup` named `case_data` then bundles the `fbs` target together with the
-static fixture files (`architecture.json`, `expected.json`), making the whole
-case available as a single Bazel dependency.
+static fixture files (`architecture.json`, `expected.json` or `expected.yaml`),
+making the whole case available as a single Bazel dependency.
 
 For `ComponentInternalApi` and `SequenceInternalApi` suites, cases include
 `internal_api/*.fbs.bin`, and the suite forwards those files to the CLI as
 the `internal_api_diagrams` input bundle field.
 
+`ClassDesignImplementation` cases use both `unit_design` and `unit`. The
+`unit_design` rule produces design class diagrams under `unit_design_class/`,
+while the `unit` rule runs the C++ parser for implementation targets and exposes
+their class diagrams under `unit_implementation_class/`.
+
 ### Layer 3 — CLI invocation (Rust test binary)
 
-There is one `rust_test` binary per validator. Each binary lists the relevant
-`case_data` filegroups and the `validation_cli` binary in its `data` attribute
-so that Bazel places them under `TEST_SRCDIR` at test time.
+There is one `rust_test` binary per suite, defined in that suite's `BUILD` file.
+Each binary lists the relevant suite-level `*_test_data` filegroup and the
+`validation_cli` binary in its `data` attribute so that Bazel places them under
+`TEST_SRCDIR` at test time.
 
 The shared `test_framework` library provides the following helpers:
 
 | Helper | Description |
 |--------|-------------|
 | `collect_case_fbs_files(suite, case, category)` | Returns sorted absolute paths to every `.fbs.bin` in a category subdirectory |
-| `load_expected_fixture(suite, case)` | Deserialises `expected.json` into `ExpectedFixture` |
+| `load_expected_fixture(suite, case)` | Deserializes `expected.json` into `ExpectedFixture` |
+| `load_expected_yaml_fixture(suite, case)` | Deserializes `expected.yaml` into `ExpectedFixture` |
 | `run_validation_profile(case_name, profile, input_bundle)` | Writes a profile-owned input bundle, spawns the CLI binary, and returns `CliRunResult` |
 | `assert_cli_result(case, expected, result)` | Asserts exit code and checks each string in `error_contains` against the log |
 
@@ -109,17 +117,17 @@ design/component_diagram.fbs.bin        ← in ArchitecturalDesignInfo.static
         │  provider_fbs_fixture_bundle rule
         │  → symlink action (zero cost)
         ▼
-fbs/component/component_diagram.fbs.bin ← symlink → file above
+component/component_diagram.fbs.bin     ← symlink → file above
 
         │  filegroup case_data
         │  → bundles fbs + architecture.json + expected.json
         ▼
-bazel_component_test_data               ← aggregated across all cases
+//.../bazel_component:bazel_component_test_data ← aggregated across all cases
 
         │  rust_test data = [...]
         │  → placed under TEST_SRCDIR at test execution
         ▼
-bazel_component_integration_test
+//.../bazel_component:integration_test
         │
         │  collect_case_fbs_files()  → absolute paths to .fbs.bin files
         │  load_expected_fixture()   → ExpectedFixture
@@ -154,6 +162,17 @@ the validator under test.
 └── expected.json
 ```
 
+### ClassDesignImplementation cases
+
+```
+<case>/
+├── BUILD                 # unit_design + implementation cc_library + unit + provider_fbs_fixture_bundle + case_data
+├── class_diagram.puml    # unit design class diagram
+├── transport.cpp         # or other implementation source(s)
+├── transport.h           # optional implementation header(s)
+└── expected.yaml
+```
+
 ### ComponentSequence cases
 
 ```
@@ -185,7 +204,7 @@ the validator under test.
 └── expected.json
 ```
 
-### `expected.json` format
+### `expected.json` / `expected.yaml` format
 
 ```json
 {
@@ -197,11 +216,13 @@ the validator under test.
 | Field | Type | Description |
 |-------|------|-------------|
 | `should_pass` | `bool` | Whether the CLI must exit with code 0 |
-| `error_contains` | `string[]` | Substrings that must appear in the CLI log on failure. Empty for positive cases. |
+| `error_contains` | `string` or `string[]` | Substrings that must appear in the CLI log on failure. Empty for positive cases. |
 
 The framework uses **substring matching** for `error_contains`, so entries do
 not need to reproduce exact formatting — just enough context to uniquely
-identify the error.
+identify the error. Existing suites use `expected.json`; the
+`class_design_implementation` suite uses `expected.yaml` so larger multi-line
+error fragments stay readable.
 
 ## Running the tests
 
@@ -214,11 +235,12 @@ bazel test //validation/core/integration_test/...
 Run a single suite:
 
 ```bash
-bazel test //validation/core/integration_test:bazel_component_integration_test
-bazel test //validation/core/integration_test:component_class_integration_test
-bazel test //validation/core/integration_test:component_sequence_integration_test
-bazel test //validation/core/integration_test:component_internal_api_integration_test
-bazel test //validation/core/integration_test:sequence_internal_api_integration_test
+bazel test //validation/core/integration_test/bazel_component:integration_test
+bazel test //validation/core/integration_test/component_class:integration_test
+bazel test //validation/core/integration_test/component_sequence:integration_test
+bazel test //validation/core/integration_test/component_internal_api:component_internal_api_integration_test
+bazel test //validation/core/integration_test/sequence_internal_api:sequence_internal_api_integration_test
+bazel test //validation/core/integration_test/class_design_implementation:integration_test
 ```
 
 ## Adding a new test case
@@ -231,8 +253,8 @@ bazel test //validation/core/integration_test:sequence_internal_api_integration_
 2. Add the `.puml` source file(s) and — for `bazel_component` — an
    `architecture.json`.
 
-3. Write `expected.json`. For negative cases add the error substrings you
-   expect to see in the CLI log.
+3. Write `expected.json` or `expected.yaml`. For negative cases add the error
+  substrings you expect to see in the CLI log.
 
 4. Create a `BUILD` file following the pattern of an existing case in the same
    suite.
@@ -240,9 +262,11 @@ bazel test //validation/core/integration_test:sequence_internal_api_integration_
 5. Add the new `case_data` target to the matching filegroup in
   [`BUILD`](BUILD) (`bazel_component_test_data`,
   `component_class_test_data`, `component_sequence_test_data`,
-  `component_internal_api_test_data`, or `sequence_internal_api_test_data`).
+  `component_internal_api_test_data`, `sequence_internal_api_test_data`,
+  or `class_design_implementation_test_data`).
 
-6. Add a `#[test]` function in the matching suite file under `src/`.
+6. Add a `#[test]` function in the matching suite file, such as
+   `bazel_component_suite.rs` or `class_design_implementation_suite.rs`.
 
 ## Caching behaviour
 
@@ -253,5 +277,6 @@ bazel test //validation/core/integration_test:sequence_internal_api_integration_
   cache key for a test case only covers the underlying `puml_parser` action.
 - Changing one test case's `.puml` only invalidates actions for that case; the
   other cases and test binaries stay cached.
-- The three test binaries are independent: touching a sequence test case does
-  not invalidate the component or class test binary.
+- The suite test binaries are independent: touching a sequence test case does
+  not invalidate the Bazel component, component class, or class design
+  implementation test binaries.

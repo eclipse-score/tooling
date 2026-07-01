@@ -11,20 +11,28 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_test")
 
-rust_library(
-    name = "test_framework",
+filegroup(
+    name = "component_internal_api_test_data",
     srcs = [
-        "src/lib.rs",
-        "src/test_framework.rs",
+        "//validation/core/integration_test/component_internal_api/negative_interface_missing_from_internal_api:case_data",
+        "//validation/core/integration_test/component_internal_api/positive_interface_match:case_data",
     ],
-    crate_root = "src/lib.rs",
-    visibility = ["//validation/core:__subpackages__"],
+)
+
+rust_test(
+    name = "component_internal_api_integration_test",
+    srcs = ["component_internal_api_suite.rs"],
+    crate_root = "component_internal_api_suite.rs",
+    data = [
+        ":component_internal_api_test_data",
+        "//validation/core:validation_cli",
+    ],
     deps = [
         "//validation/core:validation",
+        "//validation/core/integration_test:test_framework",
         "@crates//:serde",
         "@crates//:serde_json",
-        "@crates//:serde_yaml",
     ],
 )

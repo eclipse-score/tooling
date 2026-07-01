@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
@@ -24,9 +24,31 @@ pub struct ValidationIntegrationCase {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ExpectedFixture {
     pub should_pass: bool,
+    #[serde(default, deserialize_with = "deserialize_error_contains")]
     pub error_contains: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum ExpectedErrorContains {
+    Single(String),
+    Multiple(Vec<String>),
+}
+
+fn deserialize_error_contains<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let expected_error_contains = Option::<ExpectedErrorContains>::deserialize(deserializer)?;
+
+    Ok(match expected_error_contains {
+        Some(ExpectedErrorContains::Single(fragment)) => vec![fragment],
+        Some(ExpectedErrorContains::Multiple(fragments)) => fragments,
+        None => Vec::new(),
+    })
 }
 
 pub struct CliRunResult {
@@ -95,6 +117,14 @@ pub fn load_expected_fixture(suite_dir: &str, case_dir: &str) -> ExpectedFixture
     ));
 
     serde_json::from_str(&expected_json).expect("failed to parse expected fixture")
+}
+
+pub fn load_expected_yaml_fixture(suite_dir: &str, case_dir: &str) -> ExpectedFixture {
+    let expected_yaml = read_case_file(&format!(
+        "validation/core/integration_test/{suite_dir}/{case_dir}/expected.yaml"
+    ));
+
+    serde_yaml::from_str(&expected_yaml).expect("failed to parse expected YAML fixture")
 }
 
 pub fn assert_cli_result(case_dir: &str, expected: &ExpectedFixture, result: &CliRunResult) {
