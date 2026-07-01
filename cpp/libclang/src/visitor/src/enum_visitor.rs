@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////////
+use crate::class_visitor::parse_source_location;
 use crate::context::VisitContext;
 use crate::visitor::AstVisitor;
 use clang::Entity;
@@ -34,12 +35,16 @@ impl EnumVisitor {
         } else {
             name.clone()
         };
+        let (source_file, source_line) = parse_source_location(&entity);
+
         Some(SimpleEntity {
             id: full_qualified_id,
             name,
             enclosing_namespace_id: namespace_id,
             entity_type: EntityType::Enum,
             enum_literals: get_literals(entity),
+            source_file,
+            source_line,
             ..Default::default()
         })
     }

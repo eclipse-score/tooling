@@ -9,7 +9,7 @@
       "methods": [
         {
           "name": "Car",
-          "return_type": "void",
+          "return_type": null,
           "parameters": [
             {
               "name": "name",

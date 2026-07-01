@@ -28,8 +28,8 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": null,
-      "source_line": null
+      "source_file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
+      "source_line": 25
     },
     "MyNamespace::Direction": {
       "id": "MyNamespace::Direction",
@@ -59,8 +59,8 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": null,
-      "source_line": null
+      "source_file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
+      "source_line": 35
     },
     "RGBColor": {
       "id": "RGBColor",
@@ -86,8 +86,8 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": null,
-      "source_line": null
+      "source_file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
+      "source_line": 17
     },
     "MyNamespace::Direction3D": {
       "id": "MyNamespace::Direction3D",
@@ -125,8 +125,8 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": null,
-      "source_line": null
+      "source_file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
+      "source_line": 43
     }
   },
   "functions": []

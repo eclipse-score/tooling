@@ -661,9 +661,13 @@ pub fn to_workspace_relative_or_abs_path(abs_path: std::path::PathBuf) -> String
     // so golden files stay portable across machines.
     if let Ok(cwd) = std::env::current_dir() {
         if let Ok(rel) = abs_path.strip_prefix(&cwd) {
-            return rel.to_string_lossy().into_owned();
+            return normalize_source_path(rel.to_string_lossy().as_ref());
         }
     }
 
-    abs_path.to_string_lossy().into_owned()
+    normalize_source_path(abs_path.to_string_lossy().as_ref())
+}
+
+fn normalize_source_path(path: &str) -> String {
+    path.strip_prefix("./").unwrap_or(path).to_string()
 }

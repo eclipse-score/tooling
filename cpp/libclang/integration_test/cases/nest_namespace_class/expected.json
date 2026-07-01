@@ -9,7 +9,7 @@
       "methods": [
         {
           "name": "~ITransport",
-          "return_type": "void",
+          "return_type": null,
           "parameters": [],
           "modifiers": [
             "Virtual",

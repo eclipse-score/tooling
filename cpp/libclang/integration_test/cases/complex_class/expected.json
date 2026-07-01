@@ -9,7 +9,7 @@
       "methods": [
         {
           "name": "Car",
-          "return_type": "void",
+          "return_type": null,
           "parameters": [
             {
               "is_variadic": false,
@@ -101,7 +101,7 @@
       "methods": [
         {
           "name": "~ITransport",
-          "return_type": "void",
+          "return_type": null,
           "parameters": [],
           "modifiers": [
             "Virtual",
@@ -149,7 +149,7 @@
       "methods": [
         {
           "name": "VehicleBase",
-          "return_type": "void",
+          "return_type": null,
           "parameters": [
             {
               "is_variadic": false,
@@ -165,7 +165,7 @@
         },
         {
           "name": "~VehicleBase",
-          "return_type": "void",
+          "return_type": null,
           "parameters": [],
           "modifiers": [
             "Virtual",
