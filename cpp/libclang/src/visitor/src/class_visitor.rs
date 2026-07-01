@@ -138,7 +138,7 @@ impl ClassVisitor {
     }
 }
 
-fn parse_source_location(entity: &Entity) -> (Option<String>, Option<u32>) {
+pub(crate) fn parse_source_location(entity: &Entity) -> (Option<String>, Option<u32>) {
     let Some(location) = entity.get_location() else {
         return (None, None);
     };
@@ -207,10 +207,13 @@ fn parse_method(entity: &Entity, parsed_method_type: &ParsedMethodType) -> Optio
         .map(|methods| !methods.is_empty())
         .unwrap_or(false);
 
-    let return_type = entity
-        .get_result_type()
-        .map(|ret| render_type_for_display(&ret, &parsed_method_type.return_type))
-        .unwrap_or_else(|| "void".to_string());
+    let return_type = if matches!(kind, EntityKind::Constructor | EntityKind::Destructor) {
+        None
+    } else {
+        entity
+            .get_result_type()
+            .map(|ret| render_type_for_display(&ret, &parsed_method_type.return_type))
+    };
 
     let mut parameters = Vec::new();
     let method_is_variadic = entity.get_type().map(|t| t.is_variadic()).unwrap_or(false);
@@ -233,7 +236,7 @@ fn parse_method(entity: &Entity, parsed_method_type: &ParsedMethodType) -> Optio
 
     Some(Method {
         name,
-        return_type: Some(return_type),
+        return_type,
         visibility: parse_visibility(entity),
         parameters,
         template_parameters: None,

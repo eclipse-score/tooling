@@ -43,7 +43,7 @@
       "methods": [
         {
           "name": "~IService",
-          "return_type": "void",
+          "return_type": null,
           "parameters": [],
           "modifiers": [
             "Virtual",

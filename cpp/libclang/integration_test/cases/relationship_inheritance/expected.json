@@ -9,7 +9,7 @@
       "methods": [
         {
           "name": "~Base",
-          "return_type": "void",
+          "return_type": null,
           "parameters": [],
           "modifiers": [
             "Virtual",

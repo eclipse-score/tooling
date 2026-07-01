@@ -59,7 +59,7 @@
           "visibility": "private"
         }
       ],
-      "source_file": "./cpp/libclang/integration_test/cases/include_3rdparty/transport.h",
+      "source_file": "cpp/libclang/integration_test/cases/include_3rdparty/transport.h",
       "source_line": 19
     }
   },
