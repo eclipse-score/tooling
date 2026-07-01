@@ -488,6 +488,10 @@ sphinxcontrib-jsmath==1.0.1 \
     --hash=sha256:2ec2eaebfb78f3f2078e73666b1415417a116cc848b72e5172e596c871103178 \
     --hash=sha256:a9925e4a4587247ed2191a22df5f6970656cb8ca2bd6284309578f2153e0c4b8
     # via sphinx
+sphinxcontrib-mermaid==2.0.0 \
+    --hash=sha256:59a73249bbee2c74b1a4db036f8e8899ade65982bdda6712cf22b4f4e9874bb5 \
+    --hash=sha256:cf4f7d453d001132eaba5d1fdf53d42049f02e913213cf8337427483bfca26f4
+    # via -r requirements.in
 sphinxcontrib-plantuml==0.31 \
     --hash=sha256:fd74752f8ea070e641c3f8a402fccfa1d4a4056e0967b56033d2a76282d9f956
     # via -r test/requirements.in
