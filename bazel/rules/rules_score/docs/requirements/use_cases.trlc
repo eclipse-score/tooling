@@ -163,4 +163,14 @@ section "Use Cases" {
         affected_tools = [Tools.Verifier, Tools.PlantumlParser, Tools.Bazel]
     }
 
+    ToolQualification.UseCase Validate_Unit_Specification_Documents {
+        description = '''
+            As a software developer I want the build to verify that unit design
+            class and sequence diagrams are consistent with the corresponding
+            implementation artefacts so that unit-level design drift is
+            detected automatically during the build.
+        '''
+        affected_tools = [Tools.Verifier, Tools.PlantumlParser, Tools.LibClang, Tools.Bazel]
+    }
+
 }

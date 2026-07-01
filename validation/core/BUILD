@@ -23,6 +23,7 @@ filegroup(
     name = "specifications",
     srcs = [
         "docs/specifications/bazel_component.md",
+        "docs/specifications/class_design_implementation.md",
         "docs/specifications/component_sequence.md",
     ],
     visibility = ["//visibility:public"],
