@@ -90,8 +90,13 @@ def _requirements_impl(ctx):
     # Build the kind-specific domain provider.
     # -------------------------------------------------------------------------
     if ctx.attr.req_kind == "feature":
+        upstream_lobster_depsets = []
+        for dep in ctx.attr.deps:
+            if AssumedSystemRequirementsInfo in dep:
+                upstream_lobster_depsets.append(dep[AssumedSystemRequirementsInfo].srcs)
         req_provider = FeatureRequirementsInfo(
             srcs = depset([lobster_file]),
+            upstream_srcs = depset(transitive = upstream_lobster_depsets),
             name = ctx.label.name,
         )
     elif ctx.attr.req_kind == "component":

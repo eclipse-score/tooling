@@ -2,6 +2,10 @@ requirements "Feature Requirements" {
 {FEAT_REQ_SOURCES}
 }
 
+requirements "System Requirements" {
+{UPSTREAM_REQ_SOURCES}
+}
+
 requirements "Forwarded AoUs" {
 {FORWARDED_AOU_SOURCES}
 }

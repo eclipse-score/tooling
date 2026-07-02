@@ -21,7 +21,7 @@ Tests the SEooC (Safety Element out of Context) functionality including:
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("@score_tooling//bazel/rules/rules_score:providers.bzl", "SphinxIndexFileInfo", "SphinxModuleInfo", "SphinxNeedsInfo")
+load("@score_tooling//bazel/rules/rules_score:providers.bzl", "FeatureRequirementsInfo", "SphinxIndexFileInfo", "SphinxModuleInfo", "SphinxNeedsInfo")
 
 def _seooc_index_generation_test_impl(ctx):
     """Test that dependable_element generates proper index.rst file."""
@@ -320,4 +320,84 @@ def _seooc_index_file_provider_test_impl(ctx):
 
 seooc_index_file_provider_test = analysistest.make(
     impl = _seooc_index_file_provider_test_impl,
+)
+
+def _feat_req_upstream_srcs_populated_test_impl(ctx):
+    """
+    Given a feature_requirements target whose deps include an assumed_system_requirements target,
+    When FeatureRequirementsInfo is inspected,
+    Then upstream_srcs must be non-empty and contain a .lobster file.
+    """
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    asserts.true(
+        env,
+        FeatureRequirementsInfo in target_under_test,
+        "Expected FeatureRequirementsInfo to be provided by feature_requirements target",
+    )
+
+    info = target_under_test[FeatureRequirementsInfo]
+    upstream_files = info.upstream_srcs.to_list()
+
+    asserts.true(
+        env,
+        len(upstream_files) > 0,
+        "Expected upstream_srcs to be non-empty when feature_requirements has assumed_system_requirements deps",
+    )
+
+    lobster_files = [f for f in upstream_files if f.extension == "lobster"]
+    asserts.true(
+        env,
+        len(lobster_files) > 0,
+        "Expected upstream_srcs to contain at least one .lobster file; got: " + str([f.basename for f in upstream_files]),
+    )
+
+    return analysistest.end(env)
+
+feat_req_upstream_srcs_populated_test = analysistest.make(
+    impl = _feat_req_upstream_srcs_populated_test_impl,
+)
+
+def _de_lobster_config_includes_upstream_srcs_test_impl(ctx):
+    """
+    Given a dependable_element whose feature_requirements deps include assumed_system_requirements,
+    When the lobster report action is inspected,
+    Then the upstream ASR lobster file must appear as an input to that action.
+    """
+    env = analysistest.begin(ctx)
+
+    actions = analysistest.target_actions(env)
+
+    # Find the lobster report action: it takes de_traceability_config plus all
+    # lobster source files as inputs, and produces the lobster JSON report.
+    # Identify it by the presence of de_traceability_config in its inputs.
+    lobster_report_action = None
+    for action in actions:
+        input_basenames = [f.basename for f in action.inputs.to_list()]
+        if "de_traceability_config" in input_basenames:
+            lobster_report_action = action
+            break
+
+    asserts.true(
+        env,
+        lobster_report_action != None,
+        "Expected to find the lobster report action (one whose inputs include de_traceability_config)",
+    )
+
+    input_basenames = [f.basename for f in lobster_report_action.inputs.to_list()]
+    lobster_inputs = [n for n in input_basenames if n.endswith(".lobster")]
+
+    # Both the feature req and upstream ASR lobster files should appear as inputs
+    asserts.true(
+        env,
+        len(lobster_inputs) >= 2,
+        "Expected at least 2 .lobster file inputs to the lobster report action " +
+        "(feature req + upstream ASR); got: " + str(lobster_inputs),
+    )
+
+    return analysistest.end(env)
+
+de_lobster_config_includes_upstream_srcs_test = analysistest.make(
+    impl = _de_lobster_config_includes_upstream_srcs_test_impl,
 )

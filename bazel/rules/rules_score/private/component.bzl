@@ -76,6 +76,7 @@ def _component_impl(ctx):
             req_lobster_files.append(req_target[ComponentRequirementsInfo].srcs)
         if FeatureRequirementsInfo in req_target:
             feat_req_lobster_files.append(req_target[FeatureRequirementsInfo].srcs)
+            feat_req_lobster_files.append(req_target[FeatureRequirementsInfo].upstream_srcs)
         if AssumedSystemRequirementsInfo in req_target:
             feat_req_lobster_files.append(req_target[AssumedSystemRequirementsInfo].srcs)
 

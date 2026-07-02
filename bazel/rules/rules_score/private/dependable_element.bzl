@@ -1080,6 +1080,10 @@ def _dependable_element_index_impl(ctx):
 
     # Build the DE-level lobster report if feature and component traces exist
     feat_req_list = feat_req_lobster_depset.to_list()
+    upstream_req_list = []
+    for req_target in ctx.attr.requirements:
+        if FeatureRequirementsInfo in req_target:
+            upstream_req_list.extend(req_target[FeatureRequirementsInfo].upstream_srcs.to_list())
     comp_req_list = comp_req_lobster_depset.to_list()
     comp_test_list = comp_test_lobster_depset.to_list()
     comp_arch_list = comp_arch_lobster_depset.to_list()
@@ -1149,6 +1153,7 @@ def _dependable_element_index_impl(ctx):
             output = lobster_config,
             substitutions = {
                 "{FEAT_REQ_SOURCES}": format_lobster_sources(feat_req_list),
+                "{UPSTREAM_REQ_SOURCES}": format_lobster_sources(upstream_req_list),
                 "{FORWARDED_AOU_SOURCES}": format_lobster_sources(received_aou_list),
                 "{COMP_REQ_SOURCES}": format_lobster_sources(comp_req_list),
                 "{COMP_REQ_TRACE}": comp_req_trace_lines,
@@ -1161,7 +1166,7 @@ def _dependable_element_index_impl(ctx):
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list
+        all_lobster_inputs = feat_req_list + upstream_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_html_report = subrule_lobster_html_report(lobster_report_file)
 
