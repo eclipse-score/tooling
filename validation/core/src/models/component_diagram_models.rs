@@ -13,11 +13,11 @@
 
 use std::collections::BTreeMap;
 
+use super::EntityKey;
+use crate::ValidationResult;
 pub use component_diagram::{
     ComponentRelationType, ComponentType, EndpointRole, LogicComponent, LogicRelation,
 };
-use super::EntityKey;
-use crate::ValidationResult;
 
 /// Validation-specific helpers for component metamodel entities.
 pub trait LogicComponentExt {
@@ -273,6 +273,78 @@ mod tests {
                 .relations[0]
                 .target,
             "safety_software_seooc_example.InternalInterface"
+        );
+    }
+
+    #[test]
+    fn reports_duplicate_entity_id() {
+        let inputs = ComponentDiagramInputs {
+            entities: vec![
+                entity(
+                    "MyDE",
+                    Some("my_de"),
+                    None,
+                    ComponentType::Package,
+                    Some("SEooC"),
+                    Vec::new(),
+                ),
+                entity(
+                    "myDE",
+                    Some("other_alias"),
+                    None,
+                    ComponentType::Component,
+                    Some("component"),
+                    Vec::new(),
+                ),
+            ],
+        };
+
+        let mut set_result = ValidationResult::default();
+        let _architecture = inputs.to_diagram_architecture(&mut set_result);
+
+        assert!(
+            set_result
+                .failures
+                .iter()
+                .any(|message| message.contains("Duplicate entity ID")),
+            "Expected duplicate ID error, got: {:?}",
+            set_result.failures
+        );
+    }
+
+    #[test]
+    fn reports_unresolved_parent_id() {
+        let inputs = ComponentDiagramInputs {
+            entities: vec![
+                entity(
+                    "MyDE",
+                    Some("my_de"),
+                    None,
+                    ComponentType::Package,
+                    Some("SEooC"),
+                    Vec::new(),
+                ),
+                entity(
+                    "CompA",
+                    Some("comp_a"),
+                    Some("NonExistent"),
+                    ComponentType::Component,
+                    Some("component"),
+                    Vec::new(),
+                ),
+            ],
+        };
+
+        let mut set_result = ValidationResult::default();
+        let _architecture = inputs.to_diagram_architecture(&mut set_result);
+
+        assert!(
+            set_result
+                .failures
+                .iter()
+                .any(|message| message.contains("Unresolved parent_id")),
+            "Expected unresolved parent error, got: {:?}",
+            set_result.failures
         );
     }
 }

@@ -16,56 +16,44 @@
 
 use std::collections::BTreeSet;
 
-use crate::models::{ComponentDiagramArchitecture, Errors, InternalApiIndex, LogicComponentExt};
+use super::shared::format_name_list;
+use crate::models::{ComponentDiagramArchitecture, InternalApiIndex, LogicComponentExt};
+use crate::{Diagnostics, ValidationResult};
 
 /// Run component-vs-internal-API interface reference validation.
 pub fn validate_component_internal_api(
     component_diagram: &ComponentDiagramArchitecture,
     internal_api_diagram: &InternalApiIndex,
-    errors: Errors,
-) -> Errors {
-    ComponentInternalApiValidator::new(component_diagram, internal_api_diagram, errors).run()
+) -> ValidationResult {
+    ComponentInternalApiValidator::new(component_diagram, internal_api_diagram).run()
 }
 
 struct ComponentInternalApiValidator {
     component_interface_ids: BTreeSet<String>,
     internal_api_interface_ids: BTreeSet<String>,
-    errors: Errors,
+    result: ValidationResult,
 }
 
 impl ComponentInternalApiValidator {
     fn new(
         component_diagram: &ComponentDiagramArchitecture,
         internal_api_diagram: &InternalApiIndex,
-        errors: Errors,
     ) -> Self {
         Self {
             component_interface_ids: collect_component_interface_ids(component_diagram),
             internal_api_interface_ids: collect_internal_api_interface_ids(internal_api_diagram),
-            errors,
+            result: ValidationResult::default(),
         }
     }
 
-    fn run(mut self) -> Errors {
-        self.errors.debug_output = self.build_debug_log();
+    fn run(mut self) -> ValidationResult {
+        append_debug_log(
+            &mut self.result.diagnostics,
+            &self.component_interface_ids,
+            &self.internal_api_interface_ids,
+        );
         self.check_component_interfaces_declared_by_internal_api();
-        self.errors
-    }
-
-    fn build_debug_log(&self) -> String {
-        let mut log = String::new();
-
-        log.push_str("DEBUG: Component interfaces checked against internal API:\n");
-        for interface_id in &self.component_interface_ids {
-            log.push_str(&format!("  {interface_id}\n"));
-        }
-
-        log.push_str("DEBUG: Internal API interfaces available for component interfaces:\n");
-        for interface_id in &self.internal_api_interface_ids {
-            log.push_str(&format!("  {interface_id}\n"));
-        }
-
-        log
+        self.result
     }
 
     fn check_component_interfaces_declared_by_internal_api(&mut self) {
@@ -76,11 +64,27 @@ impl ComponentInternalApiValidator {
             .collect();
 
         if !missing_interfaces.is_empty() {
-            self.errors
-                .push(format_missing_internal_api_interface_error(
+            self.result
+                .add_failure(format_missing_internal_api_interface_error(
                     &missing_interfaces,
                 ));
         }
+    }
+}
+
+fn append_debug_log(
+    diagnostics: &mut Diagnostics,
+    component_interface_ids: &BTreeSet<String>,
+    internal_api_interface_ids: &BTreeSet<String>,
+) {
+    diagnostics.debug(|| "Component interfaces checked against internal API:".to_string());
+    for interface_id in component_interface_ids {
+        diagnostics.debug(|| format!("  {interface_id}\n"));
+    }
+
+    diagnostics.debug(|| "Internal API interfaces available for component interfaces:".to_string());
+    for interface_id in internal_api_interface_ids {
+        diagnostics.debug(|| format!("  {interface_id}\n"));
     }
 }
 
@@ -106,23 +110,11 @@ fn format_missing_internal_api_interface_error(
     missing_internal_api_interfaces: &BTreeSet<String>,
 ) -> String {
     format!(
-        "Internal API consistency violation: Missing internal API interface:\n\
+        "Internal API consistency failure: Missing internal API interface:\n\
           Missing interfaces  : {missing_interfaces}\n\
           Action              : Add each component interface to the internal API diagram or remove it from the component diagram",
         missing_interfaces = format_name_list(missing_internal_api_interfaces),
     )
-}
-
-fn format_name_list(names: &BTreeSet<String>) -> String {
-    if names.is_empty() {
-        return "<none>".to_string();
-    }
-
-    names
-        .iter()
-        .map(|name| format!("\"{name}\""))
-        .collect::<Vec<_>>()
-        .join(", ")
 }
 
 #[cfg(test)]

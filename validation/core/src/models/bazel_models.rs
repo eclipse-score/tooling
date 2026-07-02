@@ -142,3 +142,42 @@ pub struct BazelArchitecture {
     /// Nested units (`<<unit>>`), keyed with the enclosing component alias.
     pub unit_set: BTreeMap<EntityKey, String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_arch(entries: Vec<(&str, Vec<&str>, Vec<&str>)>) -> BazelInput {
+        let mut components = BTreeMap::new();
+        for (label, units, nested) in entries {
+            components.insert(
+                label.to_string(),
+                BazelInputEntry {
+                    units: units.into_iter().map(str::to_string).collect(),
+                    components: nested.into_iter().map(str::to_string).collect(),
+                },
+            );
+        }
+        BazelInput { components }
+    }
+
+    #[test]
+    fn reports_duplicate_dependable_element_key() {
+        let arch = make_arch(vec![
+            ("@//pkg1:comp_a", vec![], vec![]),
+            ("@//pkg2:comp_a", vec![], vec![]),
+        ]);
+
+        let mut setup_result = ValidationResult::default();
+        let _architecture = arch.to_bazel_architecture(&mut setup_result);
+
+        assert!(
+            setup_result
+                .failures
+                .iter()
+                .any(|message| message.contains("Duplicate dependable element key")),
+            "Expected duplicate dependable element key error, got: {:?}",
+            setup_result.failures
+        );
+    }
+}
