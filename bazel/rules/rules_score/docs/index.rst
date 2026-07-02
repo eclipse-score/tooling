@@ -38,7 +38,9 @@ safety analysis to the top-level SEooC assembly.
    :caption: Validation
 
    tool_reference/specs/bazel_component
+   tool_reference/specs/component_internal_api
    tool_reference/specs/component_sequence
+   tool_reference/specs/sequence_internal_api
 
 .. toctree::
    :maxdepth: 2

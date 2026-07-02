@@ -20,7 +20,7 @@ use sequence_logic::{
     Condition, ConditionType, Event, Interaction, Return, SequenceNode, SequenceTree,
 };
 
-use crate::models::{SequenceDiagramInput, SequenceDiagramInputs};
+use crate::models::SequenceDiagramInputs;
 use crate::readers::Reader;
 
 pub struct SequenceDiagramReader;
@@ -52,18 +52,9 @@ impl Reader for SequenceDiagramReader {
                 Vec::new()
             };
 
-            let source_files = diagram
-                .source_files()
-                .map(|values| values.iter().map(|f| f.to_string()).collect::<Vec<_>>())
-                .unwrap_or_default();
-
-            diagrams.push(SequenceDiagramInput {
-                tree: SequenceTree {
-                    name: diagram.name().map(|s| s.to_string()),
-                    root_interactions,
-                },
-                source_files,
-                version: diagram.version().map(|s| s.to_string()),
+            diagrams.push(SequenceTree {
+                name: diagram.name().map(|s| s.to_string()),
+                root_interactions,
             });
         }
 

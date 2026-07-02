@@ -29,16 +29,15 @@ The current implementation supports these validation flows:
 
 1. `BazelComponent`: compares the indexed Bazel build graph with the indexed
    PlantUML component-diagram structure.
-
-2. `ComponentSequence`: checks that component-diagram unit aliases, shared
+2. `ComponentInternalApi`: checks that every component-diagram interface is
+  declared by the Internal API diagram.
+3. `ComponentSequence`: checks that component-diagram unit aliases, shared
   interface relations, and sequence-diagram function-call connections stay in
-  sync. When internal API diagrams are provided, it also checks that each
-  sequence function name is declared on a shared interface referenced by both
-  participating units.
-
-  Internal API diagrams are handled separately from regular class diagrams.
-  If no `--internal-api-fbs` inputs are provided, `ComponentSequence` still runs
-  the alias and interface-connection checks and skips method-level validation.
+  sync.
+4. `SequenceInternalApi`: checks that Internal API methods are exercised by
+  sequence interactions. When component input is also available, it uses that
+  component context to check sequence function names against related shared
+  interfaces.
 
 The CLI dispatches to the selected validation profile. Each profile owns its
 input schema, reads the models it needs, and runs the validators that are
