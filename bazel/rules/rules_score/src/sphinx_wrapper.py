@@ -289,6 +289,16 @@ def main() -> int:
             level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s"
         )
         validate_arguments(args)
+        # Resolve execroot-relative tool paths to absolute paths NOW, while cwd
+        # is still the execroot (Bazel guarantees cwd = execroot at action start).
+        # Sphinx changes its working directory to the source/staging directory
+        # before evaluating conf.py, so os.path.abspath() inside conf.py would
+        # resolve against the wrong base.  Converting here is safe and means
+        # conf.py receives already-absolute values via the environment.
+        for _tool_var in ("GRAPHVIZ_DOT", "PLANTUML_BIN", "FTA_METAMODEL_DIR"):
+            _tool_path = os.environ.get(_tool_var)
+            if _tool_path and not os.path.isabs(_tool_path):
+                os.environ[_tool_var] = os.path.abspath(_tool_path)
         # Create processor instance
         stdout_processor = StdoutProcessor()
         stderr_processor = StderrProcessor()

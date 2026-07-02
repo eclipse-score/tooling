@@ -362,7 +362,10 @@ class RstReportTool(MetaDataToolBase):
             err.dump()
             return 1
 
-        if not is_dot_available():
+        # Honor GRAPHVIZ_DOT (set by the Bazel rule to the hermetic dot) the same
+        # way PolicyDiagramBuilder does, so the warning reflects what is actually
+        # emitted rather than only checking for a system `dot` on PATH.
+        if not is_dot_available(os.environ.get("GRAPHVIZ_DOT") or None):
             print(
                 "warning: dot utility not found, report will not include "
                 "the tracing policy visualisation"

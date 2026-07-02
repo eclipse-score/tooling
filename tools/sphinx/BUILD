@@ -12,17 +12,7 @@
 # *******************************************************************************
 
 load("@pip_rules_score//:requirements.bzl", "requirement")
-load("@rules_java//java:defs.bzl", "java_binary")
 load("@rules_python//sphinxdocs:sphinx.bzl", "sphinx_build_binary")
-
-java_binary(
-    name = "plantuml",
-    main_class = "net.sourceforge.plantuml.Run",
-    visibility = ["//visibility:public"],
-    runtime_deps = [
-        "@blueprint_maven_dependencies//:net_sourceforge_plantuml_plantuml",
-    ],
-)
 
 sphinx_build_binary(
     name = "sphinx-build",
@@ -39,6 +29,5 @@ sphinx_build_binary(
         requirement("sphinxcontrib-umlet"),
         requirement("svglib"),
         requirement("sphinxcontrib-plantuml"),
-        "@rules_python//python/runfiles",
     ],
 )

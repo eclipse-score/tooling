@@ -21,58 +21,11 @@ Template variables like {PROJECT_NAME} are replaced during Bazel build.
 import json
 import os
 import sys
-from pathlib import Path
-from typing import List
 
-from python.runfiles import Runfiles
 from sphinx.util import logging
 
 # Create a logger with the Sphinx namespace
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Helpers: Bazel execroot path resolution
-# ---------------------------------------------------------------------------
-
-
-# Capture the current working directory at module import time.
-# In Bazel action context, cwd == execroot. In IDE/non-Bazel runs, cwd is
-# the current directory. This is captured once to avoid repeated resolution.
-_EXECROOT = Path.cwd()
-
-
-def _resolve_execroot_path(path_value: str) -> str:
-    """Resolve an execroot-relative path to an absolute filesystem path.
-
-    Bazel passes action inputs as paths relative to the execroot (e.g.
-    ``external/+_repo_rules2+graphviz_deb/usr/bin/dot_builtins``).  Those
-    paths are only valid when the process' cwd is the execroot — which is
-    not guaranteed once Sphinx changes directories during the build.
-
-    This function makes them absolute so they work regardless of cwd.
-    Absolute paths and plain command names (e.g. ``dot``) are returned
-    unchanged.
-    """
-    p = Path(path_value)
-    if p.is_absolute():
-        return str(p)
-    if path_value.startswith("external/") or path_value.startswith("bazel-out/"):
-        # First try cwd-as-execroot (fast path).
-        candidate = (_EXECROOT / p).resolve()
-        if candidate.exists():
-            return str(candidate)
-
-        # If cwd is nested under bazel-out, walk upward and locate the first
-        # parent that contains the requested relative path.
-        for parent in [_EXECROOT, *_EXECROOT.parents]:
-            candidate = (parent / p).resolve()
-            if candidate.exists():
-                return str(candidate)
-
-        # Fallback: preserve previous behavior even if the file does not exist
-        # yet (keeps logging/debug output deterministic).
-        return str((_EXECROOT / p).resolve())
-    return path_value
 
 
 logger.debug("#" * 80)
@@ -169,103 +122,106 @@ except ImportError:
     needs_id_regex = "^[A-Za-z0-9_-]{6,}"
 
 
-# Use the runfiles to find the plantuml binary.
-# Runfiles are only available when running in Bazel.
-r = Runfiles.Create()
-if r is None:
-    raise ValueError("Could not initialize Bazel runfiles.")
-
-plantuml_repo_candidates: List[str] = []
-
-for repo_name in [
-    os.environ.get("TEST_WORKSPACE"),
-    "_main",
-    "score_tooling",
-    "score_tooling~",
-    "score_tooling+",
-]:
-    if repo_name and repo_name not in plantuml_repo_candidates:
-        plantuml_repo_candidates.append(repo_name)
-
-plantuml_runfiles_candidates = [
-    f"{repo_name}/tools/sphinx/plantuml" for repo_name in plantuml_repo_candidates
-]
-
-plantuml_path = None
-for runfile_path in plantuml_runfiles_candidates:
-    candidate = r.Rlocation(runfile_path, source_repo="")
-    if candidate and Path(candidate).exists():
-        plantuml_path = Path(candidate)
-        logger.info(f"Selected PlantUML from runfiles path {runfile_path}: {candidate}")
-        break
-
-if plantuml_path is None:
-    searched = ", ".join(plantuml_runfiles_candidates)
+# ---------------------------------------------------------------------------
+# PlantUML binary discovery
+# ---------------------------------------------------------------------------
+# PLANTUML_BIN     — execroot-relative path of //third_party/plantuml:plantuml
+#                    (a rules_java java_binary launcher script), injected by the
+#                    sphinx_module Bazel rule via the action env.
+# PLANTUML_BIN_RLOC — analysis-time-stable Bazel rlocation key derived from the
+#                    target's short_path (no exec-config hash); used only for
+#                    diagnostic logging here.
+#
+# Path resolution rationale (applies to all hermetic tool paths in this file):
+# os.path.abspath() converts the execroot-relative path to an absolute path
+# using the process's current working directory.  Bazel guarantees that the
+# action's cwd equals the execroot at process start.  conf.py is loaded during
+# Sphinx initialisation — before Sphinx can perform any os.chdir() — so the
+# abspath() call is stable for the entire action lifetime.  This replaces the
+# previous _resolve_execroot_path() which walked parent directories as a
+# fallback, a pattern that is fragile and wrong when nested under bazel-out/.
+# See docs/tooling_architecture.rst §"Hermetic tool path resolution".
+_plantuml_bin = os.environ.get("PLANTUML_BIN")
+if not _plantuml_bin:
     raise ValueError(
-        f"Could not find plantuml binary via runfiles lookup. Searched: {searched}."
+        "PLANTUML_BIN environment variable is not set. It must point at the "
+        "//third_party/plantuml:plantuml launcher and is normally provided by the "
+        "sphinx_module Bazel rule. If you are invoking Sphinx outside that rule, "
+        "set PLANTUML_BIN to the plantuml binary path."
     )
-
-# Locate the FTA metamodel in the docs-build runfiles (shipped via
-# //tools/sphinx:sphinx-build data) so it can be put on PlantUML's include path.
-# FTA diagrams keep their ``!include fta_metamodel.puml``; sphinxcontrib-plantuml
-# renders via ``-pipe`` (no source-file dir), so a relative include only resolves
-# through ``plantuml.include.path``.
-fta_metamodel_dir = ""
-for repo_name in plantuml_repo_candidates:
-    candidate = r.Rlocation(f"{repo_name}/plantuml/fta_metamodel.puml", source_repo="")
-    if candidate and Path(candidate).exists():
-        fta_metamodel_dir = str(Path(candidate).parent)
-        logger.info(f"Found fta_metamodel.puml on include path: {candidate}")
-        break
-
-if not fta_metamodel_dir:
-    logger.warning(
-        "fta_metamodel.puml not found in runfiles — FTA diagrams using "
-        "!include fta_metamodel.puml will fail to render. "
-        f"Searched repo candidates: {plantuml_repo_candidates}"
-    )
-
-# Use PlantUML's built-in Smetana layout engine (Java port of Graphviz).
-# This avoids requiring an external dot binary in the Bazel sandbox.
-# ``--jvm_flag`` is consumed by the java_binary launcher and sets the JVM system
-# property PlantUML reads for its include search path.  It must precede the
-# program args (``-Playout`` etc.), or the launcher forwards it to PlantUML
-# (which ignores it) instead of the JVM.
-_include_flag = (
-    f" --jvm_flag=-Dplantuml.include.path={fta_metamodel_dir}"
-    if fta_metamodel_dir
-    else ""
+plantuml_path = os.path.abspath(_plantuml_bin)
+logger.debug(
+    f"plantuml resolved: {plantuml_path} "
+    f"(rloc: {os.environ.get('PLANTUML_BIN_RLOC', 'n/a')})"
 )
-plantuml = f"{plantuml_path}{_include_flag} -Playout=smetana"
+
 plantuml_output_format = "svg_obj"
+# `plantuml` command is assembled below, after graphviz_dot is resolved, so
+# PlantUML can use the same hermetic Graphviz dot (see Graphviz section).
 
 # ---------------------------------------------------------------------------
 # Graphviz (sphinx.ext.graphviz)
 # ---------------------------------------------------------------------------
-# GRAPHVIZ_DOT is set by the Bazel sphinx_module rule to point at the hermetic
-# dot_builtins binary from @graphviz_deb.  The path is execroot-relative, so
-# we resolve it to an absolute path here so it remains valid after any cwd
-# change that Sphinx may perform during the build.
-# If GRAPHVIZ_DOT is absent, force a known-invalid dot path so Sphinx fails
-# clearly on graphviz directives instead of silently using host-installed dot.
-if "GRAPHVIZ_DOT" in os.environ:
-    graphviz_dot = _resolve_execroot_path(os.environ["GRAPHVIZ_DOT"])
-    graphviz_output_format = "svg"
+# GRAPHVIZ_DOT      — execroot-relative path of //third_party/docs_runtime:dot
+#                     (the exec_in_sysroot POSIX-sh wrapper), injected by the
+#                     sphinx_module Bazel rule.
+# GRAPHVIZ_DOT_RLOC — analysis-time-stable rlocation key; logged only.
+#
+# Path resolution: same os.path.abspath() rationale as PLANTUML_BIN above.
+#
+# The exec_in_sysroot wrapper is a runfiles-aware POSIX-sh script that
+# bootstraps its own runfiles via the standard $0.runfiles/ Bazel convention.
+# Passing the ABSOLUTE path ensures $0 is absolute, so $0.runfiles/ resolves to
+# the correct companion directory even when the wrapper is called as a
+# subprocess from inside the Sphinx Python process (which carries its own
+# RUNFILES_DIR pointing at the sphinx tool's runfiles, not the dot wrapper's
+# runfiles).
+#
+# GRAPHVIZ_DOT is mandatory: the sphinx_module rule always provides the hermetic
+# wrapper, so if it is missing conf.py fails loudly rather than silently using a
+# host-installed dot binary.
+_graphviz_dot_path = os.environ.get("GRAPHVIZ_DOT")
+if not _graphviz_dot_path:
+    raise ValueError(
+        "GRAPHVIZ_DOT environment variable is not set. It must point at the "
+        "//third_party/docs_runtime:dot hermetic wrapper and is normally provided "
+        "by the sphinx_module Bazel rule. If you are invoking Sphinx outside that "
+        "rule, set GRAPHVIZ_DOT to the hermetic dot wrapper path."
+    )
+_graphviz_dot_rloc = os.environ.get("GRAPHVIZ_DOT_RLOC", "")
+graphviz_dot = os.path.abspath(_graphviz_dot_path)
+graphviz_output_format = "svg"
+logger.debug(
+    f"graphviz dot resolved: {graphviz_dot} (rloc: {_graphviz_dot_rloc or 'n/a'})"
+)
 
-    # LD_LIBRARY_PATH and LTDL_LIBRARY_PATH are set by the Bazel rule as
-    # execroot-relative paths.  We mutate os.environ (not just a local) because
-    # sphinx.ext.graphviz spawns `dot` as a child process that inherits these
-    # variables to locate the bundled shared libraries and plugins.  Each
-    # component is resolved to absolute so it stays valid if Sphinx changes cwd
-    # before spawning the dot subprocess.
-    for _env_var in ("LD_LIBRARY_PATH", "LTDL_LIBRARY_PATH"):
-        _env_val = os.environ.get(_env_var, "")
-        if _env_val:
-            os.environ[_env_var] = ":".join(
-                _resolve_execroot_path(p) for p in _env_val.split(":")
-            )
+# ---------------------------------------------------------------------------
+# PlantUML layout engine: hermetic dot + FTA metamodel include path
+# ---------------------------------------------------------------------------
+# FTA_METAMODEL_DIR — directory containing fta_metamodel.puml, set by the
+#                     sphinx_module rule from //plantuml:fta_metamodel.
+#                     FTA diagrams keep ``!include fta_metamodel.puml``;
+#                     sphinxcontrib-plantuml renders via -pipe (no source-file
+#                     dir on the include search path) so the file must be
+#                     listed on plantuml.include.path.  The JVM flag must
+#                     precede the program args or the java_binary launcher
+#                     passes it to PlantUML instead of the JVM.
+_fta_metamodel_dir = os.environ.get("FTA_METAMODEL_DIR", "")
+if _fta_metamodel_dir:
+    _fta_metamodel_dir = os.path.abspath(_fta_metamodel_dir)
+    logger.debug(f"fta_metamodel include path: {_fta_metamodel_dir}")
+    _include_flag = f" --jvm_flag=-Dplantuml.include.path={_fta_metamodel_dir}"
 else:
-    graphviz_dot = "/__hermetic_graphviz_not_configured__/dot"
+    logger.warning(
+        "FTA_METAMODEL_DIR is not set; FTA diagrams using "
+        "!include fta_metamodel.puml will fail to render."
+    )
+    _include_flag = ""
+
+# PlantUML uses the same hermetic Graphviz dot as sphinx.ext.graphviz for its
+# internal layout calls, via the -graphvizdot flag.  There is no fallback: the
+# hermetic dot is the single reference rendering path for both.
+plantuml = f"{plantuml_path}{_include_flag} -graphvizdot {graphviz_dot}"
 
 # HTML theme
 html_theme = "sphinx_rtd_theme"

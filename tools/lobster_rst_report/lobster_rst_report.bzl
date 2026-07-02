@@ -54,11 +54,22 @@ def _lobster_report_rst_impl(ctx):
     rst_args.add_all(["--out-dir", rst_dir.path])
     rst_args.add_all(["--source-root", source_root])
 
+    # Wire in the hermetic graphviz dot wrapper (exec_in_sysroot + docs_runtime) so
+    # the generated RST emits the `.. graphviz::` policy-diagram directive (the
+    # tool checks dot availability via GRAPHVIZ_DOT) instead of the host-dependent
+    # fallback note.
+    rst_inputs = [lobster_report_json]
+    rst_env = {
+        "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
+    }
+
     ctx.actions.run(
         executable = ctx.executable._lobster_rst_report,
-        inputs = [lobster_report_json],
+        inputs = rst_inputs,
         outputs = [rst_dir],
         arguments = [rst_args],
+        env = rst_env,
+        tools = [ctx.attr._graphviz.files_to_run],
         progress_message = "lobster-rst-report (pages) %s" % ctx.label.name,
     )
 
@@ -84,6 +95,11 @@ lobster_report_rst = rule(
         ),
         "_lobster_rst_report": attr.label(
             default = "//tools/lobster_rst_report:lobster-rst-report",
+            executable = True,
+            cfg = "exec",
+        ),
+        "_graphviz": attr.label(
+            default = Label("//third_party/docs_runtime:dot"),
             executable = True,
             cfg = "exec",
         ),

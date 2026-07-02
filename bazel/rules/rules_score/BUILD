@@ -189,13 +189,6 @@ sphinx_module(
 py_binary(
     name = "raw_build",
     srcs = ["src/sphinx_wrapper.py"],
-    data = [
-        "//tools/sphinx:plantuml",
-        # Ship the FTA metamodel in the docs-build runfiles so conf.py can put it
-        # on PlantUML's include path; FTA diagrams keep ``!include
-        # fta_metamodel.puml`` and resolve it even under -pipe rendering.
-        "//plantuml:fta_metamodel",
-    ],
     env = {
         "SOURCE_DIRECTORY": "",
         "DATA": "",
@@ -206,7 +199,6 @@ py_binary(
     deps = [
         ":sphinx_module_ext",
         "@lobster//sphinx_lobster:sphinx_lobster_builder",
-        "@rules_python//python/runfiles",
         "@score_tooling//plantuml/sphinx/clickable_plantuml",
         "@trlc//tools/sphinx/extensions/trlc",
         requirement("sphinx"),
