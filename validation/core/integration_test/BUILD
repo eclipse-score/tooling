@@ -42,19 +42,33 @@ filegroup(
 filegroup(
     name = "component_sequence_test_data",
     srcs = [
-        "//validation/core/integration_test/component_sequence/negative_interface_function_not_exercised:case_data",
-        "//validation/core/integration_test/component_sequence/negative_invalid_consumer_provider_direction:case_data",
-        "//validation/core/integration_test/component_sequence/negative_method_missing_from_internal_api:case_data",
         "//validation/core/integration_test/component_sequence/negative_missing_interface_connection_for_sequence_connected_units:case_data",
-        "//validation/core/integration_test/component_sequence/negative_missing_method_in_related_interface:case_data",
         "//validation/core/integration_test/component_sequence/negative_missing_participant:case_data",
         "//validation/core/integration_test/component_sequence/negative_missing_sequence_interaction_for_interface_connected_units:case_data",
         "//validation/core/integration_test/component_sequence/negative_missing_unit_interface_relation:case_data",
         "//validation/core/integration_test/component_sequence/negative_mixed_mismatch:case_data",
         "//validation/core/integration_test/component_sequence/negative_orphan_participant:case_data",
         "//validation/core/integration_test/component_sequence/positive_exact_match:case_data",
-        "//validation/core/integration_test/component_sequence/positive_internal_api_method_match:case_data",
-        "//validation/core/integration_test/component_sequence/positive_self_call_method_match:case_data",
+    ],
+)
+
+filegroup(
+    name = "component_internal_api_test_data",
+    srcs = [
+        "//validation/core/integration_test/component_internal_api/negative_interface_missing_from_internal_api:case_data",
+        "//validation/core/integration_test/component_internal_api/positive_interface_match:case_data",
+    ],
+)
+
+filegroup(
+    name = "sequence_internal_api_test_data",
+    srcs = [
+        "//validation/core/integration_test/sequence_internal_api/negative_interface_function_not_exercised:case_data",
+        "//validation/core/integration_test/sequence_internal_api/negative_invalid_consumer_provider_direction:case_data",
+        "//validation/core/integration_test/sequence_internal_api/negative_method_available_but_not_on_related_interface:case_data",
+        "//validation/core/integration_test/sequence_internal_api/negative_missing_method_in_related_interface:case_data",
+        "//validation/core/integration_test/sequence_internal_api/positive_internal_api_method_match:case_data",
+        "//validation/core/integration_test/sequence_internal_api/positive_self_call_method_match:case_data",
     ],
 )
 
@@ -112,6 +126,38 @@ rust_test(
     crate_root = "src/component_sequence_suite.rs",
     data = [
         ":component_sequence_test_data",
+        "//validation/core:validation_cli",
+    ],
+    deps = [
+        ":test_framework",
+        "//validation/core:validation",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "component_internal_api_integration_test",
+    srcs = ["src/component_internal_api_suite.rs"],
+    crate_root = "src/component_internal_api_suite.rs",
+    data = [
+        ":component_internal_api_test_data",
+        "//validation/core:validation_cli",
+    ],
+    deps = [
+        ":test_framework",
+        "//validation/core:validation",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "sequence_internal_api_integration_test",
+    srcs = ["src/sequence_internal_api_suite.rs"],
+    crate_root = "src/sequence_internal_api_suite.rs",
+    data = [
+        ":sequence_internal_api_test_data",
         "//validation/core:validation_cli",
     ],
     deps = [
