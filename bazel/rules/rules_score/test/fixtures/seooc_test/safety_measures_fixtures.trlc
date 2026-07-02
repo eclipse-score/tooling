@@ -29,14 +29,12 @@ ScoreReq.ControlMeasure SomeBasicEvent {
 }
 
 ScoreReq.PreventiveMeasure SomePreventiveMeasure {
-    safety      = ScoreReq.Asil.QM
-    description = "A preventive measure that reduces the likelihood of a hazard"
-    version     = 1
 }
 
 ScoreReq.Mitigation SomeMitigation {
     safety      = ScoreReq.Asil.B
     description = "A mitigation that reduces the severity of a hazard"
+    rationale   = "Reduces severity by providing an alternative processing path"
     version     = 1
 }
 

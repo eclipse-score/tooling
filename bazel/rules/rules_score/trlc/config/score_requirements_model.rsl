@@ -78,9 +78,7 @@ tuple CompReqSourceId {
 
 type CompReq "Component-level requirement allocated to a specific software component." extends RequirementSafety {
     derived_from "Versioned references to the FeatReq or AssumedSystemReq items this component requirement is derived from. Omit only for component-internal requirements with no feature-level parent."
-                 optional CompReqSourceId[1 .. *]
-    mitigates    "Reference to the FailureMode or safety concern that this requirement mitigates."
-                 optional String
+                CompReqSourceId[1 .. *]
 }
 
 tuple CompReqId {
@@ -93,7 +91,7 @@ tuple CompReqId {
 // Safety Analyses
 ///////////////////////////////
 
-enum guidewords "HAZOP-style guide words used to categorize failure mode." {
+enum Guideword "HAZOP-style guide words used to categorize failure mode." {
 
     // -------------------------------------------------------------------------
     // Message fault models  (MF_01_xx)
@@ -147,7 +145,7 @@ enum guidewords "HAZOP-style guide words used to categorize failure mode." {
 
 type FailureMode "A potential failure of a system function, described using one or more HAZOP guide words." extends ScoreReq.RequirementSafety {
     guidewords      "One or more HAZOP guide words classifying the nature of this failure."
-                   guidewords[1 .. *]
+                   Guideword[1 .. *]
     failureeffect  "Description of the consequence of this failure mode on the system or its users."
                    String
     rationale      "Explanation of why this failure mode is considered relevant."
@@ -156,21 +154,26 @@ type FailureMode "A potential failure of a system function, described using one 
                    optional String
 }
 
-abstract type Measure "Abstract base type for all safety measures. Cannot be instantiated directly." extends ScoreReq.RequirementSafety {
+type ControlMeasure "A design or operational measure that detects, prevents, or limits a failure mode." extends RequirementSafety {
+    mitigates    "Reference to the FailureMode or safety concern that this requirement mitigates."
+                 optional String
 }
 
-type ControlMeasure "A design or operational measure that detects, prevents, or limits a failure mode." extends Measure {
+type PreventiveMeasure "A measure that prevents a failure mode from occurring in the first place." {
 }
 
-type PreventiveMeasure "A measure that prevents a failure mode from occurring in the first place." extends Measure {
+type Mitigation "A measure that reduces the severity or probability of a failure mode's effect." extends AssumedSystemReq {
+    mitigates    "Reference to the FailureMode or safety concern that this requirement mitigates."
+                 optional String
 }
 
-type Mitigation "A measure that reduces the severity or probability of a failure mode's effect." extends Measure {
+type AoU "Assumption of Use — a safety-relevant condition that a user must fulfil." extends ControlMeasure {
 }
 
-type AoU "Assumption of Use — a safety-relevant condition that a caller must fulfil when using this component." extends ControlMeasure {
-    mitigates "Reference to the FailureMode or hazard that is mitigated when this assumption is satisfied."
-              optional String
+tuple Measure {
+    item    [ControlMeasure, PreventiveMeasure, Mitigation]
+    separator @
+    version Integer
 }
 
 ///////////////////////////////
