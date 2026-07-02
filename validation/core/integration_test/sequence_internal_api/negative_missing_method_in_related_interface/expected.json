@@ -2,7 +2,7 @@
   "should_pass": false,
   "error_contains": [
     "Method consistency failure",
-    "sequence function name was not found in the related interface methods",
+    "sequence function name was not found in available interface methods",
     "\"GetData\"",
     "\"package_a.InternalInterface\""
   ]

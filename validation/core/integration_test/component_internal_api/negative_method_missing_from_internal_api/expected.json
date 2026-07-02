@@ -1,0 +1,7 @@
+{
+  "should_pass": false,
+  "error_contains": [
+    "Internal API consistency failure: Missing internal API interface",
+    "Missing interfaces  : \"package_a.InternalInterface\""
+  ]
+}
