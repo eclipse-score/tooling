@@ -702,6 +702,7 @@ feature_requirements(
 component_requirements(
     name = "comp_req_rst",
     srcs = ["fixtures/rst_requirements/component_requirements.rst"],
+    ref_package = "FeatureRequirements",
     deps = [
         ":asr_rst",
         ":feat_req_rst",

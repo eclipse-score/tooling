@@ -19,5 +19,6 @@ Component Requirements (RST)
    :id: comp_req__rst_test__001
    :safety: ASIL_B
    :status: valid
+   :derived_from: feat_req__rst_test__001
 
    The mock library shall provide mock_function_1 returning 42 for RST-based fixture validation.
