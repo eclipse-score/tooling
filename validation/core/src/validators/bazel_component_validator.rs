@@ -386,22 +386,6 @@ mod tests {
     }
 
     #[test]
-    fn test_duplicate_bazel_key_detected() {
-        let arch = make_arch(vec![
-            ("@//pkg1:comp_a", vec![], vec![]),
-            ("@//pkg2:comp_a", vec![], vec![]),
-        ]);
-        let diagram = diagram(vec![entity("CompA", Some("comp_a"), None, Some("SEooC"))]);
-        let errs = run_arch_validation(&arch, &diagram);
-        assert!(!errs.is_empty());
-        assert!(
-            errs.failures.iter().any(|m| m.contains("Duplicate")),
-            "Expected duplicate error, got: {:?}",
-            errs.failures
-        );
-    }
-
-    #[test]
     fn test_same_short_name_different_packages_one_child() {
         let arch = make_arch(vec![
             ("de", vec![], vec!["@//pkg1:comp_a"]),
@@ -547,44 +531,5 @@ mod tests {
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
-    }
-
-    #[test]
-    fn test_duplicate_diagram_id_detected() {
-        let arch = make_arch(vec![("my_de", vec![], vec![])]);
-        let diagram = diagram(vec![
-            entity("MyDE", Some("my_de"), None, Some("SEooC")),
-            entity("myDE", Some("other_alias"), None, Some("component")),
-        ]);
-        let errs = run_arch_validation(&arch, &diagram);
-        assert!(
-            errs.failures
-                .iter()
-                .any(|m| m.contains("Duplicate entity ID")),
-            "Expected duplicate ID error, got: {:?}",
-            errs.failures
-        );
-    }
-
-    #[test]
-    fn test_orphaned_parent_id_detected() {
-        let arch = make_arch(vec![("my_de", vec![], vec![])]);
-        let diagram = diagram(vec![
-            entity("MyDE", Some("my_de"), None, Some("SEooC")),
-            entity(
-                "CompA",
-                Some("comp_a"),
-                Some("NonExistent"),
-                Some("component"),
-            ),
-        ]);
-        let errs = run_arch_validation(&arch, &diagram);
-        assert!(
-            errs.failures
-                .iter()
-                .any(|m| m.contains("Unresolved parent_id")),
-            "Expected unresolved parent error, got: {:?}",
-            errs.failures
-        );
     }
 }

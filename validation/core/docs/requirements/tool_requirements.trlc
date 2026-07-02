@@ -102,7 +102,7 @@ section "Tool Requirements" {
 
         section "Sequence Internal API Validator" {
 
-            ToolQualification.ToolRequirement ComponentSequenceMethodNameConsistency {
+            ToolQualification.ToolRequirement ComponentSequenceInternalApiMethodNameConsistency {
                 description = '''When component, sequence, and internal API
                 diagrams are provided, the validator shall report an error
                 when a function used in a sequence interaction is not declared
@@ -112,16 +112,19 @@ section "Tool Requirements" {
                 satisfied_by = Verifier
             }
 
-            ToolQualification.ToolRequirement SequenceInternalApiInterfaceCoverage {
-                description = '''When sequence and internal API diagrams are
-                provided, the validator shall report an error when a function
-                declared in an internal API interface is never called in any
-                sequence interaction. Self-calls count as valid usage.'''
+            ToolQualification.ToolRequirement ComponentSequenceInternalApiConsumerProviderRoleConsistency {
+                description = '''When component, sequence, and internal API
+                diagrams are provided, the validator shall report an error
+                when a cross-unit sequence interaction does not match
+                consumer/provider roles derived from the shared interfaces in
+                the component diagram: the caller shall require and the callee
+                shall provide an interface on which the called method is
+                declared.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
-            ToolQualification.ToolRequirement ComponentSequenceInterfaceCoverage {
+            ToolQualification.ToolRequirement ComponentSequenceInternalApiInterfaceCoverage {
                 description = '''When component, sequence, and internal API
                 diagrams are provided, the validator shall report an error
                 when a function declared in a validated interface is never

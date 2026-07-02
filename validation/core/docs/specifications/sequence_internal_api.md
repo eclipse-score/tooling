@@ -30,20 +30,49 @@ the participating units.
 
 All comparisons are case-sensitive.
 
-Method-name consistency is checked only when component context is available.
-Without component context, the validator does not run a weak global method-name
-existence check.
+Method-name consistency and consumer/provider roles consistency are checked only
+when component context is available. Without component context, the validator
+does not run a weak global method-name existence check.
 
-### Related Interface Method-Name Consistency With Component Context
+### Method-Name Consistency
 
-When component context is available, every function used in a sequence
-interaction must be declared in the related Internal API interface context.
+Every function used in a sequence interaction must be declared in the related
+Internal API interface context.
 
 For cross-unit calls, the method must be declared on a shared interface of the
 participating units as defined in the component diagram. For self-calls, the
-method must be declared on one of the available component or Internal API
+method must be declared on one of the available interfaces.
+*(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceInternalApiMethodNameConsistency`)*
+
+```text
+' component diagram
+component "Unit 1" as unit_1 <<unit>>
+component "Unit 2" as unit_2 <<unit>>
+interface "IData" as IData
+unit_1 -( IData
+unit_2 )- IData
+
+' sequence diagram
+participant "Unit 1" as unit_1
+participant "Unit 2" as unit_2
+unit_1 -> unit_2 : GetData()
+
+' internal_api diagram
+interface "IData" as IData <<interface>> {
+  {abstract} GetData(): Data*
+}
+```
+
+### Consumer/Provider Role Consistency
+
+When component context is available, cross-unit sequence calls must align with
+consumer/provider roles derived from the component diagram for shared
 interfaces.
-*(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceMethodNameConsistency`)*
+
+The caller shall require and the callee shall provide at least one shared
+interface on which the called method is declared. Self-calls are excluded from
+this check.
+*(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceInternalApiConsumerProviderRoleConsistency`)*
 
 ```text
 ' component diagram
@@ -68,8 +97,7 @@ interface "IData" as IData <<interface>> {
 
 Every function declared in an Internal API interface must be called in at least
 one sequence interaction. Self-calls count as valid usage.
-*(Requirement: {requirement:downstream-ref}`Tools.SequenceInternalApiInterfaceCoverage`)*
-*(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceInterfaceCoverage`)*
+*(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceInternalApiInterfaceCoverage`)*
 
 ```text
 ' internal_api diagram
@@ -89,7 +117,8 @@ unit_1 -> unit_2 : SetData(d)
 
 | Failure case | Validation rule |
 |---|---|
-| Method not declared in related interface | Related Interface Method-Name Consistency With Component Context |
+| Method not declared in related interface | Method-Name Consistency |
+| Invalid consumer/provider roles | Consumer/Provider Role Consistency |
 | Internal API interface function not exercised | Interface Coverage |
 
 ## Debug Output

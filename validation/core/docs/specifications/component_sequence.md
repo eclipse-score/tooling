@@ -47,9 +47,8 @@ participant "Unit 2" as unit_2
 Every pair of units connected through an interface in the component diagram
 must have at least one corresponding function-call interaction in the sequence
 diagrams, and every cross-unit function call in a sequence diagram must
-correspond to an interface connection in the component diagram. The caller
-shall be the consumer of the shared interface and the callee shall be the
-provider. Self-calls are excluded from this check.
+correspond to an interface connection in the component diagram. Self-calls are
+excluded from this check.
 *(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceInterfaceConnectionConsistency`)*
 
 ```text
@@ -74,7 +73,6 @@ unit_1 -> unit_2 : GetData()
 | Unexpected sequence participant | Alias Consistency |
 | Missing sequence interaction for interface-connected units | Interface-Connection Consistency |
 | Missing interface connection for sequence-connected units | Interface-Connection Consistency |
-| Invalid consumer/provider roles | Interface-Connection Consistency |
 
 ## Debug Output
 
