@@ -96,6 +96,10 @@ architectural_design(
 Diagrams in `public_api` are classified separately so their lobster items flow
 through `public_api_lobster_files` for failure-mode traceability.
 
+Mermaid diagrams are also available in Sphinx-authored `.rst` and `.md`
+sources via the bundled `sphinxcontrib-mermaid` extension, but unlike `.puml`
+inputs they are not parsed into FlatBuffers or LOBSTER artifacts.
+
 ---
 
 ## `unit`

@@ -4,5 +4,6 @@ sphinx
 sphinx-needs
 sphinx-design
 myst-parser
+sphinxcontrib-mermaid
 sphinxcontrib-plantuml
 sphinx-rtd-theme
