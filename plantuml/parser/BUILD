@@ -23,7 +23,7 @@ alias(
 )
 
 alias(
-    name = "linker",
-    actual = "//plantuml/linker:linker",
+    name = "puml_cli",
+    actual = "//plantuml/parser/puml_cli:puml_cli",
     visibility = ["//visibility:public"],
 )
