@@ -27,6 +27,7 @@ use component_serializer::ComponentSerializer;
 use sequence_serializer::SequenceSerializer;
 
 use puml_fta::{lobster_document, FtaChain, FtaModel};
+use puml_idmap::{write_idmap_to_file, IdMapModel};
 use puml_lobster::{write_lobster_to_file, LobsterModel};
 use puml_parser::{
     DiagramParser, ErrorLocation, Preprocessor, ProcedureParserService, PumlActivityParser,
@@ -109,6 +110,19 @@ struct Args {
     /// processing is performed in this mode.
     #[arg(long)]
     fta_output_dir: Option<String>,
+
+    /// Output directory for generated idmap sidecar files (optional).
+    /// When set, a <stem>.idmap.json is written for each resolved diagram,
+    /// recording the defines/references used by the clickable_plantuml
+    /// Sphinx extension to resolve cross-diagram links.
+    #[arg(long)]
+    idmap_output_dir: Option<String>,
+
+    /// Stable workspace-relative source name baked into generated artifacts
+    /// (FlatBuffers/lobster/idmap ``source`` field). When omitted, the
+    /// filesystem basename is used as a fallback.
+    #[arg(long)]
+    source_name: Option<String>,
 }
 
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -167,13 +181,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
 
-    let lobster_output_dir: Option<PathBuf> = match &args.lobster_output_dir {
-        Some(dir) => {
-            let p = PathBuf::from(dir);
-            fs::create_dir_all(&p)?;
-            Some(p)
-        }
-        None => None,
+    let lobster_output_dir: Option<PathBuf> = if let Some(dir) = &args.lobster_output_dir {
+        let p = PathBuf::from(dir);
+        fs::create_dir_all(&p)?;
+        Some(p)
+    } else {
+        None
+    };
+
+    let idmap_output_dir: Option<PathBuf> = if let Some(dir) = &args.idmap_output_dir {
+        let p = PathBuf::from(dir);
+        fs::create_dir_all(&p)?;
+        Some(p)
+    } else {
+        None
     };
 
     let file_list = collect_files_from_args(&args)?;
@@ -197,6 +218,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
+        // Capture the @startuml <name> before resolve_parsed_diagram
+        // consumes parsed_content — the resolver discards it from the map.
+        let diagram_name: Option<String> = match &parsed_content {
+            ParsedDiagram::Component(doc) => doc.name.clone(),
+            _ => None,
+        };
+
         match resolve_parsed_diagram(parsed_content) {
             Ok(logic_result) => {
                 debug!(
@@ -209,9 +237,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
 
-                let source_file = path
-                    .file_name()
-                    .and_then(|n| n.to_str())
+                // Prefer the stable workspace-relative --source-name when
+                // provided; fall back to the filesystem basename (legacy).
+                let source_file: &str = args
+                    .source_name
+                    .as_deref()
+                    .or_else(|| path.file_name().and_then(|n| n.to_str()))
                     .unwrap_or_default();
                 let fbs_buffer = serialize_resolved_diagram(&logic_result, source_file);
                 if let Some(ref dir) = fbs_output_dir {
@@ -225,7 +256,23 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         ResolvedDiagram::Activity(_) => LobsterModel::Empty,
                         ResolvedDiagram::Sequence(_) => LobsterModel::Empty,
                     };
-                    write_lobster_to_file(lobster_model, path, ldir)?;
+                    write_lobster_to_file(lobster_model, path, Some(source_file), ldir)?;
+                }
+
+                if let Some(idir) = &idmap_output_dir {
+                    let idmap_model = match &logic_result {
+                        ResolvedDiagram::Component(model) => IdMapModel::Component(model),
+                        ResolvedDiagram::Class(model) => IdMapModel::Class(model),
+                        ResolvedDiagram::Activity(_) => IdMapModel::Empty,
+                        ResolvedDiagram::Sequence(model) => IdMapModel::Sequence(model),
+                    };
+                    write_idmap_to_file(
+                        idmap_model,
+                        path,
+                        Some(source_file),
+                        diagram_name.as_deref(),
+                        idir,
+                    )?;
                 }
             }
             Err(e) => {
@@ -295,6 +342,20 @@ fn run_fta(
         let model = FtaModel::from_procedure_file(&parsed)?;
         all_items.extend(model.lobster_items(basename));
         all_chains.extend(model.chains(basename));
+
+        if let Some(ref idir_str) = args.idmap_output_dir {
+            let idir = PathBuf::from(idir_str);
+            fs::create_dir_all(&idir)?;
+            let source_file = args.source_name.as_deref().unwrap_or(basename);
+            write_idmap_to_file(
+                IdMapModel::Fta(&model),
+                file,
+                Some(source_file),
+                None,
+                &idir,
+            )?;
+        }
+
         debug!("Processed FTA diagram: {}", file.display());
     }
 
