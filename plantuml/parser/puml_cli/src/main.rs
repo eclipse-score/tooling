@@ -27,6 +27,7 @@ use component_serializer::ComponentSerializer;
 use sequence_serializer::SequenceSerializer;
 
 use puml_fta::{lobster_document, FtaChain, FtaModel};
+use puml_idmap::{write_empty_idmap_to_file, write_idmap_to_file, IdMapModel};
 use puml_lobster::{write_lobster_to_file, LobsterModel};
 use puml_parser::{
     DiagramParser, ErrorLocation, Preprocessor, ProcedureParserService, PumlActivityParser,
@@ -109,6 +110,13 @@ struct Args {
     /// processing is performed in this mode.
     #[arg(long)]
     fta_output_dir: Option<String>,
+
+    /// Output directory for generated idmap sidecar files (optional).
+    /// When set, a <stem>.idmap.json is written for each resolved diagram,
+    /// recording the defines/references used by the clickable_plantuml
+    /// Sphinx extension to resolve cross-diagram links.
+    #[arg(long)]
+    idmap_output_dir: Option<String>,
 }
 
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -121,7 +129,6 @@ enum DiagramType {
     Sequence,
 }
 
-#[allow(dead_code)] // Class and Sequence variants are WIP
 #[derive(Debug, Serialize)]
 enum ParsedDiagram {
     Activity(puml_parser::RawActivityDiagram),
@@ -167,13 +174,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
 
-    let lobster_output_dir: Option<PathBuf> = match &args.lobster_output_dir {
-        Some(dir) => {
-            let p = PathBuf::from(dir);
-            fs::create_dir_all(&p)?;
-            Some(p)
-        }
-        None => None,
+    let lobster_output_dir: Option<PathBuf> = if let Some(dir) = &args.lobster_output_dir {
+        let p = PathBuf::from(dir);
+        fs::create_dir_all(&p)?;
+        Some(p)
+    } else {
+        None
+    };
+
+    let idmap_output_dir: Option<PathBuf> = if let Some(dir) = &args.idmap_output_dir {
+        let p = PathBuf::from(dir);
+        fs::create_dir_all(&p)?;
+        Some(p)
+    } else {
+        None
     };
 
     let file_list = collect_files_from_args(&args)?;
@@ -197,6 +211,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
+        // Capture the @startuml <name> before resolve_parsed_diagram
+        // consumes parsed_content — the resolver discards it from the map.
+        let diagram_name: Option<String> = match &parsed_content {
+            ParsedDiagram::Component(doc) => doc.name.clone(),
+            _ => None,
+        };
+
         match resolve_parsed_diagram(parsed_content) {
             Ok(logic_result) => {
                 debug!(
@@ -209,11 +230,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
 
-                let source_file = path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or_default();
-                let fbs_buffer = serialize_resolved_diagram(&logic_result, source_file);
+                let source_file = source_path_for_output(path);
+                let fbs_buffer = serialize_resolved_diagram(&logic_result, &source_file);
                 if let Some(ref dir) = fbs_output_dir {
                     write_fbs_to_file(&fbs_buffer, path, dir)?;
                 }
@@ -225,7 +243,42 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         ResolvedDiagram::Activity(_) => LobsterModel::Empty,
                         ResolvedDiagram::Sequence(_) => LobsterModel::Empty,
                     };
-                    write_lobster_to_file(lobster_model, path, ldir)?;
+                    write_lobster_to_file(lobster_model, path, &source_file, ldir)?;
+                }
+
+                if let Some(idir) = &idmap_output_dir {
+                    match &logic_result {
+                        ResolvedDiagram::Component(model) => {
+                            write_idmap_to_file(
+                                IdMapModel::Component(model),
+                                path,
+                                Some(&source_file),
+                                diagram_name.as_deref(),
+                                idir,
+                            )?;
+                        }
+                        ResolvedDiagram::Class(model) => {
+                            write_idmap_to_file(
+                                IdMapModel::Class(model),
+                                path,
+                                Some(&source_file),
+                                diagram_name.as_deref(),
+                                idir,
+                            )?;
+                        }
+                        ResolvedDiagram::Sequence(model) => {
+                            write_idmap_to_file(
+                                IdMapModel::Sequence(model),
+                                path,
+                                Some(&source_file),
+                                diagram_name.as_deref(),
+                                idir,
+                            )?;
+                        }
+                        ResolvedDiagram::Activity(_) => {
+                            write_empty_idmap_to_file(path, Some(&source_file), idir)?;
+                        }
+                    }
                 }
             }
             Err(e) => {
@@ -295,6 +348,20 @@ fn run_fta(
         let model = FtaModel::from_procedure_file(&parsed)?;
         all_items.extend(model.lobster_items(basename));
         all_chains.extend(model.chains(basename));
+
+        if let Some(ref idir_str) = args.idmap_output_dir {
+            let idir = PathBuf::from(idir_str);
+            fs::create_dir_all(&idir)?;
+            let source_file = source_path_for_output(file);
+            write_idmap_to_file(
+                IdMapModel::Fta(&model),
+                file,
+                Some(&source_file),
+                None,
+                &idir,
+            )?;
+        }
+
         debug!("Processed FTA diagram: {}", file.display());
     }
 
@@ -538,25 +605,52 @@ fn collect_files_from_args(
     Ok(file_list)
 }
 
-fn resolve_path(path: &Path) -> PathBuf {
+fn resolve_path(path: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    if path.is_absolute() {
+        return Ok(path.to_path_buf());
+    }
+
     // When running with 'bazel run', use BUILD_WORKSPACE_DIRECTORY
-    let base_dir = std::env::var("BUILD_WORKSPACE_DIRECTORY")
+    let base_dir = match std::env::var("BUILD_WORKSPACE_DIRECTORY") {
+        Ok(dir) => PathBuf::from(dir),
+        Err(_) => std::env::current_dir()?,
+    };
+
+    Ok(base_dir.join(path))
+}
+
+fn source_path_for_output(path: &Path) -> String {
+    let workspace_root = std::env::var("BUILD_WORKSPACE_DIRECTORY")
         .ok()
         .map(PathBuf::from)
-        .unwrap_or_else(|| std::env::current_dir().unwrap());
+        .or_else(|| std::env::current_dir().ok());
 
-    if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        base_dir.join(path)
+    // Prefer a stable, workspace-relative path so the embedded `source` is
+    // reproducible across machines and portable outside Bazel.
+    if let Some(root) = workspace_root {
+        if let Ok(rel) = path.strip_prefix(&root) {
+            return rel.to_string_lossy().into_owned();
+        }
     }
+
+    // Already relative: keep it verbatim (still portable).
+    if path.is_relative() {
+        return path.to_string_lossy().into_owned();
+    }
+
+    // Absolute path outside the workspace: never embed the machine-specific
+    // absolute path — it leaks local directory layout and breaks build
+    // reproducibility. Fall back to the file name only.
+    path.file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| path.to_string_lossy().into_owned())
 }
 
 fn add_single_file(
     path: &Path,
     file_list: &mut HashSet<Rc<PathBuf>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let abs_path = resolve_path(path);
+    let abs_path = resolve_path(path)?;
 
     if !abs_path.is_file() {
         return Err(format!("Path is not a file: {}", path.display()).into());
@@ -572,7 +666,7 @@ fn collect_puml_files_from_folder(
     dir: &Path,
     file_list: &mut HashSet<Rc<PathBuf>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let abs_dir = resolve_path(dir);
+    let abs_dir = resolve_path(dir)?;
 
     if !abs_dir.is_dir() {
         return Err(format!("Path is not a directory: {}", dir.display()).into());
@@ -768,5 +862,74 @@ mod fta_pipeline_tests {
         assert!(err.to_string().contains("duplicate FTA diagram basename"));
 
         fs::remove_dir_all(&dir).ok();
+    }
+}
+
+#[cfg(test)]
+mod idmap_wiring_tests {
+    use super::*;
+
+    fn unique_dir(tag: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!(
+            "puml_idmap_wiring_{}_{}_{}",
+            tag,
+            std::process::id(),
+            nanos
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// Activity diagrams carry no cross-linkable elements, so the CLI routes
+    /// them to the explicit empty-writer API rather than a model converter.
+    /// This verifies both the routing predicate (the diagram resolves to
+    /// `ResolvedDiagram::Activity`) and the resulting on-disk empty idmap.
+    #[test]
+    fn activity_diagram_routes_to_empty_idmap_writer() {
+        let content = "@startuml\nstart\n:Do work;\nstop\n@enduml";
+        let path = Rc::new(PathBuf::from("flow/activity.puml"));
+
+        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Activity)
+            .expect("activity parse must succeed");
+        let resolved = resolve_parsed_diagram(parsed).expect("activity must resolve");
+        assert!(
+            matches!(resolved, ResolvedDiagram::Activity(_)),
+            "activity diagram must resolve to the Activity variant that triggers the empty writer"
+        );
+
+        // Mirror the CLI dispatch for the Activity arm.
+        let dir = unique_dir("activity");
+        let source_file = source_path_for_output(&path);
+        let output = write_empty_idmap_to_file(&path, Some(&source_file), &dir)
+            .expect("empty idmap must be written");
+
+        assert_eq!(
+            output.file_name().and_then(|n| n.to_str()),
+            Some("activity.idmap.json")
+        );
+        let json: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&output).unwrap()).unwrap();
+        assert_eq!(json["source"], "flow/activity.puml");
+        assert!(json["defines"].as_array().unwrap().is_empty());
+        assert!(json["references"].as_array().unwrap().is_empty());
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    /// An absolute path outside the workspace must never leak into the emitted
+    /// `source` field; the fallback collapses to the file name only.
+    #[test]
+    fn source_path_for_output_does_not_leak_absolute_paths() {
+        let outside = Path::new("/nonexistent/abs/dir/diagram.puml");
+        let source = source_path_for_output(outside);
+        assert_eq!(source, "diagram.puml");
+        assert!(
+            !source.starts_with('/'),
+            "absolute path must not leak into source, got: {source}"
+        );
     }
 }
