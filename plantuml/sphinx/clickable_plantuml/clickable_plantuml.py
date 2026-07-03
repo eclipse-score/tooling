@@ -10,27 +10,70 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""Sphinx extension to make PlantUML diagrams clickable."""
+"""Sphinx extension to make PlantUML diagrams clickable.
+
+Design overview
+---------------
+Link data is derived from ``.idmap.json`` sidecar files produced by the
+PlantUML parser (``puml_cli --idmap-output-dir ...``).  Each idmap file
+records two roles for the elements in one ``.puml`` diagram:
+
+* **defines** – elements elaborated (given children / structure) in that
+  diagram.  A component diagram that contains ``package Proxy { ... }`` is
+  the definition site of ``Proxy``.
+* **references** – leaf mentions and relation endpoints.  A top-level
+  ``[Proxy]`` box in an overview is a reference that should link to the
+  diagram that defines it.
+
+The matching algorithm:
+
+1. Build a *definition index*: ``{alias|id → [source_paths]}``.
+2. For each reference ``(alias, id)`` in a diagram, look up the index (FQN
+   ``id`` first, then ``alias``) to find candidate definer diagrams.
+3. If exactly one definer: emit the link.
+4. If multiple definers: pick the one sharing the longest common workspace-
+   relative path prefix with the source diagram (proximity tiebreak).
+   On a tie: log a warning and emit no link (safe over wrong).
+5. Never link a diagram to itself.
+"""
+
+from __future__ import annotations
 
 import functools
 import json
+import os
 import re
-from pathlib import Path
+import urllib.parse
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from docutils import nodes
 from sphinx.application import Sphinx
+from sphinx.errors import ExtensionError
 from sphinx.util import logging
 
 logger = logging.getLogger(__name__)
 
-# Environment attribute names used by this extension.
-_ENV_LINK_DATA = "clickable_plantuml_link_data"
-# Stores {puml_basename: (docname, anchor_id_or_None)}
-_ENV_PUML_DOCNAMES = "clickable_plantuml_puml_docnames"
+# ---------------------------------------------------------------------------
+# Environment attribute names
+# ---------------------------------------------------------------------------
 
-# Characters allowed in PlantUML alias identifiers.
-_ALIAS_SAFE_RE = re.compile(r"^[\w.]+$")
+# {normalized_source_path: raw_idmap_dict} — loaded once in builder-inited.
+_ENV_IDMAP_BY_SOURCE = "clickable_plantuml_idmap_by_source"
+# {alias_or_id: [source_path, ...]} — definition index built in builder-inited.
+_ENV_DEF_INDEX = "clickable_plantuml_def_index"
+# {normalized_source_path: (docname, anchor_or_None)} — populated in doctree-read.
+_ENV_PUML_DOCNAMES = "clickable_plantuml_puml_docnames"
+# Absolute prefix to strip from PlantUML node paths to obtain canonical source keys.
+_ENV_WORKSPACE_OFFSET = "clickable_plantuml_workspace_offset"
+# Frozen set of known canonical source keys for fast membership checks.
+_ENV_SOURCE_KEYS = "clickable_plantuml_source_keys"
+# Count of plantuml nodes that were not idmap-backed and thus not linkable.
+_ENV_NO_IDMAP_NODE_COUNT = "clickable_plantuml_no_idmap_node_count"
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
 def _find_parent_section_id(node: nodes.Node) -> str | None:
@@ -45,76 +88,240 @@ def _find_parent_section_id(node: nodes.Node) -> str | None:
     return None
 
 
+def _normalize_source_path(raw: str) -> str:
+    """Normalise a source path to a forward-slash relative string."""
+    return str(PurePosixPath(raw)).lstrip("/")
+
+
+def _assert_canonical_source_key(source_key: str) -> None:
+    """Assert that *source_key* is a workspace-relative POSIX key."""
+    if source_key != _normalize_source_path(source_key):
+        raise ValueError(f"non-canonical source key: {source_key!r}")
+
+
+def _common_prefix_length(path_a: str, path_b: str) -> int:
+    """Return the number of shared path components between two canonical keys.
+
+    Both inputs must be canonical workspace-relative POSIX keys to ensure
+    the proximity comparison is valid (never mixing staging paths with
+    canonical paths).
+    """
+    _assert_canonical_source_key(path_a)
+    _assert_canonical_source_key(path_b)
+    parts_a = PurePosixPath(path_a).parts
+    parts_b = PurePosixPath(path_b).parts
+    count = 0
+    for a, b in zip(parts_a, parts_b):
+        if a == b:
+            count += 1
+        else:
+            break
+    return count
+
+
+def _proximity_tiebreak(source: str, candidates: list[str]) -> str | None:
+    """Pick the candidate with the longest common prefix with *source*.
+
+    All inputs are canonical workspace-relative POSIX keys (guaranteed by the
+    exact-matching in P0-1); the assertions guard that invariant so a staging
+    path can never sneak into the comparison.  Returns ``None`` when two or
+    more candidates score equally (tie → no link).
+    """
+    _assert_canonical_source_key(source)
+    best_candidate: str | None = None
+    best_score = -1
+    has_tie = False
+
+    for candidate in candidates:
+        _assert_canonical_source_key(candidate)
+        score = _common_prefix_length(source, candidate)
+        if score > best_score:
+            best_score = score
+            best_candidate = candidate
+            has_tie = False
+        elif score == best_score:
+            has_tie = True
+
+    if has_tie or best_candidate is None:
+        return None
+    return best_candidate
+
+
+def _resolve_definer(
+    alias: str,
+    fqn: str,
+    source_key: str,
+    definition_index: dict[str, list[str]],
+) -> str | None:
+    """Return the definer source key for one reference, or ``None``.
+
+    Resolution rules:
+
+    * FQN (``id``) lookup takes precedence over the ``alias`` lookup.
+    * A diagram never links to itself (self-links are dropped).
+    * A single remaining candidate wins outright; multiple candidates go
+      through the proximity tiebreak, and a genuine tie logs a warning and
+      returns ``None`` (safe over wrong).
+    """
+    _assert_canonical_source_key(source_key)
+    candidates = definition_index.get(fqn) or definition_index.get(alias) or []
+    for candidate in candidates:
+        _assert_canonical_source_key(candidate)
+    # Never link a diagram to itself.
+    candidates = [c for c in candidates if c != source_key]
+    if not candidates:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+    target = _proximity_tiebreak(source_key, candidates)
+    if target is None:
+        logger.warning(
+            "clickable_plantuml: ambiguous definition for '%s' in '%s'"
+            " — tied candidates %s; no link emitted",
+            alias,
+            source_key,
+            candidates,
+        )
+    return target
+
+
+def _build_target_url(
+    builder: Any,
+    output_format: str,
+    imagedir: str,
+    docname: str,
+    target_docname: str,
+    anchor: str | None,
+) -> str:
+    """Build the link URL for a resolved definer diagram.
+
+    In ``svg_obj`` mode the rendered SVG lives in the ``_images/`` directory,
+    so URLs inside the SVG must be relative to ``_images/`` rather than the
+    containing HTML page.  For inline ``svg``/``png`` the SVG is embedded in
+    the page, so a page-relative URL is correct.  The optional section
+    *anchor* is appended as a fragment.
+    """
+    if output_format == "svg_obj":
+        target_uri = builder.get_target_uri(target_docname)
+        url = os.path.relpath(target_uri, imagedir).replace("\\", "/")
+    else:
+        url = builder.get_relative_uri(docname, target_docname)
+    if anchor:
+        url += f"#{anchor}"
+    return url
+
+
+def _escape_plantuml_url(url: str) -> str:
+    """Percent-encode characters significant in PlantUML URL syntax.
+
+    PlantUML terminates ``url of X is [[...]]`` at the first ``]]``.  We also
+    encode ``[``, spaces, and other characters that would confuse the PlantUML
+    lexer.  The fragment (after ``#``) is encoded separately to preserve it.
+    """
+    # Characters that are safe to leave unencoded in a URL context. ``#`` is
+    # deliberately excluded here and reintroduced only as the single fragment
+    # separator, so literal hash payload is always encoded.
+    _SAFE = "/:?&=@!$'()*+,;-._~"
+    fragment_sep = url.find("#")
+    if fragment_sep != -1:
+        base = urllib.parse.quote(url[:fragment_sep], safe=_SAFE)
+        frag = urllib.parse.quote(url[fragment_sep + 1 :], safe="-._~")
+        # Keep a real fragment separator so generated SVG href remains valid.
+        return f"{base}#{frag}"
+    return urllib.parse.quote(url, safe=_SAFE)
+
+
 # ---------------------------------------------------------------------------
-# JSON loading
+# idmap loading
 # ---------------------------------------------------------------------------
 
 
-def _load_link_mappings(
-    search_dir: str,
-    pattern: str = "*plantuml_links.json",
-) -> dict[str, dict[str, Any]]:
-    """Return ``{source_file: {source_id: {target_file, ...}}}``."""
-    link_data: dict[str, dict[str, Any]] = {}
-    for json_file in Path(search_dir).rglob(pattern):
+def _load_idmap_files(
+    source_dir: Path,
+) -> tuple[dict[str, Any], dict[str, list[str]]]:
+    """Scan *source_dir* for ``*.idmap.json`` and build the lookup indices.
+
+    The canonical key is the workspace-relative POSIX path stored in each
+    idmap's ``source`` field (baked in by ``--source-name``).  Matching is
+    exact — there is no basename fallback — so two same-basename diagrams in
+    different packages never mislink.
+
+    Returns:
+        idmap_by_source:   ``{canonical_source_key → raw idmap dict}``
+        definition_index:  ``{alias_or_fqn_id → [canonical_source_keys]}``
+
+    Raises:
+        ExtensionError: when two idmaps normalise to the same canonical key.
+    """
+    idmap_by_source: dict[str, Any] = {}
+    definition_index: dict[str, list[str]] = {}
+
+    for json_path in sorted(source_dir.rglob("*.idmap.json")):
         try:
-            json_data = json.loads(json_file.read_text(encoding="utf-8"))
-            if "links" not in json_data or not isinstance(json_data["links"], list):
-                logger.warning(
-                    "Invalid format in %s: missing 'links' array",
-                    json_file.name,
-                )
-                continue
-            file_link_count = 0
-            for link_entry in json_data["links"]:
-                source_file = link_entry.get("source_file")
-                source_id = link_entry.get("source_id")
-                target_file = link_entry.get("target_file")
-                if not (source_file and source_id and target_file):
-                    continue
-                link_data.setdefault(source_file, {})[source_id] = {
-                    "target_file": target_file,
-                    "line": link_entry.get("source_line", 0),
-                    "description": link_entry.get("description", ""),
-                }
-                file_link_count += 1
-            logger.info(
-                "Loaded %d links from %s",
-                file_link_count,
-                json_file.relative_to(search_dir),
-            )
+            data = json.loads(json_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as exc:
-            logger.warning("Failed to load %s: %s", json_file.name, exc)
-    return link_data
+            logger.warning("clickable_plantuml: failed to load %s: %s", json_path, exc)
+            continue
 
+        raw_source = data.get("source", "")
+        if not raw_source:
+            logger.warning(
+                "clickable_plantuml: idmap %s missing 'source' field — skipped",
+                json_path.name,
+            )
+            continue
 
-def _collect_link_data(source_dir: Path) -> dict[str, dict[str, Any]]:
-    """Load all ``*plantuml_links.json`` files from *source_dir*."""
-    if source_dir.exists():
-        return _load_link_mappings(str(source_dir))
-    return {}
+        source_key = _normalize_source_path(raw_source)
+        _assert_canonical_source_key(source_key)
+        if source_key in idmap_by_source:
+            raise ExtensionError(
+                "clickable_plantuml: duplicate idmap source key "
+                f"'{source_key}' (from {json_path.name}); each diagram's "
+                "--source-name must be a unique workspace-relative path."
+            )
+        idmap_by_source[source_key] = data
+
+        for entry in data.get("defines", []):
+            alias = entry.get("alias", "")
+            fqn = entry.get("id", "")
+            if alias:
+                definition_index.setdefault(alias, []).append(source_key)
+            if fqn and fqn != alias:
+                definition_index.setdefault(fqn, []).append(source_key)
+
+    logger.info(
+        "clickable_plantuml: loaded %d idmap file(s), %d unique definition keys",
+        len(idmap_by_source),
+        len(definition_index),
+    )
+    return idmap_by_source, definition_index
 
 
 # ---------------------------------------------------------------------------
-# UML injection helper
+# UML injection
 # ---------------------------------------------------------------------------
+
+# Characters allowed in a PlantUML alias identifier.
+_ALIAS_SAFE_RE = re.compile(r"^[\w.\-]+$")
+# Matches the @enduml terminator line (used to inject url directives before it).
+_ENDUML_RE = re.compile(r"^\s*@enduml\s*$", re.MULTILINE)
 
 
 def _inject_links_into_uml(uml_content: str, links: dict[str, str]) -> str:
     """Append ``url of <alias> is [[url]]`` directives before ``@enduml``."""
     if not links:
         return uml_content
-    safe_links = {
-        alias: url
+
+    directives = [
+        f"url of {alias} is [[{url}]]"
         for alias, url in links.items()
-        if _ALIAS_SAFE_RE.match(alias) and "]]" not in url
-    }
-    if not safe_links:
+        if _ALIAS_SAFE_RE.match(alias)
+    ]
+    if not directives:
         return uml_content
-    url_directives = "\n".join(
-        f"url of {alias} is [[{url}]]" for alias, url in safe_links.items()
-    )
-    enduml_match = re.search(r"^\s*@enduml\s*$", uml_content, re.MULTILINE)
+
+    url_directives = "\n".join(directives)
+    enduml_match = _ENDUML_RE.search(uml_content)
     if enduml_match:
         prefix = uml_content[: enduml_match.start()]
         if not prefix.endswith("\n"):
@@ -124,7 +331,7 @@ def _inject_links_into_uml(uml_content: str, links: dict[str, str]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Sphinx event handlers
+# plantuml node class (cached import)
 # ---------------------------------------------------------------------------
 
 
@@ -139,117 +346,312 @@ def _get_plantuml_node_class() -> type | None:
         return None
 
 
+# ---------------------------------------------------------------------------
+# Node filename normalisation
+# ---------------------------------------------------------------------------
+
+
+def _compute_workspace_offset(srcdir: str, source_keys: set[str]) -> str:
+    """Compute the absolute prefix used to derive canonical source keys.
+
+    This runs once during ``builder-inited``. The returned prefix is removed
+    from absolute PlantUML node paths to obtain exact workspace-relative keys.
+    """
+    srcdir_posix = PurePosixPath(os.path.normpath(srcdir)).as_posix()
+    best_parent = ""
+
+    for key in source_keys:
+        _assert_canonical_source_key(key)
+        parent = str(PurePosixPath(key).parent)
+        if parent in ("", "."):
+            continue
+        if srcdir_posix == parent or srcdir_posix.endswith("/" + parent):
+            if len(parent) > len(best_parent):
+                best_parent = parent
+
+    if not best_parent:
+        return srcdir_posix
+    if srcdir_posix == best_parent:
+        return srcdir_posix
+    return srcdir_posix[: -(len(best_parent) + 1)]
+
+
+def _node_source_key(
+    node: nodes.Node, srcdir: str, workspace_offset: str, source_keys: set[str]
+) -> str | None:
+    """Return the canonical workspace-relative key for a plantuml *node*.
+
+    ``sphinxcontrib.plantuml`` stores the diagram location on the node as
+    ``incdir`` (directory relative to Sphinx's source root) plus ``filename``
+    (bare basename).  Matching is exact after realpath canonicalization: both
+    the node path and ``workspace_offset`` are resolved via ``os.path.realpath``
+    before prefix comparison.  The remainder must match a canonical source key
+    exactly.  There is no basename-based fallback: two same-basename diagrams
+    in different packages remain distinct.
+
+    Returns ``None`` when the node carries no filename, the workspace-offset
+    prefix is not matched, or the resulting canonical key is not in
+    ``source_keys``.
+    """
+    filename: str = node.get("filename", "")
+    if not filename:
+        return None
+    srcdir = os.fspath(srcdir)
+    incdir: str = node.get("incdir", "")
+    node_abs = PurePosixPath(
+        os.path.normpath(os.path.join(srcdir, incdir, filename))
+    ).as_posix()
+
+    workspace_offset = PurePosixPath(
+        os.path.realpath(os.fspath(workspace_offset))
+    ).as_posix()
+    node_abs_real = PurePosixPath(os.path.realpath(node_abs)).as_posix()
+
+    workspace_offset = workspace_offset.rstrip("/")
+    if node_abs_real.startswith(workspace_offset + "/"):
+        source_key = _normalize_source_path(node_abs_real[len(workspace_offset) + 1 :])
+        if source_key in source_keys:
+            _assert_canonical_source_key(source_key)
+            return source_key
+
+    # Fallback for symlinked/absolute staging layouts: resolve by unique
+    # canonical source-key suffix match against both lexical and real paths.
+    def _has_component_suffix(path_value: str, suffix_value: str) -> bool:
+        path_parts = PurePosixPath(path_value).parts
+        suffix_parts = PurePosixPath(suffix_value).parts
+        if len(path_parts) < len(suffix_parts):
+            return False
+        return path_parts[-len(suffix_parts) :] == suffix_parts
+
+    def _unique_suffix_source_key(path_value: str) -> str | None:
+        canonical_path = _normalize_source_path(path_value)
+        if canonical_path in source_keys:
+            return canonical_path
+        matches = [
+            key
+            for key in source_keys
+            if _has_component_suffix(canonical_path, key)
+            or _has_component_suffix(key, canonical_path)
+        ]
+        if len(matches) == 1:
+            return matches[0]
+
+        # Last-resort fallback: when suffix matching is inconclusive, choose
+        # the candidate whose path components overlap most with the observed
+        # node path (stable across synthetic staging roots). Ties remain
+        # unresolved to avoid wrong links.
+        basename = PurePosixPath(canonical_path).name
+        basename_matches = [
+            key for key in source_keys if PurePosixPath(key).name == basename
+        ]
+        if len(basename_matches) > 1:
+            path_parts = set(PurePosixPath(canonical_path).parts)
+            best_match: str | None = None
+            best_score = -1
+            has_tie = False
+            for key in basename_matches:
+                score = len(set(PurePosixPath(key).parts) & path_parts)
+                if score > best_score:
+                    best_score = score
+                    best_match = key
+                    has_tie = False
+                elif score == best_score:
+                    has_tie = True
+            if best_match is not None and not has_tie:
+                return best_match
+        return None
+
+    candidate_paths = list(
+        dict.fromkeys(
+            (
+                node_abs,
+                node_abs_real,
+                os.path.normpath(os.path.join(incdir, filename)),
+            )
+        )
+    )
+    for candidate_path in candidate_paths:
+        source_key = _unique_suffix_source_key(candidate_path)
+        if source_key is not None:
+            _assert_canonical_source_key(source_key)
+            return source_key
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Sphinx event handlers
+# ---------------------------------------------------------------------------
+
+
 def on_builder_inited(app: Sphinx) -> None:
-    """Load JSON link data once, before any documents are read."""
+    """Load idmap files and build the definition index once."""
     if app.builder.format != "html":
         return
 
     source_dir = Path(app.srcdir)
-    link_data = _collect_link_data(source_dir)
-    if not link_data:
-        logger.info("clickable_plantuml: no link mappings found")
+    if not source_dir.exists():
+        logger.info("clickable_plantuml: srcdir does not exist — no idmaps loaded")
         return
 
-    # Normalise keys to basenames for consistent lookup.
-    normalized = {Path(k).name: v for k, v in link_data.items()}
-    setattr(app.env, _ENV_LINK_DATA, normalized)
+    idmap_by_source, definition_index = _load_idmap_files(source_dir)
+    if not idmap_by_source:
+        logger.info("clickable_plantuml: no *.idmap.json files found")
+        return
 
-    logger.info(
-        "clickable_plantuml: loaded links for %d source file(s)", len(normalized)
-    )
+    workspace_offset = _compute_workspace_offset(app.srcdir, set(idmap_by_source))
+    setattr(app.env, _ENV_WORKSPACE_OFFSET, workspace_offset)
+    setattr(app.env, _ENV_IDMAP_BY_SOURCE, idmap_by_source)
+    setattr(app.env, _ENV_DEF_INDEX, definition_index)
+    setattr(app.env, _ENV_SOURCE_KEYS, frozenset(idmap_by_source))
+    setattr(app.env, _ENV_NO_IDMAP_NODE_COUNT, 0)
 
 
 def on_doctree_read(app: Sphinx, doctree: nodes.document) -> None:
-    """Record which docname (and section anchor) contains which ``.puml`` diagram.
+    """Record which docname (and section anchor) contains which diagram.
 
-    Traverses the parsed doctree.
-    The mapping is stored in ``app.env`` and consumed during ``doctree-resolved``.
+    Each diagram is registered under its canonical workspace-relative key (the
+    idmap ``source`` matched to the node's absolute path), which is directly
+    comparable to the idmap ``source`` field.
     """
     PlantumlNode = _get_plantuml_node_class()
     if PlantumlNode is None:
         return
 
+    if app.builder.format != "html":
+        return
+
+    idmap_by_source: dict[str, Any] = getattr(app.env, _ENV_IDMAP_BY_SOURCE, {})
+    if not idmap_by_source:
+        return
+
+    source_keys: frozenset[str] = getattr(
+        app.env, _ENV_SOURCE_KEYS, frozenset(idmap_by_source)
+    )
+    workspace_offset: str = getattr(app.env, _ENV_WORKSPACE_OFFSET, app.srcdir)
     puml_docnames: dict[str, tuple[str, str | None]] = getattr(
         app.env, _ENV_PUML_DOCNAMES, {}
     )
+    no_idmap_node_count: int = getattr(app.env, _ENV_NO_IDMAP_NODE_COUNT, 0)
 
-    for node in doctree.traverse(PlantumlNode):
-        filename = Path(node.get("filename", "")).name
-        if not filename:
+    for node in doctree.findall(PlantumlNode):
+        key = _node_source_key(node, app.srcdir, workspace_offset, source_keys)
+        if not key:
+            logger.debug(
+                "clickable_plantuml: plantuml node in '%s' has no resolvable"
+                " source path — skipped",
+                app.env.docname,
+            )
+            no_idmap_node_count += 1
             continue
-        if filename in puml_docnames:
+        if key in puml_docnames and puml_docnames[key][0] != app.env.docname:
             logger.warning(
-                "clickable_plantuml: diagram '%s' found in both '%s' and '%s' "
-                "(basename collision — last wins)",
-                filename,
-                puml_docnames[filename][0],
+                "clickable_plantuml: diagram '%s' found in both '%s' and '%s'"
+                " — last wins (path collision; check idmap source fields)",
+                key,
+                puml_docnames[key][0],
                 app.env.docname,
             )
         anchor = _find_parent_section_id(node)
-        puml_docnames[filename] = (app.env.docname, anchor)
+        puml_docnames[key] = (app.env.docname, anchor)
 
     setattr(app.env, _ENV_PUML_DOCNAMES, puml_docnames)
+    setattr(app.env, _ENV_NO_IDMAP_NODE_COUNT, no_idmap_node_count)
+
+
+def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
+    """Emit an aggregate info log for non-idmap-backed plantuml nodes."""
+    if app.builder.format != "html" or exception is not None:
+        return
+
+    no_idmap_node_count: int = getattr(app.env, _ENV_NO_IDMAP_NODE_COUNT, 0)
+    if no_idmap_node_count:
+        logger.info(
+            "clickable_plantuml: %d plantuml nodes had no idmap (not linkable)",
+            no_idmap_node_count,
+        )
 
 
 def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> None:
-    """Inject ``url of <alias> is [[url]]`` into plantuml nodes before rendering.
+    """Inject ``url of <alias> is [[url]]`` into plantuml nodes.
 
-    For each diagram, resolves target ``.puml`` references to the docname that
-    contains the target diagram and uses ``app.builder.get_relative_uri`` to
-    produce correct relative URLs.
+    Resolves each reference in the diagram's idmap to its definer diagram,
+    applies a proximity tiebreak on ambiguity, and builds a URL whose base
+    depends on the configured ``plantuml_output_format``:
+
+    * ``svg_obj`` – the rendered SVG lives in the ``_images/`` directory and is
+      embedded via ``<object>``; ``<a href>`` targets inside the SVG resolve
+      relative to ``_images/``, so the URL is
+      ``os.path.relpath(target_uri, imagedir)``.
+    * inline ``svg`` / ``png`` – the link resolves relative to the containing
+      HTML page, so the URL is
+      ``app.builder.get_relative_uri(docname, target_docname)``.
     """
-    link_data: dict[str, dict[str, Any]] = getattr(app.env, _ENV_LINK_DATA, {})
-    if app.builder.format != "html" or not link_data:
+    idmap_by_source: dict[str, Any] = getattr(app.env, _ENV_IDMAP_BY_SOURCE, {})
+    definition_index: dict[str, list[str]] = getattr(app.env, _ENV_DEF_INDEX, {})
+    if app.builder.format != "html" or not idmap_by_source:
         return
 
     PlantumlNode = _get_plantuml_node_class()
     if PlantumlNode is None:
         return
 
+    source_keys: frozenset[str] = getattr(
+        app.env, _ENV_SOURCE_KEYS, frozenset(idmap_by_source)
+    )
+    workspace_offset: str = getattr(app.env, _ENV_WORKSPACE_OFFSET, app.srcdir)
     puml_docnames: dict[str, tuple[str, str | None]] = getattr(
         app.env, _ENV_PUML_DOCNAMES, {}
     )
-    absolute_url_prefixes = ("http://", "https://", "/")
+
+    # Loop-invariant for the whole build: resolve once instead of per reference.
+    output_format = getattr(app.config, "plantuml_output_format", "png")
+    imagedir = getattr(app.builder, "imagedir", "_images")
 
     modified_count = 0
-    for node in doctree.traverse(PlantumlNode):
-        diagram_filename = Path(node.get("filename", "")).name
-        alias_map: dict[str, Any] = link_data.get(diagram_filename, {})
-        if not alias_map:
+    for node in doctree.findall(PlantumlNode):
+        source_key = _node_source_key(node, app.srcdir, workspace_offset, source_keys)
+        if not source_key:
+            continue
+
+        idmap = idmap_by_source.get(source_key)
+        if idmap is None:
             continue
 
         resolved_links: dict[str, str] = {}
-        for alias, info in alias_map.items():
-            target_file: str = info["target_file"]
+        seen_aliases_in_node: set[str] = set()
+        for ref in idmap.get("references", []):
+            alias: str = ref.get("alias", "")
+            fqn: str = ref.get("id", alias)
+            if not alias or alias in seen_aliases_in_node:
+                continue
 
-            if target_file.endswith(".puml"):
-                target_basename = Path(target_file).name
-                target_info = puml_docnames.get(target_basename)
-                if target_info is not None:
-                    target_docname, target_anchor = target_info
-                    # SVG files are stored in _images/ (one level below the
-                    # HTML output root). Using get_relative_uri() would give a
-                    # page-to-page relative URL, but that path is interpreted
-                    # relative to the SVG file, not the parent HTML page —
-                    # causing the browser to open the raw SVG. Instead, build
-                    # the URL relative to _images/ by prepending "../" to the
-                    # root-relative page URI returned by get_target_uri().
-                    page_uri = app.builder.get_target_uri(target_docname)
-                    url = f"../{page_uri}"
-                    if target_anchor:
-                        url += f"#{target_anchor}"
-                    resolved_links[alias] = url
-                else:
-                    logger.debug(
-                        "clickable_plantuml: target diagram '%s' for alias "
-                        "'%s' not found in any document",
-                        target_file,
-                        alias,
-                    )
-            elif target_file.startswith(absolute_url_prefixes):
-                resolved_links[alias] = target_file
-            else:
-                resolved_links[alias] = target_file
+            target_source = _resolve_definer(alias, fqn, source_key, definition_index)
+            if target_source is None:
+                continue
+
+            target_info = puml_docnames.get(target_source)
+            if target_info is None:
+                logger.debug(
+                    "clickable_plantuml: definer '%s' for alias '%s' not"
+                    " found in any document — skipping",
+                    target_source,
+                    alias,
+                )
+                continue
+
+            target_docname, target_anchor = target_info
+            url = _build_target_url(
+                app.builder,
+                output_format,
+                imagedir,
+                docname,
+                target_docname,
+                target_anchor,
+            )
+
+            resolved_links[alias] = _escape_plantuml_url(url)
+            seen_aliases_in_node.add(alias)
 
         if resolved_links:
             node["uml"] = _inject_links_into_uml(node.get("uml", ""), resolved_links)
@@ -292,9 +694,10 @@ def setup(app: Sphinx) -> dict[str, Any]:
     app.connect("doctree-resolved", on_doctree_resolved)
     app.connect("env-purge-doc", on_env_purge_doc)
     app.connect("env-merge-info", on_env_merge_info)
+    app.connect("build-finished", on_build_finished)
 
     return {
-        "version": "4.0",
+        "version": "5.0",
         "parallel_read_safe": True,
         "parallel_write_safe": True,
     }
