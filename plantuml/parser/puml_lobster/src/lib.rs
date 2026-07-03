@@ -131,20 +131,21 @@ fn map_entity_type_to_kind(entity_type: EntityType) -> &'static str {
 ///
 /// The output filename is `<stem>.lobster` where `<stem>` is the file stem of
 /// `input_path` (the original `.puml` source file).
+///
+/// When `source_name` is provided, it is embedded as the stable source path in
+/// the emitted JSON. Otherwise the filesystem path of `input_path` is used.
 pub fn write_lobster_to_file(
     model: LobsterModel<'_>,
     input_path: &Path,
+    source_name: Option<&str>,
     output_dir: &Path,
 ) -> io::Result<PathBuf> {
+    let source = source_name
+        .map(str::to_owned)
+        .unwrap_or_else(|| input_path.to_string_lossy().into_owned());
     let lobster = match model {
-        LobsterModel::Component(component_model) => {
-            let source_str = input_path.to_string_lossy().into_owned();
-            comp_model_to_lobster(component_model, &source_str)
-        }
-        LobsterModel::Class(class_model) => {
-            let source_str = input_path.to_string_lossy().into_owned();
-            class_model_to_lobster(class_model, &source_str)
-        }
+        LobsterModel::Component(component_model) => comp_model_to_lobster(component_model, &source),
+        LobsterModel::Class(class_model) => class_model_to_lobster(class_model, &source),
         LobsterModel::Empty => empty_lobster_document(),
     };
 
