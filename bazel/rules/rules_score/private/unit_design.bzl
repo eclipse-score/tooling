@@ -32,36 +32,46 @@ load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_l
 # ============================================================================
 
 def _run_puml_parser(ctx, puml_file):
-    """Run the PlantUML parser on one .puml file and emit a FlatBuffers file."""
+    """Run the PlantUML parser once and emit FlatBuffers + idmap sidecar."""
     file_stem = puml_file.basename.rsplit(".", 1)[0]
     fbs_output = ctx.actions.declare_file(
         "{}/{}.fbs.bin".format(ctx.label.name, file_stem),
     )
+    idmap_output = ctx.actions.declare_file(
+        "{}/{}.idmap.json".format(ctx.label.name, file_stem),
+    )
 
     ctx.actions.run(
         inputs = [puml_file],
-        outputs = [fbs_output],
+        outputs = [fbs_output, idmap_output],
         executable = ctx.executable._puml_parser,
         arguments = [
             "--file",
             puml_file.path,
+            "--source-name",
+            puml_file.short_path,
             "--fbs-output-dir",
             fbs_output.dirname,
+            "--idmap-output-dir",
+            idmap_output.dirname,
             "--log-level",
             get_log_level(ctx),
         ],
         progress_message = "Parsing Unit Design PlantUML diagram: %s" % puml_file.short_path,
     )
 
-    return fbs_output
+    return fbs_output, idmap_output
 
 def _parse_puml_diagrams(ctx, files):
-    """Run parser on all .puml/.plantuml files from a list and return fbs outputs."""
+    """Run parser on all .puml/.plantuml files and return fbs + idmap outputs."""
     fbs_outputs = []
+    idmap_outputs = []
     for f in files:
         if f.extension in ("puml", "plantuml"):
-            fbs_outputs.append(_run_puml_parser(ctx, f))
-    return fbs_outputs
+            fbs, idmap = _run_puml_parser(ctx, f)
+            fbs_outputs.append(fbs)
+            idmap_outputs.append(idmap)
+    return fbs_outputs, idmap_outputs
 
 def _unit_design_impl(ctx):
     """Implementation for unit_design rule.
@@ -78,12 +88,15 @@ def _unit_design_impl(ctx):
         List of providers including DefaultInfo, UnitDesignInfo, SphinxSourcesInfo
     """
 
+    static_fbs_list, static_idmap_list = _parse_puml_diagrams(ctx, ctx.files.static)
+    dynamic_fbs_list, dynamic_idmap_list = _parse_puml_diagrams(ctx, ctx.files.dynamic)
+
     all_source_files = depset(
-        transitive = [depset(ctx.files.static), depset(ctx.files.dynamic)],
+        ctx.files.static + ctx.files.dynamic + static_idmap_list + dynamic_idmap_list,
     )
 
-    static_fbs = depset(_parse_puml_diagrams(ctx, ctx.files.static))
-    dynamic_fbs = depset(_parse_puml_diagrams(ctx, ctx.files.dynamic))
+    static_fbs = depset(static_fbs_list)
+    dynamic_fbs = depset(dynamic_fbs_list)
 
     return [
         DefaultInfo(files = all_source_files),
@@ -123,7 +136,7 @@ _unit_design = rule(
                 default = Label("//plantuml/parser:parser"),
                 executable = True,
                 cfg = "exec",
-                doc = "PlantUML parser tool that generates FlatBuffers from .puml files",
+                doc = "PlantUML parser tool that generates FlatBuffers and .idmap.json files from .puml files",
             ),
         },
         **VERBOSITY_ATTR
