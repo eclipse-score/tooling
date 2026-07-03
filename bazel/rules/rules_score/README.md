@@ -90,8 +90,9 @@ architectural_design(
 **`bazel build`** — runs `puml_parser` on every `.puml` file, producing:
 - a `.fbs.bin` FlatBuffers binary (diagram AST) — consumed by validation/core checks
 - a `.lobster` traceability file (Interface elements only) — consumed by LOBSTER
-- a `plantuml_links.json` — consumed by the `clickable_plantuml` Sphinx extension
 - a `validation.log` from the `architectural-design` validation profile
+- a `.idmap.json` sidecar — consumed by the `clickable_plantuml` Sphinx extension
+  to resolve cross-diagram links based on element *defines/references* roles
 
 Diagrams in `public_api` are classified separately so their lobster items flow
 through `public_api_lobster_files` for failure-mode traceability.
