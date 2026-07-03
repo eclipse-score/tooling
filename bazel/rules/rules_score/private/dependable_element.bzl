@@ -1080,10 +1080,11 @@ def _dependable_element_index_impl(ctx):
 
     # Build the DE-level lobster report if feature and component traces exist
     feat_req_list = feat_req_lobster_depset.to_list()
-    upstream_req_list = []
+    upstream_req_depsets = []
     for req_target in ctx.attr.requirements:
         if FeatureRequirementsInfo in req_target:
-            upstream_req_list.extend(req_target[FeatureRequirementsInfo].upstream_srcs.to_list())
+            upstream_req_depsets.append(req_target[FeatureRequirementsInfo].upstream_srcs)
+    upstream_req_list = depset(transitive = upstream_req_depsets).to_list()
     comp_req_list = comp_req_lobster_depset.to_list()
     comp_test_list = comp_test_lobster_depset.to_list()
     comp_arch_list = comp_arch_lobster_depset.to_list()

@@ -388,12 +388,11 @@ def _de_lobster_config_includes_upstream_srcs_test_impl(ctx):
     input_basenames = [f.basename for f in lobster_report_action.inputs.to_list()]
     lobster_inputs = [n for n in input_basenames if n.endswith(".lobster")]
 
-    # Both the feature req and upstream ASR lobster files should appear as inputs
+    # The upstream ASR lobster file (from the asr_trlc fixture target) must be present
     asserts.true(
         env,
-        len(lobster_inputs) >= 2,
-        "Expected at least 2 .lobster file inputs to the lobster report action " +
-        "(feature req + upstream ASR); got: " + str(lobster_inputs),
+        "asr_trlc.lobster" in lobster_inputs,
+        "Expected 'asr_trlc.lobster' in lobster report action inputs; got: " + str(lobster_inputs),
     )
 
     return analysistest.end(env)
