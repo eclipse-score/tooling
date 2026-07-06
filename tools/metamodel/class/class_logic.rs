@@ -54,7 +54,7 @@ pub struct SimpleEntity {
     pub methods: Vec<Method>,
     /// Template parameters for generic types (empty option means not templated) empty vector means
     /// template is an empty bracket like template<> which can be encountered during explicit template specialization
-    pub template_parameters: Option<Vec<String>>,
+    pub template_parameters: Option<Vec<TemplateParameter>>,
 
     /// Enum literals (only for Enum entity_type)
     pub enum_literals: Vec<EnumLiteral>,
@@ -85,6 +85,34 @@ pub enum EntityType {
     AbstractClass,
     /// Enumeration
     Enum,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TemplateParameter {
+    Type {
+        name: String,
+        is_pack: bool,
+    },
+    NonType {
+        name: String,
+        value_type: String,
+        is_pack: bool,
+    },
+    Template {
+        name: String,
+        parameters: Vec<TemplateParameter>,
+        is_pack: bool,
+    },
+}
+
+impl TemplateParameter {
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Type { name, .. } => name,
+            Self::NonType { name, .. } => name,
+            Self::Template { name, .. } => name,
+        }
+    }
 }
 
 /// Visibility modifier for members
@@ -132,6 +160,12 @@ pub struct FunctionArgument {
     /// Parameter type
     pub param_type: Option<String>,
     pub is_variadic: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_pack_expansion: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -168,7 +202,7 @@ pub struct Method {
     /// Method parameters
     pub parameters: Vec<FunctionArgument>,
     /// Template parameters for generic methods
-    pub template_parameters: Option<Vec<String>>,
+    pub template_parameters: Option<Vec<TemplateParameter>>,
     pub modifiers: Vec<MethodModifier>,
 }
 
