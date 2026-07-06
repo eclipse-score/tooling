@@ -22,9 +22,19 @@ class FixedBuffer
     template <typename U>
     U convert(const T& input) const;
 
+    template <typename... Args>
+    void emplace(Args&&... args);
+
     int capacity() const;
 
   private:
     T m_data[N];
     int m_size;
+};
+
+template <template <typename> class Container>
+class ContainerOwner
+{
+  public:
+    Container<int> values();
 };

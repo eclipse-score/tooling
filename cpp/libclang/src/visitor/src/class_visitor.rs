@@ -15,7 +15,7 @@ use std::collections::HashSet;
 
 use class_diagram::{
     EntityType, FunctionArgument, MemberVariable, Method, MethodModifier, RelationType,
-    Relationship, SimpleEntity, TypeAlias, Visibility,
+    Relationship, SimpleEntity, TemplateParameter, TypeAlias, Visibility,
 };
 
 use crate::class_parser_helper::{
@@ -169,9 +169,7 @@ fn collect_method_type(entity: &Entity, builder: &mut ParsedClassInfo) -> Parsed
         .get_result_type()
         .map(|t| resolve_type(&t))
         .unwrap_or_else(|| ResolvedType::Builtin("void".to_string()));
-    let parameter_types = entity
-        .get_arguments()
-        .unwrap_or_default()
+    let parameter_types = method_arguments(entity)
         .into_iter()
         .filter_map(|arg| arg.get_type().map(|t| resolve_type(&t)))
         .collect();
@@ -184,6 +182,22 @@ fn collect_method_type(entity: &Entity, builder: &mut ParsedClassInfo) -> Parsed
     builder.method_types.push(parsed_method_type.clone());
 
     parsed_method_type
+}
+
+/// Normally libclang provides the parameter list via `Entity::get_arguments()`.
+/// However, for some cursor kinds (e.g. `FunctionTemplate`) or certain libclang
+/// versions, `get_arguments()` may return `None` even though the AST still
+/// contains `ParmDecl` child cursors.
+fn method_arguments<'tu>(entity: &Entity<'tu>) -> Vec<Entity<'tu>> {
+    entity.get_arguments().unwrap_or_else(|| {
+        // fall back to collecting all direct `ParmDecl` children from
+        // the cursor to recover the parameter list.
+        entity
+            .get_children()
+            .into_iter()
+            .filter(|child| child.get_kind() == EntityKind::ParmDecl)
+            .collect()
+    })
 }
 
 fn parse_type_alias(entity: &Entity) -> Option<TypeAlias> {
@@ -218,20 +232,23 @@ fn parse_method(entity: &Entity, parsed_method_type: &ParsedMethodType) -> Optio
     let mut parameters = Vec::new();
     let method_is_variadic = entity.get_type().map(|t| t.is_variadic()).unwrap_or(false);
 
-    if let Some(args) = entity.get_arguments() {
-        let arg_count = args.len();
-        for (idx, arg) in args.into_iter().enumerate() {
-            let param_type = arg
-                .get_type()
-                .map(|ty| ty.get_display_name())
-                .unwrap_or_default();
+    let args = method_arguments(entity);
 
-            parameters.push(FunctionArgument {
-                name: arg.get_name().unwrap_or_default(),
-                param_type: Some(param_type),
-                is_variadic: method_is_variadic && idx + 1 == arg_count,
-            });
-        }
+    let arg_count = args.len();
+    for (idx, arg) in args.into_iter().enumerate() {
+        let raw_param_type = arg
+            .get_type()
+            .map(|ty| ty.get_display_name())
+            .unwrap_or_default();
+        let is_pack_expansion = raw_param_type.contains("...");
+        let param_type = normalize_pack_expansion_type(&raw_param_type);
+
+        parameters.push(FunctionArgument {
+            name: arg.get_name().unwrap_or_default(),
+            param_type: Some(param_type),
+            is_variadic: method_is_variadic && idx + 1 == arg_count,
+            is_pack_expansion,
+        });
     }
 
     Some(Method {
@@ -265,32 +282,47 @@ fn parse_variable(
     })
 }
 
-fn parse_template_parameters(entity: &Entity) -> Option<Vec<String>> {
-    let params: Vec<String> = entity
+fn parse_template_parameters(entity: &Entity) -> Option<Vec<TemplateParameter>> {
+    let params: Vec<TemplateParameter> = entity
         .get_children()
         .into_iter()
         .enumerate()
         .filter_map(|(idx, child)| match child.get_kind() {
             EntityKind::TemplateTypeParameter => {
-                // template <typename Foo>  →  "Foo"
-                // template <typename, typename> -> "T0", "T1"
-                Some(child.get_name().unwrap_or_else(|| format!("T{idx}")))
+                // template <typename Foo>  →  "name: Foo, is_pack: False"
+                // template <typename, typename> -> "name: T0, is_pack: False", "name: T1, is_pack: False"
+                // template <typename... Foo> -> "name: Foo, is_pack: True"
+                let name = child.get_name().unwrap_or_else(|| format!("T{idx}"));
+
+                Some(TemplateParameter::Type {
+                    name,
+                    is_pack: is_template_parameter_pack(&child),
+                })
             }
             EntityKind::NonTypeTemplateParameter => {
-                // template <int N>  →  "int N"
+                // template <int N>  →  "name: N, value_type: int"
                 let type_name = child
                     .get_type()
                     .map(|t| t.get_display_name())
                     .unwrap_or_default();
                 let name = child.get_name().unwrap_or_default();
-                Some(format!("{type_name} {name}").trim().to_string())
+
+                Some(TemplateParameter::NonType {
+                    name,
+                    value_type: type_name,
+                    is_pack: is_template_parameter_pack(&child),
+                })
             }
             EntityKind::TemplateTemplateParameter => {
-                // template <template<...> class C>  →  "template<...> C"
-                Some(format!(
-                    "template<...> {}",
-                    child.get_name().unwrap_or_default()
-                ))
+                // template <template<...> class C>  → "name: C, parameters: [...], is_pack: False"
+                let parameters = parse_template_parameters(&child).unwrap_or_default();
+                let name = child.get_name().unwrap_or_else(|| format!("T{idx}"));
+
+                Some(TemplateParameter::Template {
+                    name,
+                    parameters,
+                    is_pack: is_template_parameter_pack(&child),
+                })
             }
             _ => None,
         })
@@ -301,6 +333,22 @@ fn parse_template_parameters(entity: &Entity) -> Option<Vec<String>> {
     } else {
         Some(params)
     }
+}
+
+fn normalize_pack_expansion_type(param_type: &str) -> String {
+    param_type.replace("...", "").trim().to_string()
+}
+
+fn is_template_parameter_pack(entity: &Entity) -> bool {
+    entity.get_range().is_some_and(|range| {
+        range
+            .tokenize()
+            .iter()
+            .any(|token| token.get_spelling() == "...")
+    }) || entity
+        .get_display_name()
+        .as_deref()
+        .is_some_and(|display_name| display_name.contains("..."))
 }
 
 fn parse_visibility(entity: &Entity) -> Visibility {
