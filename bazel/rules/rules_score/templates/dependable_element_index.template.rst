@@ -18,36 +18,46 @@ Dependable element: {title}
 Assumed System
 --------------
 
+Assumed System Requirements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. toctree::
    :maxdepth: 1
-   :caption: Assumed System Requirements
 
    {assumed_system_requirements}
 
+Assumptions of Use
+~~~~~~~~~~~~~~~~~~
+
 .. toctree::
    :maxdepth: 1
-   :caption: Assumptions of Use
 
    {assumptions_of_use}
 
 Software Architectural Level
 ----------------------------
 
+Feature Requirements
+~~~~~~~~~~~~~~~~~~~~
+
 .. toctree::
    :maxdepth: 1
-   :caption: Feature Requirements
 
    {feature_requirements}
 
+Architectural Design
+~~~~~~~~~~~~~~~~~~~~
+
 .. toctree::
    :maxdepth: 1
-   :caption: Architectural Design
 
    {architectural_design}
 
+Dependability Analysis
+~~~~~~~~~~~~~~~~~~~~~~
+
 .. toctree::
    :maxdepth: 1
-   :caption: Dependability Analysis
 
    {dependability_analysis}
 
