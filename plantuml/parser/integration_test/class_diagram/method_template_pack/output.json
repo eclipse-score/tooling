@@ -1,0 +1,208 @@
+{
+  "method_template_pack.puml": {
+    "name": "method_template_pack",
+    "entities": [
+      {
+        "id": "ExplicitMethodTemplatePack1",
+        "name": "ExplicitMethodTemplatePack1",
+        "enclosing_namespace_id": null,
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Create",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "ValueType",
+                "is_variadic": false,
+                "is_pack_expansion": false
+              },
+              {
+                "name": "",
+                "param_type": "ArgumentTypes&&",
+                "is_variadic": false,
+                "is_pack_expansion": true
+              }
+            ],
+            "template_parameters": [
+              {
+                "Type": {
+                  "name": "ValueType",
+                  "is_pack": false
+                }
+              },
+              {
+                "Type": {
+                  "name": "ArgumentTypes",
+                  "is_pack": true
+                }
+              }
+            ],
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "method_template_pack.puml",
+        "source_line": 15,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "ExplicitMethodTemplatePack2",
+        "name": "ExplicitMethodTemplatePack2",
+        "enclosing_namespace_id": null,
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Create",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "ValueType",
+                "is_variadic": false,
+                "is_pack_expansion": false
+              },
+              {
+                "name": "",
+                "param_type": "ArgumentTypes",
+                "is_variadic": false,
+                "is_pack_expansion": true
+              }
+            ],
+            "template_parameters": [
+              {
+                "Type": {
+                  "name": "ValueType",
+                  "is_pack": false
+                }
+              },
+              {
+                "Type": {
+                  "name": "ArgumentTypes",
+                  "is_pack": true
+                }
+              }
+            ],
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "method_template_pack.puml",
+        "source_line": 19,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "ImplicitMethodTemplatePack1",
+        "name": "ImplicitMethodTemplatePack1",
+        "enclosing_namespace_id": null,
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Create",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "ValueType",
+                "is_variadic": false,
+                "is_pack_expansion": false
+              },
+              {
+                "name": "",
+                "param_type": "ArgumentTypes&&",
+                "is_variadic": false,
+                "is_pack_expansion": true
+              }
+            ],
+            "template_parameters": [
+              {
+                "Type": {
+                  "name": "ValueType",
+                  "is_pack": false
+                }
+              },
+              {
+                "Type": {
+                  "name": "ArgumentTypes",
+                  "is_pack": true
+                }
+              }
+            ],
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "method_template_pack.puml",
+        "source_line": 23,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "ImplicitMethodTemplatePack2",
+        "name": "ImplicitMethodTemplatePack2",
+        "enclosing_namespace_id": null,
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Create",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": "ValueType",
+                "is_variadic": false,
+                "is_pack_expansion": false
+              },
+              {
+                "name": "",
+                "param_type": "ArgumentTypes",
+                "is_variadic": false,
+                "is_pack_expansion": true
+              }
+            ],
+            "template_parameters": [
+              {
+                "Type": {
+                  "name": "ValueType",
+                  "is_pack": false
+                }
+              },
+              {
+                "Type": {
+                  "name": "ArgumentTypes",
+                  "is_pack": true
+                }
+              }
+            ],
+            "modifiers": []
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "source_file": "method_template_pack.puml",
+        "source_line": 27,
+        "variables": [],
+        "relationships": []
+      }
+    ],
+    "relationships": [],
+    "source_files": [
+      "method_template_pack.puml"
+    ],
+    "version": null
+  }
+}

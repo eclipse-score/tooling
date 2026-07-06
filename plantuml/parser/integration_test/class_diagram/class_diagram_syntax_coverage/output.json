@@ -257,7 +257,12 @@
         "type_aliases": [],
         "methods": [],
         "template_parameters": [
-          "T"
+          {
+            "Type": {
+              "name": "T",
+              "is_pack": false
+            }
+          }
         ],
         "enum_literals": [],
         "source_file": "class_diagram_syntax_coverage.puml",
@@ -285,11 +290,23 @@
               {
                 "name": "",
                 "param_type": "DiagnosticJobConstructorArgumentTypes",
-                "is_variadic": true
+                "is_variadic": false,
+                "is_pack_expansion": true
               }
             ],
             "template_parameters": [
-              "DiagnosticJobType"
+              {
+                "Type": {
+                  "name": "DiagnosticJobType",
+                  "is_pack": false
+                }
+              },
+              {
+                "Type": {
+                  "name": "DiagnosticJobConstructorArgumentTypes",
+                  "is_pack": true
+                }
+              }
             ],
             "modifiers": []
           }
@@ -440,8 +457,18 @@
               }
             ],
             "template_parameters": [
-              "CallableType",
-              "ArgumentTypes..."
+              {
+                "Type": {
+                  "name": "CallableType",
+                  "is_pack": false
+                }
+              },
+              {
+                "Type": {
+                  "name": "ArgumentTypes",
+                  "is_pack": true
+                }
+              }
             ],
             "modifiers": []
           },
@@ -462,7 +489,12 @@
               }
             ],
             "template_parameters": [
-              "T"
+              {
+                "Type": {
+                  "name": "T",
+                  "is_pack": false
+                }
+              }
             ],
             "modifiers": []
           },
@@ -628,7 +660,12 @@
           }
         ],
         "template_parameters": [
-          "T"
+          {
+            "Type": {
+              "name": "T",
+              "is_pack": false
+            }
+          }
         ],
         "enum_literals": [],
         "source_file": "class_diagram_syntax_coverage.puml",
