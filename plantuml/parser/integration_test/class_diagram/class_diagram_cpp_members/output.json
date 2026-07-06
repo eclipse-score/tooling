@@ -50,8 +50,18 @@
               }
             ],
             "template_parameters": [
-              "CallableType",
-              "ArgumentTypes..."
+              {
+                "Type": {
+                  "name": "CallableType",
+                  "is_pack": false
+                }
+              },
+              {
+                "Type": {
+                  "name": "ArgumentTypes",
+                  "is_pack": true
+                }
+              }
             ],
             "modifiers": []
           },
@@ -72,7 +82,12 @@
               }
             ],
             "template_parameters": [
-              "T"
+              {
+                "Type": {
+                  "name": "T",
+                  "is_pack": false
+                }
+              }
             ],
             "modifiers": []
           },
