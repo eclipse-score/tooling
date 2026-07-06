@@ -106,3 +106,13 @@ fn test_syntax_coverage() {
 fn test_enum_value_sequence() {
     run_class_resolver_case("class_diagram_enum_value_sequence");
 }
+
+#[test]
+fn test_method_template_pack() {
+    run_class_resolver_case("method_template_pack");
+}
+
+#[test]
+fn test_class_template_pack() {
+    run_class_resolver_case("class_template_pack");
+}

@@ -1,0 +1,184 @@
+{
+  "class_template_pack.puml": {
+    "name": "class_template_pack",
+    "entities": [
+      {
+        "id": "ExplicitClassTemplatePack1",
+        "name": "ExplicitClassTemplatePack1",
+        "enclosing_namespace_id": null,
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Invoke",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "args",
+                "param_type": "InArgs",
+                "is_variadic": false,
+                "is_pack_expansion": true
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": [
+          {
+            "Type": {
+              "name": "OutArgs",
+              "is_pack": false
+            }
+          },
+          {
+            "Type": {
+              "name": "InArgs",
+              "is_pack": true
+            }
+          }
+        ],
+        "enum_literals": [],
+        "source_file": "class_template_pack.puml",
+        "source_line": 15,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "ExplicitClassTemplatePack2",
+        "name": "ExplicitClassTemplatePack2",
+        "enclosing_namespace_id": null,
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Invoke",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "args",
+                "param_type": "InArgs&&",
+                "is_variadic": false,
+                "is_pack_expansion": true
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": [
+          {
+            "Type": {
+              "name": "OutArgs",
+              "is_pack": false
+            }
+          },
+          {
+            "Type": {
+              "name": "InArgs",
+              "is_pack": true
+            }
+          }
+        ],
+        "enum_literals": [],
+        "source_file": "class_template_pack.puml",
+        "source_line": 19,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "ImplicitClassTemplatePack1",
+        "name": "ImplicitClassTemplatePack1",
+        "enclosing_namespace_id": null,
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Invoke",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "args",
+                "param_type": "InArgs",
+                "is_variadic": false,
+                "is_pack_expansion": true
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": [
+          {
+            "Type": {
+              "name": "OutArgs",
+              "is_pack": false
+            }
+          },
+          {
+            "Type": {
+              "name": "InArgs",
+              "is_pack": true
+            }
+          }
+        ],
+        "enum_literals": [],
+        "source_file": "class_template_pack.puml",
+        "source_line": 23,
+        "variables": [],
+        "relationships": []
+      },
+      {
+        "id": "ImplicitClassTemplatePack2",
+        "name": "ImplicitClassTemplatePack2",
+        "enclosing_namespace_id": null,
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Invoke",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "args",
+                "param_type": "InArgs&&",
+                "is_variadic": false,
+                "is_pack_expansion": true
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": []
+          }
+        ],
+        "template_parameters": [
+          {
+            "Type": {
+              "name": "OutArgs",
+              "is_pack": false
+            }
+          },
+          {
+            "Type": {
+              "name": "InArgs",
+              "is_pack": true
+            }
+          }
+        ],
+        "enum_literals": [],
+        "source_file": "class_template_pack.puml",
+        "source_line": 27,
+        "variables": [],
+        "relationships": []
+      }
+    ],
+    "relationships": [],
+    "source_files": [
+      "class_template_pack.puml"
+    ],
+    "version": null
+  }
+}

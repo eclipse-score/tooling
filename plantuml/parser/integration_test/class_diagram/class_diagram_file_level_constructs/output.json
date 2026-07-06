@@ -76,7 +76,12 @@
           }
         ],
         "template_parameters": [
-          "T"
+          {
+            "Type": {
+              "name": "T",
+              "is_pack": false
+            }
+          }
         ],
         "enum_literals": [],
         "source_file": "class_diagram_file_level_constructs.puml",

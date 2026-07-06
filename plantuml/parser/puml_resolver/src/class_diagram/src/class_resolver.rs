@@ -449,6 +449,9 @@ impl ClassResolver {
 
         let id = self.build_fqn(&name.internal, &parent);
 
+        let template_parameters =
+            Self::convert_class_template_parameters(template_parameters, methods);
+
         let entity = SimpleEntity {
             id: id.clone(),
             name: Self::entity_name(name),
@@ -460,7 +463,7 @@ impl ClassResolver {
                 .iter()
                 .map(|method| Self::convert_method(method, &name.internal))
                 .collect(),
-            template_parameters: template_parameters.clone(),
+            template_parameters,
             enum_literals: vec![],
             relationships: vec![],
             source_file: self.current_source_file(),
@@ -508,7 +511,10 @@ impl ClassResolver {
             return_type: m.r#type.clone(),
             visibility: Self::map_visibility(m.visibility.clone()),
             parameters: m.params.iter().map(Self::convert_param).collect(),
-            template_parameters: m.template_parameters.clone(),
+            template_parameters: Self::convert_template_parameters_with_pack_expansions(
+                &m.template_parameters,
+                &m.params,
+            ),
             modifiers: MethodModifier::from_conditions([
                 (has_modifier(&m.modifiers, "static"), MethodModifier::Static),
                 (false, MethodModifier::Virtual),
@@ -532,11 +538,95 @@ impl ClassResolver {
             .trim()
     }
 
+    fn convert_template_parameters(
+        parameters: &Option<Vec<String>>,
+    ) -> Option<Vec<TemplateParameter>> {
+        parameters.as_ref().map(|values| {
+            values
+                .iter()
+                .map(|value| {
+                    let trimmed = value.trim();
+                    let (name, is_pack) = trimmed
+                        .strip_suffix("...")
+                        .map(|name| (name.trim(), true))
+                        .unwrap_or((trimmed, false));
+
+                    TemplateParameter::Type {
+                        name: name.to_string(),
+                        is_pack,
+                    }
+                })
+                .collect()
+        })
+    }
+
+    fn convert_class_template_parameters(
+        parameters: &Option<Vec<String>>,
+        methods: &[ParserMethod],
+    ) -> Option<Vec<TemplateParameter>> {
+        parameters.as_ref()?;
+
+        let mut converted = Self::convert_template_parameters(parameters).unwrap_or_default();
+
+        for method in methods {
+            Self::append_pack_expansion_parameters(&mut converted, &method.params);
+        }
+
+        (!converted.is_empty()).then_some(converted)
+    }
+
+    fn convert_template_parameters_with_pack_expansions(
+        parameters: &Option<Vec<String>>,
+        params: &[ParserParam],
+    ) -> Option<Vec<TemplateParameter>> {
+        parameters.as_ref()?;
+
+        let mut converted = Self::convert_template_parameters(parameters).unwrap_or_default();
+        Self::append_pack_expansion_parameters(&mut converted, params);
+
+        (!converted.is_empty()).then_some(converted)
+    }
+
+    fn append_pack_expansion_parameters(
+        template_parameters: &mut Vec<TemplateParameter>,
+        params: &[ParserParam],
+    ) {
+        for param in params.iter().filter(|param| param.varargs) {
+            let Some(pack_name) = param
+                .param_type
+                .as_deref()
+                .and_then(Self::infer_pack_name_from_param_type)
+            else {
+                continue;
+            };
+
+            if !template_parameters
+                .iter()
+                .any(|parameter| parameter.name() == pack_name)
+            {
+                template_parameters.push(TemplateParameter::Type {
+                    name: pack_name.to_string(),
+                    is_pack: true,
+                });
+            }
+        }
+    }
+
+    fn infer_pack_name_from_param_type(param_type: &str) -> Option<&str> {
+        let trimmed = param_type.trim();
+        let candidate = trimmed.strip_suffix("&&").unwrap_or(trimmed).trim();
+
+        (!candidate.is_empty()).then_some(candidate)
+    }
+
     fn convert_param(param: &ParserParam) -> FunctionArgument {
         FunctionArgument {
             name: param.name.clone().unwrap_or_default(),
             param_type: param.param_type.clone(),
-            is_variadic: param.varargs,
+            // Note: For class diagrams, we don't support C-style variadic parameters (e.g., `foo(...)`),
+            // so we only consider the `varargs` flag for template pack expansions.
+            is_variadic: false,
+            is_pack_expansion: param.varargs,
         }
     }
 
