@@ -13,7 +13,8 @@
 
 use class_diagram::{
     ClassDiagram, EntityType, EnumLiteral, FunctionArgument, MemberVariable, Method,
-    MethodModifier, RelationType, Relationship, SimpleEntity, TypeAlias, Visibility,
+    MethodModifier, RelationType, Relationship, SimpleEntity, TemplateParameter, TypeAlias,
+    Visibility,
 };
 use class_fbs::class_metamodel as fb;
 use flatbuffers::FlatBufferBuilder;
@@ -104,7 +105,7 @@ impl ClassSerializer {
         let template_parameters_offset = entity.template_parameters.as_ref().map(|parameters| {
             let template_offsets: Vec<_> = parameters
                 .iter()
-                .map(|parameter| builder.create_string(parameter))
+                .map(|parameter| Self::serialize_template_parameter(builder, parameter))
                 .collect();
             builder.create_vector(&template_offsets)
         });
@@ -204,7 +205,7 @@ impl ClassSerializer {
         let template_parameters_offset = method.template_parameters.as_ref().map(|parameters| {
             let template_offsets: Vec<_> = parameters
                 .iter()
-                .map(|parameter| builder.create_string(parameter))
+                .map(|parameter| Self::serialize_template_parameter(builder, parameter))
                 .collect();
             builder.create_vector(&template_offsets)
         });
@@ -245,6 +246,61 @@ impl ClassSerializer {
                 name: Some(name_offset),
                 param_type: param_type_offset,
                 is_variadic: param.is_variadic,
+                is_pack_expansion: param.is_pack_expansion,
+            },
+        )
+    }
+
+    fn serialize_template_parameter<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        parameter: &TemplateParameter,
+    ) -> flatbuffers::WIPOffset<fb::TemplateParameter<'a>> {
+        let (kind, name, value_type, parameters, is_pack) = match parameter {
+            TemplateParameter::Type { name, is_pack } => {
+                (fb::TemplateParameterKind::Type, name, None, None, *is_pack)
+            }
+            TemplateParameter::NonType {
+                name,
+                value_type,
+                is_pack,
+            } => (
+                fb::TemplateParameterKind::NonType,
+                name,
+                Some(value_type),
+                None,
+                *is_pack,
+            ),
+            TemplateParameter::Template {
+                name,
+                parameters,
+                is_pack,
+            } => (
+                fb::TemplateParameterKind::Template,
+                name,
+                None,
+                Some(parameters),
+                *is_pack,
+            ),
+        };
+
+        let name_offset = builder.create_string(name);
+        let value_type_offset = value_type.map(|value| builder.create_string(value));
+        let parameters_offset = parameters.map(|nested_parameters| {
+            let nested_offsets: Vec<_> = nested_parameters
+                .iter()
+                .map(|nested| Self::serialize_template_parameter(builder, nested))
+                .collect();
+            builder.create_vector(&nested_offsets)
+        });
+
+        fb::TemplateParameter::create(
+            builder,
+            &fb::TemplateParameterArgs {
+                kind,
+                name: Some(name_offset),
+                value_type: value_type_offset,
+                parameters: parameters_offset,
+                is_pack,
             },
         )
     }
