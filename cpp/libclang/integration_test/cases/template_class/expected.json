@@ -1,5 +1,43 @@
 {
   "types": {
+    "ContainerOwner": {
+      "id": "ContainerOwner",
+      "name": "ContainerOwner",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "values",
+          "return_type": "Container<int>",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "relationships": [],
+      "template_parameters": [
+        {
+          "Template": {
+            "name": "Container",
+            "parameters": [
+              {
+                "Type": {
+                  "name": "T0",
+                  "is_pack": false
+                }
+              }
+            ],
+            "is_pack": false
+          }
+        }
+      ],
+      "type_aliases": [],
+      "variables": [],
+      "source_file": "cpp/libclang/integration_test/cases/template_class/transport.cpp",
+      "source_line": 36
+    },
     "FixedBuffer": {
       "id": "FixedBuffer",
       "name": "FixedBuffer",
@@ -32,10 +70,43 @@
         {
           "name": "convert",
           "return_type": "U",
-          "parameters": [],
+          "parameters": [
+            {
+              "name": "input",
+              "param_type": "const T &",
+              "is_variadic": false
+            }
+          ],
           "modifiers": [],
           "template_parameters": [
-            "U"
+            {
+              "Type": {
+                "name": "U",
+                "is_pack": false
+              }
+            }
+          ],
+          "visibility": "public"
+        },
+        {
+          "name": "emplace",
+          "return_type": "void",
+          "parameters": [
+            {
+              "name": "args",
+              "param_type": "Args &&",
+              "is_variadic": false,
+              "is_pack_expansion": true
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": [
+            {
+              "Type": {
+                "name": "Args",
+                "is_pack": true
+              }
+            }
           ],
           "visibility": "public"
         },
@@ -50,9 +121,25 @@
       ],
       "relationships": [],
       "template_parameters": [
-        "T",
-        "int N",
-        "T2"
+        {
+          "Type": {
+            "name": "T",
+            "is_pack": false
+          }
+        },
+        {
+          "NonType": {
+            "name": "N",
+            "value_type": "int",
+            "is_pack": false
+          }
+        },
+        {
+          "Type": {
+            "name": "T2",
+            "is_pack": false
+          }
+        }
       ],
       "type_aliases": [],
       "variables": [

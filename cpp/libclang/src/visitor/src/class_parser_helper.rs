@@ -586,6 +586,10 @@ fn unknown(ty: &Type) -> ResolvedType {
 }
 
 fn build_entity_id_from_decl(entity: &Entity) -> String {
+    if entity.get_kind() == EntityKind::TemplateTemplateParameter {
+        return entity.get_name().unwrap_or_default();
+    }
+
     strip_global_scope_prefix(&build_fqn_from_entity(entity))
 }
 
@@ -640,6 +644,7 @@ fn build_fqn_from_entity(entity: &Entity) -> String {
             | EntityKind::UnionDecl
             | EntityKind::EnumDecl
             | EntityKind::ClassTemplate
+            | EntityKind::TemplateTemplateParameter
             | EntityKind::TypedefDecl
             | EntityKind::TypeAliasDecl => {
                 if let Some(name) = entity.get_name() {
