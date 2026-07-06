@@ -46,6 +46,20 @@ enum MethodModifier : byte {
     Noexcept = 6
 }
 
+enum TemplateParameterKind : byte {
+    Type = 0,
+    NonType = 1,
+    Template = 2
+}
+
+table TemplateParameter {
+    kind: TemplateParameterKind = Type;
+    name: string (required);
+    value_type: string;
+    parameters: [TemplateParameter];
+    is_pack: bool = false;
+}
+
 table TypeAlias {
     alias: string (required);
     original_type: string (required);
@@ -55,6 +69,7 @@ table FunctionArgument {
     name: string (required);
     param_type: string;
     is_variadic: bool = false;
+    is_pack_expansion: bool = false;
 }
 
 table MemberVariable {
@@ -69,7 +84,7 @@ table Method {
     return_type: string;
     visibility: Visibility = Public;
     parameters: [FunctionArgument];
-    template_parameters: [string];
+    template_parameters: [TemplateParameter];
     modifiers: [MethodModifier];
 }
 
@@ -94,7 +109,7 @@ table SimpleEntity {
     type_aliases: [TypeAlias];
     variables: [MemberVariable];
     methods: [Method];
-    template_parameters: [string];
+    template_parameters: [TemplateParameter];
     enum_literals: [EnumLiteral];
     relationships: [Relationship];
     source_file: string;

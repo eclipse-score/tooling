@@ -21,7 +21,8 @@ use crate::models::ClassDiagramInputs;
 use crate::readers::Reader;
 use class_diagram::{
     ClassDiagram, EntityType, EnumLiteral, FunctionArgument, MemberVariable, Method,
-    MethodModifier, RelationType, Relationship, SimpleEntity, TypeAlias, Visibility,
+    MethodModifier, RelationType, Relationship, SimpleEntity, TemplateParameter, TypeAlias,
+    Visibility,
 };
 
 pub struct ClassDiagramReader;
@@ -30,6 +31,59 @@ fn collect_strings(
     values: Option<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&str>>>,
 ) -> Option<Vec<String>> {
     values.map(|items| items.iter().map(|value| value.to_string()).collect())
+}
+
+fn read_template_parameters(
+    values: Option<
+        flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<fb_class::TemplateParameter<'_>>>,
+    >,
+    context: &str,
+) -> Result<Option<Vec<TemplateParameter>>, String> {
+    values
+        .map(|items| {
+            items
+                .iter()
+                .enumerate()
+                .map(|(index, parameter)| {
+                    read_template_parameter(
+                        parameter,
+                        &format!("{context}:template_parameter[{index}]"),
+                    )
+                })
+                .collect::<Result<Vec<_>, String>>()
+        })
+        .transpose()
+}
+
+fn read_template_parameter(
+    parameter: fb_class::TemplateParameter<'_>,
+    context: &str,
+) -> Result<TemplateParameter, String> {
+    match parameter.kind() {
+        fb_class::TemplateParameterKind::Type => Ok(TemplateParameter::Type {
+            name: parameter.name().to_string(),
+            is_pack: parameter.is_pack(),
+        }),
+        fb_class::TemplateParameterKind::NonType => Ok(TemplateParameter::NonType {
+            name: parameter.name().to_string(),
+            value_type: parameter.value_type().unwrap_or_default().to_string(),
+            is_pack: parameter.is_pack(),
+        }),
+        fb_class::TemplateParameterKind::Template => Ok(TemplateParameter::Template {
+            name: parameter.name().to_string(),
+            parameters: read_template_parameters(
+                parameter.parameters(),
+                &format!("{context}:parameters"),
+            )?
+            .unwrap_or_default(),
+            is_pack: parameter.is_pack(),
+        }),
+        _ => Err(unsupported_enum(
+            context,
+            "template_parameter_kind",
+            parameter.kind(),
+        )),
+    }
 }
 
 fn read_type_aliases(entity: fb_class::SimpleEntity<'_>) -> Vec<TypeAlias> {
@@ -87,12 +141,16 @@ fn read_method(
                     name: param.name().to_string(),
                     param_type: param.param_type().map(|s| s.to_string()),
                     is_variadic: param.is_variadic(),
+                    is_pack_expansion: param.is_pack_expansion(),
                 })
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
 
-    let template_parameters = collect_strings(method.template_parameters());
+    let template_parameters = read_template_parameters(
+        method.template_parameters(),
+        &format!("{path}:entity:{}:method:{}", entity.id(), method.name()),
+    )?;
 
     let modifiers = method
         .modifiers()
@@ -180,7 +238,10 @@ fn read_entity(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<SimpleE
         type_aliases: read_type_aliases(entity),
         variables: read_variables(entity, path)?,
         methods: read_methods(entity, path)?,
-        template_parameters: collect_strings(entity.template_parameters()),
+        template_parameters: read_template_parameters(
+            entity.template_parameters(),
+            &format!("{path}:entity:{}", entity.id()),
+        )?,
         enum_literals: read_enum_literals(entity),
         relationships: read_entity_relationships(entity, path)?,
         source_file: entity.source_file().map(|s| s.to_string()),
