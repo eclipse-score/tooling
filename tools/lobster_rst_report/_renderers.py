@@ -33,7 +33,7 @@ Module-level helpers
 from typing import Dict
 
 from lobster.common.report import Report
-from lobster.common.items import Tracing_Status, Item, Requirement
+from lobster.common.items import Tracing_Status, Item, Requirement, Activity
 
 from ._helpers import RstUtils, ItemNaming, TracingClassifier, PolicyDiagramBuilder
 
@@ -169,12 +169,15 @@ class ItemCardBuilder:
             out.append("")
             has_content = True
 
-        # Description text (requirements only)
-        if isinstance(item, Requirement) and item.text:
+        # Description / specification text
+        if isinstance(item, (Requirement, Activity)) and item.text:
             body(".. pull-quote::")
             out.append("")
             for text_line in item.text.splitlines():
-                nested(e(text_line))
+                # Requirement text originates from external sources — escape RST
+                # special chars. Activity text is author-controlled and may
+                # contain intentional RST markup — render as-is.
+                nested(e(text_line) if isinstance(item, Requirement) else text_line)
             out.append("")
             has_content = True
 
