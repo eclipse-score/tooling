@@ -128,10 +128,18 @@ fn read_diagram(path: &str) -> Result<DiagramInfo, String> {
         .map_err(|e| format!("Failed to parse FlatBuffer {path}: {e}"))?;
 
     let source_file = graph
-        .source_file()
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
-        .ok_or_else(|| format!("Missing source_file in FlatBuffer: {path}"))?;
+        .components()
+        .and_then(|entries| {
+            entries
+                .iter()
+                .next()
+                .and_then(|entry| entry.value())
+                .map(|comp| comp.source_location())
+                .and_then(|location| location.file())
+                .filter(|file| !file.is_empty())
+                .map(ToOwned::to_owned)
+        })
+        .unwrap_or_else(|| path.to_string());
 
     let mut components = Vec::new();
     if let Some(entries) = graph.components() {

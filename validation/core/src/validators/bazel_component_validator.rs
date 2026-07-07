@@ -229,6 +229,7 @@ mod tests {
     use crate::models::{
         BazelInput, BazelInputEntry, ComponentDiagramInputs, ComponentType, LogicComponent,
     };
+    use component_diagram::SourceLocation;
     use std::collections::BTreeMap;
 
     fn make_arch(entries: Vec<(&str, Vec<&str>, Vec<&str>)>) -> BazelInput {
@@ -265,6 +266,7 @@ mod tests {
             element_type,
             stereotype: stereotype.map(|s| s.to_string()),
             relations: Vec::new(),
+            source_location: SourceLocation::new("", 0),
         }
     }
 

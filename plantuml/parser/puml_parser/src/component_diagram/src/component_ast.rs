@@ -12,6 +12,7 @@
 // *******************************************************************************
 pub use parser_core::common_ast::Arrow;
 use serde::{Deserialize, Serialize};
+use source_location::SourceLocation;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompPumlDocument {
@@ -48,6 +49,7 @@ pub struct Element {
     pub stereotype: Option<String>,
     pub style: Option<ComponentStyle>,
     pub statements: Vec<Statement>, // For nested components
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -57,6 +59,7 @@ pub struct Relation {
     pub rhs: String,
     pub style: Option<ComponentStyle>,
     pub description: Option<String>,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

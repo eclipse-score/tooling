@@ -22,7 +22,7 @@ use crate::models::{
     ComponentDiagramInputs, ComponentRelationType, ComponentType, EndpointRole, LogicComponent,
     LogicRelation,
 };
-use crate::readers::Reader;
+use crate::readers::{to_source_location, Reader};
 
 pub struct ComponentDiagramReader;
 
@@ -74,6 +74,10 @@ fn read_relations(
                         annotation: relation.annotation().map(|value| value.to_string()),
                         relation_type: map_relation_type(relation.relation_type()),
                         source_role: map_endpoint_role(relation.source_role()),
+                        source_location: to_source_location(
+                            relation.source_location().file(),
+                            relation.source_location().line(),
+                        ),
                     })
                 })
                 .collect::<Result<Vec<_>, String>>()
@@ -126,6 +130,10 @@ impl ComponentDiagramReader {
                                 element_type,
                                 stereotype: comp.stereotype().map(|s| s.to_string()),
                                 relations: read_relations(&comp, &context)?,
+                                source_location: to_source_location(
+                                    comp.source_location().file(),
+                                    comp.source_location().line(),
+                                ),
                             });
                         }
                     } else {

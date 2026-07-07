@@ -20,8 +20,12 @@ use component_fbs::component as fb;
 pub struct ComponentSerializer;
 
 impl ComponentSerializer {
-    pub fn serialize(elements: &HashMap<String, LogicComponent>, source_file: &str) -> Vec<u8> {
+    pub fn serialize(elements: &HashMap<String, LogicComponent>, _diagram_file: &str) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
+        let source_file = elements
+            .values()
+            .next()
+            .map(|e| builder.create_string(e.source_location.file.as_ref()));
 
         // --------------------------
         // 1) build components
@@ -34,6 +38,13 @@ impl ComponentSerializer {
             for r in &element.relations {
                 let target_offset = builder.create_string(&r.target);
                 let annotation_offset = r.annotation.as_ref().map(|s| builder.create_string(s));
+                let relation_source_location = fb::SourceLocation::create(
+                    &mut builder,
+                    &fb::SourceLocationArgs {
+                        file: source_file,
+                        line: r.source_location.line,
+                    },
+                );
 
                 let rel = fb::LogicRelation::create(
                     &mut builder,
@@ -42,6 +53,7 @@ impl ComponentSerializer {
                         annotation: annotation_offset,
                         relation_type: Self::convert_relation_type(r.relation_type),
                         source_role: Self::convert_endpoint_role(r.source_role),
+                        source_location: Some(relation_source_location),
                     },
                 );
                 relation_offsets.push(rel);
@@ -59,6 +71,13 @@ impl ComponentSerializer {
                 .stereotype
                 .as_ref()
                 .map(|s| builder.create_string(s));
+            let comp_source_location = fb::SourceLocation::create(
+                &mut builder,
+                &fb::SourceLocationArgs {
+                    file: source_file,
+                    line: element.source_location.line,
+                },
+            );
 
             let comp_offset = fb::LogicComponent::create(
                 &mut builder,
@@ -70,6 +89,7 @@ impl ComponentSerializer {
                     comp_type: Self::convert_type(element.element_type),
                     stereotype: comp_stereotype_offset,
                     relations: Some(relations_vector_offset),
+                    source_location: Some(comp_source_location),
                 },
             );
 
@@ -93,12 +113,10 @@ impl ComponentSerializer {
         // --------------------------
         // 3) root object
         // --------------------------
-        let source_file_offset = builder.create_string(source_file);
         let root = fb::ComponentGraph::create(
             &mut builder,
             &fb::ComponentGraphArgs {
                 components: Some(comps_vec),
-                source_file: Some(source_file_offset),
             },
         );
 

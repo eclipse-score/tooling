@@ -37,6 +37,7 @@ rust_library(
     deps = [
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_utils",
+        "//tools/metamodel/common:source_location",
         "@crates//:log",
         "@crates//:pest",
         "@crates//:serde",
