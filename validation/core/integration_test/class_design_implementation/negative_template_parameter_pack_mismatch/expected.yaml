@@ -15,10 +15,10 @@ error_contains: |
   Implementation class data differs from unit design entity:
   Entity ID             : Box
   Field                 : template_parameters
-  Design value          : ["T"]
+  Design value          : ["T..."]
   Design source file    : class_diagram.puml
   Design source line    : 6
-  Implement value       : ["U"]
-  Implement source file : validation/core/integration_test/class_design_implementation/negative_template_parameter_mismatch/transport.cpp
+  Implement value       : ["T"]
+  Implement source file : validation/core/integration_test/class_design_implementation/negative_template_parameter_pack_mismatch/transport.cpp
   Implement source line : 7
   Required Action       : Align the implementation with the unit design or update the unit design
