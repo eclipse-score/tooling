@@ -26,9 +26,9 @@ pub use bazel_models::BazelInputEntry;
 pub use bazel_models::{BazelArchitecture, BazelInput};
 pub use class_diagram_models::{ClassDiagramInputs, InternalApiIndex, InternalApiInterface};
 pub use component_diagram_models::{
-    ComponentDiagramArchitecture, ComponentDiagramElementType, ComponentDiagramInput,
-    ComponentDiagramInputs, ComponentDiagramRelation,
+    ComponentDiagramArchitecture, ComponentDiagramInputs, ComponentRelationType, ComponentType,
+    EndpointRole, LogicComponent, LogicComponentExt, LogicRelation,
 };
 pub use sequence_diagram_models::{
-    ObservedSequenceCall, SequenceDiagramIndex, SequenceDiagramInput, SequenceDiagramInputs,
+    ObservedSequenceCall, SequenceDiagramIndex, SequenceDiagramInputs,
 };

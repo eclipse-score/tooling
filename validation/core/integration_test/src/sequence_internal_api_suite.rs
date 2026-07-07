@@ -16,19 +16,21 @@ use test_framework::{
     CliRunResult,
 };
 
-const SUITE_DIR: &str = "component_sequence";
+const SUITE_DIR: &str = "sequence_internal_api";
 
 fn run_case_from_cli(
     case_dir: &str,
     component_fbs_paths: &[String],
     sequence_fbs_paths: &[String],
+    internal_api_fbs_paths: &[String],
 ) -> CliRunResult {
     run_validation_profile(
-        &format!("component_sequence_{case_dir}"),
+        &format!("sequence_internal_api_{case_dir}"),
         "architectural-design",
         serde_json::json!({
             "component_diagrams": component_fbs_paths,
             "sequence_diagrams": sequence_fbs_paths,
+            "internal_api_diagrams": internal_api_fbs_paths,
         }),
     )
 }
@@ -36,13 +38,19 @@ fn run_case_from_cli(
 fn assert_case(case_dir: &str) {
     let expected = load_expected_fixture(SUITE_DIR, case_dir);
     let component_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "component");
+    let internal_api_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "internal_api");
     let sequence_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "sequence");
 
-    let result = if !component_fbs_paths.is_empty() && !sequence_fbs_paths.is_empty() {
-        run_case_from_cli(case_dir, &component_fbs_paths, &sequence_fbs_paths)
+    let result = if !sequence_fbs_paths.is_empty() && !internal_api_fbs_paths.is_empty() {
+        run_case_from_cli(
+            case_dir,
+            &component_fbs_paths,
+            &sequence_fbs_paths,
+            &internal_api_fbs_paths,
+        )
     } else {
         panic!(
-            "missing generated FBS fixtures for {case_dir}: expected at least one component/*.fbs.bin and sequence/*.fbs.bin",
+            "missing generated FBS fixtures for {case_dir}: expected sequence/*.fbs.bin and internal_api/*.fbs.bin",
         );
     };
 
@@ -50,36 +58,31 @@ fn assert_case(case_dir: &str) {
 }
 
 #[test]
-fn positive_exact_match_suite_case() {
-    assert_case("positive_exact_match");
+fn negative_interface_function_not_exercised_suite_case() {
+    assert_case("negative_interface_function_not_exercised");
 }
 
 #[test]
-fn negative_missing_participant_suite_case() {
-    assert_case("negative_missing_participant");
+fn negative_invalid_consumer_provider_direction_suite_case() {
+    assert_case("negative_invalid_consumer_provider_direction");
 }
 
 #[test]
-fn negative_missing_interface_connection_for_sequence_connected_units_suite_case() {
-    assert_case("negative_missing_interface_connection_for_sequence_connected_units");
+fn negative_missing_method_in_related_interface_suite_case() {
+    assert_case("negative_missing_method_in_related_interface");
 }
 
 #[test]
-fn negative_missing_sequence_interaction_for_interface_connected_units_suite_case() {
-    assert_case("negative_missing_sequence_interaction_for_interface_connected_units");
+fn negative_method_available_but_not_on_related_interface_suite_case() {
+    assert_case("negative_method_available_but_not_on_related_interface");
 }
 
 #[test]
-fn negative_missing_unit_interface_relation_suite_case() {
-    assert_case("negative_missing_unit_interface_relation");
+fn positive_internal_api_method_match_suite_case() {
+    assert_case("positive_internal_api_method_match");
 }
 
 #[test]
-fn negative_orphan_participant_suite_case() {
-    assert_case("negative_orphan_participant");
-}
-
-#[test]
-fn negative_mixed_mismatch_suite_case() {
-    assert_case("negative_mixed_mismatch");
+fn positive_self_call_method_match_suite_case() {
+    assert_case("positive_self_call_method_match");
 }

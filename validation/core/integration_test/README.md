@@ -23,12 +23,17 @@ binary → validation CLI — and asserts the outcome against a JSON fixture.
 integration_test/
 ├── BUILD                        # test binaries + aggregated filegroups
 ├── puml_fixture.bzl             # Starlark rule: provider → category dirs
+├── component_sequence/          # ComponentSequence cases
+├── component_internal_api/      # ComponentInternalApi cases
+├── sequence_internal_api/       # SequenceInternalApi cases
 ├── src/
 │   ├── lib.rs                   # re-exports from test_framework
 │   ├── test_framework.rs        # shared helpers (CLI runner, assertions)
 │   ├── bazel_component_suite.rs # tests for BazelComponent validator
 │   ├── component_class_suite.rs # tests for ComponentClass validator
-│   └── component_sequence_suite.rs # tests for ComponentSequence validator
+│   ├── component_sequence_suite.rs # tests for ComponentSequence validator
+│   ├── component_internal_api_suite.rs # tests for ComponentInternalApi validator
+│   └── sequence_internal_api_suite.rs # tests for SequenceInternalApi validator
 ```
 
 ## How it works
@@ -69,9 +74,9 @@ A `filegroup` named `case_data` then bundles the `fbs` target together with the
 static fixture files (`architecture.json`, `expected.json`), making the whole
 case available as a single Bazel dependency.
 
-For `ComponentSequence` cases that exercise method-level validation, the suite
-also reads `internal_api/*.fbs.bin` and forwards those files to the CLI as
-`--internal-api-fbs`.
+For `ComponentInternalApi` and `SequenceInternalApi` suites, cases include
+`internal_api/*.fbs.bin`, and the suite forwards those files to the CLI as
+the `internal_api_diagrams` input bundle field.
 
 ### Layer 3 — CLI invocation (Rust test binary)
 
@@ -124,12 +129,6 @@ bazel_component_integration_test
 PASS / FAIL
 ```
 
-`ComponentSequence` method-validation cases follow the same flow for
-`internal_api_diagram.puml`: the `architectural_design` rule produces
-`internal_api/*.fbs.bin`, `provider_fbs_fixture_bundle` materializes those
-files under `fbs/internal_api/`, and the suite passes them to `validation_cli`
-with `--internal-api-fbs`.
-
 ## Test case anatomy
 
 Each test case is a self-contained directory. The exact files required depend on
@@ -159,10 +158,30 @@ the validator under test.
 
 ```
 <case>/
-├── BUILD                 # architectural_design (static + dynamic, plus optional internal_api) + provider_fbs_fixture_bundle + case_data
+├── BUILD                 # architectural_design + provider_fbs_fixture_bundle + case_data
 ├── component_diagram.puml
 ├── sequence_diagram.puml
-├── internal_api_diagram.puml  # optional; include when the case exercises method-level validation
+└── expected.json
+```
+
+### ComponentInternalApi cases
+
+```
+<case>/
+├── BUILD                 # architectural_design + provider_fbs_fixture_bundle + case_data
+├── component_diagram.puml
+├── internal_api_diagram.puml
+└── expected.json
+```
+
+### SequenceInternalApi cases
+
+```
+<case>/
+├── BUILD                 # architectural_design + provider_fbs_fixture_bundle + case_data
+├── component_diagram.puml
+├── sequence_diagram.puml
+├── internal_api_diagram.puml
 └── expected.json
 ```
 
@@ -198,6 +217,8 @@ Run a single suite:
 bazel test //validation/core/integration_test:bazel_component_integration_test
 bazel test //validation/core/integration_test:component_class_integration_test
 bazel test //validation/core/integration_test:component_sequence_integration_test
+bazel test //validation/core/integration_test:component_internal_api_integration_test
+bazel test //validation/core/integration_test:sequence_internal_api_integration_test
 ```
 
 ## Adding a new test case
@@ -217,8 +238,9 @@ bazel test //validation/core/integration_test:component_sequence_integration_tes
    suite.
 
 5. Add the new `case_data` target to the matching filegroup in
-   [`BUILD`](BUILD) (`bazel_component_test_data`,
-   `component_class_test_data`, or `component_sequence_test_data`).
+  [`BUILD`](BUILD) (`bazel_component_test_data`,
+  `component_class_test_data`, `component_sequence_test_data`,
+  `component_internal_api_test_data`, or `sequence_internal_api_test_data`).
 
 6. Add a `#[test]` function in the matching suite file under `src/`.
 

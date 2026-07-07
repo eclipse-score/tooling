@@ -11,19 +11,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-//! Validator entrypoints for architecture checks.
+//! Shared validator analysis and helper utilities.
 
-mod bazel_component_validator;
-mod component_internal_api_validator;
-mod component_sequence_validator;
-mod sequence_internal_api_validator;
-mod shared;
+mod diagram_analysis;
+mod helpers;
 
-#[cfg(test)]
-#[path = "test/fixtures.rs"]
-pub(crate) mod fixtures;
-
-pub use bazel_component_validator::validate_bazel_component;
-pub use component_internal_api_validator::validate_component_internal_api;
-pub use component_sequence_validator::validate_component_sequence;
-pub use sequence_internal_api_validator::validate_sequence_internal_api;
+pub(in crate::validators) use diagram_analysis::{
+    build_observed_call_contexts, build_unit_bindings, SequenceCallContext, UnitBindings,
+    UnitInterfaces,
+};
+pub(in crate::validators) use helpers::{
+    extract_method_name, format_name_list, format_sequence_call, intersect_interfaces,
+};

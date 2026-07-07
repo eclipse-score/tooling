@@ -18,10 +18,12 @@ participant "CLI" as cli
 participant "BazelReader" as bazel_reader
 participant "ComponentDiagramReader" as component_reader
 participant "SequenceDiagramReader" as sequence_reader
-participant "ClassDiagramReader" as class_reader
+participant "ClassDiagramReader\n(class + internal API)" as class_reader
 participant "validate_bazel_component()" as bazel_validator
 participant "validate_component_sequence()" as sequence_validator
 participant "validate_component_class()" as class_validator
+participant "validate_component_internal_api()" as component_internal_api_validator
+participant "validate_sequence_internal_api()" as sequence_internal_api_validator
 participant "Errors" as errors
 participant "Report writer" as report_writer
 
@@ -43,10 +45,16 @@ alt architectural-design profile
     cli -> cli: to_sequence_diagram_index(&mut errors)
   end
 
-  opt internal_api or public_api provided (planned)
-    cli -> class_reader: read(internal_api + public_api)
+  opt internal_api provided
+    cli -> class_reader: read(internal_api)
     class_reader --> cli: ClassDiagramInputs
-    cli -> cli: ClassDiagramIndex::build_index(&mut errors)
+    cli -> cli: InternalApiIndex::build_index(&mut errors)
+  end
+
+  opt public_api provided (planned)
+    cli -> class_reader: read(public_api)
+    class_reader --> cli: ClassDiagramInputs
+    cli -> cli: PublicApiIndex::build_index(&mut errors)
   end
 
   opt component + class available (planned)
@@ -58,6 +66,18 @@ alt architectural-design profile
   opt component + sequence available
     cli -> sequence_validator: validate_component_sequence(..., Errors::default())
     sequence_validator --> cli: Errors
+    cli -> errors: merge_errors(...)
+  end
+
+  opt component + internal API available
+    cli -> component_internal_api_validator: validate_component_internal_api(..., Errors::default())
+    component_internal_api_validator --> cli: Errors
+    cli -> errors: merge_errors(...)
+  end
+
+  opt sequence + internal API available
+    cli -> sequence_internal_api_validator: validate_sequence_internal_api(..., optional component, Errors::default())
+    sequence_internal_api_validator --> cli: Errors
     cli -> errors: merge_errors(...)
   end
 

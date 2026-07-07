@@ -16,11 +16,15 @@ use crate::models::{
     SequenceDiagramIndex, SequenceDiagramInputs,
 };
 use crate::readers::{ClassDiagramReader, ComponentDiagramReader, SequenceDiagramReader};
-use crate::validators::validate_component_sequence;
+use crate::validators::{
+    validate_component_internal_api, validate_component_sequence, validate_sequence_internal_api,
+};
 use crate::ValidationResult;
 use serde::Deserialize;
 
 use super::profile::{merge_results, read_and_convert, ProfileRun};
+
+type ProfileValidator<'a> = Box<dyn Fn() -> Option<ValidationResult> + 'a>;
 
 #[derive(Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -29,6 +33,31 @@ pub struct ArchitecturalDesignInputs {
     sequence_diagrams: Vec<String>,
     internal_api_diagrams: Vec<String>,
     public_api_diagrams: Vec<String>,
+}
+
+fn registered_validators<'a>(
+    component: &'a Option<ComponentDiagramArchitecture>,
+    sequence: &'a Option<SequenceDiagramIndex>,
+    internal_api: &'a Option<InternalApiIndex>,
+) -> Vec<ProfileValidator<'a>> {
+    vec![
+        Box::new(move || {
+            let (component, sequence) = (component.as_ref()?, sequence.as_ref()?);
+            Some(validate_component_sequence(component, sequence))
+        }),
+        Box::new(move || {
+            let (component, internal_api) = (component.as_ref()?, internal_api.as_ref()?);
+            Some(validate_component_internal_api(component, internal_api))
+        }),
+        Box::new(move || {
+            let (sequence, internal_api) = (sequence.as_ref()?, internal_api.as_ref()?);
+            Some(validate_sequence_internal_api(
+                sequence,
+                internal_api,
+                component.as_ref(),
+            ))
+        }),
+    ]
 }
 
 pub fn run(inputs: &ArchitecturalDesignInputs) -> Result<ProfileRun, String> {
@@ -49,13 +78,14 @@ pub fn run(inputs: &ArchitecturalDesignInputs) -> Result<ProfileRun, String> {
         |raw: ClassDiagramInputs, errs| InternalApiIndex::build_index(&raw, errs),
     )?;
 
+    let validators = registered_validators(&component, &sequence, &internal_api);
+
     let mut ran_validator = false;
-    if let (Some(component), Some(sequence)) = (component.as_ref(), sequence.as_ref()) {
-        merge_results(
-            &mut result,
-            validate_component_sequence(component, sequence, internal_api.as_ref()),
-        );
-        ran_validator = true;
+    for validator in validators {
+        if let Some(validator_result) = validator() {
+            merge_results(&mut result, validator_result);
+            ran_validator = true;
+        }
     }
 
     Ok(ProfileRun {
