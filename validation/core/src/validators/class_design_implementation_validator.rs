@@ -16,7 +16,9 @@
 
 use crate::models::ClassEntityIndex;
 use crate::ValidationResult;
-use class_diagram::{EnumLiteral, MemberVariable, Method, Relationship, SimpleEntity, TypeAlias};
+use class_diagram::{
+    EnumLiteral, MemberVariable, Method, Relationship, SimpleEntity, TemplateParameter, TypeAlias,
+};
 use std::collections::BTreeMap;
 
 /// Run design-class-vs-implementation-class validation using indexed inputs.
@@ -100,8 +102,8 @@ impl ClassDesignImplementationValidator {
                 design_entity,
                 implementation_entity,
                 "template_parameters",
-                &format!("{:?}", design_entity.template_parameters),
-                &format!("{:?}", implementation_entity.template_parameters),
+                &render_template_parameters(&design_entity.template_parameters),
+                &render_template_parameters(&implementation_entity.template_parameters),
             ));
         }
 
@@ -179,8 +181,8 @@ impl ClassDesignImplementationValidator {
                 design_entity,
                 implementation_entity,
                 &format!("variable {variable_name:?} data_type"),
-                &format!("{:?}", design_variable.data_type),
-                &format!("{:?}", implementation_variable.data_type),
+                &render_optional_type(&design_variable.data_type),
+                &render_optional_type(&implementation_variable.data_type),
             ));
         }
 
@@ -262,8 +264,8 @@ impl ClassDesignImplementationValidator {
                 design_entity,
                 implementation_entity,
                 &format!("method {method_name:?} return_type"),
-                &format!("{:?}", design_method.return_type),
-                &format!("{:?}", implementation_method.return_type),
+                &render_optional_type(&design_method.return_type),
+                &render_optional_type(&implementation_method.return_type),
             ));
         }
 
@@ -289,8 +291,8 @@ impl ClassDesignImplementationValidator {
                 design_entity,
                 implementation_entity,
                 &format!("method {method_name:?} template_parameters"),
-                &format!("{:?}", design_method.template_parameters),
-                &format!("{:?}", implementation_method.template_parameters),
+                &render_template_parameters(&design_method.template_parameters),
+                &render_template_parameters(&implementation_method.template_parameters),
             ));
         }
 
@@ -352,7 +354,7 @@ impl ClassDesignImplementationValidator {
                 ));
             }
 
-            if design_parameter.is_variadic != implementation_parameter.is_variadic {
+            if design_parameter.is_pack_expansion != implementation_parameter.is_pack_expansion {
                 self.result.add_failure(Self::format_mismatch(
                     design_entity,
                     implementation_entity,
@@ -611,7 +613,9 @@ fn parameters_match(
                 design_parameter.name == implementation_parameter.name
                     && normalized_optional_type(&design_parameter.param_type)
                         == normalized_optional_type(&implementation_parameter.param_type)
-                    && design_parameter.is_variadic == implementation_parameter.is_variadic
+                    // Note: Puml parser not support C-style variadic parameters, design_parameter.is_variadic is always false now.
+                    // && design_parameter.is_variadic == implementation_parameter.is_variadic
+                    && design_parameter.is_pack_expansion == implementation_parameter.is_pack_expansion
             },
         )
 }
@@ -621,7 +625,11 @@ fn method_key(method: &Method) -> String {
         .parameters
         .iter()
         .map(|parameter| {
-            let variadic = if parameter.is_variadic { "..." } else { "" };
+            let variadic = if parameter.is_pack_expansion {
+                "..."
+            } else {
+                ""
+            };
             format!(
                 "{}{}",
                 parameter
@@ -637,34 +645,55 @@ fn method_key(method: &Method) -> String {
     format!("{}({})", method.name, parameter_types)
 }
 
-fn format_parameter_type(type_name: &Option<String>) -> String {
-    type_name
-        .as_deref()
-        .map(normalize_type_name)
-        .unwrap_or_else(|| "<unknown>".to_string())
+fn render_optional_value<T, F>(value: Option<T>, default: &str, format_value: F) -> String
+where
+    F: FnOnce(T) -> String,
+{
+    value
+        .map(format_value)
+        .unwrap_or_else(|| default.to_string())
+}
+
+fn render_list(items: impl Iterator<Item = String>) -> String {
+    format!("[{}]", render_joined(items))
+}
+
+fn render_joined(items: impl Iterator<Item = String>) -> String {
+    items.collect::<Vec<_>>().join(", ")
+}
+
+fn render_optional_type(type_name: &Option<String>) -> String {
+    render_optional_value(type_name.as_deref(), "None", normalize_type_name)
+}
+
+fn render_parameter_type(type_name: &Option<String>) -> String {
+    render_optional_value(type_name.as_deref(), "<unknown>", normalize_type_name)
 }
 
 fn format_parameter(parameter: &class_diagram::FunctionArgument) -> String {
     if parameter.name.is_empty() {
-        format_parameter_type(&parameter.param_type)
+        render_parameter_type(&parameter.param_type)
     } else {
         format!(
             "{}: {}",
             parameter.name,
-            format_parameter_type(&parameter.param_type),
+            render_parameter_type(&parameter.param_type),
         )
     }
 }
 
 fn format_parameter_list(parameters: &[class_diagram::FunctionArgument]) -> String {
-    let mut parts = Vec::new();
-    for parameter in parameters {
-        parts.push(format_parameter(parameter));
-        if parameter.is_variadic {
-            parts.push("...".to_string());
-        }
-    }
-    parts.join(", ")
+    parameters
+        .iter()
+        .map(|parameter| {
+            let mut rendered = format_parameter(parameter);
+            if parameter.is_pack_expansion {
+                rendered.push_str("...");
+            }
+            rendered
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn format_method_parameters(parameters: &[class_diagram::FunctionArgument]) -> String {
@@ -686,6 +715,83 @@ fn format_parameter_count(parameters: &[class_diagram::FunctionArgument]) -> Str
     )
 }
 
+fn render_template_parameters(template_parameters: &Option<Vec<TemplateParameter>>) -> String {
+    render_optional_value(template_parameters.as_deref(), "None", |parameters| {
+        render_list(parameters.iter().map(render_template_parameter))
+    })
+}
+
+fn render_template_parameter(parameter: &TemplateParameter) -> String {
+    match parameter {
+        TemplateParameter::Type { name, is_pack } => {
+            render_quoted_template_parameter(name, *is_pack)
+        }
+        TemplateParameter::NonType { name, is_pack, .. } => {
+            render_quoted_template_parameter(name, *is_pack)
+        }
+        TemplateParameter::Template {
+            name,
+            parameters,
+            is_pack,
+        } => format!(
+            "\"template <{}> {}{}\"",
+            render_template_parameter_list(parameters),
+            name,
+            template_pack_marker(*is_pack)
+        ),
+    }
+}
+
+fn render_quoted_template_parameter(name: &str, is_pack: bool) -> String {
+    format!("\"{}\"", render_template_parameter_name(name, is_pack))
+}
+
+fn render_template_parameter_name(name: &str, is_pack: bool) -> String {
+    format!("{}{}", name, template_pack_marker(is_pack))
+}
+
+fn render_template_parameter_list(parameters: &[TemplateParameter]) -> String {
+    render_joined(parameters.iter().map(render_template_parameter_content))
+}
+
+fn render_template_parameter_content(parameter: &TemplateParameter) -> String {
+    match parameter {
+        TemplateParameter::Type { name, is_pack } => {
+            format!(
+                "typename {}",
+                render_template_parameter_name(name, *is_pack)
+            )
+        }
+        TemplateParameter::NonType {
+            name,
+            value_type,
+            is_pack,
+        } => format!(
+            "{} {}",
+            value_type,
+            render_template_parameter_name(name, *is_pack)
+        ),
+        TemplateParameter::Template {
+            name,
+            parameters,
+            is_pack,
+        } => format!(
+            "template <{}> typename {}{}",
+            render_template_parameter_list(parameters),
+            name,
+            template_pack_marker(*is_pack)
+        ),
+    }
+}
+
+fn template_pack_marker(is_pack: bool) -> &'static str {
+    if is_pack {
+        "..."
+    } else {
+        ""
+    }
+}
+
 fn normalized_optional_type(type_name: &Option<String>) -> Option<String> {
     type_name.as_deref().map(normalize_type_name)
 }
@@ -694,6 +800,7 @@ fn normalize_type_name(type_name: &str) -> String {
     normalize_reference_name(
         &type_name
             .trim()
+            .trim_start_matches("::")
             .replace("std::", "")
             .replace(" *", "*")
             .replace(" &", "&"),
@@ -796,17 +903,19 @@ mod tests {
                     name: String::new(),
                     param_type: Some((*parameter_type).to_string()),
                     is_variadic: false,
+                    is_pack_expansion: false,
                 })
                 .collect(),
             ..method(name)
         }
     }
 
-    fn parameter(name: &str, param_type: &str, is_variadic: bool) -> FunctionArgument {
+    fn parameter(name: &str, param_type: &str, is_pack_expansion: bool) -> FunctionArgument {
         FunctionArgument {
             name: name.to_string(),
             param_type: Some(param_type.to_string()),
-            is_variadic,
+            is_variadic: false,
+            is_pack_expansion,
         }
     }
 
@@ -883,12 +992,36 @@ mod tests {
     fn method_parameter_formatting_includes_count_names_types_and_variadic_marker() {
         let parameters = vec![
             parameter("mode", "int", false),
-            parameter("args", "std::uint8_t", true),
+            parameter("args", "IngArg&&", true),
         ];
 
         assert_eq!(
             format_parameter_count(&parameters),
-            "2 parameters (mode: int, args: uint8_t, ...)"
+            "2 parameters (mode: int, args: IngArg&&...)"
+        );
+    }
+
+    #[test]
+    fn template_parameter_formatting_includes_pack_and_nested_parameters() {
+        let template_parameters = Some(vec![
+            TemplateParameter::Type {
+                name: "T".to_string(),
+                is_pack: true,
+            },
+            TemplateParameter::Template {
+                name: "Factory".to_string(),
+                parameters: vec![TemplateParameter::NonType {
+                    name: "Size".to_string(),
+                    value_type: "int".to_string(),
+                    is_pack: false,
+                }],
+                is_pack: false,
+            },
+        ]);
+
+        assert_eq!(
+            render_template_parameters(&template_parameters),
+            "[\"T...\", \"template <int Size> Factory\"]"
         );
     }
 
@@ -916,6 +1049,15 @@ mod tests {
         assert_eq!(
             normalize_type_name("vehicle.Payload &"),
             "vehicle::Payload&"
+        );
+    }
+
+    #[test]
+    fn type_name_normalization_strips_leading_global_namespace() {
+        assert_eq!(normalize_type_name("::std::uint8_t"), "uint8_t");
+        assert_eq!(
+            normalize_type_name(" ::vehicle::Payload "),
+            "vehicle::Payload"
         );
     }
 

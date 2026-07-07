@@ -18,4 +18,7 @@ class DiagnosticJobCollectionBuilder
   public:
     template <typename DiagnosticJobType, typename... DiagnosticJobConstructorArgumentTypes>
     void With(ara::core::InstanceSpecifier, DiagnosticJobConstructorArgumentTypes...);
+
+    template <typename DiagnosticJobType, typename... DiagnosticJobConstructorArgumentTypes>
+    DiagnosticJobType Build(::ara::core::InstanceSpecifier, DiagnosticJobConstructorArgumentTypes...);
 };

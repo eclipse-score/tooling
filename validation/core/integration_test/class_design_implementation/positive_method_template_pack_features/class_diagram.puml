@@ -5,6 +5,8 @@
 
 class DiagnosticJobCollectionBuilder {
     + With<DiagnosticJobType, DiagnosticJobConstructorArgumentTypes...>(::ara::core::InstanceSpecifier, DiagnosticJobConstructorArgumentTypes...) : void
+
+    + Build<DiagnosticJobType>(::ara::core::InstanceSpecifier, DiagnosticJobConstructorArgumentTypes...) : DiagnosticJobType
 }
 
 @enduml

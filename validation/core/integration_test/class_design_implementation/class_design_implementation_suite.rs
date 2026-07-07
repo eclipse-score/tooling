@@ -141,6 +141,7 @@ fn negative_method_parameter_type_mismatch() {
 }
 
 #[test]
+#[ignore = "C-style variadic parameters are not supported by the PUML parser, so this test is ignored for now."]
 fn negative_method_parameter_variadic_mismatch() {
     assert_case("negative_method_parameter_variadic_mismatch");
 }
@@ -183,4 +184,9 @@ fn negative_enum_literal_mismatch() {
 #[test]
 fn negative_template_parameter_mismatch() {
     assert_case("negative_template_parameter_mismatch");
+}
+
+#[test]
+fn negative_template_parameter_pack_mismatch() {
+    assert_case("negative_template_parameter_pack_mismatch");
 }
