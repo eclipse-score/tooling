@@ -148,6 +148,36 @@ def _component_sphinx_sources_test_impl(ctx):
 
 component_sphinx_sources_test = analysistest.make(_component_sphinx_sources_test_impl)
 
+def _component_excludes_feature_req_docs_test_impl(ctx):
+    """Test that a feature_requirements target listed in `requirements`
+    alongside a component_requirements target is not re-rendered into the
+    component's own Sphinx docs (SphinxSourcesInfo.srcs), avoiding duplicate
+    feature requirements pages across every component. It is still expected
+    in ComponentInfo/tests via feature_requirements' own mechanisms elsewhere
+    (e.g. the dependable_element level)."""
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    sphinx_srcs = target_under_test[SphinxSourcesInfo].srcs.to_list()
+    basenames = [f.basename for f in sphinx_srcs]
+
+    asserts.true(
+        env,
+        "feat_req.rst" not in basenames,
+        "Component SphinxSourcesInfo.srcs should not include the rendered " +
+        "feature_requirements RST (found: %s)" % basenames,
+    )
+    asserts.true(
+        env,
+        "comp_req.rst" in basenames,
+        "Component SphinxSourcesInfo.srcs should include the rendered " +
+        "component_requirements RST (found: %s)" % basenames,
+    )
+
+    return analysistest.end(env)
+
+component_excludes_feature_req_docs_test = analysistest.make(_component_excludes_feature_req_docs_test_impl)
+
 # ============================================================================
 # Dependable Element Tests
 # ============================================================================
@@ -171,5 +201,6 @@ def unit_component_test_suite(name):
             ":unit_sphinx_sources_test",
             ":component_provider_test",
             ":component_sphinx_sources_test",
+            ":component_excludes_feature_req_docs_test",
         ],
     )

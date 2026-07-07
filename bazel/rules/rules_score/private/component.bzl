@@ -42,11 +42,19 @@ def _component_impl(ctx):
 
     # -------------------------------------------------------------------------
     # Sphinx Docs: collect RST sources from component_requirements targets
-    # and bubble up SphinxSourcesInfo from sub-components/units
+    # and bubble up SphinxSourcesInfo from sub-components/units.
+    #
+    # Only ComponentRequirementsInfo-providing targets contribute their own
+    # rendered RST here. feature_requirements targets are commonly also listed
+    # in `requirements` (see below) purely so their .lobster file can resolve
+    # derived_from references from the component requirements; they are
+    # already rendered once at the dependable_element level, so re-rendering
+    # them per component would duplicate the feature requirements page across
+    # every component that references the same feature.
     # -------------------------------------------------------------------------
     req_sphinx_files = []
     for req_target in ctx.attr.requirements:
-        if SphinxSourcesInfo in req_target:
+        if ComponentRequirementsInfo in req_target and SphinxSourcesInfo in req_target:
             req_sphinx_files.append(req_target[SphinxSourcesInfo].srcs)
 
     component_sphinx_files = []
@@ -275,7 +283,13 @@ def component(
     Args:
         name: The name of the component. Used as the target name.
         requirements: List of labels to component_requirements targets
-            that define the requirements for this component.
+            that define the requirements for this component. A
+            feature_requirements target may also be listed here so its
+            .lobster file is available to resolve derived_from references
+            from the component requirements; only component_requirements
+            targets contribute rendered RST to the component's Sphinx docs,
+            so listing a feature_requirements target does not duplicate it
+            in the generated documentation.
         components: List of labels to nested component targets (for hierarchical
             component structures).
         tests: List of labels to Bazel test targets that verify the component

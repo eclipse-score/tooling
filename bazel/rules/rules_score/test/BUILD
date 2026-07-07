@@ -88,6 +88,7 @@ load(
 )
 load(
     ":unit_component_test.bzl",
+    "component_excludes_feature_req_docs_test",
     "component_provider_test",
     "component_sphinx_sources_test",
     "unit_component_test_suite",
@@ -674,6 +675,11 @@ component_provider_test(
 
 component_sphinx_sources_test(
     name = "component_sphinx_sources_test",
+    target_under_test = ":test_component",
+)
+
+component_excludes_feature_req_docs_test(
+    name = "component_excludes_feature_req_docs_test",
     target_under_test = ":test_component",
 )
 
