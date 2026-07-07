@@ -260,17 +260,43 @@ deb(
 # Distroless rootfs providing graphviz + fakechroot for hermetic dot execution
 # via //third_party/docs_runtime:dot (exec_in_sysroot).
 ###############################################################################
-bazel_dep(name = "rules_distroless", version = "0.6.2")
+bazel_dep(name = "rules_distroless", version = "0.9.0")
+git_override(
+    module_name = "rules_distroless",
+    commit = "dbf25be1c3a9a1698511a4817582efe61dc5ec15",
+    remote = "https://github.com/LittleHuba/rules_distroless.git",
+)
 
 # bsdtar (used by //bazel/rules/exec_in_sysroot to extract sysroot archives).
 bazel_dep(name = "tar.bzl", version = "0.6.0")
 
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.sources_list(
+    architectures = ["amd64"],
+    components = [
+        "main",
+        "universe",
+    ],
+    suites = [
+        "noble",
+        "noble-security",
+        "noble-updates",
+    ],
+    types = ["deb"],
+    uris = ["https://snapshot.ubuntu.com/ubuntu/20260401T000000Z"],
+)
 apt.install(
-    name = "docs_runtime",
-    lock = "//third_party/docs_runtime:docs_runtime.lock.json",
-    manifest = "//third_party/docs_runtime:docs_runtime.yaml",
+    dependency_set = "docs_runtime",
     mergedusr = True,
+    packages = [
+        "fakechroot",
+        "graphviz",
+    ],
+    suites = [
+        "noble",
+        "noble-security",
+        "noble-updates",
+    ],
 )
 use_repo(apt, "docs_runtime")
 
