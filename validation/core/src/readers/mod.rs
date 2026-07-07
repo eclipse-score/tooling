@@ -13,6 +13,8 @@
 
 //! Input readers for Bazel JSON and PlantUML-derived FlatBuffer artifacts.
 
+use component_diagram::SourceLocation;
+
 mod bazel_reader;
 mod class_diagram_reader;
 mod component_diagram_reader;
@@ -44,6 +46,10 @@ pub trait Reader {
         input.is_present()
     }
     fn read(input: &Self::Input) -> Result<Self::Raw, Self::Error>;
+}
+
+pub(crate) fn to_source_location(file: Option<&str>, line: u32) -> SourceLocation {
+    SourceLocation::new(file.unwrap_or_default(), line)
 }
 
 pub use bazel_reader::BazelReader;

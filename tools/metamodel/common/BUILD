@@ -10,19 +10,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(default_visibility = ["//visibility:public"])
 
 rust_library(
-    name = "component_diagram",
-    srcs = ["component_logic.rs"],
-    crate_name = "component_diagram",
-    crate_root = "component_logic.rs",
+    name = "source_location",
+    srcs = ["source_location.rs"],
+    crate_name = "source_location",
+    crate_root = "source_location.rs",
     edition = "2021",
     deps = [
-        "//tools/metamodel/common:source_location",
         "@crates//:serde",
-        "@crates//:thiserror",
     ],
 )

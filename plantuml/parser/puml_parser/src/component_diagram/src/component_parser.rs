@@ -22,6 +22,7 @@ use parser_core::{
     format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser, ErrorLocation,
 };
 use puml_utils::LogLevel;
+use source_location::SourceLocation;
 
 use parser_core::common_parser::parse_arrow as common_parse_arrow;
 use parser_core::common_parser::{PlantUmlCommonParser, Rule};
@@ -56,21 +57,28 @@ pub struct PumlComponentParser;
 impl PumlComponentParser {
     fn parse_statement(
         pair: pest::iterators::Pair<Rule>,
+        source_file: &str,
     ) -> Result<Vec<Statement>, ComponentError> {
         for inner in pair.into_inner() {
             match inner.as_rule() {
                 Rule::element => {
-                    return Ok(vec![Statement::Element(Self::parse_element(inner)?)]);
+                    return Ok(vec![Statement::Element(Self::parse_element(
+                        inner,
+                        source_file,
+                    )?)]);
                 }
                 Rule::relation => {
-                    return Ok(vec![Statement::Relation(Self::parse_relation(inner)?)]);
+                    return Ok(vec![Statement::Relation(Self::parse_relation(
+                        inner,
+                        source_file,
+                    )?)]);
                 }
                 Rule::port_declaration => {
                     return Ok(vec![Statement::Port(Self::parse_port(inner)?)]);
                 }
                 Rule::together_block => {
                     // Flatten children into the enclosing scope (drop the wrapper)
-                    return Self::parse_together_block(inner);
+                    return Self::parse_together_block(inner, source_file);
                 }
                 _ => {}
             }
@@ -112,21 +120,26 @@ impl PumlComponentParser {
 
     fn parse_together_block(
         pair: pest::iterators::Pair<Rule>,
+        source_file: &str,
     ) -> Result<Vec<Statement>, ComponentError> {
         let mut stmts = Vec::new();
         for inner in pair.into_inner() {
             if inner.as_rule() == Rule::diagram_statement {
-                stmts.append(&mut Self::parse_statement(inner)?);
+                stmts.append(&mut Self::parse_statement(inner, source_file)?);
             }
         }
         Ok(stmts)
     }
 
-    fn parse_element(pair: pest::iterators::Pair<Rule>) -> Result<Element, ComponentError> {
+    fn parse_element(
+        pair: pest::iterators::Pair<Rule>,
+        source_file: &str,
+    ) -> Result<Element, ComponentError> {
         let mut element = Element {
             kind: "".to_string(),
             name: None,
             alias: None,
+            source_location: SourceLocation::new(source_file, pair.line_col().0 as u32),
             stereotype: None,
             style: None,
             statements: Vec::new(),
@@ -179,7 +192,7 @@ impl PumlComponentParser {
                     element.style = Some(Self::parse_component_style(inner)?);
                 }
                 Rule::statement_block => {
-                    element.statements = Self::parse_statement_block(inner)?;
+                    element.statements = Self::parse_statement_block(inner, source_file)?;
                 }
                 _ => {}
             }
@@ -188,12 +201,16 @@ impl PumlComponentParser {
         Ok(element)
     }
 
-    fn parse_relation(pair: pest::iterators::Pair<Rule>) -> Result<Relation, ComponentError> {
+    fn parse_relation(
+        pair: pest::iterators::Pair<Rule>,
+        source_file: &str,
+    ) -> Result<Relation, ComponentError> {
         let mut lhs = String::new();
         let mut rhs = String::new();
         let mut arrow = Arrow::default();
 
         let mut description = None;
+        let source_line = pair.line_col().0 as u32;
 
         for inner in pair.into_inner() {
             match inner.as_rule() {
@@ -219,6 +236,7 @@ impl PumlComponentParser {
             rhs,
             style: None,
             description,
+            source_location: SourceLocation::new(source_file, source_line),
         })
     }
 
@@ -330,13 +348,14 @@ impl PumlComponentParser {
 
     fn parse_statement_block(
         pair: pest::iterators::Pair<Rule>,
+        source_file: &str,
     ) -> Result<Vec<Statement>, ComponentError> {
         let mut statements = Vec::new();
 
         for inner in pair.into_inner() {
             match inner.as_rule() {
                 Rule::diagram_statement => {
-                    let mut stmts = Self::parse_statement(inner)?;
+                    let mut stmts = Self::parse_statement(inner, source_file)?;
                     statements.append(&mut stmts);
                 }
                 _ => {
@@ -382,6 +401,7 @@ impl DiagramParser for PumlComponentParser {
             name: None,
             statements: Vec::new(),
         };
+        let source_file = path.as_ref().clone().to_string_lossy().to_string();
 
         for pair in pairs {
             for inner_pair in pair.into_inner() {
@@ -395,7 +415,7 @@ impl DiagramParser for PumlComponentParser {
                         }
                     }
                     Rule::diagram_statement => {
-                        let mut stmts = Self::parse_statement(inner_pair)?;
+                        let mut stmts = Self::parse_statement(inner_pair, &source_file)?;
                         document.statements.append(&mut stmts);
                     }
                     _ => {
@@ -469,5 +489,45 @@ mod dispatch_style_tests {
             .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
             .expect("valid input must parse");
         assert_eq!(doc.statements.len(), 3);
+    }
+
+    #[test]
+    fn test_source_locations_are_preserved() {
+        let input = "@startuml\ncomponent A\ncomponent B\nA --> B\n@enduml";
+        let path = Rc::new(PathBuf::from("t.puml"));
+        let mut parser = PumlComponentParser;
+        let doc = parser
+            .parse_file(&path, input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        let expected_file = path.as_ref().clone().to_string_lossy().to_string();
+
+        let first_element = match &doc.statements[0] {
+            Statement::Element(element) => element,
+            actual => panic!(
+                "expected first statement to be an element, got {:?}",
+                actual
+            ),
+        };
+
+        assert_eq!(first_element.source_location.line, 2);
+        assert_eq!(
+            first_element.source_location.file.as_ref(),
+            expected_file.as_str()
+        );
+
+        let relation = match &doc.statements[2] {
+            Statement::Relation(relation) => relation,
+            actual => panic!(
+                "expected third statement to be a relation, got {:?}",
+                actual
+            ),
+        };
+
+        assert_eq!(relation.source_location.line, 4);
+        assert_eq!(
+            relation.source_location.file.as_ref(),
+            expected_file.as_str()
+        );
     }
 }

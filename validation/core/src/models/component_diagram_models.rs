@@ -15,6 +15,8 @@ use std::collections::BTreeMap;
 
 use super::EntityKey;
 use crate::ValidationResult;
+#[cfg(test)]
+use component_diagram::SourceLocation;
 pub use component_diagram::{
     ComponentRelationType, ComponentType, EndpointRole, LogicComponent, LogicRelation,
 };
@@ -191,6 +193,7 @@ mod tests {
             annotation: None,
             relation_type: ComponentRelationType::Association,
             source_role: EndpointRole::None,
+            source_location: SourceLocation::new("", 0),
         }
     }
 
@@ -210,6 +213,7 @@ mod tests {
             element_type,
             stereotype: stereotype.map(str::to_string),
             relations,
+            source_location: SourceLocation::new("", 0),
         }
     }
 

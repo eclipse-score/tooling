@@ -258,3 +258,64 @@ fn test_arrows_link() {
 fn test_nested_elements() {
     run_deployment_resolver_case("nested_elements");
 }
+
+#[test]
+fn test_source_locations_are_preserved() {
+    use component_diagram::SourceLocation;
+    use component_parser::{CompPumlDocument, Element, Relation, Statement};
+    use parser_core::common_ast::{Arrow, ArrowLine};
+
+    let component_location = SourceLocation::new("input.puml", 2);
+    let relation_location = SourceLocation::new("input.puml", 4);
+
+    let document = CompPumlDocument {
+        name: None,
+        statements: vec![
+            Statement::Element(Element {
+                kind: "component".to_string(),
+                name: Some("A".to_string()),
+                alias: None,
+                stereotype: None,
+                style: None,
+                statements: Vec::new(),
+                source_location: component_location.clone(),
+            }),
+            Statement::Element(Element {
+                kind: "component".to_string(),
+                name: Some("B".to_string()),
+                alias: None,
+                stereotype: None,
+                style: None,
+                statements: Vec::new(),
+                source_location: SourceLocation::new("input.puml", 3),
+            }),
+            Statement::Relation(Relation {
+                lhs: "A".to_string(),
+                arrow: Arrow {
+                    left: None,
+                    line: ArrowLine {
+                        raw: "--".to_string(),
+                    },
+                    middle: None,
+                    right: None,
+                },
+                rhs: "B".to_string(),
+                style: None,
+                description: None,
+                source_location: relation_location.clone(),
+            }),
+        ],
+    };
+
+    let mut resolver = ComponentResolver::new();
+    let logic = resolver.resolve(&document).expect("document must resolve");
+
+    let component = logic.get("A").expect("component A must exist");
+    assert_eq!(component.source_location, component_location);
+
+    let relation = component
+        .relations
+        .first()
+        .expect("A must have one relation");
+    assert_eq!(relation.source_location, relation_location);
+}

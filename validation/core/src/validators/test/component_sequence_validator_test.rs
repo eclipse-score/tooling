@@ -14,6 +14,7 @@ use super::super::fixtures::*;
 use super::*;
 use crate::models::{ComponentDiagramInputs, ComponentType, LogicComponent, SequenceDiagramInputs};
 use crate::ValidationResult;
+use component_diagram::SourceLocation;
 
 fn validate(
     component_diagrams: ComponentDiagramInputs,
@@ -72,6 +73,7 @@ fn units_without_alias_are_ignored() {
             element_type: ComponentType::Component,
             stereotype: Some("unit".to_string()),
             relations: Vec::new(),
+            source_location: SourceLocation::new("", 0),
         }],
     };
     let sequence_diagrams = sequence_diagrams(&[]);

@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 use serde::{Deserialize, Serialize};
+pub use source_location::SourceLocation;
 
 // #[derive(Debug, Clone)]
 // pub struct Package {
@@ -27,6 +28,7 @@ pub struct LogicComponent {
     pub element_type: ComponentType, // e.g., package, component, etc.
     pub stereotype: Option<String>, // e.g., component, unit, etc.
     pub relations: Vec<LogicRelation>,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -65,6 +67,7 @@ pub struct LogicRelation {
     /// Role of source component w.r.t. target interface.
     #[serde(default)]
     pub source_role: EndpointRole,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]

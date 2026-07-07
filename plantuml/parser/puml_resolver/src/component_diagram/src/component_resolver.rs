@@ -696,6 +696,7 @@ impl ComponentResolver {
             annotation: relation.description.clone(),
             relation_type,
             source_role,
+            source_location: relation.source_location.clone(),
         });
 
         Ok(())
@@ -797,6 +798,7 @@ impl ComponentResolver {
             id: fqn.clone(),
             name: element.name.clone(),
             alias: element.alias.clone(),
+            source_location: element.source_location.clone(),
             parent_id: parent_id.clone(),
             element_type: parse_kind(&element.kind)?,
             stereotype: element.stereotype.clone(),

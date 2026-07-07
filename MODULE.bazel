@@ -108,7 +108,10 @@ crate.spec(
     version = "0.10",
 )
 crate.spec(
-    features = ["derive"],
+    features = [
+        "derive",
+        "rc",
+    ],
     package = "serde",
     version = "1.0",
 )
