@@ -25,6 +25,7 @@ load(
     "subrule_lobster_html_report",
     "subrule_lobster_report",
 )
+load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load(
     "//bazel/rules/rules_score:providers.bzl",
     "ArchitecturalDesignInfo",
@@ -125,6 +126,16 @@ _INTEGRITY_LEVEL_RANK = {level: rank for rank, level in enumerate(_INTEGRITY_LEV
 # ============================================================================
 # Helper Functions for Documentation Generation
 # ============================================================================
+
+def _make_toctree(caption, entries, maxdepth = 1):
+    """Return a toctree RST block with a caption, or empty string if entries is empty."""
+    if not entries:
+        return ""
+    return ".. toctree::\n   :maxdepth: {maxdepth}\n   :caption: {caption}\n\n   {entries}".format(
+        maxdepth = maxdepth,
+        caption = caption,
+        entries = "\n   ".join(entries),
+    )
 
 def _get_sphinx_files(target):
     return target[SphinxSourcesInfo].deps.to_list()
@@ -809,10 +820,7 @@ def _dependable_element_index_impl(ctx):
     # Reference component pages directly in the outer toctree, avoiding an
     # intermediate components/index.rst that would repeat "Components" in the
     # Sphinx sidebar navigation.
-    if component_refs:
-        components_ref = "\n   ".join(["components/" + name for name in component_refs])
-    else:
-        components_ref = ""
+    component_entries = ["components/" + name for name in component_refs]
 
     # Generate submodule links for the index page
     deps_links = _process_deps(ctx)
@@ -829,9 +837,76 @@ def _dependable_element_index_impl(ctx):
         for r in ctx.attr.requirements
     ])
     _has_comp_reqs = any([ComponentInfo in c for c in ctx.attr.components])
-    traceability_report = (
-        "traceability_report/index" if _has_feature_reqs and _has_comp_reqs else ""
+    traceability_entries = (
+        ["traceability_report/index"] if _has_feature_reqs and _has_comp_reqs else []
     )
+
+    # Generate one section page per top-level group so each becomes a proper
+    # clickable sidebar entry.  Each block is explicit and independently controlled.
+
+    def _section_page(name, title, entries, maxdepth = 1):
+        """Declare + expand one section page; return filename or None when empty."""
+        if not entries:
+            return None
+        page = ctx.actions.declare_file(ctx.label.name + "/" + name + ".rst")
+        ctx.actions.expand_template(
+            template = ctx.file.section_template,
+            output = page,
+            substitutions = {
+                "{title}": title,
+                "{underline}": "-" * len(title),
+                "{maxdepth}": str(maxdepth),
+                "{entries}": "\n   ".join(entries),
+            },
+        )
+        output_files.append(page)
+        return name
+
+    assumed_system_ref = _section_page(
+        "assumed_system",
+        "Assumed System",
+        assumed_system_req_refs + artifacts_by_type["assumptions_of_use"],
+    )
+    software_arch_ref = _section_page(
+        "software_arch",
+        "Software Architectural Level",
+        feature_req_refs + artifacts_by_type["architectural_design"] + artifacts_by_type["dependability_analysis"],
+    )
+    components_ref = _section_page(
+        "components",
+        "Components",
+        component_entries,
+    )
+    traceability_ref = _section_page(
+        "traceability",
+        "Traceability",
+        traceability_entries,
+    )
+    checklists_ref = _section_page(
+        "checklists",
+        "Checklists",
+        artifacts_by_type["checklists"],
+        maxdepth = 2,
+    )
+    glossary_ref = _section_page(
+        "glossary",
+        "Glossary",
+        artifacts_by_type["glossary"],
+        maxdepth = 2,
+    )
+
+    section_refs = [
+        ref
+        for ref in [
+            assumed_system_ref,
+            software_arch_ref,
+            components_ref,
+            traceability_ref,
+            checklists_ref,
+            glossary_ref,
+        ]
+        if ref != None
+    ]
 
     # Render the index.rst using the template
     title = ctx.attr.module_name
@@ -843,16 +918,8 @@ def _dependable_element_index_impl(ctx):
         substitutions = {
             "{title}": title,
             "{underline}": underline,
-            "{components}": components_ref,
-            "{assumed_system_requirements}": "\n   ".join(assumed_system_req_refs),
-            "{assumptions_of_use}": "\n   ".join(artifacts_by_type["assumptions_of_use"]),
-            "{feature_requirements}": "\n   ".join(feature_req_refs),
-            "{architectural_design}": "\n   ".join(artifacts_by_type["architectural_design"]),
-            "{dependability_analysis}": "\n   ".join(artifacts_by_type["dependability_analysis"]),
-            "{checklists}": "\n   ".join(artifacts_by_type["checklists"]),
-            "{glossary}": "\n   ".join(artifacts_by_type["glossary"]),
+            "{sections}": "\n   ".join(section_refs),
             "{submodules}": deps_links,
-            "{traceability_report}": traceability_report,
         },
     )
 
@@ -1190,6 +1257,11 @@ def _dependable_element_index_attrs():
             mandatory = True,
             doc = "Template file for generating index.rst",
         ),
+        "section_template": attr.label(
+            allow_single_file = [".rst"],
+            mandatory = True,
+            doc = "Template file for generating section pages (Assumed System, Software Arch, ...).",
+        ),
         "deps": attr.label_list(
             default = [],
             doc = "Dependencies on other dependable element modules (submodules).",
@@ -1412,6 +1484,7 @@ def dependable_element(
         name = name + "_index",
         module_name = name,
         template = Label("//bazel/rules/rules_score:templates/dependable_element_index.template.rst"),
+        section_template = Label("//bazel/rules/rules_score:templates/section_page.template.rst"),
         assumptions_of_use = assumptions_of_use,
         requirements = requirements,
         components = components,
@@ -1451,4 +1524,15 @@ def dependable_element(
         index_dep = ":" + name + "_index",
         sphinx_module_dep = ":" + name + "_doc",
         **kwargs
+    )
+
+    # Step 4: Expose generated RST sources as a sphinx_docs_library so that
+    # external Sphinx builds can include this dependable element's content
+    # directly in their navigation tree (via docs_library_deps).
+    sphinx_docs_library(
+        name = name + "_rst",
+        srcs = [":" + name + "_index"],
+        prefix = "docs/sphinx/",
+        testonly = testonly,
+        visibility = ["//visibility:public"],
     )

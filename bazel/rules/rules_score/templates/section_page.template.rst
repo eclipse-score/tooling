@@ -12,15 +12,10 @@
    # SPDX-License-Identifier: Apache-2.0
    # *******************************************************************************
 
-Dependable element: {title}
-===================={underline}
+{title}
+{underline}
 
 .. toctree::
+   :maxdepth: {maxdepth}
 
-   {sections}
-
-Submodules
-----------
-This module includes the following submodules:
-
-{submodules}
+   {entries}

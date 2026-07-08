@@ -35,6 +35,7 @@ exports_files([
     "src/sphinx_wrapper.py",
     "templates/conf.template.py",
     "templates/dependable_element_index.template.rst",
+    "templates/section_page.template.rst",
     "templates/unit.template.rst",
     "templates/component.template.rst",
     "templates/fmea.template.rst",
