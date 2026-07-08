@@ -1,0 +1,133 @@
+{
+  "participant_identifier_examples.puml": {
+    "name": "participant_identifier_examples",
+    "participants": [
+      {
+        "display_name": "Quoted As Id",
+        "alias": "QuotedAsId",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": "component"
+      },
+      {
+        "display_name": "Id As Quoted",
+        "alias": "IdAsQuoted",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 20
+        },
+        "stereotype": "component"
+      },
+      {
+        "display_name": "RightId",
+        "alias": "LeftId",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 23
+        },
+        "stereotype": "component"
+      },
+      {
+        "display_name": "Quoted Only",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 26
+        },
+        "stereotype": "component"
+      },
+      {
+        "display_name": "IdOnly",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 29
+        },
+        "stereotype": "component"
+      }
+    ],
+    "root_interactions": [
+      {
+        "event": {
+          "Interaction": {
+            "caller": "QuotedAsId",
+            "callee": "IdAsQuoted",
+            "method": "callQuotedAsId()"
+          }
+        },
+        "source_location": {
+          "file": "",
+          "line": 31
+        },
+        "branches_node": [
+          {
+            "event": {
+              "Interaction": {
+                "caller": "IdAsQuoted",
+                "callee": "RightId",
+                "method": "callIdAsQuoted()"
+              }
+            },
+            "source_location": {
+              "file": "",
+              "line": 33
+            },
+            "branches_node": [
+              {
+                "event": {
+                  "Interaction": {
+                    "caller": "RightId",
+                    "callee": "Quoted Only",
+                    "method": "callIdAsId()"
+                  }
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 35
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Interaction": {
+                        "caller": "Quoted Only",
+                        "callee": "IdOnly",
+                        "method": "callQuoted()"
+                      }
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 37
+                    },
+                    "branches_node": [
+                      {
+                        "event": {
+                          "Interaction": {
+                            "caller": "IdOnly",
+                            "callee": "QuotedAsId",
+                            "method": "callId()"
+                          }
+                        },
+                        "source_location": {
+                          "file": "",
+                          "line": 39
+                        },
+                        "branches_node": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

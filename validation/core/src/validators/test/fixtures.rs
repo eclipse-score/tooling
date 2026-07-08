@@ -113,6 +113,7 @@ pub(super) fn sequence_calls(calls: &[(&str, &str, &str)]) -> SequenceDiagramInp
     SequenceDiagramInputs {
         diagrams: vec![SequenceTree {
             name: Some("seq".to_string()),
+            participants: Vec::new(),
             root_interactions: calls
                 .iter()
                 .map(|(caller, callee, method)| SequenceNode {

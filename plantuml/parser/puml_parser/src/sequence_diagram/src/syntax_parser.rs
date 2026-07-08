@@ -395,6 +395,18 @@ impl PumlSequenceParser {
             .to_string()
     }
 
+    /// Sequence participant names are stored as semantic identifiers, not as
+    /// source literals. Quotation marks are PlantUML delimiters and are not
+    /// part of the participant name in the parsed model.
+    fn normalize_participant_name(s: &str) -> String {
+        let value = s.trim();
+        if value.starts_with('"') {
+            Self::extract_quoted_string(value)
+        } else {
+            value.to_string()
+        }
+    }
+
     fn extract_participant_ref(pair: pest::iterators::Pair<Rule>) -> String {
         match pair.as_rule() {
             Rule::message_participant => pair
@@ -404,15 +416,17 @@ impl PumlSequenceParser {
                 .unwrap_or_default(),
 
             Rule::participant_ref => {
-                let fallback = pair.as_str().trim().to_string();
+                let fallback = pair.as_str().trim();
 
                 pair.into_inner()
                     .next()
                     .map(Self::extract_participant_ref)
-                    .unwrap_or(fallback)
+                    .unwrap_or_else(|| Self::normalize_participant_name(fallback))
             }
 
             Rule::quoted_string => Self::extract_quoted_string(pair.as_str()),
+
+            Rule::CNAME => Self::normalize_participant_name(pair.as_str()),
 
             Rule::quoted_participant_as_id
             | Rule::participant_id_as_quoted

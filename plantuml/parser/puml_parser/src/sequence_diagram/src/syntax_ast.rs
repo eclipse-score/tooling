@@ -14,6 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 use source_location::SourceLocation;
+use std::str::FromStr;
 
 pub use parser_core::common_ast::Arrow;
 
@@ -46,6 +47,32 @@ pub struct ParticipantDef {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ParticipantDisplay {
+    pub display_name: String,
+    pub alias: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExternalEndpoint;
+
+impl FromStr for ExternalEndpoint {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "[" | "[o" | "[x" | "]" | "o]" | "x]" => Ok(ExternalEndpoint),
+            _ => Err(()),
+        }
+    }
+}
+
+impl ExternalEndpoint {
+    pub fn as_name(self) -> &'static str {
+        "ExternalEndpoint"
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ParticipantType {
     Participant,
     Actor,
@@ -64,6 +91,33 @@ pub enum ParticipantIdentifier {
     IdAsId { id1: String, id2: String },
     Quoted(String),
     Id(String),
+}
+
+impl ParticipantIdentifier {
+    pub fn display(&self) -> ParticipantDisplay {
+        match self {
+            ParticipantIdentifier::QuotedAsId { quoted, id } => ParticipantDisplay {
+                display_name: quoted.clone(),
+                alias: Some(id.clone()),
+            },
+            ParticipantIdentifier::IdAsQuoted { id, quoted } => ParticipantDisplay {
+                display_name: quoted.clone(),
+                alias: Some(id.clone()),
+            },
+            ParticipantIdentifier::IdAsId { id1, id2 } => ParticipantDisplay {
+                display_name: id1.clone(),
+                alias: Some(id2.clone()),
+            },
+            ParticipantIdentifier::Quoted(quoted) => ParticipantDisplay {
+                display_name: quoted.clone(),
+                alias: None,
+            },
+            ParticipantIdentifier::Id(id) => ParticipantDisplay {
+                display_name: id.clone(),
+                alias: None,
+            },
+        }
+    }
 }
 
 // Destroy/Create commands

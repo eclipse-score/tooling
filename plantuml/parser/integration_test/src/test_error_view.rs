@@ -17,7 +17,9 @@ use puml_parser::{
     ActivityParserError, BaseParseError, ClassError, ComponentError, IncludeExpandError,
     IncludeParseError, PreprocessError, ProcedureExpandError, ProcedureParseError,
 };
-use puml_resolver::{ActivityResolverError, ClassPumlResolverError, ComponentResolverError};
+use puml_resolver::{
+    ActivityResolverError, ClassPumlResolverError, ComponentResolverError, SequenceResolverError,
+};
 
 #[derive(Debug)]
 pub struct ProjectedError {
@@ -323,6 +325,20 @@ impl ErrorView for ClassPumlResolverError {
 
             ClassPumlResolverError::ParseError { message } => {
                 ProjectedError::new("ParseError").with_field("message", message.clone())
+            }
+        }
+    }
+}
+
+impl ErrorView for SequenceResolverError {
+    fn project(&self, base_dir: &Path) -> ProjectedError {
+        let _ = base_dir;
+
+        match self {
+            SequenceResolverError::UndeclaredParticipant { name, role } => {
+                ProjectedError::new("UndeclaredParticipant")
+                    .with_field("name", name.clone())
+                    .with_field("role", (*role).to_string())
             }
         }
     }

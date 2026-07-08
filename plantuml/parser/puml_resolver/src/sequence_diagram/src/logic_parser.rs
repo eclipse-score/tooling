@@ -15,6 +15,14 @@
 use sequence_logic::*;
 use sequence_parser::*;
 
+fn map_special_endpoint_name(value: String) -> String {
+    if let Ok(endpoint) = value.parse::<ExternalEndpoint>() {
+        endpoint.as_name().to_string()
+    } else {
+        value
+    }
+}
+
 /// Convert a syntax-level `GroupType` into the metamodel `ConditionType`.
 fn group_type_to_condition(gt: &GroupType) -> ConditionType {
     match gt {
@@ -257,6 +265,9 @@ fn message_to_event(msg: &Message) -> Option<Event> {
                 // "A -> B" means A sends to B
                 (left.clone(), right.clone())
             };
+
+            let actual_from = map_special_endpoint_name(actual_from);
+            let actual_to = map_special_endpoint_name(actual_to);
 
             // Check arrow type to determine Interaction vs Return
             if is_return_arrow_from_arrow(arrow) {

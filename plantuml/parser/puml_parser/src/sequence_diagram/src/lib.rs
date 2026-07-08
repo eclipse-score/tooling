@@ -15,9 +15,9 @@ pub mod syntax_ast;
 mod syntax_parser;
 
 pub use syntax_ast::{
-    ActivateCmd, Arrow, CreateCmd, DeactivateCmd, DestroyCmd, GroupCmd, GroupType, Message,
-    MessageContent, ParticipantDef, ParticipantIdentifier, ParticipantType, SeqPumlDocument,
-    Statement,
+    ActivateCmd, Arrow, CreateCmd, DeactivateCmd, DestroyCmd, ExternalEndpoint, GroupCmd,
+    GroupType, Message, MessageContent, ParticipantDef, ParticipantIdentifier, ParticipantType,
+    SeqPumlDocument, Statement,
 };
 
 pub use syntax_parser::{PumlSequenceParser, SequenceError};

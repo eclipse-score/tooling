@@ -1,0 +1,397 @@
+{
+  "simple_sequence.puml": {
+    "name": "simple_sequence",
+    "participants": [
+      {
+        "display_name": "Component A",
+        "alias": "ComponentA",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": "component"
+      },
+      {
+        "display_name": "Component B",
+        "alias": "ComponentB",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": "component"
+      },
+      {
+        "display_name": "Component C",
+        "alias": "ComponentC",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 18
+        },
+        "stereotype": "component"
+      }
+    ],
+    "root_interactions": [
+      {
+        "event": {
+          "Interaction": {
+            "caller": "ComponentA",
+            "callee": "ComponentB",
+            "method": "callMethod1()"
+          }
+        },
+        "source_location": {
+          "file": "",
+          "line": 20
+        },
+        "branches_node": [
+          {
+            "event": {
+              "Condition": {
+                "condition_type": "Alt",
+                "condition_value": "condition1"
+              }
+            },
+            "source_location": {
+              "file": "",
+              "line": 21
+            },
+            "branches_node": [
+              {
+                "event": {
+                  "Return": {
+                    "caller": "ComponentA",
+                    "callee": "ComponentB",
+                    "return_content": "Return Result"
+                  }
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 22
+                },
+                "branches_node": []
+              }
+            ]
+          },
+          {
+            "event": {
+              "Condition": {
+                "condition_type": "Else",
+                "condition_value": ""
+              }
+            },
+            "source_location": {
+              "file": "",
+              "line": 23
+            },
+            "branches_node": [
+              {
+                "event": {
+                  "Interaction": {
+                    "caller": "ComponentB",
+                    "callee": "ComponentC",
+                    "method": "method2(1)"
+                  }
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 24
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Return": {
+                        "caller": "ComponentB",
+                        "callee": "ComponentC",
+                        "return_content": "Return Result"
+                      }
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 25
+                    },
+                    "branches_node": []
+                  }
+                ]
+              },
+              {
+                "event": {
+                  "Condition": {
+                    "condition_type": "Loop",
+                    "condition_value": "for i = 0; i < 3; ++i"
+                  }
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 27
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Interaction": {
+                        "caller": "ComponentB",
+                        "callee": "ComponentC",
+                        "method": "method2(i)"
+                      }
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 28
+                    },
+                    "branches_node": [
+                      {
+                        "event": {
+                          "Return": {
+                            "caller": "ComponentB",
+                            "callee": "ComponentC",
+                            "return_content": "Return Result"
+                          }
+                        },
+                        "source_location": {
+                          "file": "",
+                          "line": 29
+                        },
+                        "branches_node": []
+                      }
+                    ]
+                  },
+                  {
+                    "event": {
+                      "Condition": {
+                        "condition_type": "Alt",
+                        "condition_value": "innerConditionA"
+                      }
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 30
+                    },
+                    "branches_node": [
+                      {
+                        "event": {
+                          "Interaction": {
+                            "caller": "ComponentB",
+                            "callee": "ComponentC",
+                            "method": "method2(extra)"
+                          }
+                        },
+                        "source_location": {
+                          "file": "",
+                          "line": 31
+                        },
+                        "branches_node": [
+                          {
+                            "event": {
+                              "Return": {
+                                "caller": "ComponentB",
+                                "callee": "ComponentC",
+                                "return_content": "Return Result"
+                              }
+                            },
+                            "source_location": {
+                              "file": "",
+                              "line": 32
+                            },
+                            "branches_node": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": {
+                  "Condition": {
+                    "condition_type": "Loop",
+                    "condition_value": "while count > 0"
+                  }
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 36
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Interaction": {
+                        "caller": "ComponentB",
+                        "callee": "ComponentC",
+                        "method": "method2(count)"
+                      }
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 37
+                    },
+                    "branches_node": [
+                      {
+                        "event": {
+                          "Return": {
+                            "caller": "ComponentB",
+                            "callee": "ComponentC",
+                            "return_content": "Return Result"
+                          }
+                        },
+                        "source_location": {
+                          "file": "",
+                          "line": 38
+                        },
+                        "branches_node": []
+                      }
+                    ]
+                  },
+                  {
+                    "event": {
+                      "Condition": {
+                        "condition_type": "Alt",
+                        "condition_value": "innerConditionB"
+                      }
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 39
+                    },
+                    "branches_node": [
+                      {
+                        "event": {
+                          "Interaction": {
+                            "caller": "ComponentB",
+                            "callee": "ComponentC",
+                            "method": "method2(fallback)"
+                          }
+                        },
+                        "source_location": {
+                          "file": "",
+                          "line": 40
+                        },
+                        "branches_node": [
+                          {
+                            "event": {
+                              "Return": {
+                                "caller": "ComponentB",
+                                "callee": "ComponentC",
+                                "return_content": "Return Result"
+                              }
+                            },
+                            "source_location": {
+                              "file": "",
+                              "line": 41
+                            },
+                            "branches_node": []
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "event": {
+                      "Condition": {
+                        "condition_type": "Else",
+                        "condition_value": ""
+                      }
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 42
+                    },
+                    "branches_node": [
+                      {
+                        "event": {
+                          "Interaction": {
+                            "caller": "ComponentB",
+                            "callee": "ComponentC",
+                            "method": "method2(default)"
+                          }
+                        },
+                        "source_location": {
+                          "file": "",
+                          "line": 43
+                        },
+                        "branches_node": [
+                          {
+                            "event": {
+                              "Return": {
+                                "caller": "ComponentB",
+                                "callee": "ComponentC",
+                                "return_content": "Return Result"
+                              }
+                            },
+                            "source_location": {
+                              "file": "",
+                              "line": 44
+                            },
+                            "branches_node": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": {
+                  "Condition": {
+                    "condition_type": "Alt",
+                    "condition_value": "condition2"
+                  }
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 48
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Interaction": {
+                        "caller": "ComponentB",
+                        "callee": "ComponentC",
+                        "method": "method2(result)"
+                      }
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 49
+                    },
+                    "branches_node": [
+                      {
+                        "event": {
+                          "Return": {
+                            "caller": "ComponentB",
+                            "callee": "ComponentC",
+                            "return_content": "Return Result"
+                          }
+                        },
+                        "source_location": {
+                          "file": "",
+                          "line": 50
+                        },
+                        "branches_node": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": {
+                  "Return": {
+                    "caller": "ComponentA",
+                    "callee": "ComponentB",
+                    "return_content": "Return Result"
+                  }
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 53
+                },
+                "branches_node": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
