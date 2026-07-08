@@ -13,6 +13,7 @@
 // AST types for PlantUML Sequence Diagram Parser
 
 use serde::{Deserialize, Serialize};
+use source_location::SourceLocation;
 
 pub use parser_core::common_ast::Arrow;
 
@@ -41,6 +42,7 @@ pub struct ParticipantDef {
     pub participant_type: ParticipantType,
     pub identifier: ParticipantIdentifier,
     pub stereotype: Option<String>,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -93,6 +95,7 @@ pub struct Message {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub activation_marker: Option<String>,
     pub description: Option<String>,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -115,6 +118,7 @@ pub enum ActivationType {
 pub struct GroupCmd {
     pub group_type: GroupType,
     pub text: Option<String>,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -13,6 +13,11 @@
 
 namespace sequence_metamodel;
 
+table SourceLocation {
+    file: string;
+    line: uint32;
+}
+
 /// The kind of condition / group block in a sequence diagram.
 enum ConditionType : byte {
     Opt = 0,
@@ -75,6 +80,8 @@ union Event {
 table SequenceNode {
     /// The event at this node
     event: Event;
+    /// Source location for this node
+    source_location: SourceLocation (required);
     /// Child nodes (nested calls, branches, …)
     branches_node: [SequenceNode];
 }
@@ -85,10 +92,6 @@ table SequenceDiagram {
     name: string;
     /// Top-level sequence nodes
     root_interactions: [SequenceNode];
-    /// Source files parsed
-    source_files: [string];
-    /// Parser/writer version
-    version: string;
 }
 
 root_type SequenceDiagram;

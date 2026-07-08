@@ -18,7 +18,7 @@ use sequence_logic::{ConditionType, Event, SequenceNode, SequenceTree};
 pub struct SequenceSerializer;
 
 impl SequenceSerializer {
-    pub fn serialize(diagram: &SequenceTree, source_file: &str) -> Vec<u8> {
+    pub fn serialize(diagram: &SequenceTree, _diagram_name: &str) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
 
         let name_offset = diagram.name.as_deref().map(|n| builder.create_string(n));
@@ -30,16 +30,11 @@ impl SequenceSerializer {
             .collect();
         let nodes_offset = builder.create_vector(&node_offsets);
 
-        let source_offsets = [builder.create_string(source_file)];
-        let source_files_offset = builder.create_vector(&source_offsets);
-
         let root = fb::SequenceDiagram::create(
             &mut builder,
             &fb::SequenceDiagramArgs {
                 name: name_offset,
                 root_interactions: Some(nodes_offset),
-                source_files: Some(source_files_offset),
-                version: None,
             },
         );
 
@@ -58,6 +53,14 @@ impl SequenceSerializer {
             .map(|child| Self::serialize_node(builder, child))
             .collect();
         let branches_offset = builder.create_vector(&branch_offsets);
+        let location_file_offset = builder.create_string(node.source_location.file.as_ref());
+        let source_location = fb::SourceLocation::create(
+            builder,
+            &fb::SourceLocationArgs {
+                file: Some(location_file_offset),
+                line: node.source_location.line,
+            },
+        );
 
         // Serialize the event union.
         let (event_type, event_offset) = Self::serialize_event(builder, &node.event);
@@ -67,6 +70,7 @@ impl SequenceSerializer {
             &fb::SequenceNodeArgs {
                 event_type,
                 event: Some(event_offset),
+                source_location: Some(source_location),
                 branches_node: Some(branches_offset),
             },
         )

@@ -130,6 +130,7 @@ fn build_group_node(statements: &[Statement], group: &GroupCmd) -> (SequenceNode
     (
         SequenceNode {
             event: Event::Condition(condition),
+            source_location: group.source_location.clone(),
             branches_node: box_nodes(build_tree(&group_statements)),
         },
         consumed,
@@ -168,6 +169,7 @@ fn build_node(statements: &[Statement]) -> Option<(SequenceNode, usize)> {
                                         // Found our return - add it as the last branch node
                                         branches.push(SequenceNode {
                                             event: Event::Return(ret),
+                                            source_location: m.source_location.clone(),
                                             branches_node: Vec::new(),
                                         });
                                         consumed = i + 1;
@@ -212,6 +214,7 @@ fn build_node(statements: &[Statement]) -> Option<(SequenceNode, usize)> {
             Some((
                 SequenceNode {
                     event,
+                    source_location: msg.source_location.clone(),
                     branches_node: branches,
                 },
                 consumed,

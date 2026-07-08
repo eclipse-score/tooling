@@ -481,7 +481,11 @@ fn format_sequence_method_consistency_error(
     format!(
         "Method consistency failure: {description}:\n\
           Sequence call       : {sequence_call}\n\
+          Source file         : \"{source_file}\"\n\
+          Source line         : {source_line}\n\
           Action              : {action}",
+        source_file = call_context.source_file,
+        source_line = call_context.source_line,
     )
 }
 
@@ -499,12 +503,16 @@ fn format_sequence_role_consistency_error(
     format!(
         "Interface consistency failure: sequence interaction does not match consumer/provider roles in the component diagram:\n\
           Sequence call       : {sequence_call}\n\
+          Source file         : \"{source_file}\"\n\
+          Source line         : {source_line}\n\
           Expected caller role: \"{caller_unit}\" should require shared interface(s) {expected_interfaces}\n\
           Expected callee role: \"{callee_unit}\" should provide shared interface(s) {expected_interfaces}\n\
           Action              : Reverse the sequence call or align the required/provided interface bindings in the component diagram",
         caller_unit = call_context.caller_unit,
         callee_unit = call_context.callee_unit,
         expected_interfaces = format_name_list(expected_interfaces),
+        source_file = call_context.source_file,
+        source_line = call_context.source_line,
     )
 }
 

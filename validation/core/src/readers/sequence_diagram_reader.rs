@@ -21,7 +21,7 @@ use sequence_logic::{
 };
 
 use crate::models::SequenceDiagramInputs;
-use crate::readers::Reader;
+use crate::readers::{to_source_location, Reader};
 
 pub struct SequenceDiagramReader;
 
@@ -127,6 +127,10 @@ fn read_node(node: fb_sequence::SequenceNode<'_>, node_path: &str) -> Result<Seq
 
     Ok(SequenceNode {
         event,
+        source_location: to_source_location(
+            node.source_location().file(),
+            node.source_location().line(),
+        ),
         branches_node,
     })
 }

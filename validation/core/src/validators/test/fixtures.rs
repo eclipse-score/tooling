@@ -117,6 +117,7 @@ pub(super) fn sequence_calls(calls: &[(&str, &str, &str)]) -> SequenceDiagramInp
                         callee: (*callee).to_string(),
                         method: (*method).to_string(),
                     }),
+                    source_location: SourceLocation::new("test.puml", 0),
                     branches_node: Vec::new(),
                 })
                 .collect(),
