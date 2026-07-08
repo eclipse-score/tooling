@@ -115,6 +115,7 @@ mod sequence_resolver_tests {
     use super::*;
     use parser_core::common_ast::{Arrow, ArrowDecor, ArrowLine};
     use resolver_traits::DiagramResolver;
+    use sequence_logic::SourceLocation;
     use sequence_parser::syntax_ast::{
         Message, MessageContent, ParticipantDef, ParticipantIdentifier, ParticipantType, Statement,
     };
@@ -154,6 +155,7 @@ mod sequence_resolver_tests {
             },
             activation_marker: None,
             description: Some(label.to_string()),
+            source_location: SourceLocation::new("test.puml", 0),
         })
     }
 
@@ -166,6 +168,7 @@ mod sequence_resolver_tests {
             },
             activation_marker: None,
             description: Some(label.to_string()),
+            source_location: SourceLocation::new("test.puml", 0),
         })
     }
 
@@ -234,6 +237,7 @@ mod sequence_resolver_tests {
             participant_type: ParticipantType::Participant,
             identifier: ParticipantIdentifier::Id(name.to_string()),
             stereotype: None,
+            source_location: SourceLocation::new("test.puml", 0),
         })
     }
 
@@ -300,5 +304,51 @@ mod sequence_resolver_tests {
             statements: stmts,
         };
         assert!(resolver.resolve(&doc).is_ok());
+    }
+
+    /// Resolver output nodes must preserve source_location provenance.
+    #[test]
+    fn test_source_locations_are_preserved() {
+        let call_location = SourceLocation::new("sequence/provenance_case.puml", 42);
+        let return_location = SourceLocation::new("sequence/provenance_case.puml", 43);
+
+        let stmts = vec![
+            Statement::Message(Message {
+                content: MessageContent::WithTargets {
+                    left: "A".to_string(),
+                    arrow: solid_arrow(),
+                    right: "B".to_string(),
+                },
+                activation_marker: None,
+                description: Some("doWork".to_string()),
+                source_location: call_location.clone(),
+            }),
+            Statement::Message(Message {
+                content: MessageContent::WithTargets {
+                    left: "B".to_string(),
+                    arrow: dashed_arrow(),
+                    right: "A".to_string(),
+                },
+                activation_marker: None,
+                description: Some("result".to_string()),
+                source_location: return_location.clone(),
+            }),
+        ];
+
+        let mut resolver = SequenceResolver;
+        let doc = SeqPumlDocument {
+            name: Some("provenance".to_string()),
+            statements: stmts,
+        };
+
+        let tree = resolver.resolve(&doc).expect("must not fail");
+        assert_eq!(tree.root_interactions.len(), 1);
+
+        let interaction = &tree.root_interactions[0];
+        assert_eq!(interaction.source_location, call_location);
+
+        assert_eq!(interaction.branches_node.len(), 1);
+        let ret = &interaction.branches_node[0];
+        assert_eq!(ret.source_location, return_location);
     }
 }

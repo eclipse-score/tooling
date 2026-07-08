@@ -12,6 +12,7 @@
 // *******************************************************************************
 
 use serde::{Deserialize, Serialize};
+pub use source_location::SourceLocation;
 
 /// A single item inside a function/branch/loop body, emitted in execution order.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,6 +93,7 @@ pub enum Event {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SequenceNode {
     pub event: Event,
+    pub source_location: SourceLocation,
     pub branches_node: Vec<SequenceNode>,
 }
 

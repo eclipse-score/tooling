@@ -34,6 +34,8 @@ pub(in crate::validators) struct SequenceCallContext<'a> {
     pub(in crate::validators) caller_unit: &'a str,
     pub(in crate::validators) callee_unit: &'a str,
     pub(in crate::validators) method: &'a str,
+    pub(in crate::validators) source_file: &'a str,
+    pub(in crate::validators) source_line: u32,
     pub(in crate::validators) caller_interfaces: BTreeSet<String>,
     pub(in crate::validators) callee_interfaces: BTreeSet<String>,
 }
@@ -120,6 +122,8 @@ pub(in crate::validators) fn build_observed_call_contexts<'a>(
                 method: call.method.as_str(),
                 caller_interfaces,
                 callee_interfaces,
+                source_file: call.source_file.as_str(),
+                source_line: call.source_line,
             }
         })
         .collect()

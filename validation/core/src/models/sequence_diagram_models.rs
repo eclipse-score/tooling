@@ -29,6 +29,8 @@ pub struct ObservedSequenceCall {
     pub caller: String,
     pub callee: String,
     pub method: String,
+    pub source_file: String,
+    pub source_line: u32,
 }
 
 impl SequenceDiagramInputs {
@@ -80,12 +82,17 @@ fn collect_sequence_data(
         Event::Interaction(interaction) => {
             validate_required_endpoints(
                 result,
-                "sequence function-call connection",
-                interaction.caller.as_str(),
-                interaction.callee.as_str(),
-                interaction.method.as_str(),
-                "Sequence function",
-                "Provide both caller and callee for each sequence function-call connection",
+                RequiredEndpointsCheck {
+                    connection_kind: "sequence function-call connection",
+                    caller: interaction.caller.as_str(),
+                    callee: interaction.callee.as_str(),
+                    label_value: interaction.method.as_str(),
+                    label_name: "Sequence function",
+                    action:
+                        "Provide both caller and callee for each sequence function-call connection",
+                    source_file: node.source_location.file.as_ref(),
+                    source_line: node.source_location.line,
+                },
             );
 
             if !interaction.caller.is_empty() {
@@ -99,17 +106,23 @@ fn collect_sequence_data(
                 caller: interaction.caller.clone(),
                 callee: interaction.callee.clone(),
                 method: interaction.method.clone(),
+                source_file: node.source_location.file.to_string(),
+                source_line: node.source_location.line,
             });
         }
         Event::Return(ret) => {
             validate_required_endpoints(
                 result,
-                "sequence return connection",
-                ret.caller.as_str(),
-                ret.callee.as_str(),
-                ret.return_content.as_str(),
-                "Return content",
-                "Provide both caller and callee for each sequence return connection",
+                RequiredEndpointsCheck {
+                    connection_kind: "sequence return connection",
+                    caller: ret.caller.as_str(),
+                    callee: ret.callee.as_str(),
+                    label_value: ret.return_content.as_str(),
+                    label_name: "Return content",
+                    action: "Provide both caller and callee for each sequence return connection",
+                    source_file: node.source_location.file.as_ref(),
+                    source_line: node.source_location.line,
+                },
             );
 
             if !ret.caller.is_empty() {
@@ -127,15 +140,29 @@ fn collect_sequence_data(
     }
 }
 
-fn validate_required_endpoints(
-    result: &mut ValidationResult,
-    connection_kind: &str,
-    caller: &str,
-    callee: &str,
-    label_value: &str,
-    label_name: &str,
-    action: &str,
-) {
+struct RequiredEndpointsCheck<'a> {
+    connection_kind: &'a str,
+    caller: &'a str,
+    callee: &'a str,
+    label_value: &'a str,
+    label_name: &'a str,
+    action: &'a str,
+    source_file: &'a str,
+    source_line: u32,
+}
+
+fn validate_required_endpoints(result: &mut ValidationResult, check: RequiredEndpointsCheck<'_>) {
+    let RequiredEndpointsCheck {
+        connection_kind,
+        caller,
+        callee,
+        label_value,
+        label_name,
+        action,
+        source_file,
+        source_line,
+    } = check;
+
     if !caller.is_empty() && !callee.is_empty() {
         return;
     }
@@ -153,7 +180,11 @@ fn validate_required_endpoints(
            Caller unit        : \"{caller}\"\n\
            Callee unit        : \"{callee}\"\n\
            {label_name:<18}: \"{label_value}\"\n\
+           Source file        : \"{source_file}\"\n\
+           Source line        : \"{source_line}\"\n\
            Action             : {action}",
+        source_file = source_file,
+        source_line = source_line,
     ));
 }
 
@@ -174,6 +205,7 @@ mod tests {
                 callee: callee.to_string(),
                 method: method.to_string(),
             }),
+            source_location: sequence_logic::SourceLocation::new("test.puml", 0),
             branches_node,
         }
     }
@@ -185,6 +217,7 @@ mod tests {
                 callee: callee.to_string(),
                 return_content: String::new(),
             }),
+            source_location: sequence_logic::SourceLocation::new("test.puml", 0),
             branches_node: Vec::new(),
         }
     }

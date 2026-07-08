@@ -17,6 +17,7 @@ use parser_core::{
     format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser, ErrorLocation,
 };
 use puml_utils::LogLevel;
+use source_location::SourceLocation;
 use std::path::PathBuf;
 use std::rc::Rc;
 use thiserror::Error;
@@ -57,17 +58,27 @@ impl PumlSequenceParser {
         None
     }
 
-    fn parse_statement(pair: pest::iterators::Pair<Rule>) -> Result<Vec<Statement>, SequenceError> {
+    fn parse_statement(
+        pair: pest::iterators::Pair<Rule>,
+        source_path: &str,
+    ) -> Result<Vec<Statement>, SequenceError> {
+        let source_location = SourceLocation::new(source_path, pair.line_col().0 as u32);
         let inner = pair
             .into_inner()
             .next()
             .ok_or_else(|| SequenceError::InvalidStatement("empty statement".to_string()))?;
         match inner.as_rule() {
             Rule::participant_def => Ok(vec![Statement::ParticipantDef(
-                Self::parse_participant_def(inner)?,
+                Self::parse_participant_def(inner, source_location)?,
             )]),
-            Rule::message => Ok(vec![Statement::Message(Self::parse_message(inner)?)]),
-            Rule::group_cmd => Ok(vec![Statement::GroupCmd(Self::parse_group_cmd(inner)?)]),
+            Rule::message => Ok(vec![Statement::Message(Self::parse_message(
+                inner,
+                source_location,
+            )?)]),
+            Rule::group_cmd => Ok(vec![Statement::GroupCmd(Self::parse_group_cmd(
+                inner,
+                source_location,
+            )?)]),
             Rule::destroy_cmd => Ok(vec![Statement::DestroyCmd(Self::parse_destroy_cmd(inner)?)]),
             Rule::create_cmd => Ok(vec![Statement::CreateCmd(Self::parse_create_cmd(inner)?)]),
             Rule::activate_cmd => Ok(vec![Statement::ActivateCmd(Self::parse_activate_cmd(
@@ -83,6 +94,7 @@ impl PumlSequenceParser {
 
     fn parse_participant_def(
         pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
     ) -> Result<ParticipantDef, SequenceError> {
         let mut participant_type: Option<ParticipantType> = None;
         let mut identifier: Option<ParticipantIdentifier> = None;
@@ -182,6 +194,7 @@ impl PumlSequenceParser {
                 SequenceError::InvalidStatement("missing participant identifier".to_string())
             })?,
             stereotype,
+            source_location,
         })
     }
 
@@ -200,7 +213,10 @@ impl PumlSequenceParser {
         }
     }
 
-    fn parse_message(pair: pest::iterators::Pair<Rule>) -> Result<Message, SequenceError> {
+    fn parse_message(
+        pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
+    ) -> Result<Message, SequenceError> {
         let mut left: Option<String> = None;
         let mut arrow: Option<Arrow> = None;
         let mut right: Option<String> = None;
@@ -246,6 +262,7 @@ impl PumlSequenceParser {
             content,
             activation_marker,
             description,
+            source_location,
         })
     }
 
@@ -254,7 +271,10 @@ impl PumlSequenceParser {
             .map_err(|e| SequenceError::InvalidStatement(format!("invalid arrow: {}", e)))
     }
 
-    fn parse_group_cmd(pair: pest::iterators::Pair<Rule>) -> Result<GroupCmd, SequenceError> {
+    fn parse_group_cmd(
+        pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
+    ) -> Result<GroupCmd, SequenceError> {
         let mut group_type: Option<GroupType> = None;
         let mut text: Option<String> = None;
 
@@ -274,6 +294,7 @@ impl PumlSequenceParser {
             group_type: group_type
                 .ok_or_else(|| SequenceError::InvalidStatement("missing group type".to_string()))?,
             text,
+            source_location,
         })
     }
 
@@ -447,6 +468,7 @@ impl DiagramParser for PumlSequenceParser {
             );
         }
 
+        let source_path = path.as_ref().clone().to_string_lossy().to_string();
         let mut document = SeqPumlDocument {
             name: None,
             statements: Vec::new(),
@@ -460,7 +482,7 @@ impl DiagramParser for PumlSequenceParser {
                             document.name = Self::parse_startuml(inner_pair);
                         }
                         Rule::sequence_statement => {
-                            let mut stmts = Self::parse_statement(inner_pair)?;
+                            let mut stmts = Self::parse_statement(inner_pair, &source_path)?;
                             document.statements.append(&mut stmts);
                         }
                         Rule::empty_line => {
@@ -539,5 +561,42 @@ mod dispatch_style_tests {
             .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
             .expect("valid input must parse");
         assert_eq!(doc.statements.len(), 3);
+    }
+
+    #[test]
+    fn test_source_locations_are_preserved() {
+        let input = "@startuml\nparticipant A\nparticipant B\nA -> B : call\n@enduml";
+        let path = Rc::new(PathBuf::from("t.puml"));
+        let mut parser = PumlSequenceParser;
+        let doc = parser
+            .parse_file(&path, input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        let expected_file = path.as_ref().clone().to_string_lossy().to_string();
+
+        let first_participant = match &doc.statements[0] {
+            Statement::ParticipantDef(participant) => participant,
+            actual => panic!(
+                "expected first statement to be a participant, got {:?}",
+                actual
+            ),
+        };
+
+        assert_eq!(first_participant.source_location.line, 2);
+        assert_eq!(
+            first_participant.source_location.file.as_ref(),
+            expected_file.as_str()
+        );
+
+        let message = match &doc.statements[2] {
+            Statement::Message(message) => message,
+            actual => panic!("expected third statement to be a message, got {:?}", actual),
+        };
+
+        assert_eq!(message.source_location.line, 4);
+        assert_eq!(
+            message.source_location.file.as_ref(),
+            expected_file.as_str()
+        );
     }
 }
