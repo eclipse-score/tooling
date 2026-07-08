@@ -9,7 +9,11 @@
           "alias": null,
           "stereotype": null,
           "style": null,
-          "statements": []
+          "statements": [],
+          "source_location": {
+            "file": "",
+            "line": 14
+          }
         }
       },
       {
@@ -19,7 +23,11 @@
           "alias": null,
           "stereotype": null,
           "style": null,
-          "statements": []
+          "statements": [],
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
         }
       },
       {
@@ -29,7 +37,11 @@
           "alias": null,
           "stereotype": null,
           "style": null,
-          "statements": []
+          "statements": [],
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
         }
       },
       {
@@ -45,7 +57,11 @@
           },
           "rhs": "DiagnosticsPanel",
           "style": null,
-          "description": null
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
         }
       }
     ]

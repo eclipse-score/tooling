@@ -7,7 +7,11 @@
             "parent_id": null,
             "comp_type": "Interface",
             "stereotype": null,
-            "relations": []
+            "relations": [],
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
         },
         "ClientComp": {
             "id": "ClientComp",
@@ -20,9 +24,18 @@
                 {
                     "target": "ExternalAPI",
                     "annotation": "sends",
-                    "relation_type": "Dependency"
+                    "relation_type": "Dependency",
+                    "source_role": "None",
+                    "source_location": {
+                      "file": "",
+                      "line": 26
+                    }
                 }
-            ]
+            ],
+            "source_location": {
+              "file": "",
+              "line": 22
+            }
         }
     }
 }

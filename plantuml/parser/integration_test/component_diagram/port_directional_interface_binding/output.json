@@ -7,7 +7,11 @@
       "parent_id": null,
       "comp_type": "Package",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
     },
     "Pkg.Client": {
       "id": "Pkg.Client",
@@ -21,15 +25,27 @@
           "target": "Pkg.IProvided",
           "annotation": "provides",
           "relation_type": "InterfaceBinding",
-          "source_role": "Provided"
+          "source_role": "Provided",
+          "source_location": {
+            "file": "",
+            "line": 25
+          }
         },
         {
           "target": "Pkg.IRequired",
           "annotation": "requires",
           "relation_type": "InterfaceBinding",
-          "source_role": "Required"
+          "source_role": "Required",
+          "source_location": {
+            "file": "",
+            "line": 26
+          }
         }
-      ]
+      ],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
     },
     "Pkg.IProvided": {
       "id": "Pkg.IProvided",
@@ -38,7 +54,11 @@
       "parent_id": "Pkg",
       "comp_type": "Interface",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 22
+      }
     },
     "Pkg.IRequired": {
       "id": "Pkg.IRequired",
@@ -47,7 +67,11 @@
       "parent_id": "Pkg",
       "comp_type": "Interface",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 23
+      }
     }
   }
 }

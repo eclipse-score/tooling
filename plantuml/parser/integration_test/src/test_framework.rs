@@ -162,7 +162,15 @@ where
                 );
             }
             Expected::Ast(expected_ast) => {
-                assert_eq!(actual, expected_ast, "AST output mismatch");
+                let mut actual_json =
+                    serde_json::to_value(actual).expect("Failed to serialize actual AST");
+                let mut expected_json =
+                    serde_json::to_value(expected_ast).expect("Failed to serialize expected AST");
+
+                normalize_source_location_fields(&mut actual_json);
+                normalize_source_location_fields(&mut expected_json);
+
+                assert_eq!(actual_json, expected_json, "AST output mismatch");
             }
         }
     }
@@ -170,6 +178,23 @@ where
     fn check_err(&self, err: &Error, expected: &YamlValue, base_dir: &Path) {
         let projected = err.project(base_dir);
         assert_projected_error_matches_yaml(&projected, expected);
+    }
+}
+
+fn normalize_source_location_fields(value: &mut JsonValue) {
+    match value {
+        JsonValue::Object(map) => {
+            map.remove("file");
+            for child in map.values_mut() {
+                normalize_source_location_fields(child);
+            }
+        }
+        JsonValue::Array(items) => {
+            for item in items {
+                normalize_source_location_fields(item);
+            }
+        }
+        _ => {}
     }
 }
 

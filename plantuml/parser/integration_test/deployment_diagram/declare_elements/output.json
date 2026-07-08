@@ -7,7 +7,11 @@
       "parent_id": null,
       "comp_type": "Actor",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
     },
     "role_b": {
       "id": "role_b",
@@ -16,7 +20,11 @@
       "parent_id": null,
       "comp_type": "Agent",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 17
+      }
     },
     "item_a": {
       "id": "item_a",
@@ -25,7 +33,11 @@
       "parent_id": null,
       "comp_type": "Artifact",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 18
+      }
     },
     "zone_a": {
       "id": "zone_a",
@@ -34,7 +46,11 @@
       "parent_id": null,
       "comp_type": "Boundary",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 19
+      }
     },
     "item_b": {
       "id": "item_b",
@@ -43,7 +59,11 @@
       "parent_id": null,
       "comp_type": "Card",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 20
+      }
     },
     "zone_b": {
       "id": "zone_b",
@@ -52,7 +72,11 @@
       "parent_id": null,
       "comp_type": "Cloud",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 21
+      }
     },
     "part_a": {
       "id": "part_a",
@@ -61,7 +85,11 @@
       "parent_id": null,
       "comp_type": "Component",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 22
+      }
     },
     "part_b": {
       "id": "part_b",
@@ -70,7 +98,11 @@
       "parent_id": null,
       "comp_type": "Control",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 23
+      }
     },
     "store_a": {
       "id": "store_a",
@@ -79,7 +111,11 @@
       "parent_id": null,
       "comp_type": "Database",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 24
+      }
     },
     "record_a": {
       "id": "record_a",
@@ -88,7 +124,11 @@
       "parent_id": null,
       "comp_type": "Entity",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 25
+      }
     },
     "doc_a": {
       "id": "doc_a",
@@ -97,7 +137,11 @@
       "parent_id": null,
       "comp_type": "File",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 26
+      }
     },
     "dir_a": {
       "id": "dir_a",
@@ -106,7 +150,11 @@
       "parent_id": null,
       "comp_type": "Folder",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 27
+      }
     },
     "zone_c": {
       "id": "zone_c",
@@ -115,7 +163,11 @@
       "parent_id": null,
       "comp_type": "Frame",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 28
+      }
     },
     "port_a": {
       "id": "port_a",
@@ -124,7 +176,11 @@
       "parent_id": null,
       "comp_type": "Interface",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 29
+      }
     },
     "host_a": {
       "id": "host_a",
@@ -133,7 +189,11 @@
       "parent_id": null,
       "comp_type": "Node",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 30
+      }
     },
     "pack_a": {
       "id": "pack_a",
@@ -142,7 +202,11 @@
       "parent_id": null,
       "comp_type": "Package",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 31
+      }
     },
     "lane_a": {
       "id": "lane_a",
@@ -151,7 +215,11 @@
       "parent_id": null,
       "comp_type": "Queue",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 32
+      }
     },
     "lane_b": {
       "id": "lane_b",
@@ -160,7 +228,11 @@
       "parent_id": null,
       "comp_type": "Stack",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 33
+      }
     },
     "box_a": {
       "id": "box_a",
@@ -169,7 +241,11 @@
       "parent_id": null,
       "comp_type": "Rectangle",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 34
+      }
     },
     "store_b": {
       "id": "store_b",
@@ -178,7 +254,11 @@
       "parent_id": null,
       "comp_type": "Storage",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 35
+      }
     },
     "case_a": {
       "id": "case_a",
@@ -187,7 +267,11 @@
       "parent_id": null,
       "comp_type": "Usecase",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 36
+      }
     }
   }
 }

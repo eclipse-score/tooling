@@ -7,7 +7,11 @@
       "parent_id": null,
       "comp_type": "Artifact",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
     },
     "item_a.item_b": {
       "id": "item_a.item_b",
@@ -16,7 +20,11 @@
       "parent_id": "item_a",
       "comp_type": "Card",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
     },
     "item_a.item_b.zone_a": {
       "id": "item_a.item_b.zone_a",
@@ -25,7 +33,11 @@
       "parent_id": "item_a.item_b",
       "comp_type": "Cloud",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 17
+      }
     },
     "item_a.item_b.zone_a.part_a": {
       "id": "item_a.item_b.zone_a.part_a",
@@ -34,7 +46,11 @@
       "parent_id": "item_a.item_b.zone_a",
       "comp_type": "Component",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 18
+      }
     },
     "item_a.item_b.zone_a.part_a.store_a": {
       "id": "item_a.item_b.zone_a.part_a.store_a",
@@ -43,7 +59,11 @@
       "parent_id": "item_a.item_b.zone_a.part_a",
       "comp_type": "Database",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 19
+      }
     },
     "item_a.item_b.zone_a.part_a.store_a.doc_a": {
       "id": "item_a.item_b.zone_a.part_a.store_a.doc_a",
@@ -52,7 +72,11 @@
       "parent_id": "item_a.item_b.zone_a.part_a.store_a",
       "comp_type": "File",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 20
+      }
     },
     "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a": {
       "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a",
@@ -61,7 +85,11 @@
       "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a",
       "comp_type": "Folder",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 21
+      }
     },
     "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b": {
       "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b",
@@ -70,7 +98,11 @@
       "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a",
       "comp_type": "Frame",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 22
+      }
     },
     "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a": {
       "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a",
@@ -79,7 +111,11 @@
       "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b",
       "comp_type": "Hexagon",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 23
+      }
     },
     "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a": {
       "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a",
@@ -88,7 +124,11 @@
       "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a",
       "comp_type": "Node",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 24
+      }
     },
     "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a": {
       "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a",
@@ -97,7 +137,11 @@
       "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a",
       "comp_type": "Package",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 25
+      }
     },
     "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a": {
       "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a",
@@ -106,7 +150,11 @@
       "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a",
       "comp_type": "Queue",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 26
+      }
     },
     "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a": {
       "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a",
@@ -115,7 +163,11 @@
       "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a",
       "comp_type": "Rectangle",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 27
+      }
     },
     "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a.lane_b": {
       "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a.lane_b",
@@ -124,7 +176,11 @@
       "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a",
       "comp_type": "Stack",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 28
+      }
     },
     "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a.lane_b.store_b": {
       "id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a.lane_b.store_b",
@@ -133,7 +189,11 @@
       "parent_id": "item_a.item_b.zone_a.part_a.store_a.doc_a.dir_a.zone_b.cell_a.host_a.pack_a.lane_a.box_a.lane_b",
       "comp_type": "Storage",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 29
+      }
     }
   }
 }

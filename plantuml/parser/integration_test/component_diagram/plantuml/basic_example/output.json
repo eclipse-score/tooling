@@ -15,7 +15,11 @@
           },
           "rhs": "[Signal Adapter]",
           "style": null,
-          "description": null
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
         }
       },
       {
@@ -33,7 +37,11 @@
           },
           "rhs": "CalibrationBus",
           "style": null,
-          "description": "forwards"
+          "description": "forwards",
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
         }
       }
     ]

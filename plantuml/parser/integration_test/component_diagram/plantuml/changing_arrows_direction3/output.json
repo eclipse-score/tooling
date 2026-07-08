@@ -21,7 +21,11 @@
           },
           "rhs": "westQueue",
           "style": null,
-          "description": null
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 14
+          }
         }
       },
       {
@@ -43,7 +47,11 @@
           },
           "rhs": "eastQueue",
           "style": null,
-          "description": null
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
         }
       },
       {
@@ -65,7 +73,11 @@
           },
           "rhs": "northQueue",
           "style": null,
-          "description": null
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
         }
       },
       {
@@ -87,7 +99,11 @@
           },
           "rhs": "southQueue",
           "style": null,
-          "description": null
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
         }
       }
     ]

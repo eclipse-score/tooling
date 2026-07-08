@@ -1,6 +1,5 @@
 {
-    "relation_fqn.puml":
-    {
+    "relation_fqn.puml": {
         "SampleSEooC.ComponentB.UnitB": {
             "id": "SampleSEooC.ComponentB.UnitB",
             "name": "Unit B",
@@ -8,7 +7,11 @@
             "parent_id": "SampleSEooC.ComponentB",
             "comp_type": "Component",
             "stereotype": "unit",
-            "relations": []
+            "relations": [],
+            "source_location": {
+              "file": "",
+              "line": 21
+            }
         },
         "SampleSEooC.ComponentA.UnitA": {
             "id": "SampleSEooC.ComponentA.UnitA",
@@ -21,9 +24,18 @@
                 {
                     "target": "SampleSEooC.ComponentB.UnitB",
                     "annotation": "uses",
-                    "relation_type": "Dependency"
+                    "relation_type": "Dependency",
+                    "source_role": "None",
+                    "source_location": {
+                      "file": "",
+                      "line": 26
+                    }
                 }
-            ]
+            ],
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
         },
         "SampleSEooC": {
             "id": "SampleSEooC",
@@ -32,7 +44,11 @@
             "parent_id": null,
             "comp_type": "Package",
             "stereotype": null,
-            "relations": []
+            "relations": [],
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
         },
         "SampleSEooC.ComponentA": {
             "id": "SampleSEooC.ComponentA",
@@ -41,7 +57,11 @@
             "parent_id": "SampleSEooC",
             "comp_type": "Component",
             "stereotype": "component",
-            "relations": []
+            "relations": [],
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
         },
         "SampleSEooC.ComponentB": {
             "id": "SampleSEooC.ComponentB",
@@ -50,7 +70,11 @@
             "parent_id": "SampleSEooC",
             "comp_type": "Component",
             "stereotype": "component",
-            "relations": []
+            "relations": [],
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
         }
     }
 }

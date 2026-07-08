@@ -11,24 +11,48 @@
         {
           "target": "host_b",
           "annotation": "mark_a",
-          "relation_type": "None"
+          "relation_type": "Association",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 20
+          }
         },
         {
           "target": "host_c",
           "annotation": "mark_b",
-          "relation_type": "None"
+          "relation_type": "Association",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 21
+          }
         },
         {
           "target": "host_d",
           "annotation": "mark_c",
-          "relation_type": "None"
+          "relation_type": "Association",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 22
+          }
         },
         {
           "target": "host_e",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Association",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
         }
-      ]
+      ],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
     },
     "host_b": {
       "id": "host_b",
@@ -37,7 +61,11 @@
       "parent_id": null,
       "comp_type": "Node",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
     },
     "host_c": {
       "id": "host_c",
@@ -46,7 +74,11 @@
       "parent_id": null,
       "comp_type": "Node",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 17
+      }
     },
     "host_d": {
       "id": "host_d",
@@ -55,7 +87,11 @@
       "parent_id": null,
       "comp_type": "Node",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 18
+      }
     },
     "host_e": {
       "id": "host_e",
@@ -64,7 +100,11 @@
       "parent_id": null,
       "comp_type": "Node",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 19
+      }
     },
     "bundle_a": {
       "id": "bundle_a",
@@ -77,51 +117,98 @@
         {
           "target": "bundle_b",
           "annotation": null,
-          "relation_type": "Dependency"
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 35
+          }
         },
         {
           "target": "bundle_c",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Association",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 36
+          }
         },
         {
           "target": "bundle_d",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Association",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 37
+          }
         },
         {
           "target": "bundle_e",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Association",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 38
+          }
         },
         {
           "target": "bundle_f",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Association",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 39
+          }
         },
         {
           "target": "bundle_g",
           "annotation": null,
-          "relation_type": "Dependency"
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 40
+          }
         },
         {
           "target": "bundle_h",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Association",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 41
+          }
         },
         {
           "target": "bundle_i",
           "annotation": null,
-          "relation_type": "None"
+          "relation_type": "Association",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 42
+          }
         },
         {
           "target": "bundle_j",
           "annotation": null,
           "relation_type": "Association",
-          "source_endpoint": "Component",
-          "target_endpoint": "Component"
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 43
+          }
         }
-      ]
+      ],
+      "source_location": {
+        "file": "",
+        "line": 25
+      }
     },
     "bundle_b": {
       "id": "bundle_b",
@@ -130,7 +217,11 @@
       "parent_id": null,
       "comp_type": "Artifact",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 26
+      }
     },
     "bundle_c": {
       "id": "bundle_c",
@@ -139,7 +230,11 @@
       "parent_id": null,
       "comp_type": "Artifact",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 27
+      }
     },
     "bundle_d": {
       "id": "bundle_d",
@@ -148,7 +243,11 @@
       "parent_id": null,
       "comp_type": "Artifact",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 28
+      }
     },
     "bundle_e": {
       "id": "bundle_e",
@@ -157,7 +256,11 @@
       "parent_id": null,
       "comp_type": "Artifact",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 29
+      }
     },
     "bundle_f": {
       "id": "bundle_f",
@@ -166,7 +269,11 @@
       "parent_id": null,
       "comp_type": "Artifact",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 30
+      }
     },
     "bundle_g": {
       "id": "bundle_g",
@@ -175,7 +282,11 @@
       "parent_id": null,
       "comp_type": "Artifact",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 31
+      }
     },
     "bundle_h": {
       "id": "bundle_h",
@@ -184,7 +295,11 @@
       "parent_id": null,
       "comp_type": "Artifact",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 32
+      }
     },
     "bundle_i": {
       "id": "bundle_i",
@@ -193,7 +308,11 @@
       "parent_id": null,
       "comp_type": "Artifact",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 33
+      }
     },
     "bundle_j": {
       "id": "bundle_j",
@@ -202,7 +321,11 @@
       "parent_id": null,
       "comp_type": "Artifact",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 34
+      }
     }
   }
 }

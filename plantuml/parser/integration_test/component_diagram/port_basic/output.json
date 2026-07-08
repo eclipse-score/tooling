@@ -7,7 +7,11 @@
             "parent_id": null,
             "comp_type": "Package",
             "stereotype": null,
-            "relations": []
+            "relations": [],
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
         },
         "SampleSEooC.ComponentA": {
             "id": "SampleSEooC.ComponentA",
@@ -16,7 +20,11 @@
             "parent_id": "SampleSEooC",
             "comp_type": "Component",
             "stereotype": "component",
-            "relations": []
+            "relations": [],
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
         }
     }
 }

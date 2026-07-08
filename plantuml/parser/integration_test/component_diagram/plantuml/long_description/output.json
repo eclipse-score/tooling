@@ -9,7 +9,11 @@
           "alias": null,
           "stereotype": null,
           "style": null,
-          "statements": []
+          "statements": [],
+          "source_location": {
+            "file": "",
+            "line": 14
+          }
         }
       }
     ]

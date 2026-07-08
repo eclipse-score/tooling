@@ -7,7 +7,11 @@
             "parent_id": null,
             "comp_type": "Package",
             "stereotype": null,
-            "relations": []
+            "relations": [],
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
         },
         "SampleSEooC.ClientComp": {
             "id": "SampleSEooC.ClientComp",
@@ -20,9 +24,18 @@
                 {
                     "target": "SampleSEooC.ServerComp",
                     "annotation": "calls",
-                    "relation_type": "Dependency"
+                    "relation_type": "Dependency",
+                    "source_role": "None",
+                    "source_location": {
+                      "file": "",
+                      "line": 28
+                    }
                 }
-            ]
+            ],
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
         },
         "SampleSEooC.ServerComp": {
             "id": "SampleSEooC.ServerComp",
@@ -31,7 +44,11 @@
             "parent_id": "SampleSEooC",
             "comp_type": "Component",
             "stereotype": "component",
-            "relations": []
+            "relations": [],
+            "source_location": {
+              "file": "",
+              "line": 23
+            }
         }
     }
 }

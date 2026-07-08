@@ -12,9 +12,17 @@
           "target": "Server",
           "annotation": "calls",
           "relation_type": "Dependency",
-          "source_role": "None"
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         }
-      ]
+      ],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
     },
     "Server": {
       "id": "Server",
@@ -23,7 +31,11 @@
       "parent_id": null,
       "comp_type": "Component",
       "stereotype": "component",
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 19
+      }
     }
   }
 }
