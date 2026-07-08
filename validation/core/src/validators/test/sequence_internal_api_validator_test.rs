@@ -18,7 +18,6 @@ use crate::models::{
     SequenceDiagramInputs,
 };
 use crate::ValidationResult;
-use component_diagram::SourceLocation;
 
 fn validate(
     sequence_diagrams: SequenceDiagramInputs,
@@ -55,7 +54,7 @@ fn unit_with_non_binding_interface(alias: &str, interface_id: &str) -> LogicComp
             ComponentRelationType::Dependency,
             EndpointRole::None,
         )],
-        source_location: SourceLocation::new("", 0),
+        source_location: dummy_source_location(),
     }
 }
 
