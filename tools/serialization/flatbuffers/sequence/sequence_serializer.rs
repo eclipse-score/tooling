@@ -13,15 +13,37 @@
 
 use flatbuffers::FlatBufferBuilder;
 use sequence_fbs::sequence_metamodel as fb;
-use sequence_logic::{ConditionType, Event, SequenceNode, SequenceTree};
+use sequence_logic::{
+    ConditionType, Event, ParticipantType, SequenceNode, SequenceParticipant, SequenceTree,
+};
 
 pub struct SequenceSerializer;
+
+fn map_participant_type(value: &ParticipantType) -> fb::ParticipantType {
+    match value {
+        ParticipantType::Participant => fb::ParticipantType::Participant,
+        ParticipantType::Actor => fb::ParticipantType::Actor,
+        ParticipantType::Boundary => fb::ParticipantType::Boundary,
+        ParticipantType::Control => fb::ParticipantType::Control,
+        ParticipantType::Entity => fb::ParticipantType::Entity,
+        ParticipantType::Queue => fb::ParticipantType::Queue,
+        ParticipantType::Database => fb::ParticipantType::Database,
+        ParticipantType::Collections => fb::ParticipantType::Collections,
+    }
+}
 
 impl SequenceSerializer {
     pub fn serialize(diagram: &SequenceTree, _diagram_name: &str) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
 
         let name_offset = diagram.name.as_deref().map(|n| builder.create_string(n));
+
+        let participant_offsets: Vec<_> = diagram
+            .participants
+            .iter()
+            .map(|participant| Self::serialize_participant(&mut builder, participant))
+            .collect();
+        let participants_offset = builder.create_vector(&participant_offsets);
 
         let node_offsets: Vec<_> = diagram
             .root_interactions
@@ -34,12 +56,47 @@ impl SequenceSerializer {
             &mut builder,
             &fb::SequenceDiagramArgs {
                 name: name_offset,
+                participants: Some(participants_offset),
                 root_interactions: Some(nodes_offset),
             },
         );
 
         builder.finish(root, Some("SEQD"));
         builder.finished_data().to_vec()
+    }
+
+    fn serialize_participant<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        participant: &SequenceParticipant,
+    ) -> flatbuffers::WIPOffset<fb::SequenceParticipant<'a>> {
+        let display_name = builder.create_string(&participant.display_name);
+        let alias = participant
+            .alias
+            .as_deref()
+            .map(|value| builder.create_string(value));
+        let stereotype = participant
+            .stereotype
+            .as_deref()
+            .map(|value| builder.create_string(value));
+        let location_file = builder.create_string(participant.source_location.file.as_ref());
+        let source_location = fb::SourceLocation::create(
+            builder,
+            &fb::SourceLocationArgs {
+                file: Some(location_file),
+                line: participant.source_location.line,
+            },
+        );
+
+        fb::SequenceParticipant::create(
+            builder,
+            &fb::SequenceParticipantArgs {
+                display_name: Some(display_name),
+                alias,
+                participant_type: map_participant_type(&participant.participant_type),
+                source_location: Some(source_location),
+                stereotype,
+            },
+        )
     }
 
     fn serialize_node<'a>(

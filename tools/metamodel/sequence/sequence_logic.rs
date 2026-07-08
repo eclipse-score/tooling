@@ -59,14 +59,14 @@ pub enum ConditionType {
 }
 
 /// A condition / group block header in a sequence diagram.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Condition {
     pub condition_type: ConditionType,
     pub condition_value: String,
 }
 
 /// A method-call interaction between two participants.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Interaction {
     pub caller: String,
     pub callee: String,
@@ -74,7 +74,7 @@ pub struct Interaction {
 }
 
 /// A return message between two participants.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Return {
     pub caller: String,
     pub callee: String,
@@ -82,7 +82,7 @@ pub struct Return {
 }
 
 /// An event in a sequence diagram: a call, a return, or a condition block.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Event {
     Interaction(Interaction),
     Return(Return),
@@ -90,16 +90,42 @@ pub enum Event {
 }
 
 /// A node in the hierarchical sequence-diagram logic tree.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SequenceNode {
     pub event: Event,
     pub source_location: SourceLocation,
     pub branches_node: Vec<SequenceNode>,
 }
 
+/// A participant in a sequence diagram.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum ParticipantType {
+    Participant,
+    Actor,
+    Boundary,
+    Control,
+    Entity,
+    Queue,
+    Database,
+    Collections,
+}
+
+/// A participant in a sequence diagram.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SequenceParticipant {
+    pub display_name: String,
+    pub alias: Option<String>,
+    pub participant_type: ParticipantType,
+    pub source_location: SourceLocation,
+    pub stereotype: Option<String>,
+}
+
 /// Root container for a sequence-diagram logic tree.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SequenceTree {
     pub name: Option<String>,
+    #[serde(default)]
+    pub participants: Vec<SequenceParticipant>,
     pub root_interactions: Vec<SequenceNode>,
 }

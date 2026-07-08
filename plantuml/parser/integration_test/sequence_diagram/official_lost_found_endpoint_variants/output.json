@@ -1,0 +1,126 @@
+{
+  "official_lost_found_endpoint_variants.puml": {
+    "name": "official_lost_found_endpoint_variants",
+    "participants": [
+      {
+        "display_name": "Actor1",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Actor2",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Builder",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 18
+        },
+        "stereotype": null
+      }
+    ],
+    "root_interactions": [
+      {
+        "event": {
+          "Interaction": {
+            "caller": "ExternalEndpoint",
+            "callee": "Actor1",
+            "method": "Incoming request"
+          }
+        },
+        "source_location": {
+          "file": "",
+          "line": 20
+        },
+        "branches_node": [
+          {
+            "event": {
+              "Interaction": {
+                "caller": "ExternalEndpoint",
+                "callee": "Actor2",
+                "method": "Another incoming"
+              }
+            },
+            "source_location": {
+              "file": "",
+              "line": 21
+            },
+            "branches_node": [
+              {
+                "event": {
+                  "Interaction": {
+                    "caller": "ExternalEndpoint",
+                    "callee": "Builder",
+                    "method": "Third incoming"
+                  }
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 22
+                },
+                "branches_node": [
+                  {
+                    "event": {
+                      "Return": {
+                        "caller": "ExternalEndpoint",
+                        "callee": "Actor1",
+                        "return_content": "Outgoing response"
+                      }
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 23
+                    },
+                    "branches_node": []
+                  },
+                  {
+                    "event": {
+                      "Return": {
+                        "caller": "ExternalEndpoint",
+                        "callee": "Actor2",
+                        "return_content": "Another outgoing"
+                      }
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 24
+                    },
+                    "branches_node": []
+                  },
+                  {
+                    "event": {
+                      "Return": {
+                        "caller": "ExternalEndpoint",
+                        "callee": "Actor2",
+                        "return_content": "Third outgoing"
+                      }
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 25
+                    },
+                    "branches_node": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

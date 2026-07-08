@@ -228,6 +228,7 @@ mod tests {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
                 name: Some("seq".to_string()),
+                participants: Vec::new(),
                 root_interactions: vec![interaction(
                     "unit_1",
                     "unit_2",
@@ -266,6 +267,7 @@ mod tests {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
                 name: Some("seq".to_string()),
+                participants: Vec::new(),
                 root_interactions: vec![interaction("", "unit_2", "GetData()", Vec::new())],
             }],
         };
@@ -285,6 +287,7 @@ mod tests {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
                 name: Some("seq".to_string()),
+                participants: Vec::new(),
                 root_interactions: vec![interaction("unit_1", "", "GetData()", Vec::new())],
             }],
         };

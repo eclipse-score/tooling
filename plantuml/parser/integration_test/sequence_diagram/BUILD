@@ -36,3 +36,16 @@ filegroup(
     ],
     visibility = ["//visibility:public"],
 )
+
+filegroup(
+    name = "sequence_diagram_files",
+    srcs = glob(
+        [
+            "**/*.puml",
+            "**/*.json",
+            "**/*.yaml",
+        ],
+        allow_empty = True,
+    ),
+    visibility = ["//visibility:public"],
+)

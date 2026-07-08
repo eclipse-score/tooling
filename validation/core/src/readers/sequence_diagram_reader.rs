@@ -17,13 +17,28 @@ use std::fs;
 
 use sequence_fbs::sequence_metamodel as fb_sequence;
 use sequence_logic::{
-    Condition, ConditionType, Event, Interaction, Return, SequenceNode, SequenceTree,
+    Condition, ConditionType, Event, Interaction, ParticipantType, Return, SequenceNode,
+    SequenceParticipant, SequenceTree,
 };
 
 use crate::models::SequenceDiagramInputs;
 use crate::readers::{to_source_location, Reader};
 
 pub struct SequenceDiagramReader;
+
+fn map_participant_type(value: fb_sequence::ParticipantType) -> Result<ParticipantType, String> {
+    match value {
+        fb_sequence::ParticipantType::Participant => Ok(ParticipantType::Participant),
+        fb_sequence::ParticipantType::Actor => Ok(ParticipantType::Actor),
+        fb_sequence::ParticipantType::Boundary => Ok(ParticipantType::Boundary),
+        fb_sequence::ParticipantType::Control => Ok(ParticipantType::Control),
+        fb_sequence::ParticipantType::Entity => Ok(ParticipantType::Entity),
+        fb_sequence::ParticipantType::Queue => Ok(ParticipantType::Queue),
+        fb_sequence::ParticipantType::Database => Ok(ParticipantType::Database),
+        fb_sequence::ParticipantType::Collections => Ok(ParticipantType::Collections),
+        other => Err(format!("unsupported participant type {:?}", other)),
+    }
+}
 
 impl Reader for SequenceDiagramReader {
     type Input = [String];
@@ -52,8 +67,22 @@ impl Reader for SequenceDiagramReader {
                 Vec::new()
             };
 
+            let participants = if let Some(values) = diagram.participants() {
+                let mut parsed_participants = Vec::with_capacity(values.len());
+                for (index, participant) in values.iter().enumerate() {
+                    parsed_participants.push(read_participant(
+                        participant,
+                        &format!("{path}:participants[{index}]"),
+                    )?);
+                }
+                parsed_participants
+            } else {
+                Vec::new()
+            };
+
             diagrams.push(SequenceTree {
                 name: diagram.name().map(|s| s.to_string()),
+                participants,
                 root_interactions,
             });
         }
@@ -132,6 +161,23 @@ fn read_node(node: fb_sequence::SequenceNode<'_>, node_path: &str) -> Result<Seq
             node.source_location().line(),
         ),
         branches_node,
+    })
+}
+
+fn read_participant(
+    participant: fb_sequence::SequenceParticipant<'_>,
+    participant_path: &str,
+) -> Result<SequenceParticipant, String> {
+    Ok(SequenceParticipant {
+        display_name: participant.display_name().to_string(),
+        alias: participant.alias().map(|s| s.to_string()),
+        participant_type: map_participant_type(participant.participant_type())
+            .map_err(|err| format!("{participant_path}: {err}"))?,
+        source_location: to_source_location(
+            participant.source_location().file(),
+            participant.source_location().line(),
+        ),
+        stereotype: participant.stereotype().map(|s| s.to_string()),
     })
 }
 

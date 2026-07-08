@@ -41,6 +41,18 @@ enum EventType : byte {
     Condition = 3
 }
 
+/// The kind of participant declared in a sequence diagram.
+enum ParticipantType : byte {
+    Participant = 0,
+    Actor = 1,
+    Boundary = 2,
+    Control = 3,
+    Entity = 4,
+    Queue = 5,
+    Database = 6,
+    Collections = 7
+}
+
 /// A method-call interaction between two participants.
 table Interaction {
     /// Sending participant
@@ -69,6 +81,20 @@ table Condition {
     condition_value: string;
 }
 
+/// A declared participant in a sequence diagram.
+table SequenceParticipant {
+    /// Participant label shown in the diagram
+    display_name: string (required);
+    /// Optional alias used for references in messages
+    alias: string;
+    /// Participant kind (participant, actor, boundary, ...)
+    participant_type: ParticipantType = Participant;
+    /// Source location of the declaration, when available
+    source_location: SourceLocation (required);
+    /// Optional stereotype attached to the participant
+    stereotype: string;
+}
+
 /// Union of possible events carried by a sequence node.
 union Event {
     Interaction,
@@ -92,6 +118,8 @@ table SequenceDiagram {
     name: string;
     /// Top-level sequence nodes
     root_interactions: [SequenceNode];
+    /// Declared participants in document order
+    participants: [SequenceParticipant];
 }
 
 root_type SequenceDiagram;

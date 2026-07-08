@@ -12,9 +12,13 @@
 // *******************************************************************************
 
 use crate::logic_parser::build_tree;
+use log::warn;
 use resolver_traits::DiagramResolver;
-use sequence_logic::SequenceTree;
-use sequence_parser::syntax_ast::{MessageContent, ParticipantIdentifier, Statement};
+use sequence_logic::{ParticipantType as LogicParticipantType, SequenceParticipant, SequenceTree};
+use sequence_parser::syntax_ast::{
+    ExternalEndpoint, MessageContent, ParticipantDef, ParticipantDisplay,
+    ParticipantType as SyntaxParticipantType, Statement,
+};
 use sequence_parser::SeqPumlDocument;
 use std::collections::HashSet;
 
@@ -45,24 +49,35 @@ impl std::fmt::Display for SequenceResolverError {
 
 impl std::error::Error for SequenceResolverError {}
 
-/// Collect all identifiers that a `ParticipantIdentifier` makes available.
-fn collect_participant_names(id: &ParticipantIdentifier, out: &mut HashSet<String>) {
-    match id {
-        ParticipantIdentifier::QuotedAsId { quoted, id } => {
-            out.insert(quoted.clone());
-            out.insert(id.clone());
-        }
-        ParticipantIdentifier::IdAsQuoted { id, quoted } => {
-            out.insert(id.clone());
-            out.insert(quoted.clone());
-        }
-        ParticipantIdentifier::IdAsId { id1, id2 } => {
-            out.insert(id1.clone());
-            out.insert(id2.clone());
-        }
-        ParticipantIdentifier::Quoted(s) | ParticipantIdentifier::Id(s) => {
-            out.insert(s.clone());
-        }
+fn map_parser_participant_type(kind: &SyntaxParticipantType) -> LogicParticipantType {
+    match kind {
+        SyntaxParticipantType::Participant => LogicParticipantType::Participant,
+        SyntaxParticipantType::Actor => LogicParticipantType::Actor,
+        SyntaxParticipantType::Boundary => LogicParticipantType::Boundary,
+        SyntaxParticipantType::Control => LogicParticipantType::Control,
+        SyntaxParticipantType::Entity => LogicParticipantType::Entity,
+        SyntaxParticipantType::Queue => LogicParticipantType::Queue,
+        SyntaxParticipantType::Database => LogicParticipantType::Database,
+        SyntaxParticipantType::Collections => LogicParticipantType::Collections,
+    }
+}
+
+fn is_special_endpoint_marker(name: &str) -> bool {
+    name.parse::<ExternalEndpoint>().is_ok()
+}
+
+fn participant_from_def(def: &ParticipantDef, display: ParticipantDisplay) -> SequenceParticipant {
+    warn!(
+        "resolving sequence participant: display_name='{}', alias={:?}",
+        display.display_name, display.alias
+    );
+
+    SequenceParticipant {
+        display_name: display.display_name,
+        alias: display.alias,
+        participant_type: map_parser_participant_type(&def.participant_type),
+        source_location: def.source_location.clone(),
+        stereotype: def.stereotype.clone(),
     }
 }
 
@@ -74,24 +89,37 @@ impl DiagramResolver for SequenceResolver {
     fn resolve(&mut self, document: &SeqPumlDocument) -> Result<SequenceTree, Self::Error> {
         // 1. Collect declared participants.
         let mut declared = HashSet::new();
+        let mut participants = Vec::new();
         for stmt in &document.statements {
             if let Statement::ParticipantDef(p) = stmt {
-                collect_participant_names(&p.identifier, &mut declared);
+                let display = p.identifier.display();
+                declared.insert(display.display_name.clone());
+                if let Some(alias) = display.alias.clone() {
+                    declared.insert(alias);
+                }
+                participants.push(participant_from_def(p, display));
             }
         }
 
         // 2. Validate message targets only when participants are declared.
         if !declared.is_empty() {
+            warn!("no validation is performed");
             for stmt in &document.statements {
                 if let Statement::Message(msg) = stmt {
                     let MessageContent::WithTargets { left, right, .. } = &msg.content;
-                    if !left.is_empty() && !declared.contains(left) {
+                    if !left.is_empty()
+                        && !is_special_endpoint_marker(left)
+                        && !declared.contains(left)
+                    {
                         return Err(SequenceResolverError::UndeclaredParticipant {
                             name: left.clone(),
                             role: "caller",
                         });
                     }
-                    if !right.is_empty() && !declared.contains(right) {
+                    if !right.is_empty()
+                        && !is_special_endpoint_marker(right)
+                        && !declared.contains(right)
+                    {
                         return Err(SequenceResolverError::UndeclaredParticipant {
                             name: right.clone(),
                             role: "callee",
@@ -105,6 +133,7 @@ impl DiagramResolver for SequenceResolver {
         let root_interactions = build_tree(&document.statements);
         Ok(SequenceTree {
             name: document.name.clone(),
+            participants,
             root_interactions,
         })
     }
@@ -117,7 +146,8 @@ mod sequence_resolver_tests {
     use resolver_traits::DiagramResolver;
     use sequence_logic::SourceLocation;
     use sequence_parser::syntax_ast::{
-        Message, MessageContent, ParticipantDef, ParticipantIdentifier, ParticipantType, Statement,
+        Message, MessageContent, ParticipantDef, ParticipantIdentifier,
+        ParticipantType as SyntaxParticipantType, Statement,
     };
 
     fn solid_arrow() -> Arrow {
@@ -238,7 +268,7 @@ mod sequence_resolver_tests {
 
     fn make_participant(name: &str) -> Statement {
         Statement::ParticipantDef(ParticipantDef {
-            participant_type: ParticipantType::Participant,
+            participant_type: SyntaxParticipantType::Participant,
             identifier: ParticipantIdentifier::Id(name.to_string()),
             stereotype: None,
             source_location: dummy_source_location(),
