@@ -7,7 +7,11 @@
       "parent_id": null,
       "comp_type": "Package",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
     },
     "aaa.Driver": {
       "id": "aaa.Driver",
@@ -20,9 +24,18 @@
         {
           "target": "aaa.ECU2.DisplayService",
           "annotation": null,
-          "relation_type": "Dependency"
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 34
+          }
         }
-      ]
+      ],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
     },
     "aaa.ECU1": {
       "id": "aaa.ECU1",
@@ -31,7 +44,11 @@
       "parent_id": "aaa",
       "comp_type": "Node",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 18
+      }
     },
     "aaa.ECU1.someip": {
       "id": "aaa.ECU1.someip",
@@ -44,9 +61,18 @@
         {
           "target": "aaa.ECU1.SpeedService",
           "annotation": null,
-          "relation_type": "Dependency"
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 36
+          }
         }
-      ]
+      ],
+      "source_location": {
+        "file": "",
+        "line": 20
+      }
     },
     "aaa.ECU1.SpeedService": {
       "id": "aaa.ECU1.SpeedService",
@@ -59,9 +85,18 @@
         {
           "target": "aaa.ECU1.VehicleSpeed",
           "annotation": null,
-          "relation_type": "Dependency"
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 37
+          }
         }
-      ]
+      ],
+      "source_location": {
+        "file": "",
+        "line": 22
+      }
     },
     "aaa.ECU1.VehicleSpeed": {
       "id": "aaa.ECU1.VehicleSpeed",
@@ -70,7 +105,11 @@
       "parent_id": "aaa.ECU1",
       "comp_type": "Entity",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 24
+      }
     },
     "aaa.ECU2": {
       "id": "aaa.ECU2",
@@ -79,7 +118,11 @@
       "parent_id": "aaa",
       "comp_type": "Node",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 28
+      }
     },
     "aaa.ECU2.DisplayService": {
       "id": "aaa.ECU2.DisplayService",
@@ -92,9 +135,18 @@
         {
           "target": "aaa.ECU1.someip",
           "annotation": null,
-          "relation_type": "Dependency"
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 35
+          }
         }
-      ]
+      ],
+      "source_location": {
+        "file": "",
+        "line": 30
+      }
     }
   }
 }

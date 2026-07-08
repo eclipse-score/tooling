@@ -12,7 +12,11 @@
             "color": null,
             "attributes": []
           },
-          "statements": []
+          "statements": [],
+          "source_location": {
+            "file": "",
+            "line": 14
+          }
         }
       }
     ]

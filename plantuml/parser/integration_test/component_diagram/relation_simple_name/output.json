@@ -7,7 +7,11 @@
       "parent_id": "SampleSEooC",
       "comp_type": "Component",
       "stereotype": "component",
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 20
+      }
     },
     "SampleSEooC": {
       "id": "SampleSEooC",
@@ -16,7 +20,11 @@
       "parent_id": null,
       "comp_type": "Package",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
     },
     "SampleSEooC.ComponentA": {
       "id": "SampleSEooC.ComponentA",
@@ -29,14 +37,28 @@
         {
           "target": "SampleSEooC.ComponentA.UnitA",
           "annotation": "uses",
-          "relation_type": "Dependency"
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         },
         {
           "target": "SampleSEooC.ComponentB",
           "annotation": "uses",
-          "relation_type": "Dependency"
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 25
+          }
         }
-      ]
+      ],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
     },
     "SampleSEooC.ComponentB.UnitB": {
       "id": "SampleSEooC.ComponentB.UnitB",
@@ -45,7 +67,11 @@
       "parent_id": "SampleSEooC.ComponentB",
       "comp_type": "Component",
       "stereotype": "unit",
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 21
+      }
     },
     "SampleSEooC.ComponentA.UnitA": {
       "id": "SampleSEooC.ComponentA.UnitA",
@@ -54,7 +80,11 @@
       "parent_id": "SampleSEooC.ComponentA",
       "comp_type": "Component",
       "stereotype": "unit",
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 17
+      }
     }
   }
 }

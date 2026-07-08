@@ -11,9 +11,18 @@
                 {
                     "target": "Pkg.IService",
                     "annotation": "association",
-                    "relation_type": "Association"
+                    "relation_type": "Association",
+                    "source_role": "None",
+                    "source_location": {
+                      "file": "",
+                      "line": 19
+                    }
                 }
-            ]
+            ],
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
         },
         "Pkg.IService": {
             "id": "Pkg.IService",
@@ -22,7 +31,11 @@
             "parent_id": "Pkg",
             "comp_type": "Interface",
             "stereotype": null,
-            "relations": []
+            "relations": [],
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
         },
         "Pkg": {
             "id": "Pkg",
@@ -31,7 +44,11 @@
             "parent_id": null,
             "comp_type": "Package",
             "stereotype": null,
-            "relations": []
+            "relations": [],
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
         }
     }
 }

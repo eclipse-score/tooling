@@ -17,7 +17,11 @@
           },
           "rhs": "[Telemetry Hub]",
           "style": null,
-          "description": null
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 14
+          }
         }
       },
       {
@@ -35,7 +39,11 @@
           },
           "rhs": "[Telemetry Hub]",
           "style": null,
-          "description": null
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
         }
       }
     ]

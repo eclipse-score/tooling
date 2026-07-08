@@ -7,7 +7,11 @@
       "parent_id": null,
       "comp_type": "Package",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
     },
     "Pkg.IProvided": {
       "id": "Pkg.IProvided",
@@ -16,7 +20,11 @@
       "parent_id": "Pkg",
       "comp_type": "Interface",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
     },
     "Pkg.A": {
       "id": "Pkg.A",
@@ -30,9 +38,17 @@
           "target": "Pkg.IProvided",
           "annotation": "provides",
           "relation_type": "InterfaceBinding",
-          "source_role": "Provided"
+          "source_role": "Provided",
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
         }
-      ]
+      ],
+      "source_location": {
+        "file": "",
+        "line": 17
+      }
     }
   }
 }

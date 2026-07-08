@@ -9,7 +9,11 @@
           "alias": null,
           "stereotype": null,
           "style": null,
-          "statements": []
+          "statements": [],
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
         }
       },
       {
@@ -19,7 +23,11 @@
           "alias": "Comp2",
           "stereotype": null,
           "style": null,
-          "statements": []
+          "statements": [],
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
         }
       },
       {
@@ -29,7 +37,11 @@
           "alias": null,
           "stereotype": null,
           "style": null,
-          "statements": []
+          "statements": [],
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
         }
       },
       {
@@ -39,7 +51,11 @@
           "alias": "Comp4",
           "stereotype": null,
           "style": null,
-          "statements": []
+          "statements": [],
+          "source_location": {
+            "file": "",
+            "line": 18
+          }
         }
       }
     ]

@@ -7,7 +7,11 @@
       "parent_id": null,
       "comp_type": "Package",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
     },
     "PkgA.AliasA": {
       "id": "PkgA.AliasA",
@@ -20,9 +24,18 @@
         {
           "target": "PkgB.AliasB",
           "annotation": "uses",
-          "relation_type": "Dependency"
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 25
+          }
         }
-      ]
+      ],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
     },
     "PkgB": {
       "id": "PkgB",
@@ -31,7 +44,11 @@
       "parent_id": null,
       "comp_type": "Package",
       "stereotype": null,
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 20
+      }
     },
     "PkgB.AliasB": {
       "id": "PkgB.AliasB",
@@ -40,7 +57,11 @@
       "parent_id": "PkgB",
       "comp_type": "Component",
       "stereotype": "component",
-      "relations": []
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 21
+      }
     }
   }
 }
