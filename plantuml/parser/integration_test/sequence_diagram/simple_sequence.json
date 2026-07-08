@@ -8,7 +8,11 @@
           "id": "ComponentA"
         }
       },
-      "stereotype": "component"
+      "stereotype": "component",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 16
+      }
     }
   },
   {
@@ -20,7 +24,11 @@
           "id": "ComponentB"
         }
       },
-      "stereotype": "component"
+      "stereotype": "component",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 17
+      }
     }
   },
   {
@@ -32,7 +40,11 @@
           "id": "ComponentC"
         }
       },
-      "stereotype": "component"
+      "stereotype": "component",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 18
+      }
     }
   },
   {
@@ -53,13 +65,21 @@
           "right": "ComponentB"
         }
       },
-      "description": "callMethod1()"
+      "description": "callMethod1()",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 20
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Alt",
-      "text": "condition1"
+      "text": "condition1",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 21
+      }
     }
   },
   {
@@ -80,13 +100,21 @@
           "right": "ComponentA"
         }
       },
-      "description": "Return Result"
+      "description": "Return Result",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 22
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Else",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 23
+      }
     }
   },
   {
@@ -107,7 +135,11 @@
           "right": "ComponentC"
         }
       },
-      "description": "method2(1)"
+      "description": "method2(1)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 24
+      }
     }
   },
   {
@@ -128,13 +160,21 @@
           "right": "ComponentB"
         }
       },
-      "description": "Return Result"
+      "description": "Return Result",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 25
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Loop",
-      "text": "for i = 0; i < 3; ++i"
+      "text": "for i = 0; i < 3; ++i",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 27
+      }
     }
   },
   {
@@ -155,7 +195,11 @@
           "right": "ComponentC"
         }
       },
-      "description": "method2(i)"
+      "description": "method2(i)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 28
+      }
     }
   },
   {
@@ -176,13 +220,21 @@
           "right": "ComponentB"
         }
       },
-      "description": "Return Result"
+      "description": "Return Result",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 29
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Alt",
-      "text": "innerConditionA"
+      "text": "innerConditionA",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 30
+      }
     }
   },
   {
@@ -203,7 +255,11 @@
           "right": "ComponentC"
         }
       },
-      "description": "method2(extra)"
+      "description": "method2(extra)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 31
+      }
     }
   },
   {
@@ -224,25 +280,41 @@
           "right": "ComponentB"
         }
       },
-      "description": "Return Result"
+      "description": "Return Result",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 32
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 33
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 34
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Loop",
-      "text": "while count > 0"
+      "text": "while count > 0",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 36
+      }
     }
   },
   {
@@ -263,7 +335,11 @@
           "right": "ComponentC"
         }
       },
-      "description": "method2(count)"
+      "description": "method2(count)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 37
+      }
     }
   },
   {
@@ -284,13 +360,21 @@
           "right": "ComponentB"
         }
       },
-      "description": "Return Result"
+      "description": "Return Result",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 38
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Alt",
-      "text": "innerConditionB"
+      "text": "innerConditionB",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 39
+      }
     }
   },
   {
@@ -311,7 +395,11 @@
           "right": "ComponentC"
         }
       },
-      "description": "method2(fallback)"
+      "description": "method2(fallback)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 40
+      }
     }
   },
   {
@@ -332,13 +420,21 @@
           "right": "ComponentB"
         }
       },
-      "description": "Return Result"
+      "description": "Return Result",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 41
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Else",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 42
+      }
     }
   },
   {
@@ -359,7 +455,11 @@
           "right": "ComponentC"
         }
       },
-      "description": "method2(default)"
+      "description": "method2(default)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 43
+      }
     }
   },
   {
@@ -380,25 +480,41 @@
           "right": "ComponentB"
         }
       },
-      "description": "Return Result"
+      "description": "Return Result",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 44
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 45
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 46
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Alt",
-      "text": "condition2"
+      "text": "condition2",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 48
+      }
     }
   },
   {
@@ -419,7 +535,11 @@
           "right": "ComponentC"
         }
       },
-      "description": "method2(result)"
+      "description": "method2(result)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 49
+      }
     }
   },
   {
@@ -440,13 +560,21 @@
           "right": "ComponentB"
         }
       },
-      "description": "Return Result"
+      "description": "Return Result",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 50
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 51
+      }
     }
   },
   {
@@ -467,13 +595,21 @@
           "right": "ComponentA"
         }
       },
-      "description": "Return Result"
+      "description": "Return Result",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 53
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/simple_sequence.puml",
+        "line": 54
+      }
     }
   }
 ]

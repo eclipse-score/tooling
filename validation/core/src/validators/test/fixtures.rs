@@ -20,6 +20,10 @@ use class_diagram::{ClassDiagram, EntityType, Method, SimpleEntity, Visibility};
 use component_diagram::SourceLocation;
 use sequence_logic::{Event, Interaction, SequenceNode, SequenceTree};
 
+pub(crate) fn dummy_source_location() -> SourceLocation {
+    SourceLocation::new("", 0)
+}
+
 pub(super) fn relation_with_role(target: &str, source_role: EndpointRole) -> LogicRelation {
     relation_with_type_and_role(target, ComponentRelationType::InterfaceBinding, source_role)
 }
@@ -34,7 +38,7 @@ pub(super) fn relation_with_type_and_role(
         annotation: None,
         relation_type,
         source_role,
-        source_location: SourceLocation::new("", 0),
+        source_location: dummy_source_location(),
     }
 }
 
@@ -63,7 +67,7 @@ pub(super) fn unit_with_interface_roles(
         element_type: ComponentType::Component,
         stereotype: Some("unit".to_string()),
         relations,
-        source_location: SourceLocation::new("", 0),
+        source_location: dummy_source_location(),
     }
 }
 
@@ -80,7 +84,7 @@ pub(super) fn interface_with_id(id: &str, alias: &str) -> LogicComponent {
         element_type: ComponentType::Interface,
         stereotype: None,
         relations: Vec::new(),
-        source_location: SourceLocation::new("", 0),
+        source_location: dummy_source_location(),
     }
 }
 

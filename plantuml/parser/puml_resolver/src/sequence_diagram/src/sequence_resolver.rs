@@ -146,6 +146,10 @@ mod sequence_resolver_tests {
         }
     }
 
+    fn dummy_source_location() -> SourceLocation {
+        SourceLocation::new("test.puml", 0)
+    }
+
     fn make_call(from: &str, to: &str, label: &str) -> Statement {
         Statement::Message(Message {
             content: MessageContent::WithTargets {
@@ -155,7 +159,7 @@ mod sequence_resolver_tests {
             },
             activation_marker: None,
             description: Some(label.to_string()),
-            source_location: SourceLocation::new("test.puml", 0),
+            source_location: dummy_source_location(),
         })
     }
 
@@ -168,7 +172,7 @@ mod sequence_resolver_tests {
             },
             activation_marker: None,
             description: Some(label.to_string()),
-            source_location: SourceLocation::new("test.puml", 0),
+            source_location: dummy_source_location(),
         })
     }
 
@@ -237,7 +241,7 @@ mod sequence_resolver_tests {
             participant_type: ParticipantType::Participant,
             identifier: ParticipantIdentifier::Id(name.to_string()),
             stereotype: None,
-            source_location: SourceLocation::new("test.puml", 0),
+            source_location: dummy_source_location(),
         })
     }
 

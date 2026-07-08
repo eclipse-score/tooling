@@ -191,6 +191,7 @@ fn validate_required_endpoints(result: &mut ValidationResult, check: RequiredEnd
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::validators::fixtures::dummy_source_location;
     use sequence_logic::{Interaction, Return};
 
     fn interaction(
@@ -205,7 +206,7 @@ mod tests {
                 callee: callee.to_string(),
                 method: method.to_string(),
             }),
-            source_location: sequence_logic::SourceLocation::new("test.puml", 0),
+            source_location: dummy_source_location(),
             branches_node,
         }
     }
@@ -217,7 +218,7 @@ mod tests {
                 callee: callee.to_string(),
                 return_content: String::new(),
             }),
-            source_location: sequence_logic::SourceLocation::new("test.puml", 0),
+            source_location: dummy_source_location(),
             branches_node: Vec::new(),
         }
     }

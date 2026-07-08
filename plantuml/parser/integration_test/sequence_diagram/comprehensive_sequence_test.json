@@ -5,7 +5,11 @@
       "identifier": {
         "Id": "Actor1"
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 27
+      }
     }
   },
   {
@@ -14,7 +18,11 @@
       "identifier": {
         "Id": "Actor2"
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 28
+      }
     }
   },
   {
@@ -26,7 +34,11 @@
           "id": "runtime"
         }
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 31
+      }
     }
   },
   {
@@ -38,7 +50,11 @@
           "id": "Builder"
         }
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 32
+      }
     }
   },
   {
@@ -50,7 +66,11 @@
           "id": "messaging"
         }
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 33
+      }
     }
   },
   {
@@ -62,7 +82,11 @@
           "id": "TaskHandler"
         }
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 36
+      }
     }
   },
   {
@@ -74,7 +98,11 @@
           "id": "ProxyHandle"
         }
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 39
+      }
     }
   },
   {
@@ -86,13 +114,21 @@
           "id": "ServiceHost"
         }
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 40
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Arrow Types"
+      "text": "Arrow Types",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 46
+      }
     }
   },
   {
@@ -113,7 +149,11 @@
           "right": "Actor2"
         }
       },
-      "description": "Standard message"
+      "description": "Standard message",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 48
+      }
     }
   },
   {
@@ -134,7 +174,11 @@
           "right": "Actor1"
         }
       },
-      "description": "Return message"
+      "description": "Return message",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 51
+      }
     }
   },
   {
@@ -155,7 +199,11 @@
           "right": "Actor1"
         }
       },
-      "description": "Reverse message"
+      "description": "Reverse message",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 54
+      }
     }
   },
   {
@@ -176,7 +224,11 @@
           "right": "Actor1"
         }
       },
-      "description": "Reverse return"
+      "description": "Reverse return",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 55
+      }
     }
   },
   {
@@ -197,7 +249,11 @@
           "right": "Actor1"
         }
       },
-      "description": "Incoming request"
+      "description": "Incoming request",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 56
+      }
     }
   },
   {
@@ -218,19 +274,31 @@
           "right": ""
         }
       },
-      "description": "Outgoing response"
+      "description": "Outgoing response",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 57
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 61
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Activation Patterns"
+      "text": "Activation Patterns",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 67
+      }
     }
   },
   {
@@ -256,7 +324,11 @@
           "right": "Actor2"
         }
       },
-      "description": "Activate target"
+      "description": "Activate target",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 70
+      }
     }
   },
   {
@@ -282,7 +354,11 @@
           "right": "Builder"
         }
       },
-      "description": "Nested call"
+      "description": "Nested call",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 74
+      }
     }
   },
   {
@@ -308,7 +384,11 @@
           "right": "Actor2"
         }
       },
-      "description": null
+      "description": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 76
+      }
     }
   },
   {
@@ -334,7 +414,11 @@
           "right": "Actor1"
         }
       },
-      "description": null
+      "description": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 79
+      }
     }
   },
   {
@@ -350,13 +434,21 @@
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 82
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Lifecycle Events"
+      "text": "Lifecycle Events",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 88
+      }
     }
   },
   {
@@ -382,7 +474,11 @@
           "right": "TaskHandler"
         }
       },
-      "description": "create"
+      "description": "create",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 90
+      }
     }
   },
   {
@@ -403,19 +499,31 @@
           "right": "Actor1"
         }
       },
-      "description": null
+      "description": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 91
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 92
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Self Messages"
+      "text": "Self Messages",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 98
+      }
     }
   },
   {
@@ -436,7 +544,11 @@
           "right": "Actor1"
         }
       },
-      "description": "Internal operation"
+      "description": "Internal operation",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 99
+      }
     }
   },
   {
@@ -457,13 +569,21 @@
           "right": "Actor1"
         }
       },
-        "description": "runtime::wait_for_shutdown()"
+      "description": "runtime::wait_for_shutdown()",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 100
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 101
+      }
     }
   },
   {
@@ -484,13 +604,21 @@
           "right": "Actor2"
         }
       },
-      "description": "Message with inline note"
+      "description": "Message with inline note",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 128
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Alt",
-      "text": "configuration is cached"
+      "text": "configuration is cached",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 135
+      }
     }
   },
   {
@@ -511,13 +639,21 @@
           "right": "Actor2"
         }
       },
-      "description": "Cached result"
+      "description": "Cached result",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 136
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Else",
-      "text": "configuration needs to be fetched"
+      "text": "configuration needs to be fetched",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 137
+      }
     }
   },
   {
@@ -538,7 +674,11 @@
           "right": "messaging"
         }
       },
-      "description": "Fetch from service"
+      "description": "Fetch from service",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 138
+      }
     }
   },
   {
@@ -559,19 +699,31 @@
           "right": "Actor1"
         }
       },
-      "description": "Result"
+      "description": "Result",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 139
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 140
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Alt",
-      "text": "system is in restricted mode and the access token is invalid\\n or it does not match the request"
+      "text": "system is in restricted mode and the access token is invalid\\n or it does not match the request",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 142
+      }
     }
   },
   {
@@ -592,13 +744,21 @@
           "right": "Actor1"
         }
       },
-      "description": "Error response"
+      "description": "Error response",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 143
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Else",
-      "text": "access token is valid"
+      "text": "access token is valid",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 144
+      }
     }
   },
   {
@@ -619,19 +779,31 @@
           "right": "Actor1"
         }
       },
-      "description": "Success response"
+      "description": "Success response",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 145
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 146
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Loop",
-      "text": "For each item"
+      "text": "For each item",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 152
+      }
     }
   },
   {
@@ -652,19 +824,31 @@
           "right": "Actor2"
         }
       },
-      "description": "Process item"
+      "description": "Process item",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 153
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "loop"
+      "text": "loop",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 154
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Loop",
-      "text": "(item_list) [Call FetchValue for each item]"
+      "text": "(item_list) [Call FetchValue for each item]",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 156
+      }
     }
   },
   {
@@ -685,25 +869,41 @@
           "right": "Builder"
         }
       },
-        "description": "FetchValue(item)"
+      "description": "FetchValue(item)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 157
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 158
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Loop",
-      "text": "0..2 {0..3000ms}"
+      "text": "0..2 {0..3000ms}",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 160
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Alt",
-      "text": "timeout not reached"
+      "text": "timeout not reached",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 161
+      }
     }
   },
   {
@@ -724,25 +924,41 @@
           "right": "Actor2"
         }
       },
-      "description": "Retry"
+      "description": "Retry",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 162
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 163
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 164
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Loop",
-      "text": "For Segment in Segments"
+      "text": "For Segment in Segments",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 166
+      }
     }
   },
   {
@@ -763,37 +979,61 @@
           "right": "Actor2"
         }
       },
-        "description": "Process segment"
+      "description": "Process segment",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 167
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 168
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Loop",
-      "text": "Until success"
+      "text": "Until success",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 174
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Alt",
-      "text": "condition met"
+      "text": "condition met",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 175
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Break",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 176
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 177
+      }
     }
   },
   {
@@ -814,19 +1054,31 @@
           "right": "Actor2"
         }
       },
-      "description": "Continue processing"
+      "description": "Continue processing",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 178
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 179
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Complex Messages"
+      "text": "Complex Messages",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 185
+      }
     }
   },
   {
@@ -847,7 +1099,11 @@
           "right": "Builder"
         }
       },
-        "description": "Run(config_collection, callback, stop_token, error_reporter)"
+      "description": "Run(config_collection, callback, stop_token, error_reporter)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 187
+      }
     }
   },
   {
@@ -868,7 +1124,11 @@
           "right": "TaskHandler"
         }
       },
-      "description": "StartResponse::ValidationResult::kAccepted (0x00)"
+      "description": "StartResponse::ValidationResult::kAccepted (0x00)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 190
+      }
     }
   },
   {
@@ -889,7 +1149,11 @@
           "right": "ProxyHandle"
         }
       },
-      "description": "std::unique_ptr<IServiceProxy>>"
+      "description": "std::unique_ptr<IServiceProxy>>",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 193
+      }
     }
   },
   {
@@ -910,19 +1174,31 @@
           "right": "Actor2"
         }
       },
-      "description": "PerformQualification() [[https:"
+      "description": "PerformQualification() [[https:",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 196
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 197
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Complex Flow with All Elements"
+      "text": "Complex Flow with All Elements",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 203
+      }
     }
   },
   {
@@ -948,7 +1224,11 @@
           "right": "messaging"
         }
       },
-      "description": "Initialize(context)"
+      "description": "Initialize(context)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 205
+      }
     }
   },
   {
@@ -979,7 +1259,11 @@
           "right": "Builder"
         }
       },
-      "description": "create"
+      "description": "create",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 209
+      }
     }
   },
   {
@@ -1000,7 +1284,11 @@
           "right": "messaging"
         }
       },
-      "description": null
+      "description": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 210
+      }
     }
   },
   {
@@ -1021,7 +1309,11 @@
           "right": "Builder"
         }
       },
-      "description": "Configure(params)"
+      "description": "Configure(params)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 212
+      }
     }
   },
   {
@@ -1047,13 +1339,21 @@
           "right": "Builder"
         }
       },
-      "description": "ValidateConfiguration()"
+      "description": "ValidateConfiguration()",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 215
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Alt",
-      "text": "configuration is valid"
+      "text": "configuration is valid",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 217
+      }
     }
   },
   {
@@ -1074,13 +1374,21 @@
           "right": "messaging"
         }
       },
-      "description": "Success"
+      "description": "Success",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 218
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Loop",
-      "text": "For each service"
+      "text": "For each service",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 220
+      }
     }
   },
   {
@@ -1101,7 +1409,11 @@
           "right": "ServiceHost"
         }
       },
-      "description": "StartService()"
+      "description": "StartService()",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 221
+      }
     }
   },
   {
@@ -1122,19 +1434,31 @@
           "right": "messaging"
         }
       },
-      "description": null
+      "description": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 222
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 223
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Else",
-      "text": "configuration invalid"
+      "text": "configuration invalid",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 224
+      }
     }
   },
   {
@@ -1155,13 +1479,21 @@
           "right": "messaging"
         }
       },
-      "description": "Error"
+      "description": "Error",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 225
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 227
+      }
     }
   },
   {
@@ -1187,7 +1519,11 @@
           "right": "runtime"
         }
       },
-      "description": "ExitCodeOk"
+      "description": "ExitCodeOk",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 230
+      }
     }
   },
   {
@@ -1203,13 +1539,21 @@
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 233
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Construction stage"
+      "text": "Construction stage",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 239
+      }
     }
   },
   {
@@ -1235,19 +1579,31 @@
           "right": "Actor1"
         }
       },
-      "description": "create"
+      "description": "create",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 241
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 242
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Initialization stage"
+      "text": "Initialization stage",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 244
+      }
     }
   },
   {
@@ -1268,13 +1624,21 @@
           "right": "Actor1"
         }
       },
-      "description": "Initialize()"
+      "description": "Initialize()",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 245
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Alt",
-      "text": "system ready"
+      "text": "system ready",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 247
+      }
     }
   },
   {
@@ -1295,25 +1659,41 @@
           "right": "Actor2"
         }
       },
-      "description": "StartServices()"
+      "description": "StartServices()",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 248
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 249
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 250
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Run stage"
+      "text": "Run stage",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 252
+      }
     }
   },
   {
@@ -1334,13 +1714,21 @@
           "right": "Actor1"
         }
       },
-      "description": "Run(stop_token)"
+      "description": "Run(stop_token)",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 253
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Loop",
-      "text": "Until stop requested"
+      "text": "Until stop requested",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 255
+      }
     }
   },
   {
@@ -1361,25 +1749,41 @@
           "right": "Actor1"
         }
       },
-      "description": "ProcessEvents()"
+      "description": "ProcessEvents()",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 256
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 257
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 258
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Edge Cases"
+      "text": "Edge Cases",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 264
+      }
     }
   },
   {
@@ -1400,7 +1804,11 @@
           "right": "Actor2"
         }
       },
-      "description": null
+      "description": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 266
+      }
     }
   },
   {
@@ -1421,19 +1829,31 @@
           "right": "Actor1"
         }
       },
-      "description": null
+      "description": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 267
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Alt",
-      "text": "condition"
+      "text": "condition",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 270
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Else",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 271
+      }
     }
   },
   {
@@ -1454,13 +1874,21 @@
           "right": "Actor2"
         }
       },
-      "description": "Default action"
+      "description": "Default action",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 272
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": null
+      "text": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 273
+      }
     }
   },
   {
@@ -1486,7 +1914,11 @@
           "right": "Actor2"
         }
       },
-      "description": "Call1"
+      "description": "Call1",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 277
+      }
     }
   },
   {
@@ -1512,7 +1944,11 @@
           "right": "Builder"
         }
       },
-      "description": "Call2"
+      "description": "Call2",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 279
+      }
     }
   },
   {
@@ -1538,7 +1974,11 @@
           "right": "TaskHandler"
         }
       },
-      "description": "Call3"
+      "description": "Call3",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 281
+      }
     }
   },
   {
@@ -1564,7 +2004,11 @@
           "right": "Builder"
         }
       },
-      "description": null
+      "description": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 283
+      }
     }
   },
   {
@@ -1590,7 +2034,11 @@
           "right": "Actor2"
         }
       },
-      "description": null
+      "description": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 285
+      }
     }
   },
   {
@@ -1616,7 +2064,11 @@
           "right": "Actor1"
         }
       },
-      "description": null
+      "description": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 287
+      }
     }
   },
   {
@@ -1632,13 +2084,21 @@
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 290
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Extended Patterns: Preprocessor Functions"
+      "text": "Extended Patterns: Preprocessor Functions",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 296
+      }
     }
   },
   {
@@ -1659,7 +2119,11 @@
           "right": "Actor2"
         }
       },
-      "description": "$redtext(\"Error message\")"
+      "description": "$redtext(\"Error message\")",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 306
+      }
     }
   },
   {
@@ -1680,19 +2144,31 @@
           "right": "Actor1"
         }
       },
-      "description": "$greentext(\"Success message\")"
+      "description": "$greentext(\"Success message\")",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 307
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 308
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Extended Patterns: Participants with Colors"
+      "text": "Extended Patterns: Participants with Colors",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 310
+      }
     }
   },
   {
@@ -1701,7 +2177,11 @@
       "identifier": {
         "Id": "ColoredActor1"
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 312
+      }
     }
   },
   {
@@ -1710,7 +2190,11 @@
       "identifier": {
         "Id": "ColoredActor2"
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 313
+      }
     }
   },
   {
@@ -1719,7 +2203,11 @@
       "identifier": {
         "Id": "ColoredActor3"
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 314
+      }
     }
   },
   {
@@ -1740,7 +2228,11 @@
           "right": "ColoredActor2"
         }
       },
-      "description": "Message"
+      "description": "Message",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 316
+      }
     }
   },
   {
@@ -1761,19 +2253,31 @@
           "right": "ColoredActor3"
         }
       },
-      "description": "Another message"
+      "description": "Another message",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 317
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 318
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Extended Patterns: Boxes with Colors"
+      "text": "Extended Patterns: Boxes with Colors",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 320
+      }
     }
   },
   {
@@ -1782,7 +2286,11 @@
       "identifier": {
         "Id": "BoxedActor1"
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 322
+      }
     }
   },
   {
@@ -1791,7 +2299,11 @@
       "identifier": {
         "Id": "BoxedActor2"
       },
-      "stereotype": null
+      "stereotype": null,
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 323
+      }
     }
   },
   {
@@ -1812,19 +2324,31 @@
           "right": "BoxedActor2"
         }
       },
-      "description": "Message inside box"
+      "description": "Message inside box",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 326
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 327
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Extended Patterns: Lost and Found Messages"
+      "text": "Extended Patterns: Lost and Found Messages",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 329
+      }
     }
   },
   {
@@ -1845,7 +2369,11 @@
           "right": "Actor1"
         }
       },
-      "description": "Incoming request"
+      "description": "Incoming request",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 331
+      }
     }
   },
   {
@@ -1866,7 +2394,11 @@
           "right": "Actor2"
         }
       },
-      "description": "Another incoming"
+      "description": "Another incoming",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 332
+      }
     }
   },
   {
@@ -1887,7 +2419,11 @@
           "right": "Builder"
         }
       },
-      "description": "Third variant"
+      "description": "Third variant",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 333
+      }
     }
   },
   {
@@ -1908,7 +2444,11 @@
           "right": "o]"
         }
       },
-      "description": "Outgoing response"
+      "description": "Outgoing response",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 336
+      }
     }
   },
   {
@@ -1929,7 +2469,11 @@
           "right": "]"
         }
       },
-      "description": "Another outgoing"
+      "description": "Another outgoing",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 337
+      }
     }
   },
   {
@@ -1950,7 +2494,11 @@
           "right": "x]"
         }
       },
-      "description": "Third variant"
+      "description": "Third variant",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 338
+      }
     }
   },
   {
@@ -1971,7 +2519,11 @@
           "right": "Actor1"
         }
       },
-      "description": "Right bracket on left"
+      "description": "Right bracket on left",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 341
+      }
     }
   },
   {
@@ -1992,19 +2544,31 @@
           "right": "o["
         }
       },
-      "description": "Left bracket on right"
+      "description": "Left bracket on right",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 342
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 343
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Extended Patterns: Activation Markers"
+      "text": "Extended Patterns: Activation Markers",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 345
+      }
     }
   },
   {
@@ -2026,7 +2590,11 @@
         }
       },
       "activation_marker": "++",
-      "description": "Activate with message"
+      "description": "Activate with message",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 347
+      }
     }
   },
   {
@@ -2048,7 +2616,11 @@
         }
       },
       "activation_marker": "++",
-      "description": "Nested activation"
+      "description": "Nested activation",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 348
+      }
     }
   },
   {
@@ -2070,7 +2642,11 @@
         }
       },
       "activation_marker": "--",
-      "description": "Deactivate with response"
+      "description": "Deactivate with response",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 349
+      }
     }
   },
   {
@@ -2092,7 +2668,11 @@
         }
       },
       "activation_marker": "--",
-      "description": "Deactivate outer"
+      "description": "Deactivate outer",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 350
+      }
     }
   },
   {
@@ -2114,7 +2694,11 @@
         }
       },
       "activation_marker": "**",
-      "description": "Create and activate"
+      "description": "Create and activate",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 353
+      }
     }
   },
   {
@@ -2136,31 +2720,51 @@
         }
       },
       "activation_marker": "!!",
-      "description": "Destroy marker"
+      "description": "Destroy marker",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 356
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 357
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Extended Patterns: Ref Blocks"
+      "text": "Extended Patterns: Ref Blocks",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 359
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 368
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Extended Patterns: Dividers with URLs"
+      "text": "Extended Patterns: Dividers with URLs",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 370
+      }
     }
   },
   {
@@ -2181,7 +2785,11 @@
           "right": "Actor2"
         }
       },
-      "description": "Initialize"
+      "description": "Initialize",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 372
+      }
     }
   },
   {
@@ -2202,7 +2810,11 @@
           "right": "Builder"
         }
       },
-      "description": "Process"
+      "description": "Process",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 375
+      }
     }
   },
   {
@@ -2223,19 +2835,31 @@
           "right": "Actor1"
         }
       },
-      "description": "Verify"
+      "description": "Verify",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 378
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 379
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "Group",
-      "text": "Extended Patterns: Standalone Ellipsis"
+      "text": "Extended Patterns: Standalone Ellipsis",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 381
+      }
     }
   },
   {
@@ -2256,7 +2880,11 @@
           "right": "Actor2"
         }
       },
-      "description": "Start process"
+      "description": "Start process",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 382
+      }
     }
   },
   {
@@ -2277,13 +2905,21 @@
           "right": "Actor1"
         }
       },
-      "description": "Complete"
+      "description": "Complete",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 384
+      }
     }
   },
   {
     "GroupCmd": {
       "group_type": "End",
-      "text": "group"
+      "text": "group",
+      "source_location": {
+        "file": "plantuml/parser/integration_test/sequence_diagram/comprehensive_sequence_test.puml",
+        "line": 385
+      }
     }
   }
 ]
