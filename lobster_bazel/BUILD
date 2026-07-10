@@ -28,7 +28,8 @@ py_binary(
 
 exports_files([
     "requirements.in",
-    "requirements.txt",
+    "requirements_3_11.txt",
+    "requirements_3_12.txt",
 ])
 
 filegroup(

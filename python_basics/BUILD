@@ -12,7 +12,9 @@
 # *******************************************************************************
 
 exports_files([
-    "requirements.txt",
+    "requirements_3_10.txt",
+    "requirements_3_11.txt",
+    "requirements_3_12.txt",
     "requirements.in",
     "pyproject.toml",
     "defs.bzl",
