@@ -44,11 +44,14 @@ abstract type RequirementSafety "Extension of Requirement that carries an ASIL c
            Asil
 }
 
+abstract type CompReqSource "Common base for requirement types that can be used as component requirement sources." extends RequirementSafety {
+}
+
 ///////////////////////////////
 // S-Core Requirements Model
 ///////////////////////////////
 
-type AssumedSystemReq "System-level requirement received from the wider operational context (e.g. platform)." extends RequirementSafety {
+type AssumedSystemReq "System-level requirement received from the wider operational context (e.g. platform)." extends CompReqSource {
     rationale "Explanation of why this system-level requirement exists and how it was derived."
               String
 }
@@ -59,7 +62,7 @@ tuple AssumedSystemReqId {
     version Integer
 }
 
-type FeatReq "High-level feature requirement derived from one or more AssumedSystemReq items." extends RequirementSafety {
+type FeatReq "High-level feature requirement derived from one or more AssumedSystemReq items." extends CompReqSource {
     derived_from "One or more versioned references to the AssumedSystemReq items this feature requirement is derived from."
                  AssumedSystemReqId[1 .. *]
 }
@@ -71,7 +74,7 @@ tuple FeatReqId {
 }
 
 tuple CompReqSourceId {
-    item    [FeatReq, AssumedSystemReq]
+    item    CompReqSource
     separator @
     version Integer
 }
@@ -159,7 +162,7 @@ type ControlMeasure "A design or operational measure that detects, prevents, or 
                  optional String
 }
 
-type PreventiveMeasure "A measure that prevents a failure mode from occurring in the first place." {
+type PreventiveMeasure "A measure that prevents a failure mode from occurring in the first place." extends ControlMeasure {
 }
 
 type Mitigation "A measure that reduces the severity or probability of a failure mode's effect." extends AssumedSystemReq {
@@ -171,7 +174,7 @@ type AoU "Assumption of Use — a safety-relevant condition that a user must ful
 }
 
 tuple Measure {
-    item    [ControlMeasure, PreventiveMeasure, Mitigation]
+    item    RequirementSafety
     separator @
     version Integer
 }
