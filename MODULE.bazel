@@ -368,19 +368,8 @@ use_repo(maven, "blueprint_maven_dependencies")
 
 use_repo(pip, "manual_analysis_deps")
 
-bazel_dep(name = "trlc", version = "0.0.0")
-git_override(
-    module_name = "trlc",
-    commit = "8d25f639ff44976893d7866ba421a04db5698ebe",
-    remote = "https://github.com/bmw-software-engineering/trlc.git",
-)
-
-bazel_dep(name = "lobster", version = "0.0.0")
-git_override(
-    module_name = "lobster",
-    commit = "2792e2daee2cf524fdc7b1545fd3537791ebc36c",
-    remote = "https://github.com/bmw-software-engineering/lobster.git",
-)
+bazel_dep(name = "trlc", version = "3.0.0")
+bazel_dep(name = "lobster", version = "1.0.3")
 
 ###############################################################################
 # Dependencies for AI Checker
