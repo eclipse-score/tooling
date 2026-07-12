@@ -401,7 +401,7 @@ use_repo(pip, "ai_checker_whl_mods")
         extra_pip_args = ["--index-url=${PIP_INDEX_URL:-https://pypi.org/simple/}"],
         hub_name = "pip_ai_checker",
         python_version = "3.{}".format(version),
-        requirements_lock = "//manual_analysis:requirements_3_{}.txt".format(version),
+        requirements_lock = "//validation/ai_checker:requirements_3_{}.txt".format(version),
         whl_modifications = {
             "@ai_checker_whl_mods//:github_copilot_sdk.json": "github-copilot-sdk",
         },
