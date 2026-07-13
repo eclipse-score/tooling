@@ -46,11 +46,4 @@ local_path_override(
     path = "../../",
 )
 
-bazel_dep(name = "rules_distroless", version = "0.9.0")
-git_override(
-    module_name = "rules_distroless",
-    commit = "dbf25be1c3a9a1698511a4817582efe61dc5ec15",
-    remote = "https://github.com/LittleHuba/rules_distroless.git",
-)
-
 # end Tests
