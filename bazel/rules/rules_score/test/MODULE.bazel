@@ -102,23 +102,10 @@ register_toolchains(
     "@llvm_toolchain//:all",
 )
 
-bazel_dep(name = "trlc", version = "0.0.0")
-git_override(
-    module_name = "trlc",
-    commit = "8d25f639ff44976893d7866ba421a04db5698ebe",
-    remote = "https://github.com/bmw-software-engineering/trlc.git",
-)
-
-bazel_dep(name = "lobster", version = "0.0.0")
-git_override(
-    module_name = "lobster",
-    commit = "2792e2daee2cf524fdc7b1545fd3537791ebc36c",
-    remote = "https://github.com/bmw-software-engineering/lobster.git",
-)
-
 bazel_dep(name = "rules_distroless", version = "0.9.0")
 git_override(
     module_name = "rules_distroless",
     commit = "dbf25be1c3a9a1698511a4817582efe61dc5ec15",
     remote = "https://github.com/LittleHuba/rules_distroless.git",
 )
+bazel_dep(name = "trlc", version = "3.0.0")
