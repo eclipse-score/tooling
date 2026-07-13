@@ -14,7 +14,9 @@
 //! Converts the resolved PlantUML logical model into a `lobster-imp-trace`
 //! JSON file compatible with the LOBSTER traceability toolchain.
 //!
-//! Only [`ComponentType::Interface`] elements are emitted
+//! For component diagrams only [`ComponentType::Interface`] elements are emitted.
+//! For class diagrams, [`EntityType::Interface`] entities emit one item per method;
+//! all other entity types emit one item per entity.
 
 use class_diagram::{ClassDiagram, EntityType};
 use component_diagram::{ComponentType, LogicComponent};
@@ -49,22 +51,37 @@ fn comp_model_to_lobster(model: &HashMap<String, LogicComponent>, source_path: &
 /// Convert an in-memory resolved class model to a `lobster-imp-trace`
 /// JSON [`Value`].
 ///
-/// Every class entity becomes one lobster item. If an entity carries explicit
-/// source location metadata that is used; otherwise `source_path` is used and
-/// the line is emitted as `null` because LOBSTER does not accept `0`.
+/// For [`EntityType::Interface`] entities every method becomes its own lobster
+/// item with id `{entity.id}.{method.name}` and kind `"Method"`.  All other
+/// entity types are emitted as a single item (one per entity).
+///
+/// If an entity carries explicit source location metadata that is used;
+/// otherwise `source_path` is used and the line is emitted as `null` because
+/// LOBSTER does not accept `0`.
 fn class_model_to_lobster(model: &ClassDiagram, source_path: &str) -> Value {
     let items: Vec<Value> = model
         .entities
         .iter()
-        .map(|entity| {
+        .flat_map(|entity| {
             let source_file = entity.source_file.as_deref().unwrap_or(source_path);
 
-            build_lobster_item(
-                &entity.id,
-                source_file,
-                entity.source_line,
-                map_entity_type_to_kind(entity.entity_type),
-            )
+            if entity.entity_type == EntityType::Interface {
+                entity
+                    .methods
+                    .iter()
+                    .map(|method| {
+                        let method_id = format!("{}.{}", entity.id, method.name);
+                        build_lobster_item(&method_id, source_file, entity.source_line, "Method")
+                    })
+                    .collect::<Vec<_>>()
+            } else {
+                vec![build_lobster_item(
+                    &entity.id,
+                    source_file,
+                    entity.source_line,
+                    map_entity_type_to_kind(entity.entity_type),
+                )]
+            }
         })
         .collect();
 
