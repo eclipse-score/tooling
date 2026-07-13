@@ -29,6 +29,9 @@ ScoreReq.ControlMeasure SomeBasicEvent {
 }
 
 ScoreReq.PreventiveMeasure SomePreventiveMeasure {
+    safety      = ScoreReq.Asil.B
+    description = "A preventive measure that stops a failure mode from occurring (no mitigates field)"
+    version     = 1
 }
 
 ScoreReq.Mitigation SomeMitigation {
