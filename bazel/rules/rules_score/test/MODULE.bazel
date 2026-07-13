@@ -102,10 +102,4 @@ register_toolchains(
     "@llvm_toolchain//:all",
 )
 
-bazel_dep(name = "rules_distroless", version = "0.9.0")
-git_override(
-    module_name = "rules_distroless",
-    commit = "dbf25be1c3a9a1698511a4817582efe61dc5ec15",
-    remote = "https://github.com/LittleHuba/rules_distroless.git",
-)
 bazel_dep(name = "trlc", version = "3.0.0")
