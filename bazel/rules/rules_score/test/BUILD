@@ -77,8 +77,8 @@ load(
 )
 load(
     ":seooc_test.bzl",
-    "de_lobster_config_includes_upstream_srcs_test",
-    "feat_req_upstream_srcs_populated_test",
+    "de_lobster_config_includes_system_req_srcs_test",
+    "feat_req_system_req_srcs_populated_test",
     "seooc_all_sources_relocated_test",
     "seooc_artifacts_copied_test",
     "seooc_index_file_provider_test",
@@ -578,14 +578,14 @@ seooc_index_file_provider_test(
     target_under_test = ":test_dependable_element_index",
 )
 
-# Regression tests: upstream system requirements are propagated via upstream_srcs
-feat_req_upstream_srcs_populated_test(
-    name = "seooc_tests_feat_req_upstream_srcs_populated",
+# Regression tests: system requirements are propagated via system_req_srcs
+feat_req_system_req_srcs_populated_test(
+    name = "seooc_tests_feat_req_system_req_srcs_populated",
     target_under_test = ":feat_req",
 )
 
-de_lobster_config_includes_upstream_srcs_test(
-    name = "seooc_tests_de_lobster_config_includes_upstream_srcs",
+de_lobster_config_includes_system_req_srcs_test(
+    name = "seooc_tests_de_lobster_config_includes_system_req_srcs",
     target_under_test = ":seooc_test_lib_index",
 )
 
@@ -655,9 +655,9 @@ test_suite(
     tests = [
         ":seooc_tests_all_sources_relocated",
         ":seooc_tests_artifacts_copied",
-        ":seooc_tests_de_lobster_config_includes_upstream_srcs",
+        ":seooc_tests_de_lobster_config_includes_system_req_srcs",
         ":seooc_tests_dep_links_use_doc_dir",
-        ":seooc_tests_feat_req_upstream_srcs_populated",
+        ":seooc_tests_feat_req_system_req_srcs_populated",
         ":seooc_tests_index_file_provider",
         ":seooc_tests_index_generation",
         ":seooc_tests_multi_index_files_exist",

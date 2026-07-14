@@ -3,7 +3,7 @@ requirements "Feature Requirements" {
 }
 
 requirements "System Requirements" {
-{UPSTREAM_REQ_SOURCES}
+{SYSTEM_REQ_SOURCES}
 }
 
 requirements "Forwarded AoUs" {

@@ -322,11 +322,11 @@ seooc_index_file_provider_test = analysistest.make(
     impl = _seooc_index_file_provider_test_impl,
 )
 
-def _feat_req_upstream_srcs_populated_test_impl(ctx):
+def _feat_req_system_req_srcs_populated_test_impl(ctx):
     """
     Given a feature_requirements target whose deps include an assumed_system_requirements target,
     When FeatureRequirementsInfo is inspected,
-    Then upstream_srcs must be non-empty and contain a .lobster file.
+    Then system_req_srcs must be non-empty and contain a .lobster file.
     """
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
@@ -338,32 +338,32 @@ def _feat_req_upstream_srcs_populated_test_impl(ctx):
     )
 
     info = target_under_test[FeatureRequirementsInfo]
-    upstream_files = info.upstream_srcs.to_list()
+    system_req_files = info.system_req_srcs.to_list()
 
     asserts.true(
         env,
-        len(upstream_files) > 0,
-        "Expected upstream_srcs to be non-empty when feature_requirements has assumed_system_requirements deps",
+        len(system_req_files) > 0,
+        "Expected system_req_srcs to be non-empty when feature_requirements has assumed_system_requirements deps",
     )
 
-    lobster_files = [f for f in upstream_files if f.extension == "lobster"]
+    lobster_files = [f for f in system_req_files if f.extension == "lobster"]
     asserts.true(
         env,
         len(lobster_files) > 0,
-        "Expected upstream_srcs to contain at least one .lobster file; got: " + str([f.basename for f in upstream_files]),
+        "Expected system_req_srcs to contain at least one .lobster file; got: " + str([f.basename for f in system_req_files]),
     )
 
     return analysistest.end(env)
 
-feat_req_upstream_srcs_populated_test = analysistest.make(
-    impl = _feat_req_upstream_srcs_populated_test_impl,
+feat_req_system_req_srcs_populated_test = analysistest.make(
+    impl = _feat_req_system_req_srcs_populated_test_impl,
 )
 
-def _de_lobster_config_includes_upstream_srcs_test_impl(ctx):
+def _de_lobster_config_includes_system_req_srcs_test_impl(ctx):
     """
     Given a dependable_element whose feature_requirements deps include assumed_system_requirements,
     When the lobster report action is inspected,
-    Then the upstream ASR lobster file must appear as an input to that action.
+    Then the system requirement lobster file must appear as an input to that action.
     """
     env = analysistest.begin(ctx)
 
@@ -388,7 +388,7 @@ def _de_lobster_config_includes_upstream_srcs_test_impl(ctx):
     input_basenames = [f.basename for f in lobster_report_action.inputs.to_list()]
     lobster_inputs = [n for n in input_basenames if n.endswith(".lobster")]
 
-    # The upstream ASR lobster file (from the asr_trlc fixture target) must be present
+    # The system requirement lobster file (from the asr_trlc fixture target) must be present
     asserts.true(
         env,
         "asr_trlc.lobster" in lobster_inputs,
@@ -397,6 +397,6 @@ def _de_lobster_config_includes_upstream_srcs_test_impl(ctx):
 
     return analysistest.end(env)
 
-de_lobster_config_includes_upstream_srcs_test = analysistest.make(
-    impl = _de_lobster_config_includes_upstream_srcs_test_impl,
+de_lobster_config_includes_system_req_srcs_test = analysistest.make(
+    impl = _de_lobster_config_includes_system_req_srcs_test_impl,
 )
