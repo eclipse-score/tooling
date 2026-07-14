@@ -13,9 +13,11 @@
 
 @startuml
 
-package "safety_software_seooc_example" {
-  interface "InternalInterface" as InternalInterface <<interface>>{
-    {abstract} GetData(BindingType binding): Data*
+namespace safety_software_seooc_example {
+  namespace component_example {
+    interface "InternalInterface" as InternalInterface <<interface>>{
+      {abstract} GetData(BindingType binding): Data*
+    }
   }
 }
 
