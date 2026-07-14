@@ -66,13 +66,14 @@ Also generates a `_test` target that validates metamodel compliance.
 ```starlark
 assumptions_of_use(
     name = "my_aou",
-    requirements = [":my_feat_reqs"],
     srcs = ["assumptions.rst"],
 )
 ```
 
-**`bazel build`** — collects LOBSTER traceability files from the linked
-requirements and exposes them via `AssumptionsOfUseInfo`.
+**`bazel build`** — renders the AoU TRLC/RST sources and exposes their
+LOBSTER traceability file via `AssumptionsOfUseInfo.aou_lobster`. Tracing to
+feature/assumed-system requirements is established at the `dependable_element`
+level (via its own `requirements` attribute), not here.
 
 ---
 

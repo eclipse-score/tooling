@@ -210,7 +210,6 @@ component_requirements(
 assumptions_of_use(
     name = "aous",
     srcs = ["fixtures/seooc_test/assumptions_of_use.rst"],
-    requirements = [":feat_req"],
 )
 
 # - Architecture Design:      wp__component_arch
@@ -719,7 +718,6 @@ component_requirements(
 assumptions_of_use(
     name = "aous_rst",
     srcs = ["fixtures/rst_requirements/assumptions_of_use.rst"],
-    requirements = [":feat_req_rst"],
 )
 
 asr_rst_output_test(

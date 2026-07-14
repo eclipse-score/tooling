@@ -210,8 +210,8 @@ def _aous_rst_provider_test_impl(ctx):
     )
     asserts.true(
         env,
-        info.srcs != None,
-        "AssumptionsOfUseInfo should have a srcs field",
+        info.aou_lobster != None,
+        "AssumptionsOfUseInfo should have an aou_lobster field",
     )
 
     return analysistest.end(env)
