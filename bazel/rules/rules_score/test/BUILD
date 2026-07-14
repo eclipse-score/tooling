@@ -88,6 +88,7 @@ load(
 )
 load(
     ":unit_component_test.bzl",
+    "component_coverage_lock_test",
     "component_excludes_feature_req_docs_test",
     "component_provider_test",
     "component_sphinx_sources_test",
@@ -667,6 +668,17 @@ unit_sphinx_sources_test(
     target_under_test = ":test_unit",
 )
 
+# Test Component with coverage lock — verifies analysis phase succeeds when
+# coverage_lock is provided.
+component(
+    name = "test_component_with_coverage_lock",
+    testonly = True,
+    components = [":test_unit"],
+    coverage_lock = "fixtures/coverage_lock_test/coverage.lock.yaml",
+    requirements = [":comp_req"],
+    tests = [],
+)
+
 # Component tests
 component_provider_test(
     name = "component_provider_test",
@@ -681,6 +693,11 @@ component_sphinx_sources_test(
 component_excludes_feature_req_docs_test(
     name = "component_excludes_feature_req_docs_test",
     target_under_test = ":test_component",
+)
+
+component_coverage_lock_test(
+    name = "component_coverage_lock_test",
+    target_under_test = ":test_component_with_coverage_lock",
 )
 
 # Unit, Component, and Dependable Element test suite

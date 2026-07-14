@@ -33,9 +33,11 @@ component(
         "//bazel/rules/rules_score/examples/seooc/unit_1:unit_1",
         "//bazel/rules/rules_score/examples/seooc/unit_2:unit_2",
     ],
+    coverage_lock = "coverage.lock.yaml",
     requirements = [
         "//bazel/rules/rules_score/examples/seooc/docs/requirements:component_requirements",
         "//bazel/rules/rules_score/examples/seooc/docs/requirements:component_requirements_extra",
+        "//bazel/rules/rules_score/examples/seooc/docs/requirements:feature_requirements",
     ],
     tags = ["manual"],
     tests = [],
@@ -60,6 +62,7 @@ dependable_element(
     ],
     glossary = ["//bazel/rules/rules_score/examples/seooc/docs:glossary"],
     integrity_level = "B",
+    maturity = "development",
     requirements = [
         "//bazel/rules/rules_score/examples/seooc/docs/requirements:feature_requirements",
     ],

@@ -179,6 +179,42 @@ def _component_excludes_feature_req_docs_test_impl(ctx):
 component_excludes_feature_req_docs_test = analysistest.make(_component_excludes_feature_req_docs_test_impl)
 
 # ============================================================================
+# Coverage Lock Tests
+# ============================================================================
+
+def _component_coverage_lock_test_impl(ctx):
+    """Test that a component with coverage_lock still provides ComponentInfo and
+    DefaultInfo with output files (analysis phase must succeed)."""
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    asserts.true(
+        env,
+        ComponentInfo in target_under_test,
+        "Component with coverage_lock should provide ComponentInfo",
+    )
+
+    # DefaultInfo.files must contain the lobster report (non-empty).
+    output_files = target_under_test[DefaultInfo].files.to_list()
+    asserts.true(
+        env,
+        len(output_files) > 0,
+        "Component with coverage_lock should declare output files (expected lobster report); got: %s" % output_files,
+    )
+
+    # At least one output file should be named like the lobster report.
+    lobster_report_present = any([f.basename.endswith(".lobster_report") or f.extension == "html" or f.basename.endswith(".lobster") for f in output_files])
+    asserts.true(
+        env,
+        lobster_report_present,
+        "Component with coverage_lock should declare a lobster report output; got: %s" % [f.basename for f in output_files],
+    )
+
+    return analysistest.end(env)
+
+component_coverage_lock_test = analysistest.make(_component_coverage_lock_test_impl)
+
+# ============================================================================
 # Dependable Element Tests
 # ============================================================================
 # Note: Provider tests removed as dependable_element no longer creates a
@@ -202,5 +238,6 @@ def unit_component_test_suite(name):
             ":component_provider_test",
             ":component_sphinx_sources_test",
             ":component_excludes_feature_req_docs_test",
+            ":component_coverage_lock_test",
         ],
     )

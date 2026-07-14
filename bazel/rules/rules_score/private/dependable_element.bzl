@@ -32,6 +32,7 @@ load(
     "AssumedSystemRequirementsInfo",
     "AssumptionsOfUseInfo",
     "CertifiedScope",
+    "ComponentCoverageInfo",
     "ComponentInfo",
     "DependabilityAnalysisInfo",
     "DependableElementInfo",
@@ -1065,6 +1066,61 @@ def _dependable_element_index_impl(ctx):
     comp_test_lobster_depset = depset(transitive = comp_test_lobster_files)
     comp_arch_lobster_depset = depset(transitive = comp_arch_lobster_files)
 
+    # Coverage lock check: run test_runner once per component that has a
+    # coverage_lock_file.  Maturity controls whether drift is an error or a
+    # warning — matching the existing certified-scope / validation pattern.
+    # ComponentCoverageInfo is only present on components that declared coverage_lock.
+    # ComponentInfo.requirements is CompReq-only (FeatReq/AssumedSystemReq are
+    # kept in a separate depset by _component_impl and not included here).
+    coverage_lobster_files = []
+    for comp_target in ctx.attr.components:
+        if ComponentCoverageInfo not in comp_target:
+            continue
+        cov_info = comp_target[ComponentCoverageInfo]
+        if not cov_info.coverage_lock_file:
+            continue
+
+        comp_info = comp_target[ComponentInfo]
+        req_files = comp_info.requirements.to_list()
+        gtest_lobster = cov_info.gtest_lobster_file
+        lock_file = cov_info.coverage_lock_file
+        comp_name = comp_target.label.name
+
+        # Write req lobster manifest (exec paths — used inside the build action sandbox)
+        cov_req_manifest = ctx.actions.declare_file(
+            "{}/coverage_req_manifest_{}.txt".format(ctx.label.name, comp_name),
+        )
+        ctx.actions.write(
+            output = cov_req_manifest,
+            content = "\n".join([f.path for f in req_files]) + "\n",
+        )
+
+        cov_lobster = ctx.actions.declare_file(
+            "{}/coverage_{}.lobster".format(ctx.label.name, comp_name),
+        )
+
+        cov_args = []
+        if ctx.attr.maturity == "development":
+            cov_args.append("--allow-check-failures")
+
+        ctx.actions.run(
+            executable = ctx.executable._test_runner,
+            inputs = depset(req_files + [gtest_lobster, cov_req_manifest, lock_file]),
+            outputs = [cov_lobster],
+            arguments = cov_args,
+            env = {
+                "REQ_COVERAGE_LOBSTER_MANIFEST": cov_req_manifest.path,
+                "REQ_COVERAGE_GTEST_LOBSTER": gtest_lobster.path,
+                "REQ_COVERAGE_LOCK_FILE": lock_file.path,
+                "REQ_COVERAGE_LABEL": str(comp_target.label),
+                "REQ_COVERAGE_PACKAGE": "//" + comp_target.label.package,
+                "REQ_COVERAGE_LOBSTER_OUTPUT": cov_lobster.path,
+            },
+            mnemonic = "ComponentCoverageLockCheck",
+            progress_message = "Checking coverage lock for {}".format(comp_target.label),
+        )
+        coverage_lobster_files.append(cov_lobster)
+
     # Collect safety analysis lobster files from dependability_analysis targets
     sa_lobster_files = {}  # canonical name -> File, merged from all DA targets
     for da_target in ctx.attr.dependability_analysis:
@@ -1154,6 +1210,7 @@ def _dependable_element_index_impl(ctx):
                 "{COMP_REQ_TRACE}": comp_req_trace_lines,
                 "{ARCH_SOURCES}": format_lobster_sources(comp_arch_list),
                 "{UNIT_TEST_SOURCES}": format_lobster_sources(comp_test_list),
+                "{COVERAGE_SOURCES}": format_lobster_sources(coverage_lobster_files),
                 "{PUBLIC_API_SOURCES}": format_lobster_sources(interface_req_list),
                 "{FM_SOURCES}": format_lobster_sources(fm_list),
                 "{CM_SOURCES}": format_lobster_sources(cm_list),
@@ -1161,7 +1218,7 @@ def _dependable_element_index_impl(ctx):
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list
+        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list + coverage_lobster_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_html_report = subrule_lobster_html_report(lobster_report_file)
 
@@ -1301,6 +1358,12 @@ def _dependable_element_index_attrs():
             executable = True,
             cfg = "exec",
             doc = "Tool for filtering received AoU lobster entries based on chain-forwarding YAML.",
+        ),
+        "_test_runner": attr.label(
+            default = Label("//bazel/rules/rules_score/src/req_coverage:test_runner"),
+            executable = True,
+            cfg = "exec",
+            doc = "req_coverage test runner — checks coverage.lock.yaml for each component; maturity controls error vs. warning.",
         ),
     }
     attrs.update(VALIDATION_ATTRS)

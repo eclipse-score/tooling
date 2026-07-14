@@ -13,6 +13,11 @@ activity "Unit Test" {
 {UNIT_TEST_SOURCES}
 }
 
+activity "Requirement Coverage" {
+{COVERAGE_SOURCES}
+  trace to: "Component Requirements";
+}
+
 implementation "Architecture" {
 {ARCH_SOURCES}
   trace to: "Component Requirements";
