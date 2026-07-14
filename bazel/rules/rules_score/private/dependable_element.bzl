@@ -1425,6 +1425,10 @@ def dependable_element(
         aou_forwarding = None,
         maturity = "release",
         sphinx = Label("//bazel/rules/rules_score:score_build"),
+        sphinx_srcs = [],
+        sphinx_renamed_srcs = {},
+        sphinx_extra_opts = [],
+        sphinx_extra_opts_targets = [],
         testonly = True,
         **kwargs):
     """Define a dependable element (Safety Element out of Context - SEooC) following S-CORE process guidelines.
@@ -1464,6 +1468,18 @@ def dependable_element(
         aou_forwarding: Optional label to a YAML file listing received AoU IDs
             to further-forward to this element's own dependees. Only needed for
             chain-forwarding received AoUs that this element cannot handle.
+        sphinx_srcs: Optional list of additional files to include in the
+            generated ``<name>_doc`` sphinx_module source set (for example,
+            ``_static/*.css`` or ``_static/*.js`` assets).
+        sphinx_renamed_srcs: Optional mapping forwarded to
+            ``sphinx_module.renamed_srcs`` for placing files from
+            ``sphinx_srcs`` at explicit paths in the staged Sphinx source tree.
+        sphinx_extra_opts: Optional list forwarded to
+            ``sphinx_module.extra_opts`` for additional Sphinx CLI options
+            (for example, ``-Dhtml_css_files=image_zoom.css``).
+        sphinx_extra_opts_targets: Optional list forwarded to
+            ``sphinx_module.extra_opts_targets`` for analysis-time resolved
+            Sphinx arguments.
         sphinx: Label to sphinx build binary. Default: //bazel/rules/rules_score:score_build
         testonly: If True, only testonly targets can depend on this target.
 
@@ -1507,10 +1523,13 @@ def dependable_element(
     # <dep>_doc (SphinxModuleInfo) and <dep>_doc_needs (SphinxNeedsInfo).
     sphinx_module(
         name = name + "_doc",
-        srcs = [":" + name + "_index"],
+        srcs = [":" + name + "_index"] + sphinx_srcs,
         index = ":" + name + "_index",
         deps = [d + _DOC_TARGET_SUFFIX for d in deps],
         sphinx = sphinx,
+        renamed_srcs = sphinx_renamed_srcs,
+        extra_opts = sphinx_extra_opts,
+        extra_opts_targets = sphinx_extra_opts_targets,
         testonly = testonly,
         **kwargs
     )
