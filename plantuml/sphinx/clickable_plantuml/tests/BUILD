@@ -1,5 +1,5 @@
 # *******************************************************************************
-# Copyright (c) 2025 Contributors to the Eclipse Foundation
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -10,20 +10,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-filegroup(
-    name = "readme_md",
-    srcs = ["README.md"],
-    visibility = ["//visibility:public"],
-)
+load("@pip_rules_score//:requirements.bzl", "requirement")
+load("@score_tooling//python_basics:defs.bzl", "score_py_pytest")
 
-alias(
-    name = "parser",
-    actual = "//plantuml/parser/puml_cli:puml_cli",
-    visibility = ["//visibility:public"],
-)
-
-alias(
-    name = "puml_cli",
-    actual = "//plantuml/parser/puml_cli:puml_cli",
-    visibility = ["//visibility:public"],
+score_py_pytest(
+    name = "test_clickable_plantuml",
+    srcs = ["test_clickable_plantuml.py"],
+    deps = [
+        "//plantuml/sphinx/clickable_plantuml",
+        requirement("docutils"),
+        requirement("sphinx"),
+    ],
 )

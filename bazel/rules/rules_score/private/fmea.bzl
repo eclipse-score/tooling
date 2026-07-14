@@ -69,7 +69,7 @@ def _process_root_causes(ctx):
     ``//tools/sphinx:sphinx-build``), so the metamodel is not staged here.
 
     Returns:
-        Tuple ``(diagram_aux_files, root_causes_lobster_or_None, chains_json)``.
+        Tuple ``(diagram_aux_files, root_causes_idmaps, root_causes_lobster_or_None, chains_json)``.
         ``diagram_aux_files`` (the staged ``.puml`` diagrams) is empty when there
         are no PlantUML inputs; ``chains_json`` is always a File (an empty ``[]``
         array when there are no diagrams).
@@ -86,32 +86,52 @@ def _process_root_causes(ctx):
         # No fault trees: emit an empty chains file so the assembler still runs
         # (rendering every failure mode without an FTA).
         ctx.actions.write(chains_json, "[]\n")
-        return [], None, chains_json
+        return [], [], None, chains_json
 
-    # Symlink each authored diagram next to fmea.rst so ``.. uml:: <basename>``
-    # resolves in the Sphinx tree.
+    # Symlink each authored diagram next to fmea.rst so .. uml:: <basename>
+    # resolves in the Sphinx tree. Basenames must be unique because staging is flat.
     diagram_aux_files = []
+    seen_basenames = {}
+    duplicate_basenames = []
     for src in puml_inputs:
-        staged = ctx.actions.declare_file("{}/{}".format(ctx.label.name, src.basename))
-        ctx.actions.symlink(output = staged, target_file = src)
-        diagram_aux_files.append(staged)
+        if src.basename in seen_basenames:
+            duplicate_basenames.append(src.basename)
+        else:
+            seen_basenames[src.basename] = True
+            staged = ctx.actions.declare_file("{}/{}".format(ctx.label.name, src.basename))
+            ctx.actions.symlink(output = staged, target_file = src)
+            diagram_aux_files.append(staged)
+
+    if duplicate_basenames:
+        fail(
+            "root_causes contains duplicate basenames not supported by fmea staging: {}. "
+                .format(", ".join(duplicate_basenames)) +
+            "Rename diagrams to unique basenames.",
+        )
 
     root_causes_lobster = ctx.actions.declare_file("{}/root_causes.lobster".format(ctx.label.name))
+    root_cause_idmaps = [
+        ctx.actions.declare_file(
+            "{}/{}.idmap.json".format(ctx.label.name, src.basename.rsplit(".", 1)[0]),
+        )
+        for src in puml_inputs
+    ]
 
     args = ctx.actions.args()
     for src in puml_inputs:
         args.add("--file", src.path)
     args.add("--fta-output-dir", root_causes_lobster.dirname)
+    args.add("--idmap-output-dir", root_causes_lobster.dirname)
     args.add("--log-level", get_log_level(ctx))
     ctx.actions.run(
         inputs = puml_inputs,
-        outputs = [root_causes_lobster, chains_json],
+        outputs = [root_causes_lobster, chains_json] + root_cause_idmaps,
         executable = ctx.executable._puml_cli,
         arguments = [args],
         progress_message = "Processing root cause FTA diagrams for %s" % ctx.label.name,
     )
 
-    return diagram_aux_files, root_causes_lobster, chains_json
+    return diagram_aux_files, root_cause_idmaps, root_causes_lobster, chains_json
 
 # ============================================================================
 # Lobster (TRLC traceability) helper
@@ -142,8 +162,9 @@ def _fmea_impl(ctx):
     output_files = []
 
     # 0. FTA: extract chains/lobster + stage diagrams (and metamodel) for rendering.
-    diagram_aux_files, root_causes_lobster, chains_json = _process_root_causes(ctx)
+    diagram_aux_files, root_cause_idmaps, root_causes_lobster, chains_json = _process_root_causes(ctx)
     output_files.extend(diagram_aux_files)
+    output_files.extend(root_cause_idmaps)
 
     # 1. Assemble fmea.rst from the chains + TRLC records (single in-process parse).
     fmea_rst = ctx.actions.declare_file("{}/fmea.rst".format(ctx.label.name))
@@ -207,7 +228,7 @@ def _fmea_impl(ctx):
         SphinxSourcesInfo(
             srcs = sphinx_srcs,
             deps = depset(transitive = [sphinx_srcs]),
-            aux_srcs = depset(diagram_aux_files),
+            aux_srcs = depset(diagram_aux_files + root_cause_idmaps),
         ),
     ]
 

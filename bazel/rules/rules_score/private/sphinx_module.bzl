@@ -14,7 +14,6 @@
 # Helpers
 # ======================================================================================
 load("@bazel_skylib//lib:paths.bzl", "paths")
-load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load("@rules_python//sphinxdocs/private:sphinx_docs_library_info.bzl", "SphinxDocsLibraryInfo")
 load("//bazel/rules/rules_score:providers.bzl", "FilteredExecpathInfo", "SphinxIndexFileInfo", "SphinxModuleInfo", "SphinxNeedsInfo")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
@@ -169,7 +168,6 @@ def _score_html_impl(ctx):
     Phase 1: Generate needs.json for this module and collect from all deps
     Phase 2: Generate HTML with external needs and merge all dependency HTML
     """
-    run_args = []  # Copy of the args to forward along to debug runner
     args = ctx.actions.args()  # Args passed to the action
 
     # Expand location references in extra_opts and collect as sphinx arguments.
@@ -183,16 +181,12 @@ def _score_html_impl(ctx):
     for target in ctx.attr.extra_opts_targets:
         info = target[FilteredExecpathInfo]
         args.add(info.arg)
-        run_args.append(info.arg)
         filtered_files.append(info.matched_file)
     for opt in ctx.attr.extra_opts:
         # Standard extra_opts: expand locations and pass through
         expanded_opt = ctx.expand_location(opt, targets = location_targets)
         args.add(expanded_opt)
-        run_args.append(expanded_opt)
 
-    # Collect all transitive dependencies with deduplication
-    modules = []
     sphinx_toolchain = ctx.toolchains["//bazel/rules/rules_score:toolchain_type"].sphinxinfo
     needs_external_needs = {}
     for dep in ctx.attr.needs:
@@ -205,9 +199,6 @@ def _score_html_impl(ctx):
                 "css_class": "",
                 "version": "1.0",
             }
-    for dep in ctx.attr.deps:
-        if SphinxModuleInfo in dep:
-            modules.extend([dep[SphinxModuleInfo].html_dir])
     needs_external_needs_json = ctx.actions.declare_file(ctx.label.name + "/needs_external_needs.json")
     ctx.actions.write(
         output = needs_external_needs_json,
@@ -217,24 +208,53 @@ def _score_html_impl(ctx):
 
     # Materialize a file under the `_sources` dir
     def _relocate(source_file, dest_path = None):
-        if not dest_path:
-            dest_path = source_file.short_path.removeprefix(ctx.attr.strip_prefix)
-        dest_path = paths.join(source_prefix, dest_path)
+        identity_preserving = (
+            not dest_path and
+            (source_file.short_path.endswith(".puml") or source_file.short_path.endswith(".idmap.json"))
+        )
+
+        compat_dest_path = None
+        if identity_preserving:
+            # Preserve diagram/idmap identity under srcdir:
+            # staged-relative path (from srcdir) == short_path.
+            dest_path = paths.join(source_prefix, source_file.short_path)
+
+            # Keep docs-relative .puml path for existing ``.. uml::`` includes.
+            if source_file.short_path.endswith(".puml"):
+                compat_dest_path = paths.join(
+                    source_prefix,
+                    source_file.short_path.removeprefix(ctx.attr.strip_prefix),
+                )
+        else:
+            if not dest_path:
+                dest_path = source_file.short_path.removeprefix(ctx.attr.strip_prefix)
+            dest_path = paths.join(source_prefix, dest_path)
+
         if source_file.is_directory:
             dest_file = ctx.actions.declare_directory(dest_path)
         else:
             dest_file = ctx.actions.declare_file(dest_path)
+
+        # Symlink all staged source files/directories into the synthetic source
+        # tree; path canonicalization is handled by clickable_plantuml.
         ctx.actions.symlink(
             output = dest_file,
             target_file = source_file,
             progress_message = "Symlinking Sphinx source %{input} to %{output}",
         )
         sphinx_source_files.append(dest_file)
+
+        if compat_dest_path and compat_dest_path != dest_path:
+            compat_file = ctx.actions.declare_file(compat_dest_path)
+            ctx.actions.symlink(
+                output = compat_file,
+                target_file = source_file,
+                progress_message = "Symlinking compatibility Sphinx source %{input} to %{output}",
+            )
+            sphinx_source_files.append(compat_file)
+
         return dest_file
 
-    for dep in ctx.attr.deps:
-        if SphinxModuleInfo in dep:
-            modules.extend([dep[SphinxModuleInfo].html_dir])
     for t in ctx.attr.docs_library_deps:
         info = t[SphinxDocsLibraryInfo]
         for entry in info.transitive.to_list():
