@@ -123,10 +123,8 @@ AnalysisInfo = provider(
 AssumptionsOfUseInfo = provider(
     doc = "Provider for assumptions of use artifacts.",
     fields = {
-        "srcs": "Depset of .lobster traceability files collected from all linked requirements targets.",
         "aou_lobster": "Depset of .lobster traceability files generated from the AoU TRLC sources themselves (used for forwarding to dependees).",
-        "requirements": "List of FeatureRequirementsInfo or ComponentRequirementsInfo providers this AoU traces to.",
-        "name": "Name of the assumptions of use target.",
+        "name": "Name of the assumptions of use (or dependable_element) target.",
     },
 )
 

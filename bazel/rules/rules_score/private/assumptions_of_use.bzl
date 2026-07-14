@@ -14,127 +14,22 @@
 """
 Assumptions of Use build rules for S-CORE projects.
 
-This module provides macros and rules for defining Assumptions of Use (AoU)
-following S-CORE process guidelines. Assumptions of Use define the safety-relevant
+This module provides a macro for defining Assumptions of Use (AoU) following
+S-CORE process guidelines. Assumptions of Use define the safety-relevant
 operating conditions and constraints for a Safety Element out of Context (SEooC).
+
+Implemented as the "aou" kind of the shared score_requirements_rule (see
+requirements.bzl), so raw .trlc files, .rst files, and existing
+TrlcProviderInfo-emitting targets (e.g. trlc_requirements) may all be passed
+as srcs, matching the conventions of feature_requirements,
+component_requirements, and assumed_system_requirements.
+
+Traceability to feature/assumed-system requirements is established at the
+dependable_element level (via its own `requirements` attribute), not here.
 """
 
-load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
-load("@trlc//:trlc.bzl", "TrlcProviderInfo", "trlc_requirements_test")
-load("//bazel/rules/rules_score:providers.bzl", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_srcs_to_trlc")
-
-# ============================================================================
-# Private Rule Implementation
-# ============================================================================
-
-def _assumptions_of_use_impl(ctx):
-    """Implementation for assumptions_of_use rule.
-
-    Collects assumptions of use source files and links them to their
-    parent feature requirements through providers.
-
-    Args:
-        ctx: Rule context
-
-    Returns:
-        List of providers including DefaultInfo and AssumptionsOfUseInfo
-    """
-
-    # Render each TRLC source to RST for Sphinx
-    rendered_files = []
-    for src in ctx.attr.srcs:
-        trlc_provider = src[TrlcProviderInfo]
-        rendered_file = ctx.actions.declare_file("{}_{}.rst".format(ctx.attr.name, src.label.name))
-        args = ctx.actions.args()
-        args.add("--output", rendered_file.path)
-        args.add("--input-dir", ".")
-        args.add("--title", ctx.label.name.replace("_", " ").title())
-        args.add("--source-files")
-        args.add_all(trlc_provider.reqs)
-        ctx.actions.run(
-            inputs = src[DefaultInfo].files,
-            outputs = [rendered_file],
-            arguments = [args],
-            executable = ctx.executable._renderer,
-        )
-        rendered_files.append(rendered_file)
-
-    all_srcs = depset(rendered_files)
-
-    # Generate lobster file from AoU TRLC sources for traceability forwarding
-    all_trlc_files = []
-    for src in ctx.attr.srcs:
-        all_trlc_files.extend(src[DefaultInfo].files.to_list())
-    aou_lobster_file = None
-    if all_trlc_files and ctx.file.lobster_config:
-        aou_lobster_file, _ = subrule_lobster_trlc(all_trlc_files, ctx.file.lobster_config)
-
-    # Collect requirements providers and lobster files
-    reqs = []
-    lobster_files = []
-    for req in ctx.attr.requirements:
-        if FeatureRequirementsInfo in req:
-            info = req[FeatureRequirementsInfo]
-            reqs.append(info)
-            lobster_files.append(info.srcs)
-        elif ComponentRequirementsInfo in req:
-            info = req[ComponentRequirementsInfo]
-            reqs.append(info)
-            lobster_files.append(info.srcs)
-
-    # Collect transitive sphinx sources from requirements
-    transitive = [all_srcs]
-    for req in ctx.attr.requirements:
-        if SphinxSourcesInfo in req:
-            transitive.append(req[SphinxSourcesInfo].deps)
-
-    return [
-        DefaultInfo(files = all_srcs),
-        AssumptionsOfUseInfo(
-            srcs = depset(transitive = lobster_files),
-            aou_lobster = depset([aou_lobster_file] if aou_lobster_file else []),
-            name = ctx.label.name,
-        ),
-        SphinxSourcesInfo(
-            srcs = all_srcs,
-            deps = depset(transitive = transitive),
-            aux_srcs = depset(),
-        ),
-    ]
-
-# ============================================================================
-# Rule Definition
-# ============================================================================
-
-_assumptions_of_use = rule(
-    implementation = _assumptions_of_use_impl,
-    doc = "Collects Assumptions of Use documents with traceability to feature requirements",
-    attrs = {
-        "srcs": attr.label_list(
-            providers = [TrlcProviderInfo],
-            mandatory = True,
-            doc = "trlc_requirements targets containing Assumptions of Use specifications",
-        ),
-        "requirements": attr.label_list(
-            providers = [[FeatureRequirementsInfo], [ComponentRequirementsInfo]],
-            mandatory = False,
-            doc = "List of feature or component requirements targets that these Assumptions of Use trace to",
-        ),
-        "lobster_config": attr.label(
-            allow_single_file = True,
-            mandatory = True,
-            doc = "Lobster YAML configuration file for AoU traceability extraction.",
-        ),
-        "_renderer": attr.label(
-            default = Label("@trlc//tools/trlc_rst:trlc_rst"),
-            executable = True,
-            allow_files = True,
-            cfg = "exec",
-        ),
-    },
-    subrules = [subrule_lobster_trlc],
-)
+load("@trlc//:trlc.bzl", "trlc_requirements_test")
+load("//bazel/rules/rules_score/private:requirements.bzl", "score_requirements_rule")
 
 # ============================================================================
 # Public Macro
@@ -143,7 +38,7 @@ _assumptions_of_use = rule(
 def assumptions_of_use(
         name,
         srcs,
-        requirements = [],
+        deps = [],
         ref_package = None,
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:aou_config"),
         **kwargs):
@@ -157,13 +52,13 @@ def assumptions_of_use(
     Args:
         name: The name of the assumptions of use target. Used as the base
             name for all generated targets.
-        srcs: List of labels to trlc_requirements targets containing the
-            Assumptions of Use specifications as defined in the S-CORE
-            process. RST files containing ``aou_req`` directives are also
-            accepted and will be converted to TRLC automatically.
-        requirements: Optional list of labels to feature or component requirements
-            targets that these Assumptions of Use trace to. Establishes
-            traceability as defined in the S-CORE process.
+        srcs: List of TRLC/RST/label sources defining the Assumptions of Use.
+            Accepts raw ``.trlc`` files, ``.rst`` files containing ``aou_req``
+            directives (converted to TRLC automatically), and/or labels to
+            existing targets that already provide TrlcProviderInfo (e.g.
+            ``trlc_requirements`` targets).
+        deps: Optional list of other requirement targets (providing
+            TrlcProviderInfo) needed for cross-reference parsing.
         ref_package: Optional TRLC package prefix used for ``derived_from``
             cross-references when converting RST sources.
         lobster_config: Lobster YAML configuration for AoU traceability
@@ -174,12 +69,11 @@ def assumptions_of_use(
         <name>: Main assumptions of use target providing AssumptionsOfUseInfo
         <name>_test: TRLC validation test for the assumptions of use sources
 
-    Example using trlc_requirements targets:
+    Example using raw TRLC sources directly:
         ```starlark
         assumptions_of_use(
             name = "my_assumptions_of_use",
-            srcs = [":my_aous_trlc"],
-            requirements = [":my_feature_requirements"],
+            srcs = ["assumptions_of_use.trlc"],
         )
         ```
 
@@ -188,21 +82,20 @@ def assumptions_of_use(
         assumptions_of_use(
             name = "my_assumptions_of_use",
             srcs = ["docs/assumptions_of_use.rst"],
-            requirements = [":my_feature_requirements"],
         )
         ```
     """
-    trlc_srcs = rst_srcs_to_trlc(name, srcs, ref_package = ref_package or "")
-
-    _assumptions_of_use(
+    score_requirements_rule(
         name = name,
-        srcs = trlc_srcs,
-        requirements = requirements,
+        srcs = srcs,
+        deps = deps,
+        req_kind = "aou",
         lobster_config = lobster_config,
+        ref_package = ref_package or "",
         **kwargs
     )
     trlc_requirements_test(
         name = name + "_test",
-        reqs = trlc_srcs,
+        reqs = [":" + name],
         **kwargs
     )

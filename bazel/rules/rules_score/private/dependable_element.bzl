@@ -1100,6 +1100,11 @@ def _dependable_element_index_impl(ctx):
 
     own_aou_lobster_depset = depset(transitive = own_aou_lobster_files)
 
+    own_assumptions_of_use_info = AssumptionsOfUseInfo(
+        aou_lobster = own_aou_lobster_depset,
+        name = ctx.label.name,
+    )
+
     # Collect forwarded AoU lobster files from deps (received AoUs)
     received_aou_lobster_files = []
     for dep in ctx.attr.processed_deps:
@@ -1209,6 +1214,7 @@ def _dependable_element_index_impl(ctx):
             own_aou_lobster = own_aou_lobster_depset,
             chain_forwarded_lobster = chain_forwarded_lobster_depset,
         ),
+        own_assumptions_of_use_info,
         OutputGroupInfo(debug = depset(validation_output_files)),
     ]
 

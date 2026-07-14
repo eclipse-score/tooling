@@ -21,7 +21,7 @@ public-facing macros.
 
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo", "subrule_trlc_image_stage")
-load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
 # ============================================================================
@@ -99,6 +99,11 @@ def _requirements_impl(ctx):
             srcs = depset([lobster_file]),
             name = ctx.label.name,
         )
+    elif ctx.attr.req_kind == "aou":
+        req_provider = AssumptionsOfUseInfo(
+            aou_lobster = depset([lobster_file]),
+            name = ctx.label.name,
+        )
     else:  # assumed_system
         req_provider = AssumedSystemRequirementsInfo(
             srcs = depset([lobster_file]),
@@ -153,7 +158,7 @@ _score_requirements_rule = rule(
             doc = "Other requirement targets whose TRLC records are needed for cross-reference parsing.",
         ),
         "req_kind": attr.string(
-            values = ["feature", "component", "assumed_system"],
+            values = ["feature", "component", "assumed_system", "aou"],
             mandatory = True,
             doc = "Kind of requirements; determines which domain provider is emitted.",
         ),
@@ -192,16 +197,28 @@ def score_requirements_rule(
         **kwargs):
     """Macro wrapper around _score_requirements_rule with RST support.
 
-    Any .rst files in srcs are converted to .trlc via rst_to_trlc before
-    being passed to the underlying rule.  .trlc sources are passed through
-    unchanged.
+    Each entry in srcs is classified as follows:
+      - ".rst" files are converted to .trlc via rst_to_trlc and treated as
+        own sources.
+      - ".trlc" files are passed through unchanged as own sources.
+      - Any other label is assumed to already provide TrlcProviderInfo (e.g.
+        an existing trlc_requirements/assumed_system_requirements/... target)
+        and is routed to ``deps`` instead, since only raw TRLC files may be
+        listed in the underlying rule's ``srcs``.
 
     Args:
         ref_package: TRLC package prefix used for derived_from cross-references
             when converting RST sources (e.g. "AssumedSystemRequirements" for
             feature requirements that derive from ASR).
+
+    Returns:
+        List of resolved labels corresponding to srcs (after any .rst-to-.trlc
+        conversion), in the same order. Useful for callers that need to run
+        trlc_requirements_test against the same source set.
     """
     trlc_srcs = []
+    extra_deps = []
+    resolved_srcs = []
     for i, src in enumerate(srcs):
         if type(src) == type("") and src.endswith(".rst"):
             gen_name = "_{}_rst_gen_{}".format(name, i)
@@ -211,15 +228,22 @@ def score_requirements_rule(
                 ref_package = ref_package,
             )
             trlc_srcs.append(":" + gen_name)
-        else:
+            resolved_srcs.append(":" + gen_name)
+        elif type(src) == type("") and src.endswith(".trlc"):
             trlc_srcs.append(src)
+            resolved_srcs.append(src)
+        else:
+            extra_deps.append(src)
+            resolved_srcs.append(src)
 
     _score_requirements_rule(
         name = name,
         srcs = trlc_srcs,
-        deps = deps,
+        deps = deps + extra_deps,
         req_kind = req_kind,
         lobster_config = lobster_config,
         spec = spec,
         **kwargs
     )
+
+    return resolved_srcs
