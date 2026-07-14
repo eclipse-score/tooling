@@ -14,7 +14,7 @@
 #ifndef BAR_H
 #define BAR_H
 
-#include "bazel/rules/rules_score/examples/seooc/unit_1/foo.h"
+#include "unit_1/foo.h"
 
 #include <cstdint>
 #include <memory>

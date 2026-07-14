@@ -222,6 +222,7 @@ The Bazel rule sets one variable:
      - Content
    * - ``GRAPHVIZ_DOT``
      - Path to the ``dot`` binary
+
 The value points to the hermetic wrapper executable.  The wrapper resolves and
 executes graphviz from the sysroot itself, so no custom ``LD_LIBRARY_PATH`` /
 ``GVBINDIR`` wiring is required in the Sphinx action.

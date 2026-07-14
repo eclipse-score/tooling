@@ -11,10 +11,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load(
-    "//bazel/rules/rules_score:rules_score.bzl",
+    "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
 )
-load("//validation/ai_checker:ai_checker.bzl", "architecture_ai_test")
+load("@score_tooling//validation/ai_checker:ai_checker.bzl", "architecture_ai_test")
 
 architectural_design(
     name = "sample_seooc_design",

@@ -167,6 +167,7 @@ sphinx_docs_library(
 
 sphinx_module(
     name = "rules_score_doc",
+    testonly = True,
     srcs = glob(
         [
             "docs/**/*.rst",

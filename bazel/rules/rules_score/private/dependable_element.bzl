@@ -1432,6 +1432,7 @@ def dependable_element(
         maturity = "release",
         sphinx = Label("//bazel/rules/rules_score:score_build"),
         testonly = True,
+        docs_prefix = "docs/sphinx/",
         **kwargs):
     """Define a dependable element (Safety Element out of Context - SEooC) following S-CORE process guidelines.
 
@@ -1472,6 +1473,11 @@ def dependable_element(
             chain-forwarding received AoUs that this element cannot handle.
         sphinx: Label to sphinx build binary. Default: //bazel/rules/rules_score:score_build
         testonly: If True, only testonly targets can depend on this target.
+        docs_prefix: Prefix under which the generated `<name>_rst` sphinx_docs_library
+            exposes its RST sources, so that an external Sphinx build can embed it via
+            `docs_library_deps`. Defaults to "docs/sphinx/" (the doc root convention used
+            by the communication repo); override when consuming from a different
+            directory layout (e.g. "bazel/rules/rules_score/docs/sphinx/").
 
     Generated Targets:
         <name>_index: Internal rule that generates index.rst and copies artifacts
@@ -1538,7 +1544,7 @@ def dependable_element(
     sphinx_docs_library(
         name = name + "_rst",
         srcs = [":" + name + "_index"],
-        prefix = "docs/sphinx/",
+        prefix = docs_prefix,
         testonly = testonly,
         visibility = ["//visibility:public"],
     )

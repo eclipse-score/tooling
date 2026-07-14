@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-#include "bazel/rules/rules_score/examples/seooc/unit_1/foo.h"
+#include "unit_1/foo.h"
 
 #include <gtest/gtest.h>
 

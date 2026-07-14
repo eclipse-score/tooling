@@ -27,6 +27,28 @@ jobs:
     permissions:
       contents: read
       actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: coverage
+            run: |
+              bazel test //coverage/tests:all
+          - name: plantuml
+            run: |
+              bazel build //plantuml/... --config=clippy
+              bazel test //plantuml/...
+          - name: validation
+            run: |
+              bazel build //validation/... --config=clippy
+              bazel test //validation/...
+          - name: mod_deps
+            run: |
+              bazel mod deps --lockfile_mode=update
+          - name: libclang
+            run: |
+              bazel build //cpp/libclang/... --config=clippy
+              bazel test //cpp/libclang/...
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
@@ -37,34 +59,12 @@ jobs:
       - uses: castler/setup-bazel@cache-optimized
         with:
           bazelisk-cache: true
-          disk-cache: root_workspace_tests
+          disk-cache: root_workspace_tests-${{ matrix.name }}
           repository-cache: true
           cache-optimized: true
           cache-save: ${{ github.ref == 'refs/heads/main' }}
-      - name: Run coverage module tests
-        run: |
-          bazel test //coverage/tests:all
-      - name: Run Plantuml Tooling clippy
-        run: |
-          bazel build //plantuml/... --config=clippy
-      - name: Run Plantuml Tooling tests
-        run: |
-          bazel test //plantuml/...
-      - name: Run Validation Tooling clippy
-        run: |
-          bazel build //validation/... --config=clippy
-      - name: Run Validation Tooling tests
-        run: |
-          bazel test //validation/...
-      - name: Ensure correct dependency resolution
-        run: |
-          bazel mod deps --lockfile_mode=update
-      - name: Run Libclang Parser Tooling clippy
-        run: |
-          bazel build //cpp/libclang/... --config=clippy
-      - name: Run Libclang Parser Tooling tests
-        run: |
-          bazel test //cpp/libclang/...
+      - name: Run ${{ matrix.name }}
+        run: ${{ matrix.run }}
   integration_tests:
     runs-on: ubuntu-24.04
     permissions:
@@ -101,6 +101,24 @@ jobs:
     permissions:
       contents: read
       actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: rules_score
+            run: |
+              cd bazel/rules/rules_score/test
+              bazel test //...
+          - name: seooc_example
+            run: |
+              cd bazel/rules/rules_score/examples/seooc
+              bazel build //...
+              bazel test //...
+          - name: some_other_library_example
+            run: |
+              cd bazel/rules/rules_score/examples/some_other_library
+              bazel build //...
+              bazel test //...
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
@@ -111,15 +129,9 @@ jobs:
       - uses: castler/setup-bazel@cache-optimized
         with:
           bazelisk-cache: true
-          disk-cache: rules_score_tests
+          disk-cache: rules_score_tests-${{ matrix.name }}
           repository-cache: true
           cache-optimized: true
           cache-save: ${{ github.ref == 'refs/heads/main' }}
-      - name: Install Missing Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcairo2-dev
-      - name: Run rules_score tests
-        run: |
-          cd bazel/rules/rules_score/test
-          bazel test //...
+      - name: Run ${{ matrix.name }}
+        run: ${{ matrix.run }}

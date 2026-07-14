@@ -334,14 +334,11 @@ The ``fmea`` rule drives three actions, all reading the input artifacts above:
 The lobster outputs travel separately on ``AnalysisInfo.lobster_files``
 (``failuremodes.lobster``, ``controlmeasures.lobster``, ``root_causes.lobster``)
 into the ``dependability_analysis`` traceability report.
-  to the outer index toctree.  ``fmea`` uses this for the ``detail_*.rst``
-  sub-pages, which are referenced from the inner ``.. toctree::`` inside
-  ``fmea.rst`` rather than from the section index.
 
 .. _hermetic-tool-path-resolution:
 
 Hermetic tool path resolution
-----------------
+------------------------------
 
 Background: Bazel action environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
