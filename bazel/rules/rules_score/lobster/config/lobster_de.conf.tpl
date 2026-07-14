@@ -13,6 +13,7 @@ activity "Unit Test" {
 {UNIT_TEST_SOURCES}
 }
 
+{COVERAGE_BLOCK}
 implementation "Architecture" {
 {ARCH_SOURCES}
   trace to: "Component Requirements";

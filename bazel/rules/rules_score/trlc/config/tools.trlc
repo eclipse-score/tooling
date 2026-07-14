@@ -79,4 +79,9 @@ section "Tools" {
         description = "Manual Analysis Framework"
         classification = ToolQualification.Classification.None
     }
+
+    ToolQualification.Tool ReqCoverage {
+        description = "Requirement Coverage Lock — verifies complete test coverage of requirements via lobster-tracing annotations"
+        classification = ToolQualification.Classification.None
+    }
 }

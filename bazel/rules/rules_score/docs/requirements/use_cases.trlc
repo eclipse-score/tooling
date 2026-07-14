@@ -173,4 +173,51 @@ section "Use Cases" {
         affected_tools = [Tools.Verifier, Tools.PlantumlParser, Tools.LibClang, Tools.Bazel]
     }
 
+    ToolQualification.UseCase Declare_Complete_Coverage {
+        description = '''
+            As a safety engineer I want to declare that a set of requirements
+            is completely covered by automated test cases so that the coverage
+            claim is explicit, auditable, and version-controlled.
+        '''
+        affected_tools = [Tools.ReqCoverage]
+    }
+
+    ToolQualification.UseCase Detect_Specification_Drift {
+        description = '''
+            In the CI pipeline I want to detect automatically when a test's
+            given/when/then specification has changed without re-approval so
+            that stale coverage claims are caught before release.
+        '''
+        affected_tools = [Tools.ReqCoverage]
+    }
+
+    ToolQualification.UseCase Detect_Coverage_Set_Changes {
+        description = '''
+            In the CI pipeline I want to detect when a test case is added to or
+            removed from the set of tests linked to a requirement so that
+            undeclared coverage changes cannot pass silently.
+        '''
+        affected_tools = [Tools.ReqCoverage]
+    }
+
+    ToolQualification.UseCase Generate_Covered_Traceability_Artifact {
+        description = '''
+            As a project integrator I want the tool to emit a LOBSTER-compatible
+            artifact that marks each linked test case as covered or not so that
+            complete requirement coverage is visible in the LOBSTER dashboard.
+        '''
+        affected_tools = [Tools.ReqCoverage, Tools.Lobster]
+    }
+
+    ToolQualification.UseCase Semi_Automated_Lock_Update {
+        description = '''
+            As an engineer I want a single bazel run command that reads
+            requirement identifiers from the TRLC requirements target,
+            discovers all linked test cases in the GTest XML results, and
+            rewrites the lock file, so that I only need to review the diff
+            before committing my approval.
+        '''
+        affected_tools = [Tools.ReqCoverage, Tools.Bazel]
+    }
+
 }

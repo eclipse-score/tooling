@@ -1,0 +1,81 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml req_coverage Architecture
+skinparam componentStyle rectangle
+skinparam linetype ortho
+left to right direction
+
+package "Inputs" {
+  [TRLC .lobster] as trlc
+  [GTest binary] as gtest_bin
+  [coverage.lock.yaml\n(committed)] as lock_committed
+}
+
+package "component rule\n(component.bzl)" {
+  [subrule_lobster_gtest] as subrule
+  [_component_test\n(coverage_lock attr)] as rule_test
+  [_component_update\n(.update target)] as rule_update
+}
+
+gtest_bin  --> subrule     : XML results
+subrule    --> rule_test   : gtest.lobster
+subrule    --> rule_update : gtest.lobster
+trlc       --> rule_test   : action manifest\n(exec paths)
+trlc       --> rule_update : runfiles manifest\n(short paths)
+
+package "Python modules\n(src/req_coverage/)" {
+  [read_gtest_lobster\n+ scan + resolve + req_ids] as reader
+  [compute_lock] as compute
+  [check_lock] as check
+  [lobster_generator] as gen
+}
+
+package "Test phase  (bazel test //...)" #LightBlue {
+  [test_runner] as test_r
+}
+
+package "Run phase  (bazel run .update)" #LightYellow {
+  [update_runner] as update_r
+}
+
+rule_test  ..> test_r   : ctx.actions.run\n(--allow-check-failures)
+rule_update ..> update_r : bazel run
+
+lock_committed --> check : committed lock
+reader --> compute
+compute --> check
+compute --> gen
+check --> test_r
+gen  --> test_r
+reader --> update_r
+compute --> update_r
+
+package "Outputs" {
+  [coverage.lobster\nartifact] as lobster_out
+  [coverage.lock.yaml\n(refreshed)] as lock_out
+}
+
+test_r   --> lobster_out : always emitted
+update_r --> lock_out    : overwrites committed
+
+note bottom of rule_test
+  User API:
+  component(
+    name = "my_comp",
+    coverage_lock = "coverage.lock.yaml",
+    ...
+  )
+end note
+
+@enduml

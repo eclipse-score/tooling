@@ -311,7 +311,7 @@ bazel_dep(name = "trlc", version = "3.0.0")
 bazel_dep(name = "lobster", version = "1.0.3")
 git_override(
     module_name = "lobster",
-    commit = "07382c33f95e22992e0f8788c0537ec06877e51f",
+    commit = "247927a438647f68c70a61f9fdde155f5aee145d",
     remote = "https://github.com/bmw-software-engineering/lobster.git",
 )
 
