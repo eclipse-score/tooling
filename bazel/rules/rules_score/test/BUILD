@@ -1,5 +1,3 @@
-load("@aspect_rules_py//py:defs.bzl", "py_binary")
-
 # *******************************************************************************
 # Copyright (c) 2025 Contributors to the Eclipse Foundation
 #
@@ -12,6 +10,9 @@ load("@aspect_rules_py//py:defs.bzl", "py_binary")
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+
+load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("@pip_tooling_test//:requirements.bzl", "requirement")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load(
     "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
@@ -115,6 +116,7 @@ py_binary(
         "@score_docs_as_code//src/extensions/score_sphinx_bundle",
         "@score_tooling//bazel/rules/rules_score:bazel_sphinx_needs",
         "@score_tooling//bazel/rules/rules_score:sphinx_module_ext",
+        requirement("sphinx-rtd-theme"),
     ],
 )
 

@@ -61,7 +61,7 @@ pip.parse(
 )
 use_repo(pip, "pip_tooling_test")
 
-bazel_dep(name = "score_docs_as_code", version = "3.0.1", dev_dependency = True)
+bazel_dep(name = "score_docs_as_code", version = "4.6.1", dev_dependency = True)
 
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
 # bazel_dep(name = "score_platform", version = "0.5.0")

@@ -38,7 +38,6 @@ extensions = [
     "score_plantuml",
     "score_metamodel",
     "score_draw_uml_funcs",
-    "score_source_code_linker",
     "score_layout",
 ]
 

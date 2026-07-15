@@ -45,10 +45,8 @@ The `languages` parameter selects which formatters are wired up. Supported value
 
 | Language   | Formatter                                              |
 | ---------- | ------------------------------------------------------ |
-| `python`   | `@aspect_rules_lint//format:ruff`                      |
 | `rust`     | `@score_tooling//format_checker:rustfmt_with_policies` |
 | `starlark` | `@buildifier_prebuilt//:buildifier`                    |
-| `yaml`     | `@aspect_rules_lint//format:yamlfmt`                   |
 | `cpp`      | `@llvm_toolchain//:clang-format`                       |
 
 When `languages` is omitted, every language except `cpp` is enabled. C++ is
@@ -103,8 +101,8 @@ This will register two Bazel targets:
 To control which formatters run, pass an explicit `languages` list:
 
 ```python
-# Only check Python and Starlark.
-use_format_targets(languages = ["python", "starlark"])
+# Only check Starlark.
+use_format_targets(languages = ["starlark"])
 ```
 
 ### 3️⃣ In VS Code settings:
@@ -141,7 +139,7 @@ bazel run @score_tooling//format_checker:rustfmt_with_policies
 C++ formatting is opt-in. Enable it by adding `cpp` to the `languages` list:
 
 ```python
-use_format_targets(languages = ["python", "rust", "starlark", "yaml", "cpp"])
+use_format_targets(languages = ["rust", "starlark", "cpp"])
 ```
 
 - Formatter label: `@llvm_toolchain//:clang-format`, which requires the LLVM
