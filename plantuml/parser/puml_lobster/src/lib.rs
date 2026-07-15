@@ -151,17 +151,14 @@ fn map_entity_type_to_kind(entity_type: EntityType) -> &'static str {
 pub fn write_lobster_to_file(
     model: LobsterModel<'_>,
     input_path: &Path,
+    source_path: &str,
     output_dir: &Path,
 ) -> io::Result<PathBuf> {
     let lobster = match model {
         LobsterModel::Component(component_model) => {
-            let source_str = input_path.to_string_lossy().into_owned();
-            comp_model_to_lobster(component_model, &source_str)
+            comp_model_to_lobster(component_model, source_path)
         }
-        LobsterModel::Class(class_model) => {
-            let source_str = input_path.to_string_lossy().into_owned();
-            class_model_to_lobster(class_model, &source_str)
-        }
+        LobsterModel::Class(class_model) => class_model_to_lobster(class_model, source_path),
         LobsterModel::Empty => empty_lobster_document(),
     };
 
