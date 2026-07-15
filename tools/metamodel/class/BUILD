@@ -22,6 +22,7 @@ rust_library(
     crate_root = "class_logic.rs",
     edition = "2021",
     deps = [
+        "//tools/metamodel/common:source_location",
         "@crates//:serde",
         "@crates//:thiserror",
     ],

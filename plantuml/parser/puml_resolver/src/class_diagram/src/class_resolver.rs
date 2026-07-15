@@ -92,6 +92,10 @@ impl ClassResolver {
             self.process_relationship(rel, None)?;
         }
 
+        for elem in &file.elements {
+            self.process_declared_relations_top_level(elem, None)?;
+        }
+
         self.populate_entity_relationships();
 
         Ok(())
@@ -155,14 +159,6 @@ impl ClassResolver {
         name.display
             .clone()
             .unwrap_or_else(|| name.internal.clone())
-    }
-
-    fn current_source_file(&self) -> Option<String> {
-        self.logic
-            .source_files
-            .first()
-            .filter(|source_file| !source_file.is_empty())
-            .cloned()
     }
 
     fn register_entity_names(&mut self, name: &Name, id: &str) {
@@ -334,11 +330,22 @@ impl ClassResolver {
                     &def.name.internal,
                     &def.extends,
                     parent.clone(),
+                    &def.source_location,
                 )?;
-                self.process_implements_relationships(&def.name.internal, &def.implements, parent)?;
+                self.process_implements_relationships(
+                    &def.name.internal,
+                    &def.implements,
+                    parent,
+                    &def.source_location,
+                )?;
             }
             Element::InterfaceDef(def) => {
-                self.process_extends_relationships(&def.name.internal, &def.extends, parent)?;
+                self.process_extends_relationships(
+                    &def.name.internal,
+                    &def.extends,
+                    parent,
+                    &def.source_location,
+                )?;
             }
             _ => {}
         }
@@ -351,8 +358,15 @@ impl ClassResolver {
         child_name: &str,
         bases: &[String],
         parent: Option<String>,
+        source_location: &SourceLocation,
     ) -> Result<(), ClassPumlResolverError> {
-        self.process_declared_relationships(child_name, bases, parent, RelationType::Inheritance)
+        self.process_declared_relationships(
+            child_name,
+            bases,
+            parent,
+            RelationType::Inheritance,
+            source_location,
+        )
     }
 
     fn process_implements_relationships(
@@ -360,12 +374,14 @@ impl ClassResolver {
         class_name: &str,
         interfaces: &[String],
         parent: Option<String>,
+        source_location: &SourceLocation,
     ) -> Result<(), ClassPumlResolverError> {
         self.process_declared_relationships(
             class_name,
             interfaces,
             parent,
             RelationType::Implementation,
+            source_location,
         )
     }
 
@@ -375,6 +391,7 @@ impl ClassResolver {
         targets: &[String],
         parent: Option<String>,
         relation_type: RelationType,
+        source_location: &SourceLocation,
     ) -> Result<(), ClassPumlResolverError> {
         if targets.is_empty() {
             return Ok(());
@@ -395,6 +412,7 @@ impl ClassResolver {
                 relation_type,
                 source_multiplicity: None,
                 target_multiplicity: None,
+                source_location: source_location.clone(),
             });
         }
 
@@ -418,34 +436,36 @@ impl ClassResolver {
     }
 
     fn process_class(&mut self, def: &Element, parent: Option<String>, entity_type: EntityType) {
-        let (name, attributes, type_aliases, methods, template_parameters, source_line) = match def
-        {
-            Element::ClassDef(c) => (
-                &c.name,
-                &c.attributes,
-                &c.type_aliases,
-                &c.methods,
-                &c.template_parameters,
-                c.source_line,
-            ),
-            Element::StructDef(s) => (
-                &s.name,
-                &s.attributes,
-                &s.type_aliases,
-                &s.methods,
-                &s.template_parameters,
-                s.source_line,
-            ),
-            Element::InterfaceDef(i) => (
-                &i.name,
-                &i.attributes,
-                &i.type_aliases,
-                &i.methods,
-                &i.template_parameters,
-                i.source_line,
-            ),
-            Element::EnumDef(_) => unreachable!("EnumDef should not be passed to process_class"),
-        };
+        let (name, attributes, type_aliases, methods, template_parameters, source_location) =
+            match def {
+                Element::ClassDef(c) => (
+                    &c.name,
+                    &c.attributes,
+                    &c.type_aliases,
+                    &c.methods,
+                    &c.template_parameters,
+                    &c.source_location,
+                ),
+                Element::StructDef(s) => (
+                    &s.name,
+                    &s.attributes,
+                    &s.type_aliases,
+                    &s.methods,
+                    &s.template_parameters,
+                    &s.source_location,
+                ),
+                Element::InterfaceDef(i) => (
+                    &i.name,
+                    &i.attributes,
+                    &i.type_aliases,
+                    &i.methods,
+                    &i.template_parameters,
+                    &i.source_location,
+                ),
+                Element::EnumDef(_) => {
+                    unreachable!("EnumDef should not be passed to process_class")
+                }
+            };
 
         let id = self.build_fqn(&name.internal, &parent);
 
@@ -466,8 +486,7 @@ impl ClassResolver {
             template_parameters,
             enum_literals: vec![],
             relationships: vec![],
-            source_file: self.current_source_file(),
-            source_line,
+            source_location: source_location.clone(),
         };
 
         self.register_entity_names(name, &id);
@@ -478,6 +497,7 @@ impl ClassResolver {
         TypeAlias {
             alias: type_alias.alias.clone(),
             original_type: type_alias.original_type.clone(),
+            source_location: type_alias.source_location.clone(),
         }
     }
 
@@ -493,6 +513,7 @@ impl ClassResolver {
             data_type: attr.r#type.clone(),
             visibility: Self::map_visibility(attr.visibility.clone()),
             is_static: has_modifier(&attr.modifiers, "static"),
+            source_location: attr.source_location.clone(),
         }
     }
 
@@ -526,6 +547,7 @@ impl ClassResolver {
                 (is_constructor, MethodModifier::Constructor),
                 (is_destructor, MethodModifier::Destructor),
             ]),
+            source_location: m.source_location.clone(),
         }
     }
 
@@ -654,6 +676,7 @@ impl ClassResolver {
                 EnumLiteral {
                     name: item.name.clone(),
                     value,
+                    source_location: item.source_location.clone(),
                 }
             })
             .collect();
@@ -669,8 +692,7 @@ impl ClassResolver {
             template_parameters: None,
             enum_literals: literals,
             relationships: vec![],
-            source_file: self.current_source_file(),
-            source_line: def.source_line,
+            source_location: def.source_location.clone(),
         });
 
         self.register_entity_names(&def.name, &id);
@@ -790,6 +812,7 @@ impl ClassResolver {
             relation_type,
             source_multiplicity,
             target_multiplicity,
+            source_location: rel.source_location.clone(),
         });
 
         Ok(())
@@ -847,7 +870,7 @@ mod tests {
             name: make_name(name),
             namespace: "".to_string(),
             package: "".to_string(),
-            source_line: None,
+            source_location: SourceLocation::new("test.puml", 1),
             is_abstract: false,
             template_parameters: None,
             extends: vec![],
@@ -863,13 +886,14 @@ mod tests {
             name: make_name(name),
             namespace: "".to_string(),
             package: "".to_string(),
-            source_line: None,
+            source_location: SourceLocation::new("test.puml", 1),
             stereotypes: vec![],
             items: items
                 .into_iter()
                 .map(|n| EnumItem {
                     name: n.to_string(),
                     value: None,
+                    source_location: SourceLocation::new("test.puml", 0),
                 })
                 .collect(),
         })
@@ -1080,6 +1104,7 @@ mod tests {
             left_multiplicity: None,
             right_multiplicity: None,
             label: Some("<<label>>".to_string()),
+            source_location: SourceLocation::new("test.puml", 42),
         };
 
         resolver.process_relationship(&rel, None).unwrap();
@@ -1103,6 +1128,7 @@ mod tests {
             left_multiplicity: None,
             right_multiplicity: None,
             label: None,
+            source_location: SourceLocation::new("test.puml", 0),
         };
 
         let result = resolver.process_relationship(&rel, None);
@@ -1153,7 +1179,7 @@ mod tests {
         assert_eq!(logic.entities.len(), 1);
         assert_eq!(logic.entities[0].id, "User");
         assert!(logic.entities[0].relationships.is_empty());
-        assert_eq!(logic.entities[0].source_file.as_deref(), Some("test.puml"));
+        assert_eq!(logic.entities[0].source_location.file.as_ref(), "test.puml");
     }
 
     // ----------------------------
@@ -1166,7 +1192,7 @@ mod tests {
                 name: make_name("MyEnum"),
                 namespace: "".to_string(),
                 package: "".to_string(),
-                source_line: None,
+                source_location: SourceLocation::new("test.puml", 1),
                 stereotypes: vec![],
                 items: vec![],
             }),

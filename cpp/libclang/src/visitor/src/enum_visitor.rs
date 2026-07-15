@@ -35,7 +35,7 @@ impl EnumVisitor {
         } else {
             name.clone()
         };
-        let (source_file, source_line) = parse_source_location(&entity);
+        let source_location = parse_source_location(&entity);
 
         Some(SimpleEntity {
             id: full_qualified_id,
@@ -43,8 +43,7 @@ impl EnumVisitor {
             enclosing_namespace_id: namespace_id,
             entity_type: EntityType::Enum,
             enum_literals: get_literals(entity),
-            source_file,
-            source_line,
+            source_location,
             ..Default::default()
         })
     }
@@ -86,6 +85,7 @@ fn get_literals(entity: Entity) -> Vec<EnumLiteral> {
             Some(EnumLiteral {
                 name: c.get_name()?,
                 value: constant_val,
+                source_location: parse_source_location(&c),
             })
         })
         .collect()

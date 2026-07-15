@@ -54,16 +54,14 @@ fn comp_model_to_lobster(model: &HashMap<String, LogicComponent>, source_path: &
 /// For [`EntityType::Interface`] entities every method becomes its own lobster
 /// item with id `{entity.id}.{method.name}` and kind `"Method"`.  All other
 /// entity types are emitted as a single item (one per entity).
-///
-/// If an entity carries explicit source location metadata that is used;
-/// otherwise `source_path` is used and the line is emitted as `null` because
-/// LOBSTER does not accept `0`.
-fn class_model_to_lobster(model: &ClassDiagram, source_path: &str) -> Value {
+fn class_model_to_lobster(model: &ClassDiagram) -> Value {
     let items: Vec<Value> = model
         .entities
         .iter()
         .flat_map(|entity| {
-            let source_file = entity.source_file.as_deref().unwrap_or(source_path);
+            let source_file = entity.source_location.file.as_ref();
+            let line = entity.source_location.line;
+            let source_line = (line != 0).then_some(line);
 
             if entity.entity_type == EntityType::Interface {
                 entity
@@ -71,14 +69,14 @@ fn class_model_to_lobster(model: &ClassDiagram, source_path: &str) -> Value {
                     .iter()
                     .map(|method| {
                         let method_id = format!("{}.{}", entity.id, method.name);
-                        build_lobster_item(&method_id, source_file, entity.source_line, "Method")
+                        build_lobster_item(&method_id, source_file, source_line, "Method")
                     })
                     .collect::<Vec<_>>()
             } else {
                 vec![build_lobster_item(
                     &entity.id,
                     source_file,
-                    entity.source_line,
+                    source_line,
                     map_entity_type_to_kind(entity.entity_type),
                 )]
             }
@@ -155,13 +153,10 @@ pub fn write_lobster_to_file(
 ) -> io::Result<PathBuf> {
     let lobster = match model {
         LobsterModel::Component(component_model) => {
-            let source_str = input_path.to_string_lossy().into_owned();
-            comp_model_to_lobster(component_model, &source_str)
+            let source_path = input_path.to_string_lossy();
+            comp_model_to_lobster(component_model, source_path.as_ref())
         }
-        LobsterModel::Class(class_model) => {
-            let source_str = input_path.to_string_lossy().into_owned();
-            class_model_to_lobster(class_model, &source_str)
-        }
+        LobsterModel::Class(class_model) => class_model_to_lobster(class_model),
         LobsterModel::Empty => empty_lobster_document(),
     };
 

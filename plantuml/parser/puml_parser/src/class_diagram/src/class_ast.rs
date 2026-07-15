@@ -12,6 +12,7 @@
 // *******************************************************************************
 pub use parser_core::common_ast::Arrow;
 use serde::{Deserialize, Serialize};
+use source_location::SourceLocation;
 use std::default::Default;
 
 use crate::class_traits::{TypeDef, WritableName};
@@ -84,6 +85,7 @@ pub struct Relationship {
     pub left_multiplicity: Option<String>,
     pub right_multiplicity: Option<String>,
     pub label: Option<String>,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -99,6 +101,7 @@ pub struct Attribute {
     pub name: String,
     pub r#type: Option<String>,
     pub modifiers: Vec<String>,
+    pub source_location: SourceLocation,
 }
 impl Default for Attribute {
     fn default() -> Self {
@@ -107,6 +110,7 @@ impl Default for Attribute {
             name: String::new(),
             r#type: None,
             modifiers: Vec::new(),
+            source_location: SourceLocation::default(),
         }
     }
 }
@@ -115,6 +119,7 @@ impl Default for Attribute {
 pub struct TypeAlias {
     pub alias: String,
     pub original_type: String,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -125,6 +130,7 @@ pub struct Method {
     pub params: Vec<Param>,
     pub r#type: Option<String>,
     pub modifiers: Vec<String>,
+    pub source_location: SourceLocation,
 }
 impl Default for Method {
     fn default() -> Self {
@@ -135,6 +141,7 @@ impl Default for Method {
             params: Vec::new(),
             r#type: None,
             modifiers: Vec::new(),
+            source_location: SourceLocation::default(),
         }
     }
 }
@@ -144,7 +151,6 @@ pub struct ClassDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
-    pub source_line: Option<u32>,
     pub is_abstract: bool,
     pub template_parameters: Option<Vec<String>>,
     pub extends: Vec<String>,
@@ -152,6 +158,7 @@ pub struct ClassDef {
     pub attributes: Vec<Attribute>,
     pub type_aliases: Vec<TypeAlias>,
     pub methods: Vec<Method>,
+    pub source_location: SourceLocation,
 }
 impl TypeDef for ClassDef {
     fn name_mut(&mut self) -> &mut Name {
@@ -169,10 +176,6 @@ impl TypeDef for ClassDef {
     fn methods_mut(&mut self) -> &mut Vec<Method> {
         &mut self.methods
     }
-
-    fn source_line_mut(&mut self) -> &mut Option<u32> {
-        &mut self.source_line
-    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
@@ -180,11 +183,11 @@ pub struct StructDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
-    pub source_line: Option<u32>,
     pub template_parameters: Option<Vec<String>>,
     pub attributes: Vec<Attribute>,
     pub type_aliases: Vec<TypeAlias>,
     pub methods: Vec<Method>,
+    pub source_location: SourceLocation,
 }
 impl TypeDef for StructDef {
     fn name_mut(&mut self) -> &mut Name {
@@ -202,10 +205,6 @@ impl TypeDef for StructDef {
     fn methods_mut(&mut self) -> &mut Vec<Method> {
         &mut self.methods
     }
-
-    fn source_line_mut(&mut self) -> &mut Option<u32> {
-        &mut self.source_line
-    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
@@ -213,12 +212,12 @@ pub struct InterfaceDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
-    pub source_line: Option<u32>,
     pub template_parameters: Option<Vec<String>>,
     pub extends: Vec<String>,
     pub attributes: Vec<Attribute>,
     pub type_aliases: Vec<TypeAlias>,
     pub methods: Vec<Method>,
+    pub source_location: SourceLocation,
 }
 impl TypeDef for InterfaceDef {
     fn name_mut(&mut self) -> &mut Name {
@@ -236,10 +235,6 @@ impl TypeDef for InterfaceDef {
     fn methods_mut(&mut self) -> &mut Vec<Method> {
         &mut self.methods
     }
-
-    fn source_line_mut(&mut self) -> &mut Option<u32> {
-        &mut self.source_line
-    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
@@ -247,15 +242,16 @@ pub struct EnumDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
-    pub source_line: Option<u32>,
     pub stereotypes: Vec<String>,
     pub items: Vec<EnumItem>,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct EnumItem {
     pub name: String,
     pub value: Option<EnumValue>,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
@@ -387,6 +383,7 @@ mod tests {
             left_multiplicity: None,
             right_multiplicity: None,
             label: None,
+            source_location: SourceLocation::new("test.puml", 0),
         });
 
         assert!(!file.is_empty());
@@ -400,6 +397,7 @@ mod tests {
         enum_def.items.push(EnumItem {
             name: "RED".into(),
             value: Some(EnumValue::Literal("1".into())),
+            source_location: SourceLocation::new("test.puml", 0),
         });
 
         assert_eq!(enum_def.name.internal, "Color");
@@ -436,6 +434,7 @@ mod tests {
             left_multiplicity: None,
             right_multiplicity: None,
             label: Some("uses".into()),
+            source_location: SourceLocation::new("test.puml", 0),
         });
 
         assert_eq!(pkg.relationships.len(), 1);
@@ -496,6 +495,7 @@ mod tests {
         class.type_aliases_mut().push(TypeAlias {
             alias: "Byte".into(),
             original_type: "std::uint8_t".into(),
+            ..Default::default()
         });
 
         assert_eq!(class.type_aliases.len(), 1);
@@ -558,6 +558,7 @@ mod tests {
             obj.type_aliases_mut().push(TypeAlias {
                 alias: "Byte".into(),
                 original_type: "std::uint8_t".into(),
+                ..Default::default()
             });
             obj.methods_mut().push(Method {
                 name: "method".into(),
@@ -591,6 +592,7 @@ mod tests {
             obj.type_aliases_mut().push(TypeAlias {
                 alias: "Byte".into(),
                 original_type: "std::uint8_t".into(),
+                ..Default::default()
             });
             obj.methods_mut().push(Method {
                 name: "method".into(),
@@ -624,6 +626,7 @@ mod tests {
             obj.type_aliases_mut().push(TypeAlias {
                 alias: "Byte".into(),
                 original_type: "std::uint8_t".into(),
+                ..Default::default()
             });
             obj.methods_mut().push(Method {
                 name: "method".into(),

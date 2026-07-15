@@ -13,7 +13,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use class_diagram::SimpleEntity;
+use class_diagram::{SimpleEntity, SourceLocation};
 use sequence_logic::FunctionDef;
 
 use crate::class_parser_helper::ResolvedType;
@@ -30,16 +30,23 @@ pub struct VisitContext {
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct ParsedClassInfo {
-    pub id: String,                      // class fqn
-    pub base_classes: Vec<ResolvedType>, // base classes for inheritance relationships
+    pub id: String, // class fqn
+    pub base_classes: Vec<ParsedBaseClass>,
     pub variable_types: Vec<ParsedVariableType>,
     pub method_types: Vec<ParsedMethodType>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedBaseClass {
+    pub resolved_type: ResolvedType,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParsedVariableType {
     pub name: String,
     pub resolved_type: ResolvedType,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,4 +54,5 @@ pub struct ParsedMethodType {
     pub name: String,
     pub return_type: ResolvedType,
     pub parameter_types: Vec<ResolvedType>,
+    pub source_location: SourceLocation,
 }

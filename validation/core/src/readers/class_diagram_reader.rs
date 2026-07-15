@@ -18,7 +18,7 @@ use std::fs;
 use class_fbs::class_metamodel as fb_class;
 
 use crate::models::ClassDiagramInputs;
-use crate::readers::Reader;
+use crate::readers::{to_source_location, Reader};
 use class_diagram::{
     ClassDiagram, EntityType, EnumLiteral, FunctionArgument, MemberVariable, Method,
     MethodModifier, RelationType, Relationship, SimpleEntity, TemplateParameter, TypeAlias,
@@ -95,6 +95,10 @@ fn read_type_aliases(entity: fb_class::SimpleEntity<'_>) -> Vec<TypeAlias> {
                 .map(|value| TypeAlias {
                     alias: value.alias().to_string(),
                     original_type: value.original_type().to_string(),
+                    source_location: to_source_location(
+                        value.source_location().file(),
+                        value.source_location().line(),
+                    ),
                 })
                 .collect::<Vec<_>>()
         })
@@ -119,6 +123,10 @@ fn read_variables(
                             &format!("{path}:entity:{}:variable:{}", entity.id(), value.name()),
                         )?,
                         is_static: value.is_static(),
+                        source_location: to_source_location(
+                            value.source_location().file(),
+                            value.source_location().line(),
+                        ),
                     })
                 })
                 .collect::<Result<Vec<_>, String>>()
@@ -177,6 +185,10 @@ fn read_method(
         parameters,
         template_parameters,
         modifiers,
+        source_location: to_source_location(
+            method.source_location().file(),
+            method.source_location().line(),
+        ),
     })
 }
 
@@ -202,6 +214,10 @@ fn read_enum_literals(entity: fb_class::SimpleEntity<'_>) -> Vec<EnumLiteral> {
                 .map(|value| EnumLiteral {
                     name: value.name().to_string(),
                     value: value.value().and_then(|s| s.parse::<i128>().ok()),
+                    source_location: to_source_location(
+                        value.source_location().file(),
+                        value.source_location().line(),
+                    ),
                 })
                 .collect::<Vec<_>>()
         })
@@ -244,12 +260,10 @@ fn read_entity(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<SimpleE
         )?,
         enum_literals: read_enum_literals(entity),
         relationships: read_entity_relationships(entity, path)?,
-        source_file: entity.source_file().map(|s| s.to_string()),
-        source_line: if entity.source_line() == 0 {
-            None
-        } else {
-            Some(entity.source_line())
-        },
+        source_location: to_source_location(
+            entity.source_location().file(),
+            entity.source_location().line(),
+        ),
     })
 }
 
@@ -268,7 +282,6 @@ fn read_entities(
         .transpose()
         .map(|values| values.unwrap_or_default())
 }
-
 fn read_relationship(
     rel: fb_class::Relationship<'_>,
     context: &str,
@@ -279,6 +292,10 @@ fn read_relationship(
         relation_type: map_relation_type(rel.relation_type(), context)?,
         source_multiplicity: rel.source_multiplicity().map(|s| s.to_string()),
         target_multiplicity: rel.target_multiplicity().map(|s| s.to_string()),
+        source_location: to_source_location(
+            rel.source_location().file(),
+            rel.source_location().line(),
+        ),
     })
 }
 
@@ -297,7 +314,6 @@ impl Reader for ClassDiagramReader {
                 .map_err(|e| format!("Failed to parse class FlatBuffer {path}: {e}"))?;
 
             let entities = read_entities(diagram, path)?;
-
             let relationships = diagram
                 .relationships()
                 .map(|rels| {

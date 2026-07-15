@@ -16,7 +16,7 @@ use std::{fmt, rc::Rc};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct SourceLocation {
     pub file: Rc<str>,
     pub line: u32,
@@ -30,7 +30,7 @@ impl SourceLocation {
         }
     }
 
-    fn display_file_path(&self) -> String {
+    fn display_file(&self) -> String {
         let file_path = Path::new(self.file.as_ref());
 
         if file_path.is_absolute() {
@@ -43,6 +43,10 @@ impl SourceLocation {
 
         normalize_source_path(self.file.as_ref())
     }
+
+    pub fn display(&self) -> (String, u32) {
+        (self.display_file(), self.line)
+    }
 }
 
 fn normalize_source_path(path: &str) -> String {
@@ -51,7 +55,7 @@ fn normalize_source_path(path: &str) -> String {
 
 impl fmt::Display for SourceLocation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.display_file_path(), self.line)
+        write!(f, "{}:{}", self.display_file(), self.line)
     }
 }
 
