@@ -52,10 +52,9 @@ rust_test(
     crate_root = "class_design_implementation_suite.rs",
     data = [
         ":class_design_implementation_test_data",
-        "//validation/core:validation_cli",
     ],
     deps = [
-        "//validation/core:validation",
+        "//validation/core:validation_cli",
         "//validation/core/integration_test:test_framework",
         "@crates//:serde",
         "@crates//:serde_json",

@@ -32,10 +32,9 @@ rust_test(
     crate_root = "bazel_component_suite.rs",
     data = [
         ":bazel_component_test_data",
-        "//validation/core:validation_cli",
     ],
     deps = [
-        "//validation/core:validation",
+        "//validation/core:validation_cli",
         "//validation/core/integration_test:test_framework",
         "@crates//:serde",
         "@crates//:serde_json",

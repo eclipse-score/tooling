@@ -31,10 +31,9 @@ rust_test(
     crate_root = "sequence_internal_api_suite.rs",
     data = [
         ":sequence_internal_api_test_data",
-        "//validation/core:validation_cli",
     ],
     deps = [
-        "//validation/core:validation",
+        "//validation/core:validation_cli",
         "//validation/core/integration_test:test_framework",
         "@crates//:serde",
         "@crates//:serde_json",
