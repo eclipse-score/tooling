@@ -15,16 +15,14 @@ load("@aspect_rules_lint//format:defs.bzl", "format_multirun", "format_test")
 # Maps a user-facing language name to the (attribute, formatter label) pair that
 # is forwarded to aspect_rules_lint's format_multirun / format_test rules.
 _FORMATTERS = {
-    "python": ("python", "@aspect_rules_lint//format:ruff"),
     "rust": ("rust", "@score_tooling//format_checker:rustfmt_with_policies"),
     "starlark": ("starlark", "@buildifier_prebuilt//:buildifier"),
-    "yaml": ("yaml", "@aspect_rules_lint//format:yamlfmt"),
     "cpp": ("cc", "@llvm_toolchain//:clang-format"),
 }
 
 # Languages enabled when the caller does not specify a selection. C++ is left
 # out so that projects without C++ code do not depend on the LLVM toolchain.
-_DEFAULT_LANGUAGES = ["python", "rust", "starlark", "yaml"]
+_DEFAULT_LANGUAGES = ["rust", "starlark"]
 
 def use_format_targets(fix_name = "format.fix", check_name = "format.check", languages = None):
     """Registers format.fix and format.check targets for the selected languages.
