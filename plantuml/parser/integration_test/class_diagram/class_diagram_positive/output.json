@@ -11,23 +11,33 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 25,
         "variables": [
           {
             "name": "x",
             "data_type": "f32",
             "visibility": "public",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 26
+            }
           },
           {
             "name": "y",
             "data_type": "f32",
             "visibility": "public",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 27
+            }
           }
         ],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 25
+        }
       },
       {
         "id": "core.Size",
@@ -38,23 +48,33 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 30,
         "variables": [
           {
             "name": "width",
             "data_type": "f32",
             "visibility": "public",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 31
+            }
           },
           {
             "name": "height",
             "data_type": "f32",
             "visibility": "public",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 32
+            }
           }
         ],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 30
+        }
       },
       {
         "id": "core.Color",
@@ -67,19 +87,29 @@
         "enum_literals": [
           {
             "name": "Red",
-            "value": 0
+            "value": 0,
+            "source_location": {
+              "file": "",
+              "line": 36
+            }
           },
           {
             "name": "Green",
-            "value": 1
+            "value": 1,
+            "source_location": {
+              "file": "",
+              "line": 37
+            }
           },
           {
             "name": "Blue",
-            "value": 2
+            "value": 2,
+            "source_location": {
+              "file": "",
+              "line": 38
+            }
           }
         ],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 35,
         "variables": [],
         "relationships": [
           {
@@ -87,9 +117,17 @@
             "target": "core.geometry.Circle",
             "relation_type": "Aggregation",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 118
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 35
+        }
       },
       {
         "id": "core.Shape",
@@ -104,7 +142,11 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 42
+            }
           },
           {
             "name": "area",
@@ -112,13 +154,15 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 43
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 41,
         "variables": [],
         "relationships": [
           {
@@ -126,16 +170,28 @@
             "target": "core.Drawable",
             "relation_type": "Implementation",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 114
+            }
           },
           {
             "source": "core.Shape",
             "target": "core.Canvas",
             "relation_type": "Composition",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 116
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 41
+        }
       },
       {
         "id": "core.Drawable",
@@ -150,15 +206,21 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 47
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 46,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 46
+        }
       },
       {
         "id": "core.Canvas",
@@ -179,7 +241,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 52
+            }
           },
           {
             "name": "render",
@@ -187,19 +253,25 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 53
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 50,
         "variables": [
           {
             "name": "shapes",
             "data_type": "Shape",
             "visibility": "private",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 51
+            }
           }
         ],
         "relationships": [
@@ -208,9 +280,17 @@
             "target": "util.Logger",
             "relation_type": "Dependency",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 122
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 50
+        }
       },
       {
         "id": "core.geometry.Circle",
@@ -225,25 +305,35 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 62
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 59,
         "variables": [
           {
             "name": "center",
             "data_type": "Point",
             "visibility": "private",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 60
+            }
           },
           {
             "name": "radius",
             "data_type": "f32",
             "visibility": "private",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 61
+            }
           }
         ],
         "relationships": [
@@ -252,16 +342,28 @@
             "target": "core.Shape",
             "relation_type": "Inheritance",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 108
+            }
           },
           {
             "source": "core.geometry.Circle",
             "target": "core.geometry.Rectangle",
             "relation_type": "Association",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 126
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 59
+        }
       },
       {
         "id": "core.geometry.Rectangle",
@@ -276,25 +378,35 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 68
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 65,
         "variables": [
           {
             "name": "origin",
             "data_type": "Point",
             "visibility": "private",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 66
+            }
           },
           {
             "name": "size",
             "data_type": "Size",
             "visibility": "private",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 67
+            }
           }
         ],
         "relationships": [
@@ -303,16 +415,28 @@
             "target": "core.Shape",
             "relation_type": "Inheritance",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 110
+            }
           },
           {
             "source": "core.geometry.Rectangle",
             "target": "core.Color",
             "relation_type": "Association",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 120
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 65
+        }
       },
       {
         "id": "core.geometry.advanced.RoundedRectangle",
@@ -323,14 +447,16 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 75,
         "variables": [
           {
             "name": "corner_radius",
             "data_type": "f32",
             "visibility": "private",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 76
+            }
           }
         ],
         "relationships": [
@@ -339,9 +465,17 @@
             "target": "core.geometry.Rectangle",
             "relation_type": "Inheritance",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 112
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 75
+        }
       },
       {
         "id": "util.LogLevel",
@@ -354,25 +488,43 @@
         "enum_literals": [
           {
             "name": "De",
-            "value": 0
+            "value": 0,
+            "source_location": {
+              "file": "",
+              "line": 84
+            }
           },
           {
             "name": "Info",
-            "value": 1
+            "value": 1,
+            "source_location": {
+              "file": "",
+              "line": 85
+            }
           },
           {
             "name": "Warn",
-            "value": 2
+            "value": 2,
+            "source_location": {
+              "file": "",
+              "line": 86
+            }
           },
           {
             "name": "Err",
-            "value": 3
+            "value": 3,
+            "source_location": {
+              "file": "",
+              "line": 87
+            }
           }
         ],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 83,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 83
+        }
       },
       {
         "id": "util.Logger",
@@ -398,15 +550,21 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 91
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 90,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 90
+        }
       },
       {
         "id": "api.RestApi",
@@ -421,13 +579,15 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 99
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_positive.puml",
-        "source_line": 98,
         "variables": [],
         "relationships": [
           {
@@ -435,86 +595,18 @@
             "target": "core.Canvas",
             "relation_type": "Dependency",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 124
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
+          "line": 98
+        }
       }
-    ],
-    "relationships": [
-      {
-        "source": "core.geometry.Circle",
-        "target": "core.Shape",
-        "relation_type": "Inheritance",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "core.geometry.Rectangle",
-        "target": "core.Shape",
-        "relation_type": "Inheritance",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "core.geometry.advanced.RoundedRectangle",
-        "target": "core.geometry.Rectangle",
-        "relation_type": "Inheritance",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "core.Shape",
-        "target": "core.Drawable",
-        "relation_type": "Implementation",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "core.Shape",
-        "target": "core.Canvas",
-        "relation_type": "Composition",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "core.Color",
-        "target": "core.geometry.Circle",
-        "relation_type": "Aggregation",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "core.geometry.Rectangle",
-        "target": "core.Color",
-        "relation_type": "Association",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "core.Canvas",
-        "target": "util.Logger",
-        "relation_type": "Dependency",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "api.RestApi",
-        "target": "core.Canvas",
-        "relation_type": "Dependency",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "core.geometry.Circle",
-        "target": "core.geometry.Rectangle",
-        "relation_type": "Association",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      }
-    ],
-    "source_files": [
-      "class_diagram_positive.puml"
-    ],
-    "version": null
+    ]
   }
 }

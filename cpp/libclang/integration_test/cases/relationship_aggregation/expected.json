@@ -13,14 +13,22 @@
           "target": "Wheel",
           "relation_type": "Aggregation",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
         },
         {
           "source": "Car",
           "target": "Wheel",
           "relation_type": "Composition",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 22
+          }
         }
       ],
       "template_parameters": null,
@@ -30,41 +38,67 @@
           "name": "wheel1",
           "data_type": "Wheel *",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
         },
         {
           "name": "wheel2",
           "data_type": "std::vector<Wheel>",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 22
+          }
         },
         {
           "name": "wheel3",
           "data_type": "Wheel *",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
         },
         {
           "name": "wheel4",
           "data_type": "std::vector<const Wheel *>",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         },
         {
           "name": "wheel5",
           "data_type": "std::vector<std::vector<Wheel>>",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 25
+          }
         },
         {
           "name": "wheel6",
           "data_type": "Wheel *",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 26
+          }
         }
       ],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_aggregation/aggregation.cpp",
-      "source_line": 17
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_aggregation/aggregation.cpp",
+        "line": 17
+      }
     },
     "Wheel": {
       "id": "Wheel",
@@ -77,8 +111,10 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_aggregation/aggregation.cpp",
-      "source_line": 15
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_aggregation/aggregation.cpp",
+        "line": 15
+      }
     }
   },
   "functions": []

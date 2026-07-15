@@ -43,3 +43,12 @@ rust_test(
         "@crates//:serde",
     ],
 )
+
+rust_test(
+    name = "class_visitor_source_location_test",
+    srcs = ["src/class_visitor_test.rs"],
+    deps = [
+        ":visit_tu",
+        "//tools/metamodel/class:class_diagram",
+    ],
+)

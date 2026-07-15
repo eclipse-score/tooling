@@ -11,7 +11,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 15,
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
             "is_abstract": false,
             "type_aliases": [],
             "attributes": [
@@ -19,13 +22,21 @@
                 "visibility": "Public",
                 "name": "name",
                 "type": "string",
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                }
               },
               {
                 "visibility": "Private",
                 "name": "id",
                 "type": "int",
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 17
+                }
               }
             ],
             "methods": [
@@ -35,7 +46,11 @@
                 "params": [],
                 "type": "string",
                 "template_parameters": null,
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 18
+                }
               }
             ],
             "template_parameters": null,
@@ -45,7 +60,6 @@
         }
       }
     ],
-    "relationships": [],
-    "source_file": "attr_method.puml"
+    "relationships": []
   }
 }

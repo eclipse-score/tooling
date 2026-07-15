@@ -13,21 +13,33 @@
           "target": "MyNamespace::Engine",
           "relation_type": "Composition",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
         },
         {
           "source": "Car",
           "target": "MyNamespace::Engine",
           "relation_type": "Aggregation",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 26
+          }
         }
       ],
       "template_parameters": null,
       "type_aliases": [
         {
           "alias": "MyEngine",
-          "original_type": "MyNamespace::Engine"
+          "original_type": "MyNamespace::Engine",
+          "source_location": {
+            "file": "",
+            "line": 31
+          }
         }
       ],
       "variables": [
@@ -35,41 +47,67 @@
           "name": "engine1",
           "data_type": "MyNamespace::Engine",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
         },
         {
           "name": "engine2",
           "data_type": "MyNamespace::Engine",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         },
         {
           "name": "engine3",
           "data_type": "MyNamespace::Engine *",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 26
+          }
         },
         {
           "name": "engine4",
           "data_type": "MyNamespace::Engine &",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 27
+          }
         },
         {
           "name": "engine5",
           "data_type": "std::vector<MyNamespace::Engine>",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 29
+          }
         },
         {
           "name": "engine6",
           "data_type": "MyNamespace::Engine",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 32
+          }
         }
       ],
-      "source_file": "cpp/libclang/integration_test/cases/variable_namespace/transport.cpp",
-      "source_line": 21
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/variable_namespace/transport.cpp",
+        "line": 21
+      }
     },
     "MyNamespace::Engine": {
       "id": "MyNamespace::Engine",
@@ -82,8 +120,10 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/variable_namespace/transport.cpp",
-      "source_line": 16
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/variable_namespace/transport.cpp",
+        "line": 16
+      }
     }
   },
   "functions": []

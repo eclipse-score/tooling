@@ -22,7 +22,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
           }
         ],
         "template_parameters": [
@@ -40,10 +44,12 @@
           }
         ],
         "enum_literals": [],
-        "source_file": "class_template_pack.puml",
-        "source_line": 15,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_template_pack/class_template_pack.puml",
+          "line": 15
+        }
       },
       {
         "id": "ExplicitClassTemplatePack2",
@@ -65,7 +71,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
           }
         ],
         "template_parameters": [
@@ -83,10 +93,12 @@
           }
         ],
         "enum_literals": [],
-        "source_file": "class_template_pack.puml",
-        "source_line": 19,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_template_pack/class_template_pack.puml",
+          "line": 19
+        }
       },
       {
         "id": "ImplicitClassTemplatePack1",
@@ -108,7 +120,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 24
+            }
           }
         ],
         "template_parameters": [
@@ -126,10 +142,12 @@
           }
         ],
         "enum_literals": [],
-        "source_file": "class_template_pack.puml",
-        "source_line": 23,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_template_pack/class_template_pack.puml",
+          "line": 23
+        }
       },
       {
         "id": "ImplicitClassTemplatePack2",
@@ -151,7 +169,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 28
+            }
           }
         ],
         "template_parameters": [
@@ -169,16 +191,13 @@
           }
         ],
         "enum_literals": [],
-        "source_file": "class_template_pack.puml",
-        "source_line": 27,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_template_pack/class_template_pack.puml",
+          "line": 27
+        }
       }
-    ],
-    "relationships": [],
-    "source_files": [
-      "class_template_pack.puml"
-    ],
-    "version": null
+    ]
   }
 }

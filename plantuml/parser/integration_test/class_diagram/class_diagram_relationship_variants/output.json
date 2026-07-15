@@ -11,10 +11,12 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants.puml",
-        "source_line": 18,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_relationship_variants/class_diagram_relationship_variants.puml",
+          "line": 18
+        }
       },
       {
         "id": "sample.relationships.WorkerContract",
@@ -25,8 +27,6 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants.puml",
-        "source_line": 19,
         "variables": [],
         "relationships": [
           {
@@ -34,9 +34,17 @@
             "target": "sample.relationships.ParentContract",
             "relation_type": "Inheritance",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 33
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_relationship_variants/class_diagram_relationship_variants.puml",
+          "line": 19
+        }
       },
       {
         "id": "sample.relationships.WorkerImpl",
@@ -47,8 +55,6 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants.puml",
-        "source_line": 21,
         "variables": [],
         "relationships": [
           {
@@ -56,9 +62,17 @@
             "target": "sample.relationships.WorkerContract",
             "relation_type": "Implementation",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 34
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_relationship_variants/class_diagram_relationship_variants.puml",
+          "line": 21
+        }
       },
       {
         "id": "sample.relationships.WorkerResponse",
@@ -69,14 +83,16 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants.puml",
-        "source_line": 23,
         "variables": [
           {
             "name": "WorkerStatus",
             "data_type": null,
             "visibility": "public",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 24
+            }
           }
         ],
         "relationships": [
@@ -85,9 +101,17 @@
             "target": "sample.relationships.WorkerStatus",
             "relation_type": "Association",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 35
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_relationship_variants/class_diagram_relationship_variants.puml",
+          "line": 23
+        }
       },
       {
         "id": "sample.relationships.CheckFlag",
@@ -102,15 +126,21 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 28
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants.puml",
-        "source_line": 27,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_relationship_variants/class_diagram_relationship_variants.puml",
+          "line": 27
+        }
       },
       {
         "id": "sample.relationships.WorkerStatus",
@@ -121,8 +151,6 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_relationship_variants.puml",
-        "source_line": 31,
         "variables": [],
         "relationships": [
           {
@@ -130,58 +158,29 @@
             "target": "sample.relationships.WorkerResponse",
             "relation_type": "Aggregation",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 36
+            }
           },
           {
             "source": "sample.relationships.WorkerStatus",
             "target": "sample.relationships.WorkerImpl",
             "relation_type": "Composition",
             "source_multiplicity": "0..*",
-            "target_multiplicity": "1"
+            "target_multiplicity": "1",
+            "source_location": {
+              "file": "",
+              "line": 37
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_relationship_variants/class_diagram_relationship_variants.puml",
+          "line": 31
+        }
       }
-    ],
-    "relationships": [
-      {
-        "source": "sample.relationships.WorkerContract",
-        "target": "sample.relationships.ParentContract",
-        "relation_type": "Inheritance",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "sample.relationships.WorkerImpl",
-        "target": "sample.relationships.WorkerContract",
-        "relation_type": "Implementation",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "sample.relationships.WorkerResponse",
-        "target": "sample.relationships.WorkerStatus",
-        "relation_type": "Association",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "sample.relationships.WorkerStatus",
-        "target": "sample.relationships.WorkerResponse",
-        "relation_type": "Aggregation",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "sample.relationships.WorkerStatus",
-        "target": "sample.relationships.WorkerImpl",
-        "relation_type": "Composition",
-        "source_multiplicity": "0..*",
-        "target_multiplicity": "1"
-      }
-    ],
-    "source_files": [
-      "class_diagram_relationship_variants.puml"
-    ],
-    "version": null
+    ]
   }
 }

@@ -16,7 +16,11 @@
           "middle": null,
           "right": null
         },
-        "label": null
+        "label": null,
+        "source_location": {
+          "file": "",
+          "line": 15
+        }
       },
       {
         "left": "Sub",
@@ -31,9 +35,12 @@
             "raw": "|>"
           }
         },
-        "label": null
+        "label": null,
+        "source_location": {
+          "file": "",
+          "line": 17
+        }
       }
-    ],
-    "source_file": "relationship_inheritance.puml"
+    ]
   }
 }

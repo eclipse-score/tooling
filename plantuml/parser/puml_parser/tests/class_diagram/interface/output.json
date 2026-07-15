@@ -11,14 +11,21 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 15,
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
             "type_aliases": [],
             "attributes": [
               {
                 "visibility": "Public",
                 "name": "doSomething",
                 "type": null,
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                }
               }
             ],
             "methods": [],
@@ -28,7 +35,6 @@
         }
       }
     ],
-    "relationships": [],
-    "source_file": "interface.puml"
+    "relationships": []
   }
 }

@@ -11,7 +11,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 15,
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
             "is_abstract": false,
             "type_aliases": [],
             "attributes": [
@@ -19,7 +22,11 @@
                 "visibility": "Private",
                 "name": "id",
                 "type": "int",
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                }
               }
             ],
             "methods": [
@@ -29,7 +36,11 @@
                 "params": [],
                 "type": "String",
                 "template_parameters": null,
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 17
+                }
               }
             ],
             "template_parameters": null,
@@ -47,14 +58,21 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 20,
+            "source_location": {
+              "file": "",
+              "line": 20
+            },
             "type_aliases": [],
             "attributes": [
               {
                 "visibility": "Private",
                 "name": "instance",
                 "type": "Config",
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 21
+                }
               }
             ],
             "methods": [],
@@ -71,7 +89,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 24,
+            "source_location": {
+              "file": "",
+              "line": 24
+            },
             "type_aliases": [],
             "attributes": [],
             "methods": [
@@ -81,7 +102,11 @@
                 "params": [],
                 "type": "void",
                 "template_parameters": null,
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 25
+                }
               }
             ],
             "template_parameters": null,
@@ -97,22 +122,32 @@
           },
           "namespace": "",
           "package": "",
-          "source_line": 28,
+          "source_location": {
+            "file": "",
+            "line": 28
+          },
           "stereotypes": [],
           "items": [
             {
               "name": "MALE",
-              "value": null
+              "value": null,
+              "source_location": {
+                "file": "",
+                "line": 29
+              }
             },
             {
               "name": "FEMALE",
-              "value": null
+              "value": null,
+              "source_location": {
+                "file": "",
+                "line": 30
+              }
             }
           ]
         }
       }
     ],
-    "relationships": [],
-    "source_file": "stereotype_definition.puml"
+    "relationships": []
   }
 }

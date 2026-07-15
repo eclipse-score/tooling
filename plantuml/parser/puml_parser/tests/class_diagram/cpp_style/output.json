@@ -11,7 +11,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 15,
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
             "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
@@ -31,7 +34,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 17,
+            "source_location": {
+              "file": "",
+              "line": 17
+            },
             "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
@@ -48,7 +54,11 @@
                 ],
                 "type": null,
                 "template_parameters": null,
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 18
+                }
               }
             ],
             "template_parameters": null,
@@ -58,7 +68,6 @@
         }
       }
     ],
-    "relationships": [],
-    "source_file": "cpp_style.puml"
+    "relationships": []
   }
 }

@@ -15,10 +15,10 @@ error_contains: |
   Implementation class data differs from unit design entity:
   Entity ID             : Mode
   Field                 : "On"
-  Design value          : EnumLiteral { name: "On", value: Some(2) }
+  Design value          : 2
   Design source file    : class_diagram.puml
   Design source line    : 6
-  Implement value       : EnumLiteral { name: "On", value: Some(1) }
+  Implement value       : 1
   Implement source file : validation/core/integration_test/class_design_implementation/negative_enum_literal_mismatch/transport.cpp
   Implement source line : 6
   Required Action       : Align the implementation with the unit design or update the unit design

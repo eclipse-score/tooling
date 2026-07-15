@@ -13,7 +13,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 39
+          }
         }
       ],
       "relationships": [],
@@ -35,8 +39,10 @@
       ],
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/template_class/transport.cpp",
-      "source_line": 36
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/template_class/transport.cpp",
+        "line": 36
+      }
     },
     "FixedBuffer": {
       "id": "FixedBuffer",
@@ -57,7 +63,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 18
+          }
         },
         {
           "name": "pop",
@@ -65,7 +75,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
         },
         {
           "name": "convert",
@@ -86,7 +100,11 @@
               }
             }
           ],
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
         },
         {
           "name": "emplace",
@@ -108,7 +126,11 @@
               }
             }
           ],
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 26
+          }
         },
         {
           "name": "capacity",
@@ -116,7 +138,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 28
+          }
         }
       ],
       "relationships": [],
@@ -147,17 +173,27 @@
           "name": "m_data",
           "data_type": "T[N]",
           "is_static": false,
-          "visibility": "private"
+          "visibility": "private",
+          "source_location": {
+            "file": "",
+            "line": 31
+          }
         },
         {
           "name": "m_size",
           "data_type": "int",
           "is_static": false,
-          "visibility": "private"
+          "visibility": "private",
+          "source_location": {
+            "file": "",
+            "line": 32
+          }
         }
       ],
-      "source_file": "cpp/libclang/integration_test/cases/template_class/transport.cpp",
-      "source_line": 15
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/template_class/transport.cpp",
+        "line": 15
+      }
     }
   },
   "functions": []

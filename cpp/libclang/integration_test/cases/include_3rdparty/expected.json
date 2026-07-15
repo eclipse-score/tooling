@@ -13,7 +13,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 22
+          }
         },
         {
           "name": "createBuilder",
@@ -21,7 +25,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
         }
       ],
       "relationships": [],
@@ -32,35 +40,57 @@
           "name": "m_doors",
           "data_type": "std::uint64_t",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 25
+          }
         },
         {
           "name": "m_windows",
           "data_type": "std::vector<int>",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 26
+          }
         },
         {
           "name": "m_builder",
           "data_type": "flatbuffers::FlatBufferBuilder",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 27
+          }
         },
         {
           "name": "m_name_offsets",
           "data_type": "std::vector<flatbuffers::Offset<flatbuffers::String>>",
           "is_static": false,
-          "visibility": "protected"
+          "visibility": "protected",
+          "source_location": {
+            "file": "",
+            "line": 30
+          }
         },
         {
           "name": "m_offsets",
           "data_type": "std::vector<flatbuffers::uoffset_t>",
           "is_static": false,
-          "visibility": "private"
+          "visibility": "private",
+          "source_location": {
+            "file": "",
+            "line": 33
+          }
         }
       ],
-      "source_file": "cpp/libclang/integration_test/cases/include_3rdparty/transport.h",
-      "source_line": 19
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/include_3rdparty/transport.h",
+        "line": 19
+      }
     }
   },
   "functions": []

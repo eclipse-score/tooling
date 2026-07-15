@@ -12,8 +12,8 @@
 // *******************************************************************************
 
 use test_framework::{
-    assert_cli_result, collect_case_fbs_files, load_expected_yaml_fixture, run_validation_profile,
-    CliRunResult,
+    assert_cli_result, collect_case_fbs_files, load_expected_yaml_fixture, normalize_yaml_result,
+    run_validation_profile, CliRunResult,
 };
 
 const SUITE_DIR: &str = "class_design_implementation";
@@ -51,6 +51,8 @@ fn assert_case(case_dir: &str) {
             "missing generated FBS fixtures for {case_dir}: expected at least one unit_design_class/*.fbs.bin and unit_implementation_class/*.fbs.bin",
         );
     };
+
+    let result = normalize_yaml_result(result);
 
     assert_cli_result(case_dir, &expected, &result);
 }

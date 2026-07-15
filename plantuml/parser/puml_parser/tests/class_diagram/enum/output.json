@@ -10,7 +10,10 @@
           },
           "namespace": "",
           "package": "",
-          "source_line": 15,
+          "source_location": {
+            "file": "",
+            "line": 15
+          },
           "stereotypes": [],
           "items": []
         }
@@ -23,20 +26,35 @@
           },
           "namespace": "",
           "package": "",
-          "source_line": 17,
+          "source_location": {
+            "file": "",
+            "line": 17
+          },
           "stereotypes": [],
           "items": [
             {
               "name": "OK",
-              "value": null
+              "value": null,
+              "source_location": {
+                "file": "",
+                "line": 18
+              }
             },
             {
               "name": "ERROR",
-              "value": null
+              "value": null,
+              "source_location": {
+                "file": "",
+                "line": 19
+              }
             },
             {
               "name": "UNKNOWN",
-              "value": null
+              "value": null,
+              "source_location": {
+                "file": "",
+                "line": 20
+              }
             }
           ]
         }
@@ -49,25 +67,40 @@
           },
           "namespace": "",
           "package": "",
-          "source_line": 23,
+          "source_location": {
+            "file": "",
+            "line": 23
+          },
           "stereotypes": [],
           "items": [
             {
               "name": "INIT",
               "value": {
                 "Description": "initialize"
+              },
+              "source_location": {
+                "file": "",
+                "line": 24
               }
             },
             {
               "name": "RUNNING",
               "value": {
                 "Description": "running"
+              },
+              "source_location": {
+                "file": "",
+                "line": 25
               }
             },
             {
               "name": "STOPPED",
               "value": {
                 "Description": "stoped"
+              },
+              "source_location": {
+                "file": "",
+                "line": 26
               }
             }
           ]
@@ -81,26 +114,36 @@
           },
           "namespace": "",
           "package": "",
-          "source_line": 29,
+          "source_location": {
+            "file": "",
+            "line": 29
+          },
           "stereotypes": [],
           "items": [
             {
               "name": "HIGH",
               "value": {
                 "Literal": "0"
+              },
+              "source_location": {
+                "file": "",
+                "line": 30
               }
             },
             {
               "name": "LOW",
               "value": {
                 "Literal": "1"
+              },
+              "source_location": {
+                "file": "",
+                "line": 31
               }
             }
           ]
         }
       }
     ],
-    "relationships": [],
-    "source_file": "enum.puml"
+    "relationships": []
   }
 }

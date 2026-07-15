@@ -17,7 +17,10 @@
                 },
                 "namespace": "",
                 "package": "Core",
-                "source_line": 16,
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                },
                 "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
@@ -35,7 +38,10 @@
                 },
                 "namespace": "",
                 "package": "Core",
-                "source_line": 17,
+                "source_location": {
+                  "file": "",
+                  "line": 17
+                },
                 "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
@@ -73,7 +79,10 @@
                     },
                     "namespace": "",
                     "package": "UI",
-                    "source_line": 22,
+                    "source_location": {
+                      "file": "",
+                      "line": 22
+                    },
                     "is_abstract": false,
                     "type_aliases": [],
                     "attributes": [],
@@ -91,7 +100,6 @@
         }
       }
     ],
-    "relationships": [],
-    "source_file": "package.puml"
+    "relationships": []
   }
 }

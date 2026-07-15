@@ -16,7 +16,11 @@
             "Destructor"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 22
+          }
         },
         {
           "name": "start",
@@ -27,7 +31,11 @@
             "Abstract"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
         },
         {
           "name": "stop",
@@ -38,15 +46,21 @@
             "Abstract"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         }
       ],
       "relationships": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/nest_namespace_class/transport.cpp",
-      "source_line": 19
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/nest_namespace_class/transport.cpp",
+        "line": 19
+      }
     }
   },
   "functions": []

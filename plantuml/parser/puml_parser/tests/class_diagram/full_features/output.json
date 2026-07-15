@@ -17,7 +17,10 @@
                 },
                 "namespace": "",
                 "package": "pkg1",
-                "source_line": 16,
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                },
                 "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [
@@ -25,25 +28,41 @@
                     "visibility": "Public",
                     "name": "id",
                     "type": "int",
-                    "modifiers": []
+                    "modifiers": [],
+                    "source_location": {
+                      "file": "",
+                      "line": 17
+                    }
                   },
                   {
                     "visibility": "Private",
                     "name": "name",
                     "type": "String",
-                    "modifiers": []
+                    "modifiers": [],
+                    "source_location": {
+                      "file": "",
+                      "line": 18
+                    }
                   },
                   {
                     "visibility": "Protected",
                     "name": "flag",
                     "type": "bool",
-                    "modifiers": []
+                    "modifiers": [],
+                    "source_location": {
+                      "file": "",
+                      "line": 19
+                    }
                   },
                   {
                     "visibility": "Package",
                     "name": "pkgField",
                     "type": "float",
-                    "modifiers": []
+                    "modifiers": [],
+                    "source_location": {
+                      "file": "",
+                      "line": 20
+                    }
                   }
                 ],
                 "methods": [
@@ -67,7 +86,11 @@
                       }
                     ],
                     "type": "bool",
-                    "modifiers": []
+                    "modifiers": [],
+                    "source_location": {
+                      "file": "",
+                      "line": 22
+                    }
                   }
                 ],
                 "template_parameters": null,
@@ -83,14 +106,21 @@
                 },
                 "namespace": "",
                 "package": "pkg1",
-                "source_line": 25,
+                "source_location": {
+                  "file": "",
+                  "line": 25
+                },
                 "type_aliases": [],
                 "attributes": [
                   {
                     "visibility": "Public",
                     "name": "value",
                     "type": "int",
-                    "modifiers": []
+                    "modifiers": [],
+                    "source_location": {
+                      "file": "",
+                      "line": 26
+                    }
                   }
                 ],
                 "methods": [],
@@ -105,7 +135,10 @@
                 },
                 "namespace": "",
                 "package": "pkg1",
-                "source_line": 29,
+                "source_location": {
+                  "file": "",
+                  "line": 29
+                },
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [
@@ -115,7 +148,11 @@
                     "params": [],
                     "type": "void",
                     "template_parameters": null,
-                    "modifiers": []
+                    "modifiers": [],
+                    "source_location": {
+                      "file": "",
+                      "line": 30
+                    }
                   }
                 ],
                 "template_parameters": null,
@@ -130,24 +167,39 @@
                 },
                 "namespace": "",
                 "package": "pkg1",
-                "source_line": 33,
+                "source_location": {
+                  "file": "",
+                  "line": 33
+                },
                 "stereotypes": [],
                 "items": [
                   {
                     "name": "A",
                     "value": {
                       "Literal": "1"
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 34
                     }
                   },
                   {
                     "name": "B",
                     "value": {
                       "Description": "desc"
+                    },
+                    "source_location": {
+                      "file": "",
+                      "line": 35
                     }
                   },
                   {
                     "name": "C",
-                    "value": null
+                    "value": null,
+                    "source_location": {
+                      "file": "",
+                      "line": 36
+                    }
                   }
                 ]
               }
@@ -167,7 +219,11 @@
                   "raw": ">"
                 }
               },
-              "label": "uses"
+              "label": "uses",
+              "source_location": {
+                "file": "",
+                "line": 39
+              }
             },
             {
               "left": "B",
@@ -182,14 +238,17 @@
                   "raw": ">"
                 }
               },
-              "label": null
+              "label": null,
+              "source_location": {
+                "file": "",
+                "line": 40
+              }
             }
           ],
           "packages": []
         }
       }
     ],
-    "relationships": [],
-    "source_file": "full_features.puml"
+    "relationships": []
   }
 }

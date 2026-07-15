@@ -16,7 +16,11 @@
           "middle": null,
           "right": null
         },
-        "label": "belongs"
+        "label": "belongs",
+        "source_location": {
+          "file": "",
+          "line": 15
+        }
       },
       {
         "left": "House",
@@ -31,7 +35,11 @@
           "middle": null,
           "right": null
         },
-        "label": "in"
+        "label": "in",
+        "source_location": {
+          "file": "",
+          "line": 16
+        }
       },
       {
         "left": "Student",
@@ -46,7 +54,11 @@
             "raw": ">"
           }
         },
-        "label": null
+        "label": null,
+        "source_location": {
+          "file": "",
+          "line": 17
+        }
       },
       {
         "left": "Parser",
@@ -61,9 +73,12 @@
             "raw": ">"
           }
         },
-        "label": null
+        "label": null,
+        "source_location": {
+          "file": "",
+          "line": 18
+        }
       }
-    ],
-    "source_file": "relationship_arrows.puml"
+    ]
   }
 }

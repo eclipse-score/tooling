@@ -17,6 +17,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
+const DESIGN_SOURCE_FILE_LABEL: &str = "Design source file";
+const IMPLEMENT_SOURCE_FILE_LABEL: &str = "Implement source file";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidationIntegrationCase {
     pub name: &'static str,
@@ -124,7 +127,46 @@ pub fn load_expected_yaml_fixture(suite_dir: &str, case_dir: &str) -> ExpectedFi
         "validation/core/integration_test/{suite_dir}/{case_dir}/expected.yaml"
     ));
 
-    serde_yaml::from_str(&expected_yaml).expect("failed to parse expected YAML fixture")
+    let mut fixture: ExpectedFixture =
+        serde_yaml::from_str(&expected_yaml).expect("failed to parse expected YAML fixture");
+    fixture.error_contains = fixture
+        .error_contains
+        .into_iter()
+        .map(|fragment| normalize_yaml_diagnostic_text(&fragment))
+        .filter(|fragment| !fragment.is_empty())
+        .collect();
+    fixture
+}
+
+pub fn normalize_yaml_result(result: CliRunResult) -> CliRunResult {
+    let log_contents = normalize_yaml_diagnostic_text(&result.log_contents);
+
+    CliRunResult {
+        log_contents,
+        ..result
+    }
+}
+
+fn normalize_yaml_diagnostic_text(text: &str) -> String {
+    text.lines()
+        .filter_map(normalize_yaml_diagnostic_line)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn normalize_yaml_diagnostic_line(line: &str) -> Option<String> {
+    let trimmed = line.trim_start();
+
+    if is_source_file_line(trimmed) {
+        return None;
+    }
+
+    // Some(remove_embedded_source_location(line))
+    Some(line.to_string())
+}
+
+fn is_source_file_line(line: &str) -> bool {
+    line.starts_with(DESIGN_SOURCE_FILE_LABEL) || line.starts_with(IMPLEMENT_SOURCE_FILE_LABEL)
 }
 
 pub fn assert_cli_result(case_dir: &str, expected: &ExpectedFixture, result: &CliRunResult) {

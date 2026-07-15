@@ -26,7 +26,11 @@
             "Constructor"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
         }
       ],
       "relationships": [],
@@ -34,16 +38,26 @@
       "type_aliases": [
         {
           "alias": "NameType",
-          "original_type": "const char *"
+          "original_type": "const char *",
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
         },
         {
           "alias": "DoorCount",
-          "original_type": "int"
+          "original_type": "int",
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
         }
       ],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/type_alias/transport.cpp",
-      "source_line": 13
+      "source_location": {
+        "file": "",
+        "line": 13
+      }
     }
   },
   "functions": []

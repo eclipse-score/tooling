@@ -16,7 +16,11 @@
           "middle": null,
           "right": null
         },
-        "label": null
+        "label": null,
+        "source_location": {
+          "file": "",
+          "line": 15
+        }
       },
       {
         "left": "IInterface",
@@ -31,9 +35,12 @@
           "middle": null,
           "right": null
         },
-        "label": null
+        "label": null,
+        "source_location": {
+          "file": "",
+          "line": 16
+        }
       }
-    ],
-    "source_file": "relationship_mix_inher.puml"
+    ]
   }
 }

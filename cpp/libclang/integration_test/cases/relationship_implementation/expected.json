@@ -16,7 +16,11 @@
             "Override"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         }
       ],
       "relationships": [
@@ -25,14 +29,20 @@
           "target": "Rel::IService",
           "relation_type": "Implementation",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 22
+          }
         }
       ],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_implementation/implementation.cpp",
-      "source_line": 22
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_implementation/implementation.cpp",
+        "line": 22
+      }
     },
     "Rel::IService": {
       "id": "Rel::IService",
@@ -50,7 +60,11 @@
             "Destructor"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
         },
         {
           "name": "run",
@@ -61,15 +75,21 @@
             "Abstract"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
         }
       ],
       "relationships": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_implementation/implementation.cpp",
-      "source_line": 14
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_implementation/implementation.cpp",
+        "line": 14
+      }
     }
   },
   "functions": []

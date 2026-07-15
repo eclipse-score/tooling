@@ -13,33 +13,59 @@
         "enum_literals": [
           {
             "name": "De",
-            "value": 5
+            "value": 5,
+            "source_location": {
+              "file": "",
+              "line": 18
+            }
           },
           {
             "name": "Info",
-            "value": 6
+            "value": 6,
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
           },
           {
             "name": "Warn",
-            "value": 7
+            "value": 7,
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
           },
           {
             "name": "Err",
-            "value": 8
+            "value": 8,
+            "source_location": {
+              "file": "",
+              "line": 21
+            }
           },
           {
             "name": "Fatal",
-            "value": 10
+            "value": 10,
+            "source_location": {
+              "file": "",
+              "line": 22
+            }
           },
           {
             "name": "Trace",
-            "value": 11
+            "value": 11,
+            "source_location": {
+              "file": "",
+              "line": 23
+            }
           }
         ],
-        "source_file": "class_diagram_enum_value_sequence.puml",
-        "source_line": 17,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_enum_value_sequence/class_diagram_enum_value_sequence.puml",
+          "line": 17
+        }
       },
       {
         "id": "system.SystemState",
@@ -52,25 +78,43 @@
         "enum_literals": [
           {
             "name": "Init",
-            "value": 0
+            "value": 0,
+            "source_location": {
+              "file": "",
+              "line": 30
+            }
           },
           {
             "name": "Running",
-            "value": 1
+            "value": 1,
+            "source_location": {
+              "file": "",
+              "line": 31
+            }
           },
           {
             "name": "Stopped",
-            "value": 10
+            "value": 10,
+            "source_location": {
+              "file": "",
+              "line": 32
+            }
           },
           {
             "name": "Failed",
-            "value": 11
+            "value": 11,
+            "source_location": {
+              "file": "",
+              "line": 33
+            }
           }
         ],
-        "source_file": "class_diagram_enum_value_sequence.puml",
-        "source_line": 29,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_enum_value_sequence/class_diagram_enum_value_sequence.puml",
+          "line": 29
+        }
       },
       {
         "id": "platform.PowerMode",
@@ -83,35 +127,52 @@
         "enum_literals": [
           {
             "name": "Unknown",
-            "value": -5
+            "value": -5,
+            "source_location": {
+              "file": "",
+              "line": 40
+            }
           },
           {
             "name": "Off",
-            "value": -4
+            "value": -4,
+            "source_location": {
+              "file": "",
+              "line": 41
+            }
           },
           {
             "name": "Standby",
-            "value": 0
+            "value": 0,
+            "source_location": {
+              "file": "",
+              "line": 42
+            }
           },
           {
             "name": "Active",
-            "value": 1
+            "value": 1,
+            "source_location": {
+              "file": "",
+              "line": 43
+            }
           },
           {
             "name": "Sleep",
-            "value": 2
+            "value": 2,
+            "source_location": {
+              "file": "",
+              "line": 44
+            }
           }
         ],
-        "source_file": "class_diagram_enum_value_sequence.puml",
-        "source_line": 39,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_enum_value_sequence/class_diagram_enum_value_sequence.puml",
+          "line": 39
+        }
       }
-    ],
-    "relationships": [],
-    "source_files": [
-      "class_diagram_enum_value_sequence.puml"
-    ],
-    "version": null
+    ]
   }
 }

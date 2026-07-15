@@ -11,8 +11,10 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/same_name_diff_namespace/transport.cpp",
-      "source_line": 15
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/same_name_diff_namespace/transport.cpp",
+        "line": 15
+      }
     },
     "Beta::Engine": {
       "id": "Beta::Engine",
@@ -25,8 +27,10 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/same_name_diff_namespace/transport.cpp",
-      "source_line": 19
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/same_name_diff_namespace/transport.cpp",
+        "line": 19
+      }
     },
     "Car": {
       "id": "Car",
@@ -41,14 +45,22 @@
           "target": "Alpha::Engine",
           "relation_type": "Composition",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         },
         {
           "source": "Car",
           "target": "Beta::Engine",
           "relation_type": "Composition",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 25
+          }
         }
       ],
       "template_parameters": null,
@@ -58,17 +70,27 @@
           "name": "alpha_engine",
           "data_type": "Alpha::Engine",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         },
         {
           "name": "beta_engine",
           "data_type": "Beta::Engine",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 25
+          }
         }
       ],
-      "source_file": "cpp/libclang/integration_test/cases/same_name_diff_namespace/transport.cpp",
-      "source_line": 22
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/same_name_diff_namespace/transport.cpp",
+        "line": 22
+      }
     }
   },
   "functions": []

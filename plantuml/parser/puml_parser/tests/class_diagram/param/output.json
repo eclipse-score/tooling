@@ -11,7 +11,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 15,
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
             "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
@@ -33,7 +36,11 @@
                 ],
                 "type": "int",
                 "template_parameters": null,
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                }
               }
             ],
             "template_parameters": null,
@@ -43,7 +50,6 @@
         }
       }
     ],
-    "relationships": [],
-    "source_file": "param.puml"
+    "relationships": []
   }
 }

@@ -11,7 +11,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 15,
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
             "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
@@ -31,7 +34,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 16,
+            "source_location": {
+              "file": "",
+              "line": 16
+            },
             "type_aliases": [],
             "attributes": [],
             "methods": [],
@@ -47,7 +53,10 @@
           },
           "namespace": "",
           "package": "",
-          "source_line": 17,
+          "source_location": {
+            "file": "",
+            "line": 17
+          },
           "stereotypes": [],
           "items": []
         }
@@ -67,7 +76,11 @@
             "raw": ">"
           }
         },
-        "label": null
+        "label": null,
+        "source_location": {
+          "file": "",
+          "line": 19
+        }
       },
       {
         "left": "Req",
@@ -82,9 +95,12 @@
             "raw": ">"
           }
         },
-        "label": null
+        "label": null,
+        "source_location": {
+          "file": "",
+          "line": 20
+        }
       }
-    ],
-    "source_file": "alias_class.puml"
+    ]
   }
 }

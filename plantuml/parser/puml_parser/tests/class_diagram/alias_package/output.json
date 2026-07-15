@@ -11,7 +11,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 15,
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
             "type_aliases": [],
             "attributes": [],
             "methods": [],
@@ -34,7 +37,10 @@
                 },
                 "namespace": "",
                 "package": "diag",
-                "source_line": 18,
+                "source_location": {
+                  "file": "",
+                  "line": 18
+                },
                 "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
@@ -52,7 +58,10 @@
                 },
                 "namespace": "",
                 "package": "diag",
-                "source_line": 19,
+                "source_location": {
+                  "file": "",
+                  "line": 19
+                },
                 "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
@@ -82,7 +91,10 @@
                 },
                 "namespace": "",
                 "package": "activate",
-                "source_line": 23,
+                "source_location": {
+                  "file": "",
+                  "line": 23
+                },
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
@@ -97,7 +109,10 @@
                 },
                 "namespace": "",
                 "package": "activate",
-                "source_line": 24,
+                "source_location": {
+                  "file": "",
+                  "line": 24
+                },
                 "stereotypes": [],
                 "items": []
               }
@@ -108,7 +123,6 @@
         }
       }
     ],
-    "relationships": [],
-    "source_file": "alias_package.puml"
+    "relationships": []
   }
 }

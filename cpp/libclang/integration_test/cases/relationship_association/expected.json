@@ -19,7 +19,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         }
       ],
       "relationships": [
@@ -28,14 +32,20 @@
           "target": "Driver",
           "relation_type": "Association",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         }
       ],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
-      "source_line": 22
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
+        "line": 22
+      }
     },
     "CarByReturn": {
       "id": "CarByReturn",
@@ -50,7 +60,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
         }
       ],
       "relationships": [
@@ -59,14 +73,20 @@
           "target": "Driver",
           "relation_type": "Association",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
         }
       ],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
-      "source_line": 17
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
+        "line": 17
+      }
     },
     "CarByTemplateReturn": {
       "id": "CarByTemplateReturn",
@@ -81,7 +101,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 29
+          }
         }
       ],
       "relationships": [
@@ -90,14 +114,20 @@
           "target": "Driver",
           "relation_type": "Association",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 29
+          }
         }
       ],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
-      "source_line": 27
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
+        "line": 27
+      }
     },
     "Driver": {
       "id": "Driver",
@@ -110,8 +140,10 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
-      "source_line": 15
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_association/association.cpp",
+        "line": 15
+      }
     }
   },
   "functions": []
