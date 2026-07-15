@@ -32,11 +32,10 @@ rust_test(
     crate_root = "component_class_suite.rs",
     data = [
         ":component_class_test_data",
-        "//validation/core:validation_cli",
     ],
     deps = [
         "//tools/metamodel/class:class_diagram",
-        "//validation/core:validation",
+        "//validation/core:validation_cli",
         "//validation/core/integration_test:test_framework",
         "@crates//:serde",
         "@crates//:serde_json",
