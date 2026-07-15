@@ -13,13 +13,11 @@
 
 use class_diagram::{
     ClassDiagram, EntityType, EnumLiteral, FunctionArgument, MemberVariable, Method,
-    MethodModifier, RelationType, Relationship, SimpleEntity, TemplateParameter, TypeAlias,
-    Visibility,
+    MethodModifier, RelationType, Relationship, SimpleEntity, SourceLocation, TemplateParameter,
+    TypeAlias, Visibility,
 };
 use class_fbs::class_metamodel as fb;
 use flatbuffers::FlatBufferBuilder;
-
-const UNKNOWN_SOURCE_LINE: u32 = 0;
 
 pub struct ClassSerializer;
 
@@ -124,10 +122,8 @@ impl ClassSerializer {
             .collect();
         let entity_relationships_offset = builder.create_vector(&entity_relationship_offsets);
 
-        let source_file_offset = entity
-            .source_file
-            .as_ref()
-            .map(|source| builder.create_string(source));
+        let source_location_offset =
+            Self::serialize_source_location(builder, &entity.source_location);
 
         fb::SimpleEntity::create(
             builder,
@@ -142,8 +138,21 @@ impl ClassSerializer {
                 template_parameters: template_parameters_offset,
                 enum_literals: Some(enum_literals_offset),
                 relationships: Some(entity_relationships_offset),
-                source_file: source_file_offset,
-                source_line: entity.source_line.unwrap_or(UNKNOWN_SOURCE_LINE),
+                source_location: Some(source_location_offset),
+            },
+        )
+    }
+
+    fn serialize_source_location<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        source_location: &SourceLocation,
+    ) -> flatbuffers::WIPOffset<fb::SourceLocation<'a>> {
+        let file_offset = builder.create_string(source_location.file.as_ref());
+        fb::SourceLocation::create(
+            builder,
+            &fb::SourceLocationArgs {
+                file: Some(file_offset),
+                line: source_location.line,
             },
         )
     }
@@ -154,12 +163,15 @@ impl ClassSerializer {
     ) -> flatbuffers::WIPOffset<fb::TypeAlias<'a>> {
         let alias_offset = builder.create_string(&type_alias.alias);
         let original_type_offset = builder.create_string(&type_alias.original_type);
+        let source_location_offset =
+            Self::serialize_source_location(builder, &type_alias.source_location);
 
         fb::TypeAlias::create(
             builder,
             &fb::TypeAliasArgs {
                 alias: Some(alias_offset),
                 original_type: Some(original_type_offset),
+                source_location: Some(source_location_offset),
             },
         )
     }
@@ -173,6 +185,8 @@ impl ClassSerializer {
             .data_type
             .as_ref()
             .map(|data_type| builder.create_string(data_type));
+        let source_location_offset =
+            Self::serialize_source_location(builder, &variable.source_location);
 
         fb::MemberVariable::create(
             builder,
@@ -181,6 +195,7 @@ impl ClassSerializer {
                 data_type: data_type_offset,
                 visibility: Self::map_visibility(variable.visibility),
                 is_static: variable.is_static,
+                source_location: Some(source_location_offset),
             },
         )
     }
@@ -216,6 +231,8 @@ impl ClassSerializer {
             .map(Self::map_method_modifier)
             .collect();
         let modifiers_offset = builder.create_vector(&modifier_values);
+        let source_location_offset =
+            Self::serialize_source_location(builder, &method.source_location);
 
         fb::Method::create(
             builder,
@@ -226,6 +243,7 @@ impl ClassSerializer {
                 parameters: Some(parameters_offset),
                 template_parameters: template_parameters_offset,
                 modifiers: Some(modifiers_offset),
+                source_location: Some(source_location_offset),
             },
         )
     }
@@ -314,12 +332,15 @@ impl ClassSerializer {
             let value = value.to_string();
             builder.create_string(&value)
         });
+        let source_location_offset =
+            Self::serialize_source_location(builder, &literal.source_location);
 
         fb::EnumLiteral::create(
             builder,
             &fb::EnumLiteralArgs {
                 name: Some(name_offset),
                 value: value_offset,
+                source_location: Some(source_location_offset),
             },
         )
     }
@@ -338,6 +359,8 @@ impl ClassSerializer {
             .target_multiplicity
             .as_ref()
             .map(|multiplicity| builder.create_string(multiplicity));
+        let source_location_offset =
+            Self::serialize_source_location(builder, &relationship.source_location);
 
         fb::Relationship::create(
             builder,
@@ -347,6 +370,7 @@ impl ClassSerializer {
                 relation_type: Self::map_relation_type(relationship.relation_type),
                 source_multiplicity: source_multiplicity_offset,
                 target_multiplicity: target_multiplicity_offset,
+                source_location: Some(source_location_offset),
             },
         )
     }

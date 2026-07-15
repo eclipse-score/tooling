@@ -12,6 +12,7 @@
 // *******************************************************************************
 
 use serde::{Deserialize, Serialize};
+pub use source_location::SourceLocation;
 
 /// Represents a complete class diagram model containing all resolved entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -63,11 +64,7 @@ pub struct SimpleEntity {
     pub relationships: Vec<Relationship>,
 
     /// Debug info for display in case of mismatch
-    ///
-    /// Source file location
-    pub source_file: Option<String>,
-    /// 1-based line number in source; `None` means the source line is unknown
-    pub source_line: Option<u32>,
+    pub source_location: SourceLocation,
 }
 
 /// The type of entity in a class diagram
@@ -135,6 +132,8 @@ pub struct TypeAlias {
     /// original_type = "double"
     pub alias: String,
     pub original_type: String,
+    /// Source location in input
+    pub source_location: SourceLocation,
 }
 
 /// Represents a class attribute (member variable)
@@ -149,6 +148,8 @@ pub struct MemberVariable {
     pub visibility: Visibility,
     /// Whether this is a static member
     pub is_static: bool,
+    /// Source location in input
+    pub source_location: SourceLocation,
 }
 
 /// Represents a method parameter
@@ -204,6 +205,8 @@ pub struct Method {
     /// Template parameters for generic methods
     pub template_parameters: Option<Vec<TemplateParameter>>,
     pub modifiers: Vec<MethodModifier>,
+    /// Source location in input
+    pub source_location: SourceLocation,
 }
 
 /// Represents a relationship between two entities
@@ -222,6 +225,8 @@ pub struct Relationship {
     pub source_multiplicity: Option<String>,
     /// Target multiplicity
     pub target_multiplicity: Option<String>,
+    /// Source location in input
+    pub source_location: SourceLocation,
 }
 
 /// Types of relationships in class diagrams
@@ -250,6 +255,8 @@ pub struct EnumLiteral {
     pub name: String,
     /// Explicit value (e.g., `HIGH = 0`)
     pub value: Option<i128>,
+    /// Source location in input
+    pub source_location: SourceLocation,
 }
 
 #[cfg(test)]
@@ -268,6 +275,7 @@ mod tests {
                 data_type: Some("string".to_string()),
                 visibility: Visibility::Public,
                 is_static: false,
+                source_location: SourceLocation::new("test.puml", 1),
             }],
             methods: vec![Method {
                 name: "getName".to_string(),
@@ -276,11 +284,11 @@ mod tests {
                 parameters: vec![],
                 template_parameters: None,
                 modifiers: vec![MethodModifier::Virtual],
+                source_location: SourceLocation::new("test.puml", 1),
             }],
             template_parameters: None,
             enum_literals: vec![],
-            source_file: None,
-            source_line: None,
+            source_location: SourceLocation::new("test.puml", 1),
             type_aliases: vec![],
             relationships: vec![],
         };
@@ -298,6 +306,7 @@ mod tests {
             relation_type: RelationType::Inheritance,
             source_multiplicity: None,
             target_multiplicity: None,
+            source_location: SourceLocation::new("test.puml", 1),
         };
 
         assert_eq!(inheritance.relation_type, RelationType::Inheritance);
@@ -317,6 +326,7 @@ mod tests {
                 parameters: vec![],
                 template_parameters: None,
                 modifiers: vec![],
+                source_location: SourceLocation::new("test.puml", 1),
             }],
             ..Default::default()
         };

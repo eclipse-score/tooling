@@ -13,6 +13,11 @@
 
 namespace class_metamodel;
 
+table SourceLocation {
+    file: string;
+    line: uint32;
+}
+
 enum Visibility : byte {
     Public = 0,
     Private = 1,
@@ -63,6 +68,7 @@ table TemplateParameter {
 table TypeAlias {
     alias: string (required);
     original_type: string (required);
+    source_location: SourceLocation (required);
 }
 
 table FunctionArgument {
@@ -77,6 +83,7 @@ table MemberVariable {
     data_type: string;
     visibility: Visibility = Public;
     is_static: bool = false;
+    source_location: SourceLocation (required);
 }
 
 table Method {
@@ -86,11 +93,13 @@ table Method {
     parameters: [FunctionArgument];
     template_parameters: [TemplateParameter];
     modifiers: [MethodModifier];
+    source_location: SourceLocation (required);
 }
 
 table EnumLiteral {
     name: string (required);
     value: string;
+    source_location: SourceLocation (required);
 }
 
 table Relationship {
@@ -99,6 +108,7 @@ table Relationship {
     relation_type: RelationType = Association;
     source_multiplicity: string;
     target_multiplicity: string;
+    source_location: SourceLocation (required);
 }
 
 table SimpleEntity {
@@ -112,8 +122,7 @@ table SimpleEntity {
     template_parameters: [TemplateParameter];
     enum_literals: [EnumLiteral];
     relationships: [Relationship];
-    source_file: string;
-    source_line: uint32;
+    source_location: SourceLocation (required);
 }
 
 table ClassDiagram {

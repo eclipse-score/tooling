@@ -660,19 +660,3 @@ fn build_fqn_from_entity(entity: &Entity) -> String {
     parts.reverse();
     collapse_std_internal_namespaces(parts).join("::")
 }
-
-pub fn to_workspace_relative_or_abs_path(abs_path: std::path::PathBuf) -> String {
-    // Make path relative to current working directory (workspace root)
-    // so golden files stay portable across machines.
-    if let Ok(cwd) = std::env::current_dir() {
-        if let Ok(rel) = abs_path.strip_prefix(&cwd) {
-            return normalize_source_path(rel.to_string_lossy().as_ref());
-        }
-    }
-
-    normalize_source_path(abs_path.to_string_lossy().as_ref())
-}
-
-fn normalize_source_path(path: &str) -> String {
-    path.strip_prefix("./").unwrap_or(path).to_string()
-}

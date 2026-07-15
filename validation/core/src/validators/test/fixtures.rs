@@ -21,7 +21,7 @@ use component_diagram::SourceLocation;
 use sequence_logic::{Event, Interaction, SequenceNode, SequenceTree};
 
 pub(crate) fn dummy_source_location() -> SourceLocation {
-    SourceLocation::new("", 0)
+    SourceLocation::new("test.puml", 1)
 }
 
 pub(super) fn relation_with_role(target: &str, source_role: EndpointRole) -> LogicRelation {
@@ -121,7 +121,7 @@ pub(super) fn sequence_calls(calls: &[(&str, &str, &str)]) -> SequenceDiagramInp
                         callee: (*callee).to_string(),
                         method: (*method).to_string(),
                     }),
-                    source_location: SourceLocation::new("test.puml", 0),
+                    source_location: dummy_source_location(),
                     branches_node: Vec::new(),
                 })
                 .collect(),
@@ -145,8 +145,7 @@ pub(super) fn internal_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> Internal
                 template_parameters: None,
                 enum_literals: Vec::new(),
                 relationships: Vec::new(),
-                source_file: None,
-                source_line: None,
+                source_location: dummy_source_location(),
             })
             .collect(),
         relationships: Vec::new(),
@@ -168,6 +167,7 @@ fn method(name: &str) -> Method {
     Method {
         name: name.to_string(),
         return_type: None,
+        source_location: dummy_source_location(),
         visibility: Visibility::Public,
         parameters: Vec::new(),
         template_parameters: None,

@@ -374,13 +374,14 @@ impl ClassDesignImplementationValidator {
         let implementation_literals = enum_literal_map(implementation_entity);
         for design_literal in &design_entity.enum_literals {
             match implementation_literals.get(design_literal.name.as_str()) {
-                Some(implementation_literal) if *implementation_literal == design_literal => {}
+                Some(implementation_literal)
+                    if enum_literals_match(design_literal, implementation_literal) => {}
                 Some(implementation_literal) => self.result.add_failure(Self::format_mismatch(
                     design_entity,
                     implementation_entity,
                     &format!("{:?}", design_literal.name.as_str()),
-                    &format!("{:?}", design_literal),
-                    &format!("{:?}", implementation_literal),
+                    &enum_literal_value(design_literal),
+                    &enum_literal_value(implementation_literal),
                 )),
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
@@ -423,15 +424,14 @@ impl ClassDesignImplementationValidator {
     }
 
     fn format_missing_class(entity: &SimpleEntity) -> String {
+        let (design_file, design_line) = entity.source_location.display();
         format!(
             "Missing implementation class for unit design entity:\n\
                 Entity ID          : {}\n\
                 Design source file : {}\n\
                 Design source line : {}\n\
                 Required Action    : Add a matching implementation class or update the unit design",
-            entity.id,
-            design_source_file(entity),
-            design_source_line(entity),
+            entity.id, design_file, design_line,
         )
     }
 
@@ -440,6 +440,7 @@ impl ClassDesignImplementationValidator {
         member_type: &str,
         member_name: &str,
     ) -> String {
+        let (design_file, design_line) = design_entity.source_location.display();
         format!(
             "Missing implementation {member_type} for unit design entity:\n\
                 Entity ID          : {}\n\
@@ -447,10 +448,7 @@ impl ClassDesignImplementationValidator {
                 Design source file : {}\n\
                 Design source line : {}\n\
                 Required Action    : Implement the member or update the unit design",
-            design_entity.id,
-            member_name,
-            design_source_file(design_entity),
-            design_source_line(design_entity),
+            design_entity.id, member_name, design_file, design_line,
         )
     }
 
@@ -461,6 +459,8 @@ impl ClassDesignImplementationValidator {
         design_value: &str,
         implementation_value: &str,
     ) -> String {
+        let (design_file, design_line) = design_entity.source_location.display();
+        let (implement_file, implement_line) = implementation_entity.source_location.display();
         format!(
             "Implementation class data differs from unit design entity:\n\
                 Entity ID             : {}\n\
@@ -475,36 +475,13 @@ impl ClassDesignImplementationValidator {
             design_entity.id,
             field,
             design_value,
-            design_source_file(design_entity),
-            design_source_line(design_entity),
+            design_file,
+            design_line,
             implementation_value,
-            source_file(implementation_entity),
-            source_line(implementation_entity)
+            implement_file,
+            implement_line
         )
     }
-}
-
-fn design_source_file(entity: &SimpleEntity) -> &str {
-    source_file(entity)
-}
-
-fn source_file(entity: &SimpleEntity) -> &str {
-    entity
-        .source_file
-        .as_deref()
-        .filter(|source_file| !source_file.is_empty())
-        .unwrap_or("<unknown>")
-}
-
-fn design_source_line(entity: &SimpleEntity) -> String {
-    source_line(entity)
-}
-
-fn source_line(entity: &SimpleEntity) -> String {
-    entity
-        .source_line
-        .map(|line| line.to_string())
-        .unwrap_or_else(|| "<unknown>".to_string())
 }
 
 fn format_class_comparison_debug(
@@ -820,6 +797,18 @@ fn enum_literal_map(entity: &SimpleEntity) -> BTreeMap<&str, &EnumLiteral> {
         .collect()
 }
 
+fn enum_literals_match(design_literal: &EnumLiteral, implementation_literal: &EnumLiteral) -> bool {
+    design_literal.name == implementation_literal.name
+        && design_literal.value == implementation_literal.value
+}
+
+fn enum_literal_value(literal: &EnumLiteral) -> String {
+    match &literal.value {
+        Some(value) => format!("{:?}", value),
+        None => "None".to_string(),
+    }
+}
+
 fn relationship_map(entity: &SimpleEntity) -> BTreeMap<String, &Relationship> {
     entity
         .relationships
@@ -851,7 +840,7 @@ mod tests {
     use crate::models::ClassDiagramInputs;
     use class_diagram::{
         ClassDiagram, EntityType, FunctionArgument, MemberVariable, Method, RelationType,
-        Relationship, SimpleEntity, Visibility,
+        Relationship, SimpleEntity, SourceLocation, Visibility,
     };
     use std::sync::Once;
 
@@ -881,6 +870,7 @@ mod tests {
         Method {
             name: name.to_string(),
             return_type: None,
+            source_location: SourceLocation::new("test.puml", 1),
             visibility: Visibility::Public,
             parameters: Vec::new(),
             template_parameters: None,
@@ -929,6 +919,7 @@ mod tests {
             data_type: Some(data_type.to_string()),
             visibility: Visibility::Private,
             is_static: false,
+            source_location: SourceLocation::new("test.puml", 1),
         }
     }
 
@@ -939,6 +930,7 @@ mod tests {
             relation_type,
             source_multiplicity: None,
             target_multiplicity: None,
+            source_location: SourceLocation::new("test.puml", 1),
         }
     }
 
@@ -958,8 +950,7 @@ mod tests {
             template_parameters: None,
             enum_literals: Vec::new(),
             relationships: Vec::new(),
-            source_file: None,
-            source_line: None,
+            source_location: SourceLocation::new("test.puml", 1),
         }
     }
 

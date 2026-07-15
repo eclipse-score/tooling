@@ -18,6 +18,7 @@ mod enum_visitor;
 mod function_visitor;
 pub mod visitor;
 
+pub use class_parser_helper::ResolvedType;
 pub use class_visitor::ClassVisitor;
 pub use context::VisitContext;
 pub use enum_visitor::EnumVisitor;

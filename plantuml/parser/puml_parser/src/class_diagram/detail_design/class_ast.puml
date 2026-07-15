@@ -25,6 +25,7 @@ class ClassDef {
   package: String
   attributes: Vec<Attribute>
   methods: Vec<Method>
+  source_location: SourceLocation
 }
 
 class StructDef {
@@ -33,6 +34,7 @@ class StructDef {
   package: String
   attributes: Vec<Attribute>
   methods: Vec<Method>
+  source_location: SourceLocation
 }
 
 class InterfaceDef {
@@ -41,6 +43,7 @@ class InterfaceDef {
   package: String
   attributes: Vec<Attribute>
   methods: Vec<Method>
+  source_location: SourceLocation
 }
 
 class EnumDef {
@@ -49,12 +52,30 @@ class EnumDef {
   package: String
   stereotypes: Vec<String>
   items: Vec<EnumItem>
+  source_location: SourceLocation
 }
 
 class EnumItem {
   visibility: Option<Visibility>
   name: String
   value: Option<EnumValue>
+  source_location: SourceLocation
+}
+
+class Relationship {
+  left: String
+  right: String
+  arrow: Arrow
+  left_multiplicity: Option<String>
+  right_multiplicity: Option<String>
+  label: Option<String>
+  source_location: SourceLocation
+}
+
+class TypeAlias {
+  alias: String
+  original_type: String
+  source_location: SourceLocation
 }
 
 class Namespace {
@@ -82,12 +103,14 @@ class Method {
   generic_params: Vec<String>
   params: Vec<Param>
   type: Option<String>
+  source_location: SourceLocation
 }
 
 class Attribute {
   visibility: Visibility
   name: String
   type: Option<String>
+  source_location: SourceLocation
 }
 
 ' ========================

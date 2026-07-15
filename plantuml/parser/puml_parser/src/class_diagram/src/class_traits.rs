@@ -17,7 +17,6 @@ pub trait TypeDef {
     fn attributes_mut(&mut self) -> &mut Vec<Attribute>;
     fn type_aliases_mut(&mut self) -> &mut Vec<TypeAlias>;
     fn methods_mut(&mut self) -> &mut Vec<Method>;
-    fn source_line_mut(&mut self) -> &mut Option<u32>;
 }
 
 pub trait WritableName {

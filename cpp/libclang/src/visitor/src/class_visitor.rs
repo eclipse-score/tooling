@@ -15,13 +15,13 @@ use std::collections::HashSet;
 
 use class_diagram::{
     EntityType, FunctionArgument, MemberVariable, Method, MethodModifier, RelationType,
-    Relationship, SimpleEntity, TemplateParameter, TypeAlias, Visibility,
+    Relationship, SimpleEntity, SourceLocation, TemplateParameter, TypeAlias, Visibility,
 };
 
-use crate::class_parser_helper::{
-    render_type_for_display, resolve_type, to_workspace_relative_or_abs_path, ResolvedType,
+use crate::class_parser_helper::{render_type_for_display, resolve_type, ResolvedType};
+use crate::context::{
+    ParsedBaseClass, ParsedClassInfo, ParsedMethodType, ParsedVariableType, VisitContext,
 };
-use crate::context::{ParsedClassInfo, ParsedMethodType, ParsedVariableType, VisitContext};
 use crate::visitor::AstVisitor;
 
 pub struct ClassVisitor;
@@ -87,7 +87,7 @@ impl ClassVisitor {
 
         class_entity.entity_type = infer_entity_type_from_members(entity.get_kind(), &class_entity);
 
-        (class_entity.source_file, class_entity.source_line) = parse_source_location(entity);
+        class_entity.source_location = parse_source_location(entity);
 
         Some((builder, class_entity))
     }
@@ -96,7 +96,10 @@ impl ClassVisitor {
         match entity.get_kind() {
             EntityKind::BaseSpecifier => {
                 if let Some(base_type) = entity.get_type() {
-                    builder.base_classes.push(resolve_type(&base_type));
+                    builder.base_classes.push(ParsedBaseClass {
+                        resolved_type: resolve_type(&base_type),
+                        source_location: parse_source_location(entity),
+                    });
                 }
             }
             EntityKind::Method | EntityKind::Constructor | EntityKind::Destructor => {
@@ -138,18 +141,16 @@ impl ClassVisitor {
     }
 }
 
-pub(crate) fn parse_source_location(entity: &Entity) -> (Option<String>, Option<u32>) {
+pub(crate) fn parse_source_location(entity: &Entity) -> SourceLocation {
     let Some(location) = entity.get_location() else {
-        return (None, None);
+        return SourceLocation::default();
     };
 
     let file_location = location.get_file_location();
     let source_file = file_location
         .file
-        .map(|f| to_workspace_relative_or_abs_path(f.get_path()));
-    let source_line = Some(file_location.line);
-
-    (source_file, source_line)
+        .map(|f| f.get_path().to_string_lossy().to_string());
+    SourceLocation::new(source_file.unwrap_or_default(), file_location.line)
 }
 
 fn collect_variable_type(entity: &Entity) -> Option<ParsedVariableType> {
@@ -159,6 +160,7 @@ fn collect_variable_type(entity: &Entity) -> Option<ParsedVariableType> {
     Some(ParsedVariableType {
         name,
         resolved_type: resolve_type(&field_type),
+        source_location: parse_source_location(entity),
     })
 }
 
@@ -178,6 +180,7 @@ fn collect_method_type(entity: &Entity, builder: &mut ParsedClassInfo) -> Parsed
         name,
         return_type,
         parameter_types,
+        source_location: parse_source_location(entity),
     };
     builder.method_types.push(parsed_method_type.clone());
 
@@ -210,6 +213,7 @@ fn parse_type_alias(entity: &Entity) -> Option<TypeAlias> {
     Some(TypeAlias {
         alias,
         original_type,
+        source_location: parse_source_location(entity),
     })
 }
 
@@ -265,6 +269,7 @@ fn parse_method(entity: &Entity, parsed_method_type: &ParsedMethodType) -> Optio
             (kind == EntityKind::Constructor, MethodModifier::Constructor),
             (kind == EntityKind::Destructor, MethodModifier::Destructor),
         ]),
+        source_location: parse_source_location(entity),
     })
 }
 
@@ -279,6 +284,7 @@ fn parse_variable(
         }),
         visibility: parse_visibility(entity),
         is_static: entity.get_kind() == EntityKind::VarDecl,
+        source_location: parse_source_location(entity),
     })
 }
 
@@ -400,13 +406,16 @@ fn infer_entity_type_from_members(kind: EntityKind, class: &SimpleEntity) -> Ent
 // Relationship part
 fn build_relationships_for_class(ctx: &mut VisitContext, builder: &ParsedClassInfo) {
     for base in &builder.base_classes {
-        let resolved_base = base.referenced_entity_id().unwrap_or_else(|| {
-            panic!(
-                "Unresolved base type '{}' referenced by '{}'",
-                base.render_for_display(),
-                builder.id
-            )
-        });
+        let resolved_base = base
+            .resolved_type
+            .referenced_entity_id()
+            .unwrap_or_else(|| {
+                panic!(
+                    "Unresolved base type '{}' referenced by '{}'",
+                    base.resolved_type.render_for_display(),
+                    builder.id
+                )
+            });
 
         let Some(target_class) = ctx.types.get(resolved_base) else {
             // Base type is not in the type map — it is likely an external dependency
@@ -431,11 +440,21 @@ fn build_relationships_for_class(ctx: &mut VisitContext, builder: &ParsedClassIn
             .get_mut(&builder.id)
             .expect("Source class must exist before building relationships");
 
-        add_relationship(class, resolved_base.to_string(), relation_type);
+        add_relationship(
+            class,
+            resolved_base.to_string(),
+            relation_type,
+            &base.source_location,
+        );
     }
 }
 
-fn add_relationship(class: &mut SimpleEntity, target: String, relation_type: RelationType) {
+fn add_relationship(
+    class: &mut SimpleEntity,
+    target: String,
+    relation_type: RelationType,
+    source_location: &SourceLocation,
+) {
     if target == class.id {
         return;
     }
@@ -446,9 +465,18 @@ fn add_relationship(class: &mut SimpleEntity, target: String, relation_type: Rel
         relation_type,
         source_multiplicity: None,
         target_multiplicity: None,
+        source_location: source_location.clone(),
     };
 
-    if !class.relationships.contains(&relationship) {
+    let duplicate = class.relationships.iter().any(|existing| {
+        existing.source == relationship.source
+            && existing.target == relationship.target
+            && existing.relation_type == relationship.relation_type
+            && existing.source_multiplicity == relationship.source_multiplicity
+            && existing.target_multiplicity == relationship.target_multiplicity
+    });
+
+    if !duplicate {
         class.relationships.push(relationship);
     }
 }
@@ -478,6 +506,7 @@ fn infer_variable_relationships(
             known_class_ids,
             RelationType::Aggregation,
             RelationType::Composition,
+            &variable.source_location,
         );
     }
 }
@@ -494,6 +523,7 @@ fn infer_method_relationships(
             known_class_ids,
             RelationType::Dependency,
             RelationType::Association,
+            &method.source_location,
         );
 
         for parameter_type in &method.parameter_types {
@@ -503,6 +533,7 @@ fn infer_method_relationships(
                 known_class_ids,
                 RelationType::Dependency,
                 RelationType::Association,
+                &method.source_location,
             );
         }
     }
@@ -514,6 +545,7 @@ fn add_relationship_from_resolved_type(
     known_class_ids: &HashSet<String>,
     non_owning_relation: RelationType,
     owning_relation: RelationType,
+    source_location: &SourceLocation,
 ) {
     let Some(raw_target) = resolved_type.relationship_target_entity_id() else {
         return;
@@ -529,7 +561,7 @@ fn add_relationship_from_resolved_type(
         owning_relation
     };
 
-    add_relationship(class, target, relation_type);
+    add_relationship(class, target, relation_type, source_location);
 }
 
 fn resolve_in_model_target(

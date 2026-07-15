@@ -30,7 +30,7 @@ pub struct ClassEntityIndex {
 impl ClassEntityIndex {
     /// Build an index from class diagrams for class implementation validation.
     pub fn build_index(diagrams: &[ClassDiagramInput], result: &mut ValidationResult) -> Self {
-        let mut entities = BTreeMap::new();
+        let mut entities: BTreeMap<String, SimpleEntity> = BTreeMap::new();
 
         for diagram in diagrams {
             for entity in &diagram.entities {
@@ -43,8 +43,7 @@ impl ClassEntityIndex {
                            Key             : {key}\n\
                            First location  : {}\n\
                            Second location : {}",
-                        entity_location(prev),
-                        entity_location(&indexed_entity)
+                        prev.source_location, indexed_entity.source_location
                     ));
                 } else {
                     entities.insert(key, indexed_entity);
@@ -62,16 +61,6 @@ impl ClassEntityIndex {
     pub fn find_by_id(&self, id: &str) -> Option<&SimpleEntity> {
         self.entities.get(&id.to_lowercase())
     }
-}
-
-fn entity_location(entity: &SimpleEntity) -> String {
-    let source_file = entity.source_file.as_deref().unwrap_or("unknown-file");
-    let source_line = entity
-        .source_line
-        .map(|line| line.to_string())
-        .unwrap_or_else(|| "unknown-line".to_string());
-
-    format!("{source_file}:{source_line}")
 }
 
 /// Indexed internal-API data prepared for interface and method validators.
@@ -121,12 +110,13 @@ impl InternalApiIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use class_diagram::{ClassDiagram, Method, SimpleEntity, Visibility};
+    use class_diagram::{ClassDiagram, Method, SimpleEntity, SourceLocation, Visibility};
 
     fn method(name: &str) -> Method {
         Method {
             name: name.to_string(),
             return_type: None,
+            source_location: SourceLocation::new("test.puml", 1),
             visibility: Visibility::Public,
             parameters: Vec::new(),
             template_parameters: None,
@@ -134,7 +124,7 @@ mod tests {
         }
     }
 
-    fn entity(id: &str, source_file: Option<&str>, source_line: Option<u32>) -> SimpleEntity {
+    fn entity(id: &str, source_file: &str, source_line: u32) -> SimpleEntity {
         SimpleEntity {
             id: id.to_string(),
             name: id.rsplit('.').next().unwrap_or(id).to_string(),
@@ -146,8 +136,7 @@ mod tests {
             template_parameters: None,
             enum_literals: Vec::new(),
             relationships: Vec::new(),
-            source_file: source_file.map(str::to_string),
-            source_line,
+            source_location: SourceLocation::new(source_file, source_line),
         }
     }
 
@@ -156,8 +145,8 @@ mod tests {
         let diagrams = vec![ClassDiagram {
             name: "classes".to_string(),
             entities: vec![
-                entity("Unit.Sample", Some("design_a.puml"), Some(12)),
-                entity("unit.sample", Some("design_b.puml"), Some(34)),
+                entity("Unit.Sample", "design_a.puml", 12),
+                entity("unit.sample", "design_b.puml", 34),
             ],
             relationships: Vec::new(),
             source_files: Vec::new(),
@@ -174,12 +163,12 @@ mod tests {
     }
 
     #[test]
-    fn class_entity_index_reports_unknown_duplicate_source_locations() {
+    fn class_entity_index_reports_duplicate_source_locations_with_distinct_files() {
         let diagrams = vec![ClassDiagram {
             name: "classes".to_string(),
             entities: vec![
-                entity("Unit.Sample", None, Some(12)),
-                entity("unit.sample", Some("design_b.puml"), None),
+                entity("Unit.Sample", "design_left.puml", 1),
+                entity("unit.sample", "design_right.puml", 2),
             ],
             relationships: Vec::new(),
             source_files: Vec::new(),
@@ -190,8 +179,8 @@ mod tests {
         let _index = ClassEntityIndex::build_index(&diagrams, &mut result);
 
         assert_eq!(result.failures.len(), 1);
-        assert!(result.failures[0].contains("First location  : unknown-file:12"));
-        assert!(result.failures[0].contains("Second location : design_b.puml:unknown-line"));
+        assert!(result.failures[0].contains("First location  : design_left.puml:1"));
+        assert!(result.failures[0].contains("Second location : design_right.puml:2"));
     }
 
     #[test]
@@ -210,8 +199,7 @@ mod tests {
                     template_parameters: None,
                     enum_literals: Vec::new(),
                     relationships: Vec::new(),
-                    source_file: None,
-                    source_line: None,
+                    source_location: SourceLocation::new("test.puml", 1),
                 },
                 SimpleEntity {
                     id: "InternalAPI.Helper".to_string(),
@@ -224,8 +212,7 @@ mod tests {
                     template_parameters: None,
                     enum_literals: Vec::new(),
                     relationships: Vec::new(),
-                    source_file: None,
-                    source_line: None,
+                    source_location: SourceLocation::new("test.puml", 1),
                 },
             ],
             relationships: Vec::new(),
@@ -264,8 +251,7 @@ mod tests {
                     template_parameters: None,
                     enum_literals: Vec::new(),
                     relationships: Vec::new(),
-                    source_file: None,
-                    source_line: None,
+                    source_location: SourceLocation::new("test.puml", 1),
                 },
                 SimpleEntity {
                     id: "InternalAPI.InternalInterfaceB".to_string(),
@@ -278,8 +264,7 @@ mod tests {
                     template_parameters: None,
                     enum_literals: Vec::new(),
                     relationships: Vec::new(),
-                    source_file: None,
-                    source_line: None,
+                    source_location: SourceLocation::new("test.puml", 1),
                 },
             ],
             relationships: Vec::new(),
