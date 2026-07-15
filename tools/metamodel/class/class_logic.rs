@@ -19,10 +19,6 @@ pub use source_location::SourceLocation;
 pub struct ClassDiagram {
     pub name: String,
     pub entities: Vec<SimpleEntity>,
-    // all relationships in the entire diagram
-    pub relationships: Vec<Relationship>, // would make sense inside entities
-    pub source_files: Vec<String>,
-    pub version: Option<String>,
 }
 
 /// Represents a class, struct, interface, enum, or other type entity

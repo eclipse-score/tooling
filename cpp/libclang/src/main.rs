@@ -166,9 +166,6 @@ fn serialize_class_diagram(
     let class_diagram = ClassDiagram {
         name: String::new(), // no name for c++ side
         entities,
-        relationships: Vec::new(), // relationships are included at the entity level for c++
-        source_files: Vec::new(),  // source files are not tracked at the diagram level for c++
-        version: None,
     };
 
     let output_fbs = ClassSerializer::serialize(&class_diagram, "");

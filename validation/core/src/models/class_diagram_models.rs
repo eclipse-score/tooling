@@ -148,9 +148,6 @@ mod tests {
                 entity("Unit.Sample", "design_a.puml", 12),
                 entity("unit.sample", "design_b.puml", 34),
             ],
-            relationships: Vec::new(),
-            source_files: Vec::new(),
-            version: None,
         }];
 
         let mut result = ValidationResult::default();
@@ -170,9 +167,6 @@ mod tests {
                 entity("Unit.Sample", "design_left.puml", 1),
                 entity("unit.sample", "design_right.puml", 2),
             ],
-            relationships: Vec::new(),
-            source_files: Vec::new(),
-            version: None,
         }];
 
         let mut result = ValidationResult::default();
@@ -215,9 +209,6 @@ mod tests {
                     source_location: SourceLocation::new("test.puml", 1),
                 },
             ],
-            relationships: Vec::new(),
-            source_files: Vec::new(),
-            version: None,
         }];
 
         let mut result = ValidationResult::default();
@@ -267,9 +258,6 @@ mod tests {
                     source_location: SourceLocation::new("test.puml", 1),
                 },
             ],
-            relationships: Vec::new(),
-            source_files: Vec::new(),
-            version: None,
         }];
 
         let mut result = ValidationResult::default();
