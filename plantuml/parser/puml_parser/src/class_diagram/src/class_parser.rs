@@ -1067,14 +1067,7 @@ impl DiagramParser for PumlClassParser {
             );
         }
 
-        let mut uml_file = ClassUmlFile {
-            source_file: path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or_default()
-                .to_string(),
-            ..Default::default()
-        };
+        let mut uml_file = ClassUmlFile::default();
         let source_file: Rc<str> = path.as_ref().clone().to_string_lossy().to_string().into();
         let mut session = ClassParseSession {
             normalized_content: &normalized_content,

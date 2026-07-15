@@ -148,9 +148,6 @@ pub(super) fn internal_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> Internal
                 source_location: dummy_source_location(),
             })
             .collect(),
-        relationships: Vec::new(),
-        source_files: Vec::new(),
-        version: None,
     }];
 
     let mut setup_result = ValidationResult::default();

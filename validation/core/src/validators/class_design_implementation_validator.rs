@@ -958,9 +958,6 @@ mod tests {
         let diagrams: ClassDiagramInputs = vec![ClassDiagram {
             name: "unit".to_string(),
             entities,
-            relationships: Vec::new(),
-            source_files: Vec::new(),
-            version: None,
         }];
         ClassEntityIndex::build_index(&diagrams, &mut ValidationResult::default())
     }

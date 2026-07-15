@@ -54,7 +54,6 @@ pub enum ClassPumlResolverError {
 
 pub struct ClassResolver {
     pub logic: ClassDiagram,
-
     // internal name or alias -> FQN
     name_map: HashMap<String, String>,
 }
@@ -71,9 +70,6 @@ impl ClassResolver {
             logic: ClassDiagram {
                 name: String::new(),
                 entities: Vec::new(),
-                relationships: Vec::new(),
-                source_files: Vec::new(),
-                version: None,
             },
             name_map: HashMap::new(),
         }
@@ -84,39 +80,15 @@ impl ClassResolver {
             self.process_top_level(elem, None)?;
         }
 
-        for elem in &file.elements {
-            self.process_declared_relations_top_level(elem, None)?;
-        }
-
         for rel in &file.relationships {
-            self.process_relationship(rel, None)?;
+            self.process_relationship(rel, Some(String::new()))?;
         }
 
         for elem in &file.elements {
             self.process_declared_relations_top_level(elem, None)?;
         }
-
-        self.populate_entity_relationships();
 
         Ok(())
-    }
-
-    fn populate_entity_relationships(&mut self) {
-        let mut outgoing_relationships: HashMap<String, Vec<Relationship>> = HashMap::new();
-
-        for relationship in &self.logic.relationships {
-            outgoing_relationships
-                .entry(relationship.source.clone())
-                .or_default()
-                .push(relationship.clone());
-        }
-
-        for entity in &mut self.logic.entities {
-            entity.relationships = outgoing_relationships
-                .get(&entity.id)
-                .cloned()
-                .unwrap_or_default();
-        }
     }
 
     pub fn result(self) -> ClassDiagram {
@@ -406,14 +378,14 @@ impl ClassResolver {
                 }
             })?;
 
-            self.logic.relationships.push(Relationship {
+            self.add_relationship(Relationship {
                 source: source.clone(),
                 target,
                 relation_type,
                 source_multiplicity: None,
                 target_multiplicity: None,
                 source_location: source_location.clone(),
-            });
+            })?;
         }
 
         Ok(())
@@ -806,15 +778,33 @@ impl ClassResolver {
             )
         };
 
-        self.logic.relationships.push(Relationship {
+        self.add_relationship(Relationship {
             source: source_id,
             target: target_id,
             relation_type,
             source_multiplicity,
             target_multiplicity,
             source_location: rel.source_location.clone(),
-        });
+        })?;
 
+        Ok(())
+    }
+
+    fn add_relationship(
+        &mut self,
+        relationship: Relationship,
+    ) -> Result<(), ClassPumlResolverError> {
+        let source_id = &relationship.source;
+        let source_entity = self
+            .logic
+            .entities
+            .iter_mut()
+            .find(|entity| entity.id == *source_id)
+            .ok_or_else(|| ClassPumlResolverError::UnresolvedReference {
+                reference: source_id.clone(),
+            })?;
+
+        source_entity.relationships.push(relationship);
         Ok(())
     }
 }
@@ -830,7 +820,6 @@ impl DiagramResolver for ClassResolver {
         self.name_map.clear();
 
         self.logic.name = document.name.clone();
-        self.logic.source_files.push(document.source_file.clone());
 
         self.analyze(document)?;
 
@@ -839,9 +828,6 @@ impl DiagramResolver for ClassResolver {
             ClassDiagram {
                 name: String::new(),
                 entities: Vec::new(),
-                relationships: Vec::new(),
-                source_files: Vec::new(),
-                version: None,
             },
         );
 
@@ -1109,12 +1095,19 @@ mod tests {
 
         resolver.process_relationship(&rel, None).unwrap();
 
-        assert_eq!(resolver.logic.relationships.len(), 1);
+        let source_entity = resolver
+            .logic
+            .entities
+            .iter()
+            .find(|entity| entity.id == "B")
+            .expect("missing source entity");
+        assert_eq!(source_entity.relationships.len(), 1);
 
-        let r = &resolver.logic.relationships[0];
+        let r = &source_entity.relationships[0];
         assert_eq!(r.source, "B");
         assert_eq!(r.target, "A");
         assert_eq!(r.relation_type, RelationType::Inheritance);
+        assert_eq!(r.source_location.line, 42);
     }
 
     #[test]
@@ -1169,7 +1162,6 @@ mod tests {
 
         let file = ClassUmlFile {
             name: "test".to_string(),
-            source_file: "test.puml".to_string(),
             elements: vec![ClassUmlTopLevel::Types(make_class("User"))],
             relationships: vec![],
         };

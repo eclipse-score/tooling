@@ -27,12 +27,6 @@ use class_diagram::{
 
 pub struct ClassDiagramReader;
 
-fn collect_strings(
-    values: Option<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&str>>>,
-) -> Option<Vec<String>> {
-    values.map(|items| items.iter().map(|value| value.to_string()).collect())
-}
-
 fn read_template_parameters(
     values: Option<
         flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<fb_class::TemplateParameter<'_>>>,
@@ -314,27 +308,10 @@ impl Reader for ClassDiagramReader {
                 .map_err(|e| format!("Failed to parse class FlatBuffer {path}: {e}"))?;
 
             let entities = read_entities(diagram, path)?;
-            let relationships = diagram
-                .relationships()
-                .map(|rels| {
-                    rels.iter()
-                        .enumerate()
-                        .map(|(index, rel)| {
-                            read_relationship(rel, &format!("{path}:diagram_relationship[{index}]"))
-                        })
-                        .collect::<Result<Vec<_>, String>>()
-                })
-                .transpose()?
-                .unwrap_or_default();
-
-            let source_files = collect_strings(diagram.source_files()).unwrap_or_default();
 
             diagrams.push(ClassDiagram {
                 name: diagram.name().to_string(),
                 entities,
-                relationships,
-                source_files,
-                version: diagram.version().map(|s| s.to_string()),
             });
         }
 

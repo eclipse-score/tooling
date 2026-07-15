@@ -34,33 +34,11 @@ impl ClassSerializer {
             .collect();
         let entities_offset = builder.create_vector(&entity_offsets);
 
-        let relationship_offsets: Vec<_> = diagram
-            .relationships
-            .iter()
-            .map(|relationship| Self::serialize_relationship(&mut builder, relationship))
-            .collect();
-        let relationships_offset = builder.create_vector(&relationship_offsets);
-
-        let source_offsets: Vec<_> = diagram
-            .source_files
-            .iter()
-            .map(|source| builder.create_string(source))
-            .collect();
-        let source_files_offset = builder.create_vector(&source_offsets);
-
-        let version_offset = diagram
-            .version
-            .as_ref()
-            .map(|version| builder.create_string(version));
-
         let root = fb::ClassDiagram::create(
             &mut builder,
             &fb::ClassDiagramArgs {
                 name: Some(name_offset),
                 entities: Some(entities_offset),
-                relationships: Some(relationships_offset),
-                source_files: Some(source_files_offset),
-                version: version_offset,
             },
         );
 

@@ -128,9 +128,6 @@ table SimpleEntity {
 table ClassDiagram {
     name: string (required);
     entities: [SimpleEntity];
-    relationships: [Relationship];
-    source_files: [string];
-    version: string;
 }
 
 root_type ClassDiagram;
