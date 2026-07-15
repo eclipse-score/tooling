@@ -221,9 +221,7 @@ py_binary(
         requirement("sphinx_design"),
         requirement("myst_parser"),
         requirement("readthedocs_sphinx_ext"),
-        requirement("rst2pdf"),
         requirement("sphinxcontrib-umlet"),
-        requirement("svglib"),
         requirement("sphinxcontrib-plantuml"),
     ],
 )

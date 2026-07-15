@@ -22,7 +22,8 @@ env:
   ANDROID_SDK_ROOT: ""
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
-  root_workspace_tests:
+  tooling_checks:
+    name: tooling_checks (${{ matrix.name }})
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -59,7 +60,7 @@ jobs:
       - uses: castler/setup-bazel@cache-optimized
         with:
           bazelisk-cache: true
-          disk-cache: root_workspace_tests-${{ matrix.name }}
+          disk-cache: tooling_checks-${{ matrix.name }}
           repository-cache: true
           cache-optimized: true
           cache-save: ${{ github.ref == 'refs/heads/main' }}
@@ -97,6 +98,7 @@ jobs:
           cd cr_checker/tests
           bazel test //...
   rules_score_tests:
+    name: rules_score_tests (${{ matrix.name }})
     runs-on: ubuntu-24.04
     permissions:
       contents: read
