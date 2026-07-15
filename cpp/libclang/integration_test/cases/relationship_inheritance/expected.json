@@ -16,15 +16,21 @@
             "Destructor"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
         }
       ],
       "relationships": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_inheritance/inheritance.cpp",
-      "source_line": 13
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_inheritance/inheritance.cpp",
+        "line": 13
+      }
     },
     "Vehicle::Car": {
       "id": "Vehicle::Car",
@@ -39,14 +45,20 @@
           "target": "Base",
           "relation_type": "Inheritance",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
         }
       ],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_inheritance/inheritance.cpp",
-      "source_line": 19
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_inheritance/inheritance.cpp",
+        "line": 19
+      }
     }
   },
   "functions": []

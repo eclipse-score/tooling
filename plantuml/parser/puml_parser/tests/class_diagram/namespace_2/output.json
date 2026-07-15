@@ -24,7 +24,10 @@
                     },
                     "namespace": "UI",
                     "package": "",
-                    "source_line": 17,
+                    "source_location": {
+                      "file": "",
+                      "line": 17
+                    },
                     "is_abstract": false,
                     "type_aliases": [],
                     "attributes": [],
@@ -41,7 +44,6 @@
         }
       }
     ],
-    "relationships": [],
-    "source_file": "namespace_2.puml"
+    "relationships": []
   }
 }

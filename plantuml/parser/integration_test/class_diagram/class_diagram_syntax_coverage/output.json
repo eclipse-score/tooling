@@ -11,10 +11,12 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 21,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 21
+        }
       },
       {
         "id": "GroupedB",
@@ -25,10 +27,12 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 22,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 22
+        }
       },
       {
         "id": "sample.newline.IActivateTask",
@@ -49,15 +53,21 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 40
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 39,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 39
+        }
       },
       {
         "id": "sample.newline.BaseInterface",
@@ -68,10 +78,12 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 43,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 43
+        }
       },
       {
         "id": "sample.newline.ChildInterface",
@@ -82,8 +94,6 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 45,
         "variables": [],
         "relationships": [
           {
@@ -91,16 +101,28 @@
             "target": "sample.newline.BaseInterface",
             "relation_type": "Inheritance",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 134
+            }
           },
           {
             "source": "sample.newline.ChildInterface",
             "target": "sample.newline.BaseInterface",
             "relation_type": "Inheritance",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 45
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 45
+        }
       },
       {
         "id": "sample.newline.ServiceContract",
@@ -111,10 +133,12 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 48,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 48
+        }
       },
       {
         "id": "sample.newline.myClass",
@@ -131,15 +155,21 @@
             "template_parameters": null,
             "modifiers": [
               "Abstract"
-            ]
+            ],
+            "source_location": {
+              "file": "",
+              "line": 51
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 50,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 50
+        }
       },
       {
         "id": "sample.newline.CheckProgrammingDependenciesFlag",
@@ -154,13 +184,15 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 55
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 54,
         "variables": [],
         "relationships": [
           {
@@ -168,9 +200,17 @@
             "target": "sample.newline.CheckProgrammingDependenciesFlagState",
             "relation_type": "Association",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 138
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 54
+        }
       },
       {
         "id": "sample.newline.CheckProgrammingDependenciesFlagState",
@@ -181,10 +221,12 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 58,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 58
+        }
       },
       {
         "id": "sample.newline.ErrorInfo",
@@ -197,11 +239,13 @@
         "enum_literals": [
           {
             "name": "kUnspecified",
-            "value": 0
+            "value": 0,
+            "source_location": {
+              "file": "",
+              "line": 61
+            }
           }
         ],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 60,
         "variables": [],
         "relationships": [
           {
@@ -209,16 +253,28 @@
             "target": "sample.newline.StartResponsePayload",
             "relation_type": "Aggregation",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 136
+            }
           },
           {
             "source": "sample.newline.ErrorInfo",
             "target": "sample.newline.ServiceImpl",
             "relation_type": "Composition",
             "source_multiplicity": "0..*",
-            "target_multiplicity": "1"
+            "target_multiplicity": "1",
+            "source_location": {
+              "file": "",
+              "line": 137
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 60
+        }
       },
       {
         "id": "sample.newline.StartResponsePayload",
@@ -229,14 +285,16 @@
         "methods": [],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 64,
         "variables": [
           {
             "name": "ErrorInfo",
             "data_type": null,
             "visibility": "public",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 65
+            }
           }
         ],
         "relationships": [
@@ -245,9 +303,17 @@
             "target": "sample.newline.ErrorInfo",
             "relation_type": "Association",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 135
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 64
+        }
       },
       {
         "id": "sample.newline.GenericClass",
@@ -265,10 +331,12 @@
           }
         ],
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 68,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 68
+        }
       },
       {
         "id": "sample.newline.DiagnosticJobCollectionBuilder",
@@ -308,15 +376,21 @@
                 }
               }
             ],
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 72
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 71,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 71
+        }
       },
       {
         "id": "sample.newline.SoftwareEntityTable",
@@ -357,15 +431,21 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 76
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 75,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 75
+        }
       },
       {
         "id": "sample.newline.ServiceImpl",
@@ -382,7 +462,11 @@
             "template_parameters": null,
             "modifiers": [
               "Abstract"
-            ]
+            ],
+            "source_location": {
+              "file": "",
+              "line": 81
+            }
           },
           {
             "name": "Finalize",
@@ -392,7 +476,11 @@
             "template_parameters": null,
             "modifiers": [
               "Static"
-            ]
+            ],
+            "source_location": {
+              "file": "",
+              "line": 82
+            }
           },
           {
             "name": "Submit",
@@ -406,7 +494,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 83
+            }
           },
           {
             "name": "Build",
@@ -414,7 +506,11 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 84
+            }
           },
           {
             "name": "~ServiceImpl",
@@ -424,7 +520,11 @@
             "template_parameters": null,
             "modifiers": [
               "Destructor"
-            ]
+            ],
+            "source_location": {
+              "file": "",
+              "line": 89
+            }
           },
           {
             "name": "operator()",
@@ -438,7 +538,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 90
+            }
           },
           {
             "name": "Submit",
@@ -470,7 +574,11 @@
                 }
               }
             ],
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 91
+            }
           },
           {
             "name": "Submit",
@@ -496,7 +604,11 @@
                 }
               }
             ],
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 92
+            }
           },
           {
             "name": "GetActiveSWEs",
@@ -504,7 +616,11 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 95
+            }
           },
           {
             "name": "TakeOwnership",
@@ -512,7 +628,11 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 96
+            }
           },
           {
             "name": "operator->",
@@ -520,7 +640,11 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 97
+            }
           },
           {
             "name": "run_application",
@@ -534,7 +658,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 98
+            }
           },
           {
             "name": "Visit",
@@ -548,7 +676,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 100
+            }
           },
           {
             "name": "VisitUnnamed",
@@ -562,7 +694,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 101
+            }
           },
           {
             "name": "CreateJobs",
@@ -586,7 +722,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 104
+            }
           },
           {
             "name": "ChangeHandler",
@@ -605,25 +745,35 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 105
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 79,
         "variables": [
           {
             "name": "config_",
             "data_type": "Config",
             "visibility": "private",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 86
+            }
           },
           {
             "name": "non_fatal_errors",
             "data_type": "{test::result::Error}",
             "visibility": "public",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 99
+            }
           }
         ],
         "relationships": [
@@ -632,16 +782,28 @@
             "target": "sample.newline.ServiceContract",
             "relation_type": "Implementation",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 133
+            }
           },
           {
             "source": "sample.newline.ServiceImpl",
             "target": "sample.newline.ServiceContract",
             "relation_type": "Implementation",
             "source_multiplicity": null,
-            "target_multiplicity": null
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 79
+            }
           }
-        ]
+        ],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 79
+        }
       },
       {
         "id": "sample.newline.<<template>>\\nTest<T>",
@@ -656,7 +818,11 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 112
+            }
           }
         ],
         "template_parameters": [
@@ -668,10 +834,12 @@
           }
         ],
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 111,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 111
+        }
       },
       {
         "id": "TestMethod",
@@ -717,22 +885,32 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 117
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 116,
         "variables": [
           {
             "name": "",
             "data_type": "std::mutex",
             "visibility": "private",
-            "is_static": false
+            "is_static": false,
+            "source_location": {
+              "file": "",
+              "line": 118
+            }
           }
         ],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 116
+        }
       },
       {
         "id": "AllowModeChangeService",
@@ -742,7 +920,11 @@
         "type_aliases": [
           {
             "alias": "AllowOpModeChangeOutput",
-            "original_type": "std::uint8_t"
+            "original_type": "std::uint8_t",
+            "source_location": {
+              "file": "",
+              "line": 129
+            }
           }
         ],
         "methods": [
@@ -765,78 +947,22 @@
             "template_parameters": null,
             "modifiers": [
               "Static"
-            ]
+            ],
+            "source_location": {
+              "file": "",
+              "line": 130
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_syntax_coverage.puml",
-        "source_line": 128,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
+          "line": 128
+        }
       }
-    ],
-    "relationships": [
-      {
-        "source": "sample.newline.ChildInterface",
-        "target": "sample.newline.BaseInterface",
-        "relation_type": "Inheritance",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "sample.newline.ServiceImpl",
-        "target": "sample.newline.ServiceContract",
-        "relation_type": "Implementation",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "sample.newline.ServiceImpl",
-        "target": "sample.newline.ServiceContract",
-        "relation_type": "Implementation",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "sample.newline.ChildInterface",
-        "target": "sample.newline.BaseInterface",
-        "relation_type": "Inheritance",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "sample.newline.StartResponsePayload",
-        "target": "sample.newline.ErrorInfo",
-        "relation_type": "Association",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "sample.newline.ErrorInfo",
-        "target": "sample.newline.StartResponsePayload",
-        "relation_type": "Aggregation",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      },
-      {
-        "source": "sample.newline.ErrorInfo",
-        "target": "sample.newline.ServiceImpl",
-        "relation_type": "Composition",
-        "source_multiplicity": "0..*",
-        "target_multiplicity": "1"
-      },
-      {
-        "source": "sample.newline.CheckProgrammingDependenciesFlag",
-        "target": "sample.newline.CheckProgrammingDependenciesFlagState",
-        "relation_type": "Association",
-        "source_multiplicity": null,
-        "target_multiplicity": null
-      }
-    ],
-    "source_files": [
-      "class_diagram_syntax_coverage.puml"
-    ],
-    "version": null
+    ]
   }
 }

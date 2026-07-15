@@ -13,7 +13,11 @@
           "target": "Engine",
           "relation_type": "Composition",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
         }
       ],
       "template_parameters": null,
@@ -23,11 +27,17 @@
           "name": "engine",
           "data_type": "Engine",
           "is_static": false,
-          "visibility": "private"
+          "visibility": "private",
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
         }
       ],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_composition/composition.cpp",
-      "source_line": 15
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_composition/composition.cpp",
+        "line": 15
+      }
     },
     "Engine": {
       "id": "Engine",
@@ -40,8 +50,10 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_composition/composition.cpp",
-      "source_line": 13
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_composition/composition.cpp",
+        "line": 13
+      }
     }
   },
   "functions": []

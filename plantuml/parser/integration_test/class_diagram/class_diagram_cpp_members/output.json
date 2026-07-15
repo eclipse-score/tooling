@@ -17,7 +17,11 @@
             "template_parameters": null,
             "modifiers": [
               "Destructor"
-            ]
+            ],
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
           },
           {
             "name": "operator()",
@@ -31,7 +35,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 18
+            }
           },
           {
             "name": "Submit",
@@ -63,7 +71,11 @@
                 }
               }
             ],
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
           },
           {
             "name": "Submit",
@@ -89,7 +101,11 @@
                 }
               }
             ],
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
           },
           {
             "name": "operator->",
@@ -97,7 +113,11 @@
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 21
+            }
           },
           {
             "name": "Visit",
@@ -111,7 +131,11 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 22
+            }
           },
           {
             "name": "VisitUnnamed",
@@ -125,21 +149,22 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": []
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 23
+            }
           }
         ],
         "template_parameters": null,
         "enum_literals": [],
-        "source_file": "class_diagram_cpp_members.puml",
-        "source_line": 16,
         "variables": [],
-        "relationships": []
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_cpp_members/class_diagram_cpp_members.puml",
+          "line": 16
+        }
       }
-    ],
-    "relationships": [],
-    "source_files": [
-      "class_diagram_cpp_members.puml"
-    ],
-    "version": null
+    ]
   }
 }

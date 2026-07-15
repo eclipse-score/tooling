@@ -11,7 +11,6 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 15,
             "is_abstract": false,
             "type_aliases": [],
             "attributes": [
@@ -19,13 +18,21 @@
                 "visibility": "Public",
                 "name": "attr_1",
                 "type": "int",
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                }
               }
             ],
             "methods": [],
             "template_parameters": null,
             "extends": [],
-            "implements": []
+            "implements": [],
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
           }
         }
       },
@@ -38,7 +45,6 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 19,
             "is_abstract": false,
             "type_aliases": [],
             "attributes": [
@@ -46,18 +52,25 @@
                 "visibility": "Private",
                 "name": "attr_2",
                 "type": "int",
-                "modifiers": []
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 20
+                }
               }
             ],
             "methods": [],
             "template_parameters": null,
             "extends": [],
-            "implements": []
+            "implements": [],
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
           }
         }
       }
     ],
-    "relationships": [],
-    "source_file": "class_merge.puml"
+    "relationships": []
   }
 }

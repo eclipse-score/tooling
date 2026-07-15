@@ -26,7 +26,11 @@
             "Constructor"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         },
         {
           "name": "start",
@@ -37,7 +41,11 @@
             "Override"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 26
+          }
         },
         {
           "name": "stop",
@@ -48,7 +56,11 @@
             "Override"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 27
+          }
         },
         {
           "name": "getDoors",
@@ -56,7 +68,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 28
+          }
         },
         {
           "name": "wheelCount",
@@ -67,7 +83,11 @@
             "Override"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 29
+          }
         }
       ],
       "relationships": [
@@ -76,7 +96,11 @@
           "target": "MyNamespace::MyNamespace2::VehicleBase",
           "relation_type": "Inheritance",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 21
+          }
         }
       ],
       "template_parameters": null,
@@ -86,11 +110,17 @@
           "name": "m_doors",
           "data_type": "int",
           "is_static": false,
-          "visibility": "private"
+          "visibility": "private",
+          "source_location": {
+            "file": "",
+            "line": 32
+          }
         }
       ],
-      "source_file": "cpp/libclang/integration_test/cases/complex_class/transport.cpp",
-      "source_line": 21
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/complex_class/transport.cpp",
+        "line": 21
+      }
     },
     "MyNamespace::MyNamespace2::ITransport": {
       "id": "MyNamespace::MyNamespace2::ITransport",
@@ -108,7 +138,11 @@
             "Destructor"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
         },
         {
           "name": "start",
@@ -119,7 +153,11 @@
             "Abstract"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         },
         {
           "name": "stop",
@@ -130,15 +168,21 @@
             "Abstract"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 25
+          }
         }
       ],
       "relationships": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/complex_class/transport.h",
-      "source_line": 20
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/complex_class/transport.h",
+        "line": 20
+      }
     },
     "MyNamespace::MyNamespace2::VehicleBase": {
       "id": "MyNamespace::MyNamespace2::VehicleBase",
@@ -161,7 +205,11 @@
             "Constructor"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 32
+          }
         },
         {
           "name": "~VehicleBase",
@@ -173,7 +221,11 @@
             "Destructor"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 33
+          }
         },
         {
           "name": "wheelCount",
@@ -184,7 +236,11 @@
             "Abstract"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 36
+          }
         },
         {
           "name": "instanceCount",
@@ -194,7 +250,11 @@
             "Static"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 39
+          }
         },
         {
           "name": "create",
@@ -210,7 +270,11 @@
             "Static"
           ],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 40
+          }
         }
       ],
       "relationships": [
@@ -219,7 +283,11 @@
           "target": "MyNamespace::MyNamespace2::ITransport",
           "relation_type": "Implementation",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 29
+          }
         }
       ],
       "template_parameters": null,
@@ -229,41 +297,67 @@
           "name": "m_speed",
           "data_type": "int",
           "is_static": false,
-          "visibility": "protected"
+          "visibility": "protected",
+          "source_location": {
+            "file": "",
+            "line": 43
+          }
         },
         {
           "name": "m_name",
           "data_type": "const char *",
           "is_static": false,
-          "visibility": "private"
+          "visibility": "private",
+          "source_location": {
+            "file": "",
+            "line": 46
+          }
         },
         {
           "name": "m_id",
           "data_type": "char *const",
           "is_static": false,
-          "visibility": "private"
+          "visibility": "private",
+          "source_location": {
+            "file": "",
+            "line": 47
+          }
         },
         {
           "name": "m_max_speed",
           "data_type": "const int",
           "is_static": false,
-          "visibility": "private"
+          "visibility": "private",
+          "source_location": {
+            "file": "",
+            "line": 48
+          }
         },
         {
           "name": "m_firmware",
           "data_type": "const int *const",
           "is_static": false,
-          "visibility": "private"
+          "visibility": "private",
+          "source_location": {
+            "file": "",
+            "line": 49
+          }
         },
         {
           "name": "m_ref",
           "data_type": "const int &",
           "is_static": false,
-          "visibility": "private"
+          "visibility": "private",
+          "source_location": {
+            "file": "",
+            "line": 50
+          }
         }
       ],
-      "source_file": "cpp/libclang/integration_test/cases/complex_class/transport.h",
-      "source_line": 29
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/complex_class/transport.h",
+        "line": 29
+      }
     }
   },
   "functions": []

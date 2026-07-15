@@ -17,7 +17,10 @@
                 },
                 "namespace": "Service",
                 "package": "",
-                "source_line": 16,
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                },
                 "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
@@ -28,7 +31,11 @@
                     "params": [],
                     "type": null,
                     "template_parameters": null,
-                    "modifiers": []
+                    "modifiers": [],
+                    "source_location": {
+                      "file": "",
+                      "line": 17
+                    }
                   }
                 ],
                 "template_parameters": null,
@@ -41,7 +48,6 @@
         }
       }
     ],
-    "relationships": [],
-    "source_file": "color.puml"
+    "relationships": []
   }
 }

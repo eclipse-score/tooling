@@ -11,7 +11,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 15,
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
             "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
@@ -23,7 +26,6 @@
         }
       }
     ],
-    "relationships": [],
-    "source_file": "one_class.puml"
+    "relationships": []
   }
 }

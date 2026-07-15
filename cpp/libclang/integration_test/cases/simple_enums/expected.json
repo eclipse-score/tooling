@@ -8,19 +8,35 @@
       "enum_literals": [
         {
           "name": "Cyan",
-          "value": 0
+          "value": 0,
+          "source_location": {
+            "file": "",
+            "line": 27
+          }
         },
         {
           "name": "Magenta",
-          "value": 1
+          "value": 1,
+          "source_location": {
+            "file": "",
+            "line": 28
+          }
         },
         {
           "name": "Yellow",
-          "value": 2
+          "value": 2,
+          "source_location": {
+            "file": "",
+            "line": 29
+          }
         },
         {
           "name": "Black",
-          "value": 65535
+          "value": 65535,
+          "source_location": {
+            "file": "",
+            "line": 30
+          }
         }
       ],
       "methods": [],
@@ -28,8 +44,10 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
-      "source_line": 25
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
+        "line": 25
+      }
     },
     "MyNamespace::Direction": {
       "id": "MyNamespace::Direction",
@@ -39,19 +57,35 @@
       "enum_literals": [
         {
           "name": "North",
-          "value": 0
+          "value": 0,
+          "source_location": {
+            "file": "",
+            "line": 37
+          }
         },
         {
           "name": "East",
-          "value": 1
+          "value": 1,
+          "source_location": {
+            "file": "",
+            "line": 38
+          }
         },
         {
           "name": "South",
-          "value": 2
+          "value": 2,
+          "source_location": {
+            "file": "",
+            "line": 39
+          }
         },
         {
           "name": "West",
-          "value": 3
+          "value": 3,
+          "source_location": {
+            "file": "",
+            "line": 40
+          }
         }
       ],
       "methods": [],
@@ -59,8 +93,10 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
-      "source_line": 35
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
+        "line": 35
+      }
     },
     "RGBColor": {
       "id": "RGBColor",
@@ -70,15 +106,27 @@
       "enum_literals": [
         {
           "name": "Red",
-          "value": -1
+          "value": -1,
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
         },
         {
           "name": "Green",
-          "value": 0
+          "value": 0,
+          "source_location": {
+            "file": "",
+            "line": 20
+          }
         },
         {
           "name": "Blue",
-          "value": 32767
+          "value": 32767,
+          "source_location": {
+            "file": "",
+            "line": 21
+          }
         }
       ],
       "methods": [],
@@ -86,8 +134,10 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
-      "source_line": 17
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
+        "line": 17
+      }
     },
     "MyNamespace::Direction3D": {
       "id": "MyNamespace::Direction3D",
@@ -97,27 +147,51 @@
       "enum_literals": [
         {
           "name": "North",
-          "value": 0
+          "value": 0,
+          "source_location": {
+            "file": "",
+            "line": 45
+          }
         },
         {
           "name": "East",
-          "value": 1
+          "value": 1,
+          "source_location": {
+            "file": "",
+            "line": 46
+          }
         },
         {
           "name": "South",
-          "value": 2
+          "value": 2,
+          "source_location": {
+            "file": "",
+            "line": 47
+          }
         },
         {
           "name": "West",
-          "value": 3
+          "value": 3,
+          "source_location": {
+            "file": "",
+            "line": 48
+          }
         },
         {
           "name": "Up",
-          "value": 4
+          "value": 4,
+          "source_location": {
+            "file": "",
+            "line": 49
+          }
         },
         {
           "name": "Down",
-          "value": 255
+          "value": 255,
+          "source_location": {
+            "file": "",
+            "line": 50
+          }
         }
       ],
       "methods": [],
@@ -125,8 +199,10 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
-      "source_line": 43
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/simple_enums/transport.h",
+        "line": 43
+      }
     }
   },
   "functions": []

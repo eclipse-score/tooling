@@ -11,7 +11,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 23,
+            "source_location": {
+              "file": "",
+              "line": 23
+            },
             "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
@@ -31,7 +34,10 @@
             },
             "namespace": "",
             "package": "",
-            "source_line": 24,
+            "source_location": {
+              "file": "",
+              "line": 24
+            },
             "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
@@ -57,9 +63,12 @@
             "raw": ">"
           }
         },
-        "label": null
+        "label": null,
+        "source_location": {
+          "file": "",
+          "line": 26
+        }
       }
-    ],
-    "source_file": "ctrl_instruct.puml"
+    ]
   }
 }

@@ -15,6 +15,6 @@ mod test_framework;
 
 pub use test_framework::{
     assert_cli_result, case_file_path, collect_case_fbs_files, load_expected_fixture,
-    load_expected_yaml_fixture, run_validation_profile, CliRunResult, ExpectedFixture,
-    ValidationIntegrationCase,
+    load_expected_yaml_fixture, normalize_yaml_result, run_validation_profile, CliRunResult,
+    ExpectedFixture, ValidationIntegrationCase,
 };

@@ -19,7 +19,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
         },
         {
           "name": "setName",
@@ -33,7 +37,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 20
+          }
         },
         {
           "name": "setIdRef",
@@ -47,7 +55,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 21
+          }
         },
         {
           "name": "setIdRValueRef",
@@ -61,7 +73,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 22
+          }
         },
         {
           "name": "setMutableBuffer",
@@ -75,7 +91,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
         },
         {
           "name": "setPinnedBuffer",
@@ -89,7 +109,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 25
+          }
         },
         {
           "name": "setConstBuffer",
@@ -103,7 +127,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 26
+          }
         },
         {
           "name": "setHistory",
@@ -117,7 +145,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 28
+          }
         },
         {
           "name": "setNameList",
@@ -131,7 +163,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 29
+          }
         },
         {
           "name": "setHistoryMatrix",
@@ -145,7 +181,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 30
+          }
         },
         {
           "name": "setNameMatrix",
@@ -159,7 +199,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 31
+          }
         },
         {
           "name": "setNameIndex",
@@ -173,7 +217,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 33
+          }
         },
         {
           "name": "setHistoryLayerViews",
@@ -187,7 +235,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 34
+          }
         },
         {
           "name": "setConstPointerMatrix",
@@ -201,15 +253,21 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 35
+          }
         }
       ],
       "relationships": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/method_parameter_type/transport.cpp",
-      "source_line": 17
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/method_parameter_type/transport.cpp",
+        "line": 17
+      }
     }
   },
   "functions": []

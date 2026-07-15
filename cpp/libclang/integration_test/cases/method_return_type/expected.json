@@ -12,7 +12,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 27
+          }
         },
         {
           "name": "getIdRef",
@@ -20,7 +24,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 28
+          }
         },
         {
           "name": "getIdRValueRef",
@@ -28,7 +36,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 29
+          }
         },
         {
           "name": "getMutableIdPtr",
@@ -36,7 +48,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 30
+          }
         },
         {
           "name": "getPinnedIdPtr",
@@ -44,7 +60,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 31
+          }
         },
         {
           "name": "getHistory",
@@ -52,7 +72,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 33
+          }
         },
         {
           "name": "getNames",
@@ -60,7 +84,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 34
+          }
         },
         {
           "name": "getConstPointerMatrix",
@@ -68,7 +96,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 36
+          }
         },
         {
           "name": "getNameIndex",
@@ -76,7 +108,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 37
+          }
         },
         {
           "name": "getRouteInfoById",
@@ -84,7 +120,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 39
+          }
         }
       ],
       "name": "MethodReturnTypeSample",
@@ -94,11 +134,17 @@
           "target": "external_types::RouteInfo",
           "relation_type": "Association",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 39
+          }
         }
       ],
-      "source_file": "cpp/libclang/integration_test/cases/method_return_type/transport.cpp",
-      "source_line": 25,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/method_return_type/transport.cpp",
+        "line": 25
+      },
       "template_parameters": null,
       "type_aliases": [],
       "variables": []
@@ -118,11 +164,17 @@
           "name": "route_id",
           "data_type": "int",
           "is_static": false,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
         }
       ],
-      "source_file": "cpp/libclang/integration_test/cases/method_return_type/transport.cpp",
-      "source_line": 18
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/method_return_type/transport.cpp",
+        "line": 18
+      }
     }
   },
   "functions": []

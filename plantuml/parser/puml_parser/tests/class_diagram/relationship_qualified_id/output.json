@@ -16,9 +16,12 @@
           "middle": null,
           "right": null
         },
-        "label": null
+        "label": null,
+        "source_location": {
+          "file": "",
+          "line": 15
+        }
       }
-    ],
-    "source_file": "relationship_qualified_id.puml"
+    ]
   }
 }

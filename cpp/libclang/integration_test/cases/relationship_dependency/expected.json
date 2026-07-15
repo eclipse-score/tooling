@@ -19,7 +19,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 28
+          }
         }
       ],
       "relationships": [
@@ -28,14 +32,20 @@
           "target": "Logger",
           "relation_type": "Dependency",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 28
+          }
         }
       ],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
-      "source_line": 26
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
+        "line": 26
+      }
     },
     "CarDepByParamRef": {
       "id": "CarDepByParamRef",
@@ -56,7 +66,11 @@
           ],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 33
+          }
         }
       ],
       "relationships": [
@@ -65,14 +79,20 @@
           "target": "Logger",
           "relation_type": "Dependency",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 33
+          }
         }
       ],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
-      "source_line": 31
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
+        "line": 31
+      }
     },
     "CarDepByReturnPtr": {
       "id": "CarDepByReturnPtr",
@@ -87,7 +107,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 18
+          }
         }
       ],
       "relationships": [
@@ -96,14 +120,20 @@
           "target": "Logger",
           "relation_type": "Dependency",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 18
+          }
         }
       ],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
-      "source_line": 16
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
+        "line": 16
+      }
     },
     "CarDepByReturnRef": {
       "id": "CarDepByReturnRef",
@@ -118,7 +148,11 @@
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
-          "visibility": "public"
+          "visibility": "public",
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
         }
       ],
       "relationships": [
@@ -127,14 +161,20 @@
           "target": "Logger",
           "relation_type": "Dependency",
           "source_multiplicity": null,
-          "target_multiplicity": null
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
         }
       ],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
-      "source_line": 21
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
+        "line": 21
+      }
     },
     "Logger": {
       "id": "Logger",
@@ -147,8 +187,10 @@
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
-      "source_file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
-      "source_line": 14
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/relationship_dependency/dependency.cpp",
+        "line": 14
+      }
     }
   },
   "functions": []
