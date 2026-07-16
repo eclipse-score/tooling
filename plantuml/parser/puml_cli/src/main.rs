@@ -209,11 +209,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
 
-                let source_file = path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or_default();
-                let fbs_buffer = serialize_resolved_diagram(&logic_result, source_file);
+                let fbs_buffer = serialize_resolved_diagram(&logic_result);
                 if let Some(ref dir) = fbs_output_dir {
                     write_fbs_to_file(&fbs_buffer, path, dir)?;
                 }
@@ -310,19 +306,17 @@ fn run_fta(
     Ok(())
 }
 
-fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram, source_file: &str) -> Vec<u8> {
+fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram) -> Vec<u8> {
     match resolved_content {
         ResolvedDiagram::Activity(resolved_content) => {
-            ActivitySerializer::serialize(resolved_content, source_file)
+            ActivitySerializer::serialize(resolved_content)
         }
         ResolvedDiagram::Component(resolved_content) => {
-            ComponentSerializer::serialize(resolved_content, source_file)
+            ComponentSerializer::serialize(resolved_content)
         }
-        ResolvedDiagram::Class(resolved_content) => {
-            ClassSerializer::serialize(resolved_content, source_file)
-        }
+        ResolvedDiagram::Class(resolved_content) => ClassSerializer::serialize(resolved_content),
         ResolvedDiagram::Sequence(resolved_content) => {
-            SequenceSerializer::serialize(resolved_content, source_file)
+            SequenceSerializer::serialize(resolved_content)
         }
     }
 }

@@ -22,7 +22,7 @@ use flatbuffers::FlatBufferBuilder;
 pub struct ClassSerializer;
 
 impl ClassSerializer {
-    pub fn serialize(diagram: &ClassDiagram, _source_file: &str) -> Vec<u8> {
+    pub fn serialize(diagram: &ClassDiagram) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
 
         let name_offset = builder.create_string(&diagram.name);

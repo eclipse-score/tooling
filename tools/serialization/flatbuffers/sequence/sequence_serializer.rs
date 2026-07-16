@@ -18,7 +18,7 @@ use sequence_logic::{ConditionType, Event, SequenceNode, SequenceTree};
 pub struct SequenceSerializer;
 
 impl SequenceSerializer {
-    pub fn serialize(diagram: &SequenceTree, _diagram_name: &str) -> Vec<u8> {
+    pub fn serialize(diagram: &SequenceTree) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
 
         let name_offset = diagram.name.as_deref().map(|n| builder.create_string(n));

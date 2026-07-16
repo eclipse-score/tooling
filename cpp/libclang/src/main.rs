@@ -168,7 +168,7 @@ fn serialize_class_diagram(
         entities,
     };
 
-    let output_fbs = ClassSerializer::serialize(&class_diagram, "");
+    let output_fbs = ClassSerializer::serialize(&class_diagram);
     write_fbs_output(output_path, &output_fbs)?;
 
     Ok(())
