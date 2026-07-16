@@ -148,6 +148,27 @@ section "Tool Requirements" {
 
         }
 
+        section "Component Public API Validator" {
+
+            ToolQualification.ToolRequirement ComponentPublicApiInterfaceDeclarationConsistency {
+                description = '''The validator shall report an error when a
+                public API interface declared in the component diagram is not
+                declared as an interface in the public API class diagram.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ComponentPublicApiSeoocRelationshipConsistency {
+                description = '''The validator shall report an error when a
+                public API interface declared in the component diagram is not
+                connected by an interface-binding relationship from the SEooC
+                in the component diagram.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+        }
+
         section "Class Design Implementation Validator" {
 
             ToolQualification.ToolRequirement ClassDesignImplementationEntityConsistency {

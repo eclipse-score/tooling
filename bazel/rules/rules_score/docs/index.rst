@@ -40,6 +40,7 @@ safety analysis to the top-level SEooC assembly.
    tool_reference/specs/bazel_component
    tool_reference/specs/class_design_implementation
    tool_reference/specs/component_internal_api
+   tool_reference/specs/component_public_api
    tool_reference/specs/component_sequence
    tool_reference/specs/sequence_internal_api
 
