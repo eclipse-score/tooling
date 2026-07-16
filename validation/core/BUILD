@@ -25,6 +25,7 @@ filegroup(
         "docs/specifications/bazel_component.md",
         "docs/specifications/class_design_implementation.md",
         "docs/specifications/component_internal_api.md",
+        "docs/specifications/component_public_api.md",
         "docs/specifications/component_sequence.md",
         "docs/specifications/sequence_internal_api.md",
     ],
