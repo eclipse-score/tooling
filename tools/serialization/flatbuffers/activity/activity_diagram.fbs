@@ -84,7 +84,6 @@ table ActivityStmt {
 table ActivityDiagram {
   name:string;
   statements:[ActivityStmt];
-  source_file:string;
 }
 
 root_type ActivityDiagram;

@@ -20,7 +20,7 @@ use component_fbs::component as fb;
 pub struct ComponentSerializer;
 
 impl ComponentSerializer {
-    pub fn serialize(elements: &HashMap<String, LogicComponent>, _diagram_file: &str) -> Vec<u8> {
+    pub fn serialize(elements: &HashMap<String, LogicComponent>) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
         let source_file = elements
             .values()

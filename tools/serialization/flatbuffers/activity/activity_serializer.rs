@@ -21,7 +21,7 @@ use flatbuffers::FlatBufferBuilder;
 pub struct ActivitySerializer;
 
 impl ActivitySerializer {
-    pub fn serialize(diagram: &ActivityDiagram, source_file: &str) -> Vec<u8> {
+    pub fn serialize(diagram: &ActivityDiagram) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
 
         let name_offset = diagram.name.as_deref().map(|n| builder.create_string(n));
@@ -33,13 +33,11 @@ impl ActivitySerializer {
             .collect();
         let statements_offset = builder.create_vector(&statement_offsets);
 
-        let source_file_offset = builder.create_string(source_file);
         let root = fb::ActivityDiagram::create(
             &mut builder,
             &fb::ActivityDiagramArgs {
                 name: name_offset,
                 statements: Some(statements_offset),
-                source_file: Some(source_file_offset),
             },
         );
 
