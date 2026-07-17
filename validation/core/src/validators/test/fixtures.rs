@@ -72,15 +72,17 @@ pub(super) fn unit_with_interface_roles(
 }
 
 pub(super) fn interface(alias: &str) -> LogicComponent {
-    interface_with_id(alias, alias)
+    interface_with_parent(alias, None)
 }
 
-pub(super) fn interface_with_id(id: &str, alias: &str) -> LogicComponent {
+pub(super) fn interface_with_parent(alias: &str, parent_id: Option<&str>) -> LogicComponent {
     LogicComponent {
-        id: id.to_string(),
+        id: parent_id
+            .map(|parent_id| format!("{parent_id}.{alias}"))
+            .unwrap_or_else(|| alias.to_string()),
         name: Some(alias.to_string()),
         alias: Some(alias.to_string()),
-        parent_id: None,
+        parent_id: parent_id.map(str::to_string),
         element_type: ComponentType::Interface,
         stereotype: None,
         relations: Vec::new(),
@@ -151,14 +153,7 @@ pub(super) fn internal_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> Internal
             .collect(),
     }];
 
-    let mut setup_result = ValidationResult::default();
-    let index = InternalApiIndex::build_index(&diagrams, &mut setup_result);
-    assert!(
-        setup_result.is_empty(),
-        "test fixture construction failed: {:?}",
-        setup_result.failures
-    );
-    index
+    InternalApiIndex::build_index(&diagrams)
 }
 
 fn method(name: &str) -> Method {

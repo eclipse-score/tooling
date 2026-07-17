@@ -75,7 +75,7 @@ pub fn run(inputs: &ArchitecturalDesignInputs) -> Result<ProfileRun, String> {
     let internal_api = read_and_convert::<ClassDiagramReader, InternalApiIndex>(
         inputs.internal_api_diagrams.as_slice(),
         &mut result,
-        |raw: ClassDiagramInputs, errs| InternalApiIndex::build_index(&raw, errs),
+        |raw: ClassDiagramInputs, _result| InternalApiIndex::build_index(&raw),
     )?;
 
     let validators = registered_validators(&component, &sequence, &internal_api);
