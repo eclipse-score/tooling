@@ -14,7 +14,7 @@
 use super::super::fixtures::*;
 use super::*;
 use crate::models::{
-    ComponentDiagramInputs, ComponentRelationType, ComponentType, EndpointRole, LogicComponent,
+    ComponentDiagramInputs, ComponentRelationType, EndpointRole, LogicComponent,
     SequenceDiagramInputs,
 };
 use crate::ValidationResult;
@@ -25,6 +25,11 @@ fn validate(
 ) -> ValidationResult {
     let mut setup_result = ValidationResult::default();
     let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(
+        setup_result.is_empty(),
+        "test fixture setup failed: {:?}",
+        setup_result.failures
+    );
 
     validate_sequence_internal_api(&sequence_index, internal_api, None)
 }
@@ -37,25 +42,23 @@ fn validate_with_component_context(
     let mut setup_result = ValidationResult::default();
     let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
     let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(
+        setup_result.is_empty(),
+        "test fixture setup failed: {:?}",
+        setup_result.failures
+    );
 
     validate_sequence_internal_api(&sequence_index, internal_api, Some(&component_arch))
 }
 
 fn unit_with_non_binding_interface(alias: &str, interface_id: &str) -> LogicComponent {
-    LogicComponent {
-        id: format!("some_id.{alias}"),
-        name: Some(alias.to_string()),
-        alias: Some(alias.to_string()),
-        parent_id: None,
-        element_type: ComponentType::Component,
-        stereotype: Some("unit".to_string()),
-        relations: vec![relation_with_type_and_role(
-            interface_id,
-            ComponentRelationType::Dependency,
-            EndpointRole::None,
-        )],
-        source_location: dummy_source_location(),
-    }
+    let mut unit = unit_without_interfaces(alias);
+    unit.relations = vec![relation(
+        interface_id,
+        ComponentRelationType::Dependency,
+        EndpointRole::None,
+    )];
+    unit
 }
 
 #[test]
@@ -112,9 +115,9 @@ fn self_calls_count_as_internal_api_method_usage() {
 
 #[test]
 fn reports_sequence_function_missing_from_available_interfaces_with_component_context() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        unit("u2", &["InternalInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
+        unit("u2", &[], &["InternalInterface"]),
         interface("InternalInterface"),
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
@@ -137,7 +140,7 @@ fn reports_sequence_function_missing_from_available_interfaces_with_component_co
 
 #[test]
 fn reports_sequence_function_missing_when_shared_interface_has_no_direction_roles() {
-    let component_diagrams = component_diagrams_with_entities(vec![
+    let component_diagrams = component_diagram(vec![
         unit_with_non_binding_interface("u1", "InternalInterface"),
         unit_with_non_binding_interface("u2", "InternalInterface"),
         interface("InternalInterface"),
@@ -164,9 +167,9 @@ fn reports_sequence_function_missing_when_shared_interface_has_no_direction_role
 
 #[test]
 fn reports_interface_function_not_exercised_in_sequence_diagrams_with_component_context() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        unit("u2", &["InternalInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
+        unit("u2", &[], &["InternalInterface"]),
         interface("InternalInterface"),
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
@@ -184,9 +187,9 @@ fn reports_interface_function_not_exercised_in_sequence_diagrams_with_component_
 
 #[test]
 fn reports_unreferenced_internal_api_interface_function_not_exercised_without_self_calls() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        unit("u2", &["InternalInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
+        unit("u2", &[], &["InternalInterface"]),
         interface("InternalInterface"),
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
@@ -207,8 +210,8 @@ fn reports_unreferenced_internal_api_interface_function_not_exercised_without_se
 
 #[test]
 fn reports_self_call_method_mismatch_when_unit_has_missing_internal_api_interface() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["MissingInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["MissingInterface"], &[]),
         interface("MissingInterface"),
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
@@ -226,9 +229,9 @@ fn reports_self_call_method_mismatch_when_unit_has_missing_internal_api_interfac
 
 #[test]
 fn passes_when_sequence_function_exists_on_related_interface_with_component_context() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        unit("u2", &["InternalInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
+        unit("u2", &[], &["InternalInterface"]),
         interface("InternalInterface"),
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
@@ -242,7 +245,7 @@ fn passes_when_sequence_function_exists_on_related_interface_with_component_cont
 
 #[test]
 fn reports_self_call_function_missing_from_available_interfaces() {
-    let component_diagrams = component_diagrams(&["u1"]);
+    let component_diagrams = component_diagram(vec![unit_without_interfaces("u1")]);
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["OtherMethod"])]);
 
@@ -263,7 +266,7 @@ fn reports_self_call_function_missing_from_available_interfaces() {
 
 #[test]
 fn passes_when_self_call_uses_internal_api_interface_without_component_interfaces() {
-    let component_diagrams = component_diagrams(&["u1"]);
+    let component_diagrams = component_diagram(vec![unit_without_interfaces("u1")]);
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
 
@@ -275,8 +278,8 @@ fn passes_when_self_call_uses_internal_api_interface_without_component_interface
 
 #[test]
 fn passes_when_all_interface_functions_are_exercised_by_self_calls() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
         interface("InternalInterface"),
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()"), ("u1", "u1", "SetData()")]);
@@ -290,7 +293,7 @@ fn passes_when_all_interface_functions_are_exercised_by_self_calls() {
 
 #[test]
 fn reports_self_call_without_any_available_interfaces() {
-    let component_diagrams = component_diagrams(&["u1"]);
+    let component_diagrams = component_diagram(vec![unit_without_interfaces("u1")]);
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
     let internal_api = internal_api_index(vec![]);
 
@@ -305,9 +308,9 @@ fn reports_self_call_without_any_available_interfaces() {
 
 #[test]
 fn reports_method_declared_only_on_caller_side_interfaces() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["SharedInterface", "CallerOnlyInterface"]),
-        unit("u2", &["SharedInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["SharedInterface", "CallerOnlyInterface"], &[]),
+        unit("u2", &[], &["SharedInterface"]),
         interface("SharedInterface"),
         interface("CallerOnlyInterface"),
     ]);
@@ -338,9 +341,9 @@ fn reports_method_declared_only_on_caller_side_interfaces() {
 
 #[test]
 fn reports_method_declared_only_on_callee_side_interfaces() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["SharedInterface"]),
-        unit("u2", &["SharedInterface", "CalleeOnlyInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["SharedInterface"], &[]),
+        unit("u2", &[], &["SharedInterface", "CalleeOnlyInterface"]),
         interface("SharedInterface"),
         interface("CalleeOnlyInterface"),
     ]);
@@ -371,9 +374,9 @@ fn reports_method_declared_only_on_callee_side_interfaces() {
 
 #[test]
 fn reports_method_declared_on_both_sides_but_not_on_shared_interface() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["SharedInterface", "CallerOnlyInterface"]),
-        unit("u2", &["SharedInterface", "CalleeOnlyInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["SharedInterface", "CallerOnlyInterface"], &[]),
+        unit("u2", &[], &["SharedInterface", "CalleeOnlyInterface"]),
         interface("SharedInterface"),
         interface("CallerOnlyInterface"),
         interface("CalleeOnlyInterface"),
@@ -406,9 +409,9 @@ fn reports_method_declared_on_both_sides_but_not_on_shared_interface() {
 
 #[test]
 fn reports_role_violation_when_method_exists_only_on_reverse_direction_interface() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit_with_interface_roles("u1", &[], &["InternalInterface"]),
-        unit_with_interface_roles("u2", &["InternalInterface"], &[]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &[], &["InternalInterface"]),
+        unit("u2", &["InternalInterface"], &[]),
         interface("InternalInterface"),
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
@@ -433,9 +436,9 @@ fn reports_role_violation_when_method_exists_only_on_reverse_direction_interface
 
 #[test]
 fn passes_when_method_interface_matches_call_direction_roles() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit_with_interface_roles("u1", &["InternalInterface"], &[]),
-        unit_with_interface_roles("u2", &[], &["InternalInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
+        unit("u2", &[], &["InternalInterface"]),
         interface("InternalInterface"),
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);

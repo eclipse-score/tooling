@@ -31,10 +31,10 @@ fn validate(
 
 #[test]
 fn reports_missing_component_interface_declared_by_internal_api() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        unit("u2", &["InternalInterface"]),
-        interface_with_parent("InternalInterface", Some("component_example")),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
+        unit("u2", &["InternalInterface"], &[]),
+        interface_with_parent_id("InternalInterface", "component_example"),
     ]);
     let internal_api = internal_api_index(vec![("OtherInterface", vec!["GetData"])]);
 
@@ -49,11 +49,11 @@ fn reports_missing_component_interface_declared_by_internal_api() {
 
 #[test]
 fn reports_each_missing_component_interface_once() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface", "InternalInterface1"]),
-        unit("u2", &["InternalInterface"]),
-        interface_with_parent("InternalInterface", Some("component_example")),
-        interface_with_parent("InternalInterface1", Some("component_example")),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface", "InternalInterface1"], &[]),
+        unit("u2", &["InternalInterface"], &[]),
+        interface_with_parent_id("InternalInterface", "component_example"),
+        interface_with_parent_id("InternalInterface1", "component_example"),
     ]);
     let internal_api = internal_api_index(vec![(
         "component_example.InternalInterface",
@@ -70,9 +70,9 @@ fn reports_each_missing_component_interface_once() {
 
 #[test]
 fn reports_missing_component_interface_even_without_unit_relation() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &[]),
-        interface_with_parent("UnusedInterface", Some("component_example")),
+    let component_diagrams = component_diagram(vec![
+        unit_without_interfaces("u1"),
+        interface_with_parent_id("UnusedInterface", "component_example"),
     ]);
     let internal_api = internal_api_index(vec![]);
 
@@ -86,12 +86,12 @@ fn reports_missing_component_interface_even_without_unit_relation() {
 
 #[test]
 fn reports_all_missing_component_interfaces_in_one_message() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface", "InternalInterface1"]),
-        unit("u2", &["InternalInterface"]),
-        unit("u3", &["InternalInterface"]),
-        interface_with_parent("InternalInterface", Some("component_example")),
-        interface_with_parent("InternalInterface1", Some("component_example")),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface", "InternalInterface1"], &[]),
+        unit("u2", &["InternalInterface"], &[]),
+        unit("u3", &["InternalInterface"], &[]),
+        interface_with_parent_id("InternalInterface", "component_example"),
+        interface_with_parent_id("InternalInterface1", "component_example"),
     ]);
     let internal_api = internal_api_index(vec![(
         "component_example.InternalInterface",
@@ -108,9 +108,9 @@ fn reports_all_missing_component_interfaces_in_one_message() {
 
 #[test]
 fn reports_missing_component_interface_without_sequence_method_call() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        interface_with_parent("InternalInterface", Some("component_example")),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
+        interface_with_parent_id("InternalInterface", "component_example"),
     ]);
     let internal_api = internal_api_index(vec![("OtherInterface", vec!["GetData"])]);
 
@@ -124,10 +124,10 @@ fn reports_missing_component_interface_without_sequence_method_call() {
 
 #[test]
 fn reports_case_mismatch_between_component_and_internal_api_interface_names() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        unit("u2", &["InternalInterface"]),
-        interface_with_parent("InternalInterface", Some("component_example")),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
+        unit("u2", &["InternalInterface"], &[]),
+        interface_with_parent_id("InternalInterface", "component_example"),
     ]);
     let internal_api = internal_api_index(vec![("internalinterface", vec!["GetData"])]);
 
@@ -141,10 +141,10 @@ fn reports_case_mismatch_between_component_and_internal_api_interface_names() {
 
 #[test]
 fn matches_internal_api_by_component_interface_id_when_alias_differs() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["pkg.InternalInterface"]),
-        unit("u2", &["pkg.InternalInterface"]),
-        interface_with_parent("InternalInterface", Some("pkg")),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["pkg.InternalInterface"], &[]),
+        unit("u2", &["pkg.InternalInterface"], &[]),
+        interface_with_parent_id("InternalInterface", "pkg"),
     ]);
     let internal_api = internal_api_index(vec![("pkg.InternalInterface", vec!["GetData"])]);
 
@@ -155,8 +155,8 @@ fn matches_internal_api_by_component_interface_id_when_alias_differs() {
 
 #[test]
 fn ignores_component_interface_without_parent_id() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
         interface("InternalInterface"), // no parent_id
     ]);
     let internal_api = internal_api_index(vec![]);
