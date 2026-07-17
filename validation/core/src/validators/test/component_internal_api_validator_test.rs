@@ -21,7 +21,11 @@ fn validate(
 ) -> ValidationResult {
     let mut setup_result = ValidationResult::default();
     let component_arch = component_diagrams.to_diagram_architecture(&mut setup_result);
-
+    assert!(
+        setup_result.is_empty(),
+        "test fixture setup failed: {:?}",
+        setup_result.failures
+    );
     validate_component_internal_api(&component_arch, internal_api)
 }
 
@@ -30,7 +34,7 @@ fn reports_missing_component_interface_declared_by_internal_api() {
     let component_diagrams = component_diagrams_with_entities(vec![
         unit("u1", &["InternalInterface"]),
         unit("u2", &["InternalInterface"]),
-        interface("InternalInterface"),
+        interface_with_parent("InternalInterface", Some("component_example")),
     ]);
     let internal_api = internal_api_index(vec![("OtherInterface", vec!["GetData"])]);
 
@@ -38,7 +42,8 @@ fn reports_missing_component_interface_declared_by_internal_api() {
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains("Missing internal API interface"));
-    assert!(validation_result.failures[0].contains("Missing interfaces  : \"InternalInterface\""));
+    assert!(validation_result.failures[0]
+        .contains("Missing interfaces  : \"component_example.InternalInterface\""));
     assert!(!validation_result.failures[0].contains("Unit                :"));
 }
 
@@ -47,29 +52,36 @@ fn reports_each_missing_component_interface_once() {
     let component_diagrams = component_diagrams_with_entities(vec![
         unit("u1", &["InternalInterface", "InternalInterface1"]),
         unit("u2", &["InternalInterface"]),
-        interface("InternalInterface"),
-        interface("InternalInterface1"),
+        interface_with_parent("InternalInterface", Some("component_example")),
+        interface_with_parent("InternalInterface1", Some("component_example")),
     ]);
-    let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
+    let internal_api = internal_api_index(vec![(
+        "component_example.InternalInterface",
+        vec!["GetData"],
+    )]);
 
     let validation_result = validate(component_diagrams, &internal_api);
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains("Missing internal API interface"));
-    assert!(validation_result.failures[0].contains("Missing interfaces  : \"InternalInterface1\""));
+    assert!(validation_result.failures[0]
+        .contains("Missing interfaces  : \"component_example.InternalInterface1\""));
 }
 
 #[test]
 fn reports_missing_component_interface_even_without_unit_relation() {
-    let component_diagrams =
-        component_diagrams_with_entities(vec![unit("u1", &[]), interface("UnusedInterface")]);
+    let component_diagrams = component_diagrams_with_entities(vec![
+        unit("u1", &[]),
+        interface_with_parent("UnusedInterface", Some("component_example")),
+    ]);
     let internal_api = internal_api_index(vec![]);
 
     let validation_result = validate(component_diagrams, &internal_api);
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains("Missing internal API interface"));
-    assert!(validation_result.failures[0].contains("Missing interfaces  : \"UnusedInterface\""));
+    assert!(validation_result.failures[0]
+        .contains("Missing interfaces  : \"component_example.UnusedInterface\""));
 }
 
 #[test]
@@ -78,23 +90,27 @@ fn reports_all_missing_component_interfaces_in_one_message() {
         unit("u1", &["InternalInterface", "InternalInterface1"]),
         unit("u2", &["InternalInterface"]),
         unit("u3", &["InternalInterface"]),
-        interface("InternalInterface"),
-        interface("InternalInterface1"),
+        interface_with_parent("InternalInterface", Some("component_example")),
+        interface_with_parent("InternalInterface1", Some("component_example")),
     ]);
-    let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
+    let internal_api = internal_api_index(vec![(
+        "component_example.InternalInterface",
+        vec!["GetData"],
+    )]);
 
     let validation_result = validate(component_diagrams, &internal_api);
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains("Missing internal API interface"));
-    assert!(validation_result.failures[0].contains("Missing interfaces  : \"InternalInterface1\""));
+    assert!(validation_result.failures[0]
+        .contains("Missing interfaces  : \"component_example.InternalInterface1\""));
 }
 
 #[test]
 fn reports_missing_component_interface_without_sequence_method_call() {
     let component_diagrams = component_diagrams_with_entities(vec![
         unit("u1", &["InternalInterface"]),
-        interface("InternalInterface"),
+        interface_with_parent("InternalInterface", Some("component_example")),
     ]);
     let internal_api = internal_api_index(vec![("OtherInterface", vec!["GetData"])]);
 
@@ -102,7 +118,8 @@ fn reports_missing_component_interface_without_sequence_method_call() {
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains("Missing internal API interface"));
-    assert!(validation_result.failures[0].contains("Missing interfaces  : \"InternalInterface\""));
+    assert!(validation_result.failures[0]
+        .contains("Missing interfaces  : \"component_example.InternalInterface\""));
 }
 
 #[test]
@@ -110,7 +127,7 @@ fn reports_case_mismatch_between_component_and_internal_api_interface_names() {
     let component_diagrams = component_diagrams_with_entities(vec![
         unit("u1", &["InternalInterface"]),
         unit("u2", &["InternalInterface"]),
-        interface("InternalInterface"),
+        interface_with_parent("InternalInterface", Some("component_example")),
     ]);
     let internal_api = internal_api_index(vec![("internalinterface", vec!["GetData"])]);
 
@@ -118,7 +135,8 @@ fn reports_case_mismatch_between_component_and_internal_api_interface_names() {
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains("Missing internal API interface"));
-    assert!(validation_result.failures[0].contains("Missing interfaces  : \"InternalInterface\""));
+    assert!(validation_result.failures[0]
+        .contains("Missing interfaces  : \"component_example.InternalInterface\""));
 }
 
 #[test]
@@ -126,9 +144,22 @@ fn matches_internal_api_by_component_interface_id_when_alias_differs() {
     let component_diagrams = component_diagrams_with_entities(vec![
         unit("u1", &["pkg.InternalInterface"]),
         unit("u2", &["pkg.InternalInterface"]),
-        interface_with_id("pkg.InternalInterface", "InternalInterface"),
+        interface_with_parent("InternalInterface", Some("pkg")),
     ]);
     let internal_api = internal_api_index(vec![("pkg.InternalInterface", vec!["GetData"])]);
+
+    let validation_result = validate(component_diagrams, &internal_api);
+
+    assert!(validation_result.failures.is_empty());
+}
+
+#[test]
+fn ignores_component_interface_without_parent_id() {
+    let component_diagrams = component_diagrams_with_entities(vec![
+        unit("u1", &["InternalInterface"]),
+        interface("InternalInterface"), // no parent_id
+    ]);
+    let internal_api = internal_api_index(vec![]);
 
     let validation_result = validate(component_diagrams, &internal_api);
 

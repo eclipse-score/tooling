@@ -76,7 +76,7 @@ pub struct InternalApiIndex {
 
 impl InternalApiIndex {
     /// Build an [`InternalApiIndex`] from internal-API diagram inputs.
-    pub fn build_index(diagrams: &[ClassDiagramInput], _result: &mut ValidationResult) -> Self {
+    pub fn build_index(diagrams: &[ClassDiagramInput]) -> Self {
         let mut interfaces = Vec::new();
 
         for diagram in diagrams {
@@ -211,10 +211,8 @@ mod tests {
             ],
         }];
 
-        let mut result = ValidationResult::default();
-        let index = InternalApiIndex::build_index(&diagrams, &mut result);
+        let index = InternalApiIndex::build_index(&diagrams);
 
-        assert!(result.is_empty());
         assert!(index
             .interfaces()
             .find(|interface| interface.id == "InternalAPI.InternalInterface")
@@ -260,10 +258,8 @@ mod tests {
             ],
         }];
 
-        let mut result = ValidationResult::default();
-        let index = InternalApiIndex::build_index(&diagrams, &mut result);
+        let index = InternalApiIndex::build_index(&diagrams);
 
-        assert!(result.is_empty());
         let interface_ids: BTreeSet<&str> = index
             .interfaces()
             .map(|interface| interface.id.as_str())

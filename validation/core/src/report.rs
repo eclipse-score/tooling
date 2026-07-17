@@ -21,7 +21,7 @@ pub fn finish_profile_validation(
     profile: Profile,
     profile_run: &ProfileRun,
 ) -> Result<(), String> {
-    if !profile_run.ran_validator {
+    if !profile_run.ran_validator && profile_run.result.is_empty() {
         log::info!(
             "Skipping validation profile {}: no selected validators have their required inputs.",
             profile.as_str()
@@ -106,4 +106,39 @@ fn format_error_details(profile_run: &ProfileRun, prefix: &str) -> String {
         .map(|(i, msg)| format!("{}[{}] {}", prefix, i + 1, msg))
         .collect::<Vec<_>>()
         .join("\n\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use validation::ValidationResult;
+
+    #[test]
+    fn skips_when_no_validator_ran_and_result_is_empty() {
+        let profile_run = ProfileRun {
+            ran_validator: false,
+            result: ValidationResult::default(),
+        };
+
+        let result =
+            finish_profile_validation(None, false, Profile::ArchitecturalDesign, &profile_run);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn reports_failure_when_no_validator_ran_but_read_model_failed() {
+        let mut validation_result = ValidationResult::default();
+        validation_result.add_failure("read model failed".to_string());
+        let profile_run = ProfileRun {
+            ran_validator: false,
+            result: validation_result,
+        };
+
+        let result =
+            finish_profile_validation(None, false, Profile::ArchitecturalDesign, &profile_run);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("read model failed"));
+    }
 }

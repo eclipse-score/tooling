@@ -40,7 +40,7 @@ impl ComponentInternalApiValidator {
         internal_api_diagram: &InternalApiIndex,
     ) -> Self {
         Self {
-            component_interface_ids: collect_component_interface_ids(component_diagram),
+            component_interface_ids: collect_component_internal_interface_ids(component_diagram),
             internal_api_interface_ids: collect_internal_api_interface_ids(internal_api_diagram),
             result: ValidationResult::default(),
         }
@@ -88,13 +88,13 @@ fn append_debug_log(
     }
 }
 
-fn collect_component_interface_ids(
+fn collect_component_internal_interface_ids(
     component_diagram: &ComponentDiagramArchitecture,
 ) -> BTreeSet<String> {
     component_diagram
         .entities
         .iter()
-        .filter(|entity| entity.is_interface())
+        .filter(|entity| entity.is_interface() && entity.parent_id.is_some())
         .map(|entity| entity.id.clone())
         .collect()
 }
