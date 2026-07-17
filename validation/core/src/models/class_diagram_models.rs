@@ -107,6 +107,34 @@ impl InternalApiIndex {
     }
 }
 
+/// Indexed public-API data prepared for component/public-API validators.
+pub struct PublicApiIndex {
+    api_index: BTreeMap<String, String>, // <interface name, interface id>
+}
+
+impl PublicApiIndex {
+    /// Build a [`PublicApiIndex`] from public-API class diagram inputs.
+    pub fn build_index(diagrams: &[ClassDiagramInput]) -> Self {
+        let mut api_index: BTreeMap<String, String> = BTreeMap::new();
+
+        for diagram in diagrams {
+            for entity in &diagram.entities {
+                if entity.entity_type != EntityType::Interface {
+                    continue;
+                }
+
+                api_index.insert(entity.name.clone(), entity.id.clone());
+            }
+        }
+
+        Self { api_index }
+    }
+
+    pub fn api_names(&self) -> impl Iterator<Item = &String> + '_ {
+        self.api_index.keys()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

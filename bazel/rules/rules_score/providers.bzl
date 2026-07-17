@@ -185,6 +185,7 @@ ArchitecturalDesignInfo = provider(
     fields = {
         "static": "Depset of FlatBuffers binaries for static architecture diagrams (class diagrams, component diagrams, etc.)",
         "dynamic": "Depset of FlatBuffers binaries for dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
+        "public_api": "Depset of FlatBuffers binaries for public API diagrams (class diagrams, etc.)",
         "internal_api": "Depset of FlatBuffers binaries for internal API diagrams (class diagrams, etc.)",
         "name": "Name of the architectural design target",
         "public_api_lobster_files": "Depset of .lobster traceability files generated from public_api diagrams.",

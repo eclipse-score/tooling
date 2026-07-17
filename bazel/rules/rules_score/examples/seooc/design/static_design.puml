@@ -24,8 +24,8 @@ package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC
     }
 }
 
-package "SampleLibraryAPI" as SampleLibraryAPI
+interface "SampleLibraryAPI" as SampleLibraryAPI
 
-component_example --> SampleLibraryAPI
+safety_software_seooc_example )-d- SampleLibraryAPI
 
 @enduml
