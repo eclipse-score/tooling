@@ -24,6 +24,7 @@ def _collect_fbs_files(deps):
     files_by_category = {
         "component": [],
         "internal_api": [],
+        "public_api": [],
         "sequence": [],
         "unit_design_class": [],
         "unit_design_sequence": [],
@@ -35,10 +36,12 @@ def _collect_fbs_files(deps):
         if ArchitecturalDesignInfo in dep:
             component_files = dep[ArchitecturalDesignInfo].static.to_list()
             internal_api_files = dep[ArchitecturalDesignInfo].internal_api.to_list()
+            public_api_files = dep[ArchitecturalDesignInfo].public_api.to_list()
             sequence_files = dep[ArchitecturalDesignInfo].dynamic.to_list()
 
             files_by_category["component"].extend(component_files)
             files_by_category["internal_api"].extend(internal_api_files)
+            files_by_category["public_api"].extend(public_api_files)
             files_by_category["sequence"].extend(sequence_files)
 
         if UnitDesignInfo in dep:
@@ -90,6 +93,7 @@ def _provider_fbs_fixture_bundle_impl(ctx):
 
     _materialize_category("component")
     _materialize_category("internal_api")
+    _materialize_category("public_api")
     _materialize_category("sequence")
     _materialize_category("unit_design_class")
     _materialize_category("unit_design_sequence")

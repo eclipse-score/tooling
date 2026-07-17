@@ -20,7 +20,7 @@ ScoreReq.FailureMode SampleFailureMode{
     failureeffect = "The world as we know it will end"
     version = 1
     safety = ScoreReq.Asil.B
-    interface = "SampleLibraryAPI.GetNumber"
+    interface = "safety_software_seooc_example.SampleLibraryAPI.GetNumber"
 }
 
 ScoreReq.FailureMode SampleFailureMode2{
@@ -29,5 +29,5 @@ ScoreReq.FailureMode SampleFailureMode2{
     failureeffect = "Downstream consumers time out"
     version = 1
     safety = ScoreReq.Asil.D
-    interface = "SampleLibraryAPI.GetNumber"
+    interface = "safety_software_seooc_example.SampleLibraryAPI.GetNumber"
 }

@@ -13,11 +13,12 @@
 
 use crate::models::{
     ClassDiagramInputs, ComponentDiagramArchitecture, ComponentDiagramInputs, InternalApiIndex,
-    SequenceDiagramIndex, SequenceDiagramInputs,
+    PublicApiIndex, SequenceDiagramIndex, SequenceDiagramInputs,
 };
 use crate::readers::{ClassDiagramReader, ComponentDiagramReader, SequenceDiagramReader};
 use crate::validators::{
-    validate_component_internal_api, validate_component_sequence, validate_sequence_internal_api,
+    validate_component_internal_api, validate_component_public_api, validate_component_sequence,
+    validate_sequence_internal_api,
 };
 use crate::ValidationResult;
 use serde::Deserialize;
@@ -39,6 +40,7 @@ fn registered_validators<'a>(
     component: &'a Option<ComponentDiagramArchitecture>,
     sequence: &'a Option<SequenceDiagramIndex>,
     internal_api: &'a Option<InternalApiIndex>,
+    public_api: &'a Option<PublicApiIndex>,
 ) -> Vec<ProfileValidator<'a>> {
     vec![
         Box::new(move || {
@@ -48,6 +50,10 @@ fn registered_validators<'a>(
         Box::new(move || {
             let (component, internal_api) = (component.as_ref()?, internal_api.as_ref()?);
             Some(validate_component_internal_api(component, internal_api))
+        }),
+        Box::new(move || {
+            let (component, public_api) = (component.as_ref()?, public_api.as_ref()?);
+            Some(validate_component_public_api(component, public_api))
         }),
         Box::new(move || {
             let (sequence, internal_api) = (sequence.as_ref()?, internal_api.as_ref()?);
@@ -77,8 +83,13 @@ pub fn run(inputs: &ArchitecturalDesignInputs) -> Result<ProfileRun, String> {
         &mut result,
         |raw: ClassDiagramInputs, _result| InternalApiIndex::build_index(&raw),
     )?;
+    let public_api = read_and_convert::<ClassDiagramReader, PublicApiIndex>(
+        inputs.public_api_diagrams.as_slice(),
+        &mut result,
+        |raw: ClassDiagramInputs, _result| PublicApiIndex::build_index(&raw),
+    )?;
 
-    let validators = registered_validators(&component, &sequence, &internal_api);
+    let validators = registered_validators(&component, &sequence, &internal_api, &public_api);
 
     let mut ran_validator = false;
     for validator in validators {

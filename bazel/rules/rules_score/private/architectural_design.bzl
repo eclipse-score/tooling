@@ -42,7 +42,6 @@ def _run_puml_parser(ctx, puml_file):
     Args:
         ctx: Rule context
         puml_file: The .puml File object to parse
-
     Returns:
         Tuple of (fbs_output, lobster_output) declared output Files.
     """
@@ -79,7 +78,6 @@ def _parse_puml_diagrams(ctx, files):
     Args:
         ctx: Rule context
         files: List of File objects
-
     Returns:
         Tuple of (fbs_outputs, lobster_outputs) lists of generated Files.
     """
@@ -92,13 +90,14 @@ def _parse_puml_diagrams(ctx, files):
             lobster_outputs.append(lobster)
     return fbs_outputs, lobster_outputs
 
-def _run_validation(ctx, component_fbs_files, sequence_fbs_files, internal_api_fbs_files):
+def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs_files, internal_api_fbs_files):
     """Run the architectural-design validation profile.
 
     Args:
         ctx: Rule context
         component_fbs_files: Component-diagram FlatBuffer files generated from this target's static inputs.
         sequence_fbs_files: Sequence-diagram FlatBuffer files generated from this target's dynamic inputs.
+        public_api_fbs_files: List of public-API FlatBuffer files generated from this target's public_api inputs.
         internal_api_fbs_files: List of internal-API FlatBuffer files generated from this target's internal_api inputs.
     Returns:
         Struct with file and name fields describing the validation log entry.
@@ -111,9 +110,10 @@ def _run_validation(ctx, component_fbs_files, sequence_fbs_files, internal_api_f
         input_bundle = {
             "component_diagrams": [f.path for f in component_fbs_files],
             "sequence_diagrams": [f.path for f in sequence_fbs_files],
+            "public_api_diagrams": [f.path for f in public_api_fbs_files],
             "internal_api_diagrams": [f.path for f in internal_api_fbs_files],
         },
-        inputs = component_fbs_files + sequence_fbs_files + internal_api_fbs_files,
+        inputs = component_fbs_files + sequence_fbs_files + public_api_fbs_files + internal_api_fbs_files,
         mnemonic = "ArchitecturalDesignValidate",
         maturity = ctx.attr.maturity,
         log_level = get_log_level(ctx),
@@ -193,6 +193,7 @@ def _architectural_design_impl(ctx):
         ctx,
         static_fbs_list,
         dynamic_fbs_list,
+        public_api_fbs_list,
         internal_api_fbs_list,
     )
 
@@ -203,6 +204,7 @@ def _architectural_design_impl(ctx):
         ArchitecturalDesignInfo(
             static = static_fbs,
             dynamic = dynamic_fbs,
+            public_api = public_api_fbs,
             internal_api = internal_api_fbs,
             name = ctx.label.name,
             public_api_lobster_files = public_api_lobster,
