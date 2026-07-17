@@ -29,7 +29,10 @@ fn validate(
 
 #[test]
 fn passes_when_aliases_and_participants_are_identical() {
-    let component_diagrams = component_diagrams(&["unit_1", "unit_2"]);
+    let component_diagrams = component_diagram(vec![
+        unit_without_interfaces("unit_1"),
+        unit_without_interfaces("unit_2"),
+    ]);
     let sequence_diagrams = sequence_diagrams(&["unit_1", "unit_2"]);
 
     let validation_result = validate(component_diagrams, sequence_diagrams);
@@ -38,7 +41,11 @@ fn passes_when_aliases_and_participants_are_identical() {
 
 #[test]
 fn reports_missing_and_extra() {
-    let component_diagrams = component_diagrams(&["unit_1", "unit_2", "unit_3"]);
+    let component_diagrams = component_diagram(vec![
+        unit_without_interfaces("unit_1"),
+        unit_without_interfaces("unit_2"),
+        unit_without_interfaces("unit_3"),
+    ]);
     let sequence_diagrams = sequence_diagrams(&["unit_2", "unit_4"]);
 
     let validation_result = validate(component_diagrams, sequence_diagrams);
@@ -83,7 +90,10 @@ fn units_without_alias_are_ignored() {
 
 #[test]
 fn reports_alias_missing_from_participants() {
-    let component_diagrams = component_diagrams(&["u1", "u2"]);
+    let component_diagrams = component_diagram(vec![
+        unit_without_interfaces("u1"),
+        unit_without_interfaces("u2"),
+    ]);
     let sequence_diagrams = sequence_diagrams(&["u1"]);
 
     let validation_result = validate(component_diagrams, sequence_diagrams);
@@ -93,7 +103,7 @@ fn reports_alias_missing_from_participants() {
 
 #[test]
 fn reports_participant_not_in_aliases() {
-    let component_diagrams = component_diagrams(&["u1"]);
+    let component_diagrams = component_diagram(vec![unit_without_interfaces("u1")]);
     let sequence_diagrams = sequence_diagrams(&["u1", "orphan"]);
 
     let validation_result = validate(component_diagrams, sequence_diagrams);
@@ -103,8 +113,8 @@ fn reports_participant_not_in_aliases() {
 
 #[test]
 fn reports_missing_component_alias_and_interface_connection_for_sequence_call() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
         interface("InternalInterface"),
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "orphan", "GetData()")]);
@@ -127,9 +137,9 @@ fn reports_missing_component_alias_and_interface_connection_for_sequence_call() 
 
 #[test]
 fn reports_missing_sequence_call_for_interface_connected_units() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        unit("u2", &["InternalInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
+        unit("u2", &[], &["InternalInterface"]),
         interface("InternalInterface"),
     ]);
     let sequence_diagrams = sequence_diagrams(&["u1", "u2"]);
@@ -144,9 +154,9 @@ fn reports_missing_sequence_call_for_interface_connected_units() {
 
 #[test]
 fn reports_missing_participant_and_missing_sequence_call_for_interface_connected_units() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        unit("u2", &["InternalInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
+        unit("u2", &[], &["InternalInterface"]),
         interface("InternalInterface"),
     ]);
     let sequence_diagrams = sequence_diagrams(&["u1"]);
@@ -167,9 +177,9 @@ fn reports_missing_participant_and_missing_sequence_call_for_interface_connected
 
 #[test]
 fn reports_sequence_call_without_corresponding_shared_interface_connection() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["CallerInterface"]),
-        unit("u2", &["CalleeInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["CallerInterface"], &[]),
+        unit("u2", &[], &["CalleeInterface"]),
         interface("CallerInterface"),
         interface("CalleeInterface"),
     ]);
@@ -186,9 +196,9 @@ fn reports_sequence_call_without_corresponding_shared_interface_connection() {
 
 #[test]
 fn passes_when_interface_connected_units_have_sequence_call() {
-    let component_diagrams = component_diagrams_with_entities(vec![
-        unit("u1", &["InternalInterface"]),
-        unit("u2", &["InternalInterface"]),
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["InternalInterface"], &[]),
+        unit("u2", &[], &["InternalInterface"]),
         interface("InternalInterface"),
     ]);
     let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);

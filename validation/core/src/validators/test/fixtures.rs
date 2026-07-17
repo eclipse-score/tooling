@@ -15,20 +15,71 @@ use crate::models::{
     ComponentDiagramInputs, ComponentRelationType, ComponentType, EndpointRole, InternalApiIndex,
     LogicComponent, LogicRelation, SequenceDiagramInputs,
 };
-use crate::ValidationResult;
 use class_diagram::{ClassDiagram, EntityType, Method, SimpleEntity, Visibility};
 use component_diagram::SourceLocation;
 use sequence_logic::{Event, Interaction, SequenceNode, SequenceTree};
+
+// Common fixtures
 
 pub(crate) fn dummy_source_location() -> SourceLocation {
     SourceLocation::new("test.puml", 1)
 }
 
-pub(super) fn relation_with_role(target: &str, source_role: EndpointRole) -> LogicRelation {
-    relation_with_type_and_role(target, ComponentRelationType::InterfaceBinding, source_role)
+fn entity_id(alias: &str, parent_id: Option<&str>) -> String {
+    parent_id
+        .map(|parent_id| format!("{parent_id}.{alias}"))
+        .unwrap_or_else(|| alias.to_string())
 }
 
-pub(super) fn relation_with_type_and_role(
+// Component diagram fixtures
+
+pub(super) fn component_diagram(entities: Vec<LogicComponent>) -> ComponentDiagramInputs {
+    ComponentDiagramInputs { entities }
+}
+
+pub(super) fn unit(
+    alias: &str,
+    required_interfaces: &[&str],
+    provided_interfaces: &[&str],
+) -> LogicComponent {
+    let mut relations = Vec::new();
+    for target in required_interfaces {
+        relations.push(relation(
+            target,
+            ComponentRelationType::InterfaceBinding,
+            EndpointRole::Required,
+        ));
+    }
+    for target in provided_interfaces {
+        relations.push(relation(
+            target,
+            ComponentRelationType::InterfaceBinding,
+            EndpointRole::Provided,
+        ));
+    }
+
+    logic_component(
+        alias,
+        None,
+        ComponentType::Component,
+        Some("unit"),
+        relations,
+    )
+}
+
+pub(super) fn unit_without_interfaces(alias: &str) -> LogicComponent {
+    unit(alias, &[], &[])
+}
+
+pub(super) fn interface(alias: &str) -> LogicComponent {
+    interface_entity(alias, None)
+}
+
+pub(super) fn interface_with_parent_id(alias: &str, parent_id: &str) -> LogicComponent {
+    interface_entity(alias, Some(parent_id))
+}
+
+pub(super) fn relation(
     target: &str,
     relation_type: ComponentRelationType,
     source_role: EndpointRole,
@@ -42,65 +93,30 @@ pub(super) fn relation_with_type_and_role(
     }
 }
 
-pub(super) fn unit(alias: &str, interface_targets: &[&str]) -> LogicComponent {
-    unit_with_interface_roles(alias, interface_targets, interface_targets)
+fn interface_entity(alias: &str, parent_id: Option<&str>) -> LogicComponent {
+    logic_component(alias, parent_id, ComponentType::Interface, None, Vec::new())
 }
 
-pub(super) fn unit_with_interface_roles(
+fn logic_component(
     alias: &str,
-    required_interfaces: &[&str],
-    provided_interfaces: &[&str],
+    parent_id: Option<&str>,
+    element_type: ComponentType,
+    stereotype: Option<&str>,
+    relations: Vec<LogicRelation>,
 ) -> LogicComponent {
-    let mut relations = Vec::new();
-    for target in required_interfaces {
-        relations.push(relation_with_role(target, EndpointRole::Required));
-    }
-    for target in provided_interfaces {
-        relations.push(relation_with_role(target, EndpointRole::Provided));
-    }
-
     LogicComponent {
-        id: format!("some_id.{alias}"),
+        id: entity_id(alias, parent_id),
         name: Some(alias.to_string()),
         alias: Some(alias.to_string()),
-        parent_id: None,
-        element_type: ComponentType::Component,
-        stereotype: Some("unit".to_string()),
+        parent_id: parent_id.map(str::to_string),
+        element_type,
+        stereotype: stereotype.map(str::to_string),
         relations,
         source_location: dummy_source_location(),
     }
 }
 
-pub(super) fn interface(alias: &str) -> LogicComponent {
-    interface_with_parent(alias, None)
-}
-
-pub(super) fn interface_with_parent(alias: &str, parent_id: Option<&str>) -> LogicComponent {
-    LogicComponent {
-        id: parent_id
-            .map(|parent_id| format!("{parent_id}.{alias}"))
-            .unwrap_or_else(|| alias.to_string()),
-        name: Some(alias.to_string()),
-        alias: Some(alias.to_string()),
-        parent_id: parent_id.map(str::to_string),
-        element_type: ComponentType::Interface,
-        stereotype: None,
-        relations: Vec::new(),
-        source_location: dummy_source_location(),
-    }
-}
-
-pub(super) fn component_diagrams(aliases: &[&str]) -> ComponentDiagramInputs {
-    ComponentDiagramInputs {
-        entities: aliases.iter().map(|alias| unit(alias, &[])).collect(),
-    }
-}
-
-pub(super) fn component_diagrams_with_entities(
-    entities: Vec<LogicComponent>,
-) -> ComponentDiagramInputs {
-    ComponentDiagramInputs { entities }
-}
+// Sequence diagram fixtures.
 
 pub(super) fn sequence_diagrams(participants: &[&str]) -> SequenceDiagramInputs {
     sequence_calls(
@@ -132,28 +148,42 @@ pub(super) fn sequence_calls(calls: &[(&str, &str, &str)]) -> SequenceDiagramInp
     }
 }
 
+// Class diagram API fixtures.
+
 pub(super) fn internal_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> InternalApiIndex {
     let diagrams = vec![ClassDiagram {
         name: "internal_api".to_string(),
         entities: interfaces
             .into_iter()
-            .map(|(interface_name, methods)| SimpleEntity {
-                id: interface_name.to_string(),
-                name: interface_name.to_string(),
-                enclosing_namespace_id: None,
-                entity_type: EntityType::Interface,
-                type_aliases: Vec::new(),
-                variables: Vec::new(),
-                methods: methods.into_iter().map(method).collect(),
-                template_parameters: None,
-                enum_literals: Vec::new(),
-                relationships: Vec::new(),
-                source_location: dummy_source_location(),
+            .map(|(interface_name, methods)| {
+                let mut interface = class_interface(interface_name, None);
+                interface.methods = methods.into_iter().map(method).collect();
+                interface
             })
             .collect(),
     }];
 
     InternalApiIndex::build_index(&diagrams)
+}
+
+pub(super) fn class_interface(name: &str, namespace: Option<&str>) -> SimpleEntity {
+    simple_entity(name, EntityType::Interface, namespace)
+}
+
+fn simple_entity(name: &str, entity_type: EntityType, namespace: Option<&str>) -> SimpleEntity {
+    SimpleEntity {
+        id: entity_id(name, namespace),
+        name: name.to_string(),
+        enclosing_namespace_id: namespace.map(str::to_string),
+        entity_type,
+        type_aliases: Vec::new(),
+        variables: Vec::new(),
+        methods: Vec::new(),
+        template_parameters: None,
+        enum_literals: Vec::new(),
+        relationships: Vec::new(),
+        source_location: dummy_source_location(),
+    }
 }
 
 fn method(name: &str) -> Method {
