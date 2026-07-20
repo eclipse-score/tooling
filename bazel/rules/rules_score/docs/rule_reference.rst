@@ -119,6 +119,10 @@ These are too broad to be assigned to a single component.
      - label list
      - no
      - Reserved for consistency; unused at root level (default ``[]``)
+   * - ``image_srcs``
+     - label list
+     - no
+     - Image/diagram files (``.svg``, ``.png``, or ``.puml``) referenced from ``description`` fields via ``.. image::``/``.. uml::`` — see :ref:`requirements-images` (default ``[]``)
    * - ``visibility``
      - —
      - no
@@ -162,6 +166,10 @@ integration level; can only be satisfied by multiple components working together
      - label list
      - no
      - ``assumed_system_requirements`` targets for ``derived_from`` cross-reference resolution (default ``[]``)
+   * - ``image_srcs``
+     - label list
+     - no
+     - Image/diagram files (``.svg``, ``.png``, or ``.puml``) referenced from ``description`` fields via ``.. image::``/``.. uml::`` — see :ref:`requirements-images` (default ``[]``)
    * - ``visibility``
      - —
      - no
@@ -205,6 +213,10 @@ testable within that component.
      - label list
      - no
      - ``feature_requirements`` or ``assumed_system_requirements`` targets for ``derived_from`` resolution (default ``[]``)
+   * - ``image_srcs``
+     - label list
+     - no
+     - Image/diagram files (``.svg``, ``.png``, or ``.puml``) referenced from ``description`` fields via ``.. image::``/``.. uml::`` — see :ref:`requirements-images` (default ``[]``)
    * - ``visibility``
      - —
      - no

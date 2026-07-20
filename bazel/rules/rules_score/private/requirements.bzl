@@ -172,9 +172,9 @@ _score_requirements_rule = rule(
             doc = "TRLC specification target providing the RSL files that define the requirement types. Defaults to the S-CORE requirements model.",
         ),
         "image_srcs": attr.label_list(
-            allow_files = [".svg", ".png"],
+            allow_files = [".svg", ".png", ".puml"],
             default = [],
-            doc = "Image files (.svg or .png) to stage next to the rendered RST. The package-relative path of each file (e.g. 'diagrams/arch.png') must match the path written in a ``.. image::`` directive inside the requirement description field.",
+            doc = "Image and diagram files (.svg, .png, or .puml) to stage next to the rendered RST.",
         ),
         "_renderer": attr.label(
             default = Label("@trlc//tools/trlc_rst:trlc_rst"),

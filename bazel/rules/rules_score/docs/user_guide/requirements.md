@@ -202,6 +202,70 @@ dependable_element(
 
 The traceability from `FeatReq` down to the components that implement it runs through the `component_requirements` chain (`FeatReq → CompReq → component`).
 
+(requirements-images)=
+## Adding Images and Diagrams to Requirement Descriptions
+
+A requirement's `description` field can embed images and PlantUML diagrams so
+they are rendered directly in the generated Sphinx documentation, right next
+to the requirement text.
+
+**Markdown-style images** — use `![alt](path)`; it is converted to an RST
+`.. image::` directive:
+
+```text
+ScoreReq.CompReq COMP_002 {
+    description = '''The system shall expose the following architecture.
+
+    ![Architecture overview](diagrams/arch.svg)'''
+    safety       = ScoreReq.Asil.B
+    derived_from = [MySeooc.FEAT_001@1]
+    version      = 1
+}
+```
+
+```{note}
+Prefer `.svg` over `.png` for images checked into git. SVG is text-based and
+diffs/compresses cleanly, whereas `.png` is a binary blob — every change adds a
+full new copy to the git history and bloats the repository over time.
+```
+
+**PlantUML diagrams** — write a raw `.. uml::` RST directive; it is passed
+through unmodified (any RST directive, e.g. `.. image::`, `.. figure::`, or
+`.. uml::`, is preserved as-is):
+
+```text
+ScoreReq.CompReq COMP_003 {
+    description = '''The `ClientConnection` shall maintain a state machine.
+
+    .. uml:: client_connection_activity_diagram.puml'''
+    safety       = ScoreReq.Asil.B
+    derived_from = [MySeooc.FEAT_001@1]
+    version      = 1
+}
+```
+
+In both cases, the referenced file must also be declared via the `image_srcs`
+attribute (available on `assumed_system_requirements`, `feature_requirements`,
+and `component_requirements`) so it gets staged next to the rendered `.rst`
+file. The path written in the directive must match the file's package-relative
+path:
+
+```starlark
+component_requirements(
+    name = "comp_req",
+    srcs = ["docs/requirements.trlc"],
+    image_srcs = [
+        "diagrams/arch.svg",
+        "//path/to:client_connection_activity_diagram.puml",
+    ],
+)
+```
+
+`image_srcs` accepts `.svg`, `.png`, and `.puml` files. `.puml` files require
+`sphinxcontrib-plantuml` to be configured in the consuming project's Sphinx
+`conf.py` (already the case for S-CORE projects using `architectural_design`
+diagrams — see {ref}`RST and Markdown Wrappers <rst-and-markdown-wrappers>`).
+
 ## Modeling Requirements in Bazel Rules
 
 For the complete attribute reference for all requirements Bazel rules, see the rule index:
