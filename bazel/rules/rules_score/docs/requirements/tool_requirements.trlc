@@ -176,4 +176,105 @@ section "Tool Requirements" {
 
     }
 
+    section "Requirement Coverage" {
+
+        ToolQualification.ToolRequirement Lock_File_As_Spec_And_Approval {
+            description = '''
+                The tool shall use one YAML lock file as both the declaration of
+                which requirements are claimed to be completely covered and as the
+                committed approval artifact.
+            '''
+            derived_from = [Declare_Complete_Coverage]
+            satisfied_by = Tools.ReqCoverage
+        }
+
+        ToolQualification.ToolRequirement Requirement_IDs_From_TRLC {
+            description = '''
+                The tool shall extract requirement identifiers automatically from
+                the TrlcProviderInfo provider of the requirements target attribute.
+            '''
+            derived_from = [Semi_Automated_Lock_Update, Declare_Complete_Coverage]
+            satisfied_by = Tools.ReqCoverage
+        }
+
+        ToolQualification.ToolRequirement Parse_GWT_Annotations {
+            description = '''
+                The tool shall parse GTest XML result files, extracting
+                RecordProperty values for the keys lobster-tracing, given, when,
+                and then on a per-TEST, per-TEST_F, and per-TEST_P basis. A test case
+                without a given, when, or then property shall be included with an
+                empty string for each missing field.
+            '''
+            derived_from = [Detect_Specification_Drift, Detect_Coverage_Set_Changes]
+            satisfied_by = Tools.ReqCoverage
+        }
+
+        ToolQualification.ToolRequirement Multi_Requirement_Linking {
+            description = '''
+                A test case that carries lobster-tracing values matching more than
+                one requirement identifier shall appear in the lock file entry of
+                every matched requirement.
+            '''
+            derived_from = [Declare_Complete_Coverage]
+            satisfied_by = Tools.ReqCoverage
+        }
+
+        ToolQualification.ToolRequirement Lock_File_Content {
+            description = '''
+                The lock file shall contain, per requirement: the requirement
+                identifier and an ordered list of linked test cases. Each test
+                case entry shall contain: a uid in the format
+                "//bazel_package/SuiteName:TestName" (package-scoped gtest tag)
+                and the individual given, when, and then strings as separate
+                fields.
+            '''
+            derived_from = [Detect_Specification_Drift, Declare_Complete_Coverage]
+            satisfied_by = Tools.ReqCoverage
+        }
+
+        ToolQualification.ToolRequirement Lock_File_Ordering {
+            description = '''
+                Test cases within a requirement entry shall be ordered
+                lexicographically by uid to produce a deterministic,
+                diff-friendly lock file.
+            '''
+            derived_from = [Detect_Specification_Drift, Detect_Coverage_Set_Changes]
+            satisfied_by = Tools.ReqCoverage
+        }
+
+        ToolQualification.ToolRequirement Update_Command {
+            description = '''
+                The .update Bazel run target shall extract requirement identifiers
+                from the TrlcProviderInfo target, parse GTest XML result files for
+                lobster-tracing-linked test cases, build the spec from
+                given/when/then, and overwrite the committed lock file.
+            '''
+            derived_from = [Semi_Automated_Lock_Update]
+            satisfied_by = Tools.ReqCoverage
+        }
+
+        ToolQualification.ToolRequirement Test_Command_Verification {
+            description = '''
+                The Bazel test target shall parse GTest XML result files, rebuild
+                the spec for each linked test, and compare uid and spec against
+                the committed lock file, failing if they differ. On failure it
+                shall print a human-readable diff showing which test cases changed
+                and the exact bazel run command needed to refresh the lock file.
+            '''
+            derived_from = [Detect_Specification_Drift, Detect_Coverage_Set_Changes]
+            satisfied_by = Tools.ReqCoverage
+        }
+
+        ToolQualification.ToolRequirement LOBSTER_Covered_Attribute {
+            description = '''
+                The test target shall emit a lobster-act-trace JSON artifact that
+                marks each linked test case as "ok" when its uid exists in the
+                committed lock file and its spec matches, and "fail" otherwise.
+            '''
+            derived_from = [Generate_Covered_Traceability_Artifact]
+            satisfied_by = Tools.ReqCoverage
+        }
+
+    }
+
 }

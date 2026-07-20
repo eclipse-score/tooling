@@ -48,3 +48,4 @@ of truth.
 
    lobster_bazel
    lobster
+   req_coverage

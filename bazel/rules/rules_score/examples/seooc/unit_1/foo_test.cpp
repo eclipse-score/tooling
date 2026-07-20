@@ -18,6 +18,10 @@
 TEST(Foo, GetNumber) {
   ::testing::Test::RecordProperty("lobster-tracing",
                                   "SampleComponent.REQ_COMP_001");
+  ::testing::Test::RecordProperty("given",
+                                  "a default-constructed Foo instance");
+  ::testing::Test::RecordProperty("when", "GetNumber is called");
+  ::testing::Test::RecordProperty("then", "it returns 42");
 
   unit_1::Foo unit{};
 
@@ -27,6 +31,11 @@ TEST(Foo, GetNumber) {
 TEST(Foo, IsFinal) {
   ::testing::Test::RecordProperty("lobster-tracing",
                                   "SampleComponent.REQ_COMP_002");
+  ::testing::Test::RecordProperty("given", "the Foo class definition");
+  ::testing::Test::RecordProperty("when",
+                                  "checking whether the class is extensible");
+  ::testing::Test::RecordProperty(
+      "then", "it is declared final, preventing any subclassing");
   // Foo is declared final; extensibility is enforced at compile time.
   SUCCEED();
 }
@@ -34,6 +43,11 @@ TEST(Foo, IsFinal) {
 TEST(Foo, InitializesToKnownValue) {
   ::testing::Test::RecordProperty("lobster-tracing",
                                   "SampleComponentExtra.REQ_COMP_EXTRA_001");
+  ::testing::Test::RecordProperty("given",
+                                  "a default-constructed Foo instance");
+  ::testing::Test::RecordProperty("when",
+                                  "GetNumber is called for the first time");
+  ::testing::Test::RecordProperty("then", "it returns 42");
 
   unit_1::Foo unit{};
   EXPECT_EQ(unit.GetNumber(), 42u);
@@ -42,6 +56,10 @@ TEST(Foo, InitializesToKnownValue) {
 TEST(Foo, ValueConsistentAcrossReads) {
   ::testing::Test::RecordProperty("lobster-tracing",
                                   "SampleComponentExtra.REQ_COMP_EXTRA_002");
+  ::testing::Test::RecordProperty("given", "a const Foo instance");
+  ::testing::Test::RecordProperty("when", "GetNumber is called multiple times");
+  ::testing::Test::RecordProperty("then",
+                                  "the same value is returned on each call");
 
   const unit_1::Foo unit{};
   EXPECT_EQ(unit.GetNumber(), unit.GetNumber());
