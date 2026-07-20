@@ -406,16 +406,15 @@ fn infer_entity_type_from_members(kind: EntityKind, class: &SimpleEntity) -> Ent
 // Relationship part
 fn build_relationships_for_class(ctx: &mut VisitContext, builder: &ParsedClassInfo) {
     for base in &builder.base_classes {
-        let resolved_base = base
-            .resolved_type
-            .referenced_entity_id()
-            .unwrap_or_else(|| {
-                panic!(
-                    "Unresolved base type '{}' referenced by '{}'",
-                    base.resolved_type.render_for_display(),
-                    builder.id
-                )
-            });
+        let Some(resolved_base) = base.resolved_type.referenced_entity_id() else {
+            eprintln!(
+                "Warning: unable to resolve base type '{}' for '{}'; \
+                 skipping inheritance relationship (dependent/decltype expression?)",
+                base.resolved_type.render_for_display(),
+                builder.id
+            );
+            continue;
+        };
 
         let Some(target_class) = ctx.types.get(resolved_base) else {
             // Base type is not in the type map — it is likely an external dependency

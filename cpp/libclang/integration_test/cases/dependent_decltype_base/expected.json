@@ -1,0 +1,147 @@
+{
+    "types": {
+        "ContainerBase": {
+            "id": "ContainerBase",
+            "name": "ContainerBase",
+            "enclosing_namespace_id": null,
+            "entity_type": "Class",
+            "enum_literals": [],
+            "methods": [
+                {
+                    "name": "~ContainerBase",
+                    "return_type": null,
+                    "parameters": [],
+                    "modifiers": [
+                        "Virtual",
+                        "Destructor"
+                    ],
+                    "template_parameters": null,
+                    "visibility": "public",
+                    "source_location": {
+                        "file": "",
+                        "line": 16
+                    }
+                }
+            ],
+            "relationships": [],
+            "template_parameters": null,
+            "type_aliases": [],
+            "variables": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/dependent_decltype_base/dependent_base.cpp",
+                "line": 14
+            }
+        },
+        "IsMaplikeContainer": {
+            "id": "IsMaplikeContainer",
+            "name": "IsMaplikeContainer",
+            "enclosing_namespace_id": null,
+            "entity_type": "Class",
+            "enum_literals": [],
+            "methods": [],
+            "relationships": [],
+            "template_parameters": [
+                {
+                    "Type": {
+                        "name": "T",
+                        "is_pack": false
+                    }
+                }
+            ],
+            "type_aliases": [],
+            "variables": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/dependent_decltype_base/dependent_base.cpp",
+                "line": 30
+            }
+        },
+        "Container": {
+            "id": "Container",
+            "name": "Container",
+            "enclosing_namespace_id": null,
+            "entity_type": "Class",
+            "enum_literals": [],
+            "methods": [],
+            "relationships": [
+                {
+                    "source": "Container",
+                    "target": "ContainerBase",
+                    "relation_type": "Inheritance",
+                    "source_multiplicity": null,
+                    "target_multiplicity": null,
+                    "source_location": {
+                        "file": "",
+                        "line": 34
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "type_aliases": [],
+            "variables": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/dependent_decltype_base/dependent_base.cpp",
+                "line": 34
+            }
+        },
+        "Widget": {
+            "id": "Widget",
+            "name": "Widget",
+            "enclosing_namespace_id": null,
+            "entity_type": "Class",
+            "enum_literals": [],
+            "methods": [
+                {
+                    "name": "Widget",
+                    "return_type": null,
+                    "parameters": [],
+                    "modifiers": [
+                        "Constructor"
+                    ],
+                    "template_parameters": null,
+                    "visibility": "public",
+                    "source_location": {
+                        "file": "",
+                        "line": 40
+                    }
+                }
+            ],
+            "relationships": [],
+            "template_parameters": null,
+            "type_aliases": [],
+            "variables": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/dependent_decltype_base/dependent_base.cpp",
+                "line": 38
+            }
+        },
+        "ConcreteWidgetUser": {
+            "id": "ConcreteWidgetUser",
+            "name": "ConcreteWidgetUser",
+            "enclosing_namespace_id": null,
+            "entity_type": "Class",
+            "enum_literals": [],
+            "methods": [],
+            "relationships": [
+                {
+                    "source": "ConcreteWidgetUser",
+                    "target": "Widget",
+                    "relation_type": "Inheritance",
+                    "source_multiplicity": null,
+                    "target_multiplicity": null,
+                    "source_location": {
+                        "file": "",
+                        "line": 45
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "type_aliases": [],
+            "variables": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/dependent_decltype_base/dependent_base.cpp",
+                "line": 45
+            }
+        }
+    },
+    "functions": []
+}

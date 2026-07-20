@@ -195,3 +195,55 @@ fn collapse_std_internal_namespaces_does_not_drop_non_std_internal_namespaces() 
         vec!["foo".to_string(), "__detail".to_string(), "Bar".to_string()]
     );
 }
+
+// `ResolvedType::Dependent` represents types libclang cannot resolve without
+// template instantiation, e.g. the base class in:
+//   template <typename T>
+//   struct is_maplike_container : decltype(is_maplike_container_impl(std::declval<T>())) {};
+// It must behave like `Unknown` for entity/relationship lookups (there is no
+// entity id to find), but is a distinct variant so callers can tell "expected,
+// permanent limitation" apart from "missing/unanalyzed dependency" (`Unknown`).
+
+#[test]
+fn dependent_type_has_no_referenced_entity_id() {
+    let ty = ResolvedType::Dependent(
+        "decltype(is_maplike_container_impl(std::declval<T>()))".to_string(),
+    );
+
+    assert_eq!(ty.referenced_entity_id(), None);
+}
+
+#[test]
+fn dependent_type_has_no_relationship_target() {
+    let ty = ResolvedType::Dependent(
+        "decltype(is_maplike_container_impl(std::declval<T>()))".to_string(),
+    );
+
+    assert_eq!(ty.relationship_target_entity_id(), None);
+}
+
+#[test]
+fn dependent_type_is_not_non_owning() {
+    let ty = ResolvedType::Dependent("decltype(foo(std::declval<T>()))".to_string());
+
+    assert!(!ty.is_non_owning());
+}
+
+#[test]
+fn dependent_type_renders_its_source_text() {
+    let ty = ResolvedType::Dependent("decltype(foo(std::declval<T>()))".to_string());
+
+    assert_eq!(ty.render_for_display(), "decltype(foo(std::declval<T>()))");
+}
+
+#[test]
+fn dependent_type_nested_in_wrapper_has_no_referenced_entity_id() {
+    // A dependent expression wrapped in a qualifier (e.g. as a const base or
+    // through recursive resolution) must still be unresolvable, not silently
+    // fall back to `self` and look like something concrete.
+    let ty = ResolvedType::Const(Box::new(ResolvedType::Dependent(
+        "decltype(foo(std::declval<T>()))".to_string(),
+    )));
+
+    assert_eq!(ty.referenced_entity_id(), None);
+}

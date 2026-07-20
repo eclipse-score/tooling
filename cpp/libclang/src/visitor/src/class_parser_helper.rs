@@ -48,6 +48,14 @@ pub enum ResolvedType {
     },
 
     Unknown(String),
+
+    /// A type that is structurally unresolvable without template instantiation,
+    /// e.g. `decltype(some_trait_impl(std::declval<T>()))` inside an
+    /// uninstantiated template (the common SFINAE/trait-detection idiom). This is
+    /// distinct from `Unknown`: it is an expected, permanent limitation of
+    /// AST-only analysis rather than a gap in the resolver, so callers should not
+    /// treat it as an error condition.
+    Dependent(String),
 }
 
 impl ResolvedType {
@@ -96,7 +104,9 @@ impl ResolvedType {
     /// - Wrapper/qualifier/array nodes delegate to their inner element.
     pub fn relationship_target_entity_id(&self) -> Option<&str> {
         match self {
-            ResolvedType::Builtin(_) | ResolvedType::Unknown(_) => None,
+            ResolvedType::Builtin(_) | ResolvedType::Unknown(_) | ResolvedType::Dependent(_) => {
+                None
+            }
             ResolvedType::UserDefined(id) => Some(id),
             ResolvedType::Template { base, args } => args
                 .iter()
@@ -252,6 +262,8 @@ impl ResolvedType {
             },
 
             ResolvedType::Unknown(s) => s.clone(),
+
+            ResolvedType::Dependent(s) => s.clone(),
         }
     }
 
@@ -332,7 +344,10 @@ fn contains_template_type(resolved: &ResolvedType) -> bool {
         | ResolvedType::Const(inner)
         | ResolvedType::Volatile(inner) => contains_template_type(inner),
         ResolvedType::Array { element, .. } => contains_template_type(element),
-        ResolvedType::Builtin(_) | ResolvedType::UserDefined(_) | ResolvedType::Unknown(_) => false,
+        ResolvedType::Builtin(_)
+        | ResolvedType::UserDefined(_)
+        | ResolvedType::Unknown(_)
+        | ResolvedType::Dependent(_) => false,
     }
 }
 
@@ -520,7 +535,9 @@ fn resolve_named_type(original: &Type, canonical: &Type) -> ResolvedType {
     // Fallback order matters:
     // 1) source declaration (preserves local spelling when available)
     // 2) canonical declaration (captures normalized identity)
-    // 3) unknown name heuristic
+    // 3) dependent-expression heuristic (e.g. `decltype(expr_using<T>)` inside an
+    //    uninstantiated template) — structurally unresolvable before instantiation
+    // 4) unknown name heuristic
     if let Some(resolved) = resolve_decl_based(original) {
         return resolved;
     }
@@ -529,7 +546,22 @@ fn resolve_named_type(original: &Type, canonical: &Type) -> ResolvedType {
         return resolved;
     }
 
+    if is_dependent_expression_type(original) {
+        return ResolvedType::Dependent(resolve_unknown_name(original, canonical));
+    }
+
     ResolvedType::Unknown(resolve_unknown_name(original, canonical))
+}
+
+/// Detects types libclang exposes as `Unexposed` because their meaning depends on
+/// an unbound template parameter, e.g. `decltype(is_x_impl(std::declval<T>()))`
+/// in a template that is never instantiated in this translation unit. Such types
+/// cannot be resolved to a concrete entity id without template instantiation,
+/// which is out of scope for AST-only analysis. This is checked only after both
+/// declaration-based resolution attempts have already failed, so it never shadows
+/// a legitimately resolvable type.
+fn is_dependent_expression_type(ty: &Type) -> bool {
+    ty.get_kind() == TypeKind::Unexposed
 }
 
 fn resolve_unknown_name(original: &Type, canonical: &Type) -> String {
