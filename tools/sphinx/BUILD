@@ -25,9 +25,7 @@ sphinx_build_binary(
         requirement("sphinx_rtd_theme"),
         requirement("myst_parser"),
         requirement("readthedocs_sphinx_ext"),
-        requirement("rst2pdf"),
         requirement("sphinxcontrib-umlet"),
-        requirement("svglib"),
         requirement("sphinxcontrib-plantuml"),
     ],
 )

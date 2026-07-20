@@ -15,3 +15,6 @@ python_basics/integration_tests
 starpls/integration_tests
 # Should be run from its own directory (separate Module)
 bazel/rules/rules_score/test
+# Separate local Bazel modules (use @seooc// and @some_other_library// instead)
+bazel/rules/rules_score/examples/seooc
+bazel/rules/rules_score/examples/some_other_library

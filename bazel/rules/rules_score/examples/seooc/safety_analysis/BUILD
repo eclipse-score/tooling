@@ -12,7 +12,7 @@
 # *******************************************************************************
 
 load(
-    "//bazel/rules/rules_score:rules_score.bzl",
+    "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "fmea",
 )
 
@@ -29,7 +29,7 @@ filegroup(
 
 fmea(
     name = "sample_fmea",
-    arch_design = "//bazel/rules/rules_score/examples/seooc/design:sample_seooc_design",
+    arch_design = "//design:sample_seooc_design",
     controlmeasures = ["sample_fmea_control_measures.trlc"],
     failuremodes = ["sample_fmea_failure_modes.trlc"],
     root_causes = [":sample_fta"],

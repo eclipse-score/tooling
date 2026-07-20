@@ -338,4 +338,4 @@ The debug log contains:
 ## Developer Guide
 
 Architecture, agent internals, the report pipeline, caching, and extension
-points are documented in [DEVELOPMENT.md](DEVELOPMENT.md).
+points are documented in [DEVELOPMENT.md](https://github.com/eclipse-score/tooling/blob/main/validation/ai_checker/DEVELOPMENT.md).

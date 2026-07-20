@@ -1,11 +1,9 @@
 myst-parser
 pyyaml
 readthedocs-sphinx-ext
-rst2pdf
 sphinx
 sphinx-needs
 sphinx-design
 sphinxcontrib-plantuml
 sphinxcontrib-umlet
 sphinx-rtd-theme
-svglib

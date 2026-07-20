@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load(
-    "//bazel/rules/rules_score:rules_score.bzl",
+    "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "unit",
 )
 
@@ -19,12 +19,12 @@ unit(
     name = "unit_1",
     #    scope = ["//bazel/rules/rules_score/examples/seooc/unit_1:__pkg__"],
     #    scope = ["//bazel/rules/rules_score/examples/seooc:__subpackages__"],
-    scope = ["//bazel/rules/rules_score/examples/seooc/unit_1:unit_1_lib"],
+    scope = ["//unit_1:unit_1_lib"],
     tests = [
         ":unit_1_test",
     ],
     unit_design = [
-        "//bazel/rules/rules_score/examples/seooc/unit_1/docs:unit_design",
+        "//unit_1/docs:unit_design",
     ],
     visibility = ["//visibility:public"],
     implementation = [
@@ -37,7 +37,7 @@ cc_library(
     srcs = ["foo.cpp"],
     hdrs = ["foo.h"],
     visibility = ["//visibility:public"],
-    deps = ["//bazel/rules/rules_score/examples/some_other_library"],
+    deps = ["@some_other_library"],
 )
 
 cc_test(

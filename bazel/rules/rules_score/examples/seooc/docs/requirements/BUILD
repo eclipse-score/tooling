@@ -11,8 +11,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("//bazel/rules/rules_score:rules_score.bzl", "assumed_system_requirements", "component_requirements", "feature_requirements")
-load("//validation/ai_checker:ai_checker.bzl", "trlc_requirements_ai_test")
+load("@score_tooling//bazel/rules/rules_score:rules_score.bzl", "assumed_system_requirements", "component_requirements", "feature_requirements")
+load("@score_tooling//validation/ai_checker:ai_checker.bzl", "trlc_requirements_ai_test")
 
 assumed_system_requirements(
     name = "assumed_system_requirements",

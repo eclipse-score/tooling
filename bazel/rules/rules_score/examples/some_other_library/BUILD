@@ -10,9 +10,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@trlc//:trlc.bzl", "trlc_requirements")
+
 load(
-    "//bazel/rules/rules_score:rules_score.bzl",
+    "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
     "assumptions_of_use",
     "component",
@@ -27,20 +27,14 @@ architectural_design(
     ],
 )
 
-trlc_requirements(
-    name = "aous_trlc",
-    srcs = ["aous.trlc"],
-    spec = ["@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model"],
-)
-
 assumptions_of_use(
     name = "other_library_aous",
-    srcs = [":aous_trlc"],
+    srcs = ["aous.trlc"],
 )
 
 unit(
     name = "abc",
-    scope = ["//bazel/rules/rules_score/examples/some_other_library:__pkg__"],
+    scope = ["//:__pkg__"],
     tests = [],
     unit_design = [],
     implementation = [
@@ -53,7 +47,7 @@ component(
     components = [
         ":abc",
     ],
-    requirements = ["//bazel/rules/rules_score/examples/seooc/docs/requirements:component_requirements"],
+    requirements = [],  # TODO: define own requirements (removed circular dep on @seooc)
     tags = ["manual"],
     tests = [],
 )
@@ -64,15 +58,16 @@ dependable_element(
     assumptions_of_use = [":other_library_aous"],
     components = [":component_example"],
     dependability_analysis = [],
+    docs_prefix = "bazel/rules/rules_score/docs/sphinx/",
     integrity_level = "D",
     requirements = [],
     tests = [],
-    visibility = ["//:__subpackages__"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "some_other_library",
     srcs = [],
-    visibility = ["//:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [],
 )

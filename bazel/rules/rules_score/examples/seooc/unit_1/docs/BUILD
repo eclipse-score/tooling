@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load(
-    "//bazel/rules/rules_score:rules_score.bzl",
+    "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "unit_design",
 )
 

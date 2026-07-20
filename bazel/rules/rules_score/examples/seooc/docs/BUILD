@@ -1,3 +1,9 @@
+load(
+    "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
+    "assumptions_of_use",
+    "glossary",
+)
+
 # *******************************************************************************
 # Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
@@ -10,34 +16,20 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test")
-load(
-    "//bazel/rules/rules_score:rules_score.bzl",
-    "assumptions_of_use",
-    "glossary",
-)
-
-trlc_requirements(
-    name = "aous",
-    srcs = [
-        "aous.trlc",
-    ],
-    spec = [
-        "@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model",
-    ],
-    visibility = ["//visibility:public"],
-)
+load("@trlc//:trlc.bzl", "trlc_requirements_test")
 
 assumptions_of_use(
     name = "sample_aous",
-    srcs = [":aous"],
+    srcs = [
+        "aous.trlc",
+    ],
     visibility = ["//visibility:public"],
 )
 
 trlc_requirements_test(
     name = "aous_test",
     reqs = [
-        ":aous",
+        ":sample_aous",
     ],
     visibility = ["//visibility:public"],
 )

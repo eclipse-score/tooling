@@ -20,19 +20,38 @@ module(
 ###############################################################################
 # Core Dependencies
 ###############################################################################
+bazel_dep(name = "aspect_rules_py", version = "1.4.0")  # py_binary/py_library loads in cli_helper.bzl:13, cr_checker.bzl:16, defs.bzl:16, etc.
+
+bazel_dep(name = "aspect_rules_lint", version = "1.5.3", dev_dependency = True)
+
+bazel_dep(name = "rules_java", version = "8.15.1")  # required for dash
+
+bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2", dev_dependency = True)
+
+## Rules Score
 bazel_dep(name = "rules_cc", version = "0.2.14")
 bazel_dep(name = "rules_python", version = "1.4.1")
-bazel_dep(name = "aspect_rules_py", version = "1.4.0")
 bazel_dep(name = "platforms", version = "1.0.0")
-bazel_dep(name = "aspect_rules_lint", version = "1.5.3")
 bazel_dep(name = "rules_shell", version = "0.5.0")
-bazel_dep(name = "rules_java", version = "8.15.1")
 bazel_dep(name = "rules_rust", version = "0.68.1-score")
 bazel_dep(name = "score_rust_policies", version = "0.0.2")
 bazel_dep(name = "bazel_skylib", version = "1.7.1")
-bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2")
 bazel_dep(name = "flatbuffers", version = "25.9.23")
 bazel_dep(name = "download_utils", version = "1.2.2")
+bazel_dep(name = "trlc", version = "3.0.0")
+bazel_dep(name = "lobster", version = "1.0.3")
+git_override(
+    module_name = "lobster",
+    commit = "07382c33f95e22992e0f8788c0537ec06877e51f",
+    remote = "https://github.com/bmw-software-engineering/lobster.git",
+)
+
+bazel_dep(name = "rules_distroless", version = "0.8.0")
+bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
+
+bazel_dep(name = "toolchains_llvm", version = "1.6.0", dev_dependency = True)  # Libclang Tooling
+
+bazel_dep(name = "rules_jvm_external", version = "6.10")  # PlantUML
 
 # flatbuffers depends on this transitively, but older grpc-java version
 # The main problem is that there the command `bazel mod deps` is broken, which
@@ -42,7 +61,6 @@ bazel_dep(name = "grpc-java", version = "1.75.0.bcr.1")
 ###############################################################################
 # CC Toolchain
 ###############################################################################
-
 bazel_dep(name = "score_bazel_cpp_toolchains", version = "0.3.1", dev_dependency = True)
 
 score_gcc = use_extension("@score_bazel_cpp_toolchains//extensions:gcc.bzl", "gcc", dev_dependency = True)
@@ -184,7 +202,7 @@ python.toolchain(
 ###############################################################################
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 
-# Main tooling pip
+# Python Tooling
 [
     pip.parse(
         envsubst = ["PIP_INDEX_URL"],
@@ -199,6 +217,7 @@ pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
     ]
 ]
 
+# Lobster Bazel
 use_repo(pip, "pip_tooling")
 
 [
@@ -217,6 +236,7 @@ use_repo(pip, "pip_tooling")
 
 use_repo(pip, "pip_lobster_bazel")
 
+# Rules Score Python Deps
 [
     pip.parse(
         envsubst = ["PIP_INDEX_URL"],
@@ -250,8 +270,6 @@ deb(
 # Distroless rootfs providing graphviz + fakechroot for hermetic dot execution
 # via //third_party/docs_runtime:dot (exec_in_sysroot).
 ###############################################################################
-bazel_dep(name = "rules_distroless", version = "0.8.0")
-
 # bsdtar (used by //bazel/rules/exec_in_sysroot to extract sysroot archives).
 bazel_dep(name = "tar.bzl", version = "0.6.0")
 
@@ -269,15 +287,8 @@ register_toolchains(
 )
 
 ###############################################################################
-# Setup Googletest
-###############################################################################
-bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
-
-###############################################################################
 # Blueprint Maven
 ###############################################################################
-bazel_dep(name = "rules_jvm_external", version = "6.10")
-
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.install(
     name = "blueprint_maven_dependencies",
@@ -306,14 +317,6 @@ use_repo(maven, "blueprint_maven_dependencies")
 ]
 
 use_repo(pip, "manual_analysis_deps")
-
-bazel_dep(name = "trlc", version = "3.0.0")
-bazel_dep(name = "lobster", version = "1.0.3")
-git_override(
-    module_name = "lobster",
-    commit = "07382c33f95e22992e0f8788c0537ec06877e51f",
-    remote = "https://github.com/bmw-software-engineering/lobster.git",
-)
 
 ###############################################################################
 # Dependencies for AI Checker
@@ -350,8 +353,6 @@ use_repo(pip, "pip_ai_checker")
 ###############################################################################
 # LLVM Toolchain
 ###############################################################################
-bazel_dep(name = "toolchains_llvm", version = "1.6.0", dev_dependency = True)
-
 llvm = use_extension(
     "@toolchains_llvm//toolchain/extensions:llvm.bzl",
     "llvm",

@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-name: Run Python Basics Integration and Unit Tests
+name: Run Tests
 on:
   pull_request:
     types: [opened, reopened, synchronize]
@@ -22,7 +22,7 @@ env:
   ANDROID_SDK_ROOT: ""
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
-  root_workspace_tests:
+  tooling_checks:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -37,7 +37,7 @@ jobs:
       - uses: castler/setup-bazel@cache-optimized
         with:
           bazelisk-cache: true
-          disk-cache: root_workspace_tests
+          disk-cache: tooling_checks
           repository-cache: true
           cache-optimized: true
           cache-save: ${{ github.ref == 'refs/heads/main' }}
@@ -66,10 +66,27 @@ jobs:
         run: |
           bazel test //cpp/libclang/...
   integration_tests:
+    name: integration_tests (${{ matrix.name }})
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: python_basics
+            run: |
+              cd python_basics/integration_tests
+              bazel test //...
+          - name: starpls
+            run: |
+              cd starpls/integration_tests
+              bazel test //...
+          - name: cr_checker
+            run: |
+              cd cr_checker/tests
+              bazel test //...
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
@@ -80,27 +97,36 @@ jobs:
       - uses: castler/setup-bazel@cache-optimized
         with:
           bazelisk-cache: true
-          disk-cache: integration_tests
+          disk-cache: integration_tests-${{ matrix.name }}
           repository-cache: true
           cache-optimized: true
           cache-save: ${{ github.ref == 'refs/heads/main' }}
-      - name: Run python_basics integration tests
-        run: |
-          cd python_basics/integration_tests
-          bazel test //...
-      - name: Run starpls integration tests
-        run: |
-          cd starpls/integration_tests
-          bazel test //...
-      - name: Run cr_checker unit tests
-        run: |
-          cd cr_checker/tests
-          bazel test //...
+      - name: Run ${{ matrix.name }}
+        run: ${{ matrix.run }}
   rules_score_tests:
+    name: rules_score_tests (${{ matrix.name }})
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: rules_score
+            run: |
+              cd bazel/rules/rules_score/test
+              bazel test //...
+          - name: seooc_example
+            run: |
+              cd bazel/rules/rules_score/examples/seooc
+              bazel build //...
+              bazel test //...
+          - name: some_other_library_example
+            run: |
+              cd bazel/rules/rules_score/examples/some_other_library
+              bazel build //...
+              bazel test //...
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
@@ -111,15 +137,9 @@ jobs:
       - uses: castler/setup-bazel@cache-optimized
         with:
           bazelisk-cache: true
-          disk-cache: rules_score_tests
+          disk-cache: rules_score_tests-${{ matrix.name }}
           repository-cache: true
           cache-optimized: true
           cache-save: ${{ github.ref == 'refs/heads/main' }}
-      - name: Install Missing Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcairo2-dev
-      - name: Run rules_score tests
-        run: |
-          cd bazel/rules/rules_score/test
-          bazel test //...
+      - name: Run ${{ matrix.name }}
+        run: ${{ matrix.run }}
