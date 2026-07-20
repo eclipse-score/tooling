@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-name: Run Python Basics Integration and Unit Tests
+name: Run Tests
 on:
   pull_request:
     types: [opened, reopened, synchronize]
@@ -23,7 +23,50 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
   tooling_checks:
-    name: tooling_checks (${{ matrix.name }})
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+      - name: Free Disk Space (Ubuntu)
+        uses: eclipse-score/more-disk-space@v1
+        with:
+          level: 4
+      - uses: castler/setup-bazel@cache-optimized
+        with:
+          bazelisk-cache: true
+          disk-cache: tooling_checks
+          repository-cache: true
+          cache-optimized: true
+          cache-save: ${{ github.ref == 'refs/heads/main' }}
+      - name: Run coverage module tests
+        run: |
+          bazel test //coverage/tests:all
+      - name: Run Plantuml Tooling clippy
+        run: |
+          bazel build //plantuml/... --config=clippy
+      - name: Run Plantuml Tooling tests
+        run: |
+          bazel test //plantuml/...
+      - name: Run Validation Tooling clippy
+        run: |
+          bazel build //validation/... --config=clippy
+      - name: Run Validation Tooling tests
+        run: |
+          bazel test //validation/...
+      - name: Ensure correct dependency resolution
+        run: |
+          bazel mod deps --lockfile_mode=update
+      - name: Run Libclang Parser Tooling clippy
+        run: |
+          bazel build //cpp/libclang/... --config=clippy
+      - name: Run Libclang Parser Tooling tests
+        run: |
+          bazel test //cpp/libclang/...
+  integration_tests:
+    name: integration_tests (${{ matrix.name }})
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -32,24 +75,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: coverage
+          - name: python_basics
             run: |
-              bazel test //coverage/tests:all
-          - name: plantuml
+              cd python_basics/integration_tests
+              bazel test //...
+          - name: starpls
             run: |
-              bazel build //plantuml/... --config=clippy
-              bazel test //plantuml/...
-          - name: validation
+              cd starpls/integration_tests
+              bazel test //...
+          - name: cr_checker
             run: |
-              bazel build //validation/... --config=clippy
-              bazel test //validation/...
-          - name: mod_deps
-            run: |
-              bazel mod deps --lockfile_mode=update
-          - name: libclang
-            run: |
-              bazel build //cpp/libclang/... --config=clippy
-              bazel test //cpp/libclang/...
+              cd cr_checker/tests
+              bazel test //...
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
@@ -60,43 +97,12 @@ jobs:
       - uses: castler/setup-bazel@cache-optimized
         with:
           bazelisk-cache: true
-          disk-cache: tooling_checks-${{ matrix.name }}
+          disk-cache: integration_tests-${{ matrix.name }}
           repository-cache: true
           cache-optimized: true
           cache-save: ${{ github.ref == 'refs/heads/main' }}
       - name: Run ${{ matrix.name }}
         run: ${{ matrix.run }}
-  integration_tests:
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      actions: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7.0.0
-      - name: Free Disk Space (Ubuntu)
-        uses: eclipse-score/more-disk-space@v1
-        with:
-          level: 4
-      - uses: castler/setup-bazel@cache-optimized
-        with:
-          bazelisk-cache: true
-          disk-cache: integration_tests
-          repository-cache: true
-          cache-optimized: true
-          cache-save: ${{ github.ref == 'refs/heads/main' }}
-      - name: Run python_basics integration tests
-        run: |
-          cd python_basics/integration_tests
-          bazel test //...
-      - name: Run starpls integration tests
-        run: |
-          cd starpls/integration_tests
-          bazel test //...
-      - name: Run cr_checker unit tests
-        run: |
-          cd cr_checker/tests
-          bazel test //...
   rules_score_tests:
     name: rules_score_tests (${{ matrix.name }})
     runs-on: ubuntu-24.04
