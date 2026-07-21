@@ -778,9 +778,10 @@ impl ComponentResolver {
 
     fn visit_element(&mut self, element: &Element) -> Result<(), ComponentResolverError> {
         let local_id = element
+            .identity
             .alias
             .as_deref()
-            .or(element.name.as_deref())
+            .or(element.identity.name.as_deref())
             .expect("Element must have name or alias (guaranteed by grammar)");
 
         let fqn = self.make_fqn(local_id);
@@ -796,12 +797,12 @@ impl ComponentResolver {
 
         let logic = LogicComponent {
             id: fqn.clone(),
-            name: element.name.clone(),
-            alias: element.alias.clone(),
-            source_location: element.source_location.clone(),
+            name: element.identity.name.clone(),
+            alias: element.identity.alias.clone(),
+            source_location: element.identity.source_location.clone(),
             parent_id: parent_id.clone(),
-            element_type: parse_kind(&element.kind)?,
-            stereotype: element.stereotype.clone(),
+            element_type: parse_kind(&element.identity.element_kind)?,
+            stereotype: element.identity.stereotype.clone(),
             relations: Vec::new(),
         };
 

@@ -10,7 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
-pub use parser_core::common_ast::Arrow;
+pub use parser_core::common_ast::{Arrow, ElementIdentity};
 use serde::{Deserialize, Serialize};
 use source_location::SourceLocation;
 
@@ -43,13 +43,9 @@ pub enum PortType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Element {
-    pub kind: String,
-    pub name: Option<String>,
-    pub alias: Option<String>,
-    pub stereotype: Option<String>,
+    pub identity: ElementIdentity,
     pub style: Option<ComponentStyle>,
     pub statements: Vec<Statement>, // For nested components
-    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

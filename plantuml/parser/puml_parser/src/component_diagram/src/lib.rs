@@ -15,6 +15,7 @@ mod component_ast;
 mod component_parser;
 
 pub use component_ast::{
-    Arrow, CompPumlDocument, ComponentStyle, Element, Port, PortType, Relation, Statement,
+    Arrow, CompPumlDocument, ComponentStyle, Element, ElementIdentity, Port, PortType, Relation,
+    Statement,
 };
 pub use component_parser::{ComponentError, PumlComponentParser};
