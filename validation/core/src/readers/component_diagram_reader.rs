@@ -90,27 +90,19 @@ impl ComponentDiagramReader {
     /// Read all `Component` and `Package` entities from the given FlatBuffers
     /// binary files.
     ///
-    /// Files that carry a known non-component file identifier (e.g. `CLSD` for
-    /// class diagrams or `SEQD` for sequence diagrams) are silently skipped so
-    /// that callers can pass all architectural-design FlatBuffers without
-    /// pre-filtering by diagram type.
+    /// Files that don't carry the component-diagram file identifier (`COMD`) —
+    /// e.g. because the PlantUML source was auto-detected as a class, sequence,
+    /// or other diagram type — are silently skipped so that callers can pass
+    /// all architectural-design FlatBuffers without pre-filtering by diagram type.
     pub fn read(paths: &[String]) -> Result<ComponentDiagramInputs, String> {
         let mut out = Vec::new();
 
         for path in paths {
             let data = fs::read(path).map_err(|e| format!("Failed to read {path}: {e}"))?;
 
-            // FlatBuffers stores the file identifier at bytes 4-7 when one is
-            // present.  Component diagrams are written without an identifier
-            // (builder.finish(root, None)), so bytes 4-7 are regular data.
-            // Class diagrams ("CLSD") and sequence diagrams ("SEQD") carry an
-            // explicit identifier.  Skip such files here; they are not
-            // component diagrams and must not be parsed with the component schema.
-            if data.len() >= 8 {
-                let file_id = &data[4..8];
-                if file_id == b"CLSD" || file_id == b"SEQD" {
-                    continue;
-                }
+            if !fb_component::component_graph_buffer_has_identifier(&data) {
+                log::warn!("{path}: not a component-diagram, skipping validation");
+                continue;
             }
 
             let graph = flatbuffers::root::<fb_component::ComponentGraph>(&data)

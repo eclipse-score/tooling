@@ -304,6 +304,14 @@ impl Reader for ClassDiagramReader {
         for path in input {
             let data = fs::read(path).map_err(|e| format!("Failed to read {path}: {e}"))?;
 
+            // The PlantUML parser auto-detects diagram kind; a `.puml` may end up parsed
+            // as a different type (e.g. Component). Skip mismatched buffers instead of
+            // letting the verifier fail on misaligned data.
+            if !fb_class::class_diagram_buffer_has_identifier(&data) {
+                log::warn!("{path}: not a class-diagram, skipping validation");
+                continue;
+            }
+
             let diagram = flatbuffers::root::<fb_class::ClassDiagram>(&data)
                 .map_err(|e| format!("Failed to parse class FlatBuffer {path}: {e}"))?;
 
