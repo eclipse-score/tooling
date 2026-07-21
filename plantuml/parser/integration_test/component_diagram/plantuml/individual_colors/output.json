@@ -4,19 +4,21 @@
     "statements": [
       {
         "Element": {
-          "kind": "component",
-          "name": "Trace Collector",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "Trace Collector",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 14
+            }
+          },
           "style": {
             "color": null,
             "attributes": []
           },
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 14
-          }
+          "statements": []
         }
       }
     ]

@@ -263,6 +263,7 @@ fn test_nested_elements() {
 fn test_source_locations_are_preserved() {
     use component_diagram::SourceLocation;
     use component_parser::{CompPumlDocument, Element, Relation, Statement};
+    use parser_core::common_ast::ElementIdentity;
     use parser_core::common_ast::{Arrow, ArrowLine};
 
     let component_location = SourceLocation::new("input.puml", 2);
@@ -272,22 +273,26 @@ fn test_source_locations_are_preserved() {
         name: None,
         statements: vec![
             Statement::Element(Element {
-                kind: "component".to_string(),
-                name: Some("A".to_string()),
-                alias: None,
-                stereotype: None,
+                identity: ElementIdentity {
+                    name: Some("A".to_string()),
+                    alias: None,
+                    stereotype: None,
+                    element_kind: "component".to_string(),
+                    source_location: component_location.clone(),
+                },
                 style: None,
                 statements: Vec::new(),
-                source_location: component_location.clone(),
             }),
             Statement::Element(Element {
-                kind: "component".to_string(),
-                name: Some("B".to_string()),
-                alias: None,
-                stereotype: None,
+                identity: ElementIdentity {
+                    name: Some("B".to_string()),
+                    alias: None,
+                    stereotype: None,
+                    element_kind: "component".to_string(),
+                    source_location: SourceLocation::new("input.puml", 3),
+                },
                 style: None,
                 statements: Vec::new(),
-                source_location: SourceLocation::new("input.puml", 3),
             }),
             Statement::Relation(Relation {
                 lhs: "A".to_string(),

@@ -4,58 +4,66 @@
     "statements": [
       {
         "Element": {
-          "kind": "component",
-          "name": "Telemetry collector",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "Telemetry collector",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 15
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "component",
-          "name": "Calibration service",
-          "alias": "CalibrationSvc",
-          "stereotype": null,
+          "identity": {
+            "name": "Calibration service",
+            "alias": "CalibrationSvc",
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 16
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "component",
-          "name": "HealthMonitor",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "HealthMonitor",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 17
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "component",
-          "name": "Fallback\\nrecorder",
-          "alias": "FallbackRecorder",
-          "stereotype": null,
+          "identity": {
+            "name": "Fallback\\nrecorder",
+            "alias": "FallbackRecorder",
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 18
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 18
-          }
+          "statements": []
         }
       }
     ]
