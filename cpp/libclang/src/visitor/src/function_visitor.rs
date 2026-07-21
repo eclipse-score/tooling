@@ -34,23 +34,40 @@ impl FunctionVisitor {
     // ── Top-level extraction ──────────────────────────────────────────────────
 
     fn extract_function_def(entity: Entity) -> Option<FunctionDef> {
-        let body_node = Self::get_method_body(entity)?;
+        let Some(body_node) = Self::get_method_body(entity) else {
+            log::debug!(
+                "skipping method '{}': no compound statement body (declaration-only?)",
+                entity.get_name().unwrap_or_default()
+            );
+            return None;
+        };
 
         if !entity
             .get_location()
             .map(|loc| loc.is_in_main_file())
             .unwrap_or(false)
         {
+            log::debug!(
+                "skipping method '{}': not located in the main file",
+                entity.get_name().unwrap_or_default()
+            );
             return None;
         }
 
-        let method_name = entity.get_name()?;
+        let Some(method_name) = entity.get_name() else {
+            log::debug!("skipping method: entity has no name");
+            return None;
+        };
         let class_name = entity
             .get_semantic_parent()
             .and_then(|p| p.get_name())
             .unwrap_or_default();
 
         if class_name.is_empty() {
+            log::debug!(
+                "skipping method '{}': owning class/struct has no name",
+                method_name
+            );
             return None;
         }
 

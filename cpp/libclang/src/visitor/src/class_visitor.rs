@@ -59,7 +59,10 @@ impl ClassVisitor {
         entity: &Entity,
         namespace: Option<&str>,
     ) -> Option<(ParsedClassInfo, SimpleEntity)> {
-        let name = entity.get_name()?;
+        let Some(name) = entity.get_name() else {
+            log::debug!("skipping class/struct: anonymous type has no name");
+            return None;
+        };
 
         let id = match namespace {
             Some(ns) if !ns.is_empty() => format!("{ns}::{name}"),
@@ -154,8 +157,17 @@ pub(crate) fn parse_source_location(entity: &Entity) -> SourceLocation {
 }
 
 fn collect_variable_type(entity: &Entity) -> Option<ParsedVariableType> {
-    let name = entity.get_name()?;
-    let field_type = entity.get_type()?;
+    let Some(name) = entity.get_name() else {
+        log::debug!("skipping field/variable: entity has no name");
+        return None;
+    };
+    let Some(field_type) = entity.get_type() else {
+        log::debug!(
+            "skipping field/variable '{}': could not determine its type",
+            name
+        );
+        return None;
+    };
 
     Some(ParsedVariableType {
         name,
@@ -204,11 +216,21 @@ fn method_arguments<'tu>(entity: &Entity<'tu>) -> Vec<Entity<'tu>> {
 }
 
 fn parse_type_alias(entity: &Entity) -> Option<TypeAlias> {
-    let alias = entity.get_name()?;
+    let Some(alias) = entity.get_name() else {
+        log::debug!("skipping type alias: entity has no name");
+        return None;
+    };
 
-    let original_type = entity
+    let Some(original_type) = entity
         .get_typedef_underlying_type()
-        .map(|t| render_type_for_display(&t, &resolve_type(&t)))?;
+        .map(|t| render_type_for_display(&t, &resolve_type(&t)))
+    else {
+        log::debug!(
+            "skipping type alias '{}': could not determine underlying type",
+            alias
+        );
+        return None;
+    };
 
     Some(TypeAlias {
         alias,
@@ -407,23 +429,41 @@ fn infer_entity_type_from_members(kind: EntityKind, class: &SimpleEntity) -> Ent
 fn build_relationships_for_class(ctx: &mut VisitContext, builder: &ParsedClassInfo) {
     for base in &builder.base_classes {
         let Some(resolved_base) = base.resolved_type.referenced_entity_id() else {
-            eprintln!(
-                "Warning: unable to resolve base type '{}' for '{}'; \
-                 skipping inheritance relationship (dependent/decltype expression?)",
-                base.resolved_type.render_for_display(),
-                builder.id
-            );
+            if matches!(base.resolved_type, ResolvedType::Dependent(_)) {
+                // Expected, permanent limitation of AST-only analysis (e.g. a
+                // `decltype`/SFINAE base class that cannot be resolved without
+                // template instantiation) — never abort, not even in debug/test
+                // builds.
+                log::debug!(
+                    "unable to resolve base type '{}' for '{}'; \
+                     skipping inheritance relationship (dependent/decltype expression)",
+                    base.resolved_type.render_for_display(),
+                    builder.id
+                );
+            } else {
+                // Unexpected: a base class resolving to `Unknown`/`Builtin` likely
+                // indicates a gap in the resolver rather than a known limitation.
+                // When in doubt, warn and continue rather than abort — a single
+                // unanticipated input must never crash the parser.
+                log::warn!(
+                    "unable to resolve base type '{}' for '{}'; \
+                     skipping inheritance relationship (unexpected unresolved type)",
+                    base.resolved_type.render_for_display(),
+                    builder.id
+                );
+            }
             continue;
         };
 
         let Some(target_class) = ctx.types.get(resolved_base) else {
             // Base type is not in the type map — it is likely an external dependency
-            // that was filtered out during the visit phase. Skip the relationship
-            // rather than panicking so analysis of workspace classes can proceed.
-            eprintln!(
-                "Warning: base type '{}' not found in type map for '{}'; \
-                 skipping inheritance relationship (external dependency?)",
-                resolved_base, builder.id
+            // that was filtered out during the visit phase. This is expected and
+            // common, so skip the relationship without ever aborting.
+            log::debug!(
+                "base type '{}' not found in type map for '{}'; \
+                 skipping inheritance relationship (external dependency)",
+                resolved_base,
+                builder.id
             );
             continue;
         };
@@ -434,10 +474,20 @@ fn build_relationships_for_class(ctx: &mut VisitContext, builder: &ParsedClassIn
             RelationType::Inheritance
         };
 
-        let class = ctx
-            .types
-            .get_mut(&builder.id)
-            .expect("Source class must exist before building relationships");
+        let Some(class) = ctx.types.get_mut(&builder.id) else {
+            // Internal invariant: `builder.id` is derived from `ctx.types` during
+            // the visit phase, so it should always still be present here. If it
+            // isn't, that's a bug in the visitor pipeline rather than an expected
+            // input condition. When in doubt, warn and skip rather than abort —
+            // a single unanticipated input must never crash the parser.
+            log::warn!(
+                "source class '{}' unexpectedly missing from type map; \
+                 skipping inheritance relationship to '{}'",
+                builder.id,
+                resolved_base
+            );
+            continue;
+        };
 
         add_relationship(
             class,

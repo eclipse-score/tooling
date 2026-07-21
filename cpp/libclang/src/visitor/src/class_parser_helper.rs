@@ -547,10 +547,18 @@ fn resolve_named_type(original: &Type, canonical: &Type) -> ResolvedType {
     }
 
     if is_dependent_expression_type(original) {
-        return ResolvedType::Dependent(resolve_unknown_name(original, canonical));
+        let name = resolve_unknown_name(original, canonical);
+        log::debug!(
+            "type '{}' is structurally unresolvable before template instantiation \
+             (dependent/decltype expression)",
+            name
+        );
+        return ResolvedType::Dependent(name);
     }
 
-    ResolvedType::Unknown(resolve_unknown_name(original, canonical))
+    let name = resolve_unknown_name(original, canonical);
+    log::debug!("could not resolve type '{}' to a concrete entity id", name);
+    ResolvedType::Unknown(name)
 }
 
 /// Detects types libclang exposes as `Unexposed` because their meaning depends on
