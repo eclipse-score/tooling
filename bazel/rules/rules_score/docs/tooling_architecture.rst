@@ -91,13 +91,14 @@ are rendered under :doc:`tool_reference/index`.
      - Converts RST requirement directives (``feat_req``, ``comp_req``, …) into
        ``.trlc`` records so requirements can be authored in either RST or TRLC.
    * - **PlantUML Parser**
-     - ``@score_tooling//plantuml/parser:parser`` (Rust) + ``:linker``
+     - ``@score_tooling//plantuml/parser:parser`` (Rust)
      - ``architectural_design``, ``unit_design``
      - Parses ``.puml`` diagrams into a FlatBuffers AST (``.fbs.bin``, one
-       ``root_type`` per diagram kind) and extracts interface ``.lobster``
-       items. The **linker** merges the FlatBuffers into ``plantuml_links.json``
-       for the ``clickable_plantuml`` Sphinx extension. Rejects syntactically
-       invalid diagrams with a non-zero exit code.
+       ``root_type`` per diagram kind), extracts interface ``.lobster`` items,
+       and emits ``.idmap.json`` sidecars recording the *defines/references*
+       roles of each element.  The ``clickable_plantuml`` Sphinx extension reads
+       these sidecars to resolve cross-diagram links without a separate linker
+       step.  Rejects syntactically invalid diagrams with a non-zero exit code.
    * - **puml_cli (FTA mode)**
      - ``//plantuml/parser/puml_cli`` ``--fta-output-dir`` (Rust; FTA model in
        the ``puml_fta`` crate)
@@ -115,6 +116,15 @@ are rendered under :doc:`tool_reference/index`.
    * - **fmea_assembler**
      - ``//bazel/rules/rules_score:fmea_assembler``
        (``src/fmea_assembler.py``, local; links the ``TRLCRST`` library)
+     - ``fmea``
+     - Assembles the failure-mode-centric ``fmea.rst`` from ``fta_chains.json``
+       plus the FailureMode / ControlMeasure records in one in-process TRLC
+       parse: an overview table, one section per failure mode (detail + inline
+       fault tree + that chain's control measures), and trailing "Unlinked"
+       sections so nothing is dropped.
+   * - **safety_analysis_tools**
+     - ``//bazel/rules/rules_score:safety_analysis_tools``
+       (``src/safety_analysis_tools.py``, local)
      - ``fmea``
      - Assembles the failure-mode-centric ``fmea.rst`` from ``fta_chains.json``
        plus the FailureMode / ControlMeasure records in one in-process TRLC

@@ -32,36 +32,60 @@ load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_l
 # ============================================================================
 
 def _run_puml_parser(ctx, puml_file):
-    """Run the PlantUML parser on one .puml file and emit a FlatBuffers file."""
+    """Run the PlantUML parser on one .puml file and emit a FlatBuffers file
+    and an idmap sidecar.
+
+    ``--source-name`` is passed as ``puml_file.short_path`` (mirroring
+    architectural_design.bzl's ``_run_puml_parser``) so the ``source`` field
+    embedded in the idmap output is a stable, workspace-relative path that
+    the `clickable_plantuml` Sphinx extension can match against paths it
+    derives from Sphinx's own doctree. Without this, unit design diagrams
+    (e.g. a unit's class diagram) can never become the "definition" side of
+    a cross-diagram link, so references to that unit from architectural
+    design diagrams (static or dynamic) never resolve.
+
+    Returns:
+        Tuple of (fbs_output, idmap_output) declared output Files.
+    """
     file_stem = puml_file.basename.rsplit(".", 1)[0]
     fbs_output = ctx.actions.declare_file(
         "{}/{}.fbs.bin".format(ctx.label.name, file_stem),
     )
+    idmap_output = ctx.actions.declare_file(
+        "{}/{}.idmap.json".format(ctx.label.name, file_stem),
+    )
 
     ctx.actions.run(
         inputs = [puml_file],
-        outputs = [fbs_output],
+        outputs = [fbs_output, idmap_output],
         executable = ctx.executable._puml_parser,
         arguments = [
             "--file",
             puml_file.path,
             "--fbs-output-dir",
             fbs_output.dirname,
+            "--idmap-output-dir",
+            idmap_output.dirname,
+            "--source-name",
+            puml_file.short_path,
             "--log-level",
             get_log_level(ctx),
         ],
         progress_message = "Parsing Unit Design PlantUML diagram: %s" % puml_file.short_path,
     )
 
-    return fbs_output
+    return fbs_output, idmap_output
 
 def _parse_puml_diagrams(ctx, files):
-    """Run parser on all .puml/.plantuml files from a list and return fbs outputs."""
+    """Run parser on all .puml/.plantuml files from a list and return fbs/idmap outputs."""
     fbs_outputs = []
+    idmap_outputs = []
     for f in files:
         if f.extension in ("puml", "plantuml"):
-            fbs_outputs.append(_run_puml_parser(ctx, f))
-    return fbs_outputs
+            fbs, idmap = _run_puml_parser(ctx, f)
+            fbs_outputs.append(fbs)
+            idmap_outputs.append(idmap)
+    return fbs_outputs, idmap_outputs
 
 def _unit_design_impl(ctx):
     """Implementation for unit_design rule.
@@ -69,7 +93,7 @@ def _unit_design_impl(ctx):
     Collects unit design artifacts (RST documents and PlantUML diagrams) and
     provides them through the UnitDesignInfo and SphinxSourcesInfo providers.
     PlantUML files are passed through for Sphinx rendering and parsed into
-    FlatBuffers binaries.
+    FlatBuffers binaries and idmap sidecars.
 
     Args:
         ctx: Rule context
@@ -82,8 +106,18 @@ def _unit_design_impl(ctx):
         transitive = [depset(ctx.files.static), depset(ctx.files.dynamic)],
     )
 
-    static_fbs = depset(_parse_puml_diagrams(ctx, ctx.files.static))
-    dynamic_fbs = depset(_parse_puml_diagrams(ctx, ctx.files.dynamic))
+    static_fbs_list, static_idmap_list = _parse_puml_diagrams(ctx, ctx.files.static)
+    dynamic_fbs_list, dynamic_idmap_list = _parse_puml_diagrams(ctx, ctx.files.dynamic)
+    static_fbs = depset(static_fbs_list)
+    dynamic_fbs = depset(dynamic_fbs_list)
+
+    # Stage idmap sidecars into the sphinx sources alongside the source
+    # diagrams so `clickable_plantuml` (which scans `srcdir` recursively for
+    # `*.idmap.json`) can discover them - see architectural_design.bzl's
+    # identical `all_idmap_files`/`sphinx_files` handling.
+    sphinx_srcs = depset(
+        transitive = [depset(static_idmap_list + dynamic_idmap_list), all_source_files],
+    )
 
     return [
         DefaultInfo(files = all_source_files),
@@ -93,8 +127,8 @@ def _unit_design_impl(ctx):
             name = ctx.label.name,
         ),
         SphinxSourcesInfo(
-            srcs = all_source_files,
-            deps = all_source_files,
+            srcs = sphinx_srcs,
+            deps = sphinx_srcs,
             aux_srcs = depset(),
         ),
     ]

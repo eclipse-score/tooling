@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "puml_lobster",
@@ -21,5 +21,14 @@ rust_library(
         "//tools/metamodel/class:class_diagram",
         "//tools/metamodel/component:component_diagram",
         "@crates//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "puml_lobster_test",
+    crate = ":puml_lobster",
+    deps = [
+        "//tools/metamodel/class:class_diagram",
+        "//tools/metamodel/component:component_diagram",
     ],
 )

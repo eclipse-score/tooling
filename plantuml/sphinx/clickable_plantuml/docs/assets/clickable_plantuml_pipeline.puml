@@ -1,0 +1,68 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml clickable_plantuml_pipeline
+title From .puml source to a clickable diagram - pipeline steps and artifacts
+
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam componentStyle rectangle
+
+skinparam component {
+  BackgroundColor<<step>> #FFF8E1
+  BorderColor<<step>> #F9A825
+  BackgroundColor<<external>> #F5F5F5
+  BorderColor<<external>> #757575
+}
+skinparam artifact {
+  BackgroundColor<<artifact>> #E3F2FD
+  BorderColor<<artifact>> #1565C0
+}
+
+artifact ".puml source file\n(path: workspace-relative,\nfrom puml_file.short_path)" as PumlSrc <<artifact>>
+
+component "puml_cli: parse & resolve" as Step1 <<step>> {
+  component "puml_parser\n(pest grammar -> AST)" as Parser
+  component "puml_resolver\n(alias/reference\nresolution)" as Resolver
+  Parser -right-> Resolver
+}
+
+artifact "resolved diagram model\n(class | component | sequence |\nactivity | FTA)" as Model <<artifact>>
+
+component "puml_idmap: role detection" as Step2 <<step>> {
+  component "classify each element:\ndefine (elaborated here) or\nreference (leaf / relation endpoint)" as RoleDetection
+}
+
+artifact "<stem>.idmap.json\n(source, defines[], references[])" as IdMap <<artifact>>
+
+component "clickable_plantuml: Sphinx extension" as Step3 <<step>> {
+  component "builder-inited\n(build global definition index)" as BuilderInited
+  component "doctree-resolved\n(resolve + inject\n\"url of X is [[link]]\")" as DoctreeResolved
+  BuilderInited -right-> DoctreeResolved
+}
+
+component "sphinxcontrib-plantuml" as Step4 <<external>> {
+  component "renders uml text -> SVG/PNG" as Render
+}
+
+artifact "clickable SVG/PNG\nin the built docs" as Output <<artifact>>
+
+PumlSrc --> Step1 : consumed by
+Step1 --> Model : produces
+Model --> Step2 : consumed by
+Step2 --> IdMap : produces\n(one per diagram)
+IdMap --> Step3 : consumed by\n(every *.idmap.json\nin the source tree)
+Step3 --> Step4 : hands off\nannotated uml to
+Step4 --> Output : produces
+
+@enduml

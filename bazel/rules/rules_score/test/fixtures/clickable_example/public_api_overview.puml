@@ -11,25 +11,15 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml unit_2_class_diagram
+@startuml public_api_overview
 
-' Foo is owned and elaborated by unit_1 (see unit_1_class_diagram.puml); it is
-' shown here only as a memberless collaborator stub, purely for context on
-' Bar's composition relationship.
-namespace unit_1 {
-    class Foo <<final>>
-}
-
-namespace unit_2 {
-    class Bar <<final>>{
-        --
-        - foo_ : unique_ptr<unit_1::Foo>
-        --
-        + Bar(foo : unique_ptr<unit_1::Foo>)
-        + AssertNumber() : bool
+package "Package Pub" as package_pub {
+    component "Component Pub" as component_pub <<component>> {
+        component "Unit Pub" as unit_pub <<unit>>
     }
-}
 
-Bar --> Foo : uses
+    interface "PublicInterface" as PublicInterface
+    unit_pub -( PublicInterface
+}
 
 @enduml

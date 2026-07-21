@@ -165,6 +165,15 @@ sphinx_docs_library(
     strip_prefix = "validation/core/docs/specifications/",
 )
 
+# PlantUML diagrams referenced by clickable_plantuml/README.md
+# (relative links like `docs/assets/clickable_plantuml_pipeline.puml`).
+sphinx_docs_library(
+    name = "clickable_plantuml_doc_assets",
+    srcs = ["//plantuml/sphinx/clickable_plantuml:doc_assets"],
+    prefix = "bazel/rules/rules_score/docs/tool_reference/",
+    strip_prefix = "plantuml/sphinx/clickable_plantuml/",
+)
+
 # Source files from the standalone minimal example, mapped into the Sphinx
 # source tree so that general.rst can reference them via literalinclude.
 sphinx_docs_library(
@@ -194,6 +203,7 @@ sphinx_module(
         ":minimal_example_srcs",
         ":tool_readme_ai_checker_assets",
         ":validation_specs",
+        ":clickable_plantuml_doc_assets",
     ],
     index = "docs/index.rst",
     renamed_srcs = {

@@ -149,12 +149,12 @@ fn map_entity_type_to_kind(entity_type: EntityType) -> &'static str {
 pub fn write_lobster_to_file(
     model: LobsterModel<'_>,
     input_path: &Path,
+    source_path: &str,
     output_dir: &Path,
 ) -> io::Result<PathBuf> {
     let lobster = match model {
         LobsterModel::Component(component_model) => {
-            let source_path = input_path.to_string_lossy();
-            comp_model_to_lobster(component_model, source_path.as_ref())
+            comp_model_to_lobster(component_model, source_path)
         }
         LobsterModel::Class(class_model) => class_model_to_lobster(class_model),
         LobsterModel::Empty => empty_lobster_document(),
@@ -179,4 +179,148 @@ fn write_lobster_value_to_file(
 
     fs::write(&output_path, content + "\n")?;
     Ok(output_path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use class_diagram::SimpleEntity;
+    use component_diagram::SourceLocation;
+
+    fn interface_component(id: &str) -> LogicComponent {
+        LogicComponent {
+            id: id.to_string(),
+            name: None,
+            alias: None,
+            parent_id: None,
+            element_type: ComponentType::Interface,
+            stereotype: None,
+            relations: Vec::new(),
+            source_location: SourceLocation::new("test.puml", 0),
+        }
+    }
+
+    fn unique_tmp_dir(tag: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!(
+            "puml_lobster_{}_{}_{}",
+            tag,
+            std::process::id(),
+            nanos
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// Remove a test's temp dir, surfacing (rather than silently swallowing)
+    /// any cleanup failure so a locked/undeletable dir doesn't go unnoticed.
+    fn cleanup_tmp_dir(dir: &Path) {
+        if let Err(e) = fs::remove_dir_all(dir) {
+            eprintln!(
+                "warning: failed to remove temp dir {}: {}",
+                dir.display(),
+                e
+            );
+        }
+    }
+
+    #[test]
+    fn write_lobster_to_file_embeds_source_path_for_component_model() {
+        let mut model = HashMap::new();
+        model.insert("pkg.Iface".to_string(), interface_component("pkg.Iface"));
+        let dir = unique_tmp_dir("component");
+        let input = Path::new("some/dir/component.puml");
+
+        let output = write_lobster_to_file(
+            LobsterModel::Component(&model),
+            input,
+            "pkg/component.puml",
+            &dir,
+        )
+        .expect("lobster file must be written");
+
+        let doc: Value = serde_json::from_str(&fs::read_to_string(&output).unwrap()).unwrap();
+        let items = doc["data"].as_array().unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0]["location"]["file"], "pkg/component.puml");
+
+        cleanup_tmp_dir(&dir);
+    }
+
+    #[test]
+    fn write_lobster_to_file_embeds_source_path_for_class_model() {
+        let entity = SimpleEntity {
+            id: "pkg.Foo".to_string(),
+            name: "Foo".to_string(),
+            source_location: SourceLocation::new("pkg/classes.puml", 0),
+            ..Default::default()
+        };
+        let model = ClassDiagram {
+            name: "d".to_string(),
+            entities: vec![entity],
+        };
+        let dir = unique_tmp_dir("class");
+        let input = Path::new("some/dir/classes.puml");
+
+        let output =
+            write_lobster_to_file(LobsterModel::Class(&model), input, "pkg/classes.puml", &dir)
+                .expect("lobster file must be written");
+
+        let doc: Value = serde_json::from_str(&fs::read_to_string(&output).unwrap()).unwrap();
+        let items = doc["data"].as_array().unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0]["location"]["file"], "pkg/classes.puml");
+
+        cleanup_tmp_dir(&dir);
+    }
+
+    /// Each entity's own `source_location.file` is embedded in its lobster
+    /// item, independent of the `source_path` parameter passed to the writer
+    /// (which only applies to component models).
+    #[test]
+    fn write_lobster_to_file_class_entity_uses_own_source_location() {
+        let entity = SimpleEntity {
+            id: "pkg.Foo".to_string(),
+            name: "Foo".to_string(),
+            source_location: SourceLocation::new("pkg/entity_specific.puml", 0),
+            ..Default::default()
+        };
+        let model = ClassDiagram {
+            name: "d".to_string(),
+            entities: vec![entity],
+        };
+        let dir = unique_tmp_dir("class_override");
+        let input = Path::new("some/dir/classes.puml");
+
+        let output =
+            write_lobster_to_file(LobsterModel::Class(&model), input, "pkg/classes.puml", &dir)
+                .expect("lobster file must be written");
+
+        let doc: Value = serde_json::from_str(&fs::read_to_string(&output).unwrap()).unwrap();
+        assert_eq!(
+            doc["data"].as_array().unwrap()[0]["location"]["file"],
+            "pkg/entity_specific.puml"
+        );
+
+        cleanup_tmp_dir(&dir);
+    }
+
+    #[test]
+    fn write_lobster_to_file_output_filename_is_input_stem() {
+        let dir = unique_tmp_dir("filename");
+        let input = Path::new("some/dir/my_diagram.puml");
+
+        let output = write_lobster_to_file(LobsterModel::Empty, input, "pkg/my_diagram.puml", &dir)
+            .expect("lobster file must be written");
+
+        assert_eq!(
+            output.file_name().and_then(|n| n.to_str()),
+            Some("my_diagram.lobster")
+        );
+
+        cleanup_tmp_dir(&dir);
+    }
 }

@@ -50,8 +50,24 @@ pub enum NodeKind {
     IntermediateEvent,
     /// `$BasicEvent` — a leaf root cause / control measure.
     BasicEvent,
-    /// `$AndGate`, `$OrGate`, `$TransferInGate` — a logic gate.
+    /// `$AndGate`, `$OrGate`, `$TransferInGate` — a logic gate.  Use
+    /// [`FtaNode::gate_kind`] to distinguish which one.
     Gate,
+}
+
+/// Which specific gate macro produced a [`NodeKind::Gate`] node.
+///
+/// `NodeKind::Gate` alone does not distinguish an internal `$AndGate`/`$OrGate`
+/// from a `$TransferInGate` (which links to another diagram's top event).
+/// Consumers that need that distinction (e.g. `puml_idmap`) must match on this
+/// field rather than guessing from the node's `alias` shape.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum GateKind {
+    And,
+    Or,
+    /// Transfers into another diagram's top event; `alias` is that top
+    /// event's TRLC fully-qualified name.
+    TransferIn,
 }
 
 /// One node of a fault tree.
@@ -66,6 +82,9 @@ pub struct FtaNode {
     /// Alias of the parent node this node connects upward to.  `None` for the
     /// top event (the root).
     pub connection: Option<String>,
+    /// `Some` only when `kind == NodeKind::Gate`; identifies which gate macro
+    /// produced this node. `None` for all other kinds.
+    pub gate_kind: Option<GateKind>,
     /// 1-based line of the macro call in its source diagram.
     /// `None` when the line is unavailable (e.g. synthesised nodes in tests).
     pub line: Option<usize>,
@@ -145,6 +164,7 @@ impl FtaModel {
                     name: Some(string_arg(call, 0)?),
                     alias: string_arg(call, 1)?,
                     connection: None,
+                    gate_kind: None,
                     line,
                 },
                 INTERMEDIATE_EVENT => FtaNode {
@@ -152,6 +172,7 @@ impl FtaModel {
                     name: Some(string_arg(call, 0)?),
                     alias: string_arg(call, 1)?,
                     connection: Some(string_arg(call, 2)?),
+                    gate_kind: None,
                     line,
                 },
                 BASIC_EVENT => FtaNode {
@@ -159,15 +180,25 @@ impl FtaModel {
                     name: Some(string_arg(call, 0)?),
                     alias: string_arg(call, 1)?,
                     connection: Some(string_arg(call, 2)?),
+                    gate_kind: None,
                     line,
                 },
-                AND_GATE | OR_GATE | TRANSFER_IN_GATE => FtaNode {
-                    kind: NodeKind::Gate,
-                    name: None,
-                    alias: string_arg(call, 0)?,
-                    connection: Some(string_arg(call, 1)?),
-                    line,
-                },
+                AND_GATE | OR_GATE | TRANSFER_IN_GATE => {
+                    let gate_kind = match call.name.as_str() {
+                        AND_GATE => GateKind::And,
+                        OR_GATE => GateKind::Or,
+                        TRANSFER_IN_GATE => GateKind::TransferIn,
+                        _ => unreachable!("matched only by the outer arm pattern"),
+                    };
+                    FtaNode {
+                        kind: NodeKind::Gate,
+                        name: None,
+                        alias: string_arg(call, 0)?,
+                        connection: Some(string_arg(call, 1)?),
+                        gate_kind: Some(gate_kind),
+                        line,
+                    }
+                }
                 // Unknown / cosmetic macros are not part of the topology.
                 _ => continue,
             };

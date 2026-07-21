@@ -32,18 +32,27 @@ load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_l
 # ============================================================================
 
 def _run_puml_parser(ctx, puml_file):
-    """Run the PlantUML parser on a single .puml file to produce a FlatBuffers binary
-    and a lobster traceability file.
+    """Run the PlantUML parser on a single .puml file to produce a FlatBuffers binary,
+    a lobster traceability file, and an idmap sidecar.
 
     The diagram type is auto-detected by the parser and encoded in the
     FlatBuffers schema (each diagram type uses its own root_type).
     Lobster output is produced in-process for component diagrams.
 
+    ``--source-name`` is passed as ``puml_file.short_path`` so the ``source``
+    field embedded in the fbs/lobster/idmap outputs is a stable,
+    workspace-relative path. This is required by the `clickable_plantuml`
+    Sphinx extension, which matches idmap ``source`` keys against paths it
+    derives from Sphinx's own doctree — an unstable value (e.g. a sandbox
+    exec-root-relative path) would silently break cross-diagram linking.
+    `BUILD_WORKSPACE_DIRECTORY`, which `puml_cli` otherwise falls back on, is
+    only set for `bazel run`, never for build actions like this one.
+
     Args:
         ctx: Rule context
         puml_file: The .puml File object to parse
     Returns:
-        Tuple of (fbs_output, lobster_output) declared output Files.
+        Tuple of (fbs_output, lobster_output, idmap_output) declared output Files.
     """
     file_stem = puml_file.basename.rsplit(".", 1)[0]
     fbs_output = ctx.actions.declare_file(
@@ -52,10 +61,13 @@ def _run_puml_parser(ctx, puml_file):
     lobster_output = ctx.actions.declare_file(
         "{}/{}.lobster".format(ctx.label.name, file_stem),
     )
+    idmap_output = ctx.actions.declare_file(
+        "{}/{}.idmap.json".format(ctx.label.name, file_stem),
+    )
 
     ctx.actions.run(
         inputs = [puml_file],
-        outputs = [fbs_output, lobster_output],
+        outputs = [fbs_output, lobster_output, idmap_output],
         executable = ctx.executable._puml_parser,
         arguments = [
             "--file",
@@ -64,13 +76,17 @@ def _run_puml_parser(ctx, puml_file):
             fbs_output.dirname,
             "--lobster-output-dir",
             lobster_output.dirname,
+            "--idmap-output-dir",
+            idmap_output.dirname,
+            "--source-name",
+            puml_file.short_path,
             "--log-level",
             get_log_level(ctx),
         ],
         progress_message = "Parsing PlantUML diagram: %s" % puml_file.short_path,
     )
 
-    return fbs_output, lobster_output
+    return fbs_output, lobster_output, idmap_output
 
 def _parse_puml_diagrams(ctx, files):
     """Run the PlantUML parser on all .puml/.plantuml files in a list.
@@ -79,16 +95,18 @@ def _parse_puml_diagrams(ctx, files):
         ctx: Rule context
         files: List of File objects
     Returns:
-        Tuple of (fbs_outputs, lobster_outputs) lists of generated Files.
+        Tuple of (fbs_outputs, lobster_outputs, idmap_outputs) lists of generated Files.
     """
     fbs_outputs = []
     lobster_outputs = []
+    idmap_outputs = []
     for f in files:
         if f.extension in ("puml", "plantuml"):
-            fbs, lobster = _run_puml_parser(ctx, f)
+            fbs, lobster, idmap = _run_puml_parser(ctx, f)
             fbs_outputs.append(fbs)
             lobster_outputs.append(lobster)
-    return fbs_outputs, lobster_outputs
+            idmap_outputs.append(idmap)
+    return fbs_outputs, lobster_outputs, idmap_outputs
 
 def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs_files, internal_api_fbs_files):
     """Run the architectural-design validation profile.
@@ -139,10 +157,10 @@ def _architectural_design_impl(ctx):
 
     # Parse each architectural view separately so each provider field carries
     # the flatbuffers for its own category.
-    static_fbs_list, static_lobster_list = _parse_puml_diagrams(ctx, ctx.files.static)
-    dynamic_fbs_list, dynamic_lobster_list = _parse_puml_diagrams(ctx, ctx.files.dynamic)
-    public_api_fbs_list, public_api_lobster_list = _parse_puml_diagrams(ctx, ctx.files.public_api)
-    internal_api_fbs_list, _internal_api_lobster_list = _parse_puml_diagrams(ctx, ctx.files.internal_api)
+    static_fbs_list, static_lobster_list, static_idmap_list = _parse_puml_diagrams(ctx, ctx.files.static)
+    dynamic_fbs_list, dynamic_lobster_list, dynamic_idmap_list = _parse_puml_diagrams(ctx, ctx.files.dynamic)
+    public_api_fbs_list, public_api_lobster_list, public_api_idmap_list = _parse_puml_diagrams(ctx, ctx.files.public_api)
+    internal_api_fbs_list, _internal_api_lobster_list, internal_api_idmap_list = _parse_puml_diagrams(ctx, ctx.files.internal_api)
 
     static_fbs = depset(static_fbs_list)
     dynamic_fbs = depset(dynamic_fbs_list)
@@ -155,29 +173,17 @@ def _architectural_design_impl(ctx):
         transitive = [depset(ctx.files.static), depset(ctx.files.dynamic), depset(ctx.files.public_api), depset(ctx.files.internal_api)],
     )
 
-    # Run the linker on all generated .fbs.bin files to produce a
-    # plantuml_links.json for the clickable_plantuml Sphinx extension.
-    all_fbs_files = static_fbs.to_list() + dynamic_fbs.to_list() + public_api_fbs.to_list() + internal_api_fbs.to_list()
-    plantuml_links_json = ctx.actions.declare_file(
-        "{}/plantuml_links.json".format(ctx.label.name),
+    # All idmap sidecars (across static/dynamic/public_api/internal_api) are
+    # staged into the sphinx sources so the `clickable_plantuml` extension can
+    # discover them (it scans `srcdir` recursively for `*.idmap.json`) and
+    # resolve cross-diagram links — including component diagrams linking to
+    # the class diagrams that elaborate their public/internal API interfaces.
+    all_idmap_files = depset(
+        static_idmap_list + dynamic_idmap_list + public_api_idmap_list + internal_api_idmap_list,
     )
-    if all_fbs_files:
-        ctx.actions.run(
-            inputs = all_fbs_files,
-            outputs = [plantuml_links_json],
-            executable = ctx.executable._linker,
-            arguments = ["--fbs-files"] + [f.path for f in all_fbs_files] + ["--output", plantuml_links_json.path, "--log-level", get_log_level(ctx)],
-            progress_message = "Generating PlantUML links JSON for %s" % ctx.label.name,
-        )
-    else:
-        ctx.actions.write(
-            output = plantuml_links_json,
-            content = '{"links":[]}',
-        )
 
     sphinx_files = depset(
-        [plantuml_links_json],
-        transitive = [all_source_files],
+        transitive = [all_idmap_files, all_source_files],
     )
 
     # Generate a thin RST wrapper for every .puml diagram so it appears as a
@@ -210,7 +216,7 @@ def _architectural_design_impl(ctx):
             public_api_lobster_files = public_api_lobster,
             validation_logs = [validation_log],
         ),
-        # Source diagram files + plantuml_links.json for the sphinx documentation build
+        # Source diagram files + *.idmap.json sidecars for the sphinx documentation build
         SphinxSourcesInfo(
             srcs = sphinx_srcs,
             deps = sphinx_srcs,
@@ -258,13 +264,7 @@ def _architectural_design_attrs():
             default = Label("@score_tooling//plantuml/parser:parser"),
             executable = True,
             cfg = "exec",
-            doc = "PlantUML parser tool that generates FlatBuffers from .puml files",
-        ),
-        "_linker": attr.label(
-            default = Label("@score_tooling//plantuml/parser:linker"),
-            executable = True,
-            cfg = "exec",
-            doc = "Tool that generates plantuml_links.json from FlatBuffers diagram outputs",
+            doc = "PlantUML parser tool that generates FlatBuffers/lobster/idmap files from .puml files",
         ),
         "_puml_rst_template": attr.label(
             default = Label("//bazel/rules/rules_score:templates/puml_diagram.template.rst"),

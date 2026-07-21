@@ -10,21 +10,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-filegroup(
-    name = "readme_md",
-    srcs = ["README.md"],
-    visibility = ["//visibility:public"],
-)
+load("@pip_rules_score//:requirements.bzl", "requirement")
+load("@score_tooling//python_basics:defs.bzl", "score_py_pytest")
 
-filegroup(
-    name = "doc_assets",
-    srcs = glob(["docs/assets/*.puml"]),
-    visibility = ["//visibility:public"],
-)
-
-py_library(
-    name = "clickable_plantuml",
-    srcs = ["clickable_plantuml.py"],
-    imports = ["."],
-    visibility = ["//visibility:public"],
+score_py_pytest(
+    name = "test_clickable_plantuml",
+    srcs = ["test_clickable_plantuml.py"],
+    deps = [
+        "//plantuml/sphinx/clickable_plantuml",
+        requirement("docutils"),
+        requirement("sphinx"),
+    ],
 )
