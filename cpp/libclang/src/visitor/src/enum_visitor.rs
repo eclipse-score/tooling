@@ -28,7 +28,10 @@ impl AstVisitor for EnumVisitor {
 
 impl EnumVisitor {
     fn visit_enum(entity: Entity) -> Option<SimpleEntity> {
-        let name = entity.get_name()?;
+        let Some(name) = entity.get_name() else {
+            log::debug!("skipping enum: anonymous enum has no name");
+            return None;
+        };
         let namespace_id = Self::get_namespace_id(&entity);
         let full_qualified_id = if let Some(namespace_id) = &namespace_id {
             format!("{}::{}", namespace_id, name)
@@ -79,6 +82,10 @@ fn get_literals(entity: Entity) -> Vec<EnumLiteral> {
                     Some(constant_val_tuple.0 as i128)
                 }
             } else {
+                log::debug!(
+                    "enum constant '{}' has no value; skipping literal",
+                    c.get_name().unwrap_or_default()
+                );
                 return None;
             };
 

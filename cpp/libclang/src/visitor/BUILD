@@ -28,6 +28,7 @@ rust_library(
         "//tools/metamodel/class:class_diagram",
         "//tools/metamodel/sequence:sequence_diagram",
         "@crates//:clang",
+        "@crates//:log",
         "@crates//:serde",
     ],
 )
@@ -40,6 +41,7 @@ rust_test(
     ],
     deps = [
         "@crates//:clang",
+        "@crates//:log",
         "@crates//:serde",
     ],
 )

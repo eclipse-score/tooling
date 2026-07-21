@@ -181,3 +181,45 @@ fn resolve_relationships_skips_dependent_base_class_without_panicking() {
         SourceLocation::new(source_file, 5)
     );
 }
+
+/// An unresolved base type that is *not* `ResolvedType::Dependent` (e.g.
+/// `Unknown`) is unexpected and gets a `log::warn!`, but must still never
+/// abort the parser — when in doubt, warn and skip rather than crash.
+#[test]
+fn resolve_relationships_warns_and_skips_unexpected_unresolved_base() {
+    let source_file = "unit_source.cpp";
+
+    let mut ctx = VisitContext::default();
+    ctx.types.insert(
+        "Derived".to_string(),
+        SimpleEntity {
+            id: "Derived".to_string(),
+            name: "Derived".to_string(),
+            source_location: SourceLocation::new(source_file, 1),
+            ..Default::default()
+        },
+    );
+
+    ctx.parsed_class_info.push(ParsedClassInfo {
+        id: "Derived".to_string(),
+        base_classes: vec![ParsedBaseClass {
+            // Not `Dependent`: an unexpected, unresolvable base type.
+            resolved_type: ResolvedType::Unknown("SomeWeirdType".to_string()),
+            source_location: SourceLocation::new(source_file, 1),
+        }],
+        variable_types: vec![],
+        method_types: vec![],
+    });
+
+    // Must not panic.
+    ClassVisitor::resolve_relationships(&mut ctx);
+
+    let derived = ctx
+        .types
+        .get("Derived")
+        .expect("Derived must still exist after relationship resolution");
+    assert!(
+        derived.relationships.is_empty(),
+        "unresolvable base class must not produce a relationship"
+    );
+}
