@@ -42,7 +42,7 @@ rectangle "sphinx_module" <<rule>> as sphinx
 ' ── Tools ─────────────────────────────────────────────────────────────────────
 rectangle "**TRLC**\ntrlc parser + trlc_rst\n(.trlc/.rsl -> .rst; TRLCRST lib)" <<tool>> as trlc
 rectangle "**rst_to_trlc**\n(.rst -> .trlc)" <<own>> as r2t
-rectangle "**PlantUML Parser**\nparser + linker (Rust)\n(.puml -> .fbs.bin + .lobster)" <<tool>> as puml
+rectangle "**PlantUML Parser**\npuml_cli (Rust)\n(.puml -> .fbs.bin + .lobster + .idmap.json)" <<tool>> as puml
 rectangle "**puml_cli** (FTA mode)\ninline metamodel + extract\n(.puml -> inlined .puml +\nfta_chains.json + root_causes.lobster)" <<own>> as fta
 rectangle "**fmea_assembler**\nTRLCRST page build\n(.trlc + chains -> fmea.rst)" <<own>> as asm
 rectangle "**Lobster**\nlobster-trlc / -report /\n-ci-report / gtest_report" <<tool>> as lob

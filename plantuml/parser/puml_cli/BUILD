@@ -19,6 +19,7 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         "//plantuml/parser/puml_fta",
+        "//plantuml/parser/puml_idmap",
         "//plantuml/parser/puml_lobster",
         "//plantuml/parser/puml_parser",
         "//plantuml/parser/puml_resolver",
@@ -45,6 +46,7 @@ rust_test(
     crate_root = "src/main.rs",
     deps = [
         "//plantuml/parser/puml_fta",
+        "//plantuml/parser/puml_idmap",
         "//plantuml/parser/puml_lobster",
         "//plantuml/parser/puml_parser",
         "//plantuml/parser/puml_resolver",

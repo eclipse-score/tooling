@@ -27,6 +27,7 @@ use component_serializer::ComponentSerializer;
 use sequence_serializer::SequenceSerializer;
 
 use puml_fta::{lobster_document, FtaChain, FtaModel};
+use puml_idmap::{write_empty_idmap_to_file, write_idmap_to_file, IdMapModel};
 use puml_lobster::{write_lobster_to_file, LobsterModel};
 use puml_parser::{
     DiagramParser, ErrorLocation, Preprocessor, ProcedureParserService, PumlActivityParser,
@@ -109,6 +110,20 @@ struct Args {
     /// processing is performed in this mode.
     #[arg(long)]
     fta_output_dir: Option<String>,
+
+    /// Output directory for generated idmap sidecar files (optional).
+    /// When set, a <stem>.idmap.json is written for each resolved diagram,
+    /// recording the defines/references used by the clickable_plantuml
+    /// Sphinx extension to resolve cross-diagram links.
+    #[arg(long)]
+    idmap_output_dir: Option<String>,
+
+    /// Only meaningful for a single resolved diagram: requires exactly one
+    /// input file (a single `--file`, no `--folders`) and cannot be combined
+    /// with `--fta-output-dir` (which always processes a batch of files).
+    /// Must be a relative path (never a machine-specific absolute path).
+    #[arg(long)]
+    source_name: Option<String>,
 }
 
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -121,7 +136,6 @@ enum DiagramType {
     Sequence,
 }
 
-#[allow(dead_code)] // Class and Sequence variants are WIP
 #[derive(Debug, Serialize)]
 enum ParsedDiagram {
     Activity(puml_parser::RawActivityDiagram),
@@ -154,7 +168,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     .into(),
             );
         }
+        if args.source_name.is_some() {
+            return Err("--source-name cannot be combined with --fta-output-dir".into());
+        }
         return run_fta(&args, dir, log_level);
+    }
+
+    if let Some(name) = &args.source_name {
+        validate_source_name(name)?;
     }
 
     let emit_debug_json = log_level.to_level_filter() >= log::LevelFilter::Debug;
@@ -167,19 +188,38 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
 
-    let lobster_output_dir: Option<PathBuf> = match &args.lobster_output_dir {
-        Some(dir) => {
-            let p = PathBuf::from(dir);
-            fs::create_dir_all(&p)?;
-            Some(p)
-        }
-        None => None,
+    let lobster_output_dir: Option<PathBuf> = if let Some(dir) = &args.lobster_output_dir {
+        let p = PathBuf::from(dir);
+        fs::create_dir_all(&p)?;
+        Some(p)
+    } else {
+        None
     };
+
+    let idmap_output_dir: Option<PathBuf> = if let Some(dir) = &args.idmap_output_dir {
+        let p = PathBuf::from(dir);
+        fs::create_dir_all(&p)?;
+        Some(p)
+    } else {
+        None
+    };
+    // Two input files with the same file stem (in different directories) would
+    // otherwise silently overwrite each other's `<stem>.idmap.json`; track the
+    // output paths already claimed this run and fail fast on a collision.
+    let mut seen_idmap_outputs: HashSet<PathBuf> = HashSet::new();
 
     let file_list = collect_files_from_args(&args)?;
 
     if file_list.is_empty() {
         return Err("No valid PUML files found.".into());
+    }
+    if args.source_name.is_some() && file_list.len() != 1 {
+        return Err(format!(
+            "--source-name requires exactly one input file (a single --file, no \
+             --folders); got {} files",
+            file_list.len(),
+        )
+        .into());
     }
     debug!("Collected {} puml files.", file_list.len());
 
@@ -197,6 +237,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
+        // Capture the @startuml <name> before resolve_parsed_diagram
+        // consumes parsed_content — the resolver discards it from the map.
+        let diagram_name: Option<String> = match &parsed_content {
+            ParsedDiagram::Component(doc) => doc.name.clone(),
+            _ => None,
+        };
+
         match resolve_parsed_diagram(parsed_content) {
             Ok(logic_result) => {
                 debug!(
@@ -209,6 +256,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
 
+                let source_file = args
+                    .source_name
+                    .clone()
+                    .unwrap_or_else(|| source_path_for_output(path));
                 let fbs_buffer = serialize_resolved_diagram(&logic_result);
                 if let Some(ref dir) = fbs_output_dir {
                     write_fbs_to_file(&fbs_buffer, path, dir)?;
@@ -221,7 +272,36 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         ResolvedDiagram::Activity(_) => LobsterModel::Empty,
                         ResolvedDiagram::Sequence(_) => LobsterModel::Empty,
                     };
-                    write_lobster_to_file(lobster_model, path, ldir)?;
+                    write_lobster_to_file(lobster_model, path, &source_file, ldir)?;
+                }
+
+                if let Some(idir) = &idmap_output_dir {
+                    let output_path = puml_idmap::idmap_output_path(path, idir);
+                    if !seen_idmap_outputs.insert(output_path.clone()) {
+                        return Err(format!(
+                            "duplicate idmap output {}: multiple input files map to the \
+                             same <stem>.idmap.json in {}; rename one of the inputs so \
+                             their file stems differ",
+                            output_path.display(),
+                            idir.display(),
+                        )
+                        .into());
+                    }
+
+                    match idmap_model_for(&logic_result) {
+                        Some(idmap_model) => {
+                            write_idmap_to_file(
+                                idmap_model,
+                                path,
+                                Some(&source_file),
+                                diagram_name.as_deref(),
+                                idir,
+                            )?;
+                        }
+                        None => {
+                            write_empty_idmap_to_file(path, Some(&source_file), idir)?;
+                        }
+                    }
                 }
             }
             Err(e) => {
@@ -259,6 +339,16 @@ fn run_fta(
     // Chains/lobster items reference each diagram by basename; two inputs sharing
     // a basename (in different directories) would be indistinguishable downstream.
     let mut seen_basenames: HashSet<String> = HashSet::new();
+    // Mirrors the collision guard in the main resolve path: two input files
+    // whose file *stem* collides (independent of the basename check above,
+    // which only fires on an exact basename match) would otherwise silently
+    // overwrite each other's `<stem>.idmap.json`.
+    let mut seen_idmap_outputs: HashSet<PathBuf> = HashSet::new();
+    // Created once up front (rather than per-file inside the loop below) since
+    // the directory is the same for every file this run.
+    if let Some(ref idir_str) = args.idmap_output_dir {
+        fs::create_dir_all(idir_str)?;
+    }
 
     for file in &sorted {
         let basename = file.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
@@ -291,6 +381,30 @@ fn run_fta(
         let model = FtaModel::from_procedure_file(&parsed)?;
         all_items.extend(model.lobster_items(basename));
         all_chains.extend(model.chains(basename));
+
+        if let Some(ref idir_str) = args.idmap_output_dir {
+            let idir = PathBuf::from(idir_str);
+            let output_path = puml_idmap::idmap_output_path(file, &idir);
+            if !seen_idmap_outputs.insert(output_path.clone()) {
+                return Err(format!(
+                    "duplicate idmap output {}: multiple FTA input files map to the \
+                     same <stem>.idmap.json in {}; rename one of the inputs so \
+                     their file stems differ",
+                    output_path.display(),
+                    idir.display(),
+                )
+                .into());
+            }
+            let source_file = source_path_for_output(file);
+            write_idmap_to_file(
+                IdMapModel::Fta(&model),
+                file,
+                Some(&source_file),
+                None,
+                &idir,
+            )?;
+        }
+
         debug!("Processed FTA diagram: {}", file.display());
     }
 
@@ -327,6 +441,19 @@ pub enum ResolvedDiagram {
     Component(HashMap<String, component_diagram::LogicComponent>),
     Class(class_diagram::ClassDiagram),
     Sequence(sequence_logic::SequenceTree),
+}
+
+/// Map a resolved diagram to the `IdMapModel` variant used to build its
+/// `.idmap.json`, or `None` for diagram kinds with no linkable elements
+/// (currently only `Activity`), which the caller must route to
+/// [`write_empty_idmap_to_file`] instead.
+fn idmap_model_for(resolved: &ResolvedDiagram) -> Option<IdMapModel<'_>> {
+    match resolved {
+        ResolvedDiagram::Component(model) => Some(IdMapModel::Component(model)),
+        ResolvedDiagram::Class(model) => Some(IdMapModel::Class(model)),
+        ResolvedDiagram::Sequence(model) => Some(IdMapModel::Sequence(model)),
+        ResolvedDiagram::Activity(_) => None,
+    }
 }
 
 fn resolve_parsed_diagram(
@@ -532,25 +659,71 @@ fn collect_files_from_args(
     Ok(file_list)
 }
 
-fn resolve_path(path: &Path) -> PathBuf {
+fn resolve_path(path: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    if path.is_absolute() {
+        return Ok(path.to_path_buf());
+    }
+
     // When running with 'bazel run', use BUILD_WORKSPACE_DIRECTORY
-    let base_dir = std::env::var("BUILD_WORKSPACE_DIRECTORY")
+    let base_dir = match std::env::var("BUILD_WORKSPACE_DIRECTORY") {
+        Ok(dir) => PathBuf::from(dir),
+        Err(_) => std::env::current_dir()?,
+    };
+
+    Ok(base_dir.join(path))
+}
+
+/// Validate a user-supplied `--source-name` value.
+///
+/// Rejects empty strings and absolute paths: an absolute path would leak the
+/// local machine's directory layout into build outputs (breaking build
+/// reproducibility) and would defeat the whole purpose of the flag, which is
+/// to supply a *stable, workspace-relative* key for cross-diagram matching.
+fn validate_source_name(name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    if name.is_empty() {
+        return Err("--source-name must not be empty".into());
+    }
+    if Path::new(name).is_absolute() {
+        return Err(format!(
+            "--source-name must be a workspace-relative path, got an absolute path: {name}"
+        )
+        .into());
+    }
+    Ok(())
+}
+
+fn source_path_for_output(path: &Path) -> String {
+    let workspace_root = std::env::var("BUILD_WORKSPACE_DIRECTORY")
         .ok()
         .map(PathBuf::from)
-        .unwrap_or_else(|| std::env::current_dir().unwrap());
+        .or_else(|| std::env::current_dir().ok());
 
-    if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        base_dir.join(path)
+    // Prefer a stable, workspace-relative path so the embedded `source` is
+    // reproducible across machines and portable outside Bazel.
+    if let Some(root) = workspace_root {
+        if let Ok(rel) = path.strip_prefix(&root) {
+            return rel.to_string_lossy().into_owned();
+        }
     }
+
+    // Already relative: keep it verbatim (still portable).
+    if path.is_relative() {
+        return path.to_string_lossy().into_owned();
+    }
+
+    // Absolute path outside the workspace: never embed the machine-specific
+    // absolute path — it leaks local directory layout and breaks build
+    // reproducibility. Fall back to the file name only.
+    path.file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| path.to_string_lossy().into_owned())
 }
 
 fn add_single_file(
     path: &Path,
     file_list: &mut HashSet<Rc<PathBuf>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let abs_path = resolve_path(path);
+    let abs_path = resolve_path(path)?;
 
     if !abs_path.is_file() {
         return Err(format!("Path is not a file: {}", path.display()).into());
@@ -566,7 +739,7 @@ fn collect_puml_files_from_folder(
     dir: &Path,
     file_list: &mut HashSet<Rc<PathBuf>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let abs_dir = resolve_path(dir);
+    let abs_dir = resolve_path(dir)?;
 
     if !abs_dir.is_dir() {
         return Err(format!("Path is not a directory: {}", dir.display()).into());
@@ -762,5 +935,299 @@ mod fta_pipeline_tests {
         assert!(err.to_string().contains("duplicate FTA diagram basename"));
 
         fs::remove_dir_all(&dir).ok();
+    }
+}
+
+#[cfg(test)]
+mod idmap_wiring_tests {
+    use super::*;
+
+    fn unique_dir(tag: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!(
+            "puml_idmap_wiring_{}_{}_{}",
+            tag,
+            std::process::id(),
+            nanos
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// Remove a test's temp dir, surfacing (rather than silently swallowing)
+    /// any cleanup failure so a locked/undeletable dir doesn't go unnoticed.
+    fn cleanup_dir(dir: &Path) {
+        if let Err(e) = fs::remove_dir_all(dir) {
+            eprintln!(
+                "warning: failed to remove temp dir {}: {}",
+                dir.display(),
+                e
+            );
+        }
+    }
+
+    /// Activity diagrams carry no cross-linkable elements, so the CLI routes
+    /// them to the explicit empty-writer API rather than a model converter.
+    /// This verifies both the routing predicate (the diagram resolves to
+    /// `ResolvedDiagram::Activity`) and the resulting on-disk empty idmap.
+    #[test]
+    fn activity_diagram_routes_to_empty_idmap_writer() {
+        let content = "@startuml\nstart\n:Do work;\nstop\n@enduml";
+        let path = Rc::new(PathBuf::from("flow/activity.puml"));
+
+        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Activity)
+            .expect("activity parse must succeed");
+        let resolved = resolve_parsed_diagram(parsed).expect("activity must resolve");
+        assert!(
+            matches!(resolved, ResolvedDiagram::Activity(_)),
+            "activity diagram must resolve to the Activity variant that triggers the empty writer"
+        );
+
+        // Mirror the CLI dispatch for the Activity arm.
+        let dir = unique_dir("activity");
+        let source_file = source_path_for_output(&path);
+        let output = write_empty_idmap_to_file(&path, Some(&source_file), &dir)
+            .expect("empty idmap must be written");
+
+        assert_eq!(
+            output.file_name().and_then(|n| n.to_str()),
+            Some("activity.idmap.json")
+        );
+        let json: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&output).unwrap()).unwrap();
+        assert_eq!(json["source"], "flow/activity.puml");
+        assert!(json["defines"].as_array().unwrap().is_empty());
+        assert!(json["references"].as_array().unwrap().is_empty());
+
+        cleanup_dir(&dir);
+    }
+
+    /// An absolute path outside the workspace must never leak into the emitted
+    /// `source` field; the fallback collapses to the file name only.
+    #[test]
+    fn source_path_for_output_does_not_leak_absolute_paths() {
+        let outside = Path::new("/nonexistent/abs/dir/diagram.puml");
+        let source = source_path_for_output(outside);
+        assert_eq!(source, "diagram.puml");
+        assert!(
+            !source.starts_with('/'),
+            "absolute path must not leak into source, got: {source}"
+        );
+    }
+
+    /// Component diagrams route through `idmap_model_for` to the
+    /// `IdMapModel::Component` dispatch arm and `write_idmap_to_file`, unlike
+    /// the Activity arm covered above.
+    #[test]
+    fn component_diagram_routes_to_idmap_model_dispatch() {
+        let content = "@startuml\n\
+             component \"Client\" as Client <<component>> {\n\
+                 portout out1\n\
+             }\n\
+             component \"Server\" as Server <<component>> {\n\
+                 portin in1\n\
+             }\n\
+             out1 --> in1 : calls\n\
+             @enduml";
+        let path = Rc::new(PathBuf::from("comp/client_server.puml"));
+
+        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Component)
+            .expect("component parse must succeed");
+        let resolved = resolve_parsed_diagram(parsed).expect("component must resolve");
+        assert!(matches!(resolved, ResolvedDiagram::Component(_)));
+
+        let idmap_model =
+            idmap_model_for(&resolved).expect("component diagrams must dispatch to an IdMapModel");
+
+        let dir = unique_dir("component");
+        let source_file = source_path_for_output(&path);
+        let output = write_idmap_to_file(idmap_model, &path, Some(&source_file), None, &dir)
+            .expect("component idmap must be written");
+
+        assert_eq!(
+            output.file_name().and_then(|n| n.to_str()),
+            Some("client_server.idmap.json")
+        );
+        let json: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&output).unwrap()).unwrap();
+        assert_eq!(json["source"], "comp/client_server.puml");
+
+        cleanup_dir(&dir);
+    }
+
+    /// Class diagrams route through `idmap_model_for` to the
+    /// `IdMapModel::Class` dispatch arm and `write_idmap_to_file`.
+    #[test]
+    fn class_diagram_routes_to_idmap_model_dispatch() {
+        let content = "@startuml\nclass A {\n    +a\n}\n@enduml";
+        let path = Rc::new(PathBuf::from("cls/a.puml"));
+
+        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Class)
+            .expect("class parse must succeed");
+        let resolved = resolve_parsed_diagram(parsed).expect("class must resolve");
+        assert!(matches!(resolved, ResolvedDiagram::Class(_)));
+
+        let idmap_model =
+            idmap_model_for(&resolved).expect("class diagrams must dispatch to an IdMapModel");
+
+        let dir = unique_dir("class");
+        let source_file = source_path_for_output(&path);
+        let output = write_idmap_to_file(idmap_model, &path, Some(&source_file), None, &dir)
+            .expect("class idmap must be written");
+
+        assert_eq!(
+            output.file_name().and_then(|n| n.to_str()),
+            Some("a.idmap.json")
+        );
+        let json: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&output).unwrap()).unwrap();
+        assert_eq!(json["source"], "cls/a.puml");
+
+        cleanup_dir(&dir);
+    }
+
+    /// Sequence diagrams route through `idmap_model_for` to the
+    /// `IdMapModel::Sequence` dispatch arm and `write_idmap_to_file`.
+    #[test]
+    fn sequence_diagram_routes_to_idmap_model_dispatch() {
+        let content =
+            "@startuml\nparticipant Alice\nparticipant Bob\nAlice -> Bob : hello\n@enduml";
+        let path = Rc::new(PathBuf::from("seq/hello.puml"));
+
+        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Sequence)
+            .expect("sequence parse must succeed");
+        let resolved = resolve_parsed_diagram(parsed).expect("sequence must resolve");
+        assert!(matches!(resolved, ResolvedDiagram::Sequence(_)));
+
+        let idmap_model =
+            idmap_model_for(&resolved).expect("sequence diagrams must dispatch to an IdMapModel");
+
+        let dir = unique_dir("sequence");
+        let source_file = source_path_for_output(&path);
+        let output = write_idmap_to_file(idmap_model, &path, Some(&source_file), None, &dir)
+            .expect("sequence idmap must be written");
+
+        assert_eq!(
+            output.file_name().and_then(|n| n.to_str()),
+            Some("hello.idmap.json")
+        );
+        let json: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&output).unwrap()).unwrap();
+        assert_eq!(json["source"], "seq/hello.puml");
+        assert!(json["defines"].as_array().unwrap().is_empty());
+        assert_eq!(json["references"].as_array().unwrap().len(), 2);
+
+        cleanup_dir(&dir);
+    }
+
+    /// Regression test for cross-diagram-type FQN linking: a component
+    /// diagram's `interface` reference and a class/internal-API diagram's
+    /// `interface` define must resolve to the *identical* FQN `id` when both
+    /// declare the same enclosing `package`.
+    ///
+    /// Both `ComponentResolver` and `ClassResolver` build ids as dot-joined
+    /// FQNs rooted at the enclosing `package`/namespace name (not at the
+    /// `@startuml <name>`), so as long as two diagrams share the same
+    /// package name for a jointly-referenced element, `puml_idmap`'s
+    /// FQN-first matching in `clickable_plantuml` links them correctly
+    /// without falling back to (collision-prone) alias-only matching. This
+    /// mirrors the real `component_internal_api/positive_interface_match`
+    /// integration test fixture.
+    #[test]
+    fn component_reference_and_class_define_share_fqn_for_same_package_interface() {
+        let component_content = "@startuml\n\
+             package \"Package A\" as package_a {\n\
+                 component \"Component A\" as component_a <<component>> {\n\
+                     component \"Unit 1\" as unit_1 <<unit>>\n\
+                 }\n\
+                 interface \"InternalInterface\" as InternalInterface\n\
+                 unit_1 -( InternalInterface\n\
+             }\n\
+             @enduml";
+        let component_path = Rc::new(PathBuf::from("comp/component_diagram.puml"));
+        let component_parsed = parse_puml_file(
+            &component_path,
+            component_content,
+            LogLevel::Info,
+            DiagramType::Component,
+        )
+        .expect("component parse must succeed");
+        let component_resolved =
+            resolve_parsed_diagram(component_parsed).expect("component must resolve");
+        let component_idmap_model = idmap_model_for(&component_resolved)
+            .expect("component diagrams must dispatch to an IdMapModel");
+
+        let class_content = "@startuml\n\
+             package package_a {\n\
+                 interface \"InternalInterface\" as InternalInterface {\n\
+                     +GetData()\n\
+                 }\n\
+             }\n\
+             @enduml";
+        let class_path = Rc::new(PathBuf::from("cls/internal_api_diagram.puml"));
+        let class_parsed = parse_puml_file(
+            &class_path,
+            class_content,
+            LogLevel::Info,
+            DiagramType::Class,
+        )
+        .expect("class parse must succeed");
+        let class_resolved = resolve_parsed_diagram(class_parsed).expect("class must resolve");
+        let class_idmap_model = idmap_model_for(&class_resolved)
+            .expect("class diagrams must dispatch to an IdMapModel");
+
+        let dir = unique_dir("cross_type_fqn");
+        let component_output = write_idmap_to_file(
+            component_idmap_model,
+            &component_path,
+            Some(&source_path_for_output(&component_path)),
+            None,
+            &dir,
+        )
+        .expect("component idmap must be written");
+        let class_output = write_idmap_to_file(
+            class_idmap_model,
+            &class_path,
+            Some(&source_path_for_output(&class_path)),
+            None,
+            &dir,
+        )
+        .expect("class idmap must be written");
+
+        let component_json: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&component_output).unwrap()).unwrap();
+        let class_json: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&class_output).unwrap()).unwrap();
+
+        let component_ref_id = component_json["references"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["alias"] == "InternalInterface")
+            .expect("component diagram must reference InternalInterface")["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let class_define_id = class_json["defines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["alias"] == "InternalInterface")
+            .expect("class diagram must define InternalInterface")["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        assert_eq!(
+            component_ref_id, class_define_id,
+            "component reference FQN and class define FQN must match exactly \
+             for clickable_plantuml's FQN-first resolution to link them"
+        );
+        assert_eq!(component_ref_id, "package_a.InternalInterface");
+
+        cleanup_dir(&dir);
     }
 }

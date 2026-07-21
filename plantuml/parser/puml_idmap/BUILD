@@ -10,18 +10,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 
-rust_binary(
-    name = "linker",
-    srcs = ["src/main.rs"],
-    crate_root = "src/main.rs",
-    visibility = ["//visibility:public"],
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "puml_idmap",
+    srcs = ["src/lib.rs"],
+    visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
-        "//tools/serialization/flatbuffers/component:component_fbs",
-        "@crates//:clap",
-        "@crates//:env_logger",
-        "@crates//:flatbuffers",
+        "//plantuml/parser/puml_fta",
+        "//tools/metamodel/class:class_diagram",
+        "//tools/metamodel/component:component_diagram",
+        "//tools/metamodel/sequence:sequence_diagram",
         "@crates//:log",
         "@crates//:serde",
         "@crates//:serde_json",
@@ -29,6 +29,11 @@ rust_binary(
 )
 
 rust_test(
-    name = "linker_test",
-    crate = ":linker",
+    name = "puml_idmap_test",
+    crate = ":puml_idmap",
+    deps = [
+        "//tools/metamodel/class:class_diagram",
+        "//tools/metamodel/component:component_diagram",
+        "//tools/metamodel/sequence:sequence_diagram",
+    ],
 )

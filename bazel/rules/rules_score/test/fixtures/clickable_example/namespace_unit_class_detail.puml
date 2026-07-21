@@ -11,25 +11,19 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml unit_2_class_diagram
+' Unlike unit_class_detail.puml (whose class is literally named after the
+' unit, "unit_one"), this fixture elaborates the unit purely via the
+' enclosing namespace: no class here is named "ns_unit". This exercises
+' puml_idmap's namespace-as-define synthesis in class_model_to_idmap() -
+' the namespace itself (not any class inside it) must become the "define"
+' so namespace_unit_overview.puml's leaf `ns_unit` reference resolves.
 
-' Foo is owned and elaborated by unit_1 (see unit_1_class_diagram.puml); it is
-' shown here only as a memberless collaborator stub, purely for context on
-' Bar's composition relationship.
-namespace unit_1 {
-    class Foo <<final>>
-}
+@startuml namespace_unit_class_detail
 
-namespace unit_2 {
-    class Bar <<final>>{
-        --
-        - foo_ : unique_ptr<unit_1::Foo>
-        --
-        + Bar(foo : unique_ptr<unit_1::Foo>)
-        + AssertNumber() : bool
+namespace package_ns::component_ns::ns_unit {
+    class RealImpl {
+        + DoWork()
     }
 }
-
-Bar --> Foo : uses
 
 @enduml

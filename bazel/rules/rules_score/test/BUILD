@@ -118,6 +118,7 @@ py_binary(
         "@score_docs_as_code//src/extensions/score_sphinx_bundle",
         "@score_tooling//bazel/rules/rules_score:bazel_sphinx_needs",
         "@score_tooling//bazel/rules/rules_score:sphinx_module_ext",
+        "@score_tooling//plantuml/sphinx/clickable_plantuml",
         requirement("sphinx-rtd-theme"),
     ],
 )
@@ -257,6 +258,335 @@ fmea(
 architectural_design(
     name = "arch_design_dep",
     static = ["fixtures/dep_seooc_lib.puml"],
+)
+
+# Live example backing the "End-to-End Clickable Diagram Example" documented
+# in //plantuml/sphinx/clickable_plantuml/README.md: overview.puml references
+# `Proxy`, which proxy_detail.puml defines, so clickable_plantuml should
+# inject a real link between the two rendered diagrams. Regression-checked by
+# :clickable_example_link_rendered_test below.
+architectural_design(
+    name = "arch_design_clickable_example_overview",
+    static = ["fixtures/clickable_example/overview.puml"],
+)
+
+architectural_design(
+    name = "arch_design_clickable_example_proxy_detail",
+    static = ["fixtures/clickable_example/proxy_detail.puml"],
+)
+
+dependable_element(
+    name = "clickable_example_lib",
+    architectural_design = [
+        ":arch_design_clickable_example_overview",
+        ":arch_design_clickable_example_proxy_detail",
+    ],
+    assumptions_of_use = [":aous"],
+    components = [],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    # This fixture intentionally reuses the same top-level id ("Proxy") as
+    # both a reference (overview.puml) and a definition (proxy_detail.puml)
+    # to exercise clickable_plantuml's cross-diagram id resolution - exactly
+    # the scenario documented in the clickable_plantuml README. The
+    # dependable-element process-compliance validator doesn't understand
+    # define-vs-reference semantics and flags this as a duplicate id / missing
+    # SEooC package, so validation findings are downgraded to warnings here;
+    # this fixture is purely illustrative and isn't a real SEooC.
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+# Live example of clickable_plantuml's cross-diagram-type "interface" linking:
+# interface_overview.puml (a component diagram) references `InternalInterface`
+# via a `-(` binding on a unit, and interface_detail.puml (auto-detected as a
+# class diagram because the interface has a method) defines it - both share
+# the FQN `package_a.InternalInterface` because ids are rooted at the
+# enclosing `package_a` package, not at the `@startuml` name. Mirrors
+# validation/core/integration_test/component_internal_api/positive_interface_match.
+# Regression-checked by :interface_example_link_rendered_test below.
+architectural_design(
+    name = "arch_design_interface_example",
+    internal_api = ["fixtures/clickable_example/interface_detail.puml"],
+    static = ["fixtures/clickable_example/interface_overview.puml"],
+)
+
+dependable_element(
+    name = "interface_example_lib",
+    architectural_design = [":arch_design_interface_example"],
+    assumptions_of_use = [":aous"],
+    components = [],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    # Downgraded to warnings for the same reason as clickable_example_lib
+    # above: this fixture intentionally reuses "InternalInterface" as both a
+    # reference and a definition, which the dependable-element validator
+    # can't distinguish from an accidental duplicate id.
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+# Live example of clickable_plantuml's pure class-diagram linking:
+# class_overview.puml references `AuditTrail` as a bare, member-less class,
+# and class_detail.puml defines it (it has a method, making it the
+# elaboration site). Regression-checked by :class_example_link_rendered_test
+# below.
+architectural_design(
+    name = "arch_design_class_example",
+    static = [
+        "fixtures/clickable_example/class_overview.puml",
+        "fixtures/clickable_example/class_detail.puml",
+    ],
+)
+
+dependable_element(
+    name = "class_example_lib",
+    architectural_design = [":arch_design_class_example"],
+    assumptions_of_use = [":aous"],
+    components = [],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    # Downgraded to warnings for the same reason as clickable_example_lib
+    # above: this fixture intentionally reuses "AuditTrail" as both a
+    # reference and a definition, which the dependable-element validator
+    # can't distinguish from an accidental duplicate id.
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+# Live example of clickable_plantuml's "public API" linking chain: an
+# interface bound to a unit in the *static* architecture (public_api_overview.puml,
+# a component diagram) references `PublicInterface`, and public_api_detail.puml
+# (also a component-style diagram, passed via architectural_design's
+# `public_api` attribute, which also feeds FMEA/safety-analysis traceability -
+# mirrors examples/seooc/design/public_api.puml) defines it. Both share the
+# FQN `package_pub.PublicInterface`. Regression-checked by
+# :public_api_example_link_rendered_test below.
+architectural_design(
+    name = "arch_design_public_api_example",
+    public_api = ["fixtures/clickable_example/public_api_detail.puml"],
+    static = ["fixtures/clickable_example/public_api_overview.puml"],
+)
+
+# public_api items must be referenced by a FailureMode in the SEooC's own
+# safety analysis (unlike static/dynamic/internal_api) - the shared
+# dependability_analysis_target/samplelibrary_safety_analysis fixture used by
+# other targets in this file is deliberately empty, so this scenario gets its
+# own minimal FMEA that traces to "package_pub.PublicInterface".
+fmea(
+    name = "public_api_example_fmea",
+    arch_design = ":arch_design_public_api_example",
+    failuremodes = ["fixtures/clickable_example/public_api_failure_modes.trlc"],
+    root_causes = ["fixtures/clickable_example/public_api_fta.puml"],
+)
+
+dependability_analysis(
+    name = "public_api_example_dependability_analysis",
+    arch_design = ":arch_design_public_api_example",
+    fmea = [":public_api_example_fmea"],
+)
+
+dependable_element(
+    name = "public_api_example_lib",
+    architectural_design = [":arch_design_public_api_example"],
+    assumptions_of_use = [":aous"],
+    components = [],
+    dependability_analysis = [":public_api_example_dependability_analysis"],
+    integrity_level = "B",
+    # Downgraded to warnings for the same reason as clickable_example_lib
+    # above: this fixture intentionally reuses "PublicInterface" as both a
+    # reference and a definition, which the dependable-element validator
+    # can't distinguish from an accidental duplicate id.
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+# Live example of clickable_plantuml's "unit to class diagram" linking chain:
+# the *static* architecture (unit_overview.puml, a component diagram) shows
+# `unit_one` as a leaf unit (no children) - a reference - and
+# unit_class_detail.puml (a class diagram naming a class after the same unit,
+# nested in the matching namespace) defines it. Both share the FQN
+# `package_u.component_u.unit_one`, since component-diagram ids and
+# class-diagram namespace FQNs use the same dot-joined scheme. Regression-
+# checked by :unit_example_link_rendered_test below.
+architectural_design(
+    name = "arch_design_unit_example",
+    static = [
+        "fixtures/clickable_example/unit_overview.puml",
+        "fixtures/clickable_example/unit_class_detail.puml",
+    ],
+)
+
+dependable_element(
+    name = "unit_example_lib",
+    architectural_design = [":arch_design_unit_example"],
+    assumptions_of_use = [":aous"],
+    components = [],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    # Downgraded to warnings for the same reason as clickable_example_lib
+    # above: this fixture intentionally reuses "unit_one" (well, its FQN) as
+    # both a reference and a definition, which the dependable-element
+    # validator can't distinguish from an accidental duplicate id.
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+# Live example of clickable_plantuml's namespace-as-define synthesis: unlike
+# :unit_example above (whose class is literally named after the unit),
+# namespace_unit_class_detail.puml elaborates `ns_unit` purely via the
+# enclosing namespace `package_ns::component_ns::ns_unit`, nesting a
+# differently-named class (`RealImpl`) inside it. class_model_to_idmap() must
+# synthesize a define for the namespace FQN itself (not just for RealImpl)
+# for namespace_unit_overview.puml's leaf `ns_unit` reference to resolve.
+# Routed through unit_design()/unit()/component() (not a bare
+# architectural_design static list) so this also regression-checks
+# unit_design.bzl's idmap generation. Regression-checked by
+# :namespace_unit_example_link_rendered_test below.
+unit_design(
+    name = "namespace_unit_design",
+    static = ["fixtures/clickable_example/namespace_unit_class_detail.puml"],
+)
+
+unit(
+    name = "namespace_unit",
+    testonly = True,
+    # RealImpl is illustrative only (mock_lib1 has no matching C++ class);
+    # downgrade the design-vs-implementation validation finding to a
+    # warning, same rationale as maturity="development" elsewhere in this
+    # file.
+    maturity = "development",
+    tests = [":test_unit_tests"],
+    unit_design = [":namespace_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "namespace_unit_component",
+    testonly = True,
+    components = [":namespace_unit"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
+architectural_design(
+    name = "arch_design_namespace_unit_example",
+    static = ["fixtures/clickable_example/namespace_unit_overview.puml"],
+)
+
+dependable_element(
+    name = "namespace_unit_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_namespace_unit_example"],
+    assumptions_of_use = [":aous"],
+    components = [":namespace_unit_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    # Downgraded to warnings for the same reason as clickable_example_lib
+    # above: this fixture intentionally reuses "ns_unit" (its FQN) as both a
+    # reference (static architecture) and a definition (namespace synthesis),
+    # which the dependable-element validator can't distinguish from an
+    # accidental duplicate id.
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+# Regression test: clickable_plantuml must inject a working link between a
+# unit shown in the static architecture (namespace_unit_overview.puml) and
+# its elaborating class diagram, whose only linkable element is the
+# namespace itself, not a same-named class (namespace_unit_class_detail.puml,
+# built via unit_design()) - the "namespace-as-define synthesis" scenario.
+sh_test(
+    name = "namespace_unit_example_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "package_ns.component_ns.ns_unit",
+        "$(rootpaths :namespace_unit_example_lib_index)",
+    ],
+    data = [":namespace_unit_example_lib_index"],
+)
+
+# Live example of clickable_plantuml's "dynamic to static" linking chain: the
+# *dynamic* architecture (dynamic_overview.puml, a sequence diagram) shows
+# participants `Dispatcher` and `Worker` - both references, since sequence
+# diagrams have no defines - and dynamic_component_detail.puml (a component
+# diagram in the *static* architecture) shows both as leaf units (also
+# references, since neither has children of its own). Both units are
+# elaborated by their own class diagrams (dynamic_dispatcher_class.puml,
+# dynamic_worker_class.puml), which is where the actual click target lands -
+# mirrors :unit_example above, applied to both units of a dynamic scenario.
+# TaskInterface (shared by both units) is likewise only a reference in the
+# component diagram; its definition lives in the *public API*
+# (dynamic_public_api_detail.puml), exactly like :public_api_example above.
+# Regression-checked by :dynamic_example_link_rendered_test,
+# :dynamic_dispatcher_class_link_rendered_test,
+# :dynamic_worker_class_link_rendered_test and
+# :dynamic_public_api_link_rendered_test below.
+#
+# NOTE: clicking on individual *messages* in the sequence diagram (e.g.
+# "Assign"/"Done") is not currently supported - sequence_model_to_idmap()
+# only tracks participant names, not per-message/method labels (see
+# puml_idmap/src/lib.rs). Implementing that would require the sequence
+# resolver to persist message identifiers in SequenceTree first.
+architectural_design(
+    name = "arch_design_dynamic_example",
+    dynamic = ["fixtures/clickable_example/dynamic_overview.puml"],
+    public_api = ["fixtures/clickable_example/dynamic_public_api_detail.puml"],
+    static = [
+        "fixtures/clickable_example/dynamic_component_detail.puml",
+        "fixtures/clickable_example/dynamic_dispatcher_class.puml",
+        "fixtures/clickable_example/dynamic_worker_class.puml",
+    ],
+)
+
+# public_api items must be referenced by a FailureMode in the SEooC's own
+# safety analysis (see :public_api_example_fmea above for the same reasoning)
+# - the shared dependability_analysis_target fixture is deliberately empty, so
+# this scenario gets its own minimal FMEA that traces to "TaskInterface".
+fmea(
+    name = "dynamic_example_fmea",
+    arch_design = ":arch_design_dynamic_example",
+    failuremodes = ["fixtures/clickable_example/dynamic_public_api_failure_modes.trlc"],
+    root_causes = ["fixtures/clickable_example/dynamic_public_api_fta.puml"],
+)
+
+dependability_analysis(
+    name = "dynamic_example_dependability_analysis",
+    arch_design = ":arch_design_dynamic_example",
+    fmea = [":dynamic_example_fmea"],
+)
+
+dependable_element(
+    name = "dynamic_example_lib",
+    architectural_design = [":arch_design_dynamic_example"],
+    assumptions_of_use = [":aous"],
+    components = [],
+    dependability_analysis = [":dynamic_example_dependability_analysis"],
+    integrity_level = "B",
+    # Downgraded to warnings for the same reason as clickable_example_lib
+    # above: this fixture intentionally reuses "Dispatcher"/"Worker"/
+    # "TaskInterface" as both references and definitions, which the
+    # dependable-element validator can't distinguish from an accidental
+    # duplicate id.
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
 )
 
 # Minimal dependable element used as a dependency target to test
@@ -570,6 +900,128 @@ sh_test(
     srcs = ["check_seooc_dep_links.sh"],
     args = ["$(rootpaths :seooc_test_lib_index)"],
     data = [":seooc_test_lib_index"],
+)
+
+# Regression test: clickable_plantuml must actually inject a working link
+# between the two example diagrams in fixtures/clickable_example/ (mirrors
+# //plantuml/sphinx/clickable_plantuml/README.md's documented example).
+sh_test(
+    name = "clickable_example_link_rendered_test",
+    srcs = ["check_clickable_example_link.sh"],
+    args = ["$(rootpaths :clickable_example_lib_index)"],
+    data = [":clickable_example_lib_index"],
+)
+
+# Regression test: clickable_plantuml must inject a working link between the
+# "InternalInterface" reference (interface_overview.puml, a component
+# diagram) and its definition (interface_detail.puml, auto-detected as a
+# class diagram) - the cross-diagram-type "interface" scenario.
+sh_test(
+    name = "interface_example_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "package_a.InternalInterface",
+        "$(rootpaths :interface_example_lib_index)",
+    ],
+    data = [":interface_example_lib_index"],
+)
+
+# Regression test: clickable_plantuml must inject a working link between the
+# "AuditTrail" reference (class_overview.puml) and its definition
+# (class_detail.puml) - the pure class-diagram scenario.
+sh_test(
+    name = "class_example_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "AuditTrail",
+        "$(rootpaths :class_example_lib_index)",
+    ],
+    data = [":class_example_lib_index"],
+)
+
+# Regression test: clickable_plantuml must inject a working link between an
+# interface used in the static architecture (public_api_overview.puml) and
+# its definition in the public API diagram (public_api_detail.puml) - the
+# "interface in static architecture links to public API" scenario.
+sh_test(
+    name = "public_api_example_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "package_pub.PublicInterface",
+        "$(rootpaths :public_api_example_lib_index)",
+    ],
+    data = [":public_api_example_lib_index"],
+)
+
+# Regression test: clickable_plantuml must inject a working link between a
+# unit shown in the static architecture (unit_overview.puml) and its
+# elaborating class diagram (unit_class_detail.puml) - the "unit links to its
+# class diagram" scenario.
+sh_test(
+    name = "unit_example_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "package_u.component_u.unit_one",
+        "$(rootpaths :unit_example_lib_index)",
+    ],
+    data = [":unit_example_lib_index"],
+)
+
+# Regression test: clickable_plantuml must inject a working link between a
+# participant shown in the dynamic architecture (dynamic_overview.puml, a
+# sequence diagram) and the corresponding unit in the static architecture
+# (dynamic_component_detail.puml) - the "dynamic participant links to static
+# unit" scenario.
+sh_test(
+    name = "dynamic_example_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "Worker",
+        "$(rootpaths :dynamic_example_lib_index)",
+    ],
+    data = [":dynamic_example_lib_index"],
+)
+
+# Regression test: clickable_plantuml must inject a working link between the
+# "Dispatcher" unit (a reference in both dynamic_overview.puml and
+# dynamic_component_detail.puml) and its elaborating class diagram
+# (dynamic_dispatcher_class.puml) - the "unit links to its own class diagram"
+# scenario, for the first of the two units.
+sh_test(
+    name = "dynamic_dispatcher_class_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "Dispatcher",
+        "$(rootpaths :dynamic_example_lib_index)",
+    ],
+    data = [":dynamic_example_lib_index"],
+)
+
+# Regression test: same as above, for the second unit ("Worker" links to
+# dynamic_worker_class.puml).
+sh_test(
+    name = "dynamic_worker_class_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "Worker",
+        "$(rootpaths :dynamic_example_lib_index)",
+    ],
+    data = [":dynamic_example_lib_index"],
+)
+
+# Regression test: clickable_plantuml must inject a working link between
+# "TaskInterface" as used in the static architecture
+# (dynamic_component_detail.puml) and its definition in the public API
+# (dynamic_public_api_detail.puml) - the "interface in static architecture
+# links to public API" scenario, applied to the dynamic_example units.
+sh_test(
+    name = "dynamic_public_api_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "TaskInterface",
+        "$(rootpaths :dynamic_example_lib_index)",
+    ],
+    data = [":dynamic_example_lib_index"],
 )
 
 # Test that sphinx_module is generated with correct providers
