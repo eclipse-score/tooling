@@ -84,3 +84,6 @@ table ComponentGraph {
 }
 
 root_type ComponentGraph;
+
+file_identifier "COMD";
+file_extension "comd";

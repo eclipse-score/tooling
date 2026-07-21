@@ -51,6 +51,14 @@ impl Reader for SequenceDiagramReader {
         for path in input {
             let data = fs::read(path).map_err(|e| format!("Failed to read {path}: {e}"))?;
 
+            // See the analogous check in class_diagram_reader.rs: skip a buffer that
+            // doesn't match this schema instead of letting the verifier fail on
+            // misaligned data.
+            if !fb_sequence::sequence_diagram_buffer_has_identifier(&data) {
+                log::warn!("{path}: not a sequence-diagram, skipping validation");
+                continue;
+            }
+
             let diagram = flatbuffers::root::<fb_sequence::SequenceDiagram>(&data)
                 .map_err(|e| format!("Failed to parse sequence FlatBuffer {path}: {e}"))?;
 

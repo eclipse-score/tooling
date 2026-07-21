@@ -123,7 +123,7 @@ impl ComponentSerializer {
         // --------------------------
         // 4) finish
         // --------------------------
-        builder.finish(root, None);
+        builder.finish(root, Some("COMD"));
 
         builder.finished_data().to_vec()
     }
