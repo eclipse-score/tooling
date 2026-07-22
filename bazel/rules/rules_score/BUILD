@@ -165,6 +165,15 @@ sphinx_docs_library(
     strip_prefix = "validation/core/docs/specifications/",
 )
 
+# Source files from the standalone minimal example, mapped into the Sphinx
+# source tree so that general.rst can reference them via literalinclude.
+sphinx_docs_library(
+    name = "minimal_example_srcs",
+    srcs = ["//bazel/rules/rules_score/examples/minimal:doc_sources"],
+    prefix = "bazel/rules/rules_score/docs/examples/minimal/",
+    strip_prefix = "bazel/rules/rules_score/examples/minimal/",
+)
+
 sphinx_module(
     name = "rules_score_doc",
     testonly = True,
@@ -182,6 +191,7 @@ sphinx_module(
         "//bazel/rules/rules_score/docs/requirements:use_cases_rst",
     ],
     docs_library_deps = [
+        ":minimal_example_srcs",
         ":tool_readme_ai_checker_assets",
         ":validation_specs",
     ],

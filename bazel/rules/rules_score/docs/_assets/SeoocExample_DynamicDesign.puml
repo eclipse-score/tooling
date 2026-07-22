@@ -11,11 +11,12 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml MySeooc_PublicApi
+@startuml SeoocExample_DynamicDesign
 
-interface "KeyValueStore" as KVS {
-    + write(key: string, value: bytes): Result
-    + read(key: string): Optional<bytes>
-}
+participant "Unit 1" as unit_1 <<unit>>
+participant "Unit 2" as unit_2 <<unit>>
+
+unit_1 -> unit_2 : GetData()
+unit_2 --> unit_1 : return : Data*
 
 @enduml

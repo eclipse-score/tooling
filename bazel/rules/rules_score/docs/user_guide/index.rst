@@ -16,10 +16,23 @@ User Guide
 ==========
 
 .. toctree::
+   :caption: Overview
    :maxdepth: 2
 
    general
+
+.. toctree::
+   :caption: Tutorial
+   :maxdepth: 2
+
+   tutorial/index
+
+.. toctree::
+   :caption: Guides
+   :maxdepth: 2
+
    requirements
+   assumptions_of_use
    architectural_design
    unit_design
    dependability_analysis

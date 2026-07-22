@@ -77,6 +77,60 @@ cross-module dependencies and automatic HTML merging.
 - ``<name>`` — HTML output under ``bazel-bin/<name>/html/``; use in ``deps`` of other ``sphinx_module`` targets.
 - ``<name>_needs`` — ``needs.json`` produced by the needs builder; consumed transitively by downstream modules for cross-module ``{requirement:downstream-ref}`` resolution. See :ref:`two-phase-sphinx-build` for the full data-flow description.
 
+.. _rule-filter-execpath:
+
+filter_execpath
+~~~~~~~~~~~~~~~
+
+*Advanced.* Resolves a Sphinx ``-D`` command-line argument (such as a Doxygen
+build output path) from a Bazel target's outputs at analysis time, producing
+a fully-qualified string that can be passed to ``sphinx_module.extra_opts_targets``.
+This is needed when a Sphinx extension (e.g. Breathe for Doxygen integration)
+requires a path that is only known once the dependency has been built.
+
+.. code-block:: python
+
+   filter_execpath(
+       name           = "breathe_project_path",
+       flag           = "-Dbreathe_projects.MyLib",
+       target         = "//doc:doxygen_build",
+       filter_pattern = "xml/index.xml",
+   )
+
+   sphinx_module(
+       name               = "my_docs",
+       srcs               = glob(["docs/**/*.rst"]),
+       index              = "docs/index.rst",
+       extra_opts_targets = [":breathe_project_path"],
+   )
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``name``
+     - string
+     - yes
+     - Target name
+   * - ``flag``
+     - string
+     - yes
+     - The Sphinx ``-D`` flag name (e.g. ``"-Dbreathe_projects.MyLib"``)
+   * - ``target``
+     - label
+     - yes
+     - Bazel target whose output files are searched
+   * - ``filter_pattern``
+     - string
+     - yes
+     - Substring used to identify the relevant output file within ``target``'s outputs
+
+**Provides:** ``FilteredExecpathInfo`` — carries ``flag``, ``resolved_path``, and the combined ``arg`` string (``flag=resolved_path``). Consumed via ``sphinx_module.extra_opts_targets``.
+
 
 Artifact Rules
 --------------
@@ -234,9 +288,8 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
 .. code-block:: python
 
    assumptions_of_use(
-       name         = "aous",
-       srcs         = ["docs/assumptions.trlc"],
-       requirements = [":features"],
+       name = "aous",
+       srcs = ["docs/assumptions.trlc"],
    )
 
 .. list-table::
@@ -254,11 +307,19 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
    * - ``srcs``
      - label list
      - yes
-     - ``.trlc`` files containing ``AoU`` records
-   * - ``requirements``
+     - ``.trlc`` files (containing ``AoU`` records), ``.rst`` files, or labels to existing ``TrlcProviderInfo``-providing targets
+   * - ``deps``
      - label list
      - no
-     - ``feature_requirements`` or ``component_requirements`` targets that these AoUs trace to (default ``[]``)
+     - Other requirement targets (``TrlcProviderInfo``) needed for cross-reference parsing (default ``[]``)
+   * - ``ref_package``
+     - string
+     - no
+     - TRLC package prefix used for ``derived_from`` cross-references when converting RST sources (default ``None``)
+   * - ``lobster_config``
+     - label
+     - no
+     - Advanced: override the Lobster YAML configuration for AoU traceability extraction (default: built-in S-CORE AoU config)
    * - ``visibility``
      - —
      - no
@@ -326,16 +387,18 @@ Example glossary source (``.rst``):
 architectural_design
 ~~~~~~~~~~~~~~~~~~~~
 
-Bundles static, dynamic, and public-API architecture views into a single target.
-Provides ``ArchitecturalDesignInfo`` consumed by ``dependable_element`` and ``fmea``.
+Bundles static, dynamic, public-API, and internal-API architecture views into a
+single target. Provides ``ArchitecturalDesignInfo`` consumed by ``dependable_element``
+and ``fmea``.
 
 .. code-block:: python
 
    architectural_design(
-       name       = "arch",
-       static     = ["docs/static_design.puml"],
-       dynamic    = ["docs/sequence.puml"],
-       public_api = ["docs/public_api.puml"],
+       name         = "arch",
+       static       = ["docs/static_design.puml"],
+       dynamic      = ["docs/sequence.puml"],
+       public_api   = ["docs/public_api.puml"],
+       internal_api = ["docs/internal_api.puml"],
    )
 
 .. list-table::
@@ -361,7 +424,15 @@ Provides ``ArchitecturalDesignInfo`` consumed by ``dependable_element`` and ``fm
    * - ``public_api``
      - label list
      - no
-     - Public-API diagram files (``.puml``); also generates traceability items for safety analysis (default ``[]``)
+     - Public-API diagram files (``.puml``); also generates traceability items for safety analysis, exposed via ``ArchitecturalDesignInfo.public_api_lobster_files`` (default ``[]``)
+   * - ``internal_api``
+     - label list
+     - no
+     - Internal-API diagram files (``.puml``) describing interfaces exposed between components inside the SEooC; their FlatBuffers output is exposed via ``ArchitecturalDesignInfo.internal_api`` for downstream validation (default ``[]``)
+   * - ``maturity``
+     - string
+     - no
+     - ``"release"`` (default) treats validation findings as errors; ``"development"`` emits warnings and continues
    * - ``visibility``
      - —
      - no
@@ -477,8 +548,9 @@ Running ``bazel test`` validates the full FMEA traceability chain.
 .. code-block:: python
 
    dependability_analysis(
-       name = "analysis",
-       fmea = [":my_fmea"],
+       name        = "analysis",
+       arch_design = ":my_arch",
+       fmea        = [":my_fmea"],
    )
 
 .. list-table::
@@ -495,8 +567,12 @@ Running ``bazel test`` validates the full FMEA traceability chain.
      - Target name
    * - ``fmea``
      - label list
-     - yes
-     - ``fmea`` targets to include in this analysis
+     - no
+     - ``fmea`` targets to include in this analysis (default ``[]``)
+   * - ``arch_design``
+     - label
+     - no
+     - Optional ``architectural_design`` target this analysis relates to (default ``None``)
    * - ``visibility``
      - —
      - no
@@ -552,9 +628,13 @@ diagram.
      - yes
      - Test targets that verify this unit (may be ``[]``)
    * - ``scope``
-     - label list
+     - string list
      - no
-     - Additional targets needed by the implementation but not listed in ``implementation`` (default ``[]``)
+     - Additional Bazel label strings, not already reachable through ``implementation``, that this unit is allowed to depend on. Each entry is either a specific target label (``//pkg:target``, allowlisting just that target) or a package wildcard (``//pkg:__pkg__`` for everything directly in that package, ``//pkg:__subpackages__`` for the whole package tree). Any transitive implementation dependency not covered by ``implementation`` or ``scope`` triggers a scope violation at ``dependable_element`` build time. (default ``[]``)
+   * - ``maturity``
+     - string
+     - no
+     - ``"release"`` (default) treats scope violations as errors; ``"development"`` emits warnings and continues
    * - ``testonly``
      - bool
      - no
@@ -686,6 +766,10 @@ and scope checks at build/test time.
      - label list
      - no
      - Additional ``.rst`` / ``.md`` checklist files (default ``[]``)
+   * - ``glossary``
+     - label list
+     - no
+     - ``glossary`` targets whose pages are included in the generated documentation under a dedicated Glossary section (default ``[]``)
    * - ``deps``
      - label list
      - no
@@ -693,11 +777,21 @@ and scope checks at build/test time.
    * - ``aou_forwarding``
      - label
      - no
-     - A YAML file selecting which *received* AoUs to chain-forward to elements that depend on this one. Each entry requires an ``aou_id`` and a ``justification``. Own AoUs (from ``assumptions_of_use``) are always forwarded automatically.
+     - Optional YAML file that selects which *received* AoUs to chain-forward to elements that depend on this one. Own AoUs (declared in ``assumptions_of_use``) are always forwarded automatically — no file needed. Schema:
+
+       .. code-block:: yaml
+
+          forwarded_aous:
+            - aou_id: "Package.AOU_ID"
+              justification: >
+                Reason why this element cannot handle the AoU itself
+                and must forward it to its own integrators.
+
+       See :ref:`requirements user guide <rule-assumptions-of-use>` for the full forwarding workflow.
    * - ``maturity``
      - string
      - no
-     - ``"release"`` (default) or ``"development"`` — in development mode, scope violations and architecture errors are downgraded to warnings
+     - ``"release"`` (default) treats certified-scope violations and architecture consistency errors as hard build failures. ``"development"`` downgrades them to warnings so the build still succeeds — useful when iterating before all scope and architecture declarations are finalised. **Always revert to ``"release"`` before a certification delivery.**
    * - ``testonly``
      - bool
      - no

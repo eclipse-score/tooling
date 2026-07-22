@@ -63,6 +63,20 @@ component_requirements(
     ],
 )
 
+# Requirements for the nested sub_component_example (a CompReq file is
+# assigned to exactly one component, so it lives in its own target/file).
+component_requirements(
+    name = "component_requirements_sub",
+    srcs = [
+        "component_requirements_sub.trlc",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":assumed_system_requirements",
+        ":feature_requirements",
+    ],
+)
+
 trlc_requirements_ai_test(
     name = "component_requirements_ai_test",
     reqs = [":component_requirements"],

@@ -11,15 +11,11 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml MySeooc_FTA
+@startuml SeoocExample_PublicApi
 
-!include fta_metamodel.puml
-
-$TopEvent("KVS returns stale data after power loss", "MySeooc.FM_001")
-
-$OrGate("OG_1", "MySeooc.FM_001")
-
-$BasicEvent("Write not flushed to storage", "MySeooc.RC_001", "OG_1")
-$BasicEvent("Corruption on unclean shutdown", "MySeooc.RC_002", "OG_1")
+package "SampleLibraryAPI" as SampleLibraryAPI {
+    interface "GetNumber" as GetNumber
+    ' interface "SetNumber" as SetNumber
+}
 
 @enduml

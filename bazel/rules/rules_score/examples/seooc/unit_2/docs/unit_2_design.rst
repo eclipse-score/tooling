@@ -15,6 +15,10 @@
 Unit 2 Class Design
 ^^^^^^^^^^^^^^^^^^^
 
+``unit_2`` implements ``Bar``, which composes a ``unit_1::Foo`` and validates
+its value (see ``bar.h`` / ``bar.cpp``). The diagram also shows ``Foo`` to
+make the cross-unit dependency explicit.
+
 .. uml:: unit_2_class_diagram.puml
    :align: center
    :alt: Unit 2 Class Diagram

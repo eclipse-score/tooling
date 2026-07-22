@@ -18,3 +18,5 @@ bazel/rules/rules_score/test
 # Separate local Bazel modules (use @seooc// and @some_other_library// instead)
 bazel/rules/rules_score/examples/seooc
 bazel/rules/rules_score/examples/some_other_library
+# Separate local Bazel module (system integrator demo, depends on @seooc//)
+bazel/rules/rules_score/examples/integrator
