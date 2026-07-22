@@ -4,16 +4,18 @@
     "statements": [
       {
         "Element": {
-          "kind": "component",
-          "name": "diagnostic_bundle",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "diagnostic_bundle",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 14
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 14
-          }
+          "statements": []
         }
       }
     ]

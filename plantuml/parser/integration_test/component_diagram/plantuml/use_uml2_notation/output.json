@@ -4,16 +4,18 @@
     "statements": [
       {
         "Element": {
-          "kind": "interface",
-          "name": "Telemetry Feed",
-          "alias": "Feed",
-          "stereotype": null,
+          "identity": {
+            "name": "Telemetry Feed",
+            "alias": "Feed",
+            "stereotype": null,
+            "element_kind": "interface",
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 15
-          }
+          "statements": []
         }
       },
       {

@@ -4,72 +4,82 @@
     "statements": [
       {
         "Element": {
-          "kind": "interface",
-          "name": "\"Command Intake\"",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "\"Command Intake\"",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "interface",
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 15
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "interface",
-          "name": "\"Status Broadcast\"",
-          "alias": "StatusOut",
-          "stereotype": null,
+          "identity": {
+            "name": "\"Status Broadcast\"",
+            "alias": "StatusOut",
+            "stereotype": null,
+            "element_kind": "interface",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 16
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "interface",
-          "name": "MaintenanceHook",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "MaintenanceHook",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "interface",
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 17
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "interface",
-          "name": "Safety\\nfeedback",
-          "alias": "SafetyFeedback",
-          "stereotype": null,
+          "identity": {
+            "name": "Safety\\nfeedback",
+            "alias": "SafetyFeedback",
+            "stereotype": null,
+            "element_kind": "interface",
+            "source_location": {
+              "file": "",
+              "line": 18
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 18
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "component",
-          "name": "telemetry_gateway",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "telemetry_gateway",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 20
-          }
+          "statements": []
         }
       }
     ]

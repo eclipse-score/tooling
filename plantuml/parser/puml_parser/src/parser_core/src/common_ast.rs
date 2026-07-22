@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 use serde::{Deserialize, Serialize};
+use source_location::SourceLocation;
 use std::default::Default;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -60,4 +61,14 @@ pub enum ArrowDirection {
     Down,
     Left,
     Right,
+}
+
+// ---------- Shared Raw Element Identity ----------
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ElementIdentity {
+    pub name: Option<String>,       // text before "as", stripped of quotes
+    pub alias: Option<String>,      // text after "as"
+    pub stereotype: Option<String>, // inside << >>, stripped of delimiters
+    pub element_kind: String,       // keyword verbatim: "component","class","participant"…
+    pub source_location: SourceLocation,
 }

@@ -4,44 +4,50 @@
     "statements": [
       {
         "Element": {
-          "kind": "component",
-          "name": "ActiveController",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "ActiveController",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 14
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 14
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "component",
-          "name": "DiagnosticsPanel",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "DiagnosticsPanel",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 15
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "component",
-          "name": "DormantSimulator",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "DormantSimulator",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 16
-          }
+          "statements": []
         }
       },
       {

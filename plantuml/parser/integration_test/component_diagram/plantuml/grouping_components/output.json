@@ -4,58 +4,66 @@
     "statements": [
       {
         "Element": {
-          "kind": "component",
-          "name": "First component",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "First component",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 15
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "component",
-          "name": "Another component",
-          "alias": "Comp2",
-          "stereotype": null,
+          "identity": {
+            "name": "Another component",
+            "alias": "Comp2",
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 16
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "component",
-          "name": "Comp3",
-          "alias": null,
-          "stereotype": null,
+          "identity": {
+            "name": "Comp3",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 17
-          }
+          "statements": []
         }
       },
       {
         "Element": {
-          "kind": "component",
-          "name": "Last\\ncomponent",
-          "alias": "Comp4",
-          "stereotype": null,
+          "identity": {
+            "name": "Last\\ncomponent",
+            "alias": "Comp4",
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 18
+            }
+          },
           "style": null,
-          "statements": [],
-          "source_location": {
-            "file": "",
-            "line": 18
-          }
+          "statements": []
         }
       }
     ]

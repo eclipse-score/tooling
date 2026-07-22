@@ -16,7 +16,8 @@ use std::rc::Rc;
 use thiserror::Error;
 
 use crate::{
-    Arrow, CompPumlDocument, ComponentStyle, Element, Port, PortType, Relation, Statement,
+    Arrow, CompPumlDocument, ComponentStyle, Element, ElementIdentity, Port, PortType, Relation,
+    Statement,
 };
 use parser_core::{
     format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser, ErrorLocation,
@@ -135,12 +136,19 @@ impl PumlComponentParser {
         pair: pest::iterators::Pair<Rule>,
         source_file: &str,
     ) -> Result<Element, ComponentError> {
+        let source_location = SourceLocation::new(source_file, pair.line_col().0 as u32);
+        let mut kind = String::new();
+        let mut name: Option<String> = None;
+        let mut alias: Option<String> = None;
+        let mut stereotype: Option<String> = None;
         let mut element = Element {
-            kind: "".to_string(),
-            name: None,
-            alias: None,
-            source_location: SourceLocation::new(source_file, pair.line_col().0 as u32),
-            stereotype: None,
+            identity: ElementIdentity {
+                name: None,
+                alias: None,
+                stereotype: None,
+                element_kind: String::new(),
+                source_location: source_location.clone(),
+            },
             style: None,
             statements: Vec::new(),
         };
@@ -152,41 +160,42 @@ impl PumlComponentParser {
                     for nested_inner in inner.into_inner() {
                         match nested_inner.as_rule() {
                             Rule::default_element => {
-                                let (kind, name_opt) = Self::parse_default_element(nested_inner)?;
-                                element.kind = kind;
-                                element.name = name_opt;
+                                let (parsed_kind, name_opt) =
+                                    Self::parse_default_element(nested_inner)?;
+                                kind = parsed_kind;
+                                name = name_opt;
                             }
                             // For bracket_element, it's always a `component` kind
                             Rule::bracket_element => {
                                 let name_opt = Self::parse_bracket_element(nested_inner)?;
-                                element.kind = "component".to_string();
-                                element.name = name_opt;
+                                kind = "component".to_string();
+                                name = name_opt;
                             }
                             _ => {}
                         }
                     }
                 }
                 Rule::short_form_component => {
-                    element.name = Some(Self::extract_component_name(inner));
-                    element.kind = "component".to_string();
+                    name = Some(Self::extract_component_name(inner));
+                    kind = "component".to_string();
                 }
                 Rule::short_form_actor => {
-                    element.name = Some(Self::extract_actor_name(inner));
-                    element.kind = "actor".to_string();
+                    name = Some(Self::extract_actor_name(inner));
+                    kind = "actor".to_string();
                 }
                 Rule::short_form_interface => {
-                    element.name = Some(Self::extract_interface_name(inner));
-                    element.kind = "interface".to_string();
+                    name = Some(Self::extract_interface_name(inner));
+                    kind = "interface".to_string();
                 }
                 Rule::short_form_usecase => {
-                    element.name = Some(Self::extract_usecase_name(inner));
-                    element.kind = "usecase".to_string();
+                    name = Some(Self::extract_usecase_name(inner));
+                    kind = "usecase".to_string();
                 }
                 Rule::alias_clause => {
-                    element.alias = Self::extract_alias(inner);
+                    alias = Self::extract_alias(inner);
                 }
                 Rule::stereotype => {
-                    element.stereotype = Self::extract_stereotype(inner);
+                    stereotype = Self::extract_stereotype(inner);
                 }
                 Rule::element_style => {
                     element.style = Some(Self::parse_component_style(inner)?);
@@ -197,6 +206,14 @@ impl PumlComponentParser {
                 _ => {}
             }
         }
+
+        element.identity = ElementIdentity {
+            name,
+            alias,
+            stereotype,
+            element_kind: kind,
+            source_location,
+        };
 
         Ok(element)
     }
@@ -510,9 +527,9 @@ mod dispatch_style_tests {
             ),
         };
 
-        assert_eq!(first_element.source_location.line, 2);
+        assert_eq!(first_element.identity.source_location.line, 2);
         assert_eq!(
-            first_element.source_location.file.as_ref(),
+            first_element.identity.source_location.file.as_ref(),
             expected_file.as_str()
         );
 
