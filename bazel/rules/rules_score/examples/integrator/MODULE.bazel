@@ -1,0 +1,65 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+
+module(
+    name = "integrator",
+    version = "0.0.0",
+)
+
+bazel_dep(name = "score_tooling", version = "0.0.0")
+local_path_override(
+    module_name = "score_tooling",
+    path = "../../../../..",
+)
+
+# The integrator depends on safety_software_seooc_example, so it needs the
+# seooc example module. See below for why this module registers its own
+# libclang toolchain instead of reusing seooc's.
+bazel_dep(name = "seooc", version = "0.0.0")
+local_path_override(
+    module_name = "seooc",
+    path = "../seooc",
+)
+
+# seooc's own MODULE.bazel overrides for its dependencies are only honored
+# when seooc is the root module. Since seooc is a transitive dependency here,
+# its overrides must be repeated by this (root) module too.
+bazel_dep(name = "some_other_library", version = "0.0.0")
+local_path_override(
+    module_name = "some_other_library",
+    path = "../some_other_library",
+)
+
+bazel_dep(name = "trlc", version = "3.0.0")
+bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
+bazel_dep(name = "lobster", version = "1.0.3")
+git_override(
+    module_name = "lobster",
+    commit = "07382c33f95e22992e0f8788c0537ec06877e51f",
+    remote = "https://github.com/bmw-software-engineering/lobster.git",
+)
+
+# seooc's own llvm toolchain extension is a dev_dependency, so it is only
+# honored while seooc itself is the root module — it is stripped when seooc is
+# merely a transitive dependency (as it is here). This module must therefore
+# register its own libclang toolchain (see bazel/toolchains/BUILD) rather than
+# reusing @seooc//bazel/toolchains:seooc_libclang_toolchain.
+bazel_dep(name = "toolchains_llvm", version = "1.6.0", dev_dependency = True)
+
+llvm = use_extension(
+    "@toolchains_llvm//toolchain/extensions:llvm.bzl",
+    "llvm",
+    dev_dependency = True,
+)
+llvm.toolchain(llvm_version = "19.1.7")
+use_repo(llvm, "llvm_toolchain", "llvm_toolchain_llvm")

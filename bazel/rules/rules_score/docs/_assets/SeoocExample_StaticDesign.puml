@@ -1,5 +1,5 @@
 ' *******************************************************************************
-' Copyright (c) 2025 Contributors to the Eclipse Foundation
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
 '
 ' See the NOTICE file(s) distributed with this work for additional
 ' information regarding copyright ownership.
@@ -11,7 +11,7 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml static_design
+@startuml SeoocExample_StaticDesign
 
 package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
     component "ComponentExample" as component_example <<component>> {
@@ -25,8 +25,8 @@ package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC
     }
 }
 
-interface "SampleLibraryAPI" as SampleLibraryAPI
+package "SampleLibraryAPI" as SampleLibraryAPI
 
-safety_software_seooc_example )-d- SampleLibraryAPI
+component_example --> SampleLibraryAPI
 
 @enduml

@@ -15,6 +15,9 @@
 Unit 1 Class Design
 ^^^^^^^^^^^^^^^^^^^
 
+``unit_1`` implements ``Foo``, which exposes the ``GetNumber``/``SetNumber``
+accessors declared in ``SampleLibraryAPI`` (see ``foo.h`` / ``foo.cpp``).
+
 .. uml:: unit_1_class_diagram.puml
    :align: center
    :alt: Unit 1 Class Diagram

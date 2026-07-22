@@ -32,10 +32,30 @@ component(
     components = [
         "//unit_1:unit_1",
         "//unit_2:unit_2",
+        ":sub_component_example",
     ],
+    # component_requirements_sub is also listed here (in addition to
+    # sub_component_example's own requirements below) so its CompReq item is
+    # visible in the dependable_element-level traceability report -- nested
+    # components' own `requirements` are not rolled up automatically into
+    # their parent's Component Requirements tier (see test/BUILD's
+    # test_nested_component/test_parent_component fixture for the same
+    # pattern).
     requirements = [
         "//docs/requirements:component_requirements",
         "//docs/requirements:component_requirements_extra",
+        "//docs/requirements:component_requirements_sub",
+    ],
+    tags = ["manual"],
+    tests = [],
+)
+
+# Nested component: components can themselves contain further components,
+# not just units (see docs/user_guide/architectural_design.rst).
+component(
+    name = "sub_component_example",
+    requirements = [
+        "//docs/requirements:component_requirements_sub",
     ],
     tags = ["manual"],
     tests = [],
@@ -58,13 +78,17 @@ dependable_element(
     dependability_analysis = [
         ":sample_dependability_analysis",
     ],
-    docs_prefix = "bazel/rules/rules_score/docs/sphinx/",
     glossary = ["//docs:glossary"],
     integrity_level = "B",
     requirements = [
         "//docs/requirements:feature_requirements",
     ],
     tests = [],
-    visibility = ["//:__subpackages__"],
+    # Public: the integrator example depends on this element to demonstrate
+    # AoU forwarding across module boundaries (see the comment above).
+    # Cross-repo visibility specs can't reference a dependent module's
+    # apparent name without introducing a circular bazel_dep, so this is
+    # public rather than scoped to "@integrator".
+    visibility = ["//visibility:public"],
     deps = ["@some_other_library//:other_seooc"],
 )

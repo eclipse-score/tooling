@@ -11,15 +11,13 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml MySeooc_WriteSequence
+@startuml
 
-actor Caller
-participant KeyValueStore
-participant StorageBackend
-
-Caller -> KeyValueStore : write(key, value)
-KeyValueStore -> StorageBackend : flush()
-StorageBackend --> KeyValueStore : OK
-KeyValueStore --> Caller : Result::Ok
+' The package alias must match the dependable_element target name.
+package "my_element" as my_element <<SEooC>> {
+    component "MyComponent" as MyComponent <<component>> {
+        component "MyUnit" as MyUnit <<unit>>
+    }
+}
 
 @enduml
