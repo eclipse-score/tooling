@@ -13,7 +13,7 @@
 
 //! Logic parser job: Build hierarchical tree from syntax JSON
 
-use sequence_parser::syntax_ast::Statement;
+use sequence_parser::sequence_ast::Statement;
 use sequence_resolver::logic_parser::build_tree;
 
 use std::env;

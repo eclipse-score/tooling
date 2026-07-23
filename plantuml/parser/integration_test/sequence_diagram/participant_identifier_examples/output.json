@@ -23,8 +23,8 @@
         "stereotype": "component"
       },
       {
-        "display_name": "RightId",
-        "alias": "LeftId",
+        "display_name": "LeftId",
+        "alias": "RightId",
         "participant_type": "Participant",
         "source_location": {
           "file": "",

@@ -106,9 +106,10 @@ stereotype_elem = {
 
 // Participant definitions
 participant_def = {
-    create_kw? ~ participant_type ~
-    (quoted_participant_as_id | participant_id_as_quoted | participant_id_as_id | quoted_participant | participant_id) ~
-    color_spec? ~ stereotype? ~ order_clause?
+    create_kw?
+    ~ participant_type
+    ~ participant_identifier
+    ~ stereotype? ~ order_clause? ~ color_spec?
 }
 
 create_kw = { ^"create" }
@@ -117,14 +118,30 @@ participant_type = @{
      ^"entity" | ^"queue" | ^"actor") ~ &(" " | "\t" | "\n" | "\r")
 }
 
-quoted_participant_as_id = { quoted_string ~ alias_clause }
-participant_id_as_quoted = { participant_id ~ alias_clause }
-participant_id_as_id = { participant_id ~ alias_clause }
-quoted_participant = { quoted_string }
-participant_id = { CNAME }
+participant_identifier = {
+      quoted_display_with_alias
+    | display_with_alias
+    | alias_with_quoted_display
+    | quoted_display
+    | alias_only
+}
+
+// participant "Display" as Alias
+quoted_display_with_alias = { quoted_string ~ ^"as" ~ NAME }
+
+// participant Display as Alias
+display_with_alias = { NAME ~ ^"as" ~ NAME }
+
+// participant Alias as "Display"
+alias_with_quoted_display = { NAME ~ ^"as" ~ quoted_string }
+
+// participant "Display"
+quoted_display = { quoted_string }
+
+// participant Alias
+alias_only = { NAME }
 
 color_spec = @{ BASIC_COLOR }
-
 order_clause = { ^"order" ~ signed_number }
 signed_number = { "-"? ~ NUMBER }
 
@@ -159,10 +176,11 @@ message = {
 async_marker = { "&" }
 message_participant = {
     lost_found_marker |
+    quoted_display_with_alias |
+    display_with_alias |
+    alias_with_quoted_display |
     participant_ref |
-    quoted_string |
-    quoted_participant_as_id |
-    participant_id_as_quoted
+    quoted_string
 }
 lost_found_marker = { "[" ~ ("o" | "x")? | ("o" | "x")? ~ ("[" | "]") }
 participant_ref = { CNAME | quoted_string }

@@ -12,11 +12,10 @@
 // *******************************************************************************
 
 use crate::logic_parser::build_tree;
-use log::warn;
 use resolver_traits::DiagramResolver;
 use sequence_logic::{ParticipantType as LogicParticipantType, SequenceParticipant, SequenceTree};
-use sequence_parser::syntax_ast::{
-    ExternalEndpoint, MessageContent, ParticipantDef, ParticipantDisplay,
+use sequence_parser::sequence_ast::{
+    ExternalEndpoint, MessageContent, ParticipantIdentifier,
     ParticipantType as SyntaxParticipantType, Statement,
 };
 use sequence_parser::SeqPumlDocument;
@@ -66,19 +65,11 @@ fn is_special_endpoint_marker(name: &str) -> bool {
     name.parse::<ExternalEndpoint>().is_ok()
 }
 
-fn participant_from_def(def: &ParticipantDef, display: ParticipantDisplay) -> SequenceParticipant {
-    warn!(
-        "resolving sequence participant: display_name='{}', alias={:?}",
-        display.display_name, display.alias
-    );
-
-    SequenceParticipant {
-        display_name: display.display_name,
-        alias: display.alias,
-        participant_type: map_parser_participant_type(&def.participant_type),
-        source_location: def.source_location.clone(),
-        stereotype: def.stereotype.clone(),
-    }
+fn participant_reference_name(identifier: &ParticipantIdentifier) -> &str {
+    identifier
+        .alias
+        .as_deref()
+        .unwrap_or(&identifier.display_name)
 }
 
 impl DiagramResolver for SequenceResolver {
@@ -92,18 +83,19 @@ impl DiagramResolver for SequenceResolver {
         let mut participants = Vec::new();
         for stmt in &document.statements {
             if let Statement::ParticipantDef(p) = stmt {
-                let display = p.identifier.display();
-                declared.insert(display.display_name.clone());
-                if let Some(alias) = display.alias.clone() {
-                    declared.insert(alias);
-                }
-                participants.push(participant_from_def(p, display));
+                declared.insert(participant_reference_name(&p.identifier).to_string());
+                participants.push(SequenceParticipant {
+                    display_name: p.identifier.display_name.clone(),
+                    alias: p.identifier.alias.clone(),
+                    participant_type: map_parser_participant_type(&p.participant_type),
+                    source_location: p.source_location.clone(),
+                    stereotype: p.stereotype.clone(),
+                });
             }
         }
 
         // 2. Validate message targets only when participants are declared.
         if !declared.is_empty() {
-            warn!("no validation is performed");
             for stmt in &document.statements {
                 if let Statement::Message(msg) = stmt {
                     let MessageContent::WithTargets { left, right, .. } = &msg.content;
@@ -145,7 +137,7 @@ mod sequence_resolver_tests {
     use parser_core::common_ast::{Arrow, ArrowDecor, ArrowLine};
     use resolver_traits::DiagramResolver;
     use sequence_logic::SourceLocation;
-    use sequence_parser::syntax_ast::{
+    use sequence_parser::sequence_ast::{
         Message, MessageContent, ParticipantDef, ParticipantIdentifier,
         ParticipantType as SyntaxParticipantType, Statement,
     };
@@ -268,8 +260,25 @@ mod sequence_resolver_tests {
 
     fn make_participant(name: &str) -> Statement {
         Statement::ParticipantDef(ParticipantDef {
+            is_create: false,
             participant_type: SyntaxParticipantType::Participant,
-            identifier: ParticipantIdentifier::Id(name.to_string()),
+            identifier: ParticipantIdentifier {
+                display_name: name.to_string(),
+                alias: None,
+            },
+            stereotype: None,
+            source_location: dummy_source_location(),
+        })
+    }
+
+    fn make_participant_with_alias(display_name: &str, alias: &str) -> Statement {
+        Statement::ParticipantDef(ParticipantDef {
+            is_create: false,
+            participant_type: SyntaxParticipantType::Participant,
+            identifier: ParticipantIdentifier {
+                display_name: display_name.to_string(),
+                alias: Some(alias.to_string()),
+            },
             stereotype: None,
             source_location: dummy_source_location(),
         })
@@ -290,6 +299,39 @@ mod sequence_resolver_tests {
             statements: stmts,
         };
         assert!(resolver.resolve(&doc).is_ok());
+    }
+
+    #[test]
+    fn test_aliased_participant_reference_passes_validation() {
+        let stmts = vec![
+            make_participant("A"),
+            make_participant_with_alias("Display B", "B"),
+            make_call("A", "B", "doWork"),
+        ];
+        let mut resolver = SequenceResolver;
+        let doc = SeqPumlDocument {
+            name: Some("valid_alias".to_string()),
+            statements: stmts,
+        };
+        assert!(resolver.resolve(&doc).is_ok());
+    }
+
+    #[test]
+    fn test_aliased_participant_display_name_reference_raises_error() {
+        let stmts = vec![
+            make_participant("A"),
+            make_participant_with_alias("Display B", "B"),
+            make_call("A", "Display B", "doWork"),
+        ];
+        let mut resolver = SequenceResolver;
+        let doc = SeqPumlDocument {
+            name: Some("invalid_display_reference".to_string()),
+            statements: stmts,
+        };
+        let err = resolver.resolve(&doc).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("Display B"));
+        assert!(msg.contains("callee"));
     }
 
     /// An undeclared callee should cause an error.

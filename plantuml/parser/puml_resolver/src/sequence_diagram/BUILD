@@ -51,23 +51,6 @@ rust_binary(
     ],
 )
 
-# Test: Compare logic_parse output with expected JSON
-rust_test(
-    name = "logic_parse_test",
-    srcs = ["test/logic_parse_test.rs"],
-    data = [
-        "test/logic.json",
-        "//plantuml/parser/integration_test/sequence_diagram:simple_sequence_test",
-    ],
-    deps = [
-        ":puml_resolver_sequence",
-        "//plantuml/parser/puml_parser:sequence_diagram",
-        "//tools/metamodel/sequence:sequence_diagram",
-        "@crates//:serde",
-        "@crates//:serde_json",
-    ],
-)
-
 rust_test(
     name = "sequence_resolver_it",
     srcs = ["tests/sequence_resolver_test.rs"],

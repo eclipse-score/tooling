@@ -13,19 +13,19 @@
 
 @startuml participant_identifier_examples
 
-' QuotedAsId
+' quoted_display_with_alias
 participant "Quoted As Id" as QuotedAsId <<component>>
 
-' IdAsQuoted
+' alias_with_quoted_display
 participant IdAsQuoted as "Id As Quoted" <<component>>
 
-' IdAsId
+' display_with_alias
 participant LeftId as RightId <<component>>
 
-' Quoted
+' quoted_display
 participant "Quoted Only" <<component>>
 
-' Id
+' alias_only
 participant IdOnly <<component>>
 
 QuotedAsId -> IdAsQuoted : callQuotedAsId()

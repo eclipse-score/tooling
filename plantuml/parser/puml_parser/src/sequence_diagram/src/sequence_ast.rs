@@ -19,14 +19,14 @@ use std::str::FromStr;
 pub use parser_core::common_ast::Arrow;
 
 // Document structure representing a complete PlantUML sequence diagram
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SeqPumlDocument {
     pub name: Option<String>,
     pub statements: Vec<Statement>,
 }
 
 // Statement types used during parsing
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Statement {
     DestroyCmd(DestroyCmd),
     CreateCmd(CreateCmd),
@@ -38,18 +38,14 @@ pub enum Statement {
 }
 
 // Participant definitions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParticipantDef {
+    #[serde(default)]
+    pub is_create: bool,
     pub participant_type: ParticipantType,
     pub identifier: ParticipantIdentifier,
     pub stereotype: Option<String>,
     pub source_location: SourceLocation,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ParticipantDisplay {
-    pub display_name: String,
-    pub alias: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -84,66 +80,36 @@ pub enum ParticipantType {
     Collections,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ParticipantIdentifier {
-    QuotedAsId { quoted: String, id: String },
-    IdAsQuoted { id: String, quoted: String },
-    IdAsId { id1: String, id2: String },
-    Quoted(String),
-    Id(String),
-}
-
-impl ParticipantIdentifier {
-    pub fn display(&self) -> ParticipantDisplay {
-        match self {
-            ParticipantIdentifier::QuotedAsId { quoted, id } => ParticipantDisplay {
-                display_name: quoted.clone(),
-                alias: Some(id.clone()),
-            },
-            ParticipantIdentifier::IdAsQuoted { id, quoted } => ParticipantDisplay {
-                display_name: quoted.clone(),
-                alias: Some(id.clone()),
-            },
-            ParticipantIdentifier::IdAsId { id1, id2 } => ParticipantDisplay {
-                display_name: id1.clone(),
-                alias: Some(id2.clone()),
-            },
-            ParticipantIdentifier::Quoted(quoted) => ParticipantDisplay {
-                display_name: quoted.clone(),
-                alias: None,
-            },
-            ParticipantIdentifier::Id(id) => ParticipantDisplay {
-                display_name: id.clone(),
-                alias: None,
-            },
-        }
-    }
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ParticipantIdentifier {
+    pub display_name: String,
+    pub alias: Option<String>,
 }
 
 // Destroy/Create commands
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DestroyCmd {
     pub participant: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CreateCmd {
     pub participant: String,
 }
 
 // Activate/Deactivate commands
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ActivateCmd {
     pub participant: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeactivateCmd {
     pub participant: Option<String>,
 }
 
 // Messages (internal parsing structure)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Message {
     pub content: MessageContent,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -152,7 +118,7 @@ pub struct Message {
     pub source_location: SourceLocation,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum MessageContent {
     WithTargets {
         left: String,
@@ -168,7 +134,7 @@ pub enum ActivationType {
 }
 
 // Group commands (alt, opt, loop, etc.) - internal parsing structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GroupCmd {
     pub group_type: GroupType,
     pub text: Option<String>,

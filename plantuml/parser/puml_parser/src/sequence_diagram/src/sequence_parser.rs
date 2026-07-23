@@ -10,7 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
-use log::{debug, trace};
+use log::{debug, trace, warn};
 use parser_core::common_parser::parse_arrow as common_parse_arrow;
 use parser_core::common_parser::{PlantUmlCommonParser, Rule};
 use parser_core::{
@@ -22,7 +22,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use thiserror::Error;
 
-use crate::syntax_ast::*;
+use crate::sequence_ast::*;
 
 #[derive(Debug, Error)]
 pub enum SequenceError {
@@ -96,6 +96,7 @@ impl PumlSequenceParser {
         pair: pest::iterators::Pair<Rule>,
         source_location: SourceLocation,
     ) -> Result<ParticipantDef, SequenceError> {
+        let mut is_create = false;
         let mut participant_type: Option<ParticipantType> = None;
         let mut identifier: Option<ParticipantIdentifier> = None;
         let mut stereotype: Option<String> = None;
@@ -103,78 +104,13 @@ impl PumlSequenceParser {
         for inner in pair.into_inner() {
             match inner.as_rule() {
                 Rule::create_kw => {
-                    // Handle create keyword if needed
+                    is_create = true;
                 }
                 Rule::participant_type => {
-                    participant_type = Self::parse_participant_type(inner);
+                    participant_type = Some(Self::parse_participant_type(inner)?);
                 }
-                Rule::quoted_participant_as_id => {
-                    let mut parts = inner.into_inner();
-                    let quoted = parts
-                        .next()
-                        .map(|p| Self::extract_quoted_string(p.as_str()))
-                        .ok_or_else(|| {
-                            SequenceError::InvalidStatement(
-                                "missing quoted participant".to_string(),
-                            )
-                        })?;
-                    let alias_clause = parts.next().ok_or_else(|| {
-                        SequenceError::InvalidStatement("missing alias clause".to_string())
-                    })?;
-                    let id_pair = alias_clause.into_inner().next().ok_or_else(|| {
-                        SequenceError::InvalidStatement("missing alias id".to_string())
-                    })?;
-                    let id = match id_pair.as_rule() {
-                        Rule::quoted_string => Self::extract_quoted_string(id_pair.as_str()),
-                        _ => id_pair.as_str().trim().to_string(),
-                    };
-                    identifier = Some(ParticipantIdentifier::QuotedAsId { quoted, id });
-                }
-                Rule::participant_id_as_quoted => {
-                    let mut parts = inner.into_inner();
-                    let id = parts
-                        .next()
-                        .ok_or_else(|| {
-                            SequenceError::InvalidStatement("missing participant id".to_string())
-                        })?
-                        .as_str()
-                        .trim()
-                        .to_string();
-                    let alias_clause = parts.next().ok_or_else(|| {
-                        SequenceError::InvalidStatement("missing alias clause".to_string())
-                    })?;
-                    let quoted_pair = alias_clause.into_inner().next().ok_or_else(|| {
-                        SequenceError::InvalidStatement("missing quoted alias".to_string())
-                    })?;
-                    let quoted = Self::extract_quoted_string(quoted_pair.as_str());
-                    identifier = Some(ParticipantIdentifier::IdAsQuoted { id, quoted });
-                }
-                Rule::participant_id_as_id => {
-                    let mut parts = inner.into_inner();
-                    let id1 = parts
-                        .next()
-                        .ok_or_else(|| {
-                            SequenceError::InvalidStatement("missing participant id1".to_string())
-                        })?
-                        .as_str()
-                        .trim()
-                        .to_string();
-                    let alias_clause = parts.next().ok_or_else(|| {
-                        SequenceError::InvalidStatement("missing alias clause".to_string())
-                    })?;
-                    let id2_pair = alias_clause.into_inner().next().ok_or_else(|| {
-                        SequenceError::InvalidStatement("missing alias id2".to_string())
-                    })?;
-                    let id2 = id2_pair.as_str().trim().to_string();
-                    identifier = Some(ParticipantIdentifier::IdAsId { id1, id2 });
-                }
-                Rule::quoted_participant => {
-                    let quoted = Self::extract_quoted_string(inner.as_str());
-                    identifier = Some(ParticipantIdentifier::Quoted(quoted));
-                }
-                Rule::participant_id => {
-                    let id = inner.as_str().trim().to_string();
-                    identifier = Some(ParticipantIdentifier::Id(id));
+                Rule::participant_identifier => {
+                    identifier = Some(Self::parse_participant_identifier(inner)?);
                 }
                 Rule::stereotype => {
                     stereotype = Some(Self::extract_stereotype(inner.as_str()));
@@ -187,6 +123,7 @@ impl PumlSequenceParser {
         }
 
         Ok(ParticipantDef {
+            is_create,
             participant_type: participant_type.ok_or_else(|| {
                 SequenceError::InvalidStatement("missing participant type".to_string())
             })?,
@@ -198,19 +135,108 @@ impl PumlSequenceParser {
         })
     }
 
-    fn parse_participant_type(pair: pest::iterators::Pair<Rule>) -> Option<ParticipantType> {
+    fn parse_participant_identifier(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<ParticipantIdentifier, SequenceError> {
+        let participant = pair
+            .into_inner()
+            .next()
+            .expect("participant_identifier must contain a participant identifier");
+        let participant_rule = participant.as_rule();
+
+        Ok(match participant_rule {
+            Rule::quoted_display_with_alias => {
+                match Self::participant_parts(participant).as_slice() {
+                    [display_name, alias] => ParticipantIdentifier {
+                        display_name: Self::extract_quoted_string(display_name),
+                        alias: Some(alias.to_string()),
+                    },
+                    _ => {
+                        return Self::invalid_participant_identifier(
+                            "quoted_display_with_alias grammar shape changed",
+                        );
+                    }
+                }
+            }
+            Rule::display_with_alias => match Self::participant_parts(participant).as_slice() {
+                [display_name, alias] => ParticipantIdentifier {
+                    display_name: display_name.to_string(),
+                    alias: Some(alias.to_string()),
+                },
+                _ => {
+                    return Self::invalid_participant_identifier(
+                        "display_with_alias grammar shape changed",
+                    );
+                }
+            },
+            Rule::alias_with_quoted_display => {
+                match Self::participant_parts(participant).as_slice() {
+                    [alias, display_name] => ParticipantIdentifier {
+                        display_name: Self::extract_quoted_string(display_name),
+                        alias: Some(alias.to_string()),
+                    },
+                    _ => {
+                        return Self::invalid_participant_identifier(
+                            "alias_with_quoted_display grammar shape changed",
+                        );
+                    }
+                }
+            }
+            Rule::quoted_display => ParticipantIdentifier {
+                display_name: Self::extract_quoted_string(participant.as_str()),
+                alias: None,
+            },
+            Rule::alias_only => ParticipantIdentifier {
+                display_name: participant.as_str().trim().to_string(),
+                alias: None,
+            },
+            _ => {
+                warn!(
+                    "participant_identifier grammar produced unsupported value: {:?}",
+                    participant_rule
+                );
+                return Err(SequenceError::InvalidStatement(format!(
+                    "unsupported participant_identifier grammar value: {:?}",
+                    participant_rule
+                )));
+            }
+        })
+    }
+
+    fn invalid_participant_identifier(
+        reason: &str,
+    ) -> Result<ParticipantIdentifier, SequenceError> {
+        warn!("{reason}");
+        Err(SequenceError::InvalidStatement(reason.to_string()))
+    }
+
+    fn participant_parts(participant: pest::iterators::Pair<Rule>) -> Vec<String> {
+        participant
+            .into_inner()
+            .map(|part| part.as_str().trim().to_string())
+            .collect()
+    }
+
+    fn parse_participant_type(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<ParticipantType, SequenceError> {
         let text = pair.as_str().to_lowercase();
-        match text.as_str() {
-            "participant" => Some(ParticipantType::Participant),
-            "actor" => Some(ParticipantType::Actor),
-            "boundary" => Some(ParticipantType::Boundary),
-            "control" => Some(ParticipantType::Control),
-            "entity" => Some(ParticipantType::Entity),
-            "queue" => Some(ParticipantType::Queue),
-            "database" => Some(ParticipantType::Database),
-            "collections" => Some(ParticipantType::Collections),
-            _ => None,
-        }
+        Ok(match text.as_str() {
+            "participant" => ParticipantType::Participant,
+            "actor" => ParticipantType::Actor,
+            "boundary" => ParticipantType::Boundary,
+            "control" => ParticipantType::Control,
+            "entity" => ParticipantType::Entity,
+            "queue" => ParticipantType::Queue,
+            "database" => ParticipantType::Database,
+            "collections" => ParticipantType::Collections,
+            _ => {
+                warn!("participant_type grammar produced unsupported value: {text}");
+                return Err(SequenceError::InvalidStatement(format!(
+                    "unsupported participant type: {text}"
+                )));
+            }
+        })
     }
 
     fn parse_message(
@@ -383,8 +409,6 @@ impl PumlSequenceParser {
         s.trim()
             .trim_start_matches('"')
             .trim_end_matches('"')
-            .trim_start_matches('«')
-            .trim_end_matches('»')
             .to_string()
     }
 
@@ -428,22 +452,17 @@ impl PumlSequenceParser {
 
             Rule::CNAME => Self::normalize_participant_name(pair.as_str()),
 
-            Rule::quoted_participant_as_id
-            | Rule::participant_id_as_quoted
-            | Rule::participant_id_as_id => {
-                let mut inner = pair.into_inner();
+            Rule::quoted_display_with_alias | Rule::display_with_alias => pair
+                .into_inner()
+                .nth(1)
+                .map(|p| p.as_str().trim().to_string())
+                .unwrap_or_default(),
 
-                inner.next(); // skip lhs
-
-                let alias_clause = inner.next().unwrap();
-
-                let target = alias_clause.into_inner().next().unwrap();
-
-                match target.as_rule() {
-                    Rule::quoted_string => Self::extract_quoted_string(target.as_str()),
-                    _ => target.as_str().trim().to_string(),
-                }
-            }
+            Rule::alias_with_quoted_display => pair
+                .into_inner()
+                .next()
+                .map(|p| p.as_str().trim().to_string())
+                .unwrap_or_default(),
 
             _ => pair.as_str().trim().to_string(),
         }

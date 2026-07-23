@@ -10,20 +10,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_test")
-
-# Test suite: Compare parsed output with expected JSON for each test pair
-rust_test(
-    name = "syntax_parse_test",
-    srcs = ["syntax_parse_test.rs"],
-    data = [
-        "//plantuml/parser/integration_test/sequence_diagram:sequence_diagram_tests",
-    ],
-    deps = [
-        "//plantuml/parser/puml_parser:parser_core",
-        "//plantuml/parser/puml_parser:sequence_diagram",
-        "//plantuml/parser/puml_utils",
-        "@crates//:serde",
-        "@crates//:serde_json",
-    ],
+filegroup(
+    name = "sequence_diagram_files",
+    srcs = glob([
+        "**/*.json",
+        "**/*.puml",
+    ]),
+    visibility = ["//plantuml/parser:__subpackages__"],
 )
