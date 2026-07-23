@@ -82,7 +82,7 @@ Here are two examples to showcase how to do this.
 
 ```
 load("@score_python_basics//:defs.bzl", "score_py_pytest") => load("@score_tooling//:defs.bzl", "score_py_pytest")
-load("@score_cr_checker//:cr_checker.bzl", "copyright_checker") => load("@score_tooling//:defs.bzl", "copyright_checker")
+load("@score_cr_checker//:cr_checker.bzl", "copyright_checker") => load("@score_tooling//cr_checker:cr_checker.bzl", "copyright_checker")
 ```
 
 All things inside of 'tooling' can now be imported from `@score_tooling//:defs.bzl`.
@@ -91,14 +91,14 @@ The available import targets are:
 - score_virtualenv
 - score_py_pytest
 - dash_license_checker
-- copyright_checker
 - cli_helper
 - setup_starpls
 - rust_coverage_report
 
-Formatting and linting are no longer re-exported from `defs.bzl`; use
+Formatting, linting, and cr_checker are no longer re-exported from `defs.bzl`; use
 `@score_tooling//third_party/format:macros.bzl`, `@score_tooling//third_party/lint:macros.bzl`,
-or the `@score_tooling//third_party/format:rustfmt_with_policies` label directly.
+`@score_tooling//cr_checker:cr_checker.bzl`, or the `@score_tooling//third_party/format:rustfmt_with_policies`
+label directly.
 
 ## Format the tooling repository
 
