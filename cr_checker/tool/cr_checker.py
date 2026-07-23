@@ -213,38 +213,46 @@ def load_templates(path):
     return templates
 
 
-def load_exclusion(path):
+def load_exclusion(path, base_dir=None):
     """
     Loads the list of files being excluded from the copyright check.
 
     Args:
         path (str): Path to the exclusion file.
+        base_dir (str, optional): Directory the (repo-relative) exclusion entries are
+                                  resolved against. When set, the returned paths are
+                                  absolute so they can be matched against the resolved
+                                  input file paths.
 
     Returns:
         tuple(list, bool): a list of files that are excluded from the copyright check and a boolean indicating whether
                            all paths listed in the exclusion file exist and are files.
     """
 
-    exclusion = []
+    resolved = []
     valid = True
     with open(path, "r", encoding="utf-8") as file:
-        exclusion = file.read().splitlines()
+        entries = file.read().splitlines()
 
-        for item in exclusion:
-            path = Path(item)
-            if not path.exists():
-                LOGGER.error("Excluded file %s does not exist.", item)
-                exclusion.remove(item)
-                valid = False
-                continue
-            if not path.is_file():
-                exclusion.remove(item)
-                LOGGER.error("Excluded file %s is not a file.", item)
-                valid = False
-                continue
+    for item in entries:
+        if not item:
+            continue
+        candidate = item
+        if base_dir and not os.path.isabs(candidate):
+            candidate = os.path.join(base_dir, candidate)
+        candidate_path = Path(candidate)
+        if not candidate_path.exists():
+            LOGGER.error("Excluded file %s does not exist.", item)
+            valid = False
+            continue
+        if not candidate_path.is_file():
+            LOGGER.error("Excluded file %s is not a file.", item)
+            valid = False
+            continue
+        resolved.append(str(candidate_path))
 
-    LOGGER.debug(exclusion)
-    return exclusion, valid
+    LOGGER.debug(resolved)
+    return resolved, valid
 
 
 def configure_logging(log_file_path=None, verbose=False):
@@ -472,8 +480,28 @@ def get_files_from_dir(directory, exts=None):
     """
     collected_files = []
     LOGGER.debug("Getting files from directory: %s", directory)
-    for path in directory.rglob("*"):
-        if path.is_file() and path.stat().st_size != 0:
+    # ``followlinks=False`` (the default) keeps ``os.walk`` from descending into
+    # symlinked directories. This is important when the checker is run from the
+    # repository root: nested Bazel modules (e.g. examples/seooc) leave ``bazel-*``
+    # convenience symlinks that point into the Bazel output base and loop back into
+    # the repository, which would otherwise cause infinite symlink expansion.
+    for root, dirs, files in os.walk(directory, followlinks=False):
+        # Prune Bazel convenience symlinks and any other symlinked directories so
+        # the walk never leaves the source tree.
+        dirs[:] = [
+            d
+            for d in dirs
+            if not d.startswith("bazel-") and not os.path.islink(os.path.join(root, d))
+        ]
+        for name in files:
+            path = Path(root) / name
+            if path.is_symlink():
+                continue
+            try:
+                if path.stat().st_size == 0:
+                    continue
+            except OSError:
+                continue
             if (
                 exts is None
                 or path.suffix[1:] in exts
@@ -827,12 +855,23 @@ def main(argv=None):
 
     exclusion = []
     exclusion_valid = True
+    workspace = os.environ.get("BUILD_WORKSPACE_DIRECTORY")
     if args.exclusion_file:
         try:
-            exclusion, exclusion_valid = load_exclusion(args.exclusion_file)
+            exclusion, exclusion_valid = load_exclusion(args.exclusion_file, workspace)
         except IOError as err:
             LOGGER.error("Failed to load exclusion list: %s", err)
             return err.errno
+
+    # When invoked via ``bazel run`` the process runs inside the runfiles tree, but
+    # the input files/directories to check live in the user's workspace. Resolve any
+    # relative input paths against ``BUILD_WORKSPACE_DIRECTORY`` so the checker
+    # operates on the real source tree instead of Bazel-generated directory artifacts
+    # (which follow nested-module ``bazel-*`` convenience symlinks and break).
+    if workspace:
+        args.inputs = [
+            i if os.path.isabs(i) else os.path.join(workspace, i) for i in args.inputs
+        ]
 
     try:
         files = collect_inputs(args.inputs, args.extensions)

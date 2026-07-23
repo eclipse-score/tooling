@@ -15,6 +15,17 @@
 
 load("@aspect_rules_py//py:defs.bzl", "py_binary")
 
+def _src_to_workspace_path(src):
+    """Converts a source label/path to a workspace-relative filesystem path.
+
+    Examples: ``//:BUILD`` -> ``BUILD``, ``//tools:foo`` -> ``tools/foo``,
+    ``cli_helper`` -> ``cli_helper``.
+    """
+    label = native.package_relative_label(src)
+    if str(label.workspace_root):
+        fail("copyright_checker: srcs must be main-repo labels, got: {}".format(src))
+    return label.package + "/" + label.name if label.package else label.name
+
 def copyright_checker(
         name,
         srcs,
@@ -86,8 +97,16 @@ def copyright_checker(
     if use_memory_map:
         args.append("--use_memory_map")
 
+    # Pass the sources to check as plain workspace-relative paths instead of
+    # ``$(locations ...)`` directory artifacts. Directory artifacts force Bazel to
+    # traverse the whole tree when assembling runfiles, following the ``bazel-*``
+    # convenience symlinks that nested Bazel modules (e.g. examples/seooc) create,
+    # which leads to "infinite symlink expansion" errors. The checker resolves these
+    # paths against ``BUILD_WORKSPACE_DIRECTORY`` at runtime (it always runs via
+    # ``bazel run``) and walks the real source tree, skipping symlinks and ``bazel-*``
+    # directories.
     for src in srcs:
-        args.append("$(locations {})".format(src))
+        args.append(_src_to_workspace_path(src))
 
     for t_name in t_names:
         if t_name == "{}.fix".format(name):
@@ -95,9 +114,9 @@ def copyright_checker(
             if remove_offset:
                 args.append("--remove_offset {}".format(remove_offset))
 
-        data = srcs[:]
-        data.append(template)
-        data.append(config)
+        # Only the tool resources need to be in runfiles; the sources to check are
+        # read directly from the workspace at runtime.
+        data = [template, config]
         if exclusion:
             data.append(exclusion)
 
