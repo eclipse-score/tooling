@@ -4,8 +4,8 @@
 #
 #    bazel run //manual_analysis:requirements.update
 #
-bazel-runfiles==1.9.0 \
-    --hash=sha256:66fb0f221e72ad904086eda6b208e873c76a2f5511ea308e7eae449534abc202
+bazel-runfiles==2.1.0 \
+    --hash=sha256:d27b4d01eed5927126781cc104aae7b65fd49f2e7f6f92f38eee39165e3ba0e4
     # via -r manual_analysis/requirements.txt.in
 prompt-toolkit==3.0.52 \
     --hash=sha256:28cde192929c8e7321de85de1ddbe736f1375148b02f2e17edd840042b1be855 \
@@ -86,7 +86,7 @@ pyyaml==6.0.3 \
     --hash=sha256:fa160448684b4e94d80416c0fa4aac48967a969efe22931448d853ada8baf926 \
     --hash=sha256:fc09d0aa354569bc501d4e787133afc08552722d3ab34836a80547331bb5d4a0
     # via -r manual_analysis/requirements.txt.in
-wcwidth==0.2.14 \
-    --hash=sha256:4d478375d31bc5395a3c55c40ccdf3354688364cd61c4f6adacaa9215d0b3605 \
-    --hash=sha256:a7bb560c8aee30f9957e5f9895805edd20602f2d7f720186dfd906e82b4982e1
+wcwidth==0.8.2 \
+    --hash=sha256:91fbef97204b96a3d4d421609b80340b760cf33e26da123ff243d76b1fda8dda \
+    --hash=sha256:d63947694a0539a1d51e01eda7caf800c291020e6cdd7e28ad7b14dd33ad4f85
     # via prompt-toolkit
