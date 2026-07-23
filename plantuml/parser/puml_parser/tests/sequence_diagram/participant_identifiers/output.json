@@ -1,0 +1,106 @@
+{
+  "participant_identifiers.puml": {
+    "name": "participant_identifiers",
+    "statements": [
+      {
+        "ParticipantDef": {
+          "participant_type": "Actor",
+          "identifier": {
+            "display_name": "External User",
+            "alias": "User"
+          },
+          "stereotype": null,
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
+        }
+      },
+      {
+        "ParticipantDef": {
+          "participant_type": "Participant",
+          "identifier": {
+            "display_name": "Sample Service",
+            "alias": "Service"
+          },
+          "stereotype": null,
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
+        }
+      },
+      {
+        "ParticipantDef": {
+          "participant_type": "Boundary",
+          "identifier": {
+            "display_name": "Gateway",
+            "alias": "GatewayAlias"
+          },
+          "stereotype": null,
+          "source_location": {
+            "file": "",
+            "line": 18
+          }
+        }
+      },
+      {
+        "ParticipantDef": {
+          "participant_type": "Control",
+          "identifier": {
+            "display_name": "Controller",
+            "alias": null
+          },
+          "stereotype": null,
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
+        }
+      },
+      {
+        "ParticipantDef": {
+          "participant_type": "Queue",
+          "identifier": {
+            "display_name": "Work Queue",
+            "alias": null
+          },
+          "stereotype": null,
+          "source_location": {
+            "file": "",
+            "line": 20
+          }
+        }
+      },
+      {
+        "ParticipantDef": {
+          "is_create": true,
+          "participant_type": "Participant",
+          "identifier": {
+            "display_name": "Created Worker",
+            "alias": "Worker"
+          },
+          "stereotype": null,
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
+        }
+      },
+      {
+        "ParticipantDef": {
+          "participant_type": "Participant",
+          "identifier": {
+            "display_name": "LastOrder",
+            "alias": null
+          },
+          "stereotype": "component",
+          "source_location": {
+            "file": "",
+            "line": 26
+          }
+        }
+      }
+    ]
+  }
+}

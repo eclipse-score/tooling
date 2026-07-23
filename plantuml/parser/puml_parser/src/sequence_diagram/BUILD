@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "puml_parser_sequence",
@@ -46,14 +46,17 @@ rust_test(
     ],
 )
 
-# Job 1: Parse PUML file with syntax parser, output JSON
-rust_binary(
-    name = "syntax_parse",
-    srcs = ["src/syntax_parse_main.rs"],
-    visibility = ["//visibility:public"],
+rust_test(
+    name = "sequence_integration_test",
+    srcs = ["test/sequence_integration_test.rs"],
+    args = [
+        "--nocapture",
+    ],
+    data = ["//plantuml/parser/puml_parser/tests/sequence_diagram:sequence_diagram_files"],
     deps = [
         ":puml_parser_sequence",
-        "@crates//:serde",
-        "@crates//:serde_json",
+        "//plantuml/parser/integration_test:test_framework",
+        "//plantuml/parser/puml_parser:parser_core",
+        "//plantuml/parser/puml_utils",
     ],
 )

@@ -11,16 +11,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-pub mod syntax_ast;
-mod syntax_parser;
+pub mod sequence_ast;
+mod sequence_parser;
 
-pub use syntax_ast::{
+pub use sequence_ast::{
     ActivateCmd, Arrow, CreateCmd, DeactivateCmd, DestroyCmd, ExternalEndpoint, GroupCmd,
     GroupType, Message, MessageContent, ParticipantDef, ParticipantIdentifier, ParticipantType,
     SeqPumlDocument, Statement,
 };
 
-pub use syntax_parser::{PumlSequenceParser, SequenceError};
+pub use sequence_parser::{PumlSequenceParser, SequenceError};
 
 /// Parse a PlantUML sequence diagram and return the document name and statements
 /// This is a convenience function for backwards compatibility with tests

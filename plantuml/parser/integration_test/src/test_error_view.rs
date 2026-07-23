@@ -15,7 +15,7 @@ use std::path::Path;
 
 use puml_parser::{
     ActivityParserError, BaseParseError, ClassError, ComponentError, IncludeExpandError,
-    IncludeParseError, PreprocessError, ProcedureExpandError, ProcedureParseError,
+    IncludeParseError, PreprocessError, ProcedureExpandError, ProcedureParseError, SequenceError,
 };
 use puml_resolver::{
     ActivityResolverError, ClassPumlResolverError, ComponentResolverError, SequenceResolverError,
@@ -216,6 +216,18 @@ impl ErrorView for ComponentError {
         match self {
             ComponentError::Base(e) => e.project(base_dir),
             ComponentError::InvalidStatement(message) => {
+                let _ = base_dir;
+                ProjectedError::new("InvalidStatement").with_field("message", message.to_string())
+            }
+        }
+    }
+}
+
+impl ErrorView for SequenceError {
+    fn project(&self, base_dir: &Path) -> ProjectedError {
+        match self {
+            SequenceError::Base(e) => e.project(base_dir),
+            SequenceError::InvalidStatement(message) => {
                 let _ = base_dir;
                 ProjectedError::new("InvalidStatement").with_field("message", message.to_string())
             }
