@@ -11,13 +11,19 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml MySeooc_StaticDesign
+@startuml SeoocExample_FTA
 
-package "MySeooc" as MySeooc <<SEooC>> {
-    component "KvsComponent" as KvsComponent <<component>> {
-        component "KeyValueStore" as KeyValueStore <<unit>>
-        component "StorageBackend" as StorageBackend <<unit>>
-    }
-}
+!include fta_metamodel.puml
+
+$TopEvent("SampleFailureMode takes over the world", "SampleLibrary.SampleFailureMode")
+
+$OrGate("OG1", "SampleLibrary.SampleFailureMode")
+
+$IntermediateEvent("SampleFailureMode is Angry", "IEF", "OG1")
+$BasicEvent("Just bad luck", "SampleLibrary.JustBadLuck", "OG1")
+
+$AndGate("AG2", "IEF")
+$BasicEvent("No More Cookies", "SampleLibrary.NoMoreCookies", "AG2")
+$BasicEvent("No More Coffee", "SampleLibrary.NoMoreCoffee", "AG2")
 
 @enduml

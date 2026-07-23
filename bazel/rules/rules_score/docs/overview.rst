@@ -17,9 +17,10 @@ Overview
 
 ``rules_score`` organises safety-critical software artefacts into four groups:
 
-**Documentation Rule** — the generic Sphinx builder underlying all other rules:
+**Documentation Rules** — Sphinx builder and supporting helpers:
 
 - :ref:`sphinx_module <rule-sphinx-module>` — Builds Sphinx HTML from RST/MD sources with dependency merging
+- :ref:`filter_execpath <rule-filter-execpath>` — Resolves a build output path into a Sphinx ``-D`` flag at analysis time *(advanced)*
 
 **Artifact Rules** — declare individual process work products:
 
@@ -27,6 +28,7 @@ Overview
 - :ref:`feature_requirements <rule-feature-requirements>` — High-level feature specifications
 - :ref:`component_requirements <rule-component-requirements>` — Component-level requirements
 - :ref:`assumptions_of_use <rule-assumptions-of-use>` — Safety-relevant operating conditions imposed on the integrator
+- :ref:`glossary <rule-glossary>` — Glossary pages included in the generated documentation
 - :ref:`architectural_design <rule-architectural-design>` — Software architecture (static, dynamic, public API)
 - :ref:`unit_design <rule-unit-design>` — Code-level design diagrams scoped to a single unit
 - :ref:`fmea <rule-fmea>` — Failure Mode and Effects Analysis (failure modes, FTA, control measures)
@@ -40,10 +42,61 @@ Overview
 
 All rules support cross-module dependencies for sphinx-needs integration and HTML merging.
 
-Architecture diagram
---------------------
+Quick Reference
+---------------
 
-.. uml:: _assets/rules_score_overview.puml
-   :align: center
-   :alt: Overview of rules_score architecture
-   :width: 100%
+.. list-table::
+   :header-rows: 1
+   :widths: 28 20 52
+
+   * - Rule
+     - Category
+     - User Guide
+   * - :ref:`sphinx_module <rule-sphinx-module>`
+     - Documentation
+     - :doc:`integration_guide`
+   * - :ref:`filter_execpath <rule-filter-execpath>`
+     - Documentation
+     - :ref:`Rule reference <rule-filter-execpath>` *(advanced)*
+   * - :ref:`assumed_system_requirements <rule-assumed-system-req>`
+     - Artifact
+     - :doc:`user_guide/requirements`
+   * - :ref:`feature_requirements <rule-feature-requirements>`
+     - Artifact
+     - :doc:`user_guide/requirements`
+   * - :ref:`component_requirements <rule-component-requirements>`
+     - Artifact
+     - :doc:`user_guide/requirements`
+   * - :ref:`assumptions_of_use <rule-assumptions-of-use>`
+     - Artifact
+     - :doc:`user_guide/assumptions_of_use`
+   * - :ref:`glossary <rule-glossary>`
+     - Artifact
+     - :ref:`Rule reference <rule-glossary>`
+   * - :ref:`architectural_design <rule-architectural-design>`
+     - Artifact
+     - :doc:`user_guide/architectural_design`
+   * - :ref:`unit_design <rule-unit-design>`
+     - Artifact
+     - :doc:`user_guide/unit_design`
+   * - :ref:`fmea <rule-fmea>`
+     - Artifact
+     - :doc:`user_guide/dependability_analysis`
+   * - :ref:`dependability_analysis <rule-dependability-analysis>`
+     - Artifact
+     - :doc:`user_guide/dependability_analysis`
+   * - :ref:`unit <rule-unit>`
+     - Structural
+     - :doc:`user_guide/architectural_design`
+   * - :ref:`component <rule-component>`
+     - Structural
+     - :doc:`user_guide/architectural_design`
+   * - :ref:`dependable_element <rule-dependable-element>`
+     - Structural
+     - :doc:`user_guide/general`
+
+.. seealso::
+
+   :doc:`User Guide <user_guide/index>` — step-by-step guides for every rule
+
+   :doc:`Rule Reference <rule_reference>` — complete attribute reference for all rules

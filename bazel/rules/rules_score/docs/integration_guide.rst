@@ -15,6 +15,17 @@
 Integration Guide
 =================
 
+Build Flow
+----------
+
+The diagram below shows how input files flow through the Bazel rules to
+produce the final outputs.
+
+.. uml:: _assets/seooc_flow.puml
+   :align: center
+   :alt: SEooC build flow
+   :width: 90%
+
 .. _rule-toolchain-configuration:
 
 Toolchain Setup

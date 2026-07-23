@@ -28,7 +28,7 @@
 #
 
 load(
-    "//bazel/rules/rules_score:rules_score.bzl",
+    "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
     "component",
     "dependable_element",
@@ -40,7 +40,7 @@ cc_library(
     srcs = [],
     visibility = ["//visibility:public"],
     deps = [
-        "//bazel/rules/rules_score/examples/seooc:sample_library",
+        "@seooc//:sample_library",
     ],
 )
 
@@ -51,7 +51,7 @@ architectural_design(
 
 unit(
     name = "integrator_unit",
-    scope = ["//bazel/rules/rules_score/examples/integrator:__pkg__"],
+    scope = ["//:__pkg__"],
     tests = [],
     unit_design = [],
     implementation = [":integrator_lib"],
@@ -61,7 +61,7 @@ component(
     name = "integrator_component",
     components = [":integrator_unit"],
     requirements = [
-        "//bazel/rules/rules_score/examples/integrator/docs/requirements:component_requirements",
+        "//docs/requirements:component_requirements",
     ],
     tags = ["manual"],
     tests = [],
@@ -79,8 +79,8 @@ dependable_element(
     dependability_analysis = [],
     integrity_level = "B",
     requirements = [
-        "//bazel/rules/rules_score/examples/integrator/docs/requirements:feature_requirements",
+        "//docs/requirements:feature_requirements",
     ],
     tests = [],
-    deps = ["//bazel/rules/rules_score/examples/seooc:safety_software_seooc_example"],
+    deps = ["@seooc//:safety_software_seooc_example"],
 )
