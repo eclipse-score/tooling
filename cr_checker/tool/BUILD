@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load("@aspect_rules_py//py:defs.bzl", "py_library")
+load("@pip_cr_checker//:requirements.bzl", "requirement")
 
 py_library(
     name = "cr_checker_lib",
@@ -18,4 +19,7 @@ py_library(
         "cr_checker.py",
     ],
     visibility = ["//visibility:public"],
+    deps = [
+        requirement("rapidfuzz"),
+    ],
 )

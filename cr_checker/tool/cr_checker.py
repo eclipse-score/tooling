@@ -12,25 +12,55 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""The tool for checking if artifacts have proper copyright."""
+"""The tool for checking if artifacts have a proper license header."""
 
 import argparse
+import contextlib
+import enum
+import functools
 import json
 import logging
 import mmap
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+
+from rapidfuzz import fuzz
 
 BYTES_TO_READ = 4 * 1024
 DEFAULT_AUTHOR = "Contributors to the Eclipse Foundation"
 
 BORDER_FILL_PATTERN = re.compile(r"([/*#'\-=+])\1{4,}")
 FILL_CHARS_REGEX = r"[/*#'\-=+]+"
+
+# Minimum rapidfuzz similarity (0-100) an existing, wrong-format header must
+# have against the rendered template for `--fix` to treat it as a formatting
+# drift (border style, indentation, a stray typo, ...) that is safe to strip
+# and reformat automatically. Headers scoring below this are left untouched
+# and merely reported, since they may be a genuinely different license text
+# that must never be silently overwritten.
+HEADER_SIMILARITY_THRESHOLD = 80.0
+
+# Max chars allowed between "Copyright" and "SPDX-License-Identifier" for them
+# to be considered the same header block. The longest real gap across every
+# section of the shipped templates.ini is ~365 chars; 512 leaves comfortable
+# room for a longer author name or a "YYYY-YYYY" range without ever letting
+# the match wander across unrelated content (e.g. a whole file body) to reach
+# a coincidental, later mention of both words.
+COPYRIGHT_BLOCK_MAX_GAP = 512
+# A trailing ``: <license-expr>`` is required after "SPDX-License-Identifier"
+# so plain-English mentions of the phrase (e.g. in a docstring or comment
+# explaining what this tool does) aren't mistaken for an actual SPDX tag.
+COPYRIGHT_BLOCK_PATTERN = re.compile(
+    rf"Copyright.{{0,{COPYRIGHT_BLOCK_MAX_GAP}}}?SPDX-License-Identifier\s*:[^\n]*\n?",
+    re.IGNORECASE | re.DOTALL,
+)
 
 LOGGER = logging.getLogger()
 
@@ -209,38 +239,50 @@ def load_templates(path):
     return templates
 
 
-def load_exclusion(path):
+def load_exclusion(path, base_dir=None):
     """
     Loads the list of files being excluded from the copyright check.
 
     Args:
         path (str): Path to the exclusion file.
+        base_dir (str, optional): Directory the (repo-relative) exclusion entries are
+                                  resolved against. When set, the returned paths are
+                                  absolute so they can be matched against the resolved
+                                  input file paths.
 
     Returns:
         tuple(list, bool): a list of files that are excluded from the copyright check and a boolean indicating whether
                            all paths listed in the exclusion file exist and are files.
     """
 
-    exclusion = []
+    resolved = []
     valid = True
     with open(path, "r", encoding="utf-8") as file:
-        exclusion = file.read().splitlines()
+        entries = file.read().splitlines()
 
-        for item in exclusion:
-            path = Path(item)
-            if not path.exists():
-                LOGGER.error("Excluded file %s does not exist.", item)
-                exclusion.remove(item)
-                valid = False
-                continue
-            if not path.is_file():
-                exclusion.remove(item)
-                LOGGER.error("Excluded file %s is not a file.", item)
-                valid = False
-                continue
+    for item in entries:
+        if not item:
+            continue
+        candidate = item
+        if base_dir and not os.path.isabs(candidate):
+            candidate = os.path.join(base_dir, candidate)
+        candidate_path = Path(candidate)
+        if not candidate_path.exists():
+            LOGGER.error("Excluded file %s does not exist.", item)
+            valid = False
+            continue
+        if not candidate_path.is_file():
+            LOGGER.error("Excluded file %s is not a file.", item)
+            valid = False
+            continue
+        # Resolved so matching against a file's own resolved path (see
+        # `process_files`) isn't tripped up by relative-vs-absolute or
+        # symlink differences between the two representations of the same
+        # file.
+        resolved.append(str(candidate_path.resolve()))
 
-    LOGGER.debug(exclusion)
-    return exclusion, valid
+    LOGGER.debug(resolved)
+    return resolved, valid
 
 
 def configure_logging(log_file_path=None, verbose=False):
@@ -267,328 +309,852 @@ def configure_logging(log_file_path=None, verbose=False):
     LOGGER.addHandler(handler)
 
 
-def detect_shebang_offset(path, encoding):
+BOM = "\ufeff"
+
+
+def _strip_bom(text):
+    """Strips a leading UTF-8 BOM, if present.
+
+    Without this, a BOM would sit at char offset 0 and every offset-0-anchored
+    header match would spuriously fail, making a compliant file look like it's
+    missing its header.
+
+    Returns:
+        tuple(str, bool): the text without a leading BOM, and whether one was
+        present (so a fix can restore it verbatim on write).
     """
-    Detects if a file starts with a shebang (#!) and returns the byte offset
-    to skip it (length of the first line including newline).
+    if text.startswith(BOM):
+        return text[len(BOM) :], True
+    return text, False
+
+
+def _detect_line_ending(text):
+    """Returns the dominant line ending ("\\r\\n" or "\\n") used by `text`."""
+    return "\r\n" if "\r\n" in text else "\n"
+
+
+def _normalize_line_endings(text):
+    """Converts CRLF to LF so all scanning/matching only ever has to deal with
+    a single line-ending convention (templates and regexes are LF-based)."""
+    return text.replace("\r\n", "\n")
+
+
+def _restore_line_endings(text, line_ending):
+    """Converts LF back to `line_ending` (a no-op for LF files)."""
+    return text if line_ending == "\n" else text.replace("\n", line_ending)
+
+
+def _skip_blank_lines(text, pos):
+    """Advances `pos` in `text` (LF-normalized) past any blank lines starting
+    right there, returning the new position."""
+    while pos < len(text):
+        line_end = text.find("\n", pos)
+        line = text[pos : line_end + 1] if line_end != -1 else text[pos:]
+        if line.strip():
+            break
+        pos = line_end + 1 if line_end != -1 else len(text)
+    return pos
+
+
+def _match_shebang(text):
+    """Prefix matcher: returns the char length of a leading shebang line
+    (including its trailing newline), or 0 if `text` doesn't start with one.
+
+    `#![...]` is Rust's inner-attribute syntax (e.g. `#![cfg_attr(...)]`), not
+    a shebang, even though it also starts with `#!`; a real shebang is always
+    followed directly by an interpreter path (`#!/usr/bin/env ...`) or a
+    space before one (`#! /usr/bin/env ...`), never `[`.
+    """
+    if not text.startswith("#!") or text.startswith("#!["):
+        return 0
+    line_end = text.find("\n")
+    return len(text) if line_end == -1 else line_end + 1
+
+
+# Ordered registry of recognized "must stay above the header" preamble kinds.
+# Each entry is (name, matcher) where matcher(text) returns the number of
+# characters it consumes at the current start-of-file position, or 0 if it
+# doesn't apply. This is the single place to extend with new preamble kinds
+# later (e.g. a PEP 263 encoding cookie, an XML declaration, ...) without
+# touching the scanning/classification/fix logic itself. Currently only the
+# shebang is recognized.
+PREFIX_MATCHERS = [
+    ("shebang", _match_shebang),
+]
+
+
+def _match_prefix(text):
+    """Runs the prefix matcher registry once at the top of `text`.
+
+    Returns:
+        tuple(int, str | None): the char offset where the recognized preamble
+        (plus any immediately trailing blank lines) ends, and its kind (e.g.
+        "shebang"), or (0, None) if nothing matched.
+    """
+    for name, matcher in PREFIX_MATCHERS:
+        consumed = matcher(text)
+        if consumed:
+            return _skip_blank_lines(text, consumed), name
+    return 0, None
+
+
+def load_text_from_file(path, length, encoding):
+    """
+    Reads the first `length` characters of a file, without translating line
+    endings, so callers can detect/normalize them themselves.
 
     Args:
         path (Path): A `pathlib.Path` object pointing to the file.
+        length (int): Number of characters to read.
         encoding (str): Encoding type to use when reading the file.
 
     Returns:
-        int: The byte length of the shebang line (including newline) if present,
-             otherwise 0.
+        str: The portion of the file read.
     """
-    try:
-        with open(path, "r", encoding=encoding) as handle:
-            first_line = handle.readline()
-            if first_line.startswith("#!"):
-                # Calculate byte length of the first line
-                byte_length = len(first_line.encode(encoding))
-                while True:
-                    next_char = handle.read(1)
-                    if not next_char or next_char not in ("\n", "\r"):
-                        break
-                    byte_length += len(next_char.encode(encoding))
-                LOGGER.debug("Detected shebang in %s with offset %d bytes", path, byte_length)
-                return byte_length
-    except (IOError, OSError) as err:
-        LOGGER.debug("Could not detect shebang in %s: %s", path, err)
-    return 0
+    LOGGER.debug("Reading first %d characters from file: %s [%s]", length, path, encoding)
+    with open(path, "r", encoding=encoding, newline="") as handle:
+        return handle.read(length)
 
 
-def load_text_from_file(path, header_length, encoding, offset):
+def load_text_from_file_with_mmap(path, length, encoding):
     """
-    Reads the first portion of a file, up to `header_length` characters
-    plus an additional offset if provided.
+    Maps the file and reads only the first `length` bytes.
 
     Args:
         path (Path): A `pathlib.Path` object pointing to the file.
-        header_length (int): Number of characters to read for the header.
-        encoding (str): Encoding type to use when reading the file.
-        offset (int): Additional number of characters to read beyond
-                      `header_length`, typically used to account for extra
-                      lines (such as a shebang) before the header.
-
-    Returns:
-        str: The portion of the file read, which should contain the header if present,
-             including any extra characters specified by `offset`.
-    """
-    total_length = header_length + offset
-    LOGGER.debug("Reading first %d characters from file: %s [%s]", total_length, path, encoding)
-    with open(path, "r", encoding=encoding) as handle:
-        content = handle.read(total_length)
-        return content[offset:] if offset else content
-
-
-def load_text_from_file_with_mmap(path, header_length, encoding, offset):
-    """
-    Maps the file and reads only the first `header_length` bytes plus
-    an additional offset if provided.
-
-    Args:
-        path (Path): A `pathlib.Path` object pointing to the file.
-        header_length (int): Length of the header text to check.
+        length (int): Length of the header text to check.
         encoding (str): String for setting decoding type.
-        offset (int): Additional number of characters to read beyond
-                      `header_length`, typically used to account for extra
-                      lines (such as a shebang) before the header.
 
     Returns:
-        str: The portion of the file read, which should contain the header if present.
+        str: The portion of the file read.
     """
-
     file_size = os.path.getsize(path)
-    total_length = header_length + offset
-    length = min(total_length, file_size)
+    length = min(length, file_size)
 
     if not length:
         LOGGER.warning("File %s is empty [length: %d]. Return empty string.", path, length)
         return ""
 
-    LOGGER.debug("Memory mapping first %d bytes from file: %s", total_length, path)
-    with open(path, "r", encoding=encoding) as handle:
+    LOGGER.debug("Memory mapping first %d bytes from file: %s", length, path)
+    with open(path, "r", encoding=encoding, newline="") as handle:
         with mmap.mmap(handle.fileno(), length=length, access=mmap.ACCESS_READ) as fmap:
-            return fmap[:length].decode(encoding)[offset:]
+            return fmap[:length].decode(encoding, errors="replace")
 
 
-def has_copyright(path, template, use_mmap, encoding, offset, config=None):
+def load_header_text(path, length, encoding, use_mmap=False):
     """
-    Checks if the specified copyright text is present in the beginning of a file.
+    Reads the file header once, dispatching between a plain read and a
+    memory-mapped read depending on `use_mmap`.
 
     Args:
-        path (Path): A `pathlib.Path` object pointing to the file to check.
-        template (str): The copyright text to search for at the beginning
-                              of the file.
+        path (Path): A `pathlib.Path` object pointing to the file to read.
+        length (int): Number of characters/bytes to read for the header.
+        encoding (str): Encoding type to use when reading the file.
         use_mmap (bool): If True, uses memory-mapped file reading for efficient
                          large file handling.
-        encoding (str): Encoding type to use when reading the file.
-        offset (int): Additional number of characters to read beyond the length
-                      of `copyright_text`, used to account for extra content
-                      (such as a shebang) before the copyright text.
-        config (Path): Path to the config JSON file where configuration
-                variables are stored (e.g. years for copyright headers).
 
     Returns:
-        bool: True if the file contains the copyright text, False if it is missing.
+        str: The portion of the file read, which should contain the header if present.
+    """
+    reader = load_text_from_file_with_mmap if use_mmap else load_text_from_file
+    return reader(path, length, encoding)
 
-    Raises:
-        IOError: If there is an error opening or reading the file.
+
+@dataclass(frozen=True)
+class Block:
+    """A copyright-shaped block (matched by ``COPYRIGHT_BLOCK_PATTERN``)
+    found while scanning a file, including any directly adjacent border/fill
+    lines and trailing blank lines -- i.e. the whole header block a tool like
+    this one would have produced, not just the legal text itself."""
+
+    start: int
+    end: int
+    text: str
+
+
+@dataclass(frozen=True)
+class HeaderLayout:
+    """Where everything is in a file's header area, from a single scan.
+
+    This is the single "where is everything" model shared by both the
+    read-only check path (`classify`) and the mutating fix path
+    (`normalize_header`), replacing what used to be two independently
+    derived views: shebang-offset detection for the missing-header case, and
+    block-span search for the wrong-format case.
+
+    Attributes:
+        prefix_end (int): Char offset where the recognized preamble (see
+                          `PREFIX_MATCHERS`), plus any trailing blank lines,
+                          ends. 0 if nothing was recognized.
+        prefix_kind (str | None): Which preamble kind matched (e.g.
+                                  "shebang", or "manual" for `--offset`), or
+                                  None.
+        blocks (list[Block]): Every copyright-shaped block found at or after
+                              `prefix_end`, in file order. Empty means no
+                              header was found at all (MISSING); more than
+                              one means DUPLICATE.
+        leading_junk (str): Real, non-blank content sitting between
+                            `prefix_end` and `blocks[0].start` -- i.e.
+                            something that isn't the recognized preamble and
+                            isn't the header itself. Empty when there's
+                            nothing there, or when `blocks` is empty (a fully
+                            missing header has nothing to be "misplaced"
+                            relative to).
     """
 
-    load_text = load_text_from_file_with_mmap if use_mmap else load_text_from_file
+    prefix_end: int
+    prefix_kind: str | None
+    blocks: list
+    leading_junk: str
 
-    lines = template.splitlines(keepends=True)
-    regex_parts = []
+
+def _find_blocks(text, start):
+    """Finds every copyright-shaped block in `text` from `start` onward.
+
+    Mirrors the old `find_header_block_span`, looped to collect every match
+    (needed to tell a single misplaced-but-correct header apart from
+    genuine duplicates) instead of stopping at the first.
+    """
+    lines = text.splitlines(keepends=True)
+    line_offsets = [0]
     for line in lines:
+        line_offsets.append(line_offsets[-1] + len(line))
+
+    blocks = []
+    search_from = start
+    while True:
+        match = COPYRIGHT_BLOCK_PATTERN.search(text, search_from)
+        if not match:
+            break
+
+        start_idx = next(i for i, off in enumerate(line_offsets) if off > match.start()) - 1
+        end_idx = next((i for i, off in enumerate(line_offsets) if off >= match.end()), len(lines))
+
+        while start_idx > 0 and BORDER_FILL_PATTERN.search(lines[start_idx - 1].strip()):
+            start_idx -= 1
+        while end_idx < len(lines) and BORDER_FILL_PATTERN.search(lines[end_idx].strip()):
+            end_idx += 1
+        while end_idx < len(lines) and not lines[end_idx].strip():
+            end_idx += 1
+
+        block_start, block_end = line_offsets[start_idx], line_offsets[end_idx]
+        blocks.append(Block(block_start, block_end, text[block_start:block_end]))
+        search_from = max(block_end, match.end())
+
+    return blocks
+
+
+def locate_header(text, manual_prefix_offset=0):
+    """Scans `text` once and returns where everything is (see `HeaderLayout`).
+
+    Shared verbatim by both the check path (`classify`) and the fix path
+    (`normalize_header`) -- the single source of truth for "what's a
+    recognized preamble, what's the header, what's neither" that used to be
+    computed two different, independently-evolving ways.
+
+    Args:
+        text (str): The decoded, BOM-stripped, LF-normalized content to scan
+                    (a bounded header window in check mode, or the whole
+                    file in fix mode).
+        manual_prefix_offset (int): If set (via `--offset`), overrides
+                                    auto-detection and forces this many
+                                    characters (plus trailing blank lines) to
+                                    be treated as the recognized preamble --
+                                    an escape hatch for preamble kinds the
+                                    registry doesn't (yet) recognize.
+
+    Returns:
+        HeaderLayout: see above.
+    """
+    if manual_prefix_offset:
+        prefix_end, prefix_kind = _skip_blank_lines(text, manual_prefix_offset), "manual"
+    else:
+        prefix_end, prefix_kind = _match_prefix(text)
+
+    blocks = _find_blocks(text, prefix_end)
+
+    leading_junk = ""
+    if blocks:
+        candidate = text[prefix_end : blocks[0].start]
+        if candidate.strip():
+            leading_junk = candidate
+
+    return HeaderLayout(prefix_end, prefix_kind, blocks, leading_junk)
+
+
+class Status(enum.Enum):
+    """Classification of a file's header state (check-mode diagnostics)."""
+
+    MISSING = "missing"
+    COMPLIANT = "compliant"
+    MISPLACED = "misplaced"
+    WRONG_FORMAT = "wrong_format"
+    MISPLACED_AND_WRONG_FORMAT = "misplaced_and_wrong_format"
+    DUPLICATE = "duplicate"
+
+
+# Statuses `--fix` is allowed to act on automatically. WRONG_FORMAT and
+# MISPLACED_AND_WRONG_FORMAT are additionally gated on the similarity
+# threshold at the call site (see `_process_file_fix`) -- a low score means
+# the text is probably an unrelated license, which must never be silently
+# rewritten.
+FIXABLE_STATUSES = {
+    Status.MISSING,
+    Status.MISPLACED,
+    Status.WRONG_FORMAT,
+    Status.MISPLACED_AND_WRONG_FORMAT,
+}
+
+
+@functools.lru_cache(maxsize=None)
+def compile_template_regex(template):
+    """
+    Builds and compiles the header-matching regex for a template.
+
+    Results are cached per template string so the (relatively expensive) regex
+    construction happens once per extension rather than once per file.
+
+    Args:
+        template (str): The copyright template text.
+
+    Returns:
+        re.Pattern: The compiled regex matching a conforming header.
+    """
+    regex_parts = []
+    for line in template.splitlines(keepends=True):
         stripped_line = line.rstrip("\n")
         if BORDER_FILL_PATTERN.search(stripped_line):
             regex_parts.append(line_to_flexible_regex(line))
         else:
             formatted = line.format(year=r"\\d\{4\}\(-\\d\{4\}\)\?", author=r"\.\*")
             regex_parts.append(convert_bre_to_regex(formatted))
-    template_regex = "".join(regex_parts) + "\n?"
+    return re.compile("".join(regex_parts) + "\n?")
 
-    if re.match(template_regex, load_text(path, BYTES_TO_READ, encoding, offset)):
-        LOGGER.debug("File %s has copyright.", path)
+
+def _blocks_in_duplicate_window(layout, template):
+    """Blocks close enough to `layout.prefix_end` to count as (part of) the
+    file's real header, for both DUPLICATE detection and rewriting.
+
+    Shared by `classify` and `normalize_header` so the two can never
+    disagree about which blocks are "the header" -- previously `classify`
+    only ever scored/duplicate-checked blocks within this window, while
+    `normalize_header` deleted through the *last* block found anywhere in
+    the file, so a coincidental copyright-shaped mention far past a
+    fixable header (e.g. deep in a docstring or example) could make
+    `--fix` silently delete everything in between.
+
+    Args:
+        layout (HeaderLayout): The result of `locate_header`.
+        template (str): The copyright template, used to size the window
+                        (``2 * len(template)`` chars from `prefix_end`).
+
+    Returns:
+        list[Block]: The leading subsequence of `layout.blocks` within the
+        window, in file order.
+    """
+    window = 2 * len(template)
+    return [b for b in layout.blocks if b.start - layout.prefix_end < window]
+
+
+def _is_old_wrapper_prefix(leading_junk, template):
+    """True if `leading_junk` is just a leftover fragment of an OLD-style
+    header's own opening comment-wrapper marker (e.g. a bare ``<!--`` or
+    ``..`` line from a previous version of the md/rst templates) that
+    `_find_blocks`'s border-adjacency scan -- deliberately template-agnostic,
+    so it only recognizes repeated-fill-char borders, not arbitrary comment
+    delimiters -- didn't absorb into the block itself. Distinguished from
+    genuine, unrelated content that happens to sit before the header (a real
+    MISPLACED case) by checking whether it's a prefix of the *current*
+    template's own first line: every shipped template keeps its wrapper
+    marker on the first line (``<!-- ...`` for md, ``..`` for rst, ``# ...``/
+    ``// ...``/... for the rest), so a match here means the file used an
+    older/differently-formatted version of the very same wrapper, not
+    something else entirely. Also requires the fragment to contain no
+    alphanumeric characters, so real (if terse) preceding content isn't
+    swallowed by coincidence.
+    """
+    stripped = leading_junk.strip()
+    if not stripped or any(ch.isalnum() for ch in stripped):
+        return False
+    first_template_line = template.splitlines()[0] if template else ""
+    return first_template_line.startswith(stripped)
+
+
+def _strip_old_wrapper_suffix(remainder, template):
+    """Drops a leading line from `remainder` if it's just a leftover
+    fragment of an OLD-style header's own closing comment-wrapper marker
+    (e.g. a bare ``-->`` left over from an older md header written before
+    the wrapper was folded onto the border lines) that `_find_blocks`'s
+    border-adjacency scan didn't absorb into the block. Symmetric
+    counterpart to `_is_old_wrapper_prefix` for the closing side -- checks
+    whether the candidate line is a suffix of the *current* template's own
+    last line. A no-op when `remainder` doesn't start with such a fragment.
+    """
+    newline_idx = remainder.find("\n")
+    first_line = remainder if newline_idx == -1 else remainder[: newline_idx + 1]
+    stripped = first_line.strip()
+    if not stripped or any(ch.isalnum() for ch in stripped):
+        return remainder
+    last_template_line = template.splitlines()[-1] if template else ""
+    if not last_template_line.endswith(stripped):
+        return remainder
+    return remainder[len(first_line) :].lstrip("\n")
+
+
+def classify(layout, template, config):
+    """Classifies a file's header state from its `HeaderLayout`.
+
+    Args:
+        layout (HeaderLayout): The result of `locate_header`.
+        template (str): The copyright template the header should match.
+        config (Path | None): Path to the config JSON file, used to render
+                              the template's placeholders for comparison.
+
+    Returns:
+        tuple(Status, float | None): the status, and (when there's exactly
+        one block to score) the rapidfuzz similarity (0-100) between that
+        block and the rendered template -- used both for the
+        WRONG_FORMAT/MISPLACED_AND_WRONG_FORMAT diagnostic and to gate
+        whether `--fix` may safely rewrite it. None for MISSING/DUPLICATE,
+        which have no single block to score.
+
+    Note:
+        Only blocks starting within ``2 * len(template)`` characters of
+        ``layout.prefix_end`` count toward DUPLICATE detection -- the same
+        window the original implementation used -- so that a copyright-shaped
+        mention deep inside a docstring/comment/string literal further into
+        the file (e.g. an example header, or literally this module's own
+        ``COPYRIGHT_BLOCK_PATTERN`` regex source) isn't mistaken for a
+        duplicate of a real header near the top.
+    """
+    if not layout.blocks:
+        return Status.MISSING, None
+
+    blocks_in_window = _blocks_in_duplicate_window(layout, template)
+    if len(blocks_in_window) > 1:
+        return Status.DUPLICATE, None
+
+    block = layout.blocks[0]
+    rendered = template.format(year=datetime.now().year, author=get_author_from_config(config))
+    template_regex = compile_template_regex(template)
+
+    # Some templates have a literal, non-border prefix line before the
+    # border itself (e.g. the RST comment marker ".." before the "# ****"
+    # border), which `_find_blocks`'s border-adjacency scan -- deliberately
+    # template-agnostic -- doesn't recognize and so reports as
+    # `leading_junk`. Before treating it as genuine misplaced content, check
+    # whether the junk plus the block together are actually just the
+    # template's own (longer) literal prefix.
+    if layout.leading_junk:
+        extended = layout.leading_junk + block.text
+        if template_regex.match(extended):
+            return Status.COMPLIANT, fuzz.ratio(extended, rendered)
+
+    similarity = fuzz.ratio(block.text, rendered)
+    correct_format = bool(template_regex.match(block.text))
+    misplaced = bool(layout.leading_junk) and not _is_old_wrapper_prefix(layout.leading_junk, template)
+
+    if correct_format and not misplaced:
+        return Status.COMPLIANT, similarity
+    if correct_format and misplaced:
+        return Status.MISPLACED, similarity
+    if misplaced:
+        return Status.MISPLACED_AND_WRONG_FORMAT, similarity
+    return Status.WRONG_FORMAT, similarity
+
+
+def duplicate_similarity(blocks):
+    """
+    Best-effort rapidfuzz similarity (0-100) between the two most similar
+    detected blocks, for diagnostics only.
+
+    `classify`'s DUPLICATE trigger is simply "more than one block found" --
+    by design, cross-tool duplicates such as a leftover REUSE-style header
+    sitting next to a cr_checker one are structurally very different, so
+    gating *detection* on similarity would regress that case. This helper
+    only *describes* what was found, for the log message: a high score means
+    the same header was likely pasted twice (safe to just delete the extra
+    copy); a low score means two structurally different header blocks are
+    present (e.g. a REUSE/cr_checker leftover pair), which need a manual
+    merge rather than a blind deletion.
+
+    Args:
+        blocks (list[Block]): The blocks found by `locate_header`.
+
+    Returns:
+        float | None: The highest pairwise similarity among the blocks, or
+        None if fewer than two were found.
+    """
+    if len(blocks) < 2:
+        return None
+    return max(fuzz.ratio(a.text, b.text) for i, a in enumerate(blocks) for b in blocks[i + 1 :])
+
+
+def extension_key(path):
+    """Returns the template/extension-filter lookup key for `path`.
+
+    The key is the file extension without the leading dot; the extension-less
+    ``BUILD`` file is special-cased to use its literal name instead. This is
+    the single source of truth for that rule, shared by template lookup
+    (`process_files`) and extension filtering (`_matches_extension`).
+    """
+    path = Path(path)
+    return path.name if path.name == "BUILD" else path.suffix[1:]
+
+
+def _matches_extension(path, exts):
+    """Returns whether ``path`` should be considered for the given extension filter.
+
+    ``exts`` is the list passed via ``--extensions``. ``None`` means "no filter".
+    """
+    if exts is None:
         return True
-
-    LOGGER.debug("File %s doesn't have copyright.", path)
-    return False
+    return extension_key(path) in exts
 
 
-def has_any_copyright(path, use_mmap, encoding, offset):
-    """
-    Checks if any copyright notice is present in the file header, regardless of format.
+def list_tracked_files(base_dir, pathspecs=None):
+    """Lists repository files via ``git ls-files`` under ``base_dir``.
 
-    Args:
-        path (Path): A `pathlib.Path` object pointing to the file to check.
-        use_mmap (bool): If True, uses memory-mapped file reading.
-        encoding (str): Encoding type to use when reading the file.
-        offset (int): Byte offset to skip (e.g. shebang line).
+    Uses git as the source of truth for "which files exist in the repo":
 
-    Returns:
-        bool: True if any copyright notice is found, False otherwise.
-    """
-    load_text = load_text_from_file_with_mmap if use_mmap else load_text_from_file
-    content = load_text(path, BYTES_TO_READ, encoding, offset)
-    return bool(re.search(r"Copyright.*SPDX-License-Identifier", content, re.IGNORECASE | re.DOTALL))
-
-
-def has_duplicate_copyright(path, template, use_mmap, encoding, offset):
-    """
-    Checks if more than one copyright notice is present in the file header.
-
-    The check is format-agnostic: it counts occurrences of ``SPDX-License-Identifier``
-    within a window of twice the template length, so that headers written by different
-    tools (e.g. REUSE vs. cr_checker) are both counted while string literals that
-    embed copyright text further into the file are ignored.
+    * ``--cached --others --exclude-standard`` yields tracked plus untracked
+      files while honoring ``.gitignore`` (so Bazel ``bazel-*`` convenience
+      symlinks and other generated artifacts are skipped automatically).
+    * git does not respect Bazel package boundaries, so a single call reaches
+      files in nested packages without any per-package configuration.
 
     Args:
-        path (Path): A `pathlib.Path` object pointing to the file to check.
-        template (str): The copyright template; its length defines the search window.
-        use_mmap (bool): If True, uses memory-mapped file reading.
-        encoding (str): Encoding type to use when reading the file.
-        offset (int): Byte offset to skip (e.g. shebang line).
+        base_dir (str): Repository root to run git in.
+        pathspecs (list, optional): git pathspecs (directories or globs) to
+                                    restrict the listing. ``None`` lists the
+                                    whole repository.
 
     Returns:
-        bool: True if more than one copyright notice is found, False otherwise.
+        list[Path]: Absolute paths to the listed files.
     """
-    load_text = load_text_from_file_with_mmap if use_mmap else load_text_from_file
-    content = load_text(path, 2 * len(template), encoding, offset)
-    matches = list(re.finditer(r"SPDX-License-Identifier", content, re.IGNORECASE))
-    if len(matches) > 1:
-        LOGGER.debug("File %s has %d copyright headers.", path, len(matches))
-        return True
-    return False
+    cmd = [
+        "git",
+        "-C",
+        str(base_dir),
+        "ls-files",
+        "-z",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+    ]
+    if pathspecs:
+        cmd.append("--")
+        cmd.extend(pathspecs)
+
+    LOGGER.debug("Listing files with: %s", " ".join(cmd))
+    result = subprocess.run(cmd, capture_output=True, check=True)
+    base = Path(base_dir)
+    return [base / os.fsdecode(rel) for rel in result.stdout.split(b"\0") if rel]
 
 
-def get_files_from_dir(directory, exts=None):
-    """
-    Finds files in the specified directories. Filters by extensions if provided.
+def list_modified_files(base_dir):
+    """Lists files added, copied, modified, or renamed relative to ``HEAD``.
+
+    Used by ``--modified-only`` for fast, incremental runs (e.g. a
+    pre-commit hook) that should only check what's actually changing,
+    instead of the whole repository. Compares the working tree directly to
+    ``HEAD`` (not just the index), so it covers both staged and unstaged
+    changes to tracked files, plus new files once they're staged (`git
+    diff` never reports a file it has no record of at all, i.e. a brand
+    new file that was never `git add`ed); deleted files are excluded since
+    there's nothing left to check. This matches how pre-commit itself only
+    ever hands hooks the files staged for the commit.
 
     Args:
-        dirs (list of str): List of directories to search for files.
-        exts (list of str, optional): List of extensions to filter files.
-                                      If None, all files are returned.
+        base_dir (str): Repository root to run git in.
 
     Returns:
-        list of str: List of file paths found in the directories.
+        list[Path]: Absolute paths to the modified files.
     """
-    collected_files = []
-    LOGGER.debug("Getting files from directory: %s", directory)
-    for path in directory.rglob("*"):
-        if path.is_file() and path.stat().st_size != 0:
-            if exts is None or path.suffix[1:] in exts or (path.name == "BUILD" and "BUILD" in exts):
-                collected_files.append(path)
-    return collected_files
+    cmd = [
+        "git",
+        "-C",
+        str(base_dir),
+        "diff",
+        "--name-only",
+        "--diff-filter=ACMR",
+        "-z",
+        "HEAD",
+    ]
+
+    LOGGER.debug("Listing modified files with: %s", " ".join(cmd))
+    result = subprocess.run(cmd, capture_output=True, check=True)
+    base = Path(base_dir)
+    return [base / os.fsdecode(rel) for rel in result.stdout.split(b"\0") if rel]
 
 
-def collect_inputs(inputs, exts=None):
-    """
-    Collects files from a list of input paths, optionally filtering by file extensions.
+def collect_inputs(inputs, exts=None, base_dir=None):
+    """Collects files to check from the given inputs, filtered by extension.
+
+    Existing files are taken as-is; every other input is treated as a git
+    pathspec (a directory or glob) resolved via ``list_tracked_files``. When
+    ``inputs`` is empty the whole repository is listed.
 
     Args:
-        inputs (list): A list of paths to files or directories.
-                       If a directory is provided, all files within it are added to the output.
-        exts (list, optional): A list of file extensions to filter by (e.g., ['.py', '.txt']).
-                               Only files with these extensions will be included if specified.
+        inputs (list): Files and/or git pathspecs (relative to ``base_dir``).
+        exts (list, optional): Extensions to keep (see ``_matches_extension``).
+        base_dir (str, optional): Repository root. Defaults to the current
+                                  working directory.
 
     Returns:
-        list: A list of file paths collected from the input paths, filtered by the given extensions.
-              If an input is neither a file nor a directory, it is skipped with a warning.
-
-    Logs:
-        Logs messages at the DEBUG level, detailing processing of directories and files,
-        and warns if an invalid input path is encountered.
+        list[Path]: The files to check.
     """
-    all_files = []
+    base = Path(base_dir) if base_dir else Path.cwd()
     LOGGER.debug("Extensions: %s", exts)
+
+    explicit_files = []
+    pathspecs = []
     for i in inputs:
-        item = Path(i)
-        if item.is_dir():
-            LOGGER.debug("Processing directory: %s", item)
-            all_files.extend(get_files_from_dir(item, exts))
-        elif item.is_file() and (exts is None or item.suffix[1:] in exts or (item.name == "BUILD" and "BUILD" in exts)):
-            LOGGER.debug("Processing file: %s", item)
-            all_files.append(item)
-        elif item.is_file():
-            LOGGER.debug("Skipped (no configuration for file extension): %s", item)
+        candidate = Path(i)
+        absolute = candidate if candidate.is_absolute() else base / candidate
+        if absolute.is_file():
+            explicit_files.append(absolute)
         else:
-            LOGGER.warning("Skipped (input is not a valid file or directory): %s", item)
-    return all_files
+            pathspecs.append(i)
+
+    candidates = list(explicit_files)
+    if pathspecs or not inputs:
+        candidates.extend(list_tracked_files(base, pathspecs or None))
+
+    collected = []
+    seen = set()
+    for path in candidates:
+        if path.is_symlink() or not path.is_file():
+            continue
+        # An explicit file and an overlapping directory/pathspec (e.g. a file
+        # passed both directly and via its parent directory) can list the
+        # same path twice; de-duplicate so it isn't processed more than once.
+        resolved = path.resolve()
+        if resolved in seen:
+            continue
+        if _matches_extension(path, exts):
+            seen.add(resolved)
+            collected.append(path)
+        else:
+            LOGGER.debug("Skipped (no configuration for file extension): %s", path)
+    return collected
 
 
-def create_temp_file(path, encoding):
-    """
-    Creates a temporary file with the provided content.
+def render_template(template, config):
+    """Renders `template`'s `{year}`/`{author}` placeholders.
 
     Args:
-        path (str): The path of file to write the content to the temporary file.
-        encoding (str, optional): Encoding type to use when writing the file.
+        template (str): The copyright template text.
+        config (Path | None): Path to the config JSON file (see
+                              `get_author_from_config`).
 
     Returns:
-        str: The path to the temporary file created.
+        str: The rendered header text.
     """
-    with tempfile.NamedTemporaryFile(mode="w", encoding=encoding, delete=False) as temp:
-        with open(path, "r", encoding=encoding) as handle:
-            for chunk in iter(lambda: handle.read(4096), ""):
-                temp.write(chunk)
-    return temp.name
+    return template.format(year=datetime.now().year, author=get_author_from_config(config))
 
 
-def remove_old_header(file_path, encoding, num_of_chars):
-    """
-    Removes the first `num_of_chars` characters from a file and updates it in-place.
+def _atomic_write(path, content, encoding):
+    """Writes `content` to `path` atomically.
+
+    Builds the full replacement in a temp file in the same directory as
+    `path`, then renames it over the original -- so a crash/interrupt mid-write
+    (disk full, process killed, ...) never leaves `path` truncated or
+    partially written, unlike writing into `path` in-place. The temp file is
+    always cleaned up: moved into place on success, removed on failure.
 
     Args:
-        file_path (str): Path to the file to be modified.
-        encoding (str): Encoding used to read and write the file.
-        num_of_chars (int): Number of characters to remove from the beginning of the file.
-
-    Raises:
-        IOError: If there is an issue reading or writing the file.
-        ValueError: If `num_of_chars` is negative.
+        path (str): Path to the file to (re)write.
+        content (str): The full new content of the file.
+        encoding (str): Encoding to use when writing.
     """
-    with open(file_path, "r", encoding=encoding) as file:
-        file.seek(num_of_chars)
-        with tempfile.NamedTemporaryFile("w", delete=False, encoding=encoding) as temp_file:
-            shutil.copyfileobj(file, temp_file)
-    shutil.move(temp_file.name, file_path)
+    directory = os.path.dirname(os.path.abspath(path)) or "."
+    descriptor, tmp_name = tempfile.mkstemp(dir=directory)
+    try:
+        with os.fdopen(descriptor, "w", encoding=encoding, newline="") as handle:
+            handle.write(content)
+        shutil.move(tmp_name, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.remove(tmp_name)
+        raise
 
 
-def fix_copyright(path, copyright_text, encoding, offset, config=None) -> bool:
-    """
-    Inserts a copyright header into the specified file, ensuring that existing
-    content is preserved according to the provided offset.
+def normalize_header(text, layout, template, config):
+    """Rebuilds `text` with a single, correctly rendered copyright header
+    placed immediately after the recognized preamble (see `locate_header`).
+
+    Every block within the duplicate-detection window (see
+    `_blocks_in_duplicate_window` -- the same blocks `classify` treats as
+    "the header") is dropped. Any block further into the file is left
+    completely untouched, as ordinary body content: it was never counted as
+    part of the header for classification either, so deleting through it
+    would silently destroy unrelated content (e.g. a coincidental
+    "Copyright...SPDX-License-Identifier:" mention deep in a docstring or
+    example). `leading_junk` -- real content that isn't the recognized
+    preamble and isn't a copyright block -- is preserved, but relocated to
+    *after* the new header. This one routine resolves MISSING, MISPLACED,
+    WRONG_FORMAT and MISPLACED_AND_WRONG_FORMAT alike, replacing what used
+    to be a strip-then-reinsert composition of two separate functions.
 
     Args:
-        path (str): The path to the file that needs the copyright header.
-        copyright_text (str): The copyright text to be added.
-        encoding (str): The character encoding used to read and write the file.
-        offset (int): The number of bytes to preserve at the top of the file.
-                      If 0, the first line is overwritten unless it's empty.
-                      For non-zero offsets, ensures the correct number of bytes
-                      are preserved.
-        config (Path): Path to the config JSON file where configuration
-                variables are stored (e.g. years for copyright headers).
+        text (str): The decoded, BOM-stripped, LF-normalized whole file
+                    content (the caller restores the original line ending
+                    style and BOM on write).
+        layout (HeaderLayout): The result of `locate_header` for `text`.
+        template (str): The copyright template to render.
+        config (Path | None): Path to the config JSON file.
+
     Returns:
-        bool: True if the copyright header was successfully added, False if there was an error
+        str: The rebuilt, LF-normalized file content.
     """
+    prefix = text[: layout.prefix_end]
+    kept_blocks = _blocks_in_duplicate_window(layout, template)
+    remainder_start = kept_blocks[-1].end if kept_blocks else layout.prefix_end
+    remainder = _strip_old_wrapper_suffix(text[remainder_start:].lstrip("\n"), template)
 
-    temporary_file = create_temp_file(path, encoding)
+    # `leading_junk` is dropped rather than preserved-after-header when it's
+    # just a leftover fragment of an OLD-style header's own comment-wrapper
+    # marker (see `_is_old_wrapper_prefix`) -- `render_template` already
+    # emits the *current* template's own complete wrapper, so re-appending
+    # this debris after it would create a duplicate/orphaned fragment
+    # instead of preserving genuinely misplaced content.
+    leading_junk = "" if _is_old_wrapper_prefix(layout.leading_junk, template) else layout.leading_junk
 
-    with open(temporary_file, "r", encoding=encoding) as temp:
-        first_line = temp.readline()
-        byte_array = len(first_line.encode(encoding))
+    parts = [prefix, render_template(template, config), "\n"]
+    if leading_junk:
+        parts.append(leading_junk)
+        if not leading_junk.endswith("\n"):
+            parts.append("\n")
+    parts.append(remainder)
+    return "".join(parts)
 
-        if offset > 0 and offset != byte_array:
-            LOGGER.error("%s: Invalid offset value: %d, expected: %d", path, offset, byte_array)
-            return False
 
-        with open(path, "w", encoding=encoding) as handle:
-            temp.seek(0)
-            if offset > 0:
-                handle.write(first_line)
-                temp.seek(offset)
-            handle.write(copyright_text.format(year=datetime.now().year, author=get_author_from_config(config)) + "\n")
-            for chunk in iter(lambda: temp.read(4096), ""):
-                handle.write(chunk)
-    LOGGER.info("Fixed missing header in: %s", path)
-    return True
+def _tally(status, results):
+    """Bumps the appropriate counter in `results` for a classified `status`
+    (see `process_files`'s return value docs). COMPLIANT contributes
+    nothing."""
+    if status is Status.MISSING:
+        results["missing"] += 1
+    elif status is Status.DUPLICATE:
+        results["duplicate"] += 1
+    elif status is Status.MISPLACED:
+        results["misplaced"] += 1
+    elif status in (Status.WRONG_FORMAT, Status.MISPLACED_AND_WRONG_FORMAT):
+        results["wrong_format"] += 1
+
+
+def _log_status(item, status, layout, similarity):
+    """Logs a diagnostic message for a classified `status`."""
+    if status is Status.COMPLIANT:
+        LOGGER.debug("File %s has copyright.", item)
+    elif status is Status.MISSING:
+        LOGGER.error("Missing copyright header in: %s, use --fix to introduce it", item)
+    elif status is Status.MISPLACED:
+        LOGGER.error(
+            "Copyright header in %s is correctly formatted but preceded by other content "
+            "(similarity: %.0f%%); use --fix to move it to the top",
+            item,
+            similarity,
+        )
+    elif status is Status.MISPLACED_AND_WRONG_FORMAT:
+        LOGGER.error(
+            "Copyright header in %s is preceded by other content and doesn't match the "
+            "expected format (similarity to template: %.0f%%)",
+            item,
+            similarity,
+        )
+    elif status is Status.WRONG_FORMAT:
+        LOGGER.error(
+            "Wrong copyright format in: %s (similarity to template: %.0f%%), expected format from template",
+            item,
+            similarity,
+        )
+    elif status is Status.DUPLICATE:
+        similarity = duplicate_similarity(layout.blocks)
+        if similarity is None:
+            LOGGER.error("Duplicate copyright header in: %s", item)
+        elif similarity >= HEADER_SIMILARITY_THRESHOLD:
+            LOGGER.error(
+                "Duplicate copyright header in: %s (repeated headers are %.0f%% similar -- "
+                "likely the same header pasted twice)",
+                item,
+                similarity,
+            )
+        else:
+            LOGGER.error(
+                "Duplicate copyright header in: %s (repeated headers are only %.0f%% similar -- "
+                "likely different header formats/tools; review both before merging)",
+                item,
+                similarity,
+            )
+
+
+def _process_file_check(item, template, encoding, offset, use_mmap, config, results):
+    """Read-only path: classifies the file's header state and logs/tallies it."""
+    header_window = max(BYTES_TO_READ, 2 * len(template))
+    raw = load_header_text(item, header_window, encoding, use_mmap)
+    text, _ = _strip_bom(raw)
+    text = _normalize_line_endings(text)
+
+    layout = locate_header(text, manual_prefix_offset=offset)
+    status, similarity = classify(layout, template, config)
+    _log_status(item, status, layout, similarity)
+    _tally(status, results)
+
+
+def _process_file_fix(item, template, encoding, offset, remove_offset, config, results, force=False):
+    """Mutating path: classifies the file's header state, logs/tallies it, and
+    -- for any `FIXABLE_STATUSES` result that passes the similarity guard (or
+    `force`, which bypasses it) -- rewrites the file with `normalize_header`,
+    atomically."""
+    with open(item, "r", encoding=encoding, newline="") as handle:
+        raw = handle.read()
+
+    if remove_offset:
+        raw = raw[remove_offset:]
+
+    text, had_bom = _strip_bom(raw)
+    line_ending = _detect_line_ending(text)
+    text = _normalize_line_endings(text)
+
+    layout = locate_header(text, manual_prefix_offset=offset)
+    status, similarity = classify(layout, template, config)
+    _log_status(item, status, layout, similarity)
+    _tally(status, results)
+
+    if status not in FIXABLE_STATUSES:
+        return
+    if (
+        not force
+        and status in (Status.WRONG_FORMAT, Status.MISPLACED_AND_WRONG_FORMAT)
+        and similarity < HEADER_SIMILARITY_THRESHOLD
+    ):
+        # Likely an unrelated, genuinely different license text -- never
+        # silently overwritten, unless the caller explicitly opted in via
+        # --force.
+        return
+
+    new_text = normalize_header(text, layout, template, config)
+    new_text = _restore_line_endings(new_text, line_ending)
+    if had_bom:
+        new_text = BOM + new_text
+    _atomic_write(item, new_text, encoding)
+    results["fixed"] += 1
+    LOGGER.info("Fixed (%s) header in: %s", status.value, item)
 
 
 def process_files(
     files,
     templates,
     fix,
-    exclusion=[],
+    exclusion=None,
     config=None,
     use_mmap=False,
     encoding="utf-8",
     offset=0,
     remove_offset=0,
+    force=False,
 ):  # pylint: disable=too-many-arguments
     """
     Processes a list of files to check for the presence of copyright text.
@@ -603,53 +1169,67 @@ def process_files(
         config (Path): Path to the config JSON file where configuration
                        variables are stored (e.g. years for copyright headers).
         use_mmap (bool): Flag for using mmap function for reading files
-                         (instead of standard option).
+                         (instead of standard option); ignored in ``--fix``
+                         mode, which always reads the whole file.
         encoding (str): Encoding type to use when reading the file.
-        offset (int): Additional number of characters to read beyond the length
-                      of `copyright_text`, used to account for extra content
-                      (such as a shebang) before the copyright text.
-        remove_offset(int): Flag for removing old header from source files
-                             (before applying the new one) in number of chars.
+        offset (int): Number of characters to force-treat as a recognized
+                      preamble (see `locate_header`), overriding
+                      auto-detection. Typically only needed for preamble
+                      kinds `PREFIX_MATCHERS` doesn't recognize.
+        remove_offset(int): Number of characters to remove from the very
+                            start of the file before processing, in
+                            ``--fix`` mode only.
+        force (bool): Bypass the ``HEADER_SIMILARITY_THRESHOLD`` guard for
+                     WRONG_FORMAT/MISPLACED_AND_WRONG_FORMAT, rewriting the
+                     header regardless of how different it looks from the
+                     template. Only used in ``--fix`` mode. Never applies to
+                     DUPLICATE, which is always left for manual review.
 
     Returns:
-        int: The number of files that do not contain the required copyright text.
+        dict: Counters for ``missing``, ``misplaced``, ``wrong_format``,
+        ``duplicate`` and ``fixed``.
+
+    Note:
+        A wrong-format or misplaced-and-wrong-format header is only
+        auto-fixed if its rapidfuzz similarity to the rendered template is
+        at or above ``HEADER_SIMILARITY_THRESHOLD`` -- i.e. it looks like
+        the same copyright statement with a formatting difference (border
+        style, missing angle brackets, a typo, ...) -- unless ``force`` is
+        set, in which case the similarity is ignored. Otherwise it is left
+        untouched and only reported, since it may be a genuinely different
+        license text that must never be silently overwritten. Duplicate
+        headers are never auto-fixed, regardless of similarity or ``force``.
     """
-    results = {"no_copyright": 0, "fixed": 0, "duplicate_copyright": 0}
+    if exclusion is None:
+        exclusion = []
+    results = {"missing": 0, "misplaced": 0, "wrong_format": 0, "duplicate": 0, "fixed": 0}
+
     for item in files:
-        name = Path(item).name
-        key = name if name == "BUILD" else Path(item).suffix[1:]
-        if key not in templates.keys():
-            logging.debug("Skipped (no configuration for selected file extension): %s", item)
+        key = extension_key(item)
+        if key not in templates:
+            LOGGER.debug("Skipped (no configuration for selected file extension): %s", item)
             continue
 
-        if str(item) in exclusion:
-            logging.debug("Skipped due to exclusion: %s", item)
+        if str(Path(item).resolve()) in exclusion:
+            LOGGER.debug("Skipped due to exclusion: %s", item)
             continue
 
         if os.path.getsize(item) == 0:
             # No need to add copyright headers to empty files
             continue
 
-        # Automatically detect shebang and use its offset if no manual offset provided
-        shebang_offset = detect_shebang_offset(item, encoding)
-        effective_offset = offset + shebang_offset if offset == 0 else offset
-
-        if has_duplicate_copyright(item, templates[key], use_mmap, encoding, effective_offset):
-            LOGGER.error("Duplicate copyright header in: %s", item)
-            results["duplicate_copyright"] += 1
-        elif not has_copyright(item, templates[key], use_mmap, encoding, effective_offset, config):
-            if has_any_copyright(item, use_mmap, encoding, effective_offset):
-                LOGGER.warning("Wrong copyright format in: %s, expected format from template", item)
-            elif fix:
-                if remove_offset:
-                    remove_old_header(item, encoding, remove_offset)
-                fix_result = fix_copyright(item, templates[key], encoding, effective_offset, config)
-                results["no_copyright"] += 1
-                if fix_result:
-                    results["fixed"] += 1
+        template = templates[key]
+        try:
+            if fix:
+                _process_file_fix(item, template, encoding, offset, remove_offset, config, results, force)
             else:
-                LOGGER.error("Missing copyright header in: %s, use --fix to introduce it", item)
-                results["no_copyright"] += 1
+                _process_file_check(item, template, encoding, offset, use_mmap, config, results)
+        except (IOError, OSError, UnicodeError) as err:
+            # A single unreadable/undecodable file (permissions, binary
+            # content matched by an over-broad -e filter, ...) shouldn't
+            # abort the whole batch -- log it and keep going.
+            LOGGER.error("Failed to process %s: %s", item, err)
+
     return results
 
 
@@ -729,7 +1309,9 @@ def parse_arguments(argv):
         dest="offset",
         type=int,
         default=0,
-        help="Additional length offset to account for characters like a shebang (default is 0)",
+        help="Force this many characters (plus any trailing blank lines) at the start of the "
+        "file to be treated as a recognized preamble (e.g. a shebang), overriding "
+        "auto-detection. Character-based, not byte-based. Default: auto-detect (0).",
     )
 
     parser.add_argument(
@@ -742,10 +1324,31 @@ def parse_arguments(argv):
     )
 
     parser.add_argument(
+        "--force",
+        dest="force",
+        action="store_true",
+        help="With --fix, also rewrite WRONG_FORMAT/MISPLACED_AND_WRONG_FORMAT headers whose "
+        "similarity to the template is below HEADER_SIMILARITY_THRESHOLD (normally left "
+        "untouched since they may be a genuinely different license text). Never affects "
+        "DUPLICATE, which always requires manual review. Ignored without --fix.",
+    )
+
+    parser.add_argument(
         "inputs",
-        nargs="+",
+        nargs="*",
         action=ParamFileAction,
-        help="Directories and/or files to parse.",
+        help="Files and/or directories to check. When omitted, the whole repository (per 'git ls-files') is checked.",
+    )
+
+    parser.add_argument(
+        "--modified-only",
+        dest="modified_only",
+        action="store_true",
+        help="Only check files that differ from HEAD (staged and/or unstaged), "
+        "e.g. for a fast, incremental pre-commit run. Takes precedence "
+        "over 'inputs' (including any 'srcs' pathspec baked into a "
+        "Bazel target's args), so the same whole-repo target used by CI "
+        "can be reused for incremental, modified-files-only runs.",
     )
 
     return parser.parse_args(argv)
@@ -764,32 +1367,61 @@ def main(argv=None):
                                If `None`, defaults to `sys.argv[1:]`.
 
     Returns:
-        int: Error code if an IOError occurs during loading templates or collecting input files;
-        otherwise, returns 0 as success.
+        int: ``0`` if all files are compliant, ``1`` if violations were found,
+             ``2`` if the tool failed to run (e.g. unreadable inputs).
     """
-    args = parse_arguments(argv if argv is not None else sys.argv[1:])
+    try:
+        args = parse_arguments(argv if argv is not None else sys.argv[1:])
+    except (IOError, OSError) as err:
+        LOGGER.error("Failed to parse arguments: %s", err)
+        return 2
     configure_logging(args.log_file, args.verbose)
 
     try:
         templates = load_templates(args.template_file)
     except IOError as err:
         LOGGER.error("Failed to load copyright text: %s", err)
-        return err.errno
+        return 2
+
+    if args.config_file:
+        try:
+            get_author_from_config(args.config_file)
+        except (IOError, OSError, ValueError) as err:
+            LOGGER.error("Failed to load config file: %s", err)
+            return 2
 
     exclusion = []
     exclusion_valid = True
+    workspace = os.environ.get("BUILD_WORKSPACE_DIRECTORY")
     if args.exclusion_file:
         try:
-            exclusion, exclusion_valid = load_exclusion(args.exclusion_file)
+            exclusion, exclusion_valid = load_exclusion(args.exclusion_file, workspace)
         except IOError as err:
             LOGGER.error("Failed to load exclusion list: %s", err)
-            return err.errno
+            return 2
 
+    # When invoked via ``bazel run`` the process runs inside the runfiles tree, but
+    # the files to check live in the user's workspace. ``git ls-files``/``git diff``
+    # (used by ``collect_inputs``/``list_modified_files``) are run from
+    # ``BUILD_WORKSPACE_DIRECTORY`` so the checker operates on the real source
+    # tree, honoring ``.gitignore`` (which excludes the ``bazel-*`` convenience
+    # symlinks) and reaching nested Bazel packages.
     try:
-        files = collect_inputs(args.inputs, args.extensions)
-    except IOError as err:
-        LOGGER.error("Failed to process file %s with error", err.filename)
-        return err.errno
+        if args.modified_only:
+            base_dir = workspace or Path.cwd()
+            files = [
+                f
+                for f in list_modified_files(base_dir)
+                if not f.is_symlink() and f.is_file() and _matches_extension(f, args.extensions)
+            ]
+        else:
+            files = collect_inputs(args.inputs, args.extensions, workspace)
+    except (IOError, subprocess.SubprocessError) as err:
+        LOGGER.error("Failed to collect input files: %s", err)
+        return 2
+
+    if not files:
+        LOGGER.warning("No files matched the configured extensions/inputs; nothing to check.")
 
     LOGGER.debug("Running check on files: %s", files)
 
@@ -797,6 +1429,12 @@ def main(argv=None):
         LOGGER.info("%s!------DANGER ZONE------!%s", COLORS["RED"], COLORS["ENDC"])
         LOGGER.info("Remove offset set! This can REMOVE parts of source files!")
         LOGGER.info("Use ONLY if invalid copyright header is present that needs to be removed!")
+        LOGGER.info("%s!-----------------------!%s", COLORS["RED"], COLORS["ENDC"])
+
+    if args.fix and args.force:
+        LOGGER.info("%s!------DANGER ZONE------!%s", COLORS["RED"], COLORS["ENDC"])
+        LOGGER.info("Force set! Headers with low similarity to the template will be overwritten too!")
+        LOGGER.info("Review the diff afterwards -- this can rewrite genuinely different license text!")
         LOGGER.info("%s!-----------------------!%s", COLORS["RED"], COLORS["ENDC"])
 
     results = process_files(
@@ -809,17 +1447,33 @@ def main(argv=None):
         args.encoding,
         args.offset,
         args.remove_offset,
+        args.force,
     )
-    total_no = results["no_copyright"]
+    total_missing = results["missing"]
+    total_misplaced = results["misplaced"]
+    total_wrong_format = results["wrong_format"]
+    total_duplicates = results["duplicate"]
     total_fixes = results["fixed"]
-    total_duplicates = results["duplicate_copyright"]
+    total_violations = total_missing + total_misplaced + total_wrong_format + total_duplicates
 
     LOGGER.info("=" * 64)
     LOGGER.info("Process completed.")
     LOGGER.info(
-        "Total files without copyright: %s%d%s",
-        COLORS["RED"] if total_no > 0 else COLORS["GREEN"],
-        total_no,
+        "Total files missing a copyright header: %s%d%s",
+        COLORS["RED"] if total_missing > 0 else COLORS["GREEN"],
+        total_missing,
+        COLORS["ENDC"],
+    )
+    LOGGER.info(
+        "Total files with a misplaced (but correctly formatted) header: %s%d%s",
+        COLORS["RED"] if total_misplaced > 0 else COLORS["GREEN"],
+        total_misplaced,
+        COLORS["ENDC"],
+    )
+    LOGGER.info(
+        "Total files with a wrong-format header: %s%d%s",
+        COLORS["RED"] if total_wrong_format > 0 else COLORS["GREEN"],
+        total_wrong_format,
         COLORS["ENDC"],
     )
     LOGGER.info(
@@ -831,7 +1485,7 @@ def main(argv=None):
     if not exclusion_valid:
         LOGGER.info("The exclusion file contains paths that do not exist.")
     if args.fix:
-        total_not_fixed = total_no - total_fixes
+        total_not_fixed = total_violations - total_fixes
         LOGGER.info(
             "Total files that were fixed: %s%d%s",
             COLORS["GREEN"],
@@ -846,7 +1500,7 @@ def main(argv=None):
         )
     LOGGER.info("=" * 64)
 
-    return 0 if (total_no == 0 and total_duplicates == 0 and exclusion_valid) else 1
+    return 0 if (total_violations == 0 and exclusion_valid) else 1
 
 
 if __name__ == "__main__":

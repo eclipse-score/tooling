@@ -21,29 +21,12 @@ exports_files([
 
 copyright_checker(
     name = "copyright",
+    # Whole-repo scope via a git exclude-magic pathspec: every file tracked
+    # by git is checked except .github/skills (those SKILL.md / README.md
+    # files are distributed verbatim to downstream repos via //:sync_skills
+    # and are not subject to this repo's copyright checker).
     srcs = [
-        #"//tools",  # Use full label if src is a package
-        "//:BUILD",
-        "//:MODULE.bazel",
-        "cli_helper",
-        "cr_checker",
-        "dash",
-        "third_party/format",
-        "python_basics",
-        "starpls",
-        "tools",
-        "lobster_bazel",
-        "bazel",
-        "manual_analysis",
-        "plantuml",
-        "validation",
-        "third_party/lint",
-        "skills_sync",
-
-        # Add other directories/files you want to check
-        # Note: .github/skills is intentionally excluded; those SKILL.md /
-        # README.md files are distributed verbatim to downstream repos via
-        # //:sync_skills and are not subject to this repo's copyright checker.
+        ":(exclude).github/skills/**",
     ],
     config = "//cr_checker/resources:config",
     exclusion = "//cr_checker/resources:exclusion",

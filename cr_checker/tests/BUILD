@@ -16,7 +16,19 @@ load("@score_tooling//python_basics:defs.bzl", "score_py_pytest")
 score_py_pytest(
     name = "unit_tests",
     srcs = [
+        "conftest.py",
         "test_cr_checker.py",
+    ],
+    deps = [
+        "@score_tooling//cr_checker/tool:cr_checker_lib",
+    ],
+)
+
+score_py_pytest(
+    name = "integration_tests",
+    srcs = [
+        "conftest.py",
+        "test_cr_checker_integration.py",
     ],
     deps = [
         "@score_tooling//cr_checker/tool:cr_checker_lib",

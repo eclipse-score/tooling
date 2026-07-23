@@ -248,6 +248,25 @@ use_repo(pip, "pip_lobster_bazel")
 
 use_repo(pip, "pip_rules_score")
 
+# cr_checker's own Python deps (e.g. rapidfuzz), kept separate from the
+# shared pip_tooling hub (pytest/basedpyright/pylint) since cr_checker is a
+# standalone, independently reusable component.
+[
+    pip.parse(
+        envsubst = ["PIP_INDEX_URL"],
+        extra_pip_args = ["--index-url=${PIP_INDEX_URL:-https://pypi.org/simple/}"],
+        hub_name = "pip_cr_checker",
+        python_version = "3.{}".format(version),
+        requirements_lock = "//cr_checker:requirements_3_{}.txt".format(version),
+    )
+    for version in [
+        "11",
+        "12",
+    ]
+]
+
+use_repo(pip, "pip_cr_checker")
+
 ###############################################################################
 # Multitool Hub (for ruff, pyright, actionlint, etc.)
 ###############################################################################
