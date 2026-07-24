@@ -14,11 +14,13 @@
 //! Validation: compare component-diagram interfaces with interfaces declared
 //! by the internal API diagram.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::shared::format_name_list;
 use crate::models::{ComponentDiagramArchitecture, InternalApiIndex, LogicComponentExt};
+use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
+use source_location::SourceLocation;
 
 /// Run component-vs-internal-API interface reference validation.
 pub fn validate_component_internal_api(
@@ -29,7 +31,7 @@ pub fn validate_component_internal_api(
 }
 
 struct ComponentInternalApiValidator {
-    component_interface_ids: BTreeSet<String>,
+    component_interface_sources: BTreeMap<String, SourceLocation>,
     internal_api_interface_ids: BTreeSet<String>,
     result: ValidationResult,
 }
@@ -39,17 +41,23 @@ impl ComponentInternalApiValidator {
         component_diagram: &ComponentDiagramArchitecture,
         internal_api_diagram: &InternalApiIndex,
     ) -> Self {
+        let component_interface_sources =
+            collect_component_internal_interface_sources(component_diagram);
+
         Self {
-            component_interface_ids: collect_component_internal_interface_ids(component_diagram),
+            component_interface_sources,
             internal_api_interface_ids: collect_internal_api_interface_ids(internal_api_diagram),
             result: ValidationResult::default(),
         }
     }
 
     fn run(mut self) -> ValidationResult {
+        let component_interface_ids: BTreeSet<String> =
+            self.component_interface_sources.keys().cloned().collect();
+
         append_debug_log(
             &mut self.result.diagnostics,
-            &self.component_interface_ids,
+            &component_interface_ids,
             &self.internal_api_interface_ids,
         );
         self.check_component_interfaces_declared_by_internal_api();
@@ -57,8 +65,9 @@ impl ComponentInternalApiValidator {
     }
 
     fn check_component_interfaces_declared_by_internal_api(&mut self) {
-        let missing_interfaces: BTreeSet<String> = self
-            .component_interface_ids
+        let component_interface_ids: BTreeSet<String> =
+            self.component_interface_sources.keys().cloned().collect();
+        let missing_interfaces: BTreeSet<String> = component_interface_ids
             .difference(&self.internal_api_interface_ids)
             .cloned()
             .collect();
@@ -67,6 +76,7 @@ impl ComponentInternalApiValidator {
             self.result
                 .add_failure(format_missing_internal_api_interface_error(
                     &missing_interfaces,
+                    &self.component_interface_sources,
                 ));
         }
     }
@@ -88,14 +98,14 @@ fn append_debug_log(
     }
 }
 
-fn collect_component_internal_interface_ids(
+fn collect_component_internal_interface_sources(
     component_diagram: &ComponentDiagramArchitecture,
-) -> BTreeSet<String> {
+) -> BTreeMap<String, SourceLocation> {
     component_diagram
         .entities
         .iter()
         .filter(|entity| entity.is_interface() && entity.parent_id.is_some())
-        .map(|entity| entity.id.clone())
+        .map(|entity| (entity.id.clone(), entity.source_location.clone()))
         .collect()
 }
 
@@ -108,13 +118,36 @@ fn collect_internal_api_interface_ids(internal_api_diagram: &InternalApiIndex) -
 
 fn format_missing_internal_api_interface_error(
     missing_internal_api_interfaces: &BTreeSet<String>,
+    component_interface_sources: &BTreeMap<String, SourceLocation>,
 ) -> String {
-    format!(
-        "Internal API consistency failure: Missing internal API interface:\n\
-          Missing interfaces  : {missing_interfaces}\n\
-          Action              : Add each component interface to the internal API diagram or remove it from the component diagram",
-        missing_interfaces = format_name_list(missing_internal_api_interfaces),
-    )
+    let missing_interfaces = format_name_list(missing_internal_api_interfaces);
+
+    let mut error = ErrorBuilder::new(ErrorCategory::Interface)
+        .title(format!(
+            "component interface(s) {missing_interfaces} from the component diagram not found in the internal API diagram"
+        ))
+        .field("missing interfaces", missing_interfaces.clone());
+
+    for interface_id in missing_internal_api_interfaces {
+        if let Some(source_location) = component_interface_sources.get(interface_id) {
+            let (source_file, source_line) = source_location.display();
+            error = error
+                .field(
+                    format!("component source file for \"{interface_id}\""),
+                    format!("\"{source_file}\""),
+                )
+                .field(
+                    format!("component source line for \"{interface_id}\""),
+                    source_line.to_string(),
+                );
+        }
+    }
+
+    error
+        .fix(format!(
+            "add interface declaration(s) {missing_interfaces} in the internal API diagram, or remove those interface declarations from the component diagram"
+        ))
+        .build()
 }
 
 #[cfg(test)]

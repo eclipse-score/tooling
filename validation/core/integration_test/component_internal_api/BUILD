@@ -16,6 +16,10 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 filegroup(
     name = "component_internal_api_test_data",
     srcs = [
+        "//validation/core/integration_test/component_internal_api/negative_duplicate_component_alias_casefolded:case_data",
+        "//validation/core/integration_test/component_internal_api/negative_duplicate_dependable_element_alias_casefolded:case_data",
+        "//validation/core/integration_test/component_internal_api/negative_duplicate_interface_alias_casefolded:case_data",
+        "//validation/core/integration_test/component_internal_api/negative_duplicate_unit_alias_casefolded:case_data",
         "//validation/core/integration_test/component_internal_api/negative_interface_missing_from_internal_api:case_data",
         "//validation/core/integration_test/component_internal_api/positive_interface_match:case_data",
     ],

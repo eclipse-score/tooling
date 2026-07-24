@@ -14,7 +14,7 @@
 use std::collections::BTreeMap;
 
 use super::EntityKey;
-use crate::ValidationResult;
+use crate::{ErrorBuilder, ErrorCategory, ValidationResult};
 pub use component_diagram::{
     ComponentRelationType, ComponentType, EndpointRole, LogicComponent, LogicRelation,
 };
@@ -104,12 +104,28 @@ impl ComponentDiagramArchitecture {
         for entity in entities {
             let key = entity.id.to_lowercase();
             if let Some(prev) = id_index.insert(key.clone(), entity) {
-                result.add_failure(format!(
-                    "Duplicate entity ID in PlantUML diagram (case-insensitive):\n\
-                       ID : {key:?}\n\
-                       IDs: {} and {}",
-                    prev.id, entity.id
-                ));
+                let kind = entity_kind_name(entity);
+                let alias = entity.match_key();
+                let parent =
+                    entity_parent_alias(entity, &id_index).unwrap_or_else(|| "<none>".to_string());
+                let (source_file, source_line) = prev.source_location.display();
+                let (duplicate_file, duplicate_line) = entity.source_location.display();
+                result.add_failure(
+                    ErrorBuilder::new(ErrorCategory::Design)
+                        .title(format!(
+                            "{kind} \"{alias}\" is defined more than once in the component diagram."
+                        ))
+                        .field(kind, format!("\"{alias}\""))
+                        .field("parent", &parent)
+                        .field("component source file", format!("\"{source_file}\""))
+                        .field("component source line", source_line.to_string())
+                        .field("duplicate source file", format!("\"{duplicate_file}\""))
+                        .field("duplicate source line", duplicate_line.to_string())
+                        .fix(format!(
+                            "keep only one {kind} \"{alias}\" under \"{parent}\", or rename one of the duplicate entities"
+                        ))
+                        .build(),
+                );
             }
         }
 
@@ -155,13 +171,23 @@ impl ComponentDiagramArchitecture {
                 Some(parent_id) => match id_index.get(&parent_id.to_lowercase()) {
                     Some(parent) => Some(parent.match_key()),
                     None => {
-                        result.add_failure(format!(
-                            "Unresolved parent_id in PlantUML diagram:\n\
-                               Entity ID : {}\n\
-                               Parent ID : {}\n\
-                               Action    : Fix the parent reference or add the missing parent entity",
-                            entity.id, parent_id
-                        ));
+                        let kind = entity_kind_name(entity);
+                        let alias = entity.match_key();
+                        let (source_file, source_line) = entity.source_location.display();
+                        result.add_failure(
+                            ErrorBuilder::new(ErrorCategory::Design)
+                                .title(format!(
+                                    "{kind} \"{alias}\" references a parent that is not defined in the component diagram."
+                                ))
+                                .field(kind, format!("\"{alias}\""))
+                                .field("parent", format!("\"{parent_id}\""))
+                                .field("component source file", format!("\"{source_file}\""))
+                                .field("component source line", source_line.to_string())
+                                .fix(format!(
+                                    "update the parent reference for {kind} \"{alias}\", or add the missing parent entity in the component diagram"
+                                ))
+                                .build(),
+                        );
                         None
                     }
                 },
@@ -169,16 +195,61 @@ impl ComponentDiagramArchitecture {
             };
             let key = (alias, parent_alias);
             if let Some(prev) = set.insert(key.clone(), (*entity).clone()) {
-                result.add_failure(format!(
-                    "Duplicate entity in PlantUML diagram:\n\
-                       Key: {:?}\n\
-                       IDs: {} and {}",
-                    key, prev.id, entity.id
-                ));
+                if prev.id.eq_ignore_ascii_case(&entity.id) {
+                    continue;
+                }
+                let kind = entity_kind_name(entity);
+                let alias = entity.match_key();
+                let parent = key.1.as_deref().unwrap_or("<none>");
+                let (source_file, source_line) = prev.source_location.display();
+                let (duplicate_file, duplicate_line) = entity.source_location.display();
+                result.add_failure(
+                    ErrorBuilder::new(ErrorCategory::Design)
+                        .title(format!(
+                            "{kind} \"{alias}\" is defined more than once in the component diagram."
+                        ))
+                        .field(kind, format!("\"{alias}\""))
+                        .field("parent", parent)
+                        .field("component source file", format!("\"{source_file}\""))
+                        .field("component source line", source_line.to_string())
+                        .field("duplicate source file", format!("\"{duplicate_file}\""))
+                        .field("duplicate source line", duplicate_line.to_string())
+                        .fix(
+                            format!(
+                                "keep only one {kind} \"{alias}\" under \"{parent}\", or rename one of the duplicate entities"
+                            ),
+                        )
+                        .build(),
+                );
             }
         }
         set
     }
+}
+
+fn entity_kind_name(entity: &LogicComponent) -> &'static str {
+    if entity.is_unit() {
+        "unit"
+    } else if entity.is_component() {
+        "component"
+    } else if entity.is_interface() {
+        "interface"
+    } else if entity.is_seooc_package() {
+        "dependable element"
+    } else {
+        "entity"
+    }
+}
+
+fn entity_parent_alias(
+    entity: &LogicComponent,
+    id_index: &BTreeMap<String, &LogicComponent>,
+) -> Option<String> {
+    entity
+        .parent_id
+        .as_deref()
+        .and_then(|parent_id| id_index.get(&parent_id.to_lowercase()))
+        .map(|parent| parent.match_key())
 }
 
 #[cfg(test)]
@@ -309,8 +380,9 @@ mod tests {
             set_result
                 .failures
                 .iter()
-                .any(|message| message.contains("Duplicate entity ID")),
-            "Expected duplicate ID error, got: {:?}",
+                .any(|message| message
+                    .contains("is defined more than once in the component diagram")),
+            "Expected duplicate component-diagram entity error, got: {:?}",
             set_result.failures
         );
     }
@@ -345,7 +417,9 @@ mod tests {
             set_result
                 .failures
                 .iter()
-                .any(|message| message.contains("Unresolved parent_id")),
+                .any(|message| message.contains(
+                    "Component \"comp_a\" references a parent that is not defined in the component diagram."
+                )),
             "Expected unresolved parent error, got: {:?}",
             set_result.failures
         );
