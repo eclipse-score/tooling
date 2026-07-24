@@ -23,4 +23,4 @@ mod results;
 mod validators;
 
 pub use profiles::{read_profile_inputs, run_profile, Profile, ProfileInputs, ProfileRun};
-pub use results::{Diagnostics, ValidationResult};
+pub use results::{Diagnostics, ErrorBuilder, ErrorCategory, ValidationResult};

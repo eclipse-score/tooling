@@ -53,6 +53,7 @@ rust_library(
         "src/readers/mod.rs",
         "src/readers/sequence_diagram_reader.rs",
         "src/results/diagnostics.rs",
+        "src/results/error_models.rs",
         "src/results/mod.rs",
         "src/validators/bazel_component_validator.rs",
         "src/validators/class_design_implementation_validator.rs",
@@ -74,6 +75,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//tools/metamodel/class:class_diagram",
+        "//tools/metamodel/common:source_location",
         "//tools/metamodel/component:component_diagram",
         "//tools/metamodel/sequence:sequence_diagram",
         "//tools/serialization/flatbuffers/class:class_fbs",

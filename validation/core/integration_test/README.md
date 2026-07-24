@@ -72,7 +72,7 @@ produced in layer 1. No copying or re-parsing occurs; the underlying Bazel
 action cache entry is reused.
 
 A `filegroup` named `case_data` then bundles the `fbs` target together with the
-static fixture files (`architecture.json`, `expected.json` or `expected.yaml`),
+static fixture files (`architecture.json` and `expected.yaml`),
 making the whole case available as a single Bazel dependency.
 
 For `ComponentInternalApi` and `SequenceInternalApi` suites, cases include
@@ -96,7 +96,7 @@ The shared `test_framework` library provides the following helpers:
 | Helper | Description |
 |--------|-------------|
 | `collect_case_fbs_files(suite, case, category)` | Returns sorted absolute paths to every `.fbs.bin` in a category subdirectory |
-| `load_expected_fixture(suite, case)` | Deserializes `expected.json` into `ExpectedFixture` |
+| `load_expected_fixture(suite, case)` | Deserializes `expected.yaml` into `ExpectedFixture` |
 | `load_expected_yaml_fixture(suite, case)` | Deserializes `expected.yaml` into `ExpectedFixture` |
 | `run_validation_profile(case_name, profile, input_bundle)` | Writes a profile-owned input bundle, spawns the CLI binary, and returns `CliRunResult` |
 | `assert_cli_result(case, expected, result)` | Asserts exit code and checks each string in `error_contains` against the log |
@@ -120,7 +120,7 @@ design/component_diagram.fbs.bin        ← in ArchitecturalDesignInfo.static
 component/component_diagram.fbs.bin     ← symlink → file above
 
         │  filegroup case_data
-        │  → bundles fbs + architecture.json + expected.json
+        │  → bundles fbs + architecture.json + expected.yaml
         ▼
 //.../bazel_component:bazel_component_test_data ← aggregated across all cases
 
@@ -149,7 +149,7 @@ the validator under test.
 ├── BUILD                 # architectural_design + provider_fbs_fixture_bundle + case_data
 ├── component_diagram.puml
 ├── architecture.json     # Bazel build-graph snapshot (components/units)
-└── expected.json
+└── expected.yaml
 ```
 
 ### ComponentClass cases
@@ -159,7 +159,7 @@ the validator under test.
 ├── BUILD                 # architectural_design + unit_design + provider_fbs_fixture_bundle + case_data
 ├── component_diagram.puml
 ├── class_diagram.puml    # one or more; multi-file: class_diagram_part1.puml, ...
-└── expected.json
+└── expected.yaml
 ```
 
 ### ClassDesignImplementation cases
@@ -180,7 +180,7 @@ the validator under test.
 ├── BUILD                 # architectural_design + provider_fbs_fixture_bundle + case_data
 ├── component_diagram.puml
 ├── sequence_diagram.puml
-└── expected.json
+└── expected.yaml
 ```
 
 ### ComponentInternalApi cases
@@ -190,7 +190,7 @@ the validator under test.
 ├── BUILD                 # architectural_design + provider_fbs_fixture_bundle + case_data
 ├── component_diagram.puml
 ├── internal_api_diagram.puml
-└── expected.json
+└── expected.yaml
 ```
 
 ### SequenceInternalApi cases
@@ -201,16 +201,13 @@ the validator under test.
 ├── component_diagram.puml
 ├── sequence_diagram.puml
 ├── internal_api_diagram.puml
-└── expected.json
+└── expected.yaml
 ```
 
-### `expected.json` / `expected.yaml` format
+### `expected.yaml` format
 
-```json
-{
-  "should_pass": true,
-  "error_contains": []
-}
+```yaml
+should_pass: true
 ```
 
 | Field | Type | Description |
@@ -220,9 +217,7 @@ the validator under test.
 
 The framework uses **substring matching** for `error_contains`, so entries do
 not need to reproduce exact formatting — just enough context to uniquely
-identify the error. Existing suites use `expected.json`; the
-`class_design_implementation` suite uses `expected.yaml` so larger multi-line
-error fragments stay readable.
+identify the error.
 
 ## Running the tests
 
@@ -236,7 +231,6 @@ Run a single suite:
 
 ```bash
 bazel test //validation/core/integration_test/bazel_component:integration_test
-bazel test //validation/core/integration_test/component_class:integration_test
 bazel test //validation/core/integration_test/component_sequence:integration_test
 bazel test //validation/core/integration_test/component_internal_api:component_internal_api_integration_test
 bazel test //validation/core/integration_test/sequence_internal_api:sequence_internal_api_integration_test
@@ -253,7 +247,7 @@ bazel test //validation/core/integration_test/class_design_implementation:integr
 2. Add the `.puml` source file(s) and — for `bazel_component` — an
    `architecture.json`.
 
-3. Write `expected.json` or `expected.yaml`. For negative cases add the error
+3. Write `expected.yaml`. For negative cases add the error
   substrings you expect to see in the CLI log.
 
 4. Create a `BUILD` file following the pattern of an existing case in the same
@@ -261,8 +255,7 @@ bazel test //validation/core/integration_test/class_design_implementation:integr
 
 5. Add the new `case_data` target to the matching filegroup in
   [`BUILD`](BUILD) (`bazel_component_test_data`,
-  `component_class_test_data`, `component_sequence_test_data`,
-  `component_internal_api_test_data`, `sequence_internal_api_test_data`,
+  `component_sequence_test_data`, `component_internal_api_test_data`, `sequence_internal_api_test_data`,
   or `class_design_implementation_test_data`).
 
 6. Add a `#[test]` function in the matching suite file, such as

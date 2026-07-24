@@ -16,8 +16,10 @@ use crate::models::{
     LogicComponent, LogicRelation, SequenceDiagramInputs,
 };
 use class_diagram::{ClassDiagram, EntityType, Method, SimpleEntity, Visibility};
-use component_diagram::SourceLocation;
-use sequence_logic::{Event, Interaction, SequenceNode, SequenceTree};
+use sequence_logic::{
+    Event, Interaction, ParticipantType, SequenceNode, SequenceParticipant, SequenceTree,
+};
+use source_location::SourceLocation;
 
 // Common fixtures
 
@@ -131,7 +133,7 @@ pub(super) fn sequence_calls(calls: &[(&str, &str, &str)]) -> SequenceDiagramInp
     SequenceDiagramInputs {
         diagrams: vec![SequenceTree {
             name: Some("seq".to_string()),
-            participants: Vec::new(),
+            participants: sequence_participants(calls),
             root_interactions: calls
                 .iter()
                 .map(|(caller, callee, method)| SequenceNode {
@@ -146,6 +148,33 @@ pub(super) fn sequence_calls(calls: &[(&str, &str, &str)]) -> SequenceDiagramInp
                 .collect(),
         }],
     }
+}
+
+fn sequence_participants(calls: &[(&str, &str, &str)]) -> Vec<SequenceParticipant> {
+    let mut participants: Vec<SequenceParticipant> = Vec::new();
+
+    for name in calls
+        .iter()
+        .flat_map(|(caller, callee, _)| [*caller, *callee])
+    {
+        if name.is_empty()
+            || participants
+                .iter()
+                .any(|participant| participant.display_name == name)
+        {
+            continue;
+        }
+
+        participants.push(SequenceParticipant {
+            display_name: name.to_string(),
+            alias: Some(name.to_string()),
+            participant_type: ParticipantType::Participant,
+            source_location: dummy_source_location(),
+            stereotype: None,
+        });
+    }
+
+    participants
 }
 
 // Class diagram API fixtures.
