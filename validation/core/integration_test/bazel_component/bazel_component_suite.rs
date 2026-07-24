@@ -12,7 +12,7 @@
 // *******************************************************************************
 
 use test_framework::{
-    assert_cli_result, case_file_path, collect_case_fbs_files, load_expected_fixture,
+    assert_cli_result, case_file_path, collect_case_fbs_files, load_expected_yaml_fixture,
     run_validation_profile, CliRunResult,
 };
 
@@ -34,7 +34,7 @@ fn run_case_from_cli(
 }
 
 fn assert_case(case_dir: &str) {
-    let expected = load_expected_fixture(SUITE_DIR, case_dir);
+    let expected = load_expected_yaml_fixture(SUITE_DIR, case_dir);
     let component_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "component");
 
     let result = if !component_fbs_paths.is_empty() {
@@ -83,4 +83,24 @@ fn negative_extra_component_suite_case() {
 #[test]
 fn negative_wrong_stereotype_suite_case() {
     assert_case("negative_wrong_stereotype");
+}
+
+#[test]
+fn negative_duplicate_dependable_element_key_suite_case() {
+    assert_case("negative_duplicate_dependable_element_key");
+}
+
+#[test]
+fn negative_duplicate_unit_key_suite_case() {
+    assert_case("negative_duplicate_unit_key");
+}
+
+#[test]
+fn negative_duplicate_component_key_suite_case() {
+    assert_case("negative_duplicate_component_key");
+}
+
+#[test]
+fn negative_empty_target_name_label_suite_case() {
+    assert_case("negative_empty_target_name_label");
 }

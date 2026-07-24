@@ -16,6 +16,10 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 filegroup(
     name = "bazel_component_test_data",
     srcs = [
+        "//validation/core/integration_test/bazel_component/negative_duplicate_component_key:case_data",
+        "//validation/core/integration_test/bazel_component/negative_duplicate_dependable_element_key:case_data",
+        "//validation/core/integration_test/bazel_component/negative_duplicate_unit_key:case_data",
+        "//validation/core/integration_test/bazel_component/negative_empty_target_name_label:case_data",
         "//validation/core/integration_test/bazel_component/negative_extra_component:case_data",
         "//validation/core/integration_test/bazel_component/negative_extra_unit:case_data",
         "//validation/core/integration_test/bazel_component/negative_missing_component:case_data",
