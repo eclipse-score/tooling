@@ -161,10 +161,6 @@ fn is_source_file_line(line: &str) -> bool {
     line.starts_with(DESIGN_SOURCE_FILE_LABEL) || line.starts_with(IMPLEMENT_SOURCE_FILE_LABEL)
 }
 
-pub fn load_expected_fixture(suite_dir: &str, case_dir: &str) -> ExpectedFixture {
-    load_expected_yaml_fixture(suite_dir, case_dir)
-}
-
 pub fn assert_cli_result(case_dir: &str, expected: &ExpectedFixture, result: &CliRunResult) {
     assert_eq!(
         result.success, expected.should_pass,
