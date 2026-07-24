@@ -12,9 +12,10 @@
 // *******************************************************************************
 
 //! Class implementation validation: compare unit design class diagrams with
-//! implementation class diagrams produced by the C++ parser.
+//! C++ implementation produced by the C++ parser.
 
 use crate::models::ClassEntityIndex;
+use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::ValidationResult;
 use class_diagram::{
     EnumLiteral, MemberVariable, Method, Relationship, SimpleEntity, TemplateParameter, TypeAlias,
@@ -31,6 +32,12 @@ pub fn validate_class_design_implementation(
 
 struct ClassDesignImplementationValidator {
     result: ValidationResult,
+}
+
+#[derive(Clone, Copy)]
+enum FieldReferenceStyle {
+    Quoted,
+    Verbatim,
 }
 
 impl ClassDesignImplementationValidator {
@@ -92,6 +99,7 @@ impl ClassDesignImplementationValidator {
                 design_entity,
                 implementation_entity,
                 "entity_type",
+                FieldReferenceStyle::Quoted,
                 &format!("{:?}", design_entity.entity_type),
                 &format!("{:?}", implementation_entity.entity_type),
             ));
@@ -102,6 +110,7 @@ impl ClassDesignImplementationValidator {
                 design_entity,
                 implementation_entity,
                 "template_parameters",
+                FieldReferenceStyle::Quoted,
                 &render_template_parameters(&design_entity.template_parameters),
                 &render_template_parameters(&implementation_entity.template_parameters),
             ));
@@ -127,7 +136,11 @@ impl ClassDesignImplementationValidator {
                 Some(implementation_alias) => self.result.add_failure(Self::format_mismatch(
                     design_entity,
                     implementation_entity,
-                    &format!("type_alias {:?} original_type", design_alias.alias.as_str()),
+                    &format!(
+                        "type alias \"{}\" original type",
+                        design_alias.alias.as_str()
+                    ),
+                    FieldReferenceStyle::Verbatim,
                     &design_alias.original_type,
                     &implementation_alias.original_type,
                 )),
@@ -180,7 +193,8 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
-                &format!("variable {variable_name:?} data_type"),
+                &format!("variable \"{variable_name}\" data type"),
+                FieldReferenceStyle::Verbatim,
                 &render_optional_type(&design_variable.data_type),
                 &render_optional_type(&implementation_variable.data_type),
             ));
@@ -190,7 +204,8 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
-                &format!("variable {variable_name:?} visibility"),
+                &format!("variable \"{variable_name}\" visibility"),
+                FieldReferenceStyle::Verbatim,
                 &format!("{:?}", design_variable.visibility),
                 &format!("{:?}", implementation_variable.visibility),
             ));
@@ -200,7 +215,8 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
-                &format!("variable {variable_name:?} is_static"),
+                &format!("variable \"{variable_name}\" is static"),
+                FieldReferenceStyle::Verbatim,
                 &format!("{:?}", design_variable.is_static),
                 &format!("{:?}", implementation_variable.is_static),
             ));
@@ -263,7 +279,8 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
-                &format!("method {method_name:?} return_type"),
+                &format!("method \"{method_name}\" return type"),
+                FieldReferenceStyle::Verbatim,
                 &render_optional_type(&design_method.return_type),
                 &render_optional_type(&implementation_method.return_type),
             ));
@@ -273,7 +290,8 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
-                &format!("method {method_name:?} visibility"),
+                &format!("method \"{method_name}\" visibility"),
+                FieldReferenceStyle::Verbatim,
                 &format!("{:?}", design_method.visibility),
                 &format!("{:?}", implementation_method.visibility),
             ));
@@ -290,7 +308,8 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
-                &format!("method {method_name:?} template_parameters"),
+                &format!("method \"{method_name}\" template parameters"),
+                FieldReferenceStyle::Verbatim,
                 &render_template_parameters(&design_method.template_parameters),
                 &render_template_parameters(&implementation_method.template_parameters),
             ));
@@ -300,7 +319,8 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
-                &format!("method {method_name:?} modifiers"),
+                &format!("method \"{method_name}\" modifiers"),
+                FieldReferenceStyle::Verbatim,
                 &format!("{:?}", design_method.modifiers),
                 &format!("{:?}", implementation_method.modifiers),
             ));
@@ -320,7 +340,8 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
-                &format!("method {method_name:?} parameter_count"),
+                &format!("method \"{method_name}\" parameter count"),
+                FieldReferenceStyle::Verbatim,
                 &format_parameter_count(&design_method.parameters),
                 &format_parameter_count(&implementation_method.parameters),
             ));
@@ -336,7 +357,8 @@ impl ClassDesignImplementationValidator {
                 self.result.add_failure(Self::format_mismatch(
                     design_entity,
                     implementation_entity,
-                    &format!("method {method_name:?} parameter name"),
+                    &format!("method \"{method_name}\" parameter name"),
+                    FieldReferenceStyle::Verbatim,
                     &format_parameter(design_parameter),
                     &format_parameter(implementation_parameter),
                 ));
@@ -348,7 +370,8 @@ impl ClassDesignImplementationValidator {
                 self.result.add_failure(Self::format_mismatch(
                     design_entity,
                     implementation_entity,
-                    &format!("method {method_name:?} parameter type"),
+                    &format!("method \"{method_name}\" parameter type"),
+                    FieldReferenceStyle::Verbatim,
                     &format_parameter(design_parameter),
                     &format_parameter(implementation_parameter),
                 ));
@@ -358,7 +381,8 @@ impl ClassDesignImplementationValidator {
                 self.result.add_failure(Self::format_mismatch(
                     design_entity,
                     implementation_entity,
-                    &format!("method {method_name:?} parameter list"),
+                    &format!("method \"{method_name}\" parameter list"),
+                    FieldReferenceStyle::Verbatim,
                     &format_method_parameters(&design_method.parameters),
                     &format_method_parameters(&implementation_method.parameters),
                 ));
@@ -380,6 +404,7 @@ impl ClassDesignImplementationValidator {
                     design_entity,
                     implementation_entity,
                     &format!("{:?}", design_literal.name.as_str()),
+                    FieldReferenceStyle::Verbatim,
                     &enum_literal_value(design_literal),
                     &enum_literal_value(implementation_literal),
                 )),
@@ -410,6 +435,7 @@ impl ClassDesignImplementationValidator {
                         design_entity,
                         implementation_entity,
                         "relationship type",
+                        FieldReferenceStyle::Quoted,
                         &display_name,
                         &relationship_display_name(implementation_relationship),
                     ))
@@ -424,15 +450,19 @@ impl ClassDesignImplementationValidator {
     }
 
     fn format_missing_class(entity: &SimpleEntity) -> String {
-        let (design_file, design_line) = entity.source_location.display();
-        format!(
-            "Missing implementation class for unit design entity:\n\
-                Entity ID          : {}\n\
-                Design source file : {}\n\
-                Design source line : {}\n\
-                Required Action    : Add a matching implementation class or update the unit design",
-            entity.id, design_file, design_line,
-        )
+        ErrorBuilder::new(ErrorCategory::Class)
+            .title(format!(
+                "class \"{}\" from the unit design not found in the C++ class implementation",
+                entity.id
+            ))
+            .field("class", format!("\"{}\"", entity.id))
+            .field("design source file", format!("\"{}\"", design_source_file(entity)))
+            .field("design source line", design_source_line(entity).to_string())
+            .fix(format!(
+                "add implementation class \"{}\" in the C++ class implementation, or remove it from the unit design",
+                entity.id
+            ))
+            .build()
     }
 
     fn format_missing_member(
@@ -440,47 +470,97 @@ impl ClassDesignImplementationValidator {
         member_type: &str,
         member_name: &str,
     ) -> String {
-        let (design_file, design_line) = design_entity.source_location.display();
-        format!(
-            "Missing implementation {member_type} for unit design entity:\n\
-                Entity ID          : {}\n\
-                Member             : {}\n\
-                Design source file : {}\n\
-                Design source line : {}\n\
-                Required Action    : Implement the member or update the unit design",
-            design_entity.id, member_name, design_file, design_line,
-        )
+        ErrorBuilder::new(ErrorCategory::Member)
+            .title(format!(
+                "{member_type} \"{member_name}\" from entity \"{}\" in the unit design not found in the C++ class implementation",
+                design_entity.id
+            ))
+            .field("entity", format!("\"{}\"", design_entity.id))
+            .field("member", format!("{member_type} \"{member_name}\""))
+            .field(
+                "design source file",
+                format!("\"{}\"", design_source_file(design_entity)),
+            )
+            .field("design source line", design_source_line(design_entity).to_string())
+            .fix(format!(
+                "add {member_type} \"{member_name}\" to entity \"{}\" in the C++ class implementation, or remove it from the unit design",
+                design_entity.id
+            ))
+            .build()
     }
 
     fn format_mismatch(
         design_entity: &SimpleEntity,
         implementation_entity: &SimpleEntity,
         field: &str,
+        field_reference_style: FieldReferenceStyle,
         design_value: &str,
         implementation_value: &str,
     ) -> String {
-        let (design_file, design_line) = design_entity.source_location.display();
-        let (implement_file, implement_line) = implementation_entity.source_location.display();
-        format!(
-            "Implementation class data differs from unit design entity:\n\
-                Entity ID             : {}\n\
-                Field                 : {}\n\
-                Design value          : {}\n\
-                Design source file    : {}\n\
-                Design source line    : {}\n\
-                Implement value       : {}\n\
-                Implement source file : {}\n\
-                Implement source line : {}\n\
-                Required Action       : Align the implementation with the unit design or update the unit design",
-            design_entity.id,
-            field,
-            design_value,
-            design_file,
-            design_line,
-            implementation_value,
-            implement_file,
-            implement_line
-        )
+        let field_reference = format_field_reference(field, field_reference_style);
+
+        ErrorBuilder::new(ErrorCategory::Implementation)
+            .title(format!(
+                "field {field_reference} on entity \"{}\" differs between the unit design and the C++ class implementation",
+                design_entity.id,
+            ))
+            .field("entity", format!("\"{}\"", design_entity.id))
+            .field("field", field)
+            .field("design value", design_value)
+            .field(
+                "design source file",
+                format!("\"{}\"", design_source_file(design_entity)),
+            )
+            .field("design source line", design_source_line(design_entity).to_string())
+            .field("implementation value", implementation_value)
+            .field(
+                "implementation source file",
+                format!("\"{}\"", source_file(implementation_entity)),
+            )
+            .field(
+                "implementation source line",
+                source_line(implementation_entity).to_string(),
+            )
+            .fix(format!(
+                "make {field_reference} in entity \"{}\" consistent between the unit design and the C++ class implementation",
+                design_entity.id
+            ))
+            .build()
+    }
+}
+
+fn format_field_reference(field: &str, style: FieldReferenceStyle) -> String {
+    match style {
+        FieldReferenceStyle::Quoted => format!("\"{field}\""),
+        FieldReferenceStyle::Verbatim => field.to_string(),
+    }
+}
+
+fn design_source_file(entity: &SimpleEntity) -> String {
+    source_file(entity)
+}
+
+fn source_file(entity: &SimpleEntity) -> String {
+    let (file, _) = entity.source_location.display();
+
+    if file.is_empty() {
+        "<unknown>".to_string()
+    } else {
+        file
+    }
+}
+
+fn design_source_line(entity: &SimpleEntity) -> String {
+    source_line(entity)
+}
+
+fn source_line(entity: &SimpleEntity) -> String {
+    let (_, line) = entity.source_location.display();
+
+    if line == 0 {
+        "<unknown>".to_string()
+    } else {
+        line.to_string()
     }
 }
 
@@ -840,8 +920,9 @@ mod tests {
     use crate::models::ClassDiagramInputs;
     use class_diagram::{
         ClassDiagram, EntityType, FunctionArgument, MemberVariable, Method, RelationType,
-        Relationship, SimpleEntity, SourceLocation, Visibility,
+        Relationship, SimpleEntity, Visibility,
     };
+    use source_location::SourceLocation;
     use std::sync::Once;
 
     struct TestLogger;
@@ -1073,7 +1154,7 @@ mod tests {
         assert!(result
             .failures
             .iter()
-            .any(|message| message.contains("Missing implementation class")));
+            .any(|message| message.contains("[Class] Class \"Sample\" from the unit design not found in the C++ class implementation.")));
     }
 
     #[test]
@@ -1086,7 +1167,7 @@ mod tests {
         assert!(result
             .failures
             .iter()
-            .any(|message| message.contains("Missing implementation method")));
+            .any(|message| message.contains("[Member] Method \"run()\" from entity \"Sample\" in the unit design not found in the C++ class implementation.")));
     }
 
     #[test]
@@ -1121,8 +1202,8 @@ mod tests {
         let result = validate_class_design_implementation(&design, &implementation);
 
         assert!(result.failures.iter().any(|message| {
-            message.contains("Implementation class data differs")
-                && message.contains("variable \"value_\" data_type")
+            message.contains("[Implementation] Field variable \"value_\" data type on entity \"Sample\" differs between the unit design and the C++ class implementation.")
+                && message.contains("variable \"value_\" data type")
         }));
     }
 
@@ -1147,7 +1228,7 @@ mod tests {
         assert!(result
             .failures
             .iter()
-            .all(|message| !message.contains("Missing implementation method")));
+            .all(|message| !message.contains("[member] method")));
     }
 
     #[test]
@@ -1215,7 +1296,8 @@ mod tests {
         let result = validate_class_design_implementation(&design, &implementation);
 
         assert!(result.failures.iter().any(|message| {
-            message.contains("Missing implementation method") && message.contains("stop(int, int)")
+            message.contains("[Member] Method \"stop(int, int)\" from entity \"Sample\" in the unit design not found in the C++ class implementation.")
+                && message.contains("stop(int, int)")
         }));
         assert!(result
             .failures
@@ -1242,8 +1324,8 @@ mod tests {
         assert!(result
             .failures
             .iter()
-            .any(|message| message.contains("Implementation class data differs")));
+            .any(|message| message.contains("[Implementation] Field")));
         assert!(diagnostics.contains("Comparing design entity"));
-        assert!(!diagnostics.contains("Implementation class data differs"));
+        assert!(!diagnostics.contains("[Implementation] Field"));
     }
 }

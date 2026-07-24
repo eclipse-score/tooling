@@ -12,9 +12,9 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  Missing implementation enum_literal for unit design entity:
-  Entity ID          : Mode
-  Member             : On
-  Design source file : class_diagram.puml
-  Design source line : 16
-  Required Action    : Implement the member or update the unit design
+  [Member] Enum_literal "On" from entity "Mode" in the unit design not found in the C++ class implementation.
+    Entity             : "Mode"
+    Member             : enum_literal "On"
+    Design source file : "validation/core/integration_test/class_design_implementation/negative_enum_literal_missing/class_diagram.puml"
+    Design source line : 16
+    Fix                : Add enum_literal "On" to entity "Mode" in the C++ class implementation, or remove it from the unit design.

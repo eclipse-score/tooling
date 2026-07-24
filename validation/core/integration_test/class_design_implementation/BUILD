@@ -17,6 +17,7 @@ filegroup(
     name = "class_design_implementation_test_data",
     srcs = [
         "//validation/core/integration_test/class_design_implementation/negative_class_member_missing:case_data",
+        "//validation/core/integration_test/class_design_implementation/negative_duplicate_class_entity_input:case_data",
         "//validation/core/integration_test/class_design_implementation/negative_class_missing:case_data",
         "//validation/core/integration_test/class_design_implementation/negative_entity_type_mismatch:case_data",
         "//validation/core/integration_test/class_design_implementation/negative_enum_literal_mismatch:case_data",

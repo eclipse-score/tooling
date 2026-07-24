@@ -12,13 +12,13 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  Implementation class data differs from unit design entity:
-  Entity ID             : Engine
-  Field                 : variable "speed" visibility
-  Design value          : Public
-  Design source file    : class_diagram.puml
-  Design source line    : 16
-  Implement value       : Private
-  Implement source file : validation/core/integration_test/class_design_implementation/negative_variable_visibility_mismatch/transport.cpp
-  Implement source line : 14
-  Required Action       : Align the implementation with the unit design or update the unit design
+  [Implementation] Field variable "speed" visibility on entity "Engine" differs between the unit design and the C++ class implementation.
+    Entity                     : "Engine"
+    Field                      : variable "speed" visibility
+    Design value               : Public
+    Design source file         : "validation/core/integration_test/class_design_implementation/negative_variable_visibility_mismatch/class_diagram.puml"
+    Design source line         : 16
+    Implementation value       : Private
+    Implementation source file : "validation/core/integration_test/class_design_implementation/negative_variable_visibility_mismatch/transport.cpp"
+    Implementation source line : 14
+    Fix                        : Make variable "speed" visibility in entity "Engine" consistent between the unit design and the C++ class implementation.
