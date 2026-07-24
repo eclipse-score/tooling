@@ -25,6 +25,7 @@ use crate::models::{
     ComponentDiagramArchitecture, InternalApiIndex, InternalApiInterface, LogicComponentExt,
     SequenceDiagramIndex,
 };
+use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
 
 /// Run sequence-vs-internal-API method and coverage validation.
@@ -159,7 +160,6 @@ impl<'a> SequenceInternalApiValidator<'a> {
                 call_context,
                 method_name,
                 "sequence function name was not found in available interface methods",
-                "Declare this method on one of the available interfaces in the internal API diagram",
             ));
         }
 
@@ -204,7 +204,6 @@ impl<'a> SequenceInternalApiValidator<'a> {
                 call_context,
                 method_name,
                 "sequence function name was not found in the related interface methods",
-                "Declare this method on a shared interface referenced by both participating units in the internal API diagram",
             ));
         }
 
@@ -456,37 +455,49 @@ fn format_interface_method_coverage_error(
     interface: &InternalApiInterface,
     missing_methods: &BTreeSet<String>,
 ) -> String {
-    format!(
-        "Coverage consistency failure: internal API interface functions are not exercised in sequence diagrams:\n\
-          Interface id        : \"{interface_id}\"\n\
-          Missing functions   : {missing_functions}\n\
-          Action              : Add sequence interactions that call each missing function",
-        interface_id = interface.id,
-        missing_functions = format_name_list(missing_methods),
-    )
+    let missing_functions = format_name_list(missing_methods);
+    let (source_file, source_line) = interface.source_location.display();
+
+    ErrorBuilder::new(ErrorCategory::Coverage)
+        .title(format!(
+            "methods {missing_functions} declared on internal API interface \"{}\" in the internal API diagram are not exercised in the sequence diagram",
+            interface.id
+        ))
+        .field("interface id", format!("\"{}\"", interface.id))
+        .field("internal API source file", format!("\"{source_file}\""))
+        .field("internal API source line", source_line.to_string())
+        .field("missing functions", missing_functions.clone())
+        .fix(format!(
+            "add sequence interactions for functions {missing_functions} in the sequence diagram, or remove function declarations {missing_functions} in internal API interface \"{}\"",
+            interface.id
+        ))
+        .build()
 }
 
 fn format_sequence_method_consistency_error(
     call_context: &SequenceCallContext<'_>,
     method_name: &str,
     description: &str,
-    action: &str,
 ) -> String {
     let sequence_call = format_sequence_call(
         call_context.caller_unit,
         call_context.callee_unit,
         method_name,
     );
+    let (source_file, source_line) = call_context.source_location.display();
 
-    format!(
-        "Method consistency failure: {description}:\n\
-          Sequence call       : {sequence_call}\n\
-          Source file         : \"{source_file}\"\n\
-          Source line         : {source_line}\n\
-          Action              : {action}",
-        source_file = call_context.source_file,
-        source_line = call_context.source_line,
-    )
+    ErrorBuilder::new(ErrorCategory::Method)
+        .title(format!(
+            "sequence function \"{method_name}\" from sequence call {sequence_call} in the sequence diagram not found in the internal API diagram"
+        ))
+        .field("sequence call", sequence_call.clone())
+        .field("sequence source file", format!("\"{source_file}\""))
+        .field("sequence source line", source_line.to_string())
+        .field("detail", description)
+        .fix(format!(
+            "add method \"{method_name}\" in a matching internal API interface in the internal API diagram, or remove sequence function \"{method_name}\" in sequence call {sequence_call} in the sequence diagram"
+        ))
+        .build()
 }
 
 fn format_sequence_role_consistency_error(
@@ -500,20 +511,34 @@ fn format_sequence_role_consistency_error(
         method_name,
     );
 
-    format!(
-        "Interface consistency failure: sequence interaction does not match consumer/provider roles in the component diagram:\n\
-          Sequence call       : {sequence_call}\n\
-          Source file         : \"{source_file}\"\n\
-          Source line         : {source_line}\n\
-          Expected caller role: \"{caller_unit}\" should require shared interface(s) {expected_interfaces}\n\
-          Expected callee role: \"{callee_unit}\" should provide shared interface(s) {expected_interfaces}\n\
-          Action              : Reverse the sequence call or align the required/provided interface bindings in the component diagram",
-        caller_unit = call_context.caller_unit,
-        callee_unit = call_context.callee_unit,
-        expected_interfaces = format_name_list(expected_interfaces),
-        source_file = call_context.source_file,
-        source_line = call_context.source_line,
-    )
+    let expected_interfaces = format_name_list(expected_interfaces);
+    let (source_file, source_line) = call_context.source_location.display();
+
+    ErrorBuilder::new(ErrorCategory::Interface)
+        .title(format!(
+            "sequence call {sequence_call} in the sequence diagram does not match the required/provided interface roles in the component diagram"
+        ))
+        .field("sequence call", sequence_call.clone())
+        .field("sequence source file", format!("\"{source_file}\""))
+        .field("sequence source line", source_line.to_string())
+        .field(
+            "expected caller role",
+            format!(
+                "\"{}\" should require shared interface(s) {}",
+                call_context.caller_unit, expected_interfaces
+            ),
+        )
+        .field(
+            "expected callee role",
+            format!(
+                "\"{}\" should provide shared interface(s) {}",
+                call_context.callee_unit, expected_interfaces
+            ),
+        )
+        .fix(format!(
+            "add required/provided interface bindings for shared interface(s) {expected_interfaces} in the component diagram, or remove sequence call {sequence_call} in the sequence diagram"
+        ))
+        .build()
 }
 
 #[cfg(test)]
