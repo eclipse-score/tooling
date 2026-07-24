@@ -1,7 +1,0 @@
-{
-  "should_pass": false,
-  "error_contains": [
-    "Missing component in PlantUML",
-    "Alias          : \"component_example\""
-  ]
-}

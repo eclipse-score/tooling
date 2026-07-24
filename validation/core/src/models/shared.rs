@@ -13,6 +13,8 @@
 
 //! Shared helper types used across the split validation models.
 
+use crate::{ErrorBuilder, ErrorCategory};
+
 /// Composite key: `(canonical_alias, parent_alias)`. `parent_alias` is `None`
 /// for top-level entities. Using the parent as part of the key means two
 /// identically-named entities under different parents are treated as distinct.
@@ -24,7 +26,13 @@ pub type EntityKey = (String, Option<String>);
 pub(super) fn label_short_name(label: &str) -> Result<&str, String> {
     let name = label.rsplit_once(':').map(|(_, n)| n).unwrap_or(label);
     if name.is_empty() {
-        return Err(format!("Empty target name extracted from label: {label:?}"));
+        return Err(ErrorBuilder::new(ErrorCategory::Design)
+            .title(format!("Bazel label \"{label}\" does not define a target."))
+            .field("bazel label", format!("\"{label}\""))
+            .fix(format!(
+                "add a target name after ':' in Bazel label \"{label}\""
+            ))
+            .build());
     }
     Ok(name)
 }

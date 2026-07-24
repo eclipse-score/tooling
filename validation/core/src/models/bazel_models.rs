@@ -17,7 +17,7 @@ use serde::Deserialize;
 
 use super::shared::label_short_name;
 use super::EntityKey;
-use crate::ValidationResult;
+use crate::{ErrorBuilder, ErrorCategory, ValidationResult};
 
 // ---------------------------------------------------------------------------
 /// Bazel architecture JSON model produced by the dependable element rule.
@@ -62,11 +62,12 @@ impl BazelInput {
                 // Top-level entries are dependable elements (SEooC).
                 let key = (comp_key.clone(), None);
                 if let Some(prev) = seooc_set.insert(key.clone(), comp_label.clone()) {
-                    result.add_failure(format!(
-                        "Duplicate dependable element key in Bazel build graph:\n\
-                           Key   : {:?}\n\
-                           Labels: {} and {}",
-                        key, prev, comp_label
+                    result.add_failure(duplicate_bazel_entity_error(
+                        "dependable element",
+                        &comp_key,
+                        None,
+                        &prev,
+                        comp_label,
                     ));
                 }
             }
@@ -81,11 +82,12 @@ impl BazelInput {
                 };
                 let key = (unit_key, Some(comp_key.clone()));
                 if let Some(prev) = unit_set.insert(key.clone(), unit_label.clone()) {
-                    result.add_failure(format!(
-                        "Duplicate unit key in Bazel build graph:\n\
-                           Key   : {:?}\n\
-                           Labels: {} and {}",
-                        key, prev, unit_label
+                    result.add_failure(duplicate_bazel_entity_error(
+                        "unit",
+                        &key.0,
+                        Some(&comp_key),
+                        &prev,
+                        unit_label,
                     ));
                 }
             }
@@ -100,11 +102,12 @@ impl BazelInput {
                 };
                 let key = (component_key, Some(comp_key.clone()));
                 if let Some(prev) = comp_set.insert(key.clone(), component_label.clone()) {
-                    result.add_failure(format!(
-                        "Duplicate component key in Bazel build graph:\n\
-                           Key   : {:?}\n\
-                           Labels: {} and {}",
-                        key, prev, component_label
+                    result.add_failure(duplicate_bazel_entity_error(
+                        "component",
+                        &key.0,
+                        Some(&comp_key),
+                        &prev,
+                        component_label,
                     ));
                 }
             }
@@ -143,6 +146,39 @@ pub struct BazelArchitecture {
     pub unit_set: BTreeMap<EntityKey, String>,
 }
 
+fn duplicate_bazel_entity_error(
+    kind: &str,
+    alias: &str,
+    parent: Option<&str>,
+    first_label: &str,
+    second_label: &str,
+) -> String {
+    let mut error = ErrorBuilder::new(ErrorCategory::Design)
+        .title(format!(
+            "{kind} \"{alias}\" is defined more than once in Bazel."
+        ))
+        .field("alias", format!("\"{alias}\""));
+
+    if let Some(parent) = parent {
+        error = error.field("parent", parent);
+    }
+
+    let fix = match parent {
+        Some(parent) => format!(
+            "keep only one Bazel {kind} definition for \"{alias}\" under \"{parent}\", or rename one of the duplicate Bazel targets"
+        ),
+        None => format!(
+            "keep only one Bazel {kind} definition for \"{alias}\", or rename one of the duplicate Bazel targets"
+        ),
+    };
+
+    error
+        .field("first bazel label", first_label)
+        .field("second bazel label", second_label)
+        .fix(fix)
+        .build()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,11 +208,9 @@ mod tests {
         let _architecture = arch.to_bazel_architecture(&mut setup_result);
 
         assert!(
-            setup_result
-                .failures
-                .iter()
-                .any(|message| message.contains("Duplicate dependable element key")),
-            "Expected duplicate dependable element key error, got: {:?}",
+            setup_result.failures.iter().any(|message| message
+                .contains("Dependable element \"comp_a\" is defined more than once in Bazel.")),
+            "Expected duplicate dependable element design error, got: {:?}",
             setup_result.failures
         );
     }
