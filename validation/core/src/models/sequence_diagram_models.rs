@@ -13,11 +13,12 @@
 
 //! Models for sequence-diagram FlatBuffer inputs used by design verification.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
-use sequence_logic::{Event, SequenceNode, SequenceTree};
+use sequence_logic::{Event, SequenceNode, SequenceParticipant, SequenceTree};
+use source_location::SourceLocation;
 
-use crate::ValidationResult;
+use crate::{ErrorBuilder, ErrorCategory, ValidationResult};
 
 /// Collection of sequence diagrams loaded from one or more FlatBuffer files.
 pub struct SequenceDiagramInputs {
@@ -29,8 +30,7 @@ pub struct ObservedSequenceCall {
     pub caller: String,
     pub callee: String,
     pub method: String,
-    pub source_file: String,
-    pub source_line: u32,
+    pub source_location: SourceLocation,
 }
 
 impl SequenceDiagramInputs {
@@ -44,22 +44,32 @@ impl SequenceDiagramInputs {
 pub struct SequenceDiagramIndex {
     used_participants: BTreeSet<String>,
     observed_calls: Vec<ObservedSequenceCall>,
+    participant_sources: BTreeMap<String, SourceLocation>,
 }
 
 impl SequenceDiagramIndex {
     fn from_diagrams(diagrams: &[SequenceTree], result: &mut ValidationResult) -> Self {
         let mut used_participants = BTreeSet::new();
         let mut observed_calls = Vec::new();
+        let mut participant_sources = BTreeMap::new();
 
         for diagram in diagrams {
+            collect_participant_sources(&diagram.participants, &mut participant_sources);
             for node in &diagram.root_interactions {
-                collect_sequence_data(node, &mut used_participants, &mut observed_calls, result);
+                collect_sequence_data(
+                    node,
+                    &mut used_participants,
+                    &mut observed_calls,
+                    &mut participant_sources,
+                    result,
+                );
             }
         }
 
         Self {
             used_participants,
             observed_calls,
+            participant_sources,
         }
     }
 
@@ -70,95 +80,149 @@ impl SequenceDiagramIndex {
     pub fn observed_calls(&self) -> &[ObservedSequenceCall] {
         &self.observed_calls
     }
+
+    pub fn participant_source(&self, participant: &str) -> Option<&SourceLocation> {
+        self.participant_sources.get(participant)
+    }
+}
+
+fn collect_participant_sources(
+    participants: &[SequenceParticipant],
+    participant_sources: &mut BTreeMap<String, SourceLocation>,
+) {
+    for participant in participants {
+        participant_sources
+            .entry(participant_name(participant))
+            .or_insert_with(|| participant.source_location.clone());
+    }
 }
 
 fn collect_sequence_data(
     node: &SequenceNode,
     used_participants: &mut BTreeSet<String>,
     observed_calls: &mut Vec<ObservedSequenceCall>,
+    participant_sources: &mut BTreeMap<String, SourceLocation>,
     result: &mut ValidationResult,
 ) {
     match &node.event {
         Event::Interaction(interaction) => {
+            let (source_file, source_line) = node.source_location.display();
             validate_required_endpoints(
                 result,
                 RequiredEndpointsCheck {
-                    connection_kind: "sequence function-call connection",
+                    item_kind: "sequence function",
                     caller: interaction.caller.as_str(),
                     callee: interaction.callee.as_str(),
                     label_value: interaction.method.as_str(),
-                    label_name: "Sequence function",
-                    action:
-                        "Provide both caller and callee for each sequence function-call connection",
-                    source_file: node.source_location.file.as_ref(),
-                    source_line: node.source_location.line,
+                    label_name: "method",
+                    source_file: source_file.as_str(),
+                    source_line,
                 },
             );
 
-            if !interaction.caller.is_empty() {
-                used_participants.insert(interaction.caller.clone());
-            }
-            if !interaction.callee.is_empty() {
-                used_participants.insert(interaction.callee.clone());
-            }
+            record_participant_usage_and_source(
+                interaction.caller.as_str(),
+                &node.source_location,
+                used_participants,
+                participant_sources,
+            );
+            record_participant_usage_and_source(
+                interaction.callee.as_str(),
+                &node.source_location,
+                used_participants,
+                participant_sources,
+            );
 
             observed_calls.push(ObservedSequenceCall {
                 caller: interaction.caller.clone(),
                 callee: interaction.callee.clone(),
                 method: interaction.method.clone(),
-                source_file: node.source_location.file.to_string(),
-                source_line: node.source_location.line,
+                source_location: node.source_location.clone(),
             });
         }
         Event::Return(ret) => {
+            let (source_file, source_line) = node.source_location.display();
             validate_required_endpoints(
                 result,
                 RequiredEndpointsCheck {
-                    connection_kind: "sequence return connection",
+                    item_kind: "sequence return",
                     caller: ret.caller.as_str(),
                     callee: ret.callee.as_str(),
                     label_value: ret.return_content.as_str(),
-                    label_name: "Return content",
-                    action: "Provide both caller and callee for each sequence return connection",
-                    source_file: node.source_location.file.as_ref(),
-                    source_line: node.source_location.line,
+                    label_name: "return content",
+                    source_file: source_file.as_str(),
+                    source_line,
                 },
             );
 
-            if !ret.caller.is_empty() {
-                used_participants.insert(ret.caller.clone());
-            }
-            if !ret.callee.is_empty() {
-                used_participants.insert(ret.callee.clone());
-            }
+            record_participant_usage_and_source(
+                ret.caller.as_str(),
+                &node.source_location,
+                used_participants,
+                participant_sources,
+            );
+            record_participant_usage_and_source(
+                ret.callee.as_str(),
+                &node.source_location,
+                used_participants,
+                participant_sources,
+            );
         }
         Event::Condition(_) => {}
     }
 
     for child in &node.branches_node {
-        collect_sequence_data(child, used_participants, observed_calls, result);
+        collect_sequence_data(
+            child,
+            used_participants,
+            observed_calls,
+            participant_sources,
+            result,
+        );
     }
 }
 
+fn record_participant_usage_and_source(
+    participant: &str,
+    source_location: &SourceLocation,
+    used_participants: &mut BTreeSet<String>,
+    participant_sources: &mut BTreeMap<String, SourceLocation>,
+) {
+    if participant.is_empty() {
+        return;
+    }
+
+    used_participants.insert(participant.to_string());
+    participant_sources
+        .entry(participant.to_string())
+        .or_insert_with(|| source_location.clone());
+}
+
+fn participant_name(participant: &SequenceParticipant) -> String {
+    participant
+        .alias
+        .clone()
+        .filter(|alias| !alias.is_empty())
+        .unwrap_or_else(|| participant.display_name.clone())
+}
+
 struct RequiredEndpointsCheck<'a> {
-    connection_kind: &'a str,
+    item_kind: &'a str,
     caller: &'a str,
     callee: &'a str,
     label_value: &'a str,
     label_name: &'a str,
-    action: &'a str,
     source_file: &'a str,
     source_line: u32,
 }
 
 fn validate_required_endpoints(result: &mut ValidationResult, check: RequiredEndpointsCheck<'_>) {
     let RequiredEndpointsCheck {
-        connection_kind,
+        item_kind,
         caller,
         callee,
         label_value,
         label_name,
-        action,
         source_file,
         source_line,
     } = check;
@@ -174,18 +238,23 @@ fn validate_required_endpoints(result: &mut ValidationResult, check: RequiredEnd
         (false, false) => unreachable!(),
     };
 
-    result.add_failure(format!(
-        "Sequence validity failure: {connection_kind} is missing required endpoints:\n\
-           Missing endpoints  : \"{missing_endpoints}\"\n\
-           Caller unit        : \"{caller}\"\n\
-           Callee unit        : \"{callee}\"\n\
-           {label_name:<18}: \"{label_value}\"\n\
-           Source file        : \"{source_file}\"\n\
-           Source line        : \"{source_line}\"\n\
-           Action             : {action}",
-        source_file = source_file,
-        source_line = source_line,
-    ));
+    let fix = format!(
+        "add the missing {missing_endpoints} for {item_kind} \"{label_value}\" in the sequence diagram"
+    );
+
+    result.add_failure(
+        ErrorBuilder::new(ErrorCategory::Method)
+            .title(format!(
+                "{item_kind} \"{label_value}\" is missing {missing_endpoints}."
+            ))
+            .field(label_name, format!("\"{label_value}\""))
+            .field("caller unit", format!("\"{caller}\""))
+            .field("callee unit", format!("\"{callee}\""))
+            .field("sequence source file", format!("\"{source_file}\""))
+            .field("sequence source line", source_line.to_string())
+            .fix(fix)
+            .build(),
+    );
 }
 
 #[cfg(test)]
@@ -277,8 +346,7 @@ mod tests {
 
         assert_eq!(result.failures.len(), 1);
         assert!(result.failures[0]
-            .contains("sequence function-call connection is missing required endpoints"));
-        assert!(result.failures[0].contains("\"caller\""));
+            .contains("[Method] Sequence function \"GetData()\" is missing caller."));
         assert!(result.failures[0].contains("\"unit_2\""));
     }
 
@@ -297,8 +365,7 @@ mod tests {
 
         assert_eq!(result.failures.len(), 1);
         assert!(result.failures[0]
-            .contains("sequence function-call connection is missing required endpoints"));
-        assert!(result.failures[0].contains("\"callee\""));
+            .contains("[Method] Sequence function \"GetData()\" is missing callee."));
         assert!(result.failures[0].contains("\"unit_1\""));
     }
 }
