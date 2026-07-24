@@ -12,13 +12,13 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  Implementation class data differs from unit design entity:
-  Entity ID             : Engine
-  Field                 : type_alias "Speed" original_type
-  Design value          : std::uint8_t
-  Design source file    : class_diagram.puml
-  Design source line    : 6
-  Implement value       : std::uint16_t
-  Implement source file : validation/core/integration_test/class_design_implementation/negative_type_alias_mismatch/transport.cpp
-  Implement source line : 8
-  Required Action       : Align the implementation with the unit design or update the unit design
+  [Implementation] Field type alias "Speed" original type on entity "Engine" differs between the unit design and the C++ class implementation.
+    Entity                     : "Engine"
+    Field                      : type alias "Speed" original type
+    Design value               : std::uint8_t
+    Design source file         : "validation/core/integration_test/class_design_implementation/negative_type_alias_mismatch/class_diagram.puml"
+    Design source line         : 6
+    Implementation value       : std::uint16_t
+    Implementation source file : "validation/core/integration_test/class_design_implementation/negative_type_alias_mismatch/transport.cpp"
+    Implementation source line : 8
+    Fix                        : Make type alias "Speed" original type in entity "Engine" consistent between the unit design and the C++ class implementation.

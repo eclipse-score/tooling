@@ -12,13 +12,13 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  Implementation class data differs from unit design entity:
-  Entity ID             : Engine
-  Field                 : method "stop" return_type
-  Design value          : int
-  Design source file    : class_diagram.puml
-  Design source line    : 6
-  Implement value       : void
-  Implement source file : validation/core/integration_test/class_design_implementation/negative_method_mismatch/transport.cpp
-  Implement source line : 6
-  Required Action       : Align the implementation with the unit design or update the unit design
+  [Implementation] Field method "stop" return type on entity "Engine" differs between the unit design and the C++ class implementation.
+    Entity                     : "Engine"
+    Field                      : method "stop" return type
+    Design value               : int
+    Design source file         : "validation/core/integration_test/class_design_implementation/negative_method_mismatch/class_diagram.puml"
+    Design source line         : 6
+    Implementation value       : void
+    Implementation source file : "validation/core/integration_test/class_design_implementation/negative_method_mismatch/transport.cpp"
+    Implementation source line : 6
+    Fix                        : Make method "stop" return type in entity "Engine" consistent between the unit design and the C++ class implementation.

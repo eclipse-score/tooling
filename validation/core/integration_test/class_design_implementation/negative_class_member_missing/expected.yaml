@@ -12,9 +12,9 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  Missing implementation variable for unit design entity:
-  Entity ID          : Engine
-  Member             : manufacturer
-  Design source file : class_diagram.puml
-  Design source line : 17
-  Required Action    : Implement the member or update the unit design
+  [Member] Variable "manufacturer" from entity "Engine" in the unit design not found in the C++ class implementation.
+    Entity             : "Engine"
+    Member             : variable "manufacturer"
+    Design source file : "validation/core/integration_test/class_design_implementation/negative_class_member_missing/class_diagram.puml"
+    Design source line : 17
+    Fix                : Add variable "manufacturer" to entity "Engine" in the C++ class implementation, or remove it from the unit design.

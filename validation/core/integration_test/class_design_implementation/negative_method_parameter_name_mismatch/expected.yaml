@@ -12,13 +12,13 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  Implementation class data differs from unit design entity:
-  Entity ID             : Engine
-  Field                 : method "stop" parameter name
-  Design value          : force: double
-  Design source file    : class_diagram.puml
-  Design source line    : 6
-  Implement value       : thrust: double
-  Implement source file : validation/core/integration_test/class_design_implementation/negative_method_parameter_name_mismatch/transport.cpp
-  Implement source line : 6
-  Required Action       : Align the implementation with the unit design or update the unit design
+  [Implementation] Field method "stop" parameter name on entity "Engine" differs between the unit design and the C++ class implementation.
+    Entity                     : "Engine"
+    Field                      : method "stop" parameter name
+    Design value               : force: double
+    Design source file         : "validation/core/integration_test/class_design_implementation/negative_method_parameter_name_mismatch/class_diagram.puml"
+    Design source line         : 6
+    Implementation value       : thrust: double
+    Implementation source file : "validation/core/integration_test/class_design_implementation/negative_method_parameter_name_mismatch/transport.cpp"
+    Implementation source line : 6
+    Fix                        : Make method "stop" parameter name in entity "Engine" consistent between the unit design and the C++ class implementation.

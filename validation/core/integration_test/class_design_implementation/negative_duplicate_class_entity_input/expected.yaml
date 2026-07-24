@@ -10,10 +10,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+
 should_pass: false
 error_contains: |
-  [Class] Class "Manufacturer" from the unit design not found in the C++ class implementation.
-    Class              : "Manufacturer"
-    Design source file : "validation/core/integration_test/class_design_implementation/negative_class_missing/class_diagram.puml"
-    Design source line : 16
-    Fix                : Add implementation class "Manufacturer" in the C++ class implementation, or remove it from the unit design.
+  [Class] Class "Engine" is defined more than once in the class diagram.
+    Class                 : "Engine"
+    Design source file    : "validation/core/integration_test/class_design_implementation/negative_duplicate_class_entity_input/class_diagram_part1.puml"
+    Design source line    : 16
+    Duplicate source file : "validation/core/integration_test/class_design_implementation/negative_duplicate_class_entity_input/class_diagram_part2.puml"
+    Duplicate source line : 16
+    Fix                   : Remove or rename one of the duplicate class "Engine" declarations in the class diagram.
