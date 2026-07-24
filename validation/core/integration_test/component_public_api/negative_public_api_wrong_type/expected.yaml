@@ -12,5 +12,8 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  Missing public APIs : "SampleLibraryAPI"
-  Action              : Declare each public API interface in the public API class diagram or remove it from the component diagram
+  [Interface] Public API interface(s) "SampleLibraryAPI" from the static diagram not found in the public API diagram.
+    Missing public APIs                       : "SampleLibraryAPI"
+    Static source file for "SampleLibraryAPI" : "validation/core/integration_test/component_public_api/negative_public_api_wrong_type/static_design.puml"
+    Static source line for "SampleLibraryAPI" : 22
+    Fix                                       : Add public API declaration(s) "SampleLibraryAPI" in the public API diagram, or remove those interface declarations from the static diagram.
