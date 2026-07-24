@@ -12,8 +12,8 @@
 // *******************************************************************************
 
 use test_framework::{
-    assert_cli_result, collect_case_fbs_files, load_expected_fixture, run_validation_profile,
-    CliRunResult,
+    assert_cli_result, collect_case_fbs_files, load_expected_yaml_fixture, normalize_yaml_result,
+    run_validation_profile, CliRunResult,
 };
 
 const SUITE_DIR: &str = "component_internal_api";
@@ -34,7 +34,7 @@ fn run_case_from_cli(
 }
 
 fn assert_case(case_dir: &str) {
-    let expected = load_expected_fixture(SUITE_DIR, case_dir);
+    let expected = load_expected_yaml_fixture(SUITE_DIR, case_dir);
     let component_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "component");
     let internal_api_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "internal_api");
 
@@ -46,12 +46,34 @@ fn assert_case(case_dir: &str) {
         );
     };
 
+    let result = normalize_yaml_result(result);
+
     assert_cli_result(case_dir, &expected, &result);
 }
 
 #[test]
 fn negative_interface_missing_from_internal_api_suite_case() {
     assert_case("negative_interface_missing_from_internal_api");
+}
+
+#[test]
+fn negative_duplicate_unit_alias_casefolded_suite_case() {
+    assert_case("negative_duplicate_unit_alias_casefolded");
+}
+
+#[test]
+fn negative_duplicate_component_alias_casefolded_suite_case() {
+    assert_case("negative_duplicate_component_alias_casefolded");
+}
+
+#[test]
+fn negative_duplicate_interface_alias_casefolded_suite_case() {
+    assert_case("negative_duplicate_interface_alias_casefolded");
+}
+
+#[test]
+fn negative_duplicate_dependable_element_alias_casefolded_suite_case() {
+    assert_case("negative_duplicate_dependable_element_alias_casefolded");
 }
 
 #[test]
