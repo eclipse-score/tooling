@@ -1,8 +1,0 @@
-{
-  "should_pass": false,
-  "error_contains": [
-    "Method consistency failure",
-    "sequence function name was not found in the related interface methods",
-    "\"GetData\""
-  ]
-}

@@ -79,14 +79,15 @@ fn reports_internal_api_interface_function_not_exercised_without_method_name_che
     let validation_result = validate(sequence_diagrams, &internal_api);
 
     assert_eq!(validation_result.failures.len(), 1);
-    assert!(validation_result.failures[0]
-        .contains("internal API interface functions are not exercised in sequence diagrams"));
+    assert!(validation_result.failures[0].contains(
+        "Methods \"OtherMethod\" declared on internal API interface \"InternalInterface\" in the internal API diagram are not exercised in the sequence diagram."
+    ));
     assert!(validation_result.failures[0].contains("\"InternalInterface\""));
     assert!(validation_result.failures[0].contains("\"OtherMethod\""));
     assert!(validation_result
         .failures
         .iter()
-        .all(|message| !message.contains("Method consistency failure")));
+        .all(|message| !message.contains("[Method]")));
 }
 
 #[test]
@@ -97,8 +98,9 @@ fn reports_internal_api_interface_function_not_exercised() {
     let validation_result = validate(sequence_diagrams, &internal_api);
 
     assert_eq!(validation_result.failures.len(), 1);
-    assert!(validation_result.failures[0]
-        .contains("internal API interface functions are not exercised in sequence diagrams"));
+    assert!(validation_result.failures[0].contains(
+        "Methods \"SetData\" declared on internal API interface \"InternalInterface\" in the internal API diagram are not exercised in the sequence diagram."
+    ));
     assert!(validation_result.failures[0].contains("\"InternalInterface\""));
     assert!(validation_result.failures[0].contains("\"SetData\""));
 }
@@ -128,11 +130,14 @@ fn reports_sequence_function_missing_from_available_interfaces_with_component_co
 
     assert_eq!(validation_result.failures.len(), 2);
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("sequence function name was not found in available interface methods")
-            && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
+        message.contains(
+            "Sequence function \"GetData\" from sequence call \"u1\" -> \"u2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+        ) && message.contains("sequence function name was not found in available interface methods")
     }));
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("internal API interface functions are not exercised in sequence diagrams")
+        message.contains(
+            "Methods \"OtherMethod\" declared on internal API interface \"InternalInterface\" in the internal API diagram are not exercised in the sequence diagram."
+        )
             && message.contains("\"InternalInterface\"")
             && message.contains("\"OtherMethod\"")
     }));
@@ -153,15 +158,18 @@ fn reports_sequence_function_missing_when_shared_interface_has_no_direction_role
 
     assert_eq!(validation_result.failures.len(), 2);
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("sequence function name was not found in available interface methods")
-            && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
+        message.contains(
+            "Sequence function \"GetData\" from sequence call \"u1\" -> \"u2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+        ) && message.contains("sequence function name was not found in available interface methods")
     }));
     assert!(validation_result
         .failures
         .iter()
-        .all(|message| !message.contains("consumer/provider roles")));
+        .all(|message| !message.contains("required/provided interface roles")));
     assert!(validation_result.failures.iter().all(|message| {
-        !message.contains("sequence function name was not found in the related interface methods")
+        !message.contains(
+            "Detail       : sequence function name was not found in the related interface methods",
+        )
     }));
 }
 
@@ -179,8 +187,9 @@ fn reports_interface_function_not_exercised_in_sequence_diagrams_with_component_
         validate_with_component_context(component_diagrams, sequence_diagrams, &internal_api);
 
     assert_eq!(validation_result.failures.len(), 1);
-    assert!(validation_result.failures[0]
-        .contains("internal API interface functions are not exercised in sequence diagrams"));
+    assert!(validation_result.failures[0].contains(
+        "Methods \"SetData\" declared on internal API interface \"InternalInterface\" in the internal API diagram are not exercised in the sequence diagram."
+    ));
     assert!(validation_result.failures[0].contains("\"InternalInterface\""));
     assert!(validation_result.failures[0].contains("\"SetData\""));
 }
@@ -202,8 +211,9 @@ fn reports_unreferenced_internal_api_interface_function_not_exercised_without_se
         validate_with_component_context(component_diagrams, sequence_diagrams, &internal_api);
 
     assert_eq!(validation_result.failures.len(), 1);
-    assert!(validation_result.failures[0]
-        .contains("internal API interface functions are not exercised in sequence diagrams"));
+    assert!(validation_result.failures[0].contains(
+        "Methods \"SetData\" declared on internal API interface \"OtherInterface\" in the internal API diagram are not exercised in the sequence diagram."
+    ));
     assert!(validation_result.failures[0].contains("\"OtherInterface\""));
     assert!(validation_result.failures[0].contains("\"SetData\""));
 }
@@ -222,8 +232,9 @@ fn reports_self_call_method_mismatch_when_unit_has_missing_internal_api_interfac
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("sequence function name was not found")
-            && message.contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData\"")
+        message.contains(
+            "Sequence function \"GetData\" from sequence call \"u1\" -> \"u1\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+        ) && message.contains("\"u1\" -> \"u1\" : \"GetData\"")
     }));
 }
 
@@ -254,11 +265,14 @@ fn reports_self_call_function_missing_from_available_interfaces() {
 
     assert_eq!(validation_result.failures.len(), 2);
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("sequence function name was not found")
-            && message.contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData\"")
+        message.contains(
+            "Sequence function \"GetData\" from sequence call \"u1\" -> \"u1\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+        ) && message.contains("\"u1\" -> \"u1\" : \"GetData\"")
     }));
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("internal API interface functions are not exercised in sequence diagrams")
+        message.contains(
+            "Methods \"OtherMethod\" declared on internal API interface \"InternalInterface\" in the internal API diagram are not exercised in the sequence diagram."
+        )
             && message.contains("\"InternalInterface\"")
             && message.contains("\"OtherMethod\"")
     }));
@@ -301,9 +315,10 @@ fn reports_self_call_without_any_available_interfaces() {
         validate_with_component_context(component_diagrams, sequence_diagrams, &internal_api);
 
     assert_eq!(validation_result.failures.len(), 1);
-    assert!(validation_result.failures[0].contains("sequence function name was not found"));
-    assert!(validation_result.failures[0]
-        .contains("Sequence call       : \"u1\" -> \"u1\" : \"GetData\""));
+    assert!(validation_result.failures[0].contains(
+        "Sequence function \"GetData\" from sequence call \"u1\" -> \"u1\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+    ));
+    assert!(validation_result.failures[0].contains("\"u1\" -> \"u1\" : \"GetData\""));
 }
 
 #[test]
@@ -325,11 +340,14 @@ fn reports_method_declared_only_on_caller_side_interfaces() {
 
     assert_eq!(validation_result.failures.len(), 2);
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("sequence function name was not found in the related interface methods")
-            && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
+        message.contains(
+            "Sequence function \"GetData\" from sequence call \"u1\" -> \"u2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+        ) && message.contains("sequence function name was not found in the related interface methods")
     }));
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("internal API interface functions are not exercised in sequence diagrams")
+        message.contains(
+            "Methods \"OtherMethod\" declared on internal API interface \"SharedInterface\" in the internal API diagram are not exercised in the sequence diagram."
+        )
             && message.contains("\"SharedInterface\"")
             && message.contains("\"OtherMethod\"")
     }));
@@ -358,11 +376,14 @@ fn reports_method_declared_only_on_callee_side_interfaces() {
 
     assert_eq!(validation_result.failures.len(), 2);
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("sequence function name was not found in the related interface methods")
-            && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
+        message.contains(
+            "Sequence function \"GetData\" from sequence call \"u1\" -> \"u2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+        ) && message.contains("sequence function name was not found in the related interface methods")
     }));
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("internal API interface functions are not exercised in sequence diagrams")
+        message.contains(
+            "Methods \"OtherMethod\" declared on internal API interface \"SharedInterface\" in the internal API diagram are not exercised in the sequence diagram."
+        )
             && message.contains("\"SharedInterface\"")
             && message.contains("\"OtherMethod\"")
     }));
@@ -393,11 +414,14 @@ fn reports_method_declared_on_both_sides_but_not_on_shared_interface() {
 
     assert_eq!(validation_result.failures.len(), 2);
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("sequence function name was not found in the related interface methods")
-            && message.contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\"")
+        message.contains(
+            "Sequence function \"GetData\" from sequence call \"u1\" -> \"u2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+        ) && message.contains("sequence function name was not found in the related interface methods")
     }));
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("internal API interface functions are not exercised in sequence diagrams")
+        message.contains(
+            "Methods \"OtherMethod\" declared on internal API interface \"SharedInterface\" in the internal API diagram are not exercised in the sequence diagram."
+        )
             && message.contains("\"SharedInterface\"")
             && message.contains("\"OtherMethod\"")
     }));
@@ -421,17 +445,15 @@ fn reports_role_violation_when_method_exists_only_on_reverse_direction_interface
         validate_with_component_context(component_diagrams, sequence_diagrams, &internal_api);
 
     assert_eq!(validation_result.failures.len(), 1);
-    assert!(validation_result.failures[0]
-        .contains("sequence interaction does not match consumer/provider roles"));
-    assert!(validation_result.failures[0]
-        .contains("Sequence call       : \"u1\" -> \"u2\" : \"GetData\""));
     assert!(validation_result.failures[0].contains(
-        "Expected caller role: \"u1\" should require shared interface(s) \"InternalInterface\""
+        "Sequence call \"u1\" -> \"u2\" : \"GetData\" in the sequence diagram does not match the required/provided interface roles in the component diagram."
     ));
-    assert!(validation_result.failures[0].contains(
-        "Expected callee role: \"u2\" should provide shared interface(s) \"InternalInterface\""
-    ));
-    assert!(!validation_result.failures[0].contains("Method consistency failure"));
+    assert!(validation_result.failures[0].contains("\"u1\" -> \"u2\" : \"GetData\""));
+    assert!(validation_result.failures[0]
+        .contains("\"u1\" should require shared interface(s) \"InternalInterface\""));
+    assert!(validation_result.failures[0]
+        .contains("\"u2\" should provide shared interface(s) \"InternalInterface\""));
+    assert!(!validation_result.failures[0].contains("[Method]"));
 }
 
 #[test]

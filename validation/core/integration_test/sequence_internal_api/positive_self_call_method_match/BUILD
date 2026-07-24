@@ -31,7 +31,7 @@ provider_fbs_fixture_bundle(
 filegroup(
     name = "case_data",
     srcs = [
-        "expected.json",
+        "expected.yaml",
         ":fbs",
     ],
     visibility = ["//visibility:public"],

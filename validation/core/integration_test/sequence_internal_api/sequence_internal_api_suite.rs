@@ -12,7 +12,7 @@
 // *******************************************************************************
 
 use test_framework::{
-    assert_cli_result, collect_case_fbs_files, load_expected_fixture, run_validation_profile,
+    assert_cli_result, collect_case_fbs_files, load_expected_yaml_fixture, run_validation_profile,
     CliRunResult,
 };
 
@@ -36,7 +36,7 @@ fn run_case_from_cli(
 }
 
 fn assert_case(case_dir: &str) {
-    let expected = load_expected_fixture(SUITE_DIR, case_dir);
+    let expected = load_expected_yaml_fixture(SUITE_DIR, case_dir);
     let component_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "component");
     let internal_api_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "internal_api");
     let sequence_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "sequence");
