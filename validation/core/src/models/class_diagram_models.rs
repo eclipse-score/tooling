@@ -15,9 +15,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use class_diagram::{ClassDiagram as ClassDiagramInput, EntityType, SimpleEntity, SourceLocation};
+use class_diagram::{ClassDiagram as ClassDiagramInput, EntityType, SimpleEntity};
+use source_location::SourceLocation;
 
-use crate::ValidationResult;
+use crate::{ErrorBuilder, ErrorCategory, ValidationResult};
 
 /// Collection of class diagrams loaded from one or more FlatBuffer files.
 pub type ClassDiagramInputs = Vec<ClassDiagramInput>;
@@ -38,13 +39,38 @@ impl ClassEntityIndex {
 
                 let key = indexed_entity.id.to_lowercase();
                 if let Some(prev) = entities.get(&key) {
-                    result.add_failure(format!(
-                        "Duplicate class entity in validation input:\n\
-                           Key             : {key}\n\
-                           First location  : {}\n\
-                           Second location : {}",
-                        prev.source_location, indexed_entity.source_location
-                    ));
+                    let (first_source_file, _) = prev.source_location.display();
+                    let (second_source_file, _) = indexed_entity.source_location.display();
+
+                    result.add_failure(
+                        ErrorBuilder::new(ErrorCategory::Class)
+                            .title(format!(
+                                "class \"{}\" is defined more than once in the class diagram.",
+                                prev.id,
+                            ))
+                            .field("class", format!("\"{}\"", prev.id))
+                            .field(
+                                "design source file",
+                                format!("\"{}\"", first_source_file),
+                            )
+                            .field(
+                                "design source line",
+                                prev.source_location.line.to_string(),
+                            )
+                            .field(
+                                "duplicate source file",
+                                format!("\"{}\"", second_source_file),
+                            )
+                            .field(
+                                "duplicate source line",
+                                indexed_entity.source_location.line.to_string(),
+                            )
+                            .fix(format!(
+                                "remove or rename one of the duplicate class \"{}\" declarations in the class diagram",
+                                prev.id,
+                            ))
+                            .build(),
+                    );
                 } else {
                     entities.insert(key, indexed_entity);
                 }
@@ -140,7 +166,8 @@ impl PublicApiIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use class_diagram::{ClassDiagram, Method, SimpleEntity, SourceLocation, Visibility};
+    use class_diagram::{ClassDiagram, Method, SimpleEntity, Visibility};
+    use source_location::SourceLocation;
 
     fn method(name: &str) -> Method {
         Method {
@@ -184,27 +211,9 @@ mod tests {
         let _index = ClassEntityIndex::build_index(&diagrams, &mut result);
 
         assert_eq!(result.failures.len(), 1);
-        assert!(result.failures[0].contains("Key             : unit.sample"));
-        assert!(result.failures[0].contains("First location  : design_a.puml:12"));
-        assert!(result.failures[0].contains("Second location : design_b.puml:34"));
-    }
-
-    #[test]
-    fn class_entity_index_reports_duplicate_source_locations_with_distinct_files() {
-        let diagrams = vec![ClassDiagram {
-            name: "classes".to_string(),
-            entities: vec![
-                entity("Unit.Sample", "design_left.puml", 1),
-                entity("unit.sample", "design_right.puml", 2),
-            ],
-        }];
-
-        let mut result = ValidationResult::default();
-        let _index = ClassEntityIndex::build_index(&diagrams, &mut result);
-
-        assert_eq!(result.failures.len(), 1);
-        assert!(result.failures[0].contains("First location  : design_left.puml:1"));
-        assert!(result.failures[0].contains("Second location : design_right.puml:2"));
+        assert!(result.failures[0].contains(
+            "[Class] Class \"Unit.Sample\" is defined more than once in the class diagram."
+        ));
     }
 
     #[test]

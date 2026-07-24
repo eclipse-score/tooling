@@ -12,9 +12,9 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  Missing implementation relationship for unit design entity:
-  Entity ID          : Manufacturer
-  Member             : Manufacturer -> Composition -> Engine
-  Design source file : class_diagram.puml
-  Design source line : 17
-  Required Action    : Implement the member or update the unit design
+  [Member] Relationship "Manufacturer -> Composition -> Engine" from entity "Manufacturer" in the unit design not found in the C++ class implementation.
+    Entity             : "Manufacturer"
+    Member             : relationship "Manufacturer -> Composition -> Engine"
+    Design source file : "validation/core/integration_test/class_design_implementation/negative_relationship_missing/class_diagram.puml"
+    Design source line : 17
+    Fix                : Add relationship "Manufacturer -> Composition -> Engine" to entity "Manufacturer" in the C++ class implementation, or remove it from the unit design.

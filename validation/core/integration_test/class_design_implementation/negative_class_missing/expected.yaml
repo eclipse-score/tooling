@@ -12,8 +12,8 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  Missing implementation class for unit design entity:
-  Entity ID          : Manufacturer
-  Design source file : class_diagram.puml
-  Design source line : 18
-  Required Action    : Add a matching implementation class or update the unit design
+  [Class] Class "Manufacturer" from the unit design not found in the C++ class implementation.
+    Class              : "Manufacturer"
+    Design source file : "validation/core/integration_test/class_design_implementation/negative_class_missing/class_diagram.puml"
+    Design source line : 18
+    Fix                : Add implementation class "Manufacturer" in the C++ class implementation, or remove it from the unit design.

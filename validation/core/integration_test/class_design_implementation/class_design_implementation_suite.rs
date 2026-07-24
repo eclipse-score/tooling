@@ -93,6 +93,11 @@ fn negative_class_member_missing() {
 }
 
 #[test]
+fn negative_duplicate_class_entity_input() {
+    assert_case("negative_duplicate_class_entity_input");
+}
+
+#[test]
 fn negative_entity_type_mismatch() {
     assert_case("negative_entity_type_mismatch");
 }
