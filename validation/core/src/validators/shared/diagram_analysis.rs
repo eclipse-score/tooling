@@ -15,6 +15,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use source_location::SourceLocation;
+
 use crate::models::{
     ComponentDiagramArchitecture, ComponentRelationType, EndpointRole, LogicComponentExt,
     ObservedSequenceCall,
@@ -24,6 +26,7 @@ pub(in crate::validators) type UnitBindings = BTreeMap<String, UnitInterfaces>;
 
 #[derive(Clone, Default)]
 pub(in crate::validators) struct UnitInterfaces {
+    pub(in crate::validators) source_location: Option<SourceLocation>,
     pub(in crate::validators) all_interfaces: BTreeSet<String>,
     pub(in crate::validators) required_interfaces: BTreeSet<String>,
     pub(in crate::validators) provided_interfaces: BTreeSet<String>,
@@ -34,8 +37,7 @@ pub(in crate::validators) struct SequenceCallContext<'a> {
     pub(in crate::validators) caller_unit: &'a str,
     pub(in crate::validators) callee_unit: &'a str,
     pub(in crate::validators) method: &'a str,
-    pub(in crate::validators) source_file: &'a str,
-    pub(in crate::validators) source_line: u32,
+    pub(in crate::validators) source_location: &'a SourceLocation,
     pub(in crate::validators) caller_interfaces: BTreeSet<String>,
     pub(in crate::validators) callee_interfaces: BTreeSet<String>,
 }
@@ -66,7 +68,10 @@ pub(in crate::validators) fn build_unit_bindings(
             continue;
         };
 
-        let mut bindings = UnitInterfaces::default();
+        let mut bindings = UnitInterfaces {
+            source_location: Some(entity.source_location.clone()),
+            ..UnitInterfaces::default()
+        };
 
         for relation in &entity.relations {
             if !interface_ids.contains(relation.target.as_str()) {
@@ -122,8 +127,7 @@ pub(in crate::validators) fn build_observed_call_contexts<'a>(
                 method: call.method.as_str(),
                 caller_interfaces,
                 callee_interfaces,
-                source_file: call.source_file.as_str(),
-                source_line: call.source_line,
+                source_location: &call.source_location,
             }
         })
         .collect()

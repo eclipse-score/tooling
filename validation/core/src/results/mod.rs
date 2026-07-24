@@ -14,8 +14,10 @@
 //! Validation execution results.
 
 mod diagnostics;
+mod error_models;
 
 pub use diagnostics::Diagnostics;
+pub use error_models::{ErrorBuilder, ErrorCategory};
 
 #[derive(Debug, Default)]
 pub struct ValidationResult {
