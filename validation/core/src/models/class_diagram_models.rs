@@ -15,7 +15,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use class_diagram::{ClassDiagram as ClassDiagramInput, EntityType, SimpleEntity};
+use class_diagram::{ClassDiagram as ClassDiagramInput, EntityType, SimpleEntity, SourceLocation};
 
 use crate::ValidationResult;
 
@@ -67,6 +67,7 @@ impl ClassEntityIndex {
 pub struct InternalApiInterface {
     pub id: String,
     pub method_names: BTreeSet<String>,
+    pub source_location: SourceLocation,
 }
 
 /// Indexed internal-API data prepared for validators.
@@ -93,6 +94,7 @@ impl InternalApiIndex {
                         .map(|method| method.name.clone())
                         .filter(|name| !name.is_empty())
                         .collect(),
+                    source_location: entity.source_location.clone(),
                 };
 
                 interfaces.push(interface);

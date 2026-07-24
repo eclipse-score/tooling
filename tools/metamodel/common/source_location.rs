@@ -39,6 +39,13 @@ impl SourceLocation {
                     return normalize_source_path(relative.to_string_lossy().as_ref());
                 }
             }
+
+            // TODO: Do not store that absolute sandbox path as the source
+            // location. Source locations should be stable across actions, for
+            // example repo-relative.
+            if let Some(relative) = strip_bazel_execroot_prefix(self.file.as_ref()) {
+                return relative;
+            }
         }
 
         normalize_source_path(self.file.as_ref())
@@ -51,6 +58,11 @@ impl SourceLocation {
 
 fn normalize_source_path(path: &str) -> String {
     path.strip_prefix("./").unwrap_or(path).to_string()
+}
+
+fn strip_bazel_execroot_prefix(path: &str) -> Option<String> {
+    let (_, relative) = path.split_once("/execroot/_main/")?;
+    Some(normalize_source_path(relative))
 }
 
 impl fmt::Display for SourceLocation {

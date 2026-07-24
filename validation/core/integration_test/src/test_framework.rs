@@ -114,14 +114,6 @@ pub fn collect_case_fbs_files(suite_dir: &str, case_dir: &str, category: &str) -
     matches
 }
 
-pub fn load_expected_fixture(suite_dir: &str, case_dir: &str) -> ExpectedFixture {
-    let expected_json = read_case_file(&format!(
-        "validation/core/integration_test/{suite_dir}/{case_dir}/expected.json"
-    ));
-
-    serde_json::from_str(&expected_json).expect("failed to parse expected fixture")
-}
-
 pub fn load_expected_yaml_fixture(suite_dir: &str, case_dir: &str) -> ExpectedFixture {
     let expected_yaml = read_case_file(&format!(
         "validation/core/integration_test/{suite_dir}/{case_dir}/expected.yaml"
@@ -167,6 +159,10 @@ fn normalize_yaml_diagnostic_line(line: &str) -> Option<String> {
 
 fn is_source_file_line(line: &str) -> bool {
     line.starts_with(DESIGN_SOURCE_FILE_LABEL) || line.starts_with(IMPLEMENT_SOURCE_FILE_LABEL)
+}
+
+pub fn load_expected_fixture(suite_dir: &str, case_dir: &str) -> ExpectedFixture {
+    load_expected_yaml_fixture(suite_dir, case_dir)
 }
 
 pub fn assert_cli_result(case_dir: &str, expected: &ExpectedFixture, result: &CliRunResult) {

@@ -13,7 +13,7 @@
 
 //! Input readers for Bazel JSON and PlantUML-derived FlatBuffer artifacts.
 
-use component_diagram::SourceLocation;
+use source_location::SourceLocation;
 
 mod bazel_reader;
 mod class_diagram_reader;
