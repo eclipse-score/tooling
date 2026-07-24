@@ -1,8 +1,0 @@
-{
-  "should_pass": false,
-  "error_contains": [
-    "sequence-connected units have no corresponding shared interface connection in the component diagram",
-    "\"unit_1\"",
-    "\"unit_2\""
-  ]
-}

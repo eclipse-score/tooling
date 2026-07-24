@@ -23,6 +23,8 @@ filegroup(
         "//validation/core/integration_test/component_sequence/negative_mixed_mismatch:case_data",
         "//validation/core/integration_test/component_sequence/negative_orphan_participant:case_data",
         "//validation/core/integration_test/component_sequence/positive_exact_match:case_data",
+        "//validation/core/integration_test/component_sequence/positive_external_callee_in_sequence_return:case_data",
+        "//validation/core/integration_test/component_sequence/positive_external_caller_in_sequence_connection:case_data",
     ],
 )
 

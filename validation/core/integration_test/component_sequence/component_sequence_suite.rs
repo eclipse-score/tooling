@@ -12,8 +12,8 @@
 // *******************************************************************************
 
 use test_framework::{
-    assert_cli_result, collect_case_fbs_files, load_expected_fixture, run_validation_profile,
-    CliRunResult,
+    assert_cli_result, collect_case_fbs_files, load_expected_yaml_fixture, normalize_yaml_result,
+    run_validation_profile, CliRunResult,
 };
 
 const SUITE_DIR: &str = "component_sequence";
@@ -34,7 +34,7 @@ fn run_case_from_cli(
 }
 
 fn assert_case(case_dir: &str) {
-    let expected = load_expected_fixture(SUITE_DIR, case_dir);
+    let expected = load_expected_yaml_fixture(SUITE_DIR, case_dir);
     let component_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "component");
     let sequence_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "sequence");
 
@@ -45,6 +45,8 @@ fn assert_case(case_dir: &str) {
             "missing generated FBS fixtures for {case_dir}: expected at least one component/*.fbs.bin and sequence/*.fbs.bin",
         );
     };
+
+    let result = normalize_yaml_result(result);
 
     assert_cli_result(case_dir, &expected, &result);
 }
@@ -57,6 +59,16 @@ fn positive_exact_match_suite_case() {
 #[test]
 fn negative_missing_participant_suite_case() {
     assert_case("negative_missing_participant");
+}
+
+#[test]
+fn positive_external_caller_in_sequence_connection_suite_case() {
+    assert_case("positive_external_caller_in_sequence_connection");
+}
+
+#[test]
+fn positive_external_callee_in_sequence_return_suite_case() {
+    assert_case("positive_external_callee_in_sequence_return");
 }
 
 #[test]
