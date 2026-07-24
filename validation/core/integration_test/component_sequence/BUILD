@@ -16,6 +16,8 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 filegroup(
     name = "component_sequence_test_data",
     srcs = [
+        "//validation/core/integration_test/component_sequence/positive_external_callee_in_sequence_return:case_data",
+        "//validation/core/integration_test/component_sequence/positive_external_caller_in_sequence_connection:case_data",
         "//validation/core/integration_test/component_sequence/negative_missing_interface_connection_for_sequence_connected_units:case_data",
         "//validation/core/integration_test/component_sequence/negative_missing_participant:case_data",
         "//validation/core/integration_test/component_sequence/negative_missing_sequence_interaction_for_interface_connected_units:case_data",

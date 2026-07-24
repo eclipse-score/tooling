@@ -1,0 +1,23 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+
+should_pass: false
+error_contains: |
+  [Interface] Component-connected units "unit_1" and "unit_2" have no corresponding function-call in the sequence diagram.
+    Unit pair                          : "unit_1" <-> "unit_2"
+    Component source file for "unit_1" : "validation/core/integration_test/component_sequence/negative_missing_sequence_interaction_for_interface_connected_units/component_diagram.puml"
+    Component source line for "unit_1" : 18
+    Component source file for "unit_2" : "validation/core/integration_test/component_sequence/negative_missing_sequence_interaction_for_interface_connected_units/component_diagram.puml"
+    Component source line for "unit_2" : 19
+    Shared interfaces                  : "package_a.InternalInterface"
+    Fix                                : Add a function-call between "unit_1" and "unit_2" in the sequence diagram, or remove that shared interface connection from the component diagram.

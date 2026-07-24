@@ -1,0 +1,29 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+
+should_pass: false
+error_contains:
+  - |
+    [Naming] Participant "unit_3" from the sequence diagram not found in the component diagram.
+      Participant          : "unit_3"
+      Sequence source file : "validation/core/integration_test/component_sequence/negative_orphan_participant/sequence_diagram.puml"
+      Sequence source line : 17
+      Fix                  : Add component unit alias "unit_3" in the component diagram, or remove it from the sequence diagram.
+  - |
+    [Interface] Sequence-connected units "unit_1" and "unit_3" have no corresponding shared interface connection in the component diagram.
+      Unit pair               : "unit_1" <-> "unit_3"
+      Sequence source file    : "validation/core/integration_test/component_sequence/negative_orphan_participant/sequence_diagram.puml"
+      Sequence source line    : 19
+      Interfaces for "unit_1" : <none>
+      Interfaces for "unit_3" : <none>
+      Fix                     : Add a shared interface connection between "unit_1" and "unit_3" in the component diagram, or remove that function-call from the sequence diagram.

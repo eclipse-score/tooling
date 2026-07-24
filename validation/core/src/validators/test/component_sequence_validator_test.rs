@@ -56,12 +56,12 @@ fn reports_missing_and_extra() {
     let missing_count = validation_result
         .failures
         .iter()
-        .filter(|msg| msg.contains("unit alias not found in sequence participants"))
+        .filter(|msg| msg.contains("from the component diagram not found in the sequence diagram"))
         .count();
     let unexpected_count = validation_result
         .failures
         .iter()
-        .filter(|msg| msg.contains("sequence participant not found in component unit aliases"))
+        .filter(|msg| msg.contains("from the sequence diagram not found in the component diagram"))
         .count();
 
     assert_eq!(missing_count, 2);
@@ -123,12 +123,12 @@ fn reports_missing_component_alias_and_interface_connection_for_sequence_call() 
 
     assert_eq!(validation_result.failures.len(), 2);
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("sequence participant not found in component unit aliases")
+        message.contains("from the sequence diagram not found in the component diagram")
             && message.contains("\"orphan\"")
     }));
     assert!(validation_result.failures.iter().any(|message| {
         message
-            .contains("sequence-connected units have no corresponding shared interface connection")
+            .contains("have no corresponding shared interface connection in the component diagram")
             && message.contains("\"u1\"")
             && message.contains("\"orphan\"")
             && message.contains("\"InternalInterface\"")
@@ -148,7 +148,7 @@ fn reports_missing_sequence_call_for_interface_connected_units() {
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0]
-        .contains("interface-connected units are missing a sequence function-call connection"));
+        .contains("have no corresponding function-call in the sequence diagram"));
     assert!(validation_result.failures[0].contains("\"InternalInterface\""));
 }
 
@@ -165,12 +165,11 @@ fn reports_missing_participant_and_missing_sequence_call_for_interface_connected
 
     assert_eq!(validation_result.failures.len(), 2);
     assert!(validation_result.failures.iter().any(|message| {
-        message.contains("component unit alias not found in sequence participants")
+        message.contains("from the component diagram not found in the sequence diagram")
             && message.contains("\"u2\"")
     }));
     assert!(validation_result.failures.iter().any(|message| {
-        message
-            .contains("interface-connected units are missing a sequence function-call connection")
+        message.contains("have no corresponding function-call in the sequence diagram")
             && message.contains("\"InternalInterface\"")
     }));
 }
@@ -189,7 +188,7 @@ fn reports_sequence_call_without_corresponding_shared_interface_connection() {
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0]
-        .contains("sequence-connected units have no corresponding shared interface connection"));
+        .contains("have no corresponding shared interface connection in the component diagram"));
     assert!(validation_result.failures[0].contains("\"CallerInterface\""));
     assert!(validation_result.failures[0].contains("\"CalleeInterface\""));
 }

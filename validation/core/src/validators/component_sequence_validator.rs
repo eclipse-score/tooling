@@ -21,6 +21,7 @@ use super::shared::{
     SequenceCallContext, UnitBindings,
 };
 use crate::models::{ComponentDiagramArchitecture, SequenceDiagramIndex};
+use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
 
 /// Run component-vs-sequence naming validation.
@@ -33,10 +34,13 @@ pub fn validate_component_sequence(
 
 type ConnectedUnitPairs = BTreeMap<(String, String), BTreeSet<String>>;
 
+const EXTERNAL_ENDPOINT_NAME: &str = "ExternalEndpoint";
+
 struct ComponentSequenceValidator<'a> {
     observed_participants: &'a BTreeSet<String>,
     observed_call_contexts: Vec<SequenceCallContext<'a>>,
     connected_unit_pairs: ConnectedUnitPairs,
+    sequence_diagram: &'a SequenceDiagramIndex,
     unit_bindings: UnitBindings,
     result: ValidationResult,
 }
@@ -88,6 +92,7 @@ impl<'a> ComponentSequenceValidator<'a> {
             observed_participants: sequence_diagram.used_participants(),
             observed_call_contexts,
             connected_unit_pairs: build_connected_unit_pairs(&unit_bindings),
+            sequence_diagram,
             unit_bindings,
             result: ValidationResult::default(),
         }
@@ -117,25 +122,55 @@ impl<'a> ComponentSequenceValidator<'a> {
             .keys()
             .filter(|alias| !self.observed_participants.contains(*alias))
         {
-            self.result.add_failure(format!(
-                "Naming consistency failure: component unit alias not found in sequence participants:\n\
-                  Unit alias         : \"{alias}\"\n\
-                  Source             : Component diagram unit aliases\n\
-                  Action             : Add a matching sequence participant for this unit alias",
-            ));
+            let (source_file, source_line) = self
+                .unit_bindings
+                .get(alias)
+                .and_then(|bindings| bindings.source_location.as_ref())
+                .map(|source_location| source_location.display())
+                .unwrap_or_default();
+
+            self.result.add_failure(
+                ErrorBuilder::new(ErrorCategory::Naming)
+                    .title(format!(
+                        "alias \"{alias}\" from the component diagram not found in the sequence diagram"
+                    ))
+                    .field("alias", format!("\"{alias}\""))
+                    .field("component source file", format!("\"{source_file}\""))
+                    .field("component source line", source_line.to_string())
+                    .fix(format!(
+                        "add sequence participant \"{alias}\" in the sequence diagram, or remove it from the component diagram"
+                    ))
+                    .build(),
+            );
         }
 
         for participant in self
             .observed_participants
             .iter()
-            .filter(|participant| !self.unit_bindings.contains_key(*participant))
+            .filter(|participant| {
+                !is_external_endpoint(participant)
+                    && !self.unit_bindings.contains_key(*participant)
+            })
         {
-            self.result.add_failure(format!(
-                "Naming consistency failure: sequence participant not found in component unit aliases:\n\
-                  Participant        : \"{participant}\"\n\
-                  Source             : Sequence diagram participants\n\
-                  Action             : Add a matching component unit alias or remove this participant",
-            ));
+            let (source_file, source_line) = self
+                .sequence_diagram
+                .participant_source(participant)
+                .map(|source_location| source_location.display())
+                .unwrap_or_default();
+
+            self.result.add_failure(
+                ErrorBuilder::new(ErrorCategory::Naming)
+                    .title(format!(
+                        "participant \"{participant}\" from the sequence diagram not found in the component diagram"
+                    ))
+                    .field("participant", format!("\"{participant}\""))
+                    .field("sequence source file", format!("\"{source_file}\""))
+                    .field("sequence source line", source_line.to_string())
+                    .fix(format!(
+                        "add component unit alias \"{participant}\" in the component diagram, or remove it from the sequence diagram"
+                    ))
+                    .build(),
+            );
         }
     }
 
@@ -145,14 +180,45 @@ impl<'a> ComponentSequenceValidator<'a> {
                 continue;
             }
 
-            self.result.add_failure(format!(
-                "Interface consistency failure: interface-connected units are missing a sequence function-call connection:\n\
-                  Unit pair          : {unit_pair}\n\
-                  Shared interfaces  : {shared_interfaces}\n\
-                  Action             : Add a function-call connection between these units in a sequence diagram",
-                unit_pair = format_unit_pair(left_unit, right_unit),
-                shared_interfaces = format_name_list(interfaces),
-            ));
+            let unit_pair = format_unit_pair(left_unit, right_unit);
+            let shared_interfaces = format_name_list(interfaces);
+            let remove_connection_fix = if interfaces.len() == 1 {
+                "remove that shared interface connection from the component diagram"
+            } else {
+                "remove those shared interface connections from the component diagram"
+            };
+            let (left_source_file, left_source_line) = unit_source(&self.unit_bindings, left_unit);
+            let (right_source_file, right_source_line) =
+                unit_source(&self.unit_bindings, right_unit);
+
+            self.result.add_failure(
+                ErrorBuilder::new(ErrorCategory::Interface)
+                    .title(format!(
+                        "component-connected units \"{left_unit}\" and \"{right_unit}\" have no corresponding function-call in the sequence diagram"
+                    ))
+                    .field("unit pair", unit_pair)
+                    .field(
+                        format!("component source file for \"{left_unit}\""),
+                        format!("\"{left_source_file}\""),
+                    )
+                    .field(
+                        format!("component source line for \"{left_unit}\""),
+                        left_source_line.to_string(),
+                    )
+                    .field(
+                        format!("component source file for \"{right_unit}\""),
+                        format!("\"{right_source_file}\""),
+                    )
+                    .field(
+                        format!("component source line for \"{right_unit}\""),
+                        right_source_line.to_string(),
+                    )
+                    .field("shared interfaces", shared_interfaces.clone())
+                    .fix(format!(
+                        "add a function-call between \"{left_unit}\" and \"{right_unit}\" in the sequence diagram, or {remove_connection_fix}"
+                    ))
+                    .build(),
+            );
         }
     }
 
@@ -167,6 +233,10 @@ impl<'a> ComponentSequenceValidator<'a> {
         let mut seen_pairs = BTreeSet::new();
 
         for call_context in &self.observed_call_contexts {
+            if call_involves_external_endpoint(call_context) {
+                continue;
+            }
+
             if call_context.caller_unit == call_context.callee_unit {
                 continue;
             }
@@ -185,23 +255,39 @@ impl<'a> ComponentSequenceValidator<'a> {
                 continue;
             }
 
-            self.result.add_failure(format!(
-                "Interface consistency failure: sequence-connected units have no corresponding shared interface connection in the component diagram:\n\
-                  Unit pair          : {unit_pair}\n\
-                  Interfaces for \"{left_unit}\"  : {left_interfaces}\n\
-                  Interfaces for \"{right_unit}\" : {right_interfaces}\n\
-                Action             : Add a shared interface relation between these units in the component diagram",
-                unit_pair = format_unit_pair(
-                    call_context.normalized_left_unit(),
-                    call_context.normalized_right_unit(),
-                ),
-                left_unit = call_context.normalized_left_unit(),
-                right_unit = call_context.normalized_right_unit(),
-                left_interfaces = format_name_list(left_interfaces),
-                right_interfaces = format_name_list(right_interfaces),
-            ));
+            let left_unit = call_context.normalized_left_unit();
+            let right_unit = call_context.normalized_right_unit();
+            let unit_pair = format_unit_pair(left_unit, right_unit);
+            let left_interface_label = format!("interfaces for \"{left_unit}\"");
+            let right_interface_label = format!("interfaces for \"{right_unit}\"");
+            let (source_file, source_line) = sequence_call_source(call_context);
+
+            self.result.add_failure(
+                ErrorBuilder::new(ErrorCategory::Interface)
+                    .title(format!(
+                        "sequence-connected units \"{left_unit}\" and \"{right_unit}\" have no corresponding shared interface connection in the component diagram."
+                    ))
+                    .field("unit pair", unit_pair)
+                    .field("sequence source file", format!("\"{source_file}\""))
+                    .field("sequence source line", source_line.to_string())
+                    .field(&left_interface_label, format_name_list(left_interfaces))
+                    .field(&right_interface_label, format_name_list(right_interfaces))
+                    .fix(format!(
+                        "add a shared interface connection between \"{left_unit}\" and \"{right_unit}\" in the component diagram, or remove that function-call from the sequence diagram"
+                    ))
+                    .build(),
+            );
         }
     }
+}
+
+fn is_external_endpoint(participant: &str) -> bool {
+    participant == EXTERNAL_ENDPOINT_NAME
+}
+
+fn call_involves_external_endpoint(call_context: &SequenceCallContext<'_>) -> bool {
+    is_external_endpoint(call_context.caller_unit)
+        || is_external_endpoint(call_context.callee_unit)
 }
 
 fn append_debug_log(
@@ -278,6 +364,18 @@ fn build_connected_unit_pairs(
     }
 
     connected_unit_pairs
+}
+
+fn unit_source(unit_bindings: &UnitBindings, unit_alias: &str) -> (String, u32) {
+    unit_bindings
+        .get(unit_alias)
+        .and_then(|bindings| bindings.source_location.as_ref())
+        .map(|source_location| source_location.display())
+        .unwrap_or_default()
+}
+
+fn sequence_call_source(call_context: &SequenceCallContext<'_>) -> (String, u32) {
+    call_context.source_location.display()
 }
 
 fn format_unit_pair(left_unit: &str, right_unit: &str) -> String {
