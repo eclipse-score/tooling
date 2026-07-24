@@ -17,7 +17,10 @@
 //! [`BazelComponentValidator`] performs a two-way set-difference between a
 //! [`BazelArchitecture`] and a [`ComponentDiagramArchitecture`].
 
-use crate::models::{BazelArchitecture, ComponentDiagramArchitecture};
+use std::collections::BTreeMap;
+
+use crate::models::{BazelArchitecture, ComponentDiagramArchitecture, LogicComponent};
+use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
 
 /// Run bazel-vs-component architecture validation using indexed inputs.
@@ -52,52 +55,46 @@ impl BazelComponentValidator {
         diagram: &ComponentDiagramArchitecture,
     ) -> ValidationResult {
         append_debug_log(&mut self.result.diagnostics, bazel, diagram);
-        self.check_seooc(bazel, diagram);
-        self.check_components(bazel, diagram);
-        self.check_units(bazel, diagram);
+        self.check_entity_set(
+            &bazel.seooc_set,
+            &diagram.seooc_set,
+            "package",
+            "SEooC",
+            "(top-level)",
+        );
+        self.check_entity_set(
+            &bazel.comp_set,
+            &diagram.comp_set,
+            "component",
+            "component",
+            "(top-level)",
+        );
+        self.check_entity_set(
+            &bazel.unit_set,
+            &diagram.unit_set,
+            "unit",
+            "unit",
+            "(no parent?)",
+        );
         self.result
     }
 
-    fn check_seooc(&mut self, bazel: &BazelArchitecture, diagram: &ComponentDiagramArchitecture) {
-        // In Bazel but not in PlantUML -> MISSING.
-        for (key, label) in &bazel.seooc_set {
-            if !diagram.seooc_set.contains_key(key) {
-                let (name, _) = key;
-                self.result.add_failure(Self::format_missing(
-                    "package",
-                    "SEooC",
-                    name,
-                    "(top-level)",
-                    label,
-                ));
-            }
-        }
-
-        // In PlantUML but not in Bazel -> EXTRA.
-        for key in diagram.seooc_set.keys() {
-            if !bazel.seooc_set.contains_key(key) {
-                let (name, _) = key;
-                self.result
-                    .add_failure(Self::format_extra("package", name, "(top-level)"));
-            }
-        }
-    }
-
-    fn check_components(
+    fn check_entity_set(
         &mut self,
-        bazel: &BazelArchitecture,
-        diagram: &ComponentDiagramArchitecture,
+        bazel_set: &BTreeMap<(String, Option<String>), String>,
+        diagram_set: &BTreeMap<(String, Option<String>), LogicComponent>,
+        display_type: &str,
+        stereotype: &str,
+        default_parent: &str,
     ) {
         // In Bazel but not in PlantUML -> MISSING.
-        for (key, label) in &bazel.comp_set {
-            if !diagram.comp_set.contains_key(key) {
+        for (key, label) in bazel_set {
+            if !diagram_set.contains_key(key) {
                 let (name, parent) = key;
-                let parent_str = parent
-                    .as_ref()
-                    .map_or("(top-level)".to_string(), |value| value.clone());
+                let parent_str = Self::parent_display(parent, default_parent);
                 self.result.add_failure(Self::format_missing(
-                    "component",
-                    "component",
+                    display_type,
+                    stereotype,
                     name,
                     &parent_str,
                     label,
@@ -106,47 +103,24 @@ impl BazelComponentValidator {
         }
 
         // In PlantUML but not in Bazel -> EXTRA.
-        for key in diagram.comp_set.keys() {
-            if !bazel.comp_set.contains_key(key) {
+        for (key, entity) in diagram_set {
+            if !bazel_set.contains_key(key) {
                 let (name, parent) = key;
-                let parent_str = parent
-                    .as_ref()
-                    .map_or("(top-level)".to_string(), |value| value.clone());
-                self.result
-                    .add_failure(Self::format_extra("component", name, &parent_str));
+                let parent_str = Self::parent_display(parent, default_parent);
+                self.result.add_failure(Self::format_extra(
+                    display_type,
+                    name,
+                    &parent_str,
+                    entity,
+                ));
             }
         }
     }
 
-    fn check_units(&mut self, bazel: &BazelArchitecture, diagram: &ComponentDiagramArchitecture) {
-        // In Bazel but not in PlantUML -> MISSING.
-        for (key, label) in &bazel.unit_set {
-            if !diagram.unit_set.contains_key(key) {
-                let (name, parent) = key;
-                let parent_str = parent
-                    .as_ref()
-                    .map_or("(no parent?)".to_string(), |value| value.clone());
-                self.result.add_failure(Self::format_missing(
-                    "unit",
-                    "unit",
-                    name,
-                    &parent_str,
-                    label,
-                ));
-            }
-        }
-
-        // In PlantUML but not in Bazel -> EXTRA.
-        for key in diagram.unit_set.keys() {
-            if !bazel.unit_set.contains_key(key) {
-                let (name, parent) = key;
-                let parent_str = parent
-                    .as_ref()
-                    .map_or("(no parent?)".to_string(), |value| value.clone());
-                self.result
-                    .add_failure(Self::format_extra("unit", name, &parent_str));
-            }
-        }
+    fn parent_display(parent: &Option<String>, default_parent: &str) -> String {
+        parent
+            .as_ref()
+            .map_or(default_parent.to_string(), |value| value.clone())
     }
 
     fn format_missing(
@@ -156,22 +130,40 @@ impl BazelComponentValidator {
         parent_str: &str,
         label: &str,
     ) -> String {
-        format!(
-            "Missing {display_type} in PlantUML:\n\
-               Alias          : \"{name}\"\n\
-               Parent         : {parent_str}\n\
-               Bazel label    : {label}\n\
-               Required       : Add {display_type} with alias \"{name}\" and stereotype <<{stereotype}>>",
-        )
+        ErrorBuilder::new(ErrorCategory::Naming)
+            .title(format!(
+                "{display_type} \"{name}\" from Bazel not found in the PlantUML component diagram"
+            ))
+            .field("alias", format!("\"{name}\""))
+            .field("parent", parent_str)
+            .field("stereotype", format!("<<{stereotype}>>"))
+            .field("bazel label", label)
+            .fix(format!(
+                "add {display_type} \"{name}\" with stereotype <<{stereotype}>> in the PlantUML component diagram, or remove it from Bazel"
+            ))
+            .build()
     }
 
-    fn format_extra(entity_type: &str, name: &str, parent_str: &str) -> String {
-        format!(
-            "Extra {entity_type} in PlantUML not in Bazel:\n\
-               Alias          : \"{name}\"\n\
-               Parent         : {parent_str}\n\
-               Action         : Remove this {entity_type} or add to Bazel",
-        )
+    fn format_extra(
+        entity_type: &str,
+        name: &str,
+        parent_str: &str,
+        entity: &LogicComponent,
+    ) -> String {
+        let (source_file, source_line) = entity.source_location.display();
+
+        ErrorBuilder::new(ErrorCategory::Naming)
+            .title(format!(
+                "{entity_type} \"{name}\" from the PlantUML component diagram not found in Bazel"
+            ))
+            .field("alias", format!("\"{name}\""))
+            .field("parent", parent_str)
+            .field("component source file", format!("\"{source_file}\""))
+            .field("component source line", source_line.to_string())
+            .fix(format!(
+                "add the corresponding Bazel {entity_type} definition for \"{name}\", or remove it from the PlantUML component diagram"
+            ))
+            .build()
     }
 }
 
@@ -384,7 +376,9 @@ mod tests {
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
-        assert!(errs.failures.iter().any(|m| m.contains("Missing unit")));
+        assert!(errs.failures.iter().any(|m| {
+            m.contains("Unit \"unit_2\" from Bazel not found in the PlantUML component diagram.")
+        }));
     }
 
     #[test]
@@ -425,7 +419,9 @@ mod tests {
         let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
         assert!(
-            errs.failures.iter().any(|m| m.contains("Extra component")),
+            errs.failures.iter().any(|m| m.contains(
+                "Component \"extra_comp\" from the PlantUML component diagram not found in Bazel."
+            )),
             "Expected extra component error, got: {:?}",
             errs.failures
         );
@@ -445,7 +441,9 @@ mod tests {
         let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
         assert!(
-            errs.failures.iter().any(|m| m.contains("Extra unit")),
+            errs.failures.iter().any(|m| m.contains(
+                "Unit \"extra_unit\" from the PlantUML component diagram not found in Bazel."
+            )),
             "Expected extra unit error, got: {:?}",
             errs.failures
         );
@@ -461,7 +459,9 @@ mod tests {
             "<<component>> should not satisfy <<SEooC>> requirement"
         );
         assert!(
-            errs.failures.iter().any(|m| m.contains("Missing package")),
+            errs.failures.iter().any(|m| m.contains(
+                "Package \"my_de\" from Bazel not found in the PlantUML component diagram."
+            )),
             "Expected missing package error, got: {:?}",
             errs.failures
         );
@@ -483,9 +483,9 @@ mod tests {
             "<<SEooC>> should not satisfy <<component>> requirement"
         );
         assert!(
-            errs.failures
-                .iter()
-                .any(|m| m.contains("Missing component")),
+            errs.failures.iter().any(|m| m.contains(
+                "Component \"comp_a\" from Bazel not found in the PlantUML component diagram."
+            )),
             "Expected missing component error, got: {:?}",
             errs.failures
         );

@@ -30,7 +30,7 @@ filegroup(
     name = "case_data",
     srcs = [
         "architecture.json",
-        "expected.json",
+        "expected.yaml",
         ":fbs",
     ],
     visibility = ["//visibility:public"],

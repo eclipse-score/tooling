@@ -1,0 +1,20 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains: |
+  [Naming] Unit "unit_2" from Bazel not found in the PlantUML component diagram.
+    Alias       : "unit_2"
+    Parent      : component_example
+    Stereotype  : <<unit>>
+    Bazel label : @//bazel/rules/rules_score/examples/seooc/unit_2:unit_2
+    Fix         : Add unit "unit_2" with stereotype <<unit>> in the PlantUML component diagram, or remove it from Bazel.

@@ -1,7 +1,0 @@
-{
-  "should_pass": false,
-  "error_contains": [
-    "Extra component in PlantUML not in Bazel",
-    "Alias          : \"extra_component\""
-  ]
-}

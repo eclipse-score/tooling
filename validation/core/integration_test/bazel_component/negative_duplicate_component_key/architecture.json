@@ -1,0 +1,19 @@
+{
+  "components": {
+    "safety_software_seooc_example": {
+      "units": [],
+      "components": [
+        "@//pkg_a:component_example",
+        "@//pkg_b:component_example"
+      ]
+    },
+    "@//pkg_a:component_example": {
+      "units": [],
+      "components": []
+    },
+    "@//pkg_b:component_example": {
+      "units": [],
+      "components": []
+    }
+  }
+}

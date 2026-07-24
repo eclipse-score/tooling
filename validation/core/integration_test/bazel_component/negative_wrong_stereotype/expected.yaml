@@ -1,0 +1,20 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains: |
+  [Naming] Component "component_example" from Bazel not found in the PlantUML component diagram.
+    Alias       : "component_example"
+    Parent      : safety_software_seooc_example
+    Stereotype  : <<component>>
+    Bazel label : @//bazel/rules/rules_score/examples/seooc:component_example
+    Fix         : Add component "component_example" with stereotype <<component>> in the PlantUML component diagram, or remove it from Bazel.
