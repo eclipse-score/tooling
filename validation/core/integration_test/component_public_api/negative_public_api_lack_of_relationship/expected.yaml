@@ -12,6 +12,8 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  Public API interface has no component relationship:
-  Public APIs          : "SampleLibraryAPI"
-  Action               : Connect each public API interface to the SEooC, or remove it from the static design diagram
+  [Interface] Public API interface(s) "SampleLibraryAPI" in the static diagram have no relationship to the SEooC.
+    Public APIs                               : "SampleLibraryAPI"
+    Static source file for "SampleLibraryAPI" : "validation/core/integration_test/component_public_api/negative_public_api_lack_of_relationship/static_design.puml"
+    Static source line for "SampleLibraryAPI" : 22
+    Fix                                       : Connect public API interface(s) "SampleLibraryAPI" from the SEooC boundary in the static diagram, or remove those interface declarations if they are not intended to be public.
