@@ -85,8 +85,9 @@ fn reports_missing_component_public_api_declaration() {
     let validation_result = validate(component_diagrams, &public_api);
 
     assert_eq!(validation_result.failures.len(), 1);
-    assert!(validation_result.failures[0].contains("Missing public API declaration"));
-    assert!(validation_result.failures[0].contains("Missing public APIs : \"SampleLibraryAPI\""));
+    assert!(validation_result.failures[0].contains(
+        "[Interface] Public API interface(s) \"SampleLibraryAPI\" from the static diagram not found in the public API diagram."
+    ));
 }
 
 #[test]
@@ -100,8 +101,9 @@ fn reports_public_api_without_seooc_relationship() {
     let validation_result = validate(component_diagrams, &public_api);
 
     assert_eq!(validation_result.failures.len(), 1);
-    assert!(validation_result.failures[0]
-        .contains("Public API interface has no component relationship"));
+    assert!(validation_result.failures[0].contains(
+        "[Interface] Public API interface(s) \"SampleLibraryAPI\" in the static diagram have no relationship to the SEooC."
+    ));
     assert!(validation_result.failures[0].contains("\"SampleLibraryAPI\""));
 }
 
@@ -125,8 +127,9 @@ fn ignores_component_relationships_when_checking_public_api() {
     let validation_result = validate(component_diagrams, &public_api);
 
     assert_eq!(validation_result.failures.len(), 1);
-    assert!(validation_result.failures[0]
-        .contains("Public API interface has no component relationship"));
+    assert!(validation_result.failures[0].contains(
+        "[Interface] Public API interface(s) \"SampleLibraryAPI\" in the static diagram have no relationship to the SEooC."
+    ));
     assert!(validation_result.failures[0].contains("\"SampleLibraryAPI\""));
 }
 
