@@ -159,6 +159,62 @@ class TestMergeHtmlDirs(unittest.TestCase):
             (self.output / "_static" / "logo.svg").read_text(), "custom-logo"
         )
 
+    def test_nested_sibling_module_copy_is_skipped(self) -> None:
+        """Regression test: if a dependency's own HTML tree happens to contain
+        a subdirectory named after a sibling module (e.g. because that
+        dependency was itself built with sphinx_html_merge and already
+        embeds the sibling), that nested copy must be skipped rather than
+        duplicated into the merged output - the sibling is placed once, at
+        the site root, by its own top-level merge entry.
+        """
+        main = self.root / "main"
+        _write(main / "index.html", "<html></html>")
+
+        dep_a = self.root / "dep_a"
+        _write(dep_a / "index.html", "<html></html>")
+        # dep_a already contains its own nested (stale) copy of dep_b.
+        _write(dep_a / "dep_b" / "index.html", "<html>stale nested copy</html>")
+
+        dep_b = self.root / "dep_b"
+        _write(dep_b / "index.html", "<html>canonical dep_b</html>")
+
+        merge_html_dirs(
+            self.output,
+            main,
+            [("dep_a", dep_a), ("dep_b", dep_b)],
+        )
+
+        # The nested copy under dep_a/dep_b/ must not have been copied.
+        self.assertFalse((self.output / "dep_a" / "dep_b").exists())
+        # The canonical dep_b, copied from its own top-level entry, is intact.
+        self.assertEqual(
+            (self.output / "dep_b" / "index.html").read_text(),
+            "<html>canonical dep_b</html>",
+        )
+
+    def test_main_page_links_to_dependency_are_not_rewritten(self) -> None:
+        """Documents a current limitation: only dependency HTML
+        (is_dependency=True) gets its links rewritten. A main-module page
+        that links directly to a dependency keeps an unqualified href
+        regardless of how deep the main page is nested, so such links must
+        already be authored relative to the merged site root (e.g. via
+        sphinx-needs external_needs base_url) rather than as a plain relative
+        path - the merge step will not fix them up.
+        """
+        main = self.root / "main"
+        _write(
+            main / "guide" / "page.html",
+            '<a href="dep_a/index.html">link</a>',
+        )
+
+        dep_a = self.root / "dep_a"
+        _write(dep_a / "index.html", "<html></html>")
+
+        merge_html_dirs(self.output, main, [("dep_a", dep_a)])
+
+        content = (self.output / "guide" / "page.html").read_text()
+        self.assertIn('href="dep_a/index.html">link', content)
+
 
 if __name__ == "__main__":
     unittest.main()
