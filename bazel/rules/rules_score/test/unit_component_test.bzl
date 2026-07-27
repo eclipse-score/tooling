@@ -179,6 +179,109 @@ def _component_excludes_feature_req_docs_test_impl(ctx):
 component_excludes_feature_req_docs_test = analysistest.make(_component_excludes_feature_req_docs_test_impl)
 
 # ============================================================================
+# Test Case Coverage Lock Tests
+# ============================================================================
+
+def _component_test_case_coverage_lock_test_impl(ctx):
+    """Test that a component with test_case_coverage_lock still provides ComponentInfo and
+    DefaultInfo with output files (analysis phase must succeed)."""
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    asserts.true(
+        env,
+        ComponentInfo in target_under_test,
+        "Component with test_case_coverage_lock should provide ComponentInfo",
+    )
+
+    # DefaultInfo.files must contain the lobster report (non-empty).
+    output_files = target_under_test[DefaultInfo].files.to_list()
+    asserts.true(
+        env,
+        len(output_files) > 0,
+        "Component with test_case_coverage_lock should declare output files (expected lobster report); got: %s" % output_files,
+    )
+
+    # At least one output file should be named like the lobster report.
+    lobster_report_present = any([f.basename.endswith(".lobster_report") or f.extension == "html" or f.basename.endswith(".lobster") for f in output_files])
+    asserts.true(
+        env,
+        lobster_report_present,
+        "Component with test_case_coverage_lock should declare a lobster report output; got: %s" % [f.basename for f in output_files],
+    )
+
+    return analysistest.end(env)
+
+component_test_case_coverage_lock_test = analysistest.make(_component_test_case_coverage_lock_test_impl)
+
+def _dependable_element_test_case_coverage_lock_check_action_test_impl(ctx):
+    """
+    Given a dependable_element wrapping a component with test_case_coverage_lock set,
+    When the target is analyzed,
+    Then a ComponentTestCaseCoverageLockCheck action must be registered that consumes
+         the committed test_case_coverage.lock.yaml as an input, and it must carry
+         ``--allow-check-failures`` in its argv only when the
+         dependable_element's maturity is "development" (never for "release").
+
+    This exercises the actual component -> ComponentTestCaseCoverageInfo ->
+    dependable_element wiring (unlike component_test_case_coverage_lock_test, which only
+    inspects the component() rule in isolation).
+    """
+    env = analysistest.begin(ctx)
+
+    actions = analysistest.target_actions(env)
+    check_action = None
+    for action in actions:
+        if action.mnemonic == "ComponentTestCaseCoverageLockCheck":
+            check_action = action
+            break
+
+    asserts.true(
+        env,
+        check_action != None,
+        "Expected a ComponentTestCaseCoverageLockCheck action to be registered for a " +
+        "dependable_element wrapping a component with test_case_coverage_lock set",
+    )
+
+    if check_action == None:
+        return analysistest.end(env)
+
+    input_names = [f.basename for f in check_action.inputs.to_list()]
+    asserts.true(
+        env,
+        "test_case_coverage.lock.yaml" in input_names,
+        "ComponentTestCaseCoverageLockCheck action must take the committed " +
+        "test_case_coverage.lock.yaml as an input; got inputs: %s" % input_names,
+    )
+
+    has_allow_flag = "--allow-check-failures" in check_action.argv
+    asserts.equals(
+        env,
+        ctx.attr.expect_allow_check_failures,
+        has_allow_flag,
+        "expected --allow-check-failures presence=%s (maturity=%s) but argv was: %s" % (
+            ctx.attr.expect_allow_check_failures,
+            ctx.attr.maturity_under_test,
+            check_action.argv,
+        ),
+    )
+
+    return analysistest.end(env)
+
+dependable_element_test_case_coverage_lock_check_action_test = analysistest.make(
+    impl = _dependable_element_test_case_coverage_lock_check_action_test_impl,
+    attrs = {
+        "expect_allow_check_failures": attr.bool(
+            mandatory = True,
+            doc = "Whether --allow-check-failures is expected in the check action's argv.",
+        ),
+        "maturity_under_test": attr.string(
+            doc = "The maturity value of the target under test (for assertion messages only).",
+        ),
+    },
+)
+
+# ============================================================================
 # Dependable Element Tests
 # ============================================================================
 # Note: Provider tests removed as dependable_element no longer creates a
@@ -202,5 +305,8 @@ def unit_component_test_suite(name):
             ":component_provider_test",
             ":component_sphinx_sources_test",
             ":component_excludes_feature_req_docs_test",
+            ":component_test_case_coverage_lock_test",
+            ":test_case_coverage_lock_check_action_release_test",
+            ":test_case_coverage_lock_check_action_development_test",
         ],
     )

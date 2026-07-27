@@ -18,6 +18,11 @@
 TEST(MyUnitTest, ConfigureAndGet) {
   ::testing::Test::RecordProperty(
       "lobster-tracing", "MinimalExample.FEAT_001 MinimalExample.FEAT_002");
+  ::testing::Test::RecordProperty("given",
+                                  "a default-constructed MyUnit instance");
+  ::testing::Test::RecordProperty("when",
+                                  "configure is called with a known key");
+  ::testing::Test::RecordProperty("then", "get returns the configured value");
 
   MyUnit unit;
   unit.configure("mode", "fast");

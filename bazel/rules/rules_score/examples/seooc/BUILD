@@ -47,6 +47,7 @@ component(
         "//docs/requirements:component_requirements_sub",
     ],
     tags = ["manual"],
+    test_case_coverage_lock = "test_case_coverage.lock.yaml",
     tests = [],
 )
 
@@ -56,6 +57,7 @@ component(
     name = "sub_component_example",
     requirements = [
         "//docs/requirements:component_requirements_sub",
+        "//docs/requirements:feature_requirements",
     ],
     tags = ["manual"],
     tests = [],
@@ -80,6 +82,7 @@ dependable_element(
     ],
     glossary = ["//docs:glossary"],
     integrity_level = "B",
+    maturity = "development",
     requirements = [
         "//docs/requirements:feature_requirements",
     ],

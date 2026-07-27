@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
 namespace unit_2 {
 
@@ -27,6 +28,8 @@ class Bar final {
 public:
   explicit Bar(std::unique_ptr<unit_1::Foo> foo);
   bool AssertNumber() const;
+  // trace: SampleComponent.REQ_COMP_006
+  std::string Format() const;
 
 private:
   std::unique_ptr<unit_1::Foo> foo_;

@@ -45,7 +45,9 @@ trlc_requirements_test(
 
 trlc_requirements(
     name = "tools",
-    srcs = ["tools.trlc"],
+    srcs = [
+        "tools.trlc",
+    ],
     spec = [":qualification_model"],
     visibility = ["//visibility:public"],
 )

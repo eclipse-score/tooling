@@ -92,6 +92,8 @@ load(
     "component_excludes_feature_req_docs_test",
     "component_provider_test",
     "component_sphinx_sources_test",
+    "component_test_case_coverage_lock_test",
+    "dependable_element_test_case_coverage_lock_check_action_test",
     "unit_component_test_suite",
     "unit_provider_test",
     "unit_sphinx_sources_test",
@@ -390,6 +392,37 @@ dependable_element(
     tests = [],  # Empty for testing
 )
 
+# Dependable elements wrapping a test_case_coverage_lock component — used to verify the
+# ComponentTestCaseCoverageLockCheck action wiring (mnemonic/inputs/argv) at both
+# maturity levels via test_case_coverage_lock_check_action_{release,development}_test.
+dependable_element(
+    name = "test_dependable_element_coverage_release",
+    testonly = True,
+    architectural_design = [":arch_design_elem"],
+    assumptions_of_use = [":aous"],
+    components = [":test_component_with_test_case_coverage_lock"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "release",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],  # Empty for testing
+)
+
+dependable_element(
+    name = "test_dependable_element_coverage_development",
+    testonly = True,
+    architectural_design = [":arch_design_elem"],
+    assumptions_of_use = [":aous"],
+    components = [":test_component_with_test_case_coverage_lock"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],  # Empty for testing
+)
+
 # ============================================================================
 # Test Fixtures - Nested Components for Recursive Testing
 # ============================================================================
@@ -668,6 +701,18 @@ unit_sphinx_sources_test(
     target_under_test = ":test_unit",
 )
 
+# Test Component with test case coverage lock — verifies analysis phase succeeds when
+# test_case_coverage_lock is provided.
+component(
+    name = "test_component_with_test_case_coverage_lock",
+    testonly = True,
+    components = [":test_unit"],
+    requirements = [":comp_req"],
+    tags = ["manual"],
+    test_case_coverage_lock = "fixtures/test_case_coverage_lock_test/test_case_coverage.lock.yaml",
+    tests = [],
+)
+
 # Component tests
 component_provider_test(
     name = "component_provider_test",
@@ -682,6 +727,28 @@ component_sphinx_sources_test(
 component_excludes_feature_req_docs_test(
     name = "component_excludes_feature_req_docs_test",
     target_under_test = ":test_component",
+)
+
+component_test_case_coverage_lock_test(
+    name = "component_test_case_coverage_lock_test",
+    target_under_test = ":test_component_with_test_case_coverage_lock",
+)
+
+# Verifies the ComponentTestCaseCoverageLockCheck action is wired up end-to-end through
+# dependable_element (not just component() in isolation), and that
+# --allow-check-failures is only passed for maturity == "development".
+dependable_element_test_case_coverage_lock_check_action_test(
+    name = "test_case_coverage_lock_check_action_release_test",
+    expect_allow_check_failures = False,
+    maturity_under_test = "release",
+    target_under_test = ":test_dependable_element_coverage_release_index",
+)
+
+dependable_element_test_case_coverage_lock_check_action_test(
+    name = "test_case_coverage_lock_check_action_development_test",
+    expect_allow_check_failures = True,
+    maturity_under_test = "development",
+    target_under_test = ":test_dependable_element_coverage_development_index",
 )
 
 # Unit, Component, and Dependable Element test suite

@@ -33,7 +33,17 @@ test/my_unit_test.cpp
    :lines: 14-
 
 Each ``RecordProperty("lobster-tracing", "...")`` call names the requirement
-identifiers covered by that test case.
+identifiers covered by that test case. The optional ``given``/``when``/``then``
+properties capture the Given-When-Then specification for that test case:
+
+* ``given`` — the initial state or precondition
+* ``when`` — the action or event under test
+* ``then`` — the expected outcome
+
+They are picked up the same way as ``lobster-tracing`` — as plain
+``RecordProperty`` calls — and are rendered alongside the test result in the
+traceability report. Test cases without them are still traced, but show up
+without a Given-When-Then specification.
 
 BUILD
 ------
