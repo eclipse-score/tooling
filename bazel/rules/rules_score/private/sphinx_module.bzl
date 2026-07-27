@@ -89,12 +89,43 @@ sphinx_rule_attrs = dict(
     **VERBOSITY_ATTR
 )
 
+def _hermetic_tool_env(ctx):
+    """Compute the env vars that give conf.py hermetic access to plantuml/graphviz.
+
+    Returns both the execroot-relative path (for `os.path.abspath()` at process
+    start, while cwd is still the execroot) and an analysis-time-stable
+    rlocation key (no exec-config hash) for diagnostic logging. See
+    docs/tooling_architecture.rst §"Hermetic tool path resolution".
+    """
+    gv_short = ctx.executable._graphviz.short_path
+    graphviz_rloc = gv_short[3:] if gv_short.startswith("../") else ctx.workspace_name + "/" + gv_short
+    pl_short = ctx.executable._plantuml.short_path
+    plantuml_rloc = pl_short[3:] if pl_short.startswith("../") else ctx.workspace_name + "/" + pl_short
+    fta_metamodel_files = ctx.files._fta_metamodel
+    fta_metamodel_dir = fta_metamodel_files[0].dirname if fta_metamodel_files else ""
+    return fta_metamodel_files, {
+        "PLANTUML_BIN": ctx.executable._plantuml.path,
+        "PLANTUML_BIN_RLOC": plantuml_rloc,
+        "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
+        "GRAPHVIZ_DOT_RLOC": graphviz_rloc,
+        "FTA_METAMODEL_DIR": fta_metamodel_dir,
+    }
+
+def _needs_output_prefix(name):
+    """Derive the `_score_needs` output prefix from its target name.
+
+    `sphinx_module` always names this target `<name>_needs`; stripping the
+    suffix (rather than replacing all occurrences of "_needs") keeps a module
+    named e.g. "foo_needs_bar" from producing a mismatched output path.
+    """
+    return name.removesuffix("_needs")
+
 # ======================================================================================
 # Rule implementations
 # ======================================================================================
 def _score_needs_impl(ctx):
     sphinx_toolchain = ctx.toolchains["//bazel/rules/rules_score:toolchain_type"].sphinxinfo
-    output_path = ctx.label.name.replace("_needs", "") + "/needs.json"
+    output_path = ctx.label.name + "/needs.json"
     needs_output = ctx.actions.declare_file(output_path)
 
     # Get config file (generate or use provided)
@@ -123,27 +154,13 @@ def _score_needs_impl(ctx):
         get_log_level(ctx),
     ]
 
-    # Compute analysis-time-stable rlocation keys from short_path (no exec-config
-    # hash, no parent-directory walking). These are passed to conf.py for
-    # diagnostic logging and as the canonical Bazel identity of each tool.
-    # See docs/tooling_architecture.rst §"Hermetic tool path resolution".
-    _gv_short = ctx.executable._graphviz.short_path
-    _graphviz_rloc = _gv_short[3:] if _gv_short.startswith("../") else ctx.workspace_name + "/" + _gv_short
-    _pl_short = ctx.executable._plantuml.short_path
-    _plantuml_rloc = _pl_short[3:] if _pl_short.startswith("../") else ctx.workspace_name + "/" + _pl_short
-    fta_metamodel_files = ctx.files._fta_metamodel
-    fta_metamodel_dir = fta_metamodel_files[0].dirname if fta_metamodel_files else ""
+    fta_metamodel_files, action_env = _hermetic_tool_env(ctx)
     ctx.actions.run(
         inputs = needs_inputs + fta_metamodel_files,
         outputs = [needs_output],
         arguments = needs_args,
-        env = {
-            "PLANTUML_BIN": ctx.executable._plantuml.path,
-            "PLANTUML_BIN_RLOC": _plantuml_rloc,
-            "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
-            "GRAPHVIZ_DOT_RLOC": _graphviz_rloc,
-            "FTA_METAMODEL_DIR": fta_metamodel_dir,
-        },
+        env = action_env,
+        mnemonic = "SphinxNeedsBuild",
         progress_message = "Generating needs.json for: %s" % ctx.label.name,
         executable = sphinx_toolchain.sphinx.files_to_run.executable,
         tools = [
@@ -191,13 +208,11 @@ def _score_html_impl(ctx):
         args.add(expanded_opt)
         run_args.append(expanded_opt)
 
-    # Collect all transitive dependencies with deduplication
-    modules = []
     sphinx_toolchain = ctx.toolchains["//bazel/rules/rules_score:toolchain_type"].sphinxinfo
     needs_external_needs = {}
     for dep in ctx.attr.needs:
         if SphinxNeedsInfo in dep:
-            dep_name = dep.label.name.replace("_needs", "")
+            dep_name = _needs_output_prefix(dep.label.name)
             needs_external_needs[dep.label.name] = {
                 "base_url": dep_name,  # Relative path to the subdirectory where dep HTML is copied
                 "json_path": dep[SphinxNeedsInfo].needs_json_file.path,  # Use direct file
@@ -205,9 +220,6 @@ def _score_html_impl(ctx):
                 "css_class": "",
                 "version": "1.0",
             }
-    for dep in ctx.attr.deps:
-        if SphinxModuleInfo in dep:
-            modules.extend([dep[SphinxModuleInfo].html_dir])
     needs_external_needs_json = ctx.actions.declare_file(ctx.label.name + "/needs_external_needs.json")
     ctx.actions.write(
         output = needs_external_needs_json,
@@ -232,9 +244,6 @@ def _score_html_impl(ctx):
         sphinx_source_files.append(dest_file)
         return dest_file
 
-    for dep in ctx.attr.deps:
-        if SphinxModuleInfo in dep:
-            modules.extend([dep[SphinxModuleInfo].html_dir])
     for t in ctx.attr.docs_library_deps:
         info = t[SphinxDocsLibraryInfo]
         for entry in info.transitive.to_list():
@@ -276,28 +285,14 @@ def _score_html_impl(ctx):
 
     # Use the hermetic graphviz wrapper that executes `/usr/bin/dot` inside the
     # docs_runtime sysroot via exec_in_sysroot.
-    # Compute analysis-time-stable rlocation keys from short_path (no exec-config
-    # hash, no parent-directory walking). See docs/tooling_architecture.rst
-    # §"Hermetic tool path resolution".
-    _gv_short = ctx.executable._graphviz.short_path
-    _graphviz_rloc = _gv_short[3:] if _gv_short.startswith("../") else ctx.workspace_name + "/" + _gv_short
-    _pl_short = ctx.executable._plantuml.short_path
-    _plantuml_rloc = _pl_short[3:] if _pl_short.startswith("../") else ctx.workspace_name + "/" + _pl_short
-    fta_metamodel_files = ctx.files._fta_metamodel
-    fta_metamodel_dir = fta_metamodel_files[0].dirname if fta_metamodel_files else ""
-    action_env = {
-        "PLANTUML_BIN": ctx.executable._plantuml.path,
-        "PLANTUML_BIN_RLOC": _plantuml_rloc,
-        "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
-        "GRAPHVIZ_DOT_RLOC": _graphviz_rloc,
-        "FTA_METAMODEL_DIR": fta_metamodel_dir,
-    }
+    fta_metamodel_files, action_env = _hermetic_tool_env(ctx)
 
     ctx.actions.run(
         inputs = html_inputs + fta_metamodel_files,
         outputs = [sphinx_html_output],
         arguments = html_args + [args],
         env = action_env,
+        mnemonic = "SphinxHtmlBuild",
         progress_message = "Building HTML: %s" % ctx.label.name,
         executable = sphinx_toolchain.sphinx.files_to_run.executable,
         tools = [
@@ -346,6 +341,7 @@ def _score_html_impl(ctx):
         inputs = merge_inputs,
         outputs = [html_output],
         arguments = merge_args,
+        mnemonic = "SphinxHtmlMerge",
         progress_message = "Merging HTML with dependencies for %s" % ctx.label.name,
         executable = sphinx_toolchain.html_merge_tool.files_to_run.executable,
         tools = [sphinx_toolchain.html_merge_tool.files_to_run],
@@ -354,6 +350,9 @@ def _score_html_impl(ctx):
         DefaultInfo(files = depset([html_output])),
         SphinxModuleInfo(
             html_dir = html_output,
+        ),
+        OutputGroupInfo(
+            sphinx_sources = depset([config_file] + sphinx_source_files),
         ),
     ]
 
@@ -413,16 +412,22 @@ def sphinx_module(
         **kwargs):
     """Build a Sphinx module with transitive HTML dependencies.
     This rule builds documentation modules into complete HTML sites with
-    transitive dependency collection. All dependencies are automatically
-    included in a modules/ subdirectory for intersphinx cross-referencing.
+    transitive dependency collection. Each dependency's HTML is copied into a
+    <dep_name>/ subdirectory of the merged site for intersphinx/sphinx-needs
+    cross-referencing.
     Args:
         name: Name of the target
         srcs: List of source files (.rst, .md) with index file first
         index: Label to index.rst file
-        config: Label to conf.py configuration file (optional, will be auto-generated if not provided)
         deps: List of other sphinx_module targets this module depends on
         docs_library_deps: {type}`list[label]` of {obj}`sphinx_docs_library` targets.
-        sphinx: Label to sphinx build binary (default: :sphinx_build)
+        renamed_srcs: {type}`dict[label, str]` Doc source files that are renamed
+                    on their way into the Sphinx source tree.
+        sphinx: Currently unused. The Sphinx binary is resolved from the
+                    registered `//bazel/rules/rules_score:toolchain_type` toolchain,
+                    not from this parameter. Kept for source compatibility with
+                    existing callers; to use a different Sphinx binary, register a
+                    different `sphinx_toolchain` instead.
         strip_prefix: {type}`str` A prefix to remove from the file paths of the
                     source files. e.g., given `//sphinxdocs/docs:foo.md`, stripping `docs/` makes
                     Sphinx see `foo.md` in its generated source directory. If not
