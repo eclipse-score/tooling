@@ -42,3 +42,6 @@ coverage:coverage --@rules_rust//rust/settings:extra_rustc_flag=-Ccodegen-units=
 
 # Import AI checker custom configuration
 try-import %workspace%/.bazelrc.ai_checker
+
+# Import Bazel Userrc
+try-import %workspace%/user.bazelrc
