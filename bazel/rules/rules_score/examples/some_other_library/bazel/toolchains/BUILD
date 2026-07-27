@@ -12,10 +12,6 @@
 # *******************************************************************************
 
 load(
-    "@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl",
-    "sphinx_toolchain",
-)
-load(
     "@score_tooling//cpp/libclang:libclang_toolchain.bzl",
     "libclang_toolchain",
 )

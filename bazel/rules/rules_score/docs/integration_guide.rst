@@ -31,24 +31,102 @@ produce the final outputs.
 Toolchain Setup
 ---------------
 
-The ``sphinx_toolchain`` rule configures the Sphinx build environment with
-custom extensions. External modules must define and register their own toolchain
-to use ``rules_score``.
+``rules_score`` ships a default Sphinx toolchain, registered by ``score_tooling``'s
+own ``MODULE.bazel``. **You need nothing to get a working Sphinx build** — plain
+sphinx-needs, TRLC and PlantUML documentation builds out of the box for any
+module that depends on ``score_tooling``, with no toolchain setup at all.
+
+Registering your own toolchain is only needed when you want **additional**
+Sphinx extensions (e.g. Breathe for Doxygen, a custom theme) that the default
+doesn't carry. Because Bazel resolves toolchains from the root module first,
+a toolchain registered by your own ``MODULE.bazel`` always wins over
+``score_tooling``'s default — no special opt-out required.
+
+Adding extensions
+~~~~~~~~~~~~~~~~~
+
+Use the ``score_sphinx_toolchain`` macro to extend the default dependency set
+instead of reproducing it:
 
 **MODULE.bazel:**
 
 .. code-block:: python
 
-   # Add rules_score dependency
    bazel_dep(name = "score_tooling", version = "1.3.2")
 
-   # Add dependencies for custom Sphinx extensions (if needed)
-   bazel_dep(name = "score_docs_as_code", version = "3.0.1")
+   # Dependency providing your custom Sphinx extension
+   bazel_dep(name = "score_docs_as_code", version = "3.0.1", dev_dependency = True)
 
-   # Register your custom toolchain
    register_toolchains("//:my_toolchain")
 
 **BUILD:**
+
+.. code-block:: python
+
+   load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphinx_toolchain")
+
+   score_sphinx_toolchain(
+       name = "my_toolchain",
+       extra_deps = [
+           "@score_docs_as_code//src/extensions/score_sphinx_bundle",
+       ],
+   )
+
+This emits ``my_toolchain_binary`` (the Sphinx build binary: the shared
+defaults plus ``extra_deps``), ``my_toolchain_info`` (the ``sphinx_toolchain``
+target) and ``my_toolchain`` (the ``toolchain()`` itself) — register the last
+one.
+
+Diagnosing which toolchain won
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: shell
+
+   bazel cquery --toolchain_resolution_debug='.*rules_score.*' //:my_target
+
+Look for the ``Selected ... toolchain`` line under
+``@score_tooling//bazel/rules/rules_score:toolchain_type``.
+
+Replacing the dependency set entirely
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If your extensions conflict with the shared defaults — e.g. a different pip
+hub pinning an incompatible version of a shared package — pass ``deps``
+instead of ``extra_deps`` to bypass ``sphinx_base_deps`` entirely and supply
+the full list yourself:
+
+.. code-block:: python
+
+   score_sphinx_toolchain(
+       name = "my_toolchain",
+       conf_template = "//:my_conf.template.py",
+       deps = [
+           "@score_tooling//bazel/rules/rules_score:sphinx_module_ext",
+           "@my_pip_hub//sphinx:pkg",
+           "@my_pip_hub//my_custom_extension:pkg",
+           # ... full list; sphinx_base_deps is not included in this mode
+       ],
+   )
+
+``extra_deps`` and ``deps`` are mutually exclusive — passing both fails at
+load time.
+
+**score_sphinx_toolchain parameters:**
+
+- ``name`` — name of the emitted ``toolchain()`` target (mandatory)
+- ``extra_deps`` — extend mode: extra deps added on top of the shared default set (optional; default: ``[]``)
+- ``deps`` — replace mode: exact dep list, bypassing the shared defaults (optional; default: not set)
+- ``extra_data`` — extra data files/targets for the Sphinx build binary (optional; default: ``[]``)
+- ``conf_template`` — Label to ``conf.py`` template (optional; default: ``@score_tooling//bazel/rules/rules_score:templates/conf.template.py``)
+- ``package_collisions`` — forwarded to the generated ``py_binary`` (optional; default: ``"warning"``)
+- any other keyword argument (e.g. ``visibility``, ``exec_compatible_with``, ``target_compatible_with``) is forwarded to the ``toolchain()`` target
+
+Assembling a toolchain by hand
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For cases the macro doesn't fit, use the underlying ``sphinx_toolchain`` rule
+directly — it only bundles a Sphinx binary and a ``conf.py`` template into the
+provider the rules consume; you own the ``py_binary`` and ``toolchain()``:
 
 .. code-block:: python
 
@@ -61,10 +139,8 @@ to use ``rules_score``.
        main = "@score_tooling//bazel/rules/rules_score:src/sphinx_wrapper.py",
        visibility = ["//visibility:public"],
        deps = [
-           "@score_tooling//bazel/rules/rules_score:sphinx_module_ext",
-           "@score_docs_as_code//src:plantuml_for_python",
+           "@score_tooling//bazel/rules/rules_score:sphinx_base_deps",
            "@score_docs_as_code//src/extensions/score_sphinx_bundle",
-           # Add your custom Sphinx extensions here
        ],
    )
 
@@ -75,14 +151,6 @@ to use ``rules_score``.
 
    toolchain(
        name = "my_toolchain",
-       exec_compatible_with = [
-           "@platforms//os:linux",
-           "@platforms//cpu:x86_64",
-       ],
-       target_compatible_with = [
-           "@platforms//os:linux",
-           "@platforms//cpu:x86_64",
-       ],
        toolchain = ":score_sphinx_toolchain",
        toolchain_type = "@score_tooling//bazel/rules/rules_score:toolchain_type",
        visibility = ["//visibility:public"],
@@ -90,9 +158,12 @@ to use ``rules_score``.
 
 **sphinx_toolchain parameters:**
 
-- ``sphinx`` — Label to the Sphinx build binary (mandatory)
+- ``sphinx`` — Label to the Sphinx build binary (optional; default: ``@score_tooling//bazel/rules/rules_score:raw_build``)
 - ``conf_template`` — Label to ``conf.py`` template (optional; default: ``@score_tooling//bazel/rules/rules_score:templates/conf.template.py``)
-- ``html_merge_tool`` — Label to HTML merge tool (optional; default: ``@score_tooling//bazel/rules/rules_score:sphinx_html_merge``)
+
+The HTML-merge tool used to combine dependency HTML trees is a fixed,
+private implementation detail of ``sphinx_module`` — it is not part of
+``SphinxInfo`` and cannot be overridden.
 
 
 Cross-module dependencies

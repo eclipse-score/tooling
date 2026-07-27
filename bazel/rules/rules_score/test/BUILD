@@ -11,7 +11,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@aspect_rules_py//py:defs.bzl", "py_binary")
 load("@pip_tooling_test//:requirements.bzl", "requirement")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load(
@@ -29,7 +28,7 @@ load(
     "unit",
     "unit_design",
 )
-load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "sphinx_toolchain")
+load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphinx_toolchain")
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test")
 load(
@@ -71,6 +70,7 @@ load(
     "score_needs_info_fields_test",
     "score_needs_transitive_collection_test",
     "score_needs_with_deps_test",
+    "score_toolchain_override_test",
     "sphinx_module_info_fields_test",
     "sphinx_module_providers_test_suite",
     "two_phase_html_second_test",
@@ -107,12 +107,10 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files(["template/conf.template.py"])
 
-py_binary(
-    name = "score_build",
-    srcs = ["@score_tooling//bazel/rules/rules_score:src/sphinx_wrapper.py"],
-    main = "@score_tooling//bazel/rules/rules_score:src/sphinx_wrapper.py",
+score_sphinx_toolchain(
+    name = "score_toolchain",
+    conf_template = "//:template/conf.template.py",
     package_collisions = "warning",
-    visibility = ["//visibility:public"],
     deps = [
         "@score_docs_as_code//src:plantuml_for_python",
         "@score_docs_as_code//src/extensions/score_sphinx_bundle",
@@ -121,19 +119,6 @@ py_binary(
         "@score_tooling//plantuml/sphinx/clickable_plantuml",
         requirement("sphinx-rtd-theme"),
     ],
-)
-
-sphinx_toolchain(
-    name = "score_sphinx_toolchain",
-    conf_template = "//:template/conf.template.py",
-    html_merge_tool = "@score_tooling//bazel/rules/rules_score:sphinx_html_merge",
-    sphinx = ":score_build",
-)
-
-toolchain(
-    name = "score_toolchain",
-    toolchain = ":score_sphinx_toolchain",
-    toolchain_type = "@score_tooling//bazel/rules/rules_score:toolchain_type",
 )
 
 # ============================================================================
@@ -164,14 +149,12 @@ sphinx_module(
     name = "module_c_lib",
     srcs = glob(["fixtures/module_c/*.rst"]),
     index = "fixtures/module_c/index.rst",
-    sphinx = "@score_tooling//bazel/rules/rules_score:score_build",
 )
 
 sphinx_module(
     name = "module_b_lib",
     srcs = glob(["fixtures/module_b/*.rst"]),
     index = "fixtures/module_b/index.rst",
-    sphinx = "@score_tooling//bazel/rules/rules_score:score_build",
     deps = [":module_c_lib"],
 )
 
@@ -179,7 +162,6 @@ sphinx_module(
     name = "module_a_lib",
     srcs = glob(["fixtures/module_a/*.rst"]),
     index = "fixtures/module_a/index.rst",
-    sphinx = "@score_tooling//bazel/rules/rules_score:score_build",
     deps = [
         ":module_b_lib",
         ":module_c_lib",
@@ -1073,6 +1055,14 @@ sphinx_module_test_suite(name = "sphinx_module_tests")
 score_needs_with_deps_test(
     name = "score_needs_with_deps_test",
     target_under_test = ":module_a_lib_needs",
+)
+
+# Toolchain resolution: this module's own //:score_toolchain must win over
+# score_tooling's sphinx_default_toolchain (see MODULE.bazel's
+# register_toolchains("//:score_toolchain")).
+score_toolchain_override_test(
+    name = "score_toolchain_override_test",
+    target_under_test = ":module_c_lib",
 )
 
 deps_html_merging_test(

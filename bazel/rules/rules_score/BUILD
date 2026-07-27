@@ -225,17 +225,12 @@ sphinx_module(
     visibility = ["//visibility:public"],
 )
 
-# HTML merge tool
-
-py_binary(
-    name = "raw_build",
-    srcs = ["src/sphinx_wrapper.py"],
-    env = {
-        "SOURCE_DIRECTORY": "",
-        "DATA": "",
-        "ACTION": "check",
-    },
-    main = "src/sphinx_wrapper.py",
+# Dependency set for the default Sphinx build binary. Extracted into its own
+# py_library so score_sphinx_toolchain() (sphinx_toolchain.bzl) can pull it in
+# as a base for consumers who only want to add extensions, without
+# copy-pasting this list.
+py_library(
+    name = "sphinx_base_deps",
     visibility = ["//visibility:public"],
     deps = [
         ":sphinx_module_ext",
@@ -251,6 +246,19 @@ py_binary(
         requirement("sphinxcontrib-umlet"),
         requirement("sphinxcontrib-plantuml"),
     ],
+)
+
+py_binary(
+    name = "raw_build",
+    srcs = ["src/sphinx_wrapper.py"],
+    env = {
+        "SOURCE_DIRECTORY": "",
+        "DATA": "",
+        "ACTION": "check",
+    },
+    main = "src/sphinx_wrapper.py",
+    visibility = ["//visibility:public"],
+    deps = [":sphinx_base_deps"],
 )
 
 sphinx_toolchain(

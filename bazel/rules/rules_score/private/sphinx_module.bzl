@@ -343,8 +343,8 @@ def _score_html_impl(ctx):
         arguments = merge_args,
         mnemonic = "SphinxHtmlMerge",
         progress_message = "Merging HTML with dependencies for %s" % ctx.label.name,
-        executable = sphinx_toolchain.html_merge_tool.files_to_run.executable,
-        tools = [sphinx_toolchain.html_merge_tool.files_to_run],
+        executable = ctx.executable._html_merge_tool,
+        tools = [ctx.attr._html_merge_tool.files_to_run],
     )
     return [
         DefaultInfo(files = depset([html_output])),
@@ -368,6 +368,11 @@ _score_html = rule(
     implementation = _score_html_impl,
     attrs = dict(
         sphinx_rule_attrs,
+        _html_merge_tool = attr.label(
+            default = Label("//bazel/rules/rules_score:sphinx_html_merge"),
+            executable = True,
+            cfg = "exec",
+        ),
         strip_prefix = attr.string(doc = "Prefix to remove from input file paths."),
         docs_library_deps = attr.label_list(
             doc = "List of sphinx_docs_library targets to include as source files with prefix/strip_prefix handling.",
@@ -404,7 +409,6 @@ def sphinx_module(
         deps = [],
         docs_library_deps = [],
         renamed_srcs = {},
-        sphinx = Label("//bazel/rules/rules_score:score_build"),
         strip_prefix = "",
         extra_opts = [],
         extra_opts_targets = [],
@@ -423,11 +427,6 @@ def sphinx_module(
         docs_library_deps: {type}`list[label]` of {obj}`sphinx_docs_library` targets.
         renamed_srcs: {type}`dict[label, str]` Doc source files that are renamed
                     on their way into the Sphinx source tree.
-        sphinx: Currently unused. The Sphinx binary is resolved from the
-                    registered `//bazel/rules/rules_score:toolchain_type` toolchain,
-                    not from this parameter. Kept for source compatibility with
-                    existing callers; to use a different Sphinx binary, register a
-                    different `sphinx_toolchain` instead.
         strip_prefix: {type}`str` A prefix to remove from the file paths of the
                     source files. e.g., given `//sphinxdocs/docs:foo.md`, stripping `docs/` makes
                     Sphinx see `foo.md` in its generated source directory. If not

@@ -59,10 +59,6 @@ cross-module dependencies and automatic HTML merging.
      - label list
      - no
      - Other ``sphinx_module`` or ``dependable_element`` targets for cross-referencing and HTML merging (default ``[]``)
-   * - ``sphinx``
-     - label
-     - no
-     - Override the Sphinx binary (default: toolchain-provided binary)
    * - ``testonly``
      - bool
      - no
