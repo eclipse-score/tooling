@@ -114,6 +114,13 @@ py_binary(
 )
 
 # HTML merge tool
+py_library(
+    name = "sphinx_html_merge_lib",
+    srcs = ["src/sphinx_html_merge.py"],
+    imports = ["src"],
+    visibility = ["//visibility:public"],
+)
+
 py_binary(
     name = "sphinx_html_merge",
     srcs = ["src/sphinx_html_merge.py"],

@@ -25,7 +25,6 @@ Usage:
 
 import argparse
 import logging
-import os
 import re
 import shutil
 import sys
@@ -39,21 +38,29 @@ _LEVEL_MAP = {
 }
 
 
-# Standard Sphinx directories that should be copied
-# Note: _static and _sphinx_design_static are excluded for dependencies to avoid duplication
-SPHINX_DIRS = {"_sources", ".doctrees"}
+# Sphinx build-cache artifacts that must never reach the published site.
+# .doctrees holds pickled BuildEnvironment state (absolute execroot paths,
+# per-doc mtimes) — copying it is both wasted space and a hermeticity leak.
+BUILD_ARTIFACT_DIRS = {".doctrees"}
 
 
-def copy_html_files(src_dir, dst_dir, exclude_module_dirs=None, sibling_modules=None):
+def copy_html_files(src_dir, dst_dir, is_dependency=False, sibling_modules=None):
     """Copy HTML and related files from src to dst, with optional link fixing.
 
     Args:
         src_dir: Source HTML directory
         dst_dir: Destination directory
-        exclude_module_dirs: Set of module directory names to skip (to avoid copying nested modules).
-                           If None, copy everything.
-        sibling_modules: Set of sibling module names for fixing links in HTML files.
-                        If None, no link fixing is performed.
+        is_dependency: Whether src_dir is a dependency module's HTML being placed
+                     into a subdirectory of the merged site (as opposed to the
+                     main module, which is copied as-is at the site root).
+                     Dependencies have their own _static/_sphinx_design_static
+                     dropped (the merged site uses one shared _static/ at the
+                     root) and their internal links rewritten for the new
+                     nesting depth.
+        sibling_modules: Set of sibling module directory names to skip (so nested
+                        copies of other modules already merged elsewhere aren't
+                        duplicated) and to rewrite intra-site links for. Only
+                        meaningful when is_dependency is True.
     """
     src_path = Path(src_dir)
     dst_path = Path(dst_dir)
@@ -64,12 +71,10 @@ def copy_html_files(src_dir, dst_dir, exclude_module_dirs=None, sibling_modules=
 
     dst_path.mkdir(parents=True, exist_ok=True)
 
-    if exclude_module_dirs is None:
-        exclude_module_dirs = set()
+    sibling_modules = sibling_modules or set()
 
-    # Prepare regex patterns for link fixing if needed
+    # Prepare regex pattern for sibling-module link fixing, if needed.
     module_pattern = None
-    static_pattern = None
     if sibling_modules:
         module_pattern = re.compile(
             r'((?:href|src)=")('
@@ -77,28 +82,34 @@ def copy_html_files(src_dir, dst_dir, exclude_module_dirs=None, sibling_modules=
             + r")/",
             re.IGNORECASE,
         )
-        static_pattern = re.compile(
-            r'((?:href|src)=")(\.\./)*(_static|_sphinx_design_static)/', re.IGNORECASE
-        )
+    static_pattern = re.compile(
+        r'((?:href|src)=")(\.\./)*(_static|_sphinx_design_static)/', re.IGNORECASE
+    )
 
     def process_file(src_file, dst_file, relative_path):
         """Read, optionally modify, and write a file."""
-        if src_file.suffix == ".html" and sibling_modules:
+        if src_file.suffix == ".html" and is_dependency:
             # Read, modify, and write HTML files
             try:
                 content = src_file.read_text(encoding="utf-8")
 
-                # Replace module_name/ with ../module_name/
-                modified_content = module_pattern.sub(r"\1../\2/", content)
-
-                # Calculate depth for static file references
+                # Both rewrites below must agree on how many directory levels
+                # this page now sits below the merged site root, so compute
+                # the prefix once and share it.
                 depth = len(relative_path.parents) - 1
                 parent_prefix = "../" * (depth + 1)
+
+                if module_pattern is not None:
+
+                    def replace_module(match):
+                        return f"{match.group(1)}{parent_prefix}{match.group(2)}/"
+
+                    content = module_pattern.sub(replace_module, content)
 
                 def replace_static(match):
                     return f"{match.group(1)}{parent_prefix}{match.group(3)}/"
 
-                modified_content = static_pattern.sub(replace_static, modified_content)
+                modified_content = static_pattern.sub(replace_static, content)
 
                 # Write modified content
                 dst_file.parent.mkdir(parents=True, exist_ok=True)
@@ -121,13 +132,17 @@ def copy_html_files(src_dir, dst_dir, exclude_module_dirs=None, sibling_modules=
             if item.is_file():
                 process_file(item, dst_item, rel_item)
             elif item.is_dir():
-                # Skip excluded directories
-                if item.name in exclude_module_dirs:
+                # Never publish Sphinx's own build cache.
+                if item.name in BUILD_ARTIFACT_DIRS:
                     continue
-                # Skip static dirs from dependencies
-                if (
-                    item.name in ("_static", "_sphinx_design_static")
-                    and exclude_module_dirs
+                # Skip nested copies of sibling modules to avoid duplication.
+                if item.name in sibling_modules:
+                    continue
+                # Dependencies use the merged site's shared _static/ instead
+                # of their own.
+                if is_dependency and item.name in (
+                    "_static",
+                    "_sphinx_design_static",
                 ):
                     continue
 
@@ -153,7 +168,7 @@ def merge_html_dirs(output_dir, main_html_dir, dependencies, extra_static=None):
 
     # First, copy the main HTML directory
     logging.info("Copying main HTML from %s to %s", main_html_dir, output_dir)
-    copy_html_files(main_html_dir, output_dir)
+    copy_html_files(main_html_dir, output_dir, is_dependency=False)
 
     # Copy any extra static files into output/_static/
     for src_file, dest_subpath in extra_static or []:
@@ -177,7 +192,7 @@ def merge_html_dirs(output_dir, main_html_dir, dependencies, extra_static=None):
         copy_html_files(
             dep_html_dir,
             dep_output,
-            exclude_module_dirs=sibling_modules,
+            is_dependency=True,
             sibling_modules=sibling_modules,
         )
 
