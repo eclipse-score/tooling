@@ -36,3 +36,4 @@ User Guide
    architectural_design
    unit_design
    dependability_analysis
+   validation

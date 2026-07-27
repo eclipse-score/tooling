@@ -20,11 +20,125 @@ with associated requirements and tests.
 """
 
 load("@lobster//:lobster.bzl", "subrule_lobster_gtest", "subrule_lobster_html_report", "subrule_lobster_report")
-load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "CertifiedScope", "ComponentInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo", "UnitInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "CertifiedScope", "ComponentInfo", "ComponentRequirementsInfo", "ComponentTestCaseCoverageInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo", "UnitInfo")
 load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_sources")
 
 # ============================================================================
-# Private Rule Implementation
+# Private Rule Implementation: Component .update target
+# ============================================================================
+
+def _collect_req_lobster_files(ctx):
+    """Collect CompReq .lobster files from requirements targets.
+
+    Only ComponentRequirementsInfo targets contribute files; FeatReq and
+    AssumedSystemReq targets are intentionally excluded because the coverage
+    runner filters to ``kind == CompReq`` anyway.
+    """
+    req_lobster_files = []
+    for req_target in ctx.attr.requirements:
+        if ComponentRequirementsInfo in req_target:
+            req_lobster_files.extend(req_target[ComponentRequirementsInfo].srcs.to_list())
+    return req_lobster_files
+
+def _component_update_impl(ctx):
+    """Implementation for component.update — rewrites test_case_coverage.lock.yaml.
+
+    Runs ``update_runner`` as an executable, passing the gtest.lobster file
+    and the req lobster manifest via environment variables. The gtest.lobster
+    file is *not* recomputed here: it is read off ``ComponentTestCaseCoverageInfo``
+    from the sibling main component target (``ctx.attr.component``), the exact
+    same File the coverage check consumes. Recomputing it independently would
+    risk the two runs diverging and ``.update`` writing a lock file that the
+    check then rejects.
+    """
+
+    # Collect req lobster files from requirements targets
+    req_lobster_files = _collect_req_lobster_files(ctx)
+
+    # Reuse the gtest.lobster already produced by the main component target,
+    # instead of running subrule_lobster_gtest a second time.
+    gtest_lobster_file = ctx.attr.component[ComponentTestCaseCoverageInfo].gtest_lobster_file
+
+    # Write a runfiles manifest (short paths) — used by the runner at bazel run time.
+    runfiles_manifest = ctx.actions.declare_file("{}_req_lobster_runfiles_manifest.txt".format(ctx.label.name))
+    ctx.actions.write(
+        output = runfiles_manifest,
+        content = "\n".join([f.short_path for f in req_lobster_files]) + "\n",
+    )
+
+    # The lock file is written back to the source tree by update_runner using
+    # $BUILD_WORKSPACE_DIRECTORY.  Pass only the package-relative path; no
+    # symlink into runfiles is needed (the runner does not read the lock).
+    lock_file = ctx.file.test_case_coverage_lock
+
+    # Symlink the update_runner binary as the rule's executable.
+    executable = ctx.actions.declare_file("{}_update_runner_bin".format(ctx.label.name))
+    ctx.actions.symlink(
+        output = executable,
+        target_file = ctx.executable._update_runner,
+        is_executable = True,
+    )
+
+    all_inputs = req_lobster_files + [gtest_lobster_file, runfiles_manifest]
+    runfiles = ctx.runfiles(files = all_inputs)
+    runfiles = runfiles.merge(ctx.attr._update_runner[DefaultInfo].default_runfiles)
+
+    return [
+        DefaultInfo(
+            executable = executable,
+            runfiles = runfiles,
+        ),
+        RunEnvironmentInfo(environment = {
+            "TEST_CASE_COVERAGE_LOBSTER_MANIFEST": runfiles_manifest.short_path,
+            "TEST_CASE_COVERAGE_GTEST_LOBSTER": gtest_lobster_file.short_path,
+            # Package-relative path; update_runner prepends $BUILD_WORKSPACE_DIRECTORY.
+            # NOTE: ctx.label.package is "" for targets defined at the repo
+            # root — do not unconditionally prepend "/", or the path becomes
+            # "/test_case_coverage.lock.yaml" which Python's pathlib treats as an
+            # absolute filesystem-root path when joined with the workspace
+            # dir (silently discarding the workspace dir and failing with a
+            # permission error instead of writing into the source tree).
+            # Named distinctly from TEST_CASE_COVERAGE_LOCK_FILE (used by the
+            # check action below) because the two runners require different
+            # kinds of paths: this one is workspace-relative, that one is a
+            # directly resolvable/exec path.
+            "TEST_CASE_COVERAGE_LOCK_FILE_WORKSPACE_PATH": (ctx.label.package + "/" + lock_file.basename) if ctx.label.package else lock_file.basename,
+            "TEST_CASE_COVERAGE_LABEL": str(ctx.label),
+            "TEST_CASE_COVERAGE_PACKAGE": "//" + ctx.label.package,
+        }),
+    ]
+
+_component_update = rule(
+    implementation = _component_update_impl,
+    doc = "Refreshes component test_case_coverage.lock.yaml with current test coverage.",
+    attrs = {
+        "requirements": attr.label_list(
+            default = [],
+            providers = [[ComponentRequirementsInfo], [FeatureRequirementsInfo], [AssumedSystemRequirementsInfo]],
+            doc = "Requirements targets forwarded from the component() macro. Only ComponentRequirementsInfo targets contribute files; FeatReq and AssumedSystemReq labels are accepted so the macro can pass its full requirements list through without filtering.",
+        ),
+        "component": attr.label(
+            mandatory = True,
+            providers = [ComponentTestCaseCoverageInfo],
+            doc = "The sibling main component() target (self). Supplies the shared gtest.lobster File via ComponentTestCaseCoverageInfo so .update reuses the exact same artifact as the coverage check, instead of recomputing it.",
+        ),
+        "test_case_coverage_lock": attr.label(
+            allow_single_file = True,
+            mandatory = True,
+            doc = "Committed test_case_coverage.lock.yaml file to overwrite.",
+        ),
+        "_update_runner": attr.label(
+            doc = "test_case_coverage update runner executable.",
+            default = Label("//bazel/rules/rules_score/src/test_case_coverage:update_runner"),
+            executable = True,
+            cfg = "exec",
+        ),
+    },
+    executable = True,
+)
+
+# ============================================================================
+# Private Rule Implementation: Component main rule
 # ============================================================================
 
 def _component_impl(ctx):
@@ -211,6 +325,12 @@ def _component_impl(ctx):
             ),
             dependent_labels = depset(transitive = collected_dependencies),
         ),
+        # ComponentTestCaseCoverageInfo: test-case-coverage-lock data consumed by dependable_element
+        # (only emitted when test_case_coverage_lock is set; presence signals the DE to run the check).
+        ComponentTestCaseCoverageInfo(
+            gtest_lobster_file = gtest_lobster_file,
+            test_case_coverage_lock_file = ctx.file.test_case_coverage_lock,
+        ),
         # SphinxSourcesInfo: RST sources from component requirements + transitive sources from sub-components/units
         SphinxSourcesInfo(
             srcs = req_sphinx_depset,
@@ -239,6 +359,10 @@ _component_test = rule(
         "tests": attr.label_list(
             default = [],
             doc = "Component-level integration test targets",
+        ),
+        "test_case_coverage_lock": attr.label(
+            allow_single_file = True,
+            doc = "Optional committed test_case_coverage.lock.yaml file for coverage validation",
         ),
         "_lobster_ci_report": attr.label(
             default = "@lobster//:lobster-ci-report",
@@ -270,6 +394,7 @@ def component(
         tests = [],
         requirements = None,
         components = [],
+        test_case_coverage_lock = None,
         testonly = True,
         **kwargs):
     """Define a software component following S-CORE process guidelines.
@@ -279,6 +404,7 @@ def component(
     - Component requirements: Requirements specification for the component
     - Components: Nested components (for hierarchical structures)
     - Tests: Integration tests that verify the component as a whole
+    - Coverage: Optional test case coverage traceability (if test_case_coverage_lock provided)
 
     Args:
         name: The name of the component. Used as the target name.
@@ -294,6 +420,10 @@ def component(
             component structures).
         tests: List of labels to Bazel test targets that verify the component
             integration.
+        test_case_coverage_lock: Optional label to committed test_case_coverage.lock.yaml file.
+            If provided, the component rule generates test_case_coverage.lobster by comparing
+            computed test coverage against the committed lock. Enables `.update`
+            target for refreshing coverage.
         testonly: If true, only testonly targets can depend on this component.
         visibility: Bazel visibility specification for the component target.
 
@@ -304,6 +434,7 @@ def component(
             requirements = [":kvs_component_requirements"],
             components = [":kvs_unit1", ":kvs_unit2"],
             tests = ["//persistency/kvs/tests:score_kvs_component_integration_tests"],
+            test_case_coverage_lock = "test_case_coverage.lock.yaml",
             visibility = ["//visibility:public"],
         )
         ```
@@ -314,6 +445,20 @@ def component(
         requirements = requirements,
         components = components,
         tests = tests,
+        test_case_coverage_lock = test_case_coverage_lock,
         testonly = testonly,
         **kwargs
     )
+
+    # Create .update target if test_case_coverage_lock is provided
+    if test_case_coverage_lock:
+        # Only forward visibility — _component_update is an executable rule
+        # and does not accept the generic build attrs (tags, deprecation, etc.).
+        _component_update(
+            name = name + ".update",
+            requirements = requirements or [],
+            component = ":" + name,
+            test_case_coverage_lock = test_case_coverage_lock,
+            testonly = testonly,
+            visibility = kwargs.get("visibility"),
+        )

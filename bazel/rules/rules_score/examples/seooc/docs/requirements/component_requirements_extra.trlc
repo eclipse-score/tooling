@@ -16,7 +16,7 @@ import ScoreReq
 import SampleSEooC
 
 ScoreReq.CompReq REQ_COMP_EXTRA_001 {
-    description = "The numeric value management interface shall initialize its internal value to zero upon construction"
+    description = "The numeric value management interface shall return a fixed, well-defined value immediately upon construction, without requiring any prior initialization calls"
     safety = ScoreReq.Asil.B
     derived_from = [SampleSEooC.FEAT_001@1]
     version = 1

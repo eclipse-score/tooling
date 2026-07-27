@@ -29,4 +29,10 @@ bool Bar::AssertNumber() const {
   assert(foo_ != nullptr);
   return foo_->GetNumber() == kExpectedNumber;
 }
+
+// trace: SampleComponent.REQ_COMP_006
+std::string Bar::Format() const {
+  assert(foo_ != nullptr);
+  return std::to_string(foo_->GetNumber());
+}
 } // namespace unit_2

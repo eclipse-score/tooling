@@ -145,11 +145,26 @@ ComponentInfo = provider(
     doc = "Provider for component artifacts.",
     fields = {
         "name": "Name of the component target.",
-        "requirements": "Depset of requirement traceability files (.lobster) collected from requirements targets, including transitive files from nested components.",
+        "requirements": "Depset of component requirement traceability files (.lobster) collected from ComponentRequirementsInfo targets only (CompReq kind). Does not include feature or assumed-system requirement files.",
         "components": "Depset of nested component and/or unit Targets that comprise this component.",
         "tests": "Depset of test traceability files (.lobster) generated from unit test results, collected transitively from all nested components and units.",
         "architecture": "Depset of architecture traceability files (.lobster) generated from unit architectural designs, collected transitively from all nested components and units.",
         "dependent_labels": "Depset of Labels that this component's implementation depends on transitively (collected from all nested units and components, used for certification scope validation).",
+    },
+)
+
+ComponentTestCaseCoverageInfo = provider(
+    doc = """Internal provider carrying test-case-coverage-lock data for a component.
+
+    Returned alongside ComponentInfo when ``test_case_coverage_lock`` is set on a
+    ``component()`` target.  Consumed by ``dependable_element`` to run the
+    per-component ``ComponentTestCaseCoverageLockCheck`` build action.  This is an
+    implementation detail of the ``component`` / ``dependable_element``
+    interaction; do not depend on it from external rules.
+    """,
+    fields = {
+        "gtest_lobster_file": "The component's own gtest.lobster File produced by lobster-gtest. Used by the dependable_element to run the coverage lock check.",
+        "test_case_coverage_lock_file": "The committed test_case_coverage.lock.yaml File, or None if no test_case_coverage_lock is declared on the component.",
     },
 )
 

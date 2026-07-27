@@ -33,6 +33,7 @@ load(
     "AssumptionsOfUseInfo",
     "CertifiedScope",
     "ComponentInfo",
+    "ComponentTestCaseCoverageInfo",
     "DependabilityAnalysisInfo",
     "DependableElementInfo",
     "DependableElementLobsterInfo",
@@ -977,12 +978,20 @@ def _dependable_element_index_impl(ctx):
 
         if type(node) == type([]):
             if certified_scope.name in node:
-                fail("The same scope is covered twice: {}".format(certified_scope))
+                msg = "The same scope is covered twice: {}".format(certified_scope)
+                if ctx.attr.maturity == "development":
+                    print("WARNING: " + msg)
+                    continue
+                fail(msg)
             node.append(certified_scope.name)
         else:
             inserted_element = node.setdefault(last_element, default = [])
             if certified_scope.name in inserted_element:
-                fail("The same scope is covered twice: {}".format(certified_scope))
+                msg = "The same scope is covered twice: {}".format(certified_scope)
+                if ctx.attr.maturity == "development":
+                    print("WARNING: " + msg)
+                    continue
+                fail(msg)
             inserted_element.append(certified_scope.name)
 
     dependencies = depset(transitive = collected_dependent_labels).to_list()
@@ -1021,14 +1030,14 @@ def _dependable_element_index_impl(ctx):
             dep_info = dep[DependableElementInfo]
             dep_rank = _INTEGRITY_LEVEL_RANK[dep_info.integrity_level]
             if dep_rank < own_rank:
-                fail(
+                msg = (
                     "Integrity level violation: '{}' (level {}) depends on '{}' (level {}). " +
-                    "A dependable element must not depend on elements with a lower integrity level.",
-                    ctx.label,
-                    ctx.attr.integrity_level,
-                    dep_info.label,
-                    dep_info.integrity_level,
-                )
+                    "A dependable element must not depend on elements with a lower integrity level."
+                ).format(ctx.label, ctx.attr.integrity_level, dep_info.label, dep_info.integrity_level)
+                if ctx.attr.maturity == "development":
+                    print("WARNING: " + msg)
+                else:
+                    fail(msg)
 
     # =========================================================================
     # Lobster Traceability: Dependable Element Level
@@ -1064,6 +1073,74 @@ def _dependable_element_index_impl(ctx):
     comp_req_lobster_depset = depset(transitive = comp_req_lobster_files)
     comp_test_lobster_depset = depset(transitive = comp_test_lobster_files)
     comp_arch_lobster_depset = depset(transitive = comp_arch_lobster_files)
+
+    # Test-case-coverage lock check: run test_runner once per component that has a
+    # test_case_coverage_lock_file.  Maturity controls whether drift is an error or a
+    # warning — matching the existing certified-scope / validation pattern.
+    # ComponentTestCaseCoverageInfo is only present on components that declared test_case_coverage_lock.
+    # ComponentInfo.requirements is CompReq-only (FeatReq/AssumedSystemReq are
+    # kept in a separate depset by _component_impl and not included here).
+    coverage_lobster_files = []
+    for comp_target in ctx.attr.components:
+        if ComponentTestCaseCoverageInfo not in comp_target:
+            continue
+        cov_info = comp_target[ComponentTestCaseCoverageInfo]
+        if not cov_info.test_case_coverage_lock_file:
+            continue
+
+        comp_info = comp_target[ComponentInfo]
+        req_files = comp_info.requirements.to_list()
+        gtest_lobster = cov_info.gtest_lobster_file
+        if not gtest_lobster:
+            # ComponentTestCaseCoverageInfo always carries a gtest_lobster_file
+            # from _component_impl; a missing one here means the provider
+            # contract was violated (e.g. a hand-rolled provider elsewhere).
+            # Fail with a clear message instead of passing None into
+            # ctx.actions.run, which would produce an opaque analysis error.
+            fail("ComponentTestCaseCoverageInfo.gtest_lobster_file is missing for {}".format(comp_target.label))
+        lock_file = cov_info.test_case_coverage_lock_file
+        comp_name = comp_info.name
+
+        # Package-qualify the discriminator used in declared output paths:
+        # two components in different packages can share the same target
+        # name (e.g. both named "component_example"), and comp_name alone
+        # would collide.
+        comp_unique = "{}_{}".format(comp_target.label.package.replace("/", "_"), comp_name) if comp_target.label.package else comp_name
+
+        # Write req lobster manifest (exec paths — used inside the build action sandbox)
+        cov_req_manifest = ctx.actions.declare_file(
+            "{}/test_case_coverage_req_manifest_{}.txt".format(ctx.label.name, comp_unique),
+        )
+        ctx.actions.write(
+            output = cov_req_manifest,
+            content = "\n".join([f.path for f in req_files]) + "\n",
+        )
+
+        cov_lobster = ctx.actions.declare_file(
+            "{}/test_case_coverage_{}.lobster".format(ctx.label.name, comp_unique),
+        )
+
+        cov_args = []
+        if ctx.attr.maturity == "development":
+            cov_args.append("--allow-check-failures")
+
+        ctx.actions.run(
+            executable = ctx.executable._test_runner,
+            inputs = depset(req_files + [gtest_lobster, cov_req_manifest, lock_file]),
+            outputs = [cov_lobster],
+            arguments = cov_args,
+            env = {
+                "TEST_CASE_COVERAGE_LOBSTER_MANIFEST": cov_req_manifest.path,
+                "TEST_CASE_COVERAGE_GTEST_LOBSTER": gtest_lobster.path,
+                "TEST_CASE_COVERAGE_LOCK_FILE": lock_file.path,
+                "TEST_CASE_COVERAGE_LABEL": str(comp_target.label),
+                "TEST_CASE_COVERAGE_PACKAGE": "//" + comp_target.label.package,
+                "TEST_CASE_COVERAGE_LOBSTER_OUTPUT": cov_lobster.path,
+            },
+            mnemonic = "ComponentTestCaseCoverageLockCheck",
+            progress_message = "Checking test case coverage lock for {}".format(comp_target.label),
+        )
+        coverage_lobster_files.append(cov_lobster)
 
     # Collect safety analysis lobster files from dependability_analysis targets
     sa_lobster_files = {}  # canonical name -> File, merged from all DA targets
@@ -1149,6 +1226,19 @@ def _dependable_element_index_impl(ctx):
             comp_req_trace_lines = "  trace to: \"Feature Requirements\";\n"
 
         lobster_config = ctx.actions.declare_file(ctx.label.name + "/de_traceability_config")
+
+        # Only emit the "Test Case Coverage" LOBSTER layer when there is
+        # actual coverage data; an empty layer with `trace to` would cause
+        # LOBSTER to report every component requirement as missing a reference.
+        if coverage_lobster_files:
+            coverage_block = (
+                "activity \"Test Case Coverage\" {\n" +
+                format_lobster_sources(coverage_lobster_files) + "\n" +
+                "  trace to: \"Component Requirements\";\n}"
+            )
+        else:
+            coverage_block = ""
+
         ctx.actions.expand_template(
             template = ctx.file._lobster_de_template,
             output = lobster_config,
@@ -1159,6 +1249,7 @@ def _dependable_element_index_impl(ctx):
                 "{COMP_REQ_TRACE}": comp_req_trace_lines,
                 "{ARCH_SOURCES}": format_lobster_sources(comp_arch_list),
                 "{UNIT_TEST_SOURCES}": format_lobster_sources(comp_test_list),
+                "{COVERAGE_BLOCK}": coverage_block,
                 "{PUBLIC_API_SOURCES}": format_lobster_sources(interface_req_list),
                 "{FM_SOURCES}": format_lobster_sources(fm_list),
                 "{CM_SOURCES}": format_lobster_sources(cm_list),
@@ -1166,7 +1257,7 @@ def _dependable_element_index_impl(ctx):
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list
+        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list + coverage_lobster_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_html_report = subrule_lobster_html_report(lobster_report_file)
 
@@ -1307,6 +1398,12 @@ def _dependable_element_index_attrs():
             executable = True,
             cfg = "exec",
             doc = "Tool for filtering received AoU lobster entries based on chain-forwarding YAML.",
+        ),
+        "_test_runner": attr.label(
+            default = Label("//bazel/rules/rules_score/src/test_case_coverage:test_runner"),
+            executable = True,
+            cfg = "exec",
+            doc = "test_case_coverage test runner — checks test_case_coverage.lock.yaml for each component; maturity controls error vs. warning.",
         ),
     }
     attrs.update(VALIDATION_ATTRS)
@@ -1545,6 +1642,7 @@ def dependable_element(
         name = name + "_rst",
         srcs = [":" + name + "_index"],
         prefix = docs_prefix,
+        tags = kwargs.get("tags"),
         testonly = testonly,
         visibility = ["//visibility:public"],
     )

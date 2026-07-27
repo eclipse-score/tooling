@@ -48,3 +48,4 @@ of truth.
 
    lobster_bazel
    lobster
+   test_case_coverage
