@@ -296,6 +296,44 @@ def _deps_needs_collection_test_impl(ctx):
 deps_needs_collection_test = analysistest.make(_deps_needs_collection_test_impl)
 
 # ============================================================================
+# Toolchain Resolution Tests
+# ============================================================================
+
+def _score_toolchain_override_test_impl(ctx):
+    """Test that this module's own registered toolchain wins over the default.
+
+    This module (rules_score/test/MODULE.bazel) registers `//:score_toolchain`
+    as a root-module toolchain, which must take precedence over score_tooling's
+    default registration. Verified by inspecting the executable of the
+    SphinxHtmlBuild action rather than a provider field, since which toolchain
+    won is not itself exposed as a provider.
+    """
+    env = analysistest.begin(ctx)
+
+    actions = analysistest.target_actions(env)
+    html_build_actions = [a for a in actions if a.mnemonic == "SphinxHtmlBuild"]
+    asserts.equals(env, 1, len(html_build_actions), "Expected exactly one SphinxHtmlBuild action")
+
+    executable_path = html_build_actions[0].argv[0]
+    asserts.true(
+        env,
+        "score_toolchain_binary" in executable_path,
+        "Expected the locally-registered //:score_toolchain to be selected " +
+        "(executable path should contain 'score_toolchain_binary'), got: %s" % executable_path,
+    )
+    asserts.false(
+        env,
+        "raw_build" in executable_path,
+        "score_tooling's default toolchain binary ('raw_build') should not " +
+        "have been selected when this module registers its own " +
+        "//:score_toolchain, got: %s" % executable_path,
+    )
+
+    return analysistest.end(env)
+
+score_toolchain_override_test = analysistest.make(_score_toolchain_override_test_impl)
+
+# ============================================================================
 # Test Suite
 # ============================================================================
 
@@ -332,5 +370,8 @@ def sphinx_module_providers_test_suite(name):
             # Dependency tests
             ":deps_html_merging_test",
             ":deps_needs_collection_test",
+
+            # Toolchain resolution tests
+            ":score_toolchain_override_test",
         ],
     )

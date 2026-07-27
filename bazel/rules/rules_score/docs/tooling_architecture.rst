@@ -140,10 +140,11 @@ are rendered under :doc:`tool_reference/index`.
        against the *expected* architecture (static/dynamic ``.fbs.bin`` from
        ``architectural_design``). Fails the build on a mismatch.
    * - **Sphinx (Docs)**
-     - ``score_build`` (``src/sphinx_wrapper.py``),
-       ``html_merge_tool`` (``src/sphinx_html_merge.py``),
-       ``sphinx_module_ext``,
-       ``trlc`` Sphinx extension (``@trlc``)
+     - Sphinx build binary (``src/sphinx_wrapper.py``, resolved via the
+       registered ``sphinx_toolchain``), HTML merge tool
+       (``src/sphinx_html_merge.py``, a private rule detail — not toolchain-
+       configurable), ``sphinx_module_ext``, ``trlc`` Sphinx extension
+       (``@trlc``)
      - ``sphinx_module``, ``dependable_element``
      - Two-phase documentation build: **phase 1** (``<name>_needs`` target)
        runs Sphinx with ``--builder needs`` to emit ``needs.json`` containing

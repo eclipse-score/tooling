@@ -1527,7 +1527,6 @@ def dependable_element(
         deps = [],
         aou_forwarding = None,
         maturity = "release",
-        sphinx = Label("//bazel/rules/rules_score:score_build"),
         testonly = True,
         docs_prefix = "docs/sphinx/",
         **kwargs):
@@ -1568,7 +1567,6 @@ def dependable_element(
         aou_forwarding: Optional label to a YAML file listing received AoU IDs
             to further-forward to this element's own dependees. Only needed for
             chain-forwarding received AoUs that this element cannot handle.
-        sphinx: Label to sphinx build binary. Default: //bazel/rules/rules_score:score_build
         testonly: If True, only testonly targets can depend on this target.
         docs_prefix: Prefix under which the generated `<name>_rst` sphinx_docs_library
             exposes its RST sources, so that an external Sphinx build can embed it via
@@ -1619,7 +1617,6 @@ def dependable_element(
         srcs = [":" + name + "_index"],
         index = ":" + name + "_index",
         deps = [d + _DOC_TARGET_SUFFIX for d in deps],
-        sphinx = sphinx,
         testonly = testonly,
         **kwargs
     )
