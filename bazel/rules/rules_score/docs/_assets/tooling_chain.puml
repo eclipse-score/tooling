@@ -47,7 +47,7 @@ rectangle "**puml_cli** (FTA mode)\ninline metamodel + extract\n(.puml -> inline
 rectangle "**fmea_assembler**\nTRLCRST page build\n(.trlc + chains -> fmea.rst)" <<own>> as asm
 rectangle "**Lobster**\nlobster-trlc / -report /\n-ci-report / gtest_report" <<tool>> as lob
 rectangle "**Architecture Verifier**\nvalidation_cli\n(arch.json + .fbs.bin)" <<tool>> as verifier
-rectangle "**Sphinx**\nscore_build + html_merge\n(.rst -> needs.json + HTML)" <<tool>> as docs
+rectangle "**Sphinx**\ntoolchain-resolved build binary + private\nhtml_merge tool\n(.rst -> needs.json + HTML)" <<tool>> as docs
 
 ' ── Tool-qualification branch (traces tool requirements to source) ────────────
 rectangle "rules_score_impl\n(tool-qualification target)" <<rule>> as impl
