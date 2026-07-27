@@ -148,6 +148,20 @@ py_library(
     ],
 )
 
+# Shared conf.py building blocks (hermetic plantuml/graphviz/FTA resolution,
+# metamodel needs schema loading). Used by the default conf.template.py and
+# available to any consumer who supplies their own conf_template.
+py_library(
+    name = "sphinx_conf_helpers",
+    srcs = ["src/sphinx_conf_helpers.py"],
+    imports = ["src"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":bazel_sphinx_needs",
+        requirement("sphinx"),
+    ],
+)
+
 # ---------------------------------------------------------------------------
 # Tool reference pages: each README.md is renamed to <name>.md via
 # renamed_srcs on sphinx_module. No sphinx_docs_library needed for renames —
@@ -233,6 +247,7 @@ py_library(
     name = "sphinx_base_deps",
     visibility = ["//visibility:public"],
     deps = [
+        ":sphinx_conf_helpers",
         ":sphinx_module_ext",
         "@lobster//sphinx_lobster:sphinx_lobster_builder",
         "@score_tooling//plantuml/sphinx/clickable_plantuml",
