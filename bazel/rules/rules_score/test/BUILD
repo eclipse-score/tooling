@@ -881,6 +881,13 @@ py_test(
 )
 
 py_test(
+    name = "test_sphinx_html_merge",
+    size = "small",
+    srcs = ["test_sphinx_html_merge.py"],
+    deps = ["@score_tooling//bazel/rules/rules_score:sphinx_html_merge_lib"],
+)
+
+py_test(
     name = "test_rst_to_trlc",
     size = "small",
     srcs = ["rst_to_trlc_test.py"],
@@ -910,6 +917,7 @@ test_suite(
         ":test_aou_forwarding_to_lobster",
         ":test_fmea_assembler",
         ":test_rst_to_trlc",
+        ":test_sphinx_html_merge",
         ":test_trlc_rst_image_rendering",
         ":unit_component_tests",
         "//fixtures/image_srcs:requirements_image_tests",
