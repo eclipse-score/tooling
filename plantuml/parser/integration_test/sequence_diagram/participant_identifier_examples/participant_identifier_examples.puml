@@ -13,29 +13,12 @@
 
 @startuml participant_identifier_examples
 
-' quoted_display_with_alias
-participant "Quoted As Id" as QuotedAsId <<component>>
+participant "Display Service" as Service <<component>>
+participant Caller
 
-' alias_with_quoted_display
-participant IdAsQuoted as "Id As Quoted" <<component>>
-
-' display_with_alias
-participant LeftId as RightId <<component>>
-
-' quoted_display
-participant "Quoted Only" <<component>>
-
-' alias_only
-participant IdOnly <<component>>
-
-QuotedAsId -> IdAsQuoted : callQuotedAsId()
-
-IdAsQuoted -> RightId : callIdAsQuoted()
-
-RightId -> "Quoted Only" : callIdAsId()
-
-"Quoted Only" -> IdOnly : callQuoted()
-
-IdOnly -> QuotedAsId : callId()
+Caller -> Service : callByAlias()
+' Note: "Display Service" is a new participant that is implicitly created by
+'       the message endpoint resolution(confirmed by Plantuml Preview).
+Service -> "Display Service" : callByDisplayName()
 
 @enduml

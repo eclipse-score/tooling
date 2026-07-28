@@ -3,128 +3,63 @@
     "name": "participant_identifier_examples",
     "participants": [
       {
-        "display_name": "Quoted As Id",
-        "alias": "QuotedAsId",
+        "display_name": "Display Service",
+        "alias": "Service",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": "component"
+      },
+      {
+        "display_name": "Caller",
+        "alias": null,
         "participant_type": "Participant",
         "source_location": {
           "file": "",
           "line": 17
         },
-        "stereotype": "component"
+        "stereotype": null
       },
       {
-        "display_name": "Id As Quoted",
-        "alias": "IdAsQuoted",
-        "participant_type": "Participant",
-        "source_location": {
-          "file": "",
-          "line": 20
-        },
-        "stereotype": "component"
-      },
-      {
-        "display_name": "LeftId",
-        "alias": "RightId",
-        "participant_type": "Participant",
-        "source_location": {
-          "file": "",
-          "line": 23
-        },
-        "stereotype": "component"
-      },
-      {
-        "display_name": "Quoted Only",
+        "display_name": "Display Service",
         "alias": null,
         "participant_type": "Participant",
         "source_location": {
           "file": "",
-          "line": 26
+          "line": 22
         },
-        "stereotype": "component"
-      },
-      {
-        "display_name": "IdOnly",
-        "alias": null,
-        "participant_type": "Participant",
-        "source_location": {
-          "file": "",
-          "line": 29
-        },
-        "stereotype": "component"
+        "stereotype": null
       }
     ],
     "root_interactions": [
       {
         "event": {
           "Interaction": {
-            "caller": "QuotedAsId",
-            "callee": "IdAsQuoted",
-            "method": "callQuotedAsId()"
+            "caller": "Caller",
+            "callee": "Service",
+            "method": "callByAlias()"
           }
         },
         "source_location": {
           "file": "",
-          "line": 31
+          "line": 19
         },
         "branches_node": [
           {
             "event": {
               "Interaction": {
-                "caller": "IdAsQuoted",
-                "callee": "RightId",
-                "method": "callIdAsQuoted()"
+                "caller": "Service",
+                "callee": "Display Service",
+                "method": "callByDisplayName()"
               }
             },
             "source_location": {
               "file": "",
-              "line": 33
+              "line": 22
             },
-            "branches_node": [
-              {
-                "event": {
-                  "Interaction": {
-                    "caller": "RightId",
-                    "callee": "Quoted Only",
-                    "method": "callIdAsId()"
-                  }
-                },
-                "source_location": {
-                  "file": "",
-                  "line": 35
-                },
-                "branches_node": [
-                  {
-                    "event": {
-                      "Interaction": {
-                        "caller": "Quoted Only",
-                        "callee": "IdOnly",
-                        "method": "callQuoted()"
-                      }
-                    },
-                    "source_location": {
-                      "file": "",
-                      "line": 37
-                    },
-                    "branches_node": [
-                      {
-                        "event": {
-                          "Interaction": {
-                            "caller": "IdOnly",
-                            "callee": "QuotedAsId",
-                            "method": "callId()"
-                          }
-                        },
-                        "source_location": {
-                          "file": "",
-                          "line": 39
-                        },
-                        "branches_node": []
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
+            "branches_node": []
           }
         ]
       }

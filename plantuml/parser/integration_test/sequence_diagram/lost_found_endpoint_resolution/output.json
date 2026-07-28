@@ -1,0 +1,48 @@
+{
+  "lost_found_endpoint_resolution.puml": {
+    "name": "lost_found_endpoint_resolution",
+    "participants": [
+      {
+        "display_name": "Service",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      }
+    ],
+    "root_interactions": [
+      {
+        "event": {
+          "Interaction": {
+            "caller": "ExternalEndpoint",
+            "callee": "Service",
+            "method": "incoming"
+          }
+        },
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "branches_node": [
+          {
+            "event": {
+              "Return": {
+                "caller": "ExternalEndpoint",
+                "callee": "Service",
+                "return_content": "outgoing"
+              }
+            },
+            "source_location": {
+              "file": "",
+              "line": 17
+            },
+            "branches_node": []
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -72,11 +72,11 @@ fn test_participant_identifier_examples() {
 }
 
 #[test]
-fn test_official_lost_found_endpoint_variants() {
-    run_sequence_resolver_case("official_lost_found_endpoint_variants");
+fn test_lost_found_endpoint_resolution() {
+    run_sequence_resolver_case("lost_found_endpoint_resolution");
 }
 
 #[test]
-fn test_invalid_undeclared_participant() {
-    run_sequence_resolver_case("invalid_undeclared_participant");
+fn test_implicit_participant_from_message_endpoint() {
+    run_sequence_resolver_case("implicit_participant_from_message_endpoint");
 }

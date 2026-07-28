@@ -11,17 +11,9 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml official_lost_found_endpoint_variants
+@startuml lost_found_endpoint_resolution
 
-participant Actor1
-participant Actor2
-participant Builder
-
-[o-> Actor1 : Incoming request
-[-> Actor2 : Another incoming
-[x-> Builder : Third incoming
-Actor1 -->o] : Outgoing response
-Actor2 -->] : Another outgoing
-Actor2 -->x] : Third outgoing
+[ -> Service : incoming
+Service --> ] : outgoing
 
 @enduml

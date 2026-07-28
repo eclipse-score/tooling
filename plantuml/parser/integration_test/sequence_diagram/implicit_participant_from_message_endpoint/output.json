@@ -1,0 +1,43 @@
+{
+  "implicit_participant_from_message_endpoint.puml": {
+    "name": "implicit_participant_from_message_endpoint",
+    "participants": [
+      {
+        "display_name": "Client",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Service",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 18
+        },
+        "stereotype": null
+      }
+    ],
+    "root_interactions": [
+      {
+        "event": {
+          "Interaction": {
+            "caller": "Client",
+            "callee": "Service",
+            "method": "request()"
+          }
+        },
+        "source_location": {
+          "file": "",
+          "line": 18
+        },
+        "branches_node": []
+      }
+    ]
+  }
+}
