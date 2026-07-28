@@ -26,6 +26,7 @@
 - Interface binding (component-left only):
   - Provided interface:
     - `Component )- Interface`
+    - `Component --() Interface`
   - Required interface:
     - `Component -( Interface`
 
@@ -36,15 +37,19 @@
 The following forms are rejected:
 
 - Interface )- Component
+  - accepted by PlantUML Preview, but rejected by the resolver
 - Interface -( Component
+  - accepted by PlantUML Preview, but rejected by the resolver
+- Interface ()-- Component
+  - invalid in PlantUML Preview and rejected by the resolver
+- Component ()-- Interface
+  - invalid in PlantUML Preview and rejected by the resolver
+- Interface --() Component
+  - accepted by PlantUML Preview, but rejected by the resolver
 
 ### Generic lollipop decorators
 
-The following forms are resolved as plain associations and do not carry interface-binding semantics:
-  - `Component --() Interface`
-  - `Interface ()-- Component`
-
-Note: Use canonical component-left forms such as `Component )- Interface` or `Component -( Interface` when you need interface binding behavior.
+The generic lollipop form `Component --() Interface` is resolved as a provided interface binding.
 
 ### Resolver constraints
 

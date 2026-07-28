@@ -95,8 +95,8 @@ fn test_relation_simple_name_alias() {
 }
 
 #[test]
-fn test_relation_invalid_arrow_parsed_as_association() {
-    run_component_resolver_case("relation_invalid_arrow_parsed_as_association");
+fn test_relation_generic_lollipop_provided_to_component() {
+    run_component_resolver_case("relation_generic_lollipop_provided_to_component");
 }
 
 #[test]
@@ -137,6 +137,26 @@ fn test_invalid_interface_decor_between_interfaces() {
 #[test]
 fn test_invalid_interface_left_decorator() {
     run_component_resolver_case("invalid_interface_left_decorator");
+}
+
+#[test]
+fn test_invalid_interface_left_required_decorator() {
+    run_component_resolver_case("invalid_interface_left_required_decorator");
+}
+
+#[test]
+fn test_invalid_interface_left_generic_lollipop() {
+    run_component_resolver_case("invalid_interface_left_generic_lollipop");
+}
+
+#[test]
+fn test_invalid_interface_left_inverse_generic_lollipop() {
+    run_component_resolver_case("invalid_interface_left_inverse_generic_lollipop");
+}
+
+#[test]
+fn test_invalid_component_left_inverse_generic_lollipop() {
+    run_component_resolver_case("invalid_component_left_inverse_generic_lollipop");
 }
 
 #[test]

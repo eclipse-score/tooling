@@ -1,5 +1,5 @@
 {
-    "relation_invalid_arrow_parsed_as_association.puml": {
+    "relation_generic_lollipop_provided_to_component.puml": {
         "Pkg.ComponentA": {
             "id": "Pkg.ComponentA",
             "name": "Component A",
@@ -10,9 +10,9 @@
             "relations": [
                 {
                     "target": "Pkg.IService",
-                    "annotation": "association",
-                    "relation_type": "Association",
-                    "source_role": "None",
+                    "annotation": "provides",
+                    "relation_type": "InterfaceBinding",
+                    "source_role": "Provided",
                     "source_location": {
                       "file": "",
                       "line": 19
