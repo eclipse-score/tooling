@@ -16,4 +16,4 @@ invalid_interface_decor_between_interfaces.puml:
     fields:
       from: "ILeft"
       to: "IRight"
-      reason: "Interface decorators '-(' and ')-' are not allowed between two interfaces"
+      reason: "Interface decorators '-(', ')-', and '--()' are not allowed between two interfaces"

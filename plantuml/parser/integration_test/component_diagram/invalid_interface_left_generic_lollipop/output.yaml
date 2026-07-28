@@ -10,10 +10,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-invalid_interface_decor_between_components.puml:
+invalid_interface_left_generic_lollipop.puml:
   error:
     type: "InvalidRelationship"
     fields:
-      from: "A"
-      to: "B"
-      reason: "Interface decorators '-(', ')-', and '--()' require exactly one Interface endpoint"
+      from: "IProvided"
+      to: "A"
+      reason: "Decorator binding requires a Component or component-stereotyped element on the left and Interface on the right"

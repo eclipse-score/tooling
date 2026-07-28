@@ -10,13 +10,13 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-@startuml
+@startuml invalid_component_left_inverse_generic_lollipop.puml
 
 package "Pkg" as Pkg {
     component "Component A" as ComponentA <<component>>
     interface "IService" as IService
 
-    ComponentA --() IService : association
+    ComponentA ()-- IService : invalid
 }
 
 @enduml

@@ -452,14 +452,14 @@ impl ComponentResolver {
     }
 
     // Supported relation syntaxes:
-    // - Interface binding: `)-`, `-(`
+    // - Interface binding: `)-`, `-(`, `--()`
     // - Directed: `-->`, `<--`, `..>`, `<..`
     // - Undirected: `--`, `..`
     fn parse_arrow(relation: &Relation) -> Result<ArrowAnalysis, ComponentResolverError> {
         let (left, right, middle) = Self::arrow_parts(&relation.arrow);
         let line = relation.arrow.line.raw.as_str();
 
-        let has_provided_token = left == ")";
+        let has_provided_token = left == ")" || left == "()" || middle == "()";
         let has_required_token = middle == "(" || right == "(";
 
         if has_provided_token && has_required_token {
@@ -476,13 +476,17 @@ impl ComponentResolver {
         // of `"-"`.  Direction is visual-only and does not affect semantics.
         let is_lollipop_line = line.chars().all(|c| c == '-') && !line.is_empty();
 
-        let decor_role = if is_lollipop_line && left == ")" && middle.is_empty() && right.is_empty()
-        {
-            Some(EndpointRole::Provided)
-        } else if is_lollipop_line
+        let is_canonical_provided =
+            is_lollipop_line && left == ")" && middle.is_empty() && right.is_empty();
+        let is_generic_lollipop_provided =
+            is_lollipop_line && left.is_empty() && middle == "()" && right.is_empty();
+        let is_required = is_lollipop_line
             && left.is_empty()
-            && ((middle == "(" && right.is_empty()) || (middle.is_empty() && right == "("))
-        {
+            && ((middle == "(" && right.is_empty()) || (middle.is_empty() && right == "("));
+
+        let decor_role = if is_canonical_provided || is_generic_lollipop_provided {
+            Some(EndpointRole::Provided)
+        } else if is_required {
             Some(EndpointRole::Required)
         } else {
             None
@@ -550,7 +554,7 @@ impl ComponentResolver {
             return Some(ComponentResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
-                reason: "Interface decorators '-(' and ')-' require exactly one Interface endpoint"
+                reason: "Interface decorators '-(', ')-', and '--()' require exactly one Interface endpoint"
                     .to_string(),
             });
         }
@@ -564,7 +568,7 @@ impl ComponentResolver {
             return Some(ComponentResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
-                reason: "Interface decorators '-(' and ')-' are not allowed between two interfaces"
+                reason: "Interface decorators '-(', ')-', and '--()' are not allowed between two interfaces"
                     .to_string(),
             });
         }
@@ -599,13 +603,12 @@ impl ComponentResolver {
             return Some(ComponentResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
-                reason: "Unsupported interface decorator syntax: only ')-' (Provided) and '-(' (Required) are supported"
+                reason: "Unsupported interface decorator syntax: only ')-' and '--()' (Provided) plus '-(' (Required) are supported; '()--' is rejected"
                     .to_string(),
             });
         }
         None
     }
-
     fn rule_port_role_consistency(
         input: &RelationValidationInput<'_>,
     ) -> Option<ComponentResolverError> {
