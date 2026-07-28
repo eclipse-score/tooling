@@ -65,3 +65,13 @@ fn run_sequence_diagram_parser_case(case_name: &str) {
 fn test_participant_identifiers() {
     run_sequence_diagram_parser_case("participant_identifiers");
 }
+
+#[test]
+fn test_message_participants() {
+    run_sequence_diagram_parser_case("message_participants");
+}
+
+#[test]
+fn test_message_lost_found() {
+    run_sequence_diagram_parser_case("message_lost_found");
+}

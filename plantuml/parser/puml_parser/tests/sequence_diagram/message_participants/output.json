@@ -1,0 +1,167 @@
+{
+  "message_participants.puml": {
+    "name": "message_participants",
+    "statements": [
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Quoted Display",
+              "alias": "QuotedAlias"
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Target",
+              "alias": null
+            }
+          },
+          "suffix": "Activate",
+          "description": "quoted display with alias",
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Alias Quoted Display",
+              "alias": "AliasQuoted"
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Target",
+              "alias": null
+            }
+          },
+          "suffix": "Create",
+          "description": "alias with quoted display",
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Quoted Only",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Target",
+              "alias": null
+            }
+          },
+          "suffix": "Destroy",
+          "description": "quoted display",
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "AliasOnly",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Target",
+              "alias": null
+            }
+          },
+          "suffix": "Deactivate",
+          "description": "alias only",
+          "source_location": {
+            "file": "",
+            "line": 18
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "DisplayName",
+              "alias": "DisplayAlias"
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Quoted Display",
+              "alias": "QuotedAlias"
+            }
+          },
+          "suffix": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
+        }
+      }
+    ]
+  }
+}

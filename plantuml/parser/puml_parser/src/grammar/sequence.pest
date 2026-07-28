@@ -168,30 +168,50 @@ sequence_arrow = {
 
 // Messages
 message = {
-    async_marker? ~
-    message_participant? ~ sequence_arrow ~ message_participant? ~
-    activation_marker? ~ sequence_description?
+    parallel_marker? ~
+    message_endpoint ~ sequence_arrow ~ message_endpoint ~
+    message_suffix? ~ sequence_description?
 }
 
-async_marker = { "&" }
-message_participant = {
-    lost_found_marker |
-    quoted_display_with_alias |
-    display_with_alias |
-    alias_with_quoted_display |
-    participant_ref |
-    quoted_string
+parallel_marker = { "&" }
+message_endpoint = {
+      lost_found_marker
+    | inline_participant
 }
-lost_found_marker = { "[" ~ ("o" | "x")? | ("o" | "x")? ~ ("[" | "]") }
-participant_ref = { CNAME | quoted_string }
 
-activation_marker = { "+"+ | "-"+ | "*"+ | "!"+ }
+inline_participant = {
+      quoted_display_with_alias
+    | alias_with_quoted_display
+    | quoted_display
+    | alias_only
+}
+
+lost_found_marker = {
+      left_lost_found
+    | right_lost_found
+}
+//  '[',  '[o',  '[x'
+left_lost_found = { "[" ~ ("o" | "x")? }
+//  ']',  'o]',  'x]'
+right_lost_found = { ("o" | "x")? ~ "]" }
+
+message_suffix = {
+      activate_suffix
+    | deactivate_suffix
+    | create_suffix
+    | destroy_suffix
+}
+activate_suffix = { "++" ~ color_spec? }
+deactivate_suffix = { "--" }
+create_suffix = { "**" }
+destroy_suffix = { "!!" }
 
 // Short activation syntax
 activation_short = { participant_ref ~ ("++" | "--") }
+participant_ref = { CNAME | quoted_string }
 
 // Return
-return_cmd = { async_marker? ~ ^"return" ~ sequence_text_content? }
+return_cmd = { parallel_marker? ~ ^"return" ~ sequence_text_content? }
 
 // Box
 box_start = { "box" ~ quoted_string? ~ color_spec? }
@@ -199,7 +219,7 @@ box_end = { ^"end" ~ WHITESPACE? ~ ^"box" }
 
 // Group commands (alt, opt, loop, etc.)
 group_cmd = {
-    async_marker? ~ group_type ~ group_condition?
+    parallel_marker? ~ group_type ~ group_condition?
 }
 
 group_condition = @{ (!EOL ~ ANY)+ }

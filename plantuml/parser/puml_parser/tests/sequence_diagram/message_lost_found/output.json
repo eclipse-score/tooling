@@ -1,0 +1,181 @@
+{
+  "message_lost_found.puml": {
+    "name": "message_lost_found",
+    "statements": [
+      {
+        "Message": {
+          "left": {
+            "LostFound": "["
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": "left lost bracket",
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "LostFound": "[o"
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "suffix": "Activate",
+          "description": "left lost bracket o",
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "LostFound": "[x"
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "suffix": "Create",
+          "description": "left lost bracket x",
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Worker",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "LostFound": "]"
+          },
+          "suffix": null,
+          "description": "right lost bracket",
+          "source_location": {
+            "file": "",
+            "line": 18
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Worker",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "LostFound": "o]"
+          },
+          "suffix": "Deactivate",
+          "description": "right lost o bracket",
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Worker",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "LostFound": "x]"
+          },
+          "suffix": "Destroy",
+          "description": "right lost x bracket",
+          "source_location": {
+            "file": "",
+            "line": 20
+          }
+        }
+      }
+    ]
+  }
+}
