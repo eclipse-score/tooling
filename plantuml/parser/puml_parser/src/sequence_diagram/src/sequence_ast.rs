@@ -14,7 +14,6 @@
 
 use serde::{Deserialize, Serialize};
 use source_location::SourceLocation;
-use std::str::FromStr;
 
 pub use parser_core::common_ast::Arrow;
 
@@ -27,6 +26,9 @@ pub struct SeqPumlDocument {
 
 // Statement types used during parsing
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+// Keep `Message` unboxed for now because the statement representation is
+// expected to be revisited as the sequence parser/resolver model settles.
+#[allow(clippy::large_enum_variant)]
 pub enum Statement {
     DestroyCmd(DestroyCmd),
     CreateCmd(CreateCmd),
@@ -46,26 +48,6 @@ pub struct ParticipantDef {
     pub identifier: ParticipantIdentifier,
     pub stereotype: Option<String>,
     pub source_location: SourceLocation,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ExternalEndpoint;
-
-impl FromStr for ExternalEndpoint {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            "[" | "[o" | "[x" | "]" | "o]" | "x]" => Ok(ExternalEndpoint),
-            _ => Err(()),
-        }
-    }
-}
-
-impl ExternalEndpoint {
-    pub fn as_name(self) -> &'static str {
-        "ExternalEndpoint"
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -111,20 +93,26 @@ pub struct DeactivateCmd {
 // Messages (internal parsing structure)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Message {
-    pub content: MessageContent,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub activation_marker: Option<String>,
+    pub left: MessageEndpoint,
+    pub arrow: Arrow,
+    pub right: MessageEndpoint,
+    pub suffix: Option<MessageSuffix>,
     pub description: Option<String>,
     pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum MessageContent {
-    WithTargets {
-        left: String,
-        arrow: Arrow,
-        right: String,
-    },
+pub enum MessageEndpoint {
+    Participant(ParticipantIdentifier),
+    LostFound(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum MessageSuffix {
+    Activate,   // ++
+    Deactivate, // --
+    Create,     // **
+    Destroy,    // !!
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

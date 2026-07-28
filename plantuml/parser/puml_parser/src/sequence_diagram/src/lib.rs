@@ -15,26 +15,9 @@ pub mod sequence_ast;
 mod sequence_parser;
 
 pub use sequence_ast::{
-    ActivateCmd, Arrow, CreateCmd, DeactivateCmd, DestroyCmd, ExternalEndpoint, GroupCmd,
-    GroupType, Message, MessageContent, ParticipantDef, ParticipantIdentifier, ParticipantType,
-    SeqPumlDocument, Statement,
+    ActivateCmd, Arrow, CreateCmd, DeactivateCmd, DestroyCmd, GroupCmd, GroupType, Message,
+    MessageEndpoint, MessageSuffix, ParticipantIdentifier, ParticipantType, SeqPumlDocument,
+    Statement,
 };
 
 pub use sequence_parser::{PumlSequenceParser, SequenceError};
-
-/// Parse a PlantUML sequence diagram and return the document name and statements
-/// This is a convenience function for backwards compatibility with tests
-pub fn parse_sequence_diagram(
-    input: &str,
-) -> Result<(Option<String>, Vec<Statement>), Box<dyn std::error::Error>> {
-    use parser_core::DiagramParser;
-    use puml_utils::LogLevel;
-    use std::path::PathBuf;
-    use std::rc::Rc;
-
-    let mut parser = PumlSequenceParser;
-    let dummy_path = Rc::new(PathBuf::from("<input>"));
-    let document = parser.parse_file(&dummy_path, input, LogLevel::Error)?;
-
-    Ok((document.name, document.statements))
-}
