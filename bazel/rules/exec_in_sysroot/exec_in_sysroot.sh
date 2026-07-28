@@ -91,20 +91,51 @@ else
 fi
 
 # Build the exclude paths list.
-# Always exclude BUILD_WORKSPACE_DIRECTORY so workspace operations stay on host.
+# _append_exclude appends its argument to EXCLUDE_PATHS (colon-separated),
+# skipping empty values, so callers below don't each need their own
+# if-non-empty-then-append-else-init boilerplate.
 EXCLUDE_PATHS=""
-if [ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]; then
-  EXCLUDE_PATHS="${BUILD_WORKSPACE_DIRECTORY}"
+_append_exclude() {
+  [ -n "$1" ] || return 0
+  if [ -n "${EXCLUDE_PATHS}" ]; then
+    EXCLUDE_PATHS="${EXCLUDE_PATHS}:$1"
+  else
+    EXCLUDE_PATHS="$1"
+  fi
+}
+
+# Always exclude BUILD_WORKSPACE_DIRECTORY so workspace operations stay on host.
+_append_exclude "${BUILD_WORKSPACE_DIRECTORY:-}"
+
+# Always exclude the sandbox execroot too, derived from RUNFILES_DIR /
+# RUNFILES_MANIFEST_FILE.  BUILD_WORKSPACE_DIRECTORY is only set for
+# `bazel run`/`bazel test`; plain `bazel build` actions leave it unset, and
+# tools invoked deep inside the action (e.g. Sphinx's sphinx.ext.graphviz,
+# which calls the hermetic `dot` with `-o<abs-path-under-bazel-out>` while
+# running it with cwd set to the *source* doc directory, not the execroot)
+# still need their absolute, execroot-relative writes to land on the real
+# filesystem instead of being redirected into SYSROOT_DIR.
+# RUNFILES_DIR (or the runfiles manifest's
+# directory) is set once per action and always sits at
+# "<execroot>/bazel-out/<config>/.../<target>.runfiles" — a stable Bazel
+# layout invariant — so stripping everything from "/bazel-out/" onward
+# yields the execroot root regardless of the caller's cwd. This is the
+# launcher's own RUNFILES_DIR (exec_in_sysroot_launcher.sh.tpl rebinds it to
+# "$0.runfiles" before exec'ing this script) or, failing that, whatever
+# RUNFILES_DIR/RUNFILES_MANIFEST_FILE this process inherited -- both live
+# under the same sandbox execroot as the tool's real inputs/outputs.
+RUNFILES_HINT="${RUNFILES_DIR:-}"
+if [ -z "${RUNFILES_HINT}" ] && [ -n "${RUNFILES_MANIFEST_FILE:-}" ]; then
+  RUNFILES_HINT="${RUNFILES_MANIFEST_FILE}"
 fi
+case "${RUNFILES_HINT}" in
+  */bazel-out/*)
+    _append_exclude "${RUNFILES_HINT%%/bazel-out/*}"
+    ;;
+esac
 
 # Append any user-specified exclude paths.
-if [ -n "${FAKECHROOT_EXCLUDE_PATH:-}" ]; then
-  if [ -n "${EXCLUDE_PATHS}" ]; then
-    EXCLUDE_PATHS="${EXCLUDE_PATHS}:${FAKECHROOT_EXCLUDE_PATH}"
-  else
-    EXCLUDE_PATHS="${FAKECHROOT_EXCLUDE_PATH}"
-  fi
-fi
+_append_exclude "${FAKECHROOT_EXCLUDE_PATH:-}"
 
 # Exclude SYSROOT_INTERP (the sysroot's ld-linux.so) so fakechroot does not
 # intercept its execution.  When a sysroot binary is launched via
@@ -113,13 +144,7 @@ fi
 # Fakechroot would translate it to a sysroot-relative path and fail to exec it
 # (the kernel reports ENOENT).  Listing the full path here tells fakechroot to
 # pass the execve through unchanged.
-if [ -n "${SYSROOT_INTERP}" ]; then
-  if [ -n "${EXCLUDE_PATHS}" ]; then
-    EXCLUDE_PATHS="${EXCLUDE_PATHS}:${SYSROOT_INTERP}"
-  else
-    EXCLUDE_PATHS="${SYSROOT_INTERP}"
-  fi
-fi
+_append_exclude "${SYSROOT_INTERP}"
 
 if [ -n "${EXCLUDE_PATHS}" ]; then
   export FAKECHROOT_EXCLUDE_PATH="${EXCLUDE_PATHS}"
