@@ -27,13 +27,19 @@ def test_venv_ok():
 
         python_venv_folder = [x for x in packages if "python_3_12_" in x][0]
 
-        # Trying to actually use pytest module and collect current test & file
+        # Trying to actually use pytest module and collect current test & file.
+        # Scope collection to "_main" (this workspace's own sources, canonical
+        # repo name for the root module under bazel) instead of the whole
+        # runfiles tree: sibling dirs there are third-party pip site-packages
+        # (e.g. pylint's "dill" dependency ships its own dill/tests/test_*.py),
+        # which pytest would otherwise also try to collect and fail to import.
         proc = subprocess.run(
             [
                 python_venv_folder + "/bin/python",
                 "-m",
                 "pytest",
                 "--collect-only",
+                "_main",
             ],
             cwd=runfiles,
             check=True,
