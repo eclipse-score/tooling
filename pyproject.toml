@@ -1,0 +1,47 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint."messages control"]
+disable = [
+    # aspect_rules_lint's pylint aspect action (see
+    # @aspect_rules_lint//lint:pylint.bzl) only ever passes a target's own
+    # `srcs` to pylint -- it never forwards `deps` or sets up PYTHONPATH.
+    # Pylint's static import resolution therefore can never see ANY
+    # dependency (first-party or third-party) and reports import-error on
+    # every non-stdlib import, regardless of whether Bazel actually
+    # resolves it fine at build/run time. This is a structural limitation
+    # of the sandboxed lint action, not a real code defect, so it can't be
+    # fixed in userland code -- disabling is the only option.
+    "import-error",
+
+    # These duplicate checks ruff already runs (`[tool.ruff.lint] select`
+    # above): verified repo-wide that every finding below was reported by
+    # BOTH tools for the exact same file/line. Keeping both just reports the
+    # same diagnostic twice with no added signal, so pylint defers to ruff
+    # (faster, and already the formatter for this repo).
+    "unused-import",  # == ruff F401 (unused-import)
+    "undefined-variable",  # == ruff F821 (undefined-name)
+    "line-too-long",  # == ruff E501 (line-too-long)
+    "multiple-imports",  # == ruff E401 (multiple-imports-on-one-line)
+    "reimported",  # == ruff F811 (redefined-while-unused)
+    "f-string-without-interpolation",  # == ruff F541 (f-string-missing-placeholders)
+]
