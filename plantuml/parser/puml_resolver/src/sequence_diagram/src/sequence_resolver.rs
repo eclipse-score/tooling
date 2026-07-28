@@ -13,13 +13,16 @@
 
 use crate::logic_parser::build_tree;
 use resolver_traits::DiagramResolver;
-use sequence_logic::{ParticipantType as LogicParticipantType, SequenceParticipant, SequenceTree};
+use sequence_logic::{
+    ParticipantType as LogicParticipantType, SequenceParticipant, SequenceTree, SourceLocation,
+};
 use sequence_parser::sequence_ast::{
-    ExternalEndpoint, MessageContent, ParticipantIdentifier,
+    MessageEndpoint, ParticipantDef, ParticipantIdentifier,
     ParticipantType as SyntaxParticipantType, Statement,
 };
 use sequence_parser::SeqPumlDocument;
 use std::collections::HashSet;
+use std::fmt;
 
 /// Resolver for sequence diagrams.
 ///
@@ -30,23 +33,135 @@ pub struct SequenceResolver;
 
 /// Error type for `SequenceResolver`.
 #[derive(Debug)]
-pub enum SequenceResolverError {
-    /// A message references a participant that was not declared in a
-    /// `participant` (or actor/boundary/…) statement.
-    UndeclaredParticipant { name: String, role: &'static str },
-}
+pub enum SequenceResolverError {}
 
-impl std::fmt::Display for SequenceResolverError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SequenceResolverError::UndeclaredParticipant { name, role } => {
-                write!(f, "{role} '{name}' is not declared as a participant")
-            }
-        }
+impl fmt::Display for SequenceResolverError {
+    fn fmt(&self, _formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {}
     }
 }
 
 impl std::error::Error for SequenceResolverError {}
+
+impl DiagramResolver for SequenceResolver {
+    type Document = SeqPumlDocument;
+    type Output = SequenceTree;
+    type Error = SequenceResolverError;
+
+    fn resolve(&mut self, document: &SeqPumlDocument) -> Result<SequenceTree, Self::Error> {
+        let participants = build_participant_table(&document.statements);
+        let root_interactions = build_tree(&document.statements);
+
+        Ok(SequenceTree {
+            name: document.name.clone(),
+            participants,
+            root_interactions,
+        })
+    }
+}
+
+fn build_participant_table(statements: &[Statement]) -> Vec<SequenceParticipant> {
+    let mut resolved_names = HashSet::new();
+    let mut participants = Vec::new();
+
+    add_explicit_participants(statements, &mut participants, &mut resolved_names);
+    add_implicit_participants(statements, &mut participants, &mut resolved_names);
+
+    participants
+}
+
+fn add_explicit_participants(
+    statements: &[Statement],
+    participants: &mut Vec<SequenceParticipant>,
+    resolved_names: &mut HashSet<String>,
+) {
+    for stmt in statements {
+        if let Statement::ParticipantDef(participant_def) = stmt {
+            add_participant(
+                participants,
+                resolved_names,
+                explicit_participant(participant_def),
+            );
+        }
+    }
+}
+
+fn add_implicit_participants(
+    statements: &[Statement],
+    participants: &mut Vec<SequenceParticipant>,
+    resolved_names: &mut HashSet<String>,
+) {
+    for stmt in statements {
+        if let Statement::Message(msg) = stmt {
+            add_endpoint_participant(
+                participants,
+                resolved_names,
+                &msg.left,
+                &msg.source_location,
+            );
+            add_endpoint_participant(
+                participants,
+                resolved_names,
+                &msg.right,
+                &msg.source_location,
+            );
+        }
+    }
+}
+
+fn add_participant(
+    participants: &mut Vec<SequenceParticipant>,
+    resolved_names: &mut HashSet<String>,
+    participant: SequenceParticipant,
+) {
+    let identifier = ParticipantIdentifier {
+        display_name: participant.display_name.clone(),
+        alias: participant.alias.clone(),
+    };
+    let reference_name = participant_reference_name(&identifier);
+    if reference_name.is_empty() || !resolved_names.insert(reference_name.to_string()) {
+        return;
+    }
+    participants.push(participant);
+}
+
+fn add_endpoint_participant(
+    participants: &mut Vec<SequenceParticipant>,
+    resolved_names: &mut HashSet<String>,
+    endpoint: &MessageEndpoint,
+    source_location: &SourceLocation,
+) {
+    if let MessageEndpoint::Participant(identifier) = endpoint {
+        add_participant(
+            participants,
+            resolved_names,
+            implicit_participant(identifier, source_location),
+        );
+    }
+}
+
+fn explicit_participant(participant_def: &ParticipantDef) -> SequenceParticipant {
+    SequenceParticipant {
+        display_name: participant_def.identifier.display_name.clone(),
+        alias: participant_def.identifier.alias.clone(),
+        participant_type: map_parser_participant_type(&participant_def.participant_type),
+        source_location: participant_def.source_location.clone(),
+        stereotype: participant_def.stereotype.clone(),
+    }
+}
+
+fn implicit_participant(
+    identifier: &ParticipantIdentifier,
+    source_location: &SourceLocation,
+) -> SequenceParticipant {
+    SequenceParticipant {
+        display_name: identifier.display_name.clone(),
+        alias: identifier.alias.clone(),
+        participant_type: LogicParticipantType::Participant,
+        source_location: source_location.clone(),
+        stereotype: None,
+    }
+}
 
 fn map_parser_participant_type(kind: &SyntaxParticipantType) -> LogicParticipantType {
     match kind {
@@ -61,74 +176,11 @@ fn map_parser_participant_type(kind: &SyntaxParticipantType) -> LogicParticipant
     }
 }
 
-fn is_special_endpoint_marker(name: &str) -> bool {
-    name.parse::<ExternalEndpoint>().is_ok()
-}
-
 fn participant_reference_name(identifier: &ParticipantIdentifier) -> &str {
     identifier
         .alias
         .as_deref()
         .unwrap_or(&identifier.display_name)
-}
-
-impl DiagramResolver for SequenceResolver {
-    type Document = SeqPumlDocument;
-    type Output = SequenceTree;
-    type Error = SequenceResolverError;
-
-    fn resolve(&mut self, document: &SeqPumlDocument) -> Result<SequenceTree, Self::Error> {
-        // 1. Collect declared participants.
-        let mut declared = HashSet::new();
-        let mut participants = Vec::new();
-        for stmt in &document.statements {
-            if let Statement::ParticipantDef(p) = stmt {
-                declared.insert(participant_reference_name(&p.identifier).to_string());
-                participants.push(SequenceParticipant {
-                    display_name: p.identifier.display_name.clone(),
-                    alias: p.identifier.alias.clone(),
-                    participant_type: map_parser_participant_type(&p.participant_type),
-                    source_location: p.source_location.clone(),
-                    stereotype: p.stereotype.clone(),
-                });
-            }
-        }
-
-        // 2. Validate message targets only when participants are declared.
-        if !declared.is_empty() {
-            for stmt in &document.statements {
-                if let Statement::Message(msg) = stmt {
-                    let MessageContent::WithTargets { left, right, .. } = &msg.content;
-                    if !left.is_empty()
-                        && !is_special_endpoint_marker(left)
-                        && !declared.contains(left)
-                    {
-                        return Err(SequenceResolverError::UndeclaredParticipant {
-                            name: left.clone(),
-                            role: "caller",
-                        });
-                    }
-                    if !right.is_empty()
-                        && !is_special_endpoint_marker(right)
-                        && !declared.contains(right)
-                    {
-                        return Err(SequenceResolverError::UndeclaredParticipant {
-                            name: right.clone(),
-                            role: "callee",
-                        });
-                    }
-                }
-            }
-        }
-
-        // 3. Build the tree.
-        let root_interactions = build_tree(&document.statements);
-        Ok(SequenceTree {
-            name: document.name.clone(),
-            participants,
-            root_interactions,
-        })
-    }
 }
 
 #[cfg(test)]
@@ -138,7 +190,7 @@ mod sequence_resolver_tests {
     use resolver_traits::DiagramResolver;
     use sequence_logic::SourceLocation;
     use sequence_parser::sequence_ast::{
-        Message, MessageContent, ParticipantDef, ParticipantIdentifier,
+        Message, MessageEndpoint, ParticipantDef, ParticipantIdentifier,
         ParticipantType as SyntaxParticipantType, Statement,
     };
 
@@ -172,14 +224,19 @@ mod sequence_resolver_tests {
         SourceLocation::new("test.puml", 0)
     }
 
+    fn message_endpoint(name: &str) -> MessageEndpoint {
+        MessageEndpoint::Participant(ParticipantIdentifier {
+            display_name: name.to_string(),
+            alias: None,
+        })
+    }
+
     fn make_call(from: &str, to: &str, label: &str) -> Statement {
         Statement::Message(Message {
-            content: MessageContent::WithTargets {
-                left: from.to_string(),
-                arrow: solid_arrow(),
-                right: to.to_string(),
-            },
-            activation_marker: None,
+            left: message_endpoint(from),
+            arrow: solid_arrow(),
+            right: message_endpoint(to),
+            suffix: None,
             description: Some(label.to_string()),
             source_location: dummy_source_location(),
         })
@@ -187,12 +244,10 @@ mod sequence_resolver_tests {
 
     fn make_return(from: &str, to: &str, label: &str) -> Statement {
         Statement::Message(Message {
-            content: MessageContent::WithTargets {
-                left: from.to_string(),
-                arrow: dashed_arrow(),
-                right: to.to_string(),
-            },
-            activation_marker: None,
+            left: message_endpoint(from),
+            arrow: dashed_arrow(),
+            right: message_endpoint(to),
+            suffix: None,
             description: Some(label.to_string()),
             source_location: dummy_source_location(),
         })
@@ -284,9 +339,10 @@ mod sequence_resolver_tests {
         })
     }
 
-    /// When participants are declared, all message targets must be among them.
+    /// Explicit participants remain in the symbol table and message references
+    /// to them do not create duplicates.
     #[test]
-    fn test_declared_participants_pass_validation() {
+    fn test_declared_participants_are_preserved_without_duplicates() {
         let stmts = vec![
             make_participant("A"),
             make_participant("B"),
@@ -298,11 +354,14 @@ mod sequence_resolver_tests {
             name: Some("valid".to_string()),
             statements: stmts,
         };
-        assert!(resolver.resolve(&doc).is_ok());
+        let tree = resolver.resolve(&doc).expect("must not fail");
+        assert_eq!(tree.participants.len(), 2);
+        assert_eq!(tree.participants[0].display_name, "A");
+        assert_eq!(tree.participants[1].display_name, "B");
     }
 
     #[test]
-    fn test_aliased_participant_reference_passes_validation() {
+    fn test_aliased_participant_reference_does_not_create_duplicate() {
         let stmts = vec![
             make_participant("A"),
             make_participant_with_alias("Display B", "B"),
@@ -313,11 +372,14 @@ mod sequence_resolver_tests {
             name: Some("valid_alias".to_string()),
             statements: stmts,
         };
-        assert!(resolver.resolve(&doc).is_ok());
+        let tree = resolver.resolve(&doc).expect("must not fail");
+        assert_eq!(tree.participants.len(), 2);
+        assert_eq!(tree.participants[1].display_name, "Display B");
+        assert_eq!(tree.participants[1].alias.as_deref(), Some("B"));
     }
 
     #[test]
-    fn test_aliased_participant_display_name_reference_raises_error() {
+    fn test_aliased_participant_display_name_reference_creates_implicit_participant() {
         let stmts = vec![
             make_participant("A"),
             make_participant_with_alias("Display B", "B"),
@@ -328,58 +390,25 @@ mod sequence_resolver_tests {
             name: Some("invalid_display_reference".to_string()),
             statements: stmts,
         };
-        let err = resolver.resolve(&doc).unwrap_err();
-        let msg = err.to_string();
-        assert!(msg.contains("Display B"));
-        assert!(msg.contains("callee"));
+        let tree = resolver.resolve(&doc).expect("must not fail");
+        assert_eq!(tree.participants.len(), 3);
+        assert_eq!(tree.participants[2].display_name, "Display B");
+        assert_eq!(tree.participants[2].alias, None);
     }
 
-    /// An undeclared callee should cause an error.
+    /// When no participants are declared, message endpoints form the participant table.
     #[test]
-    fn test_undeclared_callee_raises_error() {
-        let stmts = vec![make_participant("A"), make_call("A", "B", "doWork")];
-        let mut resolver = SequenceResolver;
-        let doc = SeqPumlDocument {
-            name: Some("bad_callee".to_string()),
-            statements: stmts,
-        };
-        let err = resolver.resolve(&doc).unwrap_err();
-        let msg = err.to_string();
-        assert!(
-            msg.contains("B"),
-            "error should name the undeclared participant"
-        );
-        assert!(msg.contains("callee"), "error should indicate the role");
-    }
-
-    /// An undeclared caller should cause an error.
-    #[test]
-    fn test_undeclared_caller_raises_error() {
-        let stmts = vec![make_participant("B"), make_call("A", "B", "doWork")];
-        let mut resolver = SequenceResolver;
-        let doc = SeqPumlDocument {
-            name: Some("bad_caller".to_string()),
-            statements: stmts,
-        };
-        let err = resolver.resolve(&doc).unwrap_err();
-        let msg = err.to_string();
-        assert!(
-            msg.contains("A"),
-            "error should name the undeclared participant"
-        );
-        assert!(msg.contains("caller"), "error should indicate the role");
-    }
-
-    /// When no participants are declared, messages are allowed freely (no validation).
-    #[test]
-    fn test_no_participants_declared_skips_validation() {
+    fn test_no_participants_declared_creates_implicit_participants() {
         let stmts = vec![make_call("X", "Y", "hello")];
         let mut resolver = SequenceResolver;
         let doc = SeqPumlDocument {
             name: Some("implicit".to_string()),
             statements: stmts,
         };
-        assert!(resolver.resolve(&doc).is_ok());
+        let tree = resolver.resolve(&doc).expect("must not fail");
+        assert_eq!(tree.participants.len(), 2);
+        assert_eq!(tree.participants[0].display_name, "X");
+        assert_eq!(tree.participants[1].display_name, "Y");
     }
 
     /// Resolver output nodes must preserve source_location provenance.
@@ -390,22 +419,18 @@ mod sequence_resolver_tests {
 
         let stmts = vec![
             Statement::Message(Message {
-                content: MessageContent::WithTargets {
-                    left: "A".to_string(),
-                    arrow: solid_arrow(),
-                    right: "B".to_string(),
-                },
-                activation_marker: None,
+                left: message_endpoint("A"),
+                arrow: solid_arrow(),
+                right: message_endpoint("B"),
+                suffix: None,
                 description: Some("doWork".to_string()),
                 source_location: call_location.clone(),
             }),
             Statement::Message(Message {
-                content: MessageContent::WithTargets {
-                    left: "B".to_string(),
-                    arrow: dashed_arrow(),
-                    right: "A".to_string(),
-                },
-                activation_marker: None,
+                left: message_endpoint("B"),
+                arrow: dashed_arrow(),
+                right: message_endpoint("A"),
+                suffix: None,
                 description: Some("result".to_string()),
                 source_location: return_location.clone(),
             }),

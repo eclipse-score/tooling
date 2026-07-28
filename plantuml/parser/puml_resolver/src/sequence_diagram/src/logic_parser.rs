@@ -15,11 +15,16 @@
 use sequence_logic::*;
 use sequence_parser::*;
 
-fn map_special_endpoint_name(value: String) -> String {
-    if let Ok(endpoint) = value.parse::<ExternalEndpoint>() {
-        endpoint.as_name().to_string()
-    } else {
-        value
+const EXTERNAL_ENDPOINT_NAME: &str = "ExternalEndpoint";
+
+fn endpoint_name(endpoint: &MessageEndpoint) -> String {
+    match endpoint {
+        MessageEndpoint::Participant(identifier) => identifier
+            .alias
+            .as_deref()
+            .unwrap_or(&identifier.display_name)
+            .to_string(),
+        MessageEndpoint::LostFound(_) => EXTERNAL_ENDPOINT_NAME.to_string(),
     }
 }
 
@@ -244,57 +249,47 @@ fn build_node(statements: &[Statement]) -> Option<(SequenceNode, usize)> {
 
 /// Convert a message statement to an Event (Interaction or Return)
 fn message_to_event(msg: &Message) -> Option<Event> {
-    match &msg.content {
-        MessageContent::WithTargets { left, arrow, right } => {
-            let method = msg.description.clone().unwrap_or_default();
+    let method = msg.description.clone().unwrap_or_default();
 
-            // Check if arrow left decorator points left (reverse arrow like <--)
-            let is_reverse = arrow
-                .left
-                .as_ref()
-                .map(|d| d.raw.contains("<"))
-                .unwrap_or(false);
+    // Check if arrow left decorator points left (reverse arrow like <--)
+    let is_reverse = msg
+        .arrow
+        .left
+        .as_ref()
+        .map(|d| d.raw.contains("<"))
+        .unwrap_or(false);
 
-            // Determine actual caller and callee based on arrow direction
-            let (actual_from, actual_to) = if is_reverse {
-                // Arrow points left: from right participant to left participant
-                // "A <-- B" means B sends to A
-                (right.clone(), left.clone())
-            } else {
-                // Arrow points right: from left participant to right participant
-                // "A -> B" means A sends to B
-                (left.clone(), right.clone())
-            };
+    // Determine actual caller and callee based on arrow direction.
+    let (actual_from, actual_to) = if is_reverse {
+        // Arrow points left: from right participant to left participant.
+        // "A <-- B" means B sends to A.
+        (endpoint_name(&msg.right), endpoint_name(&msg.left))
+    } else {
+        // Arrow points right: from left participant to right participant.
+        // "A -> B" means A sends to B.
+        (endpoint_name(&msg.left), endpoint_name(&msg.right))
+    };
 
-            let actual_from = map_special_endpoint_name(actual_from);
-            let actual_to = map_special_endpoint_name(actual_to);
-
-            // Check arrow type to determine Interaction vs Return
-            if is_return_arrow_from_arrow(arrow) {
-                // For returns: actual_from is the sender (callee), actual_to is the receiver (caller)
-                Some(Event::Return(Return {
-                    caller: actual_to,
-                    callee: actual_from,
-                    return_content: method,
-                }))
-            } else {
-                Some(Event::Interaction(Interaction {
-                    caller: actual_from,
-                    callee: actual_to,
-                    method,
-                }))
-            }
-        } // Note: MessageContent only has WithTargets. Incomplete arrows (missing
-          // left or right participant) are represented as WithTargets with an empty
-          // string for the missing side, so no separate variant is needed.
+    // Check arrow type to determine Interaction vs Return.
+    if is_return_arrow_from_arrow(&msg.arrow) {
+        // For returns: actual_from is the sender (callee), actual_to is the receiver (caller).
+        Some(Event::Return(Return {
+            caller: actual_to,
+            callee: actual_from,
+            return_content: method,
+        }))
+    } else {
+        Some(Event::Interaction(Interaction {
+            caller: actual_from,
+            callee: actual_to,
+            method,
+        }))
     }
 }
 
 /// Check if a message represents a return arrow
 fn is_return_arrow(msg: &Message) -> bool {
-    match &msg.content {
-        MessageContent::WithTargets { arrow, .. } => is_return_arrow_from_arrow(arrow),
-    }
+    is_return_arrow_from_arrow(&msg.arrow)
 }
 
 /// Check if an arrow represents a return (dashed arrow)

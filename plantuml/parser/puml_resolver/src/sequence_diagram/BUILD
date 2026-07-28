@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "puml_resolver_sequence",
@@ -36,19 +36,6 @@ rust_library(
 rust_test(
     name = "puml_resolver_sequence_unit_test",
     crate = ":puml_resolver_sequence",
-)
-
-# Job 2: Build hierarchical tree from syntax JSON
-rust_binary(
-    name = "logic_parse",
-    srcs = ["src/logic_parse_main.rs"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":puml_resolver_sequence",
-        "//plantuml/parser/puml_parser:sequence_diagram",
-        "@crates//:serde",
-        "@crates//:serde_json",
-    ],
 )
 
 rust_test(
