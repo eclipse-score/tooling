@@ -26,9 +26,11 @@ See the individual README files for detailed usage instructions and configuratio
 | **cli_helper** | Command-line interface utilities | [README](cli_helper/README.md) |
 | **cr_checker** | Code review and compliance checking | [README](cr_checker/README.md) |
 | **dash** | Eclipse Dash license scanning | [README](dash/README.md) |
-| **format_checker** | Code formatting validation | [README](format_checker/README.md) |
+| **format** | Code formatting validation | [README](third_party/format/README.md) |
+| **lint** | Python lint aspects (ruff, pylint) | [README](third_party/lint/README.md) |
 | **python_basics** | Python development utilities and testing | [README](python_basics/README.md) |
 | **starpls** | Starlark language server support | [README](starpls/README.md) |
+| **tools** | Formatters & Linters | [README](tools/README.md) |
 | **coverage** | Rust + Python coverage reports | [README](coverage/README.md) |
 
 ## Coverage
@@ -91,9 +93,12 @@ The available import targets are:
 - dash_license_checker
 - copyright_checker
 - cli_helper
-- use_format_targets
 - setup_starpls
 - rust_coverage_report
+
+Formatting and linting are no longer re-exported from `defs.bzl`; use
+`@score_tooling//third_party/format:macros.bzl`, `@score_tooling//third_party/lint:macros.bzl`,
+or the `@score_tooling//third_party/format:rustfmt_with_policies` label directly.
 
 ## Format the tooling repository
 

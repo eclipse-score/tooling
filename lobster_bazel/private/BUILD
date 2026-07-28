@@ -38,6 +38,7 @@ load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 build_test(
     name = "ensure_all_private_targets_work",
     targets = [
-        ":requirements.update",
+        ":requirements_3_11.update",
+        ":requirements_3_12.update",
     ],
 )

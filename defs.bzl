@@ -25,9 +25,6 @@ load("//cr_checker:cr_checker.bzl", _copyright_checker = "copyright_checker")
 # --- dash ---
 load("//dash:dash.bzl", _dash_license_checker = "dash_license_checker")
 
-# --- format_checker ---
-load("//format_checker:macros.bzl", _use_format_targets = "use_format_targets")
-
 # --- python_basics ---
 load(
     "//python_basics:defs.bzl",
@@ -50,7 +47,6 @@ score_py_pytest = _score_py_pytest
 dash_license_checker = _dash_license_checker
 copyright_checker = _copyright_checker
 cli_helper = _cli_helper
-use_format_targets = _use_format_targets
 setup_starpls = _setup_starpls
 rust_coverage_report = _rust_coverage_report
 trlc_requirements_ai_test = _trlc_requirements_ai_test
