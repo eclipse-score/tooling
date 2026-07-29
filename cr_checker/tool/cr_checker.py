@@ -193,9 +193,7 @@ def load_templates(path):
             stripped_line = line.strip()
 
             if stripped_line.startswith("[") and stripped_line.endswith("]"):
-                add_template_for_extensions(
-                    templates, current_extensions, template_for_extensions
-                )
+                add_template_for_extensions(templates, current_extensions, template_for_extensions)
 
                 template_for_extensions = ""
 
@@ -205,9 +203,7 @@ def load_templates(path):
             else:
                 template_for_extensions += line
 
-        add_template_for_extensions(
-            templates, current_extensions, template_for_extensions
-        )
+        add_template_for_extensions(templates, current_extensions, template_for_extensions)
 
     LOGGER.debug(templates)
     return templates
@@ -295,9 +291,7 @@ def detect_shebang_offset(path, encoding):
                     if not next_char or next_char not in ("\n", "\r"):
                         break
                     byte_length += len(next_char.encode(encoding))
-                LOGGER.debug(
-                    "Detected shebang in %s with offset %d bytes", path, byte_length
-                )
+                LOGGER.debug("Detected shebang in %s with offset %d bytes", path, byte_length)
                 return byte_length
     except (IOError, OSError) as err:
         LOGGER.debug("Could not detect shebang in %s: %s", path, err)
@@ -322,9 +316,7 @@ def load_text_from_file(path, header_length, encoding, offset):
              including any extra characters specified by `offset`.
     """
     total_length = header_length + offset
-    LOGGER.debug(
-        "Reading first %d characters from file: %s [%s]", total_length, path, encoding
-    )
+    LOGGER.debug("Reading first %d characters from file: %s [%s]", total_length, path, encoding)
     with open(path, "r", encoding=encoding) as handle:
         content = handle.read(total_length)
         return content[offset:] if offset else content
@@ -352,9 +344,7 @@ def load_text_from_file_with_mmap(path, header_length, encoding, offset):
     length = min(total_length, file_size)
 
     if not length:
-        LOGGER.warning(
-            "File %s is empty [length: %d]. Return empty string.", path, length
-        )
+        LOGGER.warning("File %s is empty [length: %d]. Return empty string.", path, length)
         return ""
 
     LOGGER.debug("Memory mapping first %d bytes from file: %s", total_length, path)
@@ -423,11 +413,7 @@ def has_any_copyright(path, use_mmap, encoding, offset):
     """
     load_text = load_text_from_file_with_mmap if use_mmap else load_text_from_file
     content = load_text(path, BYTES_TO_READ, encoding, offset)
-    return bool(
-        re.search(
-            r"Copyright.*SPDX-License-Identifier", content, re.IGNORECASE | re.DOTALL
-        )
-    )
+    return bool(re.search(r"Copyright.*SPDX-License-Identifier", content, re.IGNORECASE | re.DOTALL))
 
 
 def has_duplicate_copyright(path, template, use_mmap, encoding, offset):
@@ -474,11 +460,7 @@ def get_files_from_dir(directory, exts=None):
     LOGGER.debug("Getting files from directory: %s", directory)
     for path in directory.rglob("*"):
         if path.is_file() and path.stat().st_size != 0:
-            if (
-                exts is None
-                or path.suffix[1:] in exts
-                or (path.name == "BUILD" and "BUILD" in exts)
-            ):
+            if exts is None or path.suffix[1:] in exts or (path.name == "BUILD" and "BUILD" in exts):
                 collected_files.append(path)
     return collected_files
 
@@ -508,11 +490,7 @@ def collect_inputs(inputs, exts=None):
         if item.is_dir():
             LOGGER.debug("Processing directory: %s", item)
             all_files.extend(get_files_from_dir(item, exts))
-        elif item.is_file() and (
-            exts is None
-            or item.suffix[1:] in exts
-            or (item.name == "BUILD" and "BUILD" in exts)
-        ):
+        elif item.is_file() and (exts is None or item.suffix[1:] in exts or (item.name == "BUILD" and "BUILD" in exts)):
             LOGGER.debug("Processing file: %s", item)
             all_files.append(item)
         elif item.is_file():
@@ -555,9 +533,7 @@ def remove_old_header(file_path, encoding, num_of_chars):
     """
     with open(file_path, "r", encoding=encoding) as file:
         file.seek(num_of_chars)
-        with tempfile.NamedTemporaryFile(
-            "w", delete=False, encoding=encoding
-        ) as temp_file:
+        with tempfile.NamedTemporaryFile("w", delete=False, encoding=encoding) as temp_file:
             shutil.copyfileobj(file, temp_file)
     shutil.move(temp_file.name, file_path)
 
@@ -588,9 +564,7 @@ def fix_copyright(path, copyright_text, encoding, offset, config=None) -> bool:
         byte_array = len(first_line.encode(encoding))
 
         if offset > 0 and offset != byte_array:
-            LOGGER.error(
-                "%s: Invalid offset value: %d, expected: %d", path, offset, byte_array
-            )
+            LOGGER.error("%s: Invalid offset value: %d, expected: %d", path, offset, byte_array)
             return False
 
         with open(path, "w", encoding=encoding) as handle:
@@ -598,12 +572,7 @@ def fix_copyright(path, copyright_text, encoding, offset, config=None) -> bool:
             if offset > 0:
                 handle.write(first_line)
                 temp.seek(offset)
-            handle.write(
-                copyright_text.format(
-                    year=datetime.now().year, author=get_author_from_config(config)
-                )
-                + "\n"
-            )
+            handle.write(copyright_text.format(year=datetime.now().year, author=get_author_from_config(config)) + "\n")
             for chunk in iter(lambda: temp.read(4096), ""):
                 handle.write(chunk)
     LOGGER.info("Fixed missing header in: %s", path)
@@ -650,9 +619,7 @@ def process_files(
         name = Path(item).name
         key = name if name == "BUILD" else Path(item).suffix[1:]
         if key not in templates.keys():
-            logging.debug(
-                "Skipped (no configuration for selected file extension): %s", item
-            )
+            logging.debug("Skipped (no configuration for selected file extension): %s", item)
             continue
 
         if str(item) in exclusion:
@@ -667,31 +634,21 @@ def process_files(
         shebang_offset = detect_shebang_offset(item, encoding)
         effective_offset = offset + shebang_offset if offset == 0 else offset
 
-        if has_duplicate_copyright(
-            item, templates[key], use_mmap, encoding, effective_offset
-        ):
+        if has_duplicate_copyright(item, templates[key], use_mmap, encoding, effective_offset):
             LOGGER.error("Duplicate copyright header in: %s", item)
             results["duplicate_copyright"] += 1
-        elif not has_copyright(
-            item, templates[key], use_mmap, encoding, effective_offset, config
-        ):
+        elif not has_copyright(item, templates[key], use_mmap, encoding, effective_offset, config):
             if has_any_copyright(item, use_mmap, encoding, effective_offset):
-                LOGGER.warning(
-                    "Wrong copyright format in: %s, expected format from template", item
-                )
+                LOGGER.warning("Wrong copyright format in: %s, expected format from template", item)
             elif fix:
                 if remove_offset:
                     remove_old_header(item, encoding, remove_offset)
-                fix_result = fix_copyright(
-                    item, templates[key], encoding, effective_offset, config
-                )
+                fix_result = fix_copyright(item, templates[key], encoding, effective_offset, config)
                 results["no_copyright"] += 1
                 if fix_result:
                     results["fixed"] += 1
             else:
-                LOGGER.error(
-                    "Missing copyright header in: %s, use --fix to introduce it", item
-                )
+                LOGGER.error("Missing copyright header in: %s, use --fix to introduce it", item)
                 results["no_copyright"] += 1
     return results
 
@@ -707,9 +664,7 @@ def parse_arguments(argv):
         argparse.Namespace: Parsed arguments containing files, directories,
                             copyright_file, extensions and log_file.
     """
-    parser = argparse.ArgumentParser(
-        description="A script to check for copyright in files with specific extensions."
-    )
+    parser = argparse.ArgumentParser(description="A script to check for copyright in files with specific extensions.")
 
     parser.add_argument(
         "-t",
@@ -734,9 +689,7 @@ def parse_arguments(argv):
         help="Path to the config file",
     )
 
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable debug logging level"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging level")
 
     parser.add_argument(
         "-l",
@@ -769,9 +722,7 @@ def parse_arguments(argv):
         help="Fix missing copyright headers by inserting them",
     )
 
-    parser.add_argument(
-        "--encoding", default="utf-8", help="File encoding (default: utf-8)."
-    )
+    parser.add_argument("--encoding", default="utf-8", help="File encoding (default: utf-8).")
 
     parser.add_argument(
         "--offset",
@@ -845,9 +796,7 @@ def main(argv=None):
     if args.fix and args.remove_offset:
         LOGGER.info("%s!------DANGER ZONE------!%s", COLORS["RED"], COLORS["ENDC"])
         LOGGER.info("Remove offset set! This can REMOVE parts of source files!")
-        LOGGER.info(
-            "Use ONLY if invalid copyright header is present that needs to be removed!"
-        )
+        LOGGER.info("Use ONLY if invalid copyright header is present that needs to be removed!")
         LOGGER.info("%s!-----------------------!%s", COLORS["RED"], COLORS["ENDC"])
 
     results = process_files(

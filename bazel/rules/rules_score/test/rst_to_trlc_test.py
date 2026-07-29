@@ -54,9 +54,7 @@ def _rst(*lines: str) -> str:
 
 class TestDirectiveToTrlc(unittest.TestCase):
     def test_assumed_system_req(self):
-        self.assertEqual(
-            DIRECTIVE_TO_TRLC["assumed_system_req"], "ScoreReq.AssumedSystemReq"
-        )
+        self.assertEqual(DIRECTIVE_TO_TRLC["assumed_system_req"], "ScoreReq.AssumedSystemReq")
 
     def test_feat_req(self):
         self.assertEqual(DIRECTIVE_TO_TRLC["feat_req"], "ScoreReq.FeatReq")
@@ -177,9 +175,7 @@ class TestParseDirectives(unittest.TestCase):
             "   The system shall do something.",
         )
         result = parse_directives(rst)
-        self.assertEqual(
-            result[0]["fields"]["rationale"], "Needed for safety analysis."
-        )
+        self.assertEqual(result[0]["fields"]["rationale"], "Needed for safety analysis.")
 
     # --- Feature Requirements ---
 
@@ -364,9 +360,7 @@ class TestRenderTrlc(unittest.TestCase):
         self.assertIn('rationale   = "TODO: add rationale"', out)
 
     def test_assumed_system_req_uses_rationale_from_rst_when_present(self):
-        items = self._single(
-            "assumed_system_req", {"rationale": "Needed for ISO 26262 compliance."}
-        )
+        items = self._single("assumed_system_req", {"rationale": "Needed for ISO 26262 compliance."})
         out = render_trlc(items, "Pkg", "")
         self.assertIn('"Needed for ISO 26262 compliance."', out)
         self.assertNotIn("TODO: add rationale", out)
@@ -453,9 +447,7 @@ class TestRenderTrlc(unittest.TestCase):
             "belongs_to",
             "tags",
         ):
-            self.assertNotIn(
-                field, out, f"'{field}' should be dropped from TRLC output"
-            )
+            self.assertNotIn(field, out, f"'{field}' should be dropped from TRLC output")
 
     # --- General TRLC structure ---
 
@@ -528,9 +520,7 @@ class TestRenderTrlc(unittest.TestCase):
 
 class TestCollectRefs(unittest.TestCase):
     def test_satisfies_is_a_ref_field(self):
-        self.assertEqual(
-            _collect_refs({"satisfies": "asr_req__test__001"}), ["asr_req__test__001"]
-        )
+        self.assertEqual(_collect_refs({"satisfies": "asr_req__test__001"}), ["asr_req__test__001"])
 
     def test_derived_from_is_a_ref_field(self):
         self.assertEqual(
@@ -705,13 +695,7 @@ class TestConvert(unittest.TestCase):
         self.assertNotIn("rationale", out)
 
     def test_package_name_derived_from_file_stem(self):
-        rst = (
-            ".. assumed_system_req:: Pkg Test\n"
-            "   :id: asr_req__test__001\n"
-            "   :safety: QM\n"
-            "\n"
-            "   Body.\n"
-        )
+        rst = ".. assumed_system_req:: Pkg Test\n   :id: asr_req__test__001\n   :safety: QM\n\n   Body.\n"
         out = self._convert(rst, filename="my_requirements.rst")
         self.assertIn("package MyRequirements", out)
 

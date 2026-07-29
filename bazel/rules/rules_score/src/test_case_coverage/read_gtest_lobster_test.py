@@ -60,9 +60,7 @@ def _write_gtest_lobster(path: Path, items: list[tuple[str, list[str], str]]) ->
 
 
 def test_single_item_basic(tmp_path):
-    p = _write_gtest_lobster(
-        tmp_path, [("Suite:TestName", ["Req.A"], ":Given: g\n:When: w\n:Then: t")]
-    )
+    p = _write_gtest_lobster(tmp_path, [("Suite:TestName", ["Req.A"], ":Given: g\n:When: w\n:Then: t")])
     records = read_gtest_lobster(p)
     assert len(records) == 1
     r = records[0]
@@ -401,9 +399,7 @@ def test_mixed_kinds_only_comp_req_returned(tmp_path):
 
 
 def test_scan_groups_by_req(tmp_path):
-    gtest = _write_gtest_lobster(
-        tmp_path, [("Suite:T", ["P.R"], ":Given: g\n:When: w\n:Then: t")]
-    )
+    gtest = _write_gtest_lobster(tmp_path, [("Suite:T", ["P.R"], ":Given: g\n:When: w\n:Then: t")])
     by_req = scan_gtest_lobster(gtest, ["P.R"])
     assert len(by_req["P.R"]) == 1
     rec = by_req["P.R"][0]

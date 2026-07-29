@@ -77,14 +77,10 @@ def copy_html_files(src_dir, dst_dir, is_dependency=False, sibling_modules=None)
     module_pattern = None
     if sibling_modules:
         module_pattern = re.compile(
-            r'((?:href|src)=")('
-            + "|".join(re.escape(mod) for mod in sibling_modules)
-            + r")/",
+            r'((?:href|src)=")(' + "|".join(re.escape(mod) for mod in sibling_modules) + r")/",
             re.IGNORECASE,
         )
-    static_pattern = re.compile(
-        r'((?:href|src)=")(\.\./)*(_static|_sphinx_design_static)/', re.IGNORECASE
-    )
+    static_pattern = re.compile(r'((?:href|src)=")(\.\./)*(_static|_sphinx_design_static)/', re.IGNORECASE)
 
     def process_file(src_file, dst_file, relative_path):
         """Read, optionally modify, and write a file."""
@@ -183,9 +179,7 @@ def merge_html_dirs(output_dir, main_html_dir, dependencies, extra_static=None):
     # Then copy each dependency into a subdirectory with link fixing
     for dep_name, dep_html_dir in dependencies:
         dep_output = output_path / dep_name
-        logging.info(
-            "Copying dependency %s from %s to %s", dep_name, dep_html_dir, dep_output
-        )
+        logging.info("Copying dependency %s from %s to %s", dep_name, dep_html_dir, dep_output)
         # Exclude other module directories to avoid nested modules
         # Remove current module from the list to get actual siblings to exclude
         sibling_modules = set(n for n in dep_names if n != dep_name)
@@ -198,12 +192,8 @@ def merge_html_dirs(output_dir, main_html_dir, dependencies, extra_static=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Merge Sphinx HTML documentation directories"
-    )
-    parser.add_argument(
-        "--output", required=True, help="Output directory for merged HTML"
-    )
+    parser = argparse.ArgumentParser(description="Merge Sphinx HTML documentation directories")
+    parser.add_argument("--output", required=True, help="Output directory for merged HTML")
     parser.add_argument("--main", required=True, help="Main HTML directory to copy")
     parser.add_argument(
         "--dep",
@@ -228,17 +218,13 @@ def main():
     )
 
     args = parser.parse_args()
-    logging.basicConfig(
-        level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s"
-    )
+    logging.basicConfig(level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s")
 
     # Parse dependencies
     dependencies = []
     for dep_spec in args.dep:
         if ":" not in dep_spec:
-            logging.error(
-                "Invalid dependency format '%s', expected NAME:PATH", dep_spec
-            )
+            logging.error("Invalid dependency format '%s', expected NAME:PATH", dep_spec)
             return 1
 
         name, path = dep_spec.split(":", 1)
@@ -248,9 +234,7 @@ def main():
     extra_static = []
     for spec in args.extra_static:
         if ":" not in spec:
-            logging.error(
-                "Invalid --extra-static format '%s', expected SRC:SUBPATH", spec
-            )
+            logging.error("Invalid --extra-static format '%s', expected SRC:SUBPATH", spec)
             return 1
         src, subpath = spec.split(":", 1)
         extra_static.append((src, subpath))

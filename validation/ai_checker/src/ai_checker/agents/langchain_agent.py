@@ -49,10 +49,7 @@ class LangChainAgent(AnalysisAgent):
         )
 
         if not hasattr(response, "analyses") or not response.analyses:
-            raise ValueError(
-                "AI model returned empty or invalid response. "
-                f"Expected 'analyses' field, got: {response}"
-            )
+            raise ValueError(f"AI model returned empty or invalid response. Expected 'analyses' field, got: {response}")
 
         # Usage accounting is intentionally not attempted here. ``with_structured_output``
         # returns the parsed pydantic object, not the underlying ``AIMessage``, so the
@@ -61,9 +58,6 @@ class LangChainAgent(AnalysisAgent):
         # does not define (which always yielded zero), this adapter reports no usage and
         # ``get_usage()`` stays empty. Backends that need usage should use ``CopilotAgent``
         # or supply a custom agent that records it via ``_record_usage``.
-        logger.debug(
-            "LangChainAgent does not report usage; structured output omits "
-            "the underlying message metadata."
-        )
+        logger.debug("LangChainAgent does not report usage; structured output omits the underlying message metadata.")
 
         return response

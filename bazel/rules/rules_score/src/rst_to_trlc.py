@@ -122,9 +122,7 @@ def _collect_body(lines: list[str], i: int) -> tuple[str, int]:
         if line and not line[0].isspace():
             break
         if not line.strip():
-            nxt = next(
-                (lines[j] for j in range(i + 1, len(lines)) if lines[j].strip()), ""
-            )
+            nxt = next((lines[j] for j in range(i + 1, len(lines)) if lines[j].strip()), "")
             if not nxt or not nxt[0].isspace():
                 return " ".join(p for p in body_parts if p), i + 1
         body_parts.append(line.strip())
@@ -139,13 +137,7 @@ def _escape(text: str) -> str:
 
 def _collect_refs(fields: dict[str, str]) -> list[str]:
     """Extract all cross-reference IDs from relationship fields."""
-    return [
-        r.strip()
-        for k in _REF_FIELDS
-        if k in fields
-        for r in fields[k].split(",")
-        if r.strip()
-    ]
+    return [r.strip() for k in _REF_FIELDS if k in fields for r in fields[k].split(",") if r.strip()]
 
 
 def parse_directives(content: str) -> list[dict[str, Any]]:
@@ -166,24 +158,15 @@ def parse_directives(content: str) -> list[dict[str, Any]]:
         raw_body, i = _collect_body(lines, i)
         body = _RE_MARKUP.sub(r"\1", raw_body).strip()
 
-        results.append(
-            {"directive": directive, "title": title, "fields": fields, "body": body}
-        )
+        results.append({"directive": directive, "title": title, "fields": fields, "body": body})
     return results
 
 
-def render_trlc(
-    directives: list[dict[str, Any]], package: str, ref_package: str
-) -> str:
+def render_trlc(directives: list[dict[str, Any]], package: str, ref_package: str) -> str:
     """Render parsed directives into TRLC file content."""
     has_refs = any(_collect_refs(item["fields"]) for item in directives)
     imports = list(_IMPORTS)
-    if (
-        has_refs
-        and ref_package
-        and ref_package != _DEFAULT_REF_PACKAGE
-        and ref_package not in imports
-    ):
+    if has_refs and ref_package and ref_package != _DEFAULT_REF_PACKAGE and ref_package not in imports:
         imports.append(ref_package)
     import_lines = [f"import {name}" for name in imports]
     lines_out = [_TRLC_HEADER, f"package {package}", "", *import_lines, ""]
@@ -225,9 +208,7 @@ def convert(
     ref_package: str | None = None,
 ) -> int:
     """Convert one RST file to TRLC. Returns number of records written."""
-    pkg = package or "".join(
-        w.capitalize() for w in re.split(r"[_\-\s]+", input_path.stem)
-    )
+    pkg = package or "".join(w.capitalize() for w in re.split(r"[_\-\s]+", input_path.stem))
     directives = parse_directives(input_path.read_text(encoding="utf-8"))
     if not directives:
         logging.warning("no supported requirement directives found in %s", input_path)
@@ -253,13 +234,9 @@ if __name__ == "__main__":
         help="Log level for tool output (default: warn).",
     )
     args = p.parse_args()
-    logging.basicConfig(
-        level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s"
-    )
+    logging.basicConfig(level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s")
     if not args.input_file.exists():
         sys.exit(f"ERROR: file not found: {args.input_file}")
     output_file = args.output_dir / (args.input_file.stem + ".trlc")
-    record_count = convert(
-        args.input_file, output_file, package=args.package, ref_package=args.ref_package
-    )
+    record_count = convert(args.input_file, output_file, package=args.package, ref_package=args.ref_package)
     logging.info("%s -> %s  (%d record(s))", args.input_file, output_file, record_count)

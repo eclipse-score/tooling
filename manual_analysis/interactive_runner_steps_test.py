@@ -148,15 +148,11 @@ class InteractiveRunnerStepsTest(unittest.TestCase):
 
         _execute_step(repeat_step, ui, results)
 
-        repeat_instruction_call = mock.call.show_text(
-            "Instructions", "Need another repetition?"
-        )
+        repeat_instruction_call = mock.call.show_text("Instructions", "Need another repetition?")
         self.assertEqual(ui.mock_calls.count(repeat_instruction_call), 1)
 
         repeat_instruction_index = ui.mock_calls.index(repeat_instruction_call)
-        action_prompt_index = ui.mock_calls.index(
-            mock.call.prompt_multiline("Run one iteration", initial_text="")
-        )
+        action_prompt_index = ui.mock_calls.index(mock.call.prompt_multiline("Run one iteration", initial_text=""))
         self.assertGreater(repeat_instruction_index, action_prompt_index)
 
     def test_execute_assertion_persists_justification_when_provided(self) -> None:

@@ -123,9 +123,7 @@ def validate_arguments(args: argparse.Namespace) -> None:
         raise ValueError(f"Index file does not exist: {args.index_file}")
 
 
-def build_sphinx_arguments(
-    args: argparse.Namespace, extra_args: List[str] = None
-) -> List[str]:
+def build_sphinx_arguments(args: argparse.Namespace, extra_args: List[str] = None) -> List[str]:
     """
     Build the argument list for Sphinx.
 
@@ -136,9 +134,7 @@ def build_sphinx_arguments(
     Returns:
         List of arguments to pass to Sphinx
     """
-    source_dir = (
-        str(Path(args.index_file).parent) if args.index_file else DEFAULT_SOURCE_DIR
-    )
+    source_dir = str(Path(args.index_file).parent) if args.index_file else DEFAULT_SOURCE_DIR
     config_dir = str(Path(args.config).parent) if args.config else source_dir
 
     base_arguments = [
@@ -171,9 +167,7 @@ def build_sphinx_arguments(
     base_arguments.extend(["-b", args.builder])
 
     # Apply sphinx-build verbosity flags derived from --log-level
-    sphinx_verbosity = _SPHINX_VERBOSITY_FLAGS.get(
-        getattr(args, "log_level", "warn"), []
-    )
+    sphinx_verbosity = _SPHINX_VERBOSITY_FLAGS.get(getattr(args, "log_level", "warn"), [])
     base_arguments.extend(sphinx_verbosity)
 
     # Forward extra options (e.g., -D flags) to Sphinx
@@ -211,9 +205,7 @@ def run_sphinx_build(sphinx_args: List[str], builder: str) -> int:
     if exit_code == 0:
         logger.info(f"docs ({builder}) finished successfully in {duration:.1f} seconds")
     else:
-        logger.error(
-            f"docs ({builder}) failed with exit code {exit_code} after {duration:.1f} seconds"
-        )
+        logger.error(f"docs ({builder}) failed with exit code {exit_code} after {duration:.1f} seconds")
 
     return exit_code
 
@@ -225,9 +217,7 @@ def parse_arguments() -> argparse.Namespace:
     Returns:
         Parsed command-line arguments
     """
-    parser = argparse.ArgumentParser(
-        description="Wrapper for Sphinx documentation builds in Bazel environments"
-    )
+    parser = argparse.ArgumentParser(description="Wrapper for Sphinx documentation builds in Bazel environments")
 
     # Required arguments
     parser.add_argument(
@@ -285,9 +275,7 @@ def main() -> int:
     """
     try:
         args, extra_args = parse_arguments()
-        logging.basicConfig(
-            level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s"
-        )
+        logging.basicConfig(level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s")
         validate_arguments(args)
         # Resolve execroot-relative tool paths to absolute paths NOW, while cwd
         # is still the execroot (Bazel guarantees cwd = execroot at action start).

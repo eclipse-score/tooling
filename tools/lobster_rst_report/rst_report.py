@@ -110,10 +110,7 @@ def write_rst(report: Report, source_root: str = "") -> str:
     lines.append("")
 
     # Detailed content: kind groups and level sections
-    items_by_level = {
-        lv: [it for it in report.items.values() if it.level == lv]
-        for lv in report.config
-    }
+    items_by_level = {lv: [it for it in report.items.values() if it.level == lv] for lv in report.config}
 
     for kind, kind_title in _KIND_ORDER:
         levels_of_kind = [lv for lv in report.config.values() if lv.kind == kind]
@@ -136,10 +133,7 @@ def write_rst(report: Report, source_root: str = "") -> str:
                 continue
 
             data = report.coverage[level.name]
-            lines.append(
-                f"**Coverage:** {data.coverage:.1f}%"
-                f" ({data.ok} of {data.items} items OK)"
-            )
+            lines.append(f"**Coverage:** {data.coverage:.1f}% ({data.ok} of {data.items} items OK)")
             lines.append("")
             lines += LevelSectionBuilder(items, report, source_root).build()
 
@@ -187,10 +181,7 @@ def write_rst_pages(report: Report, source_root: str = "") -> Dict[str, str]:
     """
     page_map = _build_page_map(report)
     coverage = report.coverage
-    items_by_level = {
-        lv: [it for it in report.items.values() if it.level == lv]
-        for lv in report.config
-    }
+    items_by_level = {lv: [it for it in report.items.values() if it.level == lv] for lv in report.config}
 
     pages = {}
 
@@ -208,10 +199,7 @@ def write_rst_pages(report: Report, source_root: str = "") -> Dict[str, str]:
             lines.append("No items recorded at this level.")
             lines.append("")
         else:
-            lines.append(
-                f"**Coverage:** {data.coverage:.1f}%"
-                f" ({data.ok} of {data.items} items OK)"
-            )
+            lines.append(f"**Coverage:** {data.coverage:.1f}% ({data.ok} of {data.items} items OK)")
             lines.append("")
             lines += LevelSectionBuilder(items, report, source_root).build()
 
@@ -366,10 +354,7 @@ class RstReportTool(MetaDataToolBase):
         # way PolicyDiagramBuilder does, so the warning reflects what is actually
         # emitted rather than only checking for a system `dot` on PATH.
         if not is_dot_available(os.environ.get("GRAPHVIZ_DOT") or None):
-            print(
-                "warning: dot utility not found, report will not include "
-                "the tracing policy visualisation"
-            )
+            print("warning: dot utility not found, report will not include the tracing policy visualisation")
             print("> please install Graphviz (https://graphviz.org)")
 
         # lobster-trace: UseCases.RST_Output
@@ -378,9 +363,7 @@ class RstReportTool(MetaDataToolBase):
         if options.out_dir is not None:
             pages = write_rst_pages(report=report, source_root=options.source_root)
             write_rst_pages_to_dir(pages, options.out_dir)
-            print(
-                f"LOBSTER RST report written to {options.out_dir}/ ({len(pages)} files)"
-            )
+            print(f"LOBSTER RST report written to {options.out_dir}/ ({len(pages)} files)")
         # lobster-trace: UseCases.RST_Output
         # lobster-trace: rst_req.RST_Report_Single_Page
         # lobster-trace: rst_req.Valid_Lobster_File
@@ -412,9 +395,7 @@ def lobster_rst_report(
     """
     report = Report()
     report.load_report(lobster_report_path)
-    write_rst_to_file(
-        write_rst(report=report, source_root=source_root), output_rst_path
-    )
+    write_rst_to_file(write_rst(report=report, source_root=source_root), output_rst_path)
 
 
 def lobster_rst_report_pages(

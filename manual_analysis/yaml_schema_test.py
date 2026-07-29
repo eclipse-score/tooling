@@ -245,9 +245,7 @@ class YamlSchemaTest(unittest.TestCase):
             )
 
     def test_requires_non_empty_requirements(self) -> None:
-        with self.assertRaisesRegex(
-            ValueError, "requirements must be a non-empty list"
-        ):
+        with self.assertRaisesRegex(ValueError, "requirements must be a non-empty list"):
             parse_analysis(
                 {
                     "requirements": [],

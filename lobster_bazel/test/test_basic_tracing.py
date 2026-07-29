@@ -27,12 +27,8 @@ class BasicTracingTest(unittest.TestCase):
         self._test_runner = TestRunner(cwd, tool_path)
         self._data_directory: Path = cwd / "data"
 
-        self._test_runner.copy_file_to_working_directory(
-            self._data_directory / "source_with_tags.py"
-        )
-        self._test_runner.copy_file_to_working_directory(
-            self._data_directory / "file_list.txt"
-        )
+        self._test_runner.copy_file_to_working_directory(self._data_directory / "source_with_tags.py")
+        self._test_runner.copy_file_to_working_directory(self._data_directory / "file_list.txt")
 
     def _configure_cmd_args(
         self,
@@ -64,9 +60,7 @@ class BasicTracingTest(unittest.TestCase):
         Test that tracing tags are correctly extracted from a Python source file.
         """
 
-        output_file_path = self._configure_cmd_args(
-            output_file="source_with_tags.lobster"
-        )
+        output_file_path = self._configure_cmd_args(output_file="source_with_tags.lobster")
 
         completed_process = self._test_runner.run_tool_test()
 
@@ -84,9 +78,7 @@ class BasicTracingTest(unittest.TestCase):
         Test that the custom namespace is applied to extracted tracing tags.
         """
 
-        output_file_path = self._configure_cmd_args(
-            output_file="source_ns.lobster", namespace="impl"
-        )
+        output_file_path = self._configure_cmd_args(output_file="source_ns.lobster", namespace="impl")
 
         completed_process = self._test_runner.run_tool_test()
 

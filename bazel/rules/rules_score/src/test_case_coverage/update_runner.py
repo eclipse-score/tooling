@@ -51,8 +51,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--allow-check-failures",
         action="store_true",
-        help="Write the lock file even when GWT spec validation fails "
-        "(mirrors test_runner's flag of the same name).",
+        help="Write the lock file even when GWT spec validation fails (mirrors test_runner's flag of the same name).",
     )
     args = parser.parse_args(argv)
 
@@ -72,9 +71,7 @@ def main(argv: list[str] | None = None) -> None:
     package = os.environ.get("TEST_CASE_COVERAGE_PACKAGE", "")
 
     # Steps 1-3: extract requirement metadata, scan gtest.lobster, compute lock
-    req_metadata, lock = scan_and_compute(
-        lobster_manifest, gtest_lobster_path, package=package, label=label
-    )
+    req_metadata, lock = scan_and_compute(lobster_manifest, gtest_lobster_path, package=package, label=label)
     if not req_metadata:
         logger.warning("[%s] No CompReq requirement IDs found in lobster manifest.", label)
 

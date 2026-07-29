@@ -98,9 +98,7 @@ def _execute_step(
         try:
             command = step.command.format_map(arg_values)
         except KeyError as err:
-            raise AnalysisFailedError(
-                f"Automated action references undefined argument: {err}"
-            ) from err
+            raise AnalysisFailedError(f"Automated action references undefined argument: {err}") from err
 
         ui.show_text("Resolved Command", command)
         return_code = ui.run_command(command)
@@ -126,8 +124,7 @@ def _execute_step(
         )
         if not passed:
             raise AnalysisFailedError(
-                "Automated action failed: "
-                f"expected return code {step.expected_return_code}, got {return_code}"
+                f"Automated action failed: expected return code {step.expected_return_code}, got {return_code}"
             )
         return
 
@@ -146,9 +143,7 @@ def _execute_step(
                 else None
             ),
             default_justification=(
-                prefill.next_assertion_justification(step.description)
-                if prefill is not None
-                else None
+                prefill.next_assertion_justification(step.description) if prefill is not None else None
             ),
         )
         passed = answer == step.positive
@@ -173,23 +168,15 @@ def _execute_step(
         selected_answer, justification = ui.prompt_choice_with_justification(
             step.description,
             options,
-            default_option=(
-                prefill.next_decision(step.description, options)
-                if prefill is not None
-                else None
-            ),
+            default_option=(prefill.next_decision(step.description, options) if prefill is not None else None),
             default_justification=(
-                prefill.next_decision_justification(step.description)
-                if prefill is not None
-                else None
+                prefill.next_decision_justification(step.description) if prefill is not None else None
             ),
         )
         ui.show_text("Result", f"Selected branch: {selected_answer}")
 
         branch_result: list[dict] = []
-        selected_branch = next(
-            branch for branch in step.branches if branch.answer == selected_answer
-        )
+        selected_branch = next(branch for branch in step.branches if branch.answer == selected_answer)
         for nested_step in selected_branch.steps:
             _execute_step(nested_step, ui, branch_result, prefill=prefill)
 
