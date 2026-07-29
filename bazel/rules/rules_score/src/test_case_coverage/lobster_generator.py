@@ -79,11 +79,7 @@ def _make_activity(
 
     blocks = []
     for tc in test_cases:
-        parts = [
-            f":{k.capitalize()}: {v}"
-            for k, v in (("given", tc.given), ("when", tc.when), ("then", tc.then))
-            if v
-        ]
+        parts = [f":{k.capitalize()}: {v}" for k, v in (("given", tc.given), ("when", tc.when), ("then", tc.then)) if v]
         if parts:
             # Prefix each block with the test case uid as a bold heading so that
             # multiple test cases for one requirement stay visually distinct in
@@ -99,10 +95,7 @@ def _make_activity(
         # version must match the committed approval
         req_version == committed_version
         # every computed test matches the committed GWT
-        and all(
-            committed_map.get(tc.uid) == (tc.given, tc.when, tc.then)
-            for tc in test_cases
-        )
+        and all(committed_map.get(tc.uid) == (tc.given, tc.when, tc.then) for tc in test_cases)
         # AND no committed test has been removed from computed
         and set(committed_map.keys()) <= computed_uids
     )
@@ -123,9 +116,7 @@ def _make_activity(
     if not covered:
         item.messages.append(f"test case coverage not confirmed for {label}")
         if req_version != committed_version:
-            item.messages.append(
-                f"Requirement Version updated: {committed_version!r} → {req_version!r}"
-            )
+            item.messages.append(f"Requirement Version updated: {committed_version!r} → {req_version!r}")
 
     return item
 

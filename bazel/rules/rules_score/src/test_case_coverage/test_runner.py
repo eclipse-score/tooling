@@ -63,9 +63,7 @@ def main(argv: list[str] | None = None) -> None:
     lobster_output_raw = os.environ.get("TEST_CASE_COVERAGE_LOBSTER_OUTPUT")
 
     # Steps 1-3: extract requirement metadata, scan gtest.lobster, compute lock
-    _req_metadata, computed = scan_and_compute(
-        lobster_manifest, gtest_lobster_path, package=package, label=label
-    )
+    _req_metadata, computed = scan_and_compute(lobster_manifest, gtest_lobster_path, package=package, label=label)
 
     # Step 3b: validate GWT specs (collect, don't exit yet — artifact must be written first)
     spec_ok, spec_issues = validate_specs(computed)

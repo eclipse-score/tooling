@@ -102,9 +102,7 @@ def serialize(lock: LockFile) -> str:
         "schema_version": lock.schema_version,
         "requirements": [_req_to_dict(r) for r in lock.requirements],
     }
-    return yaml.dump(
-        data, default_flow_style=False, allow_unicode=True, sort_keys=False
-    )
+    return yaml.dump(data, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
 
 # ---------------------------------------------------------------------------

@@ -36,9 +36,7 @@ class StarplsIntegrationTest(unittest.TestCase):
         self.starpls_binary_path = self.runfiles.Rlocation(binary_runfile_path)
 
         if not self.starpls_binary_path:
-            self.fail(
-                f"setUp failed: Could not find starpls binary via runfiles at {binary_runfile_path}"
-            )
+            self.fail(f"setUp failed: Could not find starpls binary via runfiles at {binary_runfile_path}")
         print(f"Found starpls binary for test: {self.starpls_binary_path}")
 
     def test_starpls_binary_downloaded_and_executable(self):
@@ -62,9 +60,7 @@ class StarplsIntegrationTest(unittest.TestCase):
             print("stderr:\n", result.stderr)
 
             self.assertEqual(result.returncode, 0, "Running starpls version failed")
-            self.assertIn(
-                "starpls", result.stdout, "Expected 'starpls' in version output"
-            )
+            self.assertIn("starpls", result.stdout, "Expected 'starpls' in version output")
         except FileNotFoundError:
             self.fail(f"Failed to execute binary: File not found at {binary_real_path}")
         except Exception as e:
@@ -91,9 +87,7 @@ class StarplsIntegrationTest(unittest.TestCase):
             time.sleep(5)
 
             if server_process.poll() is not None:
-                raise RuntimeError(
-                    f"Server process terminated prematurely with code {server_process.returncode}"
-                )
+                raise RuntimeError(f"Server process terminated prematurely with code {server_process.returncode}")
 
             print("Server process running. Sending init request.")
 
@@ -153,9 +147,7 @@ class StarplsIntegrationTest(unittest.TestCase):
                         server_process.wait()
                         print("Server process killed.")
                 else:
-                    print(
-                        f"Server process already terminated with code: {server_process.returncode}"
-                    )
+                    print(f"Server process already terminated with code: {server_process.returncode}")
 
 
 if __name__ == "__main__":

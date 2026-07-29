@@ -23,9 +23,7 @@ class RequirementAnalysis(BaseModel):
     """Structured output for individual requirement analysis."""
 
     requirement_id: str = Field(description="Unique identifier for the requirement")
-    description: str = Field(
-        description=("Brief description of the requirement (first line is sufficient)")
-    )
+    description: str = Field(description=("Brief description of the requirement (first line is sufficient)"))
     findings: list[str] = Field(description="List of findings from the analysis")
     suggestions: list[str] = Field(description="List of suggestions from the analysis")
     score: float = Field(
@@ -38,6 +36,4 @@ class RequirementAnalysis(BaseModel):
 class AnalysisResults(BaseModel):
     """Structured output for multiple requirement analyses."""
 
-    analyses: list[RequirementAnalysis] = Field(
-        description="List of requirement analyses"
-    )
+    analyses: list[RequirementAnalysis] = Field(description="List of requirement analyses")

@@ -166,12 +166,7 @@ def extract_lobster_items(
                 for pattern in tag_patterns:
                     if stripped.startswith(pattern):
                         after_pattern = stripped[len(pattern) :].strip()
-                        req_id = (
-                            after_pattern.replace("'", "")
-                            .replace('"', "")
-                            .replace(",", "")
-                            .strip()
-                        )
+                        req_id = after_pattern.replace("'", "").replace('"', "").replace(",", "").strip()
                         if not req_id:
                             continue
                         item = Implementation(

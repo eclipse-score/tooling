@@ -74,10 +74,7 @@ def _agent_from_custom_module(module, model_name: str) -> AnalysisAgent:
     ``LangChainAgent(SomeBaseChatModel(...))``.
     """
     if not hasattr(module, "create_agent"):
-        raise AttributeError(
-            "Custom ai_model module must define "
-            "create_agent(model_name) -> AnalysisAgent"
-        )
+        raise AttributeError("Custom ai_model module must define create_agent(model_name) -> AnalysisAgent")
     return module.create_agent(model_name=model_name)
 
 
@@ -104,9 +101,7 @@ def _load_custom_ai_model_module(custom_path: str):
 
     spec = importlib.util.spec_from_file_location("custom_ai_model", custom_path)
     if spec is None or spec.loader is None:
-        raise ImportError(
-            f"Could not load a Python module from --custom-ai-model path: {custom_path}"
-        )
+        raise ImportError(f"Could not load a Python module from --custom-ai-model path: {custom_path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -188,22 +183,15 @@ class AnalysisOrchestrator:
             project_reader = GuidelinesReader(files=project_guideline_files)
             project_content = project_reader.get_combined()
             if project_content:
-                self.system_prompt += (
-                    "\n\n# PROJECT-SPECIFIC GUIDELINES\n\n" + project_content
-                )
+                self.system_prompt += "\n\n# PROJECT-SPECIFIC GUIDELINES\n\n" + project_content
 
         # Load optional background context (markdown + plantuml) and append it
         # as a clearly labelled, read-only section of the system prompt.
         if context_files:
-            context_reader = GuidelinesReader(
-                files=context_files, extensions=(".md", ".puml")
-            )
+            context_reader = GuidelinesReader(files=context_files, extensions=(".md", ".puml"))
             context_content = context_reader.get_combined()
             if context_content:
-                self.system_prompt += (
-                    "\n\n# BACKGROUND CONTEXT (reference only — not graded)\n\n"
-                    + context_content
-                )
+                self.system_prompt += "\n\n# BACKGROUND CONTEXT (reference only — not graded)\n\n" + context_content
 
         # Create the analysis agent (private member)
         logger = logging.getLogger(__name__)
@@ -214,13 +202,9 @@ class AnalysisOrchestrator:
             # set-but-missing path is a hard error rather than a silent fallback
             # to the default agent, so a typo cannot mask the intended backend.
             if not os.path.exists(custom_ai_model):
-                raise FileNotFoundError(
-                    f"--custom-ai-model path does not exist: {custom_ai_model}"
-                )
+                raise FileNotFoundError(f"--custom-ai-model path does not exist: {custom_ai_model}")
             ai_model_module = _load_custom_ai_model_module(custom_ai_model)
-            self._agent: AnalysisAgent = _agent_from_custom_module(
-                ai_model_module, model_name
-            )
+            self._agent: AnalysisAgent = _agent_from_custom_module(ai_model_module, model_name)
         else:
             # Default: use the GitHub Copilot SDK directly via CopilotAgent
             logger.info("--> Using default CopilotAgent (Copilot SDK)")
@@ -317,9 +301,7 @@ class AnalysisOrchestrator:
 
         async def _analyze_and_close() -> AnalysisResults:
             try:
-                return await self.ai_checker.analyze(
-                    artefacts, self.system_prompt, agent
-                )
+                return await self.ai_checker.analyze(artefacts, self.system_prompt, agent)
             finally:
                 # aclose() is part of the AnalysisAgent interface (no-op by
                 # default), so cleanup is guaranteed for every backend.
@@ -388,9 +370,7 @@ class AnalysisOrchestrator:
 
 def argument_parser() -> argparse.ArgumentParser:
     """Create argument parser for CLI."""
-    parser = argparse.ArgumentParser(
-        description="Analyze TRLC requirements against engineering guidelines"
-    )
+    parser = argparse.ArgumentParser(description="Analyze TRLC requirements against engineering guidelines")
     parser.add_argument(
         "--req-file",
         action="append",
@@ -460,10 +440,7 @@ def argument_parser() -> argparse.ArgumentParser:
         "--deps",
         action="append",
         default=[],
-        help=(
-            "Additional directories for dependency resolution "
-            "(can be specified multiple times)"
-        ),
+        help=("Additional directories for dependency resolution (can be specified multiple times)"),
     )
     parser.add_argument(
         "-o",
@@ -521,10 +498,7 @@ def argument_parser() -> argparse.ArgumentParser:
         "--batch-size",
         type=int,
         default=None,
-        help=(
-            "Number of requirements to process per batch (optional, "
-            "default: process all at once)"
-        ),
+        help=("Number of requirements to process per batch (optional, default: process all at once)"),
     )
     parser.add_argument(
         "--max-concurrent-requests",
@@ -596,9 +570,7 @@ def main() -> None:
     # files, but the runner exposes $TEST_UNDECLARED_OUTPUTS_DIR and Bazel zips
     # its contents into bazel-testlogs/.../test.outputs/outputs.zip. Detecting
     # it here keeps the Bazel test launcher trivial (no output-path plumbing).
-    test_output_dir = os.environ.get("TEST_UNDECLARED_OUTPUTS_DIR") or os.environ.get(
-        "TEST_TMPDIR"
-    )
+    test_output_dir = os.environ.get("TEST_UNDECLARED_OUTPUTS_DIR") or os.environ.get("TEST_TMPDIR")
     if test_output_dir:
         os.makedirs(test_output_dir, exist_ok=True)
         defaults = {
@@ -659,15 +631,11 @@ def main() -> None:
         average = sum(scores) / len(scores) if scores else 0.0
         if average < args.score_threshold:
             print(
-                f"ERROR: Average score {average:.2f} is below threshold "
-                f"{args.score_threshold:.2f}",
+                f"ERROR: Average score {average:.2f} is below threshold {args.score_threshold:.2f}",
                 file=sys.stderr,
             )
             sys.exit(1)
-        print(
-            f"AI analysis complete. Average score: {average:.2f} "
-            f"(threshold: {args.score_threshold:.2f})"
-        )
+        print(f"AI analysis complete. Average score: {average:.2f} (threshold: {args.score_threshold:.2f})")
 
 
 if __name__ == "__main__":

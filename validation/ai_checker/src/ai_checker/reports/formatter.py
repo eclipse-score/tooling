@@ -142,8 +142,7 @@ class ResultFormatter:
         renderer_cls = _RENDERERS.get(extension)
         if renderer_cls is None:
             logger.warning(
-                "Unknown report extension %r — writing JSON content to this "
-                "file regardless of its extension.",
+                "Unknown report extension %r — writing JSON content to this file regardless of its extension.",
                 extension,
             )
             renderer_cls = JsonRenderer

@@ -30,9 +30,7 @@ project = "{PROJECT_NAME}"
 author = "S-CORE"
 version = "1.0"
 release = "1.0.0"
-project_url = (
-    "https://github.com/eclipse-score"  # Required by score_metamodel extension
-)
+project_url = "https://github.com/eclipse-score"  # Required by score_metamodel extension
 
 # Sphinx extensions - comprehensive list for SCORE modules
 extensions = [
@@ -94,10 +92,7 @@ if _fta_metamodel_dir:
     _fta_metamodel_dir = os.path.abspath(_fta_metamodel_dir)
     _include_flag = f" --jvm_flag=-Dplantuml.include.path={_fta_metamodel_dir}"
 else:
-    logger.warning(
-        "FTA_METAMODEL_DIR is not set; FTA diagrams using "
-        "!include fta_metamodel.puml will fail to render."
-    )
+    logger.warning("FTA_METAMODEL_DIR is not set; FTA diagrams using !include fta_metamodel.puml will fail to render.")
     _include_flag = ""
 
 # PlantUML uses the same hermetic Graphviz dot as sphinx.ext.graphviz for its

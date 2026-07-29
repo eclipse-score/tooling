@@ -43,9 +43,7 @@ def _setup(tmp_path: Path, req_ids, uid=_UID):
                 RequirementEntry(
                     id=req_ids[0] if req_ids else "X",
                     version="1",
-                    test_cases=[
-                        TestCase(uid=scoped_uid, given="g", when="w", then="t")
-                    ],
+                    test_cases=[TestCase(uid=scoped_uid, given="g", when="w", then="t")],
                 )
             ],
         )

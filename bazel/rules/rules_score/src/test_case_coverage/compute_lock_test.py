@@ -110,12 +110,7 @@ def test_deserialize_matching_schema_version_ok():
 def test_deserialize_requirement_missing_id_raises():
     import pytest
 
-    yaml_str = (
-        f"schema_version: {SCHEMA_VERSION}\n"
-        "requirements:\n"
-        "  - version: '1'\n"
-        "    test_cases: []\n"
-    )
+    yaml_str = f"schema_version: {SCHEMA_VERSION}\nrequirements:\n  - version: '1'\n    test_cases: []\n"
     with pytest.raises(ValueError, match="missing required 'id'"):
         deserialize(yaml_str)
 
@@ -144,13 +139,7 @@ def test_compute_lock_missing_req_yields_empty_test_cases():
 
 
 def test_compute_lock_builds_gwt_from_record():
-    records = {
-        "P.R": [
-            TestRecord(
-                uid="Suite:T", lobster_traces=["P.R"], given="g", when="w", then="t"
-            )
-        ]
-    }
+    records = {"P.R": [TestRecord(uid="Suite:T", lobster_traces=["P.R"], given="g", when="w", then="t")]}
     lock = compute_lock([_meta("P.R")], records)
     tc = lock.requirements[0].test_cases[0]
     assert tc.given == "g"
@@ -201,7 +190,6 @@ def test_gtest_tag_excluded_from_serialized_yaml():
     restored = deserialize(yaml_str)
     tc = restored.requirements[0].test_cases[0]
     assert tc.gtest_tag == ""
-
 
 
 if __name__ == "__main__":

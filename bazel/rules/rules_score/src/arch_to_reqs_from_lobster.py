@@ -31,9 +31,7 @@ from pathlib import Path
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Generate architecture lobster item for a component"
-    )
+    parser = argparse.ArgumentParser(description="Generate architecture lobster item for a component")
     parser.add_argument(
         "--component-name",
         required=True,
@@ -82,9 +80,7 @@ def extract_requirement_tags(lobster_files: list[str]) -> list[str]:
     return sorted(tags)
 
 
-def build_architecture_lobster(
-    component_name: str, build_file: str, requirement_tags: list[str]
-) -> dict:
+def build_architecture_lobster(component_name: str, build_file: str, requirement_tags: list[str]) -> dict:
     """Build the architecture lobster-imp-trace structure.
 
     Creates a single lobster implementation item representing the component.
@@ -134,12 +130,8 @@ def main() -> None:
             "cannot generate an Architecture item with no requirement links"
         )
         raise SystemExit(message)
-    arch_lobster = build_architecture_lobster(
-        args.component_name, args.build_file, req_tags
-    )
-    Path(args.output).write_text(
-        json.dumps(arch_lobster, indent=2) + "\n", encoding="utf-8"
-    )
+    arch_lobster = build_architecture_lobster(args.component_name, args.build_file, req_tags)
+    Path(args.output).write_text(json.dumps(arch_lobster, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

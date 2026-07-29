@@ -187,8 +187,7 @@ def _resolve_definer(
     target = _proximity_tiebreak(source_key, candidates)
     if target is None:
         logger.warning(
-            "clickable_plantuml: ambiguous definition for '%s' in '%s'"
-            " — tied candidates %s; no link emitted",
+            "clickable_plantuml: ambiguous definition for '%s' in '%s' — tied candidates %s; no link emitted",
             alias,
             source_key,
             candidates,
@@ -323,11 +322,7 @@ def _inject_links_into_uml(uml_content: str, links: dict[str, str]) -> str:
     if not links:
         return uml_content
 
-    directives = [
-        f"url of {alias} is [[{url}]]"
-        for alias, url in links.items()
-        if _ALIAS_SAFE_RE.match(alias)
-    ]
+    directives = [f"url of {alias} is [[{url}]]" for alias, url in links.items() if _ALIAS_SAFE_RE.match(alias)]
     if not directives:
         return uml_content
 
@@ -409,18 +404,14 @@ def _unique_suffix_source_key(path_value: str, source_keys: set[str]) -> str | N
     if canonical_path in source_keys:
         return canonical_path
     matches = [
-        key
-        for key in source_keys
-        if _has_path_suffix(canonical_path, key) or _has_path_suffix(key, canonical_path)
+        key for key in source_keys if _has_path_suffix(canonical_path, key) or _has_path_suffix(key, canonical_path)
     ]
     if len(matches) == 1:
         return matches[0]
     return None
 
 
-def _node_source_key(
-    node: nodes.Node, srcdir: str, workspace_offset: str, source_keys: set[str]
-) -> str | None:
+def _node_source_key(node: nodes.Node, srcdir: str, workspace_offset: str, source_keys: set[str]) -> str | None:
     """Return the canonical workspace-relative key for a plantuml *node*.
 
     ``sphinxcontrib.plantuml`` stores the diagram location on the node as
@@ -447,13 +438,9 @@ def _node_source_key(
         return None
     srcdir = os.fspath(srcdir)
     incdir: str = node.get("incdir", "")
-    node_abs = PurePosixPath(
-        os.path.normpath(os.path.join(srcdir, incdir, filename))
-    ).as_posix()
+    node_abs = PurePosixPath(os.path.normpath(os.path.join(srcdir, incdir, filename))).as_posix()
 
-    workspace_offset = PurePosixPath(
-        os.path.realpath(os.fspath(workspace_offset))
-    ).as_posix()
+    workspace_offset = PurePosixPath(os.path.realpath(os.fspath(workspace_offset))).as_posix()
     node_abs_real = PurePosixPath(os.path.realpath(node_abs)).as_posix()
 
     workspace_offset = workspace_offset.rstrip("/")
@@ -527,16 +514,10 @@ def on_doctree_read(app: Sphinx, doctree: nodes.document) -> None:
     if not idmap_by_source:
         return
 
-    source_keys: frozenset[str] = getattr(
-        app.env, _ENV_SOURCE_KEYS, frozenset(idmap_by_source)
-    )
+    source_keys: frozenset[str] = getattr(app.env, _ENV_SOURCE_KEYS, frozenset(idmap_by_source))
     workspace_offset: str = getattr(app.env, _ENV_WORKSPACE_OFFSET, app.srcdir)
-    puml_docnames: dict[str, tuple[str, str | None]] = getattr(
-        app.env, _ENV_PUML_DOCNAMES, {}
-    )
-    no_idmap_counts_by_doc: dict[str, int] = getattr(
-        app.env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {}
-    )
+    puml_docnames: dict[str, tuple[str, str | None]] = getattr(app.env, _ENV_PUML_DOCNAMES, {})
+    no_idmap_counts_by_doc: dict[str, int] = getattr(app.env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
 
     # doctree-read fires once per (re-)read of this docname; recompute this
     # docname's count from scratch rather than accumulating onto a running
@@ -547,8 +528,7 @@ def on_doctree_read(app: Sphinx, doctree: nodes.document) -> None:
         key = _node_source_key(node, app.srcdir, workspace_offset, source_keys)
         if not key:
             logger.debug(
-                "clickable_plantuml: plantuml node in '%s' has no resolvable"
-                " source path — skipped",
+                "clickable_plantuml: plantuml node in '%s' has no resolvable source path — skipped",
                 app.env.docname,
             )
             doc_no_idmap_count += 1
@@ -578,9 +558,7 @@ def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
     if app.builder.format != "html" or exception is not None:
         return
 
-    no_idmap_counts_by_doc: dict[str, int] = getattr(
-        app.env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {}
-    )
+    no_idmap_counts_by_doc: dict[str, int] = getattr(app.env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
     total = sum(no_idmap_counts_by_doc.values())
     if total:
         logger.info(
@@ -613,13 +591,9 @@ def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> N
     if PlantumlNode is None:
         return
 
-    source_keys: frozenset[str] = getattr(
-        app.env, _ENV_SOURCE_KEYS, frozenset(idmap_by_source)
-    )
+    source_keys: frozenset[str] = getattr(app.env, _ENV_SOURCE_KEYS, frozenset(idmap_by_source))
     workspace_offset: str = getattr(app.env, _ENV_WORKSPACE_OFFSET, app.srcdir)
-    puml_docnames: dict[str, tuple[str, str | None]] = getattr(
-        app.env, _ENV_PUML_DOCNAMES, {}
-    )
+    puml_docnames: dict[str, tuple[str, str | None]] = getattr(app.env, _ENV_PUML_DOCNAMES, {})
 
     # Loop-invariant for the whole build: resolve once instead of per reference.
     output_format = getattr(app.config, "plantuml_output_format", "png")
@@ -650,8 +624,7 @@ def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> N
             target_info = puml_docnames.get(target_source)
             if target_info is None:
                 logger.debug(
-                    "clickable_plantuml: definer '%s' for alias '%s' not"
-                    " found in any document — skipping",
+                    "clickable_plantuml: definer '%s' for alias '%s' not found in any document — skipping",
                     target_source,
                     alias,
                 )
@@ -684,36 +657,24 @@ def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> N
 
 def on_env_purge_doc(app: Sphinx, env: Any, docname: str) -> None:
     """Remove stale entries when a document is re-read (incremental builds)."""
-    puml_docnames: dict[str, tuple[str, str | None]] = getattr(
-        env, _ENV_PUML_DOCNAMES, {}
-    )
+    puml_docnames: dict[str, tuple[str, str | None]] = getattr(env, _ENV_PUML_DOCNAMES, {})
     keys_to_remove = [k for k, (dn, _) in puml_docnames.items() if dn == docname]
     for k in keys_to_remove:
         del puml_docnames[k]
 
-    no_idmap_counts_by_doc: dict[str, int] = getattr(
-        env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {}
-    )
+    no_idmap_counts_by_doc: dict[str, int] = getattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
     no_idmap_counts_by_doc.pop(docname, None)
 
 
 def on_env_merge_info(app: Sphinx, env: Any, docnames: set[str], other: Any) -> None:
     """Merge diagram location data from parallel read sub-processes."""
-    puml_docnames: dict[str, tuple[str, str | None]] = getattr(
-        env, _ENV_PUML_DOCNAMES, {}
-    )
-    other_map: dict[str, tuple[str, str | None]] = getattr(
-        other, _ENV_PUML_DOCNAMES, {}
-    )
+    puml_docnames: dict[str, tuple[str, str | None]] = getattr(env, _ENV_PUML_DOCNAMES, {})
+    other_map: dict[str, tuple[str, str | None]] = getattr(other, _ENV_PUML_DOCNAMES, {})
     puml_docnames.update(other_map)
     setattr(env, _ENV_PUML_DOCNAMES, puml_docnames)
 
-    no_idmap_counts_by_doc: dict[str, int] = getattr(
-        env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {}
-    )
-    other_no_idmap_counts_by_doc: dict[str, int] = getattr(
-        other, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {}
-    )
+    no_idmap_counts_by_doc: dict[str, int] = getattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
+    other_no_idmap_counts_by_doc: dict[str, int] = getattr(other, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
     no_idmap_counts_by_doc.update(other_no_idmap_counts_by_doc)
     setattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, no_idmap_counts_by_doc)
 

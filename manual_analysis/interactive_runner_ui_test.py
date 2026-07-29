@@ -102,9 +102,7 @@ class InteractiveRunnerUiTest(unittest.TestCase):
     def test_split_pane_prompt_multiline_delegates_to_prompt_text(self) -> None:
         ui = _SplitPaneUI()
 
-        with mock.patch.object(
-            ui, "_prompt_text", return_value="line 1\nline 2"
-        ) as prompt_text:
+        with mock.patch.object(ui, "_prompt_text", return_value="line 1\nline 2") as prompt_text:
             value = ui.prompt_multiline("Describe outcome", initial_text="prefill")
 
         self.assertEqual(value, "line 1\nline 2")
@@ -122,9 +120,7 @@ class InteractiveRunnerUiTest(unittest.TestCase):
     def test_split_pane_prompt_justification_delegates_to_prompt_text(self) -> None:
         ui = _SplitPaneUI()
 
-        with mock.patch.object(
-            ui, "_prompt_text", return_value="checked manually"
-        ) as prompt_text:
+        with mock.patch.object(ui, "_prompt_text", return_value="checked manually") as prompt_text:
             value = ui.prompt_justification(
                 "Why this answer?",
                 default_text="previous reason",
@@ -214,9 +210,7 @@ class InteractiveRunnerUiTest(unittest.TestCase):
         fake_modules = {
             "prompt_toolkit.application": mock.Mock(Application=FakeApplication),
             "prompt_toolkit.key_binding": mock.Mock(KeyBindings=FakeKeyBindings),
-            "prompt_toolkit.layout": mock.Mock(
-                HSplit=FakeHSplit, Layout=FakeLayout, VSplit=FakeVSplit
-            ),
+            "prompt_toolkit.layout": mock.Mock(HSplit=FakeHSplit, Layout=FakeLayout, VSplit=FakeVSplit),
             "prompt_toolkit.layout.dimension": mock.Mock(Dimension=FakeDimension),
             "prompt_toolkit.shortcuts": mock.Mock(message_dialog=mock.Mock()),
             "prompt_toolkit.widgets": mock.Mock(Frame=FakeFrame, TextArea=FakeTextArea),
@@ -305,9 +299,7 @@ class InteractiveRunnerUiTest(unittest.TestCase):
         fake_modules = {
             "prompt_toolkit.application": mock.Mock(Application=FakeApplication),
             "prompt_toolkit.key_binding": mock.Mock(KeyBindings=FakeKeyBindings),
-            "prompt_toolkit.layout": mock.Mock(
-                HSplit=FakeHSplit, Layout=FakeLayout, VSplit=FakeVSplit
-            ),
+            "prompt_toolkit.layout": mock.Mock(HSplit=FakeHSplit, Layout=FakeLayout, VSplit=FakeVSplit),
             "prompt_toolkit.layout.dimension": mock.Mock(Dimension=FakeDimension),
             "prompt_toolkit.widgets": mock.Mock(Frame=FakeFrame, TextArea=FakeTextArea),
         }

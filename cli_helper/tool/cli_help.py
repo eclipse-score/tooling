@@ -68,9 +68,7 @@ print(f"{CYAN}BAZEL TARGETS:\n")
 for label, desc in sorted(rows):
     paragraphs = desc.splitlines()
     first, *rest = paragraphs or [""]
-    wrapped_first = textwrap.wrap(
-        first, width=descr_w, break_long_words=False, break_on_hyphens=False
-    ) or [""]
+    wrapped_first = textwrap.wrap(first, width=descr_w, break_long_words=False, break_on_hyphens=False) or [""]
     print(f"{label.ljust(col_w)} {wrapped_first[0]}")
     for line in wrapped_first[1:]:
         print(" " * col_w + " " + line)

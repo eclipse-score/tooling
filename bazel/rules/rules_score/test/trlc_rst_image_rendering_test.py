@@ -34,10 +34,7 @@ def _runfile(*parts: str) -> str:
     ]:
         if os.path.exists(candidate):
             return candidate
-    raise FileNotFoundError(
-        f"Runfile not found: {os.path.join(*parts)}\n"
-        f"  Searched under TEST_SRCDIR={srcdir}"
-    )
+    raise FileNotFoundError(f"Runfile not found: {os.path.join(*parts)}\n  Searched under TEST_SRCDIR={srcdir}")
 
 
 class TestImageRenderingIntegration(unittest.TestCase):

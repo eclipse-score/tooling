@@ -112,9 +112,7 @@ def _expect_optional_str(value: Any, context: str) -> str | None:
     return value
 
 
-def _parse_automated_action_args(
-    raw_args: Any, context: str
-) -> list[AutomatedActionArg]:
+def _parse_automated_action_args(raw_args: Any, context: str) -> list[AutomatedActionArg]:
     if raw_args is None:
         return []
     if not isinstance(raw_args, list):
@@ -151,9 +149,7 @@ def _parse_step(raw_step: Any, index: int) -> Step:
     step = _expect_dict(raw_step, context)
 
     if "action" in step:
-        return ActionStep(
-            description=_expect_str(step.get("description"), f"{context}.description")
-        )
+        return ActionStep(description=_expect_str(step.get("description"), f"{context}.description"))
 
     if "automated_action" in step:
         payload = _extract_step_payload(step, "automated_action")
@@ -201,17 +197,11 @@ def _parse_step(raw_step: Any, index: int) -> Step:
         if "assertion" in payload:
             legacy_keys.append("assertion")
         if legacy_keys:
-            raise ValueError(
-                f"{context} repeat no longer supports: {', '.join(legacy_keys)}"
-            )
+            raise ValueError(f"{context} repeat no longer supports: {', '.join(legacy_keys)}")
         until = _expect_dict(payload.get("until"), f"{context}.until")
         repeat_until = RepeatUntil(
-            description=_expect_str(
-                until.get("description"), f"{context}.until.description"
-            ),
-            continue_answer=_expect_str(
-                until.get("continue"), f"{context}.until.continue"
-            ),
+            description=_expect_str(until.get("description"), f"{context}.until.description"),
+            continue_answer=_expect_str(until.get("continue"), f"{context}.until.continue"),
             break_answer=_expect_str(until.get("break"), f"{context}.until.break"),
         )
 
@@ -256,9 +246,7 @@ def _parse_requirements(raw_requirements: Any) -> list[str]:
     requirements = []
     for idx, req in enumerate(raw_requirements):
         if not isinstance(req, str) or not req.strip():
-            raise ValueError(
-                f"requirements[{idx}] must be a non-empty string, got: {req!r}"
-            )
+            raise ValueError(f"requirements[{idx}] must be a non-empty string, got: {req!r}")
         requirements.append(req.strip())
 
     return requirements

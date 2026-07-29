@@ -116,10 +116,7 @@ class CopilotClientManager:
         if cli_path:
             problems = check_cli_binary(cli_path)
             if problems:
-                raise CopilotSetupError(
-                    "Copilot CLI binary check failed:\n"
-                    + "\n".join(f"  - {p}" for p in problems)
-                )
+                raise CopilotSetupError("Copilot CLI binary check failed:\n" + "\n".join(f"  - {p}" for p in problems))
 
         # --- Hard-fail if no auth source available -------------------
         auth_problems = check_auth_sources()
@@ -173,9 +170,7 @@ class CopilotClientManager:
             "session_idle_timeout_seconds": "session_idle_timeout_seconds",
         }
         client_kwargs: dict[str, Any] = {
-            new_key: opts[old_key]
-            for old_key, new_key in _client_field_map.items()
-            if old_key in opts
+            new_key: opts[old_key] for old_key, new_key in _client_field_map.items() if old_key in opts
         }
         if connection is not None:
             client_kwargs["connection"] = connection
@@ -184,9 +179,7 @@ class CopilotClientManager:
     async def _start_and_verify(self) -> None:
         """Start the CLI subprocess and verify authentication."""
         if self._client is None:
-            raise RuntimeError(
-                "_start_and_verify() called before the client was created"
-            )
+            raise RuntimeError("_start_and_verify() called before the client was created")
 
         try:
             await self._client.start()
@@ -202,9 +195,7 @@ class CopilotClientManager:
                 raise CopilotSetupError(
                     f"Timeout starting Copilot CLI server: {exc}\n"
                     "  The CLI started but did not become ready in time.\n"
-                    "  This usually means the CLI cannot authenticate.\n\n"
-                    + describe_auth_sources()
-                    + "\n\n"
+                    "  This usually means the CLI cannot authenticate.\n\n" + describe_auth_sources() + "\n\n"
                     "  Possible fixes:\n"
                     "  1. Run 'copilot' in a terminal and sign in interactively.\n"
                     "  2. Export COPILOT_GITHUB_TOKEN (or GH_TOKEN / GITHUB_TOKEN)\n"
@@ -217,8 +208,7 @@ class CopilotClientManager:
             raise
         except Exception as exc:
             raise CopilotSetupError(
-                f"Failed to start CopilotClient: {type(exc).__name__}: {exc}\n\n"
-                + describe_auth_sources()
+                f"Failed to start CopilotClient: {type(exc).__name__}: {exc}\n\n" + describe_auth_sources()
             ) from exc
 
         self._started = True
@@ -242,9 +232,7 @@ class CopilotClientManager:
         try:
             auth_status = await self._client.get_auth_status()
             # The SDK uses camelCase on some versions, snake_case on others.
-            is_auth = getattr(auth_status, "isAuthenticated", None) or getattr(
-                auth_status, "is_authenticated", None
-            )
+            is_auth = getattr(auth_status, "isAuthenticated", None) or getattr(auth_status, "is_authenticated", None)
             if is_auth:
                 user = getattr(auth_status, "login", "unknown")
                 logger.info("Copilot authenticated as: %s", user)

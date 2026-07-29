@@ -156,9 +156,7 @@ def test_node_source_key_returns_none_for_unresolvable_nodes(
 def test_node_source_key_resolves_symlinked_srcdir(tmp_path: Path) -> None:
     real_root = tmp_path / "real_root"
     (real_root / "pkg").mkdir(parents=True)
-    (real_root / "pkg" / "proxy.puml").write_text(
-        "@startuml\n@enduml\n", encoding="utf-8"
-    )
+    (real_root / "pkg" / "proxy.puml").write_text("@startuml\n@enduml\n", encoding="utf-8")
 
     srcdir_link = tmp_path / "srcdir_link"
     os.symlink(real_root, srcdir_link)
@@ -295,8 +293,7 @@ def test_doctree_read_non_idmap_backed_node_is_debug_only(
 
     assert not any(record.levelno == logging.WARNING for record in caplog.records)
     assert any(
-        "has no resolvable source path" in record.getMessage()
-        and record.levelno == logging.DEBUG
+        "has no resolvable source path" in record.getMessage() and record.levelno == logging.DEBUG
         for record in caplog.records
     )
     assert getattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC) == {"index": 1}
@@ -373,9 +370,7 @@ def test_doctree_resolved_injects_link_directives(
     setattr(env, _ENV_DEF_INDEX, {"pkg.Proxy": ["pkg/proxy.puml"]})
     setattr(env, _ENV_SOURCE_KEYS, frozenset({"pkg/overview.puml", "pkg/proxy.puml"}))
     setattr(env, _ENV_WORKSPACE_OFFSET, "/workspace")
-    setattr(
-        env, _ENV_PUML_DOCNAMES, {"pkg/proxy.puml": ("design/proxy", "proxy-section")}
-    )
+    setattr(env, _ENV_PUML_DOCNAMES, {"pkg/proxy.puml": ("design/proxy", "proxy-section")})
 
     class _FakeBuilder:
         format = "html"
@@ -487,9 +482,7 @@ class _FakeBuilder:
         ("svg", "design/proxy.html"),
     ],
 )
-def test_build_target_url_respects_output_mode(
-    output_format: str, expected: str
-) -> None:
+def test_build_target_url_respects_output_mode(output_format: str, expected: str) -> None:
     url = _build_target_url(
         _FakeBuilder(),
         output_format,

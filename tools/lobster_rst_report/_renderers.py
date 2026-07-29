@@ -259,10 +259,7 @@ class ItemCardBuilder:
             key = ref.key()
             if key in self._report.items:
                 ref_item = self._report.items[key]
-                parts.append(
-                    f":ref:`{RstUtils.escape(ref_item.name)}"
-                    f" <{ItemNaming.item_label(ref_item)}>`"
-                )
+                parts.append(f":ref:`{RstUtils.escape(ref_item.name)} <{ItemNaming.item_label(ref_item)}>`")
             else:
                 parts.append(f"``{RstUtils.escape(key)}`` (unresolved)")
         return parts
@@ -303,20 +300,11 @@ class LevelSectionBuilder:
             A list of RST lines.
         """
         issue_items = sorted(
-            (
-                it
-                for it in self._items
-                if it.tracing_status
-                not in (Tracing_Status.OK, Tracing_Status.JUSTIFIED)
-            ),
+            (it for it in self._items if it.tracing_status not in (Tracing_Status.OK, Tracing_Status.JUSTIFIED)),
             key=lambda x: x.location.sorting_key(),
         )
         ok_items = sorted(
-            (
-                it
-                for it in self._items
-                if it.tracing_status in (Tracing_Status.OK, Tracing_Status.JUSTIFIED)
-            ),
+            (it for it in self._items if it.tracing_status in (Tracing_Status.OK, Tracing_Status.JUSTIFIED)),
             key=lambda x: x.location.sorting_key(),
         )
 
@@ -418,17 +406,12 @@ class IssuesListBuilder:
         # lobster-trace: UseCases.List_Findings
         lines = []
         found_any = False
-        for item in sorted(
-            self._report.items.values(), key=lambda x: x.location.sorting_key()
-        ):
+        for item in sorted(self._report.items.values(), key=lambda x: x.location.sorting_key()):
             if item.tracing_status in (Tracing_Status.OK, Tracing_Status.JUSTIFIED):
                 continue
             for message in item.messages:
                 tag = TracingClassifier.issue_tag(message)
-                item_ref = (
-                    f":ref:`{RstUtils.escape(item.name)}"
-                    f" <{ItemNaming.item_label(item)}>`"
-                )
+                item_ref = f":ref:`{RstUtils.escape(item.name)} <{ItemNaming.item_label(item)}>`"
                 lines.append(f"* [{item.tracing_status.name} — {tag}] {item_ref}")
                 found_any = True
         if not found_any:

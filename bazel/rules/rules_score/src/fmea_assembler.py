@@ -133,9 +133,7 @@ def _grid_item(body, options: dict | None = None) -> _Directive:
 
 def _card(title: str, body) -> _Directive:
     """A ``grid-item-card``; *title* may be empty for a header-less card."""
-    return _Directive(
-        "grid-item-card", title, body=body if isinstance(body, list) else [body]
-    )
+    return _Directive("grid-item-card", title, body=body if isinstance(body, list) else [body])
 
 
 def _badge(role: str, text: str) -> str:
@@ -154,15 +152,11 @@ def _attr_grid(obj: object) -> _Directive | None:
     items = []
     guideword = fields.get("guideword")
     if guideword:
-        items.append(
-            _grid_item(_badge(_GUIDEWORD_BADGE, guideword), {"class": "sd-text-center"})
-        )
+        items.append(_grid_item(_badge(_GUIDEWORD_BADGE, guideword), {"class": "sd-text-center"}))
     safety = fields.get("safety")
     if safety:
         role = _ASIL_BADGE.get(safety, _DEFAULT_BADGE)
-        items.append(
-            _grid_item(_badge(role, f"ASIL {safety}"), {"class": "sd-text-center"})
-        )
+        items.append(_grid_item(_badge(role, f"ASIL {safety}"), {"class": "sd-text-center"}))
     for field_name, label in (
         ("interface", "Interface"),
         ("failureeffect", "Failure Effect"),
@@ -190,11 +184,7 @@ def _cm_card(renderer: TRLCRST, fqn: str, obj: object) -> _Directive:
     card body above.
     """
     safety = obj.to_python_dict().get("safety", "")
-    badge_str = (
-        " " + _badge(_ASIL_BADGE.get(safety, _DEFAULT_BADGE), f"ASIL {safety}")
-        if safety
-        else ""
-    )
+    badge_str = " " + _badge(_ASIL_BADGE.get(safety, _DEFAULT_BADGE), f"ASIL {safety}") if safety else ""
     header_text = f"**{obj.name}**{badge_str}"
     description = renderer.field_value_for(fqn, "description")
     body: list = [header_text]
@@ -208,9 +198,7 @@ def _cm_grid(renderer: TRLCRST, obj_map: dict, cms: list[str]) -> _Directive | N
     return _grid(cards, columns=1) if cards else None
 
 
-def _fm_dropdown(
-    renderer: TRLCRST, fqn: str, obj: object, chain: dict | None
-) -> _Directive:
+def _fm_dropdown(renderer: TRLCRST, fqn: str, obj: object, chain: dict | None) -> _Directive:
     """One collapsible failure-mode dropdown.
 
     *chain* is ``None`` for an orphan failure mode (no fault tree); the Root
@@ -220,9 +208,7 @@ def _fm_dropdown(
     if chain is not None:
         body.append(_Directive("rubric", _ROOT_CAUSE_TITLE))
         body.append(_Directive("uml", chain["puml"]))
-        cms = _cm_grid(
-            renderer, renderer.objects_by_fqn(), chain.get("control_measures", [])
-        )
+        cms = _cm_grid(renderer, renderer.objects_by_fqn(), chain.get("control_measures", []))
         if cms is not None:
             body.append(_Directive("rubric", _CONTROL_MEASURES_TITLE))
             body.append(cms)
@@ -240,25 +226,18 @@ def _validate_chain(chain) -> str:
         fqn = chain["fm_fqn"]
         chain["puml"]
     except (KeyError, TypeError) as exc:
-        raise ValueError(
-            f"Malformed chain entry {chain!r} in fta_chains.json: "
-            f"missing required key {exc}"
-        ) from exc
+        raise ValueError(f"Malformed chain entry {chain!r} in fta_chains.json: missing required key {exc}") from exc
     return fqn
 
 
 def _render_overview(renderer: TRLCRST, fm_fqns: list[str]) -> str:
     if not fm_fqns:
         return ""
-    table = renderer.render_table_to_string(
-        _FM_TABLE_COLUMNS, fqns=fm_fqns, name_header="Failure Mode", link_fn=_ref
-    )
+    table = renderer.render_table_to_string(_FM_TABLE_COLUMNS, fqns=fm_fqns, name_header="Failure Mode", link_fn=_ref)
     return _heading(_OVERVIEW_TITLE, "-") + "\n" + table
 
 
-def _render_failure_modes(
-    renderer: TRLCRST, chains: list, obj_map: dict, fm_fqns: list[str]
-) -> str:
+def _render_failure_modes(renderer: TRLCRST, chains: list, obj_map: dict, fm_fqns: list[str]) -> str:
     dropdowns = []
     linked = set()
     for chain in chains:
@@ -268,8 +247,7 @@ def _render_failure_modes(
             dropdowns.append(_fm_dropdown(renderer, fqn, obj_map[fqn], chain))
         else:
             logger.warning(
-                "fta_chains.json references unknown FailureMode %r; "
-                "no matching TRLC record — chain skipped",
+                "fta_chains.json references unknown FailureMode %r; no matching TRLC record — chain skipped",
                 fqn,
             )
     # Orphan failure modes (no fault tree) still render, without FTA / CMs.
@@ -283,18 +261,14 @@ def _render_failure_modes(
 def _render_control_measures(renderer: TRLCRST, cm_fqns: list[str]) -> str:
     if not cm_fqns:
         return ""
-    table = renderer.render_table_to_string(
-        _CM_TABLE_COLUMNS, fqns=cm_fqns, name_header="Control Measure"
-    )
+    table = renderer.render_table_to_string(_CM_TABLE_COLUMNS, fqns=cm_fqns, name_header="Control Measure")
     return _heading(_CONTROL_MEASURES_TITLE, "-") + "\n" + table
 
 
 def _build_body(renderer: TRLCRST, chains: list, title: str) -> str:
     obj_map = renderer.objects_by_fqn()
     fm_fqns = [fqn for fqn, obj in obj_map.items() if obj.n_typ.name == "FailureMode"]
-    cm_fqns = [
-        fqn for fqn, obj in obj_map.items() if obj.n_typ.name == "ControlMeasure"
-    ]
+    cm_fqns = [fqn for fqn, obj in obj_map.items() if obj.n_typ.name == "ControlMeasure"]
 
     sections = [
         _heading(title, "="),
@@ -315,9 +289,7 @@ def main() -> None:
         required=True,
         help="fta_chains.json produced by puml_cli FTA mode.",
     )
-    parser.add_argument(
-        "--failuremodes", nargs="*", default=[], help="FailureMode .trlc files."
-    )
+    parser.add_argument("--failuremodes", nargs="*", default=[], help="FailureMode .trlc files.")
     parser.add_argument(
         "--controlmeasures",
         nargs="*",
@@ -339,9 +311,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s"
-    )
+    logging.basicConfig(level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s")
 
     try:
         with open(args.chains, encoding="utf-8") as fh:
@@ -367,9 +337,7 @@ def main() -> None:
     with open(args.template, encoding="utf-8", newline="") as fh:
         template = fh.read()
     if "{body}" not in template:
-        logger.error(
-            "Template %r does not contain a '{body}' placeholder", args.template
-        )
+        logger.error("Template %r does not contain a '{body}' placeholder", args.template)
         sys.exit(1)
     rendered = template.replace("{body}", body)
 

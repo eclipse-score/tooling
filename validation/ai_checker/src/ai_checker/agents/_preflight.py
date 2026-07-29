@@ -133,28 +133,20 @@ def describe_auth_sources() -> str:
     if home:
         lines.append(f"  [OK] $HOME = {home}  (CLI can search system keychain)")
     else:
-        lines.append(
-            "  [  ] $HOME — not set  (CLI cannot find stored OAuth credentials)"
-        )
+        lines.append("  [  ] $HOME — not set  (CLI cannot find stored OAuth credentials)")
 
     if not found_any and not home:
         lines.append("")
         lines.append("  ** No authentication source available! **")
-        lines.append(
-            "  Fix: set COPILOT_GITHUB_TOKEN, or ensure HOME is passed to the action."
-        )
-        lines.append(
-            "  See: https://github.com/github/copilot-sdk/blob/main/docs/auth/index.md"
-        )
+        lines.append("  Fix: set COPILOT_GITHUB_TOKEN, or ensure HOME is passed to the action.")
+        lines.append("  See: https://github.com/github/copilot-sdk/blob/main/docs/auth/index.md")
 
     lines.append("")
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
     if proxy:
         lines.append(f"  [OK] HTTPS_PROXY = {proxy}")
     else:
-        lines.append(
-            "  [  ] HTTPS_PROXY — not set  (may cause 'fetch failed' behind a proxy)"
-        )
+        lines.append("  [  ] HTTPS_PROXY — not set  (may cause 'fetch failed' behind a proxy)")
 
     return "\n".join(lines)
 

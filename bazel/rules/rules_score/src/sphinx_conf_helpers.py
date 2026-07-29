@@ -116,8 +116,7 @@ def resolve_fta_metamodel_dir() -> str:
     raw = os.environ.get("FTA_METAMODEL_DIR", "")
     if not raw:
         logger.warning(
-            "FTA_METAMODEL_DIR is not set; FTA diagrams using "
-            "!include fta_metamodel.puml will fail to render."
+            "FTA_METAMODEL_DIR is not set; FTA diagrams using !include fta_metamodel.puml will fail to render."
         )
         return ""
     resolved = os.path.abspath(raw)
@@ -125,9 +124,7 @@ def resolve_fta_metamodel_dir() -> str:
     return resolved
 
 
-def resolve_plantuml_command(
-    required: bool = True, graphviz_dot_path: Optional[str] = None
-) -> Optional[str]:
+def resolve_plantuml_command(required: bool = True, graphviz_dot_path: Optional[str] = None) -> Optional[str]:
     """Build the full `plantuml` conf.py setting.
 
     Combines PLANTUML_BIN with the FTA metamodel include path and the
@@ -166,15 +163,9 @@ def resolve_plantuml_command(
     )
 
     fta_dir = resolve_fta_metamodel_dir()
-    include_flag = (
-        " --jvm_flag=-Dplantuml.include.path=%s" % fta_dir if fta_dir else ""
-    )
+    include_flag = " --jvm_flag=-Dplantuml.include.path=%s" % fta_dir if fta_dir else ""
 
-    dot_path = (
-        graphviz_dot_path
-        if graphviz_dot_path is not None
-        else resolve_graphviz_dot(required=required)
-    )
+    dot_path = graphviz_dot_path if graphviz_dot_path is not None else resolve_graphviz_dot(required=required)
     layout_flag = " -graphvizdot %s" % dot_path if dot_path else ""
 
     return "%s%s%s" % (plantuml_path, include_flag, layout_flag)
@@ -225,9 +216,7 @@ def load_metamodel_needs_schema() -> Dict[str, Any]:
             "needs_id_regex": fallback_id_regex,
         }
     except ImportError:
-        logger.warning(
-            "score_metamodel not available; using minimal needs_types fallback"
-        )
+        logger.warning("score_metamodel not available; using minimal needs_types fallback")
         return {
             "needs_types": [],
             "needs_extra_options": [],

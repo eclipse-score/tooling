@@ -93,34 +93,25 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--output",
         default=os.environ.get("MANUAL_ANALYSIS_OUTPUT"),
-        help="Absolute output path (bypasses workspace resolution). "
-        "Can also be provided via MANUAL_ANALYSIS_OUTPUT.",
+        help="Absolute output path (bypasses workspace resolution). Can also be provided via MANUAL_ANALYSIS_OUTPUT.",
     )
     args = parser.parse_args(argv)
 
     if not args.files_manifest:
-        parser.error(
-            "--files-manifest is required (or set MANUAL_ANALYSIS_FILES_MANIFEST)"
-        )
+        parser.error("--files-manifest is required (or set MANUAL_ANALYSIS_FILES_MANIFEST)")
     if not args.rules_manifest:
-        parser.error(
-            "--rules-manifest is required (or set MANUAL_ANALYSIS_RULES_MANIFEST)"
-        )
+        parser.error("--rules-manifest is required (or set MANUAL_ANALYSIS_RULES_MANIFEST)")
     if not args.lock_file and not args.output:
         parser.error("--lock-file or --output is required")
 
     files_manifest_path = resolve_path(args.files_manifest)
     if not files_manifest_path.exists():
-        print(
-            f"ERROR: files manifest not found: {files_manifest_path}", file=sys.stderr
-        )
+        print(f"ERROR: files manifest not found: {files_manifest_path}", file=sys.stderr)
         sys.exit(1)
 
     rules_manifest_path = resolve_path(args.rules_manifest)
     if not rules_manifest_path.exists():
-        print(
-            f"ERROR: rules manifest not found: {rules_manifest_path}", file=sys.stderr
-        )
+        print(f"ERROR: rules manifest not found: {rules_manifest_path}", file=sys.stderr)
         sys.exit(1)
 
     if args.output:
@@ -134,9 +125,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # Process rules: compute SHA256 of canonical forms
     rules = _read_manifest_tsv(rules_manifest_path)
-    rows += [
-        (display, _sha256_string(canonical_form)) for display, canonical_form in rules
-    ]
+    rows += [(display, _sha256_string(canonical_form)) for display, canonical_form in rules]
 
     _write_lock(rows, lock_path)
 

@@ -73,9 +73,7 @@ class UpdateLockTest(unittest.TestCase):
 
             self.assertEqual(
                 output.read_text(encoding="utf-8"),
-                f"{expected_file_a} a/source\n"
-                f"{expected_file_b} b/source\n"
-                f"{expected_rule} c/rule\n",
+                f"{expected_file_a} a/source\n{expected_file_b} b/source\n{expected_rule} c/rule\n",
             )
 
     def test_main_fails_when_files_manifest_is_missing(self) -> None:
