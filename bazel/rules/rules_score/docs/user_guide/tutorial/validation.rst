@@ -25,10 +25,10 @@ Instead, test intent is captured as a **Given-When-Then** description right
 next to the code as record properties in the test name/body itself. The specification will
 then be rendered in the traceability report, together with the test results and coverage information.
 
-test/my_unit_test.cpp
+src/my_unit_test.cpp
 ----------------------
 
-.. literalinclude:: ../../examples/minimal/test/my_unit_test.cpp
+.. literalinclude:: ../../examples/minimal/src/my_unit_test.cpp
    :language: cpp
    :lines: 14-
 

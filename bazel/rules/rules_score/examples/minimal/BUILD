@@ -33,7 +33,7 @@ filegroup(
         "requirements/feature_requirements.trlc",
         "src/my_unit.cpp",
         "src/my_unit.h",
-        "test/my_unit_test.cpp",
+        "src/my_unit_test.cpp",
     ],
     visibility = ["//bazel/rules/rules_score:__pkg__"],
 )
@@ -64,7 +64,7 @@ cc_library(
 
 cc_test(
     name = "my_unit_test",
-    srcs = ["test/my_unit_test.cpp"],
+    srcs = ["src/my_unit_test.cpp"],
     deps = [
         ":my_unit_lib",
         "@googletest//:gtest_main",
