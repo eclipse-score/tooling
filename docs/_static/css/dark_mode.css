@@ -1,0 +1,354 @@
+/*
+  *******************************************************************************
+  Copyright (c) 2026 Contributors to the Eclipse Foundation
+
+  See the NOTICE file(s) distributed with this work for additional
+  information regarding copyright ownership.
+
+  This program and the accompanying materials are made available under the
+  terms of the Apache License Version 2.0 which is available at
+  https://www.apache.org/licenses/LICENSE-2.0
+
+  SPDX-License-Identifier: Apache-2.0
+  *******************************************************************************
+*/
+
+/* Dark mode theme for Sphinx RTD Theme (class-driven so JS toggle can force mode) */
+
+/* ========================================================================
+   Base body & page wrappers
+   ======================================================================== */
+body.dark-mode-enabled {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+body.dark-mode-enabled .wy-nav-content-wrap {
+    background-color: #1a1a1a;
+}
+
+body.dark-mode-enabled .wy-nav-content {
+    background-color: #1a1a1a;
+}
+
+/* ========================================================================
+   Sidebar navigation (the main broken area)
+   ======================================================================== */
+body.dark-mode-enabled .wy-nav-side {
+    background-color: #1e1e1e;
+}
+
+body.dark-mode-enabled .wy-side-scroll {
+    background-color: #1e1e1e;
+}
+
+body.dark-mode-enabled .wy-side-nav-search {
+    background-color: #263238;
+}
+
+body.dark-mode-enabled .wy-side-nav-search input[type="text"] {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #404040;
+}
+
+/* All sidebar links */
+body.dark-mode-enabled .wy-menu-vertical a {
+    color: #cfd8dc;
+}
+
+body.dark-mode-enabled .wy-menu-vertical a:hover {
+    background-color: #2d2d2d;
+    color: #ffffff;
+}
+
+/* Section caption headings (OVERVIEW, USAGE, etc.) */
+body.dark-mode-enabled .wy-menu-vertical p.caption {
+    color: #90a4ae;
+}
+
+/* Current/expanded nav items — handled by the comprehensive block below */
+
+/* Override ALL white/grey backgrounds RTD sets on expanded/current nav items.
+   RTD selectors we must beat:
+   .wy-menu-vertical li.current                        { background: #e3e3e3 }
+   .wy-menu-vertical li.current > a, li.on a           { background: #fcfcfc }
+   .wy-menu-vertical li.toctree-l2.current > a         { background: #c9c9c9 }
+   .wy-menu-vertical li.toctree-l3.current > a         { background: #bdbdbd }
+   Using !important to ensure override regardless of load order. */
+body.dark-mode-enabled .wy-menu-vertical li.current {
+    background-color: #252525 !important;
+}
+
+body.dark-mode-enabled .wy-menu-vertical li.current > a,
+body.dark-mode-enabled .wy-menu-vertical li.current > a:hover,
+body.dark-mode-enabled .wy-menu-vertical li.on a,
+body.dark-mode-enabled .wy-menu-vertical li.on a:hover {
+    background: #2d2d2d !important;
+    color: #ffffff !important;
+}
+
+body.dark-mode-enabled .wy-menu-vertical li.current a:hover {
+    background: #333333 !important;
+}
+
+body.dark-mode-enabled .wy-menu-vertical li.toctree-l2.current > a,
+body.dark-mode-enabled .wy-menu-vertical li.toctree-l2.current li.toctree-l3 > a,
+body.dark-mode-enabled .wy-menu-vertical li.toctree-l3.current > a,
+body.dark-mode-enabled .wy-menu-vertical li.toctree-l3.current li.toctree-l4 > a {
+    background: #2a2a2a !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode-enabled .wy-menu-vertical li.current li > a {
+    color: #b0bec5 !important;
+    background-color: #252525 !important;
+}
+
+body.dark-mode-enabled .wy-menu-vertical li.current li > a:hover {
+    background-color: #333333 !important;
+    color: #ffffff !important;
+}
+
+/* Active page link highlight */
+body.dark-mode-enabled .wy-menu-vertical li.current a.current {
+    color: #5dade2 !important;
+    background-color: #1a2e38 !important;
+    border-right: 3px solid #5dade2;
+}
+
+/* ========================================================================
+   Top mobile nav bar
+   ======================================================================== */
+body.dark-mode-enabled .wy-nav-top {
+    background-color: #263238;
+}
+
+/* ========================================================================
+   Content area
+   ======================================================================== */
+body.dark-mode-enabled .rst-content {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+/* Headings */
+body.dark-mode-enabled .rst-content h1,
+body.dark-mode-enabled .rst-content h2,
+body.dark-mode-enabled .rst-content h3,
+body.dark-mode-enabled .rst-content h4,
+body.dark-mode-enabled .rst-content h5,
+body.dark-mode-enabled .rst-content h6 {
+    color: #e0e0e0;
+    border-color: #404040;
+}
+
+/* Links */
+body.dark-mode-enabled a {
+    color: #5dade2;
+}
+
+body.dark-mode-enabled a:visited {
+    color: #9b7db8;
+}
+
+body.dark-mode-enabled a:hover {
+    color: #85c1e9;
+}
+
+/* Code blocks */
+body.dark-mode-enabled .rst-content .highlight {
+    background-color: #2d2d2d;
+}
+
+body.dark-mode-enabled .rst-content pre.literal-block,
+body.dark-mode-enabled .rst-content .linenodiv pre {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+}
+
+body.dark-mode-enabled .highlight pre {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+}
+
+/* Inline code */
+body.dark-mode-enabled .rst-content code,
+body.dark-mode-enabled .rst-content tt,
+body.dark-mode-enabled code {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #404040;
+}
+
+body.dark-mode-enabled .docutils.literal {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #404040;
+}
+
+/* ========================================================================
+   Tables
+   ======================================================================== */
+body.dark-mode-enabled .rst-content table.docutils,
+body.dark-mode-enabled .rst-content table.field-list {
+    background-color: #252525;
+    border-color: #404040;
+}
+
+body.dark-mode-enabled .rst-content table.docutils thead,
+body.dark-mode-enabled .rst-content table.field-list thead {
+    background-color: #1e1e1e;
+}
+
+body.dark-mode-enabled .rst-content table.docutils thead th,
+body.dark-mode-enabled .rst-content table.field-list thead th {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border-color: #404040;
+}
+
+/* Override RTD's .rst-content table.docutils:not(.field-list) tr:nth-child(2n-1) td { background-color: #f3f6f6 }
+   and .rst-content table.docutils td { background-color: transparent } */
+body.dark-mode-enabled .rst-content table.docutils:not(.field-list) tr:nth-child(2n-1) td {
+    background-color: #2a2a2a !important;
+}
+
+body.dark-mode-enabled .rst-content table.docutils td,
+body.dark-mode-enabled .rst-content table.field-list td {
+    background-color: #252525 !important;
+    border-color: #404040;
+    color: #e0e0e0;
+}
+
+body.dark-mode-enabled .rst-content table.docutils th,
+body.dark-mode-enabled .rst-content table.field-list th {
+    border-color: #404040;
+    color: #e0e0e0;
+}
+
+/* Links inside table cells */
+body.dark-mode-enabled .rst-content table.docutils a,
+body.dark-mode-enabled .rst-content table.field-list a {
+    color: #5dade2;
+}
+
+/* ========================================================================
+   Admonitions
+   ======================================================================== */
+body.dark-mode-enabled .rst-content .admonition {
+    background-color: #2d2d2d;
+    border-color: #404040;
+}
+
+body.dark-mode-enabled .rst-content .note {
+    background-color: #1e3a3a;
+    border-color: #2e5c5c;
+}
+
+body.dark-mode-enabled .rst-content .warning {
+    background-color: #3a2e1e;
+    border-color: #5c4a2e;
+}
+
+body.dark-mode-enabled .rst-content .important {
+    background-color: #3a1e1e;
+    border-color: #5c2e2e;
+}
+
+body.dark-mode-enabled .rst-content .hint,
+body.dark-mode-enabled .rst-content .tip {
+    background-color: #1e3a2e;
+    border-color: #2e5c47;
+}
+
+/* ========================================================================
+   Field lists & definition lists
+   ======================================================================== */
+body.dark-mode-enabled .rst-content dl dt {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-top-color: #404040;
+}
+
+body.dark-mode-enabled .rst-content .footnote {
+    color: #e0e0e0;
+}
+
+/* ========================================================================
+   Breadcrumb bar
+   ======================================================================== */
+body.dark-mode-enabled .wy-breadcrumbs li a {
+    color: #5dade2;
+}
+
+body.dark-mode-enabled .wy-breadcrumbs {
+    color: #90a4ae;
+}
+
+/* ========================================================================
+   Footer & pagination
+   ======================================================================== */
+body.dark-mode-enabled footer {
+    color: #90a4ae;
+}
+
+body.dark-mode-enabled .btn {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #404040;
+}
+
+body.dark-mode-enabled .btn:hover {
+    background-color: #383838;
+}
+
+/* Previous / Next navigation */
+body.dark-mode-enabled .rst-footer-buttons .btn {
+    background-color: #2d2d2d;
+    border-color: #404040;
+}
+
+/* ========================================================================
+   Search highlight
+   ======================================================================== */
+body.dark-mode-enabled .rst-content .highlighted {
+    background-color: #404040;
+}
+
+/* ========================================================================
+   Pygments / syntax highlighting
+   ======================================================================== */
+body.dark-mode-enabled .c,
+body.dark-mode-enabled .c1,
+body.dark-mode-enabled .cm {
+    color: #7d7d7d;
+}
+
+/* ========================================================================
+   Scrollbar (for WebKit browsers)
+   ======================================================================== */
+body.dark-mode-enabled ::-webkit-scrollbar {
+    background-color: #1a1a1a;
+}
+
+body.dark-mode-enabled ::-webkit-scrollbar-thumb {
+    background-color: #404040;
+    border-radius: 4px;
+}
+
+
+
+/* Dark mode toggle styling */
+.dark-mode-toggle {
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: inherit;
+    padding: 0;
+}
+
+.dark-mode-toggle:hover {
+    opacity: 0.7;
+}
