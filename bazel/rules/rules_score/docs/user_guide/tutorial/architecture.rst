@@ -86,4 +86,6 @@ in Bazel. Therefore following bazel rules are available:
 
 Once the architecture is in place, the build parses the PlantUML diagram and validates it against the Bazel model. It verifies element names, structural hierarchy, and consistency between the declared diagram and the implemented architecture.
 
+How is this verification done? i.e. what build / test target?
+
 → Full guide: :doc:`../architectural_design`

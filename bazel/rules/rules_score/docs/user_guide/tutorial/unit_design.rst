@@ -28,6 +28,7 @@ class_design.puml
 src/my_unit.h
 --------------
 
+Is this required? "can" is very vague, it should say exactly when it's required / what the benefit is.
 The public interface of the unit can be tied to its source symbols via a ``// trace:`` tag.
 
 .. literalinclude:: ../../examples/minimal/src/my_unit.h
@@ -76,8 +77,10 @@ from the ``unit``:
 
 The ``unit_design.static`` attribute accepts PlantUML files (class, state,
 object diagrams); use ``dynamic`` for sequence and activity diagrams.
+scope here is referring to unit(), not unit_design, right?
 ``scope`` declares which targets the unit "owns" — targets outside the scope
 that appear in the transitive implementation closure fail the scope check at
 build time.
+What's the transitive implementation closure?
 
 → Full guide: :doc:`../unit_design`

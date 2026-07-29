@@ -76,6 +76,13 @@ unit_design(
     static = ["docs/class_design.puml"],
 )
 
+# bazel build //bazel/rules/rules_score/examples/minimal:MyUnit currently fails to complile:
+# Failed to parse /home/q624760/.cache/bazel/_bazel_q624760/7f8ab4cad6514b4c7cf0f5238512a834/sandbox/linux-sandbox/729/execroot/_main/bazel/rules/rules_score/examples/minimal/docs/class_design.puml with any available parser
+#   Parsers tried: Component, Activity, Class, Sequence
+#   Parser with longest match: Class
+#   Failed at line 19: - _store : dict[str, str]
+#   Error: Pest error: Parsing error at (19, 21), expected [NUMBER], got []
+# Target //bazel/rules/rules_score/examples/minimal:MyUnit failed to build
 unit(
     name = "MyUnit",
     scope = ["//:my_unit_lib"],
@@ -99,5 +106,6 @@ dependable_element(
     dependability_analysis = [],
     integrity_level = "B",
     requirements = [":feature_requirements"],
+    # It would be good to have an example of a component test which tests the interaction of 2 components / units
     tests = [],
 )

@@ -45,6 +45,7 @@ They are picked up the same way as ``lobster-tracing`` — as plain
 traceability report. Test cases without them are still traced, but show up
 without a Given-When-Then specification.
 
+How do we generate the lobster report to see the given when then output?
 BUILD
 ------
 
