@@ -38,8 +38,12 @@ copyright_checker(
         "plantuml",
         "validation",
         "third_party/lint",
+        "skills_sync",
 
         # Add other directories/files you want to check
+        # Note: .github/skills is intentionally excluded; those SKILL.md /
+        # README.md files are distributed verbatim to downstream repos via
+        # //:sync_skills and are not subject to this repo's copyright checker.
     ],
     config = "//cr_checker/resources:config",
     exclusion = "//cr_checker/resources:exclusion",
