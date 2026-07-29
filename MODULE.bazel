@@ -39,14 +39,7 @@ bazel_dep(name = "bazel_skylib", version = "1.7.1")
 bazel_dep(name = "flatbuffers", version = "25.9.23")
 bazel_dep(name = "download_utils", version = "1.2.2")
 bazel_dep(name = "trlc", version = "3.0.0")
-bazel_dep(name = "lobster", version = "1.0.3")
-git_override(
-    module_name = "lobster",
-    # Bumped for req_coverage's use of lobster.common.{io,items,errors,location}.
-    commit = "247927a438647f68c70a61f9fdde155f5aee145d",
-    remote = "https://github.com/bmw-software-engineering/lobster.git",
-)
-
+bazel_dep(name = "lobster", version = "1.0.4")
 bazel_dep(name = "rules_distroless", version = "0.8.0")
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
 

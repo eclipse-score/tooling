@@ -44,6 +44,10 @@ load(
     "sphinx_module_test_suite",
 )
 load(
+    ":lobster_config_test.bzl",
+    "lobster_config_test_suite",
+)
+load(
     ":requirements_image_test.bzl",
     "image_srcs_sphinx_sources_test",
     "requirements_image_test_suite",
@@ -691,7 +695,11 @@ component(
     tests = [],  # Empty for testing
 )
 
-# Test Dependable Element
+# Test Dependable Element.
+# maturity = "development": this fixture intentionally omits a
+# test_case_coverage.lock.yaml, so under the release traceability gate its
+# empty "Test Case Coverage" level would be reported as a missing element.
+# Development maturity relaxes that gate.
 dependable_element(
     name = "test_dependable_element",
     testonly = True,
@@ -700,6 +708,7 @@ dependable_element(
     components = [":test_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
+    maturity = "development",
     requirements = [":feat_req"],
     tests = [],  # Empty for testing
 )
@@ -793,7 +802,10 @@ component(
     tests = [],
 )
 
-# Dependable element with nested components to test recursive collection
+# Dependable element with nested components to test recursive collection.
+# maturity = "development": like ``test_dependable_element`` it has no
+# test_case_coverage.lock.yaml, so the release gate would flag a missing
+# Test Case Coverage element.
 dependable_element(
     name = "test_dependable_element_nested",
     testonly = True,
@@ -802,6 +814,7 @@ dependable_element(
     components = [":test_parent_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
+    maturity = "development",
     requirements = [":feat_req"],
     tests = [],
 )
@@ -1279,6 +1292,11 @@ aous_rst_sphinx_test(
 requirements_rst_test_suite(name = "requirements_rst_tests")
 
 # ============================================================================
+# lobster_config.bzl unit tests (format_lobster_sources / format_lobster_block)
+# ============================================================================
+lobster_config_test_suite(name = "lobster_config")
+
+# ============================================================================
 # Image srcs Tests (defined in sub-package to avoid workspace-root edge case)
 # ============================================================================
 # feat_req_with_image and image_srcs_sphinx_sources_test live in
@@ -1353,6 +1371,7 @@ py_test(
 test_suite(
     name = "all_tests",
     tests = [
+        ":lobster_config_tests",
         ":requirements_rst_tests",
         ":seooc_tests",
         ":sphinx_module_tests",

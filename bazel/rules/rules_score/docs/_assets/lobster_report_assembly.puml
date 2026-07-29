@@ -1,0 +1,75 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml lobster_report_assembly
+
+' How the dependable_element _index rule assembles the lobster traceability
+' report and splices it into the Sphinx documentation tree (stages A-G).
+
+skinparam linetype ortho
+skinparam ArrowFontSize 10
+skinparam defaultTextAlignment center
+
+skinparam rectangle {
+    BackgroundColor<<src>> #EFF6FB
+    BorderColor<<src>> #0066B1
+    BackgroundColor<<tool>> #E3F2FD
+    BorderColor<<tool>> #1565C0
+    BackgroundColor<<own>> #E8F5E9
+    BorderColor<<own>> #2E7D32
+    BackgroundColor<<rep>> #FFF3E0
+    BorderColor<<rep>> #EF6C00
+    BackgroundColor<<out>> #F3E5F5
+    BorderColor<<out>> #6A1B9A
+}
+
+rectangle "A: Per-level .lobster files\n(Feature/Component Req, Unit Test,\nCoverage, Architecture, Public API,\nFailure Modes, Control Measures,\nRoot Causes)" <<src>> as A
+
+rectangle "B: expand_template\nformat_lobster_block() per level\n(emit_empty=strict in release)" <<own>> as B
+rectangle "de_traceability_config" <<rep>> as conf
+
+rectangle "C: subrule_lobster_report\nlobster-report (lobster-config flag)" <<tool>> as C
+rectangle "report.json" <<rep>> as report
+
+rectangle "D: subrule_lobster_html_report\n(optional, generate_html_report)" <<tool>> as D
+rectangle "report.html" <<rep>> as html
+
+rectangle "E: lobster-rst-report\n(out-dir, source-root flags)" <<tool>> as E
+rectangle "traceability_report/\n(index.rst + one page/level)" <<rep>> as rst
+
+rectangle "F: _section_page +\nexpand_template(index.rst)\n(toctree entry added iff E ran)" <<own>> as F
+rectangle "<name>_index/index.rst" <<rep>> as index
+
+rectangle "G: DefaultInfo +\nDependableElementLobsterInfo +\nOutputGroupInfo(lobster_ci_report)" <<own>> as G
+
+rectangle "<name> test\nlobster-ci-report (pass/fail gate)" <<out>> as gate
+rectangle "<name>_doc sphinx_module\n(HTML documentation)" <<out>> as docs
+
+A --> B
+B --> conf
+conf --> C
+C --> report
+report --> D
+D --> html
+report --> E
+E --> rst
+rst --> F
+F --> index
+report --> G
+html --> G
+rst --> G
+index --> G
+G --> gate
+G --> docs
+
+@enduml

@@ -787,7 +787,11 @@ and scope checks at build/test time.
    * - ``maturity``
      - string
      - no
-     - ``"release"`` (default) treats certified-scope violations and architecture consistency errors as hard build failures. ``"development"`` downgrades them to warnings so the build still succeeds — useful when iterating before all scope and architecture declarations are finalised. **Always revert to ``"release"`` before a certification delivery.**
+     - ``"release"`` (default) treats certified-scope violations, architecture consistency errors, and missing traceability links as hard build/test failures. ``"development"`` downgrades them to warnings so the build/test still succeeds — useful when iterating before all scope, architecture, and traceability declarations are finalised. **Always revert to ``"release"`` before a certification delivery.**
+   * - ``generate_html_report``
+     - bool
+     - no
+     - If ``True``, additionally generate a standalone LOBSTER HTML traceability report. Off by default: nothing consumes it (Sphinx renders the multi-page RST report under ``traceability_report/`` instead), so it only adds a build action (default ``False``)
    * - ``testonly``
      - bool
      - no

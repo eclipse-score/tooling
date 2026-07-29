@@ -254,10 +254,13 @@ Internally:
     artifacts, runs validation/core architecture checks as a subrule, and
    produces a DE-level LOBSTER report (`lobster_de.conf` template covering
    Feature Req → Component Req → Architecture → Public API → Failure Modes).
+
 2. `sphinx_module` compiles all RST sources + diagrams into an HTML zip.
 
 **`bazel test`** — runs the LOBSTER CI report embedded in the index rule
-and all component / unit tests transitively.
+and all component / unit tests transitively. With `maturity = "development"`
+a failing traceability check only prints a warning instead of failing the
+test.
 
 ```bash
 bazel build //examples/seooc:safety_software_seooc_example   # HTML zip

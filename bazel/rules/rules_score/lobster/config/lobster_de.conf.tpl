@@ -1,39 +1,19 @@
-requirements "Feature Requirements" {
-{FEAT_REQ_SOURCES}
-}
+{FEAT_REQ_BLOCK}
 
-requirements "Forwarded AoUs" {
-{FORWARDED_AOU_SOURCES}
-}
+{FORWARDED_AOU_BLOCK}
 
-requirements "Component Requirements" {
-{COMP_REQ_SOURCES}{COMP_REQ_TRACE}}
+{COMP_REQ_BLOCK}
 
-activity "Unit Test" {
-{UNIT_TEST_SOURCES}
-}
+{UNIT_TEST_BLOCK}
 
 {COVERAGE_BLOCK}
-implementation "Architecture" {
-{ARCH_SOURCES}
-  trace to: "Component Requirements";
-}
 
-implementation "Public API" {
-{PUBLIC_API_SOURCES}
-}
+{ARCH_BLOCK}
 
-requirements "Failure Modes" {
-{FM_SOURCES}
-  trace to: "Public API";
-}
+{PUBLIC_API_BLOCK}
 
-requirements "Control Measures" {
-{CM_SOURCES}
-}
+{FM_BLOCK}
 
-activity "Root Causes" {
-{RC_SOURCES}
-  trace to: "Failure Modes";
-  trace to: "Control Measures";
-}
+{CM_BLOCK}
+
+{RC_BLOCK}

@@ -209,6 +209,35 @@ feed that pipeline:
   **FTA** (``fta.puml``) → ``puml_cli`` (FTA mode) → ``root_causes.lobster``.
 * **Unit tests** (gtest) → ``gtest_report`` → ``<unit>.lobster``.
 
+Lobster report assembly (``dependable_element``)
+-------------------------------------------------
+
+The ``config → report.json → gate`` box in the diagram above is itself a
+multi-step pipeline, all inside the ``dependable_element`` ``_index`` rule.
+Stages A–D turn the collected ``.lobster`` inputs into the aggregated report;
+stages E–G render it as Sphinx documentation and expose it to the pass/fail
+test and to other rules.
+
+.. uml:: _assets/lobster_report_assembly.puml
+   :align: center
+   :alt: How dependable_element assembles and publishes the lobster report
+   :width: 100%
+
+#. **Config** — ``format_lobster_block()`` fills a template with one block per
+   level, guarded by whether that level has sources (release mode force-emits
+   empty verification levels so a missing one still fails the gate).
+#. **Report** — ``lobster-report`` aggregates all levels/inputs against that
+   config into ``report.json``, the single artefact everything below reads.
+#. **HTML** — optional standalone convenience artefact.
+#. **Multi-page RST** — ``lobster-rst-report --out-dir`` renders one page per
+   level plus an ``index.rst`` into a directory artefact.
+#. **Splice** — the parent ``index.rst`` gets a ``Traceability`` toctree entry
+   pointing at that directory, but only if it was actually produced.
+#. **Publish** — ``report.json`` (plus HTML/RST) are exposed via
+   ``DependableElementLobsterInfo`` and an output group, so the sibling
+   ``<name>`` test can gate on it (``lobster-ci-report``) and the sibling
+   ``<name>_doc`` ``sphinx_module`` can render it into the final HTML.
+
 .. _two-phase-sphinx-build:
 
 Two-phase Sphinx build

@@ -52,7 +52,7 @@ load(
 )
 load(
     "//bazel/rules/rules_score/private:lobster_config.bzl",
-    "format_lobster_sources",
+    "format_lobster_block",
 )
 load("//bazel/rules/rules_score/private:sphinx_module.bzl", "sphinx_module")
 load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
@@ -826,24 +826,12 @@ def _dependable_element_index_impl(ctx):
     # Generate submodule links for the index page
     deps_links = _process_deps(ctx)
 
-    # The traceability report is generated into {label.name}/traceability_report/,
-    # which is a sibling of index.rst inside the same {label.name}/ srcdir that
-    # Sphinx uses (srcdir = parent of --index_file).  The toctree therefore
-    # references it as "traceability_report/index" with no "../" traversal.
-    # A lightweight provider-presence check mirrors the condition in the lobster
-    # block below; when no lobster inputs exist the substitution is empty so
-    # Sphinx does not complain about a missing document.
-    _has_feature_reqs = any([
-        FeatureRequirementsInfo in r or AssumedSystemRequirementsInfo in r
-        for r in ctx.attr.requirements
-    ])
-    _has_comp_reqs = any([ComponentInfo in c for c in ctx.attr.components])
-    traceability_entries = (
-        ["traceability_report/index"] if _has_feature_reqs and _has_comp_reqs else []
-    )
-
     # Generate one section page per top-level group so each becomes a proper
     # clickable sidebar entry.  Each block is explicit and independently controlled.
+    # Note: the "Traceability" section page is built later, after the lobster
+    # traceability block below determines whether traceability_report/index.rst
+    # actually gets generated (see the `_section_page("traceability", ...)` call
+    # near the end of this function).
 
     def _section_page(name, title, entries, maxdepth = 1):
         """Declare + expand one section page; return filename or None when empty."""
@@ -878,11 +866,6 @@ def _dependable_element_index_impl(ctx):
         "Components",
         component_entries,
     )
-    traceability_ref = _section_page(
-        "traceability",
-        "Traceability",
-        traceability_entries,
-    )
     checklists_ref = _section_page(
         "checklists",
         "Checklists",
@@ -894,34 +877,6 @@ def _dependable_element_index_impl(ctx):
         "Glossary",
         artifacts_by_type["glossary"],
         maxdepth = 2,
-    )
-
-    section_refs = [
-        ref
-        for ref in [
-            assumed_system_ref,
-            software_arch_ref,
-            components_ref,
-            traceability_ref,
-            checklists_ref,
-            glossary_ref,
-        ]
-        if ref != None
-    ]
-
-    # Render the index.rst using the template
-    title = ctx.attr.module_name
-    underline = "=" * len(title)
-
-    ctx.actions.expand_template(
-        template = ctx.file.template,
-        output = index_rst,
-        substitutions = {
-            "{title}": title,
-            "{underline}": underline,
-            "{sections}": "\n   ".join(section_refs),
-            "{submodules}": deps_links,
-        },
     )
 
     # =========================================================================
@@ -1041,9 +996,16 @@ def _dependable_element_index_impl(ctx):
 
     # =========================================================================
     # Lobster Traceability: Dependable Element Level
-    # Builds a three-tier report: Feature Requirements <- Component Requirements
-    # <- Unit Tests (gtest). The report is only produced when all three tiers
-    # are present; gtest is optional (component-only traceability is possible).
+    # Builds the multi-level traceability report (Feature/Assumed-System
+    # Requirements, Component Requirements, Unit Test, Test Case Coverage,
+    # Architecture, Public API, Failure Modes, Control Measures, Root Causes).
+    # The report is produced whenever any level has data; each level and its
+    # `trace to:` coverage edges are emitted only when relevant. In release
+    # mode every checking level (Unit Test, Test Case Coverage, Architecture,
+    # Failure Modes, Root Causes) is emitted even when empty, so a missing
+    # unit test / coverage / architecture allocation / public API
+    # characterization / root cause fails the traceability check (see the
+    # strict handling below).
     # =========================================================================
 
     # Collect feature requirement .lobster files from requirements targets
@@ -1219,47 +1181,134 @@ def _dependable_element_index_impl(ctx):
     lobster_html_report = None
     lobster_rst_dir = None
     lobster_files = []
-    if feat_req_list:
-        # Build comp_req trace-to lines (Feature Requirements + optionally Forwarded AoUs)
-        comp_req_trace_lines = ""
-        if comp_req_list:
-            comp_req_trace_lines = "  trace to: \"Feature Requirements\";\n"
+
+    # Generate whenever there is at least one lobster input; individual
+    # levels (e.g. Feature Requirements, Failure Modes) are all optional and
+    # each one, along with any `trace to:` line pointing at it, is only
+    # emitted into the config when it actually has sources (see
+    # format_lobster_block). This keeps the report free of false "missing
+    # reference" issues for levels a given dependable element does not use.
+    has_any_lobster_input = any([
+        feat_req_list,
+        received_aou_list,
+        comp_req_list,
+        comp_test_list,
+        coverage_lobster_files,
+        comp_arch_list,
+        interface_req_list,
+        fm_list,
+        cm_list,
+        rc_list,
+    ])
+
+    if has_any_lobster_input:
+        # Release mode enforces a strict, uniform coverage policy: every
+        # LOBSTER level that acts as a *checking* source for another level's
+        # coverage (i.e. declares `trace to: "<target>"`) is declared even
+        # when it has no sources of its own. LOBSTER's coverage check runs
+        # per checking-level: with zero items in the checking level, every
+        # item in the target level is reported as a "missing down reference".
+        # This is what makes a genuinely missing downstream artifact fail the
+        # build instead of the trace_to edge silently disappearing when the
+        # checking level's inputs happen to be empty (the exact bug this
+        # rework fixes). Concretely, in release mode this applies to:
+        #   * Unit Test, Test Case Coverage, Architecture
+        #     -> check Component Requirements coverage
+        #   * Failure Modes
+        #     -> check Public API coverage
+        #   * Root Causes
+        #     -> check Failure Modes and Control Measures coverage
+        # In development mode these checking levels are omitted when empty
+        # instead, keeping the in-progress report free of noise.
+        #
+        # Each `trace to:` target level must itself be present in the config
+        # for LOBSTER to accept the edge (an edge to an absent level is an
+        # "unknown tracing target" error, not a coverage failure). So a
+        # target level that could otherwise be omitted (Public API) is also
+        # force-emitted empty in release mode purely to remain a valid
+        # target -- it does not itself become a checking level.
+        strict = ctx.attr.maturity == "release"
+
+        has_feat_req = bool(feat_req_list)
+        has_comp_req = bool(comp_req_list)
+        has_public_api = bool(interface_req_list) or strict
+        has_fm = bool(fm_list) or strict
+        has_cm = bool(cm_list) or strict
 
         lobster_config = ctx.actions.declare_file(ctx.label.name + "/de_traceability_config")
-
-        # Only emit the "Test Case Coverage" LOBSTER layer when there is
-        # actual coverage data; an empty layer with `trace to` would cause
-        # LOBSTER to report every component requirement as missing a reference.
-        if coverage_lobster_files:
-            coverage_block = (
-                "activity \"Test Case Coverage\" {\n" +
-                format_lobster_sources(coverage_lobster_files) + "\n" +
-                "  trace to: \"Component Requirements\";\n}"
-            )
-        else:
-            coverage_block = ""
 
         ctx.actions.expand_template(
             template = ctx.file._lobster_de_template,
             output = lobster_config,
             substitutions = {
-                "{FEAT_REQ_SOURCES}": format_lobster_sources(feat_req_list),
-                "{FORWARDED_AOU_SOURCES}": format_lobster_sources(received_aou_list),
-                "{COMP_REQ_SOURCES}": format_lobster_sources(comp_req_list),
-                "{COMP_REQ_TRACE}": comp_req_trace_lines,
-                "{ARCH_SOURCES}": format_lobster_sources(comp_arch_list),
-                "{UNIT_TEST_SOURCES}": format_lobster_sources(comp_test_list),
-                "{COVERAGE_BLOCK}": coverage_block,
-                "{PUBLIC_API_SOURCES}": format_lobster_sources(interface_req_list),
-                "{FM_SOURCES}": format_lobster_sources(fm_list),
-                "{CM_SOURCES}": format_lobster_sources(cm_list),
-                "{RC_SOURCES}": format_lobster_sources(rc_list),
+                "{FEAT_REQ_BLOCK}": format_lobster_block("requirements", "Feature Requirements", feat_req_list),
+                "{FORWARDED_AOU_BLOCK}": format_lobster_block("requirements", "Forwarded AoUs", received_aou_list),
+                "{COMP_REQ_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Component Requirements",
+                    comp_req_list,
+                    trace_to = ["Feature Requirements"] if has_feat_req else [],
+                ),
+                "{UNIT_TEST_BLOCK}": format_lobster_block(
+                    "activity",
+                    "Unit Test",
+                    comp_test_list,
+                    trace_to = ["Component Requirements"] if has_comp_req else [],
+                    emit_empty = strict,
+                ),
+                "{COVERAGE_BLOCK}": format_lobster_block(
+                    "activity",
+                    "Test Case Coverage",
+                    coverage_lobster_files,
+                    trace_to = ["Component Requirements"] if has_comp_req else [],
+                    emit_empty = strict,
+                ),
+                "{ARCH_BLOCK}": format_lobster_block(
+                    "implementation",
+                    "Architecture",
+                    comp_arch_list,
+                    trace_to = ["Component Requirements"] if has_comp_req else [],
+                    emit_empty = strict,
+                ),
+                "{PUBLIC_API_BLOCK}": format_lobster_block(
+                    "implementation",
+                    "Public API",
+                    interface_req_list,
+                    emit_empty = strict,
+                ),
+                "{FM_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Failure Modes",
+                    fm_list,
+                    trace_to = ["Public API"] if has_public_api else [],
+                    emit_empty = strict,
+                ),
+                "{CM_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Control Measures",
+                    cm_list,
+                    emit_empty = strict,
+                ),
+                "{RC_BLOCK}": format_lobster_block(
+                    "activity",
+                    "Root Causes",
+                    rc_list,
+                    trace_to = (["Failure Modes"] if has_fm else []) + (["Control Measures"] if has_cm else []),
+                    emit_empty = strict,
+                ),
             },
         )
 
         all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list + coverage_lobster_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
-        lobster_html_report = subrule_lobster_html_report(lobster_report_file)
+        lobster_files = [lobster_config, lobster_report_file]
+
+        # The HTML report is a standalone convenience artifact: nothing else
+        # in the build consumes it (Sphinx renders the RST report below), so
+        # it is only produced when explicitly requested.
+        if ctx.attr.generate_html_report:
+            lobster_html_report = subrule_lobster_html_report(lobster_report_file)
+            lobster_files.append(lobster_html_report)
 
         # Generate multi-page RST report inside the index subdirectory so that
         # Sphinx (which uses {label.name}/index.rst's parent as srcdir) can
@@ -1285,8 +1334,49 @@ def _dependable_element_index_impl(ctx):
             progress_message = "lobster-rst-report (pages) {}".format(ctx.label.name),
         )
 
-        lobster_files = [lobster_config, lobster_report_file, lobster_html_report, lobster_rst_dir]
+        lobster_files.append(lobster_rst_dir)
         output_files.extend(lobster_files)
+
+    # Now that lobster_rst_dir's final value is known, finish the Traceability
+    # section page and render index.rst. This must come after the lobster
+    # block above so the toctree entry is added if and only if
+    # traceability_report/index.rst actually gets generated.
+    traceability_entries = (
+        ["traceability_report/index"] if lobster_rst_dir != None else []
+    )
+    traceability_ref = _section_page(
+        "traceability",
+        "Traceability",
+        traceability_entries,
+    )
+
+    section_refs = [
+        ref
+        for ref in [
+            assumed_system_ref,
+            software_arch_ref,
+            components_ref,
+            traceability_ref,
+            checklists_ref,
+            glossary_ref,
+        ]
+        if ref != None
+    ]
+
+    # Render the index.rst using the template
+    title = ctx.attr.module_name
+    underline = "=" * len(title)
+
+    ctx.actions.expand_template(
+        template = ctx.file.template,
+        output = index_rst,
+        substitutions = {
+            "{title}": title,
+            "{underline}": underline,
+            "{sections}": "\n   ".join(section_refs),
+            "{submodules}": deps_links,
+        },
+    )
 
     return [
         DefaultInfo(files = depset(output_files)),
@@ -1382,6 +1472,10 @@ def _dependable_element_index_attrs():
             values = ["release", "development"],
             doc = "Maturity level of the dependable element. 'release' (default) treats certified scope violations as errors; 'development' emits warnings and continues.",
         ),
+        "generate_html_report": attr.bool(
+            default = False,
+            doc = "Whether to additionally generate a standalone LOBSTER HTML traceability report. Off by default: it is not consumed anywhere (Sphinx renders the multi-page RST report instead) and only adds a build action.",
+        ),
         "_lobster_de_template": attr.label(
             default = Label("//bazel/rules/rules_score/lobster/config:lobster_de_template"),
             allow_single_file = True,
@@ -1439,10 +1533,19 @@ def _dependable_element_impl(ctx):
     test_executable = ctx.actions.declare_file(ctx.label.name + "_lobster_test")
 
     if lobster_info.lobster_report != None:
-        command = "set -o pipefail; {ci} {report}".format(
-            ci = ctx.executable._lobster_ci_report.short_path,
-            report = lobster_info.lobster_report.short_path,
-        )
+        if ctx.attr.maturity == "development":
+            # Development mode: report traceability issues without failing the
+            # build, matching the certified-scope / validation warning pattern
+            # used elsewhere in this rule.
+            command = "{ci} {report} || echo 'WARNING: lobster traceability check failed (maturity=development)'".format(
+                ci = ctx.executable._lobster_ci_report.short_path,
+                report = lobster_info.lobster_report.short_path,
+            )
+        else:
+            command = "set -o pipefail; {ci} {report}".format(
+                ci = ctx.executable._lobster_ci_report.short_path,
+                report = lobster_info.lobster_report.short_path,
+            )
         runfiles = ctx.runfiles(
             files = [ctx.executable._lobster_ci_report, lobster_info.lobster_report],
         ).merge(ctx.attr._lobster_ci_report[DefaultInfo].default_runfiles)
@@ -1456,9 +1559,10 @@ def _dependable_element_impl(ctx):
         is_executable = True,
     )
 
-    # Compose default outputs: the two lobster report files (JSON + HTML) and
-    # the Sphinx HTML documentation. Intermediate files from the index (RST
-    # sources, lobster config, etc.) are intentionally excluded.
+    # Compose default outputs: the lobster JSON report (plus the HTML report
+    # when generate_html_report is enabled) and the Sphinx HTML documentation.
+    # Intermediate files from the index (RST sources, lobster config, etc.)
+    # are intentionally excluded.
     lobster_default_files = []
     if lobster_info.lobster_report:
         lobster_default_files.append(lobster_info.lobster_report)
@@ -1466,7 +1570,7 @@ def _dependable_element_impl(ctx):
         lobster_default_files.append(lobster_info.lobster_html_report)
 
     return [
-        # DefaultInfo: two lobster report files + Sphinx HTML docs so that
+        # DefaultInfo: lobster report file(s) + Sphinx HTML docs so that
         # ``bazel build <name>`` produces exactly the final user-facing outputs.
         DefaultInfo(
             executable = test_executable,
@@ -1499,6 +1603,11 @@ _dependable_element_test = rule(
             mandatory = True,
             doc = "The <name>_doc sphinx_module target providing SphinxModuleInfo.",
         ),
+        "maturity": attr.string(
+            default = "release",
+            values = ["release", "development"],
+            doc = "Maturity level of the dependable element. 'release' (default) fails ``bazel test`` when traceability links are missing; 'development' emits a warning and continues.",
+        ),
         "_lobster_ci_report": attr.label(
             default = Label("@lobster//:lobster-ci-report"),
             executable = True,
@@ -1527,6 +1636,7 @@ def dependable_element(
         deps = [],
         aou_forwarding = None,
         maturity = "release",
+        generate_html_report = False,
         testonly = True,
         docs_prefix = "docs/sphinx/",
         **kwargs):
@@ -1567,6 +1677,13 @@ def dependable_element(
         aou_forwarding: Optional label to a YAML file listing received AoU IDs
             to further-forward to this element's own dependees. Only needed for
             chain-forwarding received AoUs that this element cannot handle.
+        maturity: 'release' (default) fails the build/test on certified-scope,
+            architecture-consistency, or traceability violations. 'development'
+            downgrades all of these to warnings so the build/test still succeeds.
+        generate_html_report: If True, additionally generate a standalone
+            LOBSTER HTML traceability report. Off by default: it is not
+            consumed anywhere (Sphinx renders the multi-page RST report
+            instead) and only adds a build action.
         testonly: If True, only testonly targets can depend on this target.
         docs_prefix: Prefix under which the generated `<name>_rst` sphinx_docs_library
             exposes its RST sources, so that an external Sphinx build can embed it via
@@ -1605,6 +1722,7 @@ def dependable_element(
         aou_forwarding = aou_forwarding,
         integrity_level = integrity_level,
         maturity = maturity,
+        generate_html_report = generate_html_report,
         testonly = testonly,
         **kwargs
     )
@@ -1629,6 +1747,7 @@ def dependable_element(
         name = name,
         index_dep = ":" + name + "_index",
         sphinx_module_dep = ":" + name + "_doc",
+        maturity = maturity,
         **kwargs
     )
 
