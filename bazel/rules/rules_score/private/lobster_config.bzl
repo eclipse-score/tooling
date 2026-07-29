@@ -31,3 +31,46 @@ def format_lobster_sources(files):
         for substituting into a lobster config template placeholder.
     """
     return "\n".join(['  source: "{}";'.format(f.path) for f in files])
+
+def format_lobster_block(kind, name, files, trace_to = [], emit_empty = False):
+    """Build a complete, optional LOBSTER config block.
+
+    By default returns "" (omitting the level entirely) when `files` is empty,
+    instead of emitting an empty block. An empty level that other levels
+    `trace to:` would make LOBSTER report every item at those other levels as
+    missing a reference, so callers must only pass names in `trace_to` for
+    levels that are themselves non-empty (i.e. also present in the same config).
+
+    Set `emit_empty = True` to declare the level even when it has no sources.
+    This keeps the level's `trace to:` policy edge active so that LOBSTER
+    reports a "missing down reference" for every item at the target level that
+    this (now source-less) level fails to cover — used in release mode to make
+    a missing verification level (e.g. no unit tests, no root causes) fail the
+    traceability check instead of silently disappearing from the policy.
+
+    Args:
+        kind: LOBSTER block kind, e.g. "requirements", "activity", "implementation".
+        name: Level name, used as the quoted block header.
+        files: List of File objects to include as sources; the block is
+            omitted entirely (returns "") when this list is empty, unless
+            `emit_empty` is True.
+        trace_to: List of level names this level traces to. Only include
+            names of levels that are themselves present (non-empty) in the
+            same config.
+        emit_empty: When True, emit the block header and `trace to:` lines even
+            if `files` is empty (no `source:` lines are produced). Defaults to
+            False.
+
+    Returns:
+        The full block text (kind, header, sources, trace-to lines), or ""
+        when `files` is empty and `emit_empty` is False.
+    """
+    if not files and not emit_empty:
+        return ""
+    trace_lines = "".join(['  trace to: "{}";\n'.format(t) for t in trace_to])
+    return '{kind} "{name}" {{\n{sources}\n{trace}}}'.format(
+        kind = kind,
+        name = name,
+        sources = format_lobster_sources(files),
+        trace = trace_lines,
+    )

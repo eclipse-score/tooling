@@ -71,6 +71,7 @@ component(
 # receives all forwarded AoUs:
 #   - SampleType.SampleAoU            (auto-forwarded, own AoU of seooc)
 #   - OtherLibrary.TimingConstraint   (chain-forwarded from other_seooc through seooc)
+
 dependable_element(
     name = "integrator_seooc",
     architectural_design = [":integrator_design"],
@@ -78,6 +79,7 @@ dependable_element(
     components = [":integrator_component"],
     dependability_analysis = [],
     integrity_level = "B",
+    maturity = "development",
     requirements = [
         "//docs/requirements:feature_requirements",
     ],

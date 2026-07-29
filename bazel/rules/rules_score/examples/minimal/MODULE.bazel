@@ -34,9 +34,4 @@ use_repo(llvm, "llvm_toolchain", "llvm_toolchain_llvm")
 
 bazel_dep(name = "trlc", version = "3.0.0")
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
-bazel_dep(name = "lobster", version = "1.0.3")
-git_override(
-    module_name = "lobster",
-    commit = "07382c33f95e22992e0f8788c0537ec06877e51f",
-    remote = "https://github.com/bmw-software-engineering/lobster.git",
-)
+bazel_dep(name = "lobster", version = "1.0.4")
