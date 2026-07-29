@@ -73,4 +73,4 @@ Run the tests with:
 
    bazel test //:my_unit_test
 
-→ Full guide: :doc:`../unit_design`
+→ Full guide: :doc:`../validation`
