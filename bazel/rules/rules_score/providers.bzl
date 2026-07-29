@@ -98,7 +98,7 @@ FeatureRequirementsInfo = provider(
 ComponentRequirementsInfo = provider(
     doc = "Provider for component requirements artifacts.",
     fields = {
-        "srcs": "Depset of .lobster traceability files generated from TRLC requirement sources.",
+        "srcs": "Depset of .lobster traceability files generated from TRLC requirement sources. Includes `derived_from_aou` as a tracing target .",
         "name": "Name of the requirements target.",
     },
 )
@@ -145,7 +145,8 @@ ComponentInfo = provider(
     doc = "Provider for component artifacts.",
     fields = {
         "name": "Name of the component target.",
-        "requirements": "Depset of component requirement traceability files (.lobster) collected from ComponentRequirementsInfo targets only (CompReq kind). Does not include feature or assumed-system requirement files.",
+        "requirements": "Depset of component requirement traceability files (.lobster) collected from this component's own ComponentRequirementsInfo targets only (CompReq kind); not rolled up from nested components. Does not include feature or assumed-system requirement files. Consumed only by dependable_element's test-case-coverage-lock check. Includes `derived_from_aou` tracing targets (resolved only at the dependable_element level).",
+        "requirements_transitive": "Depset of component requirement traceability files (.lobster), rolled up transitively from this component and all nested components. Consumed by dependable_element to build the aggregated 'Component Requirements' traceability report tier.",
         "components": "Depset of nested component and/or unit Targets that comprise this component.",
         "tests": "Depset of test traceability files (.lobster) generated from unit test results, collected transitively from all nested components and units.",
         "architecture": "Depset of architecture traceability files (.lobster) generated from unit architectural designs, collected transitively from all nested components and units.",

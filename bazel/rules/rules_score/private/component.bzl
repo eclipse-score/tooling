@@ -19,9 +19,8 @@ following S-CORE process guidelines. A component consists of multiple units
 with associated requirements and tests.
 """
 
-load("@lobster//:lobster.bzl", "subrule_lobster_gtest", "subrule_lobster_html_report", "subrule_lobster_report")
+load("@lobster//:lobster.bzl", "subrule_lobster_gtest")
 load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "CertifiedScope", "ComponentInfo", "ComponentRequirementsInfo", "ComponentTestCaseCoverageInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo", "UnitInfo")
-load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_sources")
 
 # ============================================================================
 # Private Rule Implementation: Component .update target
@@ -181,20 +180,34 @@ def _component_impl(ctx):
 
     # -------------------------------------------------------------------------
     # Lobster Tracing: collect .lobster files from component_requirements targets
-    # and feature_requirements targets (needed to resolve derived_from references)
+    # and feature_requirements targets (needed to resolve derived_from references).
+    # Component requirement .lobster files always include `derived_from_aou` as
+    # a tracing target (resolved only at the dependable_element level).
+    #
+    # A feature_requirements/assumed_system_requirements target may also be
+    # listed in `requirements` purely so its rendered RST is available for
+    # derived_from cross-referencing at the TRLC level; its .lobster file is
+    # not otherwise used here (this component builds no report of its own —
+    # that only happens once, aggregated, at the dependable_element level).
     # -------------------------------------------------------------------------
     req_lobster_files = []
-    feat_req_lobster_files = []
+    req_lobster_transitive_files = []
     for req_target in ctx.attr.requirements:
         if ComponentRequirementsInfo in req_target:
             req_lobster_files.append(req_target[ComponentRequirementsInfo].srcs)
-        if FeatureRequirementsInfo in req_target:
-            feat_req_lobster_files.append(req_target[FeatureRequirementsInfo].srcs)
-        if AssumedSystemRequirementsInfo in req_target:
-            feat_req_lobster_files.append(req_target[AssumedSystemRequirementsInfo].srcs)
+            req_lobster_transitive_files.append(req_target[ComponentRequirementsInfo].srcs)
+
+    # Bubble up requirement lobster files from nested components so
+    # dependable_element sees the full tree, not just this component's own
+    # requirements (ComponentInfo.requirements itself is intentionally scoped
+    # to only this component's own explicitly-listed requirements).
+    for component in ctx.attr.components:
+        if ComponentInfo in component:
+            if component[ComponentInfo].requirements_transitive:
+                req_lobster_transitive_files.append(component[ComponentInfo].requirements_transitive)
 
     req_lobster_depset = depset(transitive = req_lobster_files)
-    feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)
+    req_lobster_transitive_depset = depset(transitive = req_lobster_transitive_files)
 
     # Collect nested components
     components_depset = depset(ctx.attr.components)
@@ -256,57 +269,15 @@ def _component_impl(ctx):
             progress_message = "Generating architecture lobster for %s" % ctx.label,
         )
 
-    # -------------------------------------------------------------------------
-    # Generate Lobster Configuration: expand static template, substituting
-    # only the source file lists (the structure is fixed per variant).
-    # -------------------------------------------------------------------------
-    comp_req_lobster_files = req_lobster_depset.to_list()
-    feat_req_lobster_files_list = feat_req_lobster_depset.to_list()
-    all_lobster_inputs = list(comp_req_lobster_files) + feat_req_lobster_files_list
-
-    if arch_lobster_file:
-        all_lobster_inputs.append(arch_lobster_file)
-
-    all_lobster_inputs.append(gtest_lobster_file)
-
-    lobster_config = ctx.actions.declare_file(ctx.attr.name + "_traceability_config")
-    ctx.actions.expand_template(
-        template = ctx.file._lobster_comp_template,
-        output = lobster_config,
-        substitutions = {
-            "{FEAT_REQ_SOURCES}": format_lobster_sources(feat_req_lobster_files_list),
-            "{COMP_REQ_SOURCES}": format_lobster_sources(comp_req_lobster_files),
-            "{ARCH_SOURCES}": format_lobster_sources([arch_lobster_file] if arch_lobster_file else []),
-            "{UNIT_TEST_SOURCES}": format_lobster_sources([gtest_lobster_file]),
-        },
-    )
-
-    # -------------------------------------------------------------------------
-    # Lobster Report Build: produce .lobster report, HTML
-    # -------------------------------------------------------------------------
-    lobster_report = subrule_lobster_report(all_lobster_inputs, lobster_config)
-    lobster_html_report = subrule_lobster_html_report(lobster_report)
-
-    test_executable = ctx.actions.declare_file("{}_lobster_ci_test_executable".format(ctx.attr.name))
-    ctx.actions.write(
-        output = test_executable,
-        content = "set -o pipefail; {} {}".format(
-            ctx.executable._lobster_ci_report.short_path,
-            lobster_report.short_path,
-        ),
-    )
-
     return [
-        # DefaultInfo: lobster report as build output + CI test executable
+        # DefaultInfo: lobster traceability files this component produces directly
+        # (architecture + unit-test lobster). The full aggregated traceability
+        # report/CI check happens once, at the dependable_element level, which
+        # re-ingests these same files together with every other component in
+        # the tree — a component has no meaningful traceability report of its
+        # own to build or gate on.
         DefaultInfo(
-            runfiles = ctx.runfiles(
-                files = [
-                    ctx.executable._lobster_ci_report,
-                    lobster_report,
-                ],
-            ).merge(ctx.attr._lobster_ci_report[DefaultInfo].default_runfiles),
-            files = depset([lobster_report, lobster_html_report]),
-            executable = test_executable,
+            files = depset(([arch_lobster_file] if arch_lobster_file else []) + [gtest_lobster_file]),
         ),
         # CertifiedScope: propagate certification scopes upward
         CertifiedScope(transitive_scopes = depset(transitive = collected_certified_scopes)),
@@ -314,6 +285,7 @@ def _component_impl(ctx):
         ComponentInfo(
             name = ctx.label.name,
             requirements = req_lobster_depset,
+            requirements_transitive = req_lobster_transitive_depset,
             components = components_depset,
             tests = depset(
                 [gtest_lobster_file],
@@ -343,7 +315,7 @@ def _component_impl(ctx):
 # Rule Definition
 # ============================================================================
 
-_component_test = rule(
+_component_rule = rule(
     implementation = _component_impl,
     doc = "Defines a software component composed of multiple units for S-CORE process compliance",
     attrs = {
@@ -364,25 +336,14 @@ _component_test = rule(
             allow_single_file = True,
             doc = "Optional committed test_case_coverage.lock.yaml file for coverage validation",
         ),
-        "_lobster_ci_report": attr.label(
-            default = "@lobster//:lobster-ci-report",
-            executable = True,
-            cfg = "exec",
-        ),
         "_arch_to_reqs_from_lobster": attr.label(
             default = Label("//bazel/rules/rules_score:arch_to_reqs_from_lobster"),
             executable = True,
             cfg = "exec",
             doc = "Tool to extract component requirements and generate architecture .lobster items for component traceability",
         ),
-        "_lobster_comp_template": attr.label(
-            default = Label("//bazel/rules/rules_score/lobster/config:lobster_component_template"),
-            allow_single_file = True,
-            doc = "Lobster config template for component traceability.",
-        ),
     },
-    subrules = [subrule_lobster_gtest, subrule_lobster_report, subrule_lobster_html_report],
-    test = True,
+    subrules = [subrule_lobster_gtest],
 )
 
 # ============================================================================
@@ -406,16 +367,22 @@ def component(
     - Tests: Integration tests that verify the component as a whole
     - Coverage: Optional test case coverage traceability (if test_case_coverage_lock provided)
 
+    A component does not build or gate on a traceability report of its own —
+    its requirements/architecture/test lobster files are propagated up via
+    ComponentInfo and validated once, aggregated with every other component in
+    the tree, by the enclosing dependable_element's lobster-ci-report test.
+
     Args:
         name: The name of the component. Used as the target name.
         requirements: List of labels to component_requirements targets
             that define the requirements for this component. A
-            feature_requirements target may also be listed here so its
-            .lobster file is available to resolve derived_from references
-            from the component requirements; only component_requirements
-            targets contribute rendered RST to the component's Sphinx docs,
-            so listing a feature_requirements target does not duplicate it
-            in the generated documentation.
+            feature_requirements target may also be listed here for
+            convenience/consistency; only component_requirements targets
+            contribute rendered RST to the component's Sphinx docs, so
+            listing a feature_requirements target does not duplicate it in
+            the generated documentation, and it has no effect on
+            traceability (derived_from resolution happens once, at the
+            dependable_element level).
         components: List of labels to nested component targets (for hierarchical
             component structures).
         tests: List of labels to Bazel test targets that verify the component
@@ -440,7 +407,7 @@ def component(
         ```
     """
 
-    _component_test(
+    _component_rule(
         name = name,
         requirements = requirements,
         components = components,

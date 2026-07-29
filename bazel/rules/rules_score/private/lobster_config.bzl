@@ -32,7 +32,7 @@ def format_lobster_sources(files):
     """
     return "\n".join(['  source: "{}";'.format(f.path) for f in files])
 
-def format_lobster_block(kind, name, files, trace_to = [], emit_empty = False):
+def format_lobster_block(kind, name, files, trace_to = [], emit_empty = False, requires = []):
     """Build a complete, optional LOBSTER config block.
 
     By default returns "" (omitting the level entirely) when `files` is empty,
@@ -48,6 +48,17 @@ def format_lobster_block(kind, name, files, trace_to = [], emit_empty = False):
     a missing verification level (e.g. no unit tests, no root causes) fail the
     traceability check instead of silently disappearing from the policy.
 
+    By default, when *multiple* levels each declare `trace to: <this level>`,
+    LOBSTER requires ALL of them to independently cover every item here (an
+    AND across sources) -- see the `requires` config directive in LOBSTER's
+    documentation. Pass `requires` to relax this to an OR: each element is a
+    list of level names, rendered as a single `requires: "A" or "B";` line
+    (multiple elements become separate, independently-AND'd `requires:`
+    lines). Only include level names that are themselves present (non-empty
+    or emit_empty) in the same config, and that already declare a `trace to:`
+    line pointing at this level (`requires` narrows an existing mandatory
+    `trace to:` edge into an alternative, it does not create one).
+
     Args:
         kind: LOBSTER block kind, e.g. "requirements", "activity", "implementation".
         name: Level name, used as the quoted block header.
@@ -60,6 +71,10 @@ def format_lobster_block(kind, name, files, trace_to = [], emit_empty = False):
         emit_empty: When True, emit the block header and `trace to:` lines even
             if `files` is empty (no `source:` lines are produced). Defaults to
             False.
+        requires: List of OR-groups (each a list of level names) that jointly
+            replace the default AND-of-sources coverage check for this level
+            with "any one of these is sufficient". Defaults to [] (no
+            override; the default AND-of-sources behaviour applies).
 
     Returns:
         The full block text (kind, header, sources, trace-to lines), or ""
@@ -68,9 +83,15 @@ def format_lobster_block(kind, name, files, trace_to = [], emit_empty = False):
     if not files and not emit_empty:
         return ""
     trace_lines = "".join(['  trace to: "{}";\n'.format(t) for t in trace_to])
-    return '{kind} "{name}" {{\n{sources}\n{trace}}}'.format(
+    requires_lines = "".join([
+        "  requires: {};\n".format(" or ".join(['"{}"'.format(n) for n in group]))
+        for group in requires
+        if group
+    ])
+    return '{kind} "{name}" {{\n{sources}\n{trace}{requires}}}'.format(
         kind = kind,
         name = name,
         sources = format_lobster_sources(files),
         trace = trace_lines,
+        requires = requires_lines,
     )

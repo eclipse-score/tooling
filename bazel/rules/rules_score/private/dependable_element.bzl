@@ -1018,15 +1018,18 @@ def _dependable_element_index_impl(ctx):
 
     feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)
 
-    # Collect component requirement and test .lobster files from ComponentInfo
+    # Collect component requirement and test .lobster files from ComponentInfo.
+    # requirements_transitive rolls up every nested component's own
+    # requirements too (unlike ComponentInfo.requirements, which is scoped to
+    # a single component and used only by the test-case-coverage check below).
     comp_req_lobster_files = []
     comp_test_lobster_files = []
     comp_arch_lobster_files = []
     for comp_target in ctx.attr.components:
         if ComponentInfo in comp_target:
             comp_info = comp_target[ComponentInfo]
-            if comp_info.requirements:
-                comp_req_lobster_files.append(comp_info.requirements)
+            if comp_info.requirements_transitive:
+                comp_req_lobster_files.append(comp_info.requirements_transitive)
             if comp_info.tests:
                 comp_test_lobster_files.append(comp_info.tests)
             if comp_info.architecture:
@@ -1119,6 +1122,11 @@ def _dependable_element_index_impl(ctx):
 
     # Build the DE-level lobster report if feature and component traces exist
     feat_req_list = feat_req_lobster_depset.to_list()
+
+    # Component requirement .lobster files always include `derived_from_aou`
+    # refs (so a component requirement can cover a received AoU); this is the
+    # only lobster-report/CI-test built for these files — component() builds
+    # no report of its own.
     comp_req_list = comp_req_lobster_depset.to_list()
     comp_test_list = comp_test_lobster_depset.to_list()
     comp_arch_list = comp_arch_lobster_depset.to_list()
@@ -1155,27 +1163,39 @@ def _dependable_element_index_impl(ctx):
     received_aou_lobster_depset = depset(transitive = received_aou_lobster_files)
     received_aou_list = received_aou_lobster_depset.to_list()
 
-    # Chain-forwarding: if aou_forwarding YAML is provided, filter received AoUs
+    # Chain-forwarding: if aou_forwarding YAML is provided, filter received AoUs.
+    # Also produces a "markers" file: synthetic items (distinct tags, `refs`
+    # pointing at the original received AoU tags) used only in THIS element's
+    # own report as the "Forwarded AoUs" level -- the identity-preserved
+    # chain_forwarded_lobster_file above cannot be reused there because it would
+    # collide (same tag) with the "Received AoUs" level in the same report.
     chain_forwarded_lobster_depset = depset()
+    forwarded_aou_markers_list = []
     if ctx.file.aou_forwarding and received_aou_list:
         chain_forwarded_lobster_file = ctx.actions.declare_file(
             ctx.label.name + "/chain_forwarded_aous.lobster",
         )
+        forwarded_aou_markers_file = ctx.actions.declare_file(
+            ctx.label.name + "/forwarded_aou_markers.lobster",
+        )
         fwd_args = ctx.actions.args()
         fwd_args.add("--yaml", ctx.file.aou_forwarding)
         fwd_args.add("--output", chain_forwarded_lobster_file)
+        fwd_args.add("--markers-output", forwarded_aou_markers_file)
         fwd_args.add("--input-lobster")
         fwd_args.add_all(received_aou_list)
         ctx.actions.run(
             inputs = [ctx.file.aou_forwarding] + received_aou_list,
-            outputs = [chain_forwarded_lobster_file],
+            outputs = [chain_forwarded_lobster_file, forwarded_aou_markers_file],
             executable = ctx.executable._aou_forwarding_tool,
             arguments = [fwd_args],
             progress_message = "Filtering chain-forwarded AoUs for %s" % ctx.label.name,
             mnemonic = "AoUForwarding",
         )
         chain_forwarded_lobster_depset = depset([chain_forwarded_lobster_file])
+        forwarded_aou_markers_list = [forwarded_aou_markers_file]
         output_files.append(chain_forwarded_lobster_file)
+        output_files.append(forwarded_aou_markers_file)
 
     lobster_report_file = None
     lobster_html_report = None
@@ -1231,6 +1251,7 @@ def _dependable_element_index_impl(ctx):
 
         has_feat_req = bool(feat_req_list)
         has_comp_req = bool(comp_req_list)
+        has_received_aou = bool(received_aou_list)
         has_public_api = bool(interface_req_list) or strict
         has_fm = bool(fm_list) or strict
         has_cm = bool(cm_list) or strict
@@ -1242,12 +1263,45 @@ def _dependable_element_index_impl(ctx):
             output = lobster_config,
             substitutions = {
                 "{FEAT_REQ_BLOCK}": format_lobster_block("requirements", "Feature Requirements", feat_req_list),
-                "{FORWARDED_AOU_BLOCK}": format_lobster_block("requirements", "Forwarded AoUs", received_aou_list),
+                # Target level: every item here must be covered, either by a
+                # Component Requirement (`derived_from_aou`) or by being
+                # further chain-forwarded (Forwarded AoUs, below). Without the
+                # `requires` override, LOBSTER would instead require BOTH
+                # sources to independently cover every item (its default
+                # AND-across-sources behaviour for multiple `trace to:`
+                # declarations), which no single AoU could ever satisfy.
+                "{RECEIVED_AOU_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Received AoUs",
+                    received_aou_list,
+                    requires = [
+                        ([
+                            "Component Requirements",
+                        ] if has_comp_req else []) + ([
+                            "Forwarded AoUs",
+                        ] if forwarded_aou_markers_list or strict else []),
+                    ],
+                ),
+                # Checking level: markers for received AoUs this element chain-
+                # forwards onward instead of handling locally. Force-emitted
+                # empty in release mode (when there are received AoUs) so the
+                # "trace to: Received AoUs" edge stays active even without an
+                # aou_forwarding.yaml -- otherwise an element that receives
+                # AoUs but neither forwards nor handles any of them would have
+                # no checking level at all, and the missing coverage would
+                # silently pass instead of failing the build.
+                "{FORWARDED_AOU_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Forwarded AoUs",
+                    forwarded_aou_markers_list,
+                    trace_to = ["Received AoUs"] if has_received_aou else [],
+                    emit_empty = strict and has_received_aou,
+                ),
                 "{COMP_REQ_BLOCK}": format_lobster_block(
                     "requirements",
                     "Component Requirements",
                     comp_req_list,
-                    trace_to = ["Feature Requirements"] if has_feat_req else [],
+                    trace_to = (["Feature Requirements"] if has_feat_req else []) + (["Received AoUs"] if has_received_aou else []),
                 ),
                 "{UNIT_TEST_BLOCK}": format_lobster_block(
                     "activity",
@@ -1299,7 +1353,7 @@ def _dependable_element_index_impl(ctx):
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list + coverage_lobster_files
+        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_files = [lobster_config, lobster_report_file]
 

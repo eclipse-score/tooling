@@ -56,12 +56,6 @@ filegroup(
 # via ctx.actions.expand_template() — only the source paths vary.
 # ---------------------------------------------------------------------------
 filegroup(
-    name = "lobster_component_template",
-    srcs = ["lobster_component.conf.tpl"],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
     name = "lobster_de_template",
     srcs = ["lobster_de.conf.tpl"],
     visibility = ["//visibility:public"],

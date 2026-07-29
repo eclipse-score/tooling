@@ -274,6 +274,14 @@ testable within that component.
 
 **Generated targets:** ``<name>`` (documentation), ``<name>_test`` (TRLC validation)
 
+A ``CompReq`` record may also set ``derived_from_aou``, a free-text list of
+identifiers (``PackageName.RecordName``, no ``@version``) naming AoUs
+received by the enclosing ``dependable_element`` that this requirement
+implements. Unlike ``derived_from``, this is a plain string field (no TRLC
+cross-module reference), matched by name against received AoUs at the
+``dependable_element`` lobster-report level — see
+:doc:`user_guide/assumptions_of_use`.
+
 .. _rule-assumptions-of-use:
 
 assumptions_of_use
