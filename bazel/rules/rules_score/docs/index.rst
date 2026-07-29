@@ -30,6 +30,7 @@ safety analysis to the top-level SEooC assembly.
    :maxdepth: 2
    :caption: Usage
 
+   skills_setup
    user_guide/index
    rule_reference
 
