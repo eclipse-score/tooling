@@ -42,9 +42,23 @@ bazel_dep(name = "download_utils", version = "1.2.2")
 bazel_dep(name = "trlc", version = "3.0.0")
 bazel_dep(name = "lobster", version = "1.0.4")
 bazel_dep(name = "rules_distroless", version = "0.8.0")
+
+# The released 0.8.0 only supports the old manifest/lock apt.install() API.
+# apt.sysroot() (needed for the hermetic libclang sysroot below, and for the
+# docs_runtime dependency_set API) is only available on this fork, which is
+# also what eclipse-score-communication2 overrides to (see its
+# third_party/score_tooling/bump_rules_distroless_api.patch, which exists
+# specifically to migrate *this* module's old-API usage to match this fork
+# when score_tooling is a non-root dependency).
+git_override(
+    module_name = "rules_distroless",
+    commit = "2cda8c523a2219593e91dbb044dd30c793d9d68f",
+    remote = "https://github.com/LittleHuba/rules_distroless.git",
+)
+
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
 
-bazel_dep(name = "toolchains_llvm", version = "1.6.0", dev_dependency = True)  # Libclang Tooling
+bazel_dep(name = "toolchains_llvm", version = "1.8.0", dev_dependency = True)  # Libclang Tooling
 
 bazel_dep(name = "rules_jvm_external", version = "6.10")  # PlantUML
 
@@ -305,22 +319,74 @@ deb(
 )
 
 ###############################################################################
-# Hermetic doc-tool sysroot (docs_runtime)
+# Hermetic apt packages (docs_runtime sysroot + LLVM toolchain sysroot)
 #
-# Distroless rootfs providing graphviz + fakechroot for hermetic dot execution
-# via //third_party/docs_runtime:dot (exec_in_sysroot).
+# Pinned to the Ubuntu 24.04 (noble) snapshot so the package closure is
+# reproducible. Both dependency sets below share this one sources_list.
 ###############################################################################
 # bsdtar (used by //bazel/rules/exec_in_sysroot to extract sysroot archives).
 bazel_dep(name = "tar.bzl", version = "0.6.0")
 
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
-apt.install(
-    name = "docs_runtime",
-    lock = "//third_party/docs_runtime:docs_runtime.lock.json",
-    manifest = "//third_party/docs_runtime:docs_runtime.yaml",
-    mergedusr = True,
+apt.sources_list(
+    architectures = ["amd64"],
+    components = [
+        "main",
+        "universe",
+    ],
+    suites = [
+        "noble",
+        "noble-security",
+        "noble-updates",
+    ],
+    types = ["deb"],
+    uris = ["https://snapshot.ubuntu.com/ubuntu/20260401T104001Z"],
 )
-use_repo(apt, "docs_runtime")
+
+# Distroless rootfs providing graphviz + fakechroot for hermetic dot execution
+# via //third_party/docs_runtime:dot (exec_in_sysroot).
+apt.install(
+    dependency_set = "docs_runtime",
+    packages = [
+        "base-files",
+        "fakechroot",  # /usr/bin/fakechroot + libfakechroot.so for exec_in_sysroot
+        "graphviz",  # /usr/bin/dot and plugins used by Sphinx + PlantUML
+    ],
+    suites = [
+        "noble",
+        "noble-security",
+        "noble-updates",
+    ],
+)
+
+# Hermetic sysroot for the LLVM toolchain (see cpp/libclang), so that
+# cpp_parser's cc_common-derived flags (and any normal C++ compile using this
+# toolchain) resolve libc/libstdc++ headers from a pinned rootfs instead of the
+# build host, matching eclipse-score-communication2's ubuntu24_04_sysroot setup.
+apt.install(
+    dependency_set = "tooling_sysroot",
+    packages = [
+        "base-files",
+        "libatomic1",  # Non-lock-free atomics support
+        "libc6",  # Core C/POSIX
+        "libc6-dev",  # Core C/POSIX
+        "libgcc-s1",  # Exception unwinding
+        "libstdc++-13-dev",  # C++ standard library headers
+        "libstdc++6",  # C++ standard library runtime
+        "linux-libc-dev",  # Core C/POSIX
+    ],
+    suites = [
+        "noble",
+        "noble-security",
+        "noble-updates",
+    ],
+)
+apt.sysroot(
+    name = "tooling_sysroot_amd64",
+    architecture = "amd64",
+    dependency_set = "tooling_sysroot",
+)
+use_repo(apt, "docs_runtime", "tooling_sysroot_amd64")
 
 register_toolchains(
     "//bazel/rules/rules_score:sphinx_default_toolchain",
@@ -419,5 +485,10 @@ llvm.toolchain(
         "-latomic",
     ]},
     llvm_version = "19.1.7",
+)
+llvm.sysroot(
+    name = "llvm_toolchain",
+    label = "@tooling_sysroot_amd64//sysroot",
+    targets = ["linux-x86_64"],
 )
 use_repo(llvm, "llvm_toolchain", "llvm_toolchain_llvm")

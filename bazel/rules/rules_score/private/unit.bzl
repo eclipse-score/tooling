@@ -21,7 +21,6 @@ software element with associated design, implementation, and tests.
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@lobster//:lobster.bzl", "subrule_gtest_report")
-load("@rules_cc//cc:find_cc_toolchain.bzl", "use_cc_toolchain")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", "rust_common")
 load("//bazel/rules/rules_score:providers.bzl", "CcDependencyInfo", "CertifiedScope", "SphinxSourcesInfo", "UnitDesignInfo", "UnitInfo")
@@ -197,7 +196,7 @@ _unit = rule(
     doc = "Defines a software unit with design, implementation, and tests for S-CORE process compliance",
     subrules = [subrule_gtest_report],
     attrs = _unit_attrs,
-    toolchains = cpp_parser_action_toolchains() + use_cc_toolchain(),
+    toolchains = cpp_parser_action_toolchains(),
     fragments = ["cpp"],
 )
 

@@ -276,11 +276,12 @@ Graphviz / ``dot``
 **Source and packaging**
 
 Graphviz now comes directly from the docs runtime sysroot
-(``@docs_runtime//:flat``), built with ``rules_distroless`` from
-``//third_party/docs_runtime/docs_runtime.yaml``.  The Sphinx action does not
-call ``dot`` directly; it uses ``//third_party/docs_runtime:dot`` — an
-``exec_in_sysroot`` wrapper that unpacks the sysroot archive and runs
-``/usr/bin/dot`` inside it through ``fakechroot``.
+(``@docs_runtime//:flat``), built with ``rules_distroless`` from the
+``apt.install(dependency_set = "docs_runtime", ...)`` tag in ``//MODULE.bazel``.
+The Sphinx action does not call ``dot`` directly; it uses
+``//third_party/docs_runtime:dot`` — an ``exec_in_sysroot`` wrapper that
+unpacks the sysroot archive and runs ``/usr/bin/dot`` inside it through
+``fakechroot``.
 
 **Where the files land (execroot-relative paths)**
 

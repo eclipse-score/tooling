@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
-load("@rules_cc//cc:find_cc_toolchain.bzl", "find_cc_toolchain", "use_cc_toolchain")
+load("@rules_cc//cc:action_names.bzl", "ACTION_NAMES")
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load(":libclang_toolchain.bzl", "LIBCLANG_TOOLCHAIN_TYPE")
@@ -42,6 +42,16 @@ def _cc_sources_aspect_impl(target, ctx):
     for dep in getattr(ctx.rule.attr, "deps", []):
         if SourceFilesInfo in dep:
             transitive_inputs.append(dep[SourceFilesInfo].inputs)
+
+    # Also pull in every header CcInfo's compilation_context reports as
+    # needed (this is Bazel's own authoritative transitive header set, e.g.
+    # including third-party deps' generated "_virtual_includes" symlink
+    # trees), not just what the aspect can walk via srcs/hdrs/deps attrs.
+    # This matters now that the parser action runs fully sandboxed (no more
+    # execution_requirements = {"no-sandbox": "1"} escape hatch): any header
+    # transitively required but not declared as an input is invisible.
+    if CcInfo in target:
+        transitive_inputs.append(target[CcInfo].compilation_context.headers)
 
     if direct_srcs:
         files = direct_srcs
@@ -163,92 +173,99 @@ def cpp_parser_action_toolchains():
 
 # Parser action implementation.
 
-def _detect_standard_from_flags(ctx):
-    """
-    Fall back: compile the action's compile flags and look for -std=.
+def _strip_source_file_flag(flags, source_file):
+    """Drop the translation-unit's own source file from a derived flag list.
 
-    This covers toolchains that express the standard via compiler flags
-    rather than named features.
-    """
+    clang-rs's Index::parser() already supplies the real translation-unit
+    filename via the libclang API separately from these --extra-arg flags.
+    If the cc_toolchain's cpp_header_parsing action_config also names that
+    same file on the command line, libclang ends up seeing the translation
+    unit specified both ways, which its parseTranslationUnit machinery cannot
+    handle and fails with a CXError_ASTReadError ("AST deserialization
+    failed").
 
-    cc_toolchain = find_cc_toolchain(ctx)
+    Two forms occur depending on the toolchain:
+      * a "-c <source_file>" pair (older toolchains_llvm, e.g. 1.6.0), and
+      * a bare positional "<source_file>" argument (toolchains_llvm >= 1.8.0,
+        whose c++-header-parsing action embeds the input file directly).
+    Both are filtered out here so the flags are safe to reuse regardless of
+    which cc_toolchain produced them.
+    """
+    result = []
+    skip_next = False
+    for i, flag in enumerate(flags):
+        if skip_next:
+            skip_next = False
+            continue
+        if flag == "-c" and i + 1 < len(flags) and flags[i + 1] == source_file:
+            skip_next = True
+            continue
+        if flag == source_file:
+            continue
+        result.append(flag)
+    return result
+
+def _get_hermetic_parser_flags(ctx, cc_toolchain, user_compile_flags, source_file):
+    """Derive the clang flags needed to parse a target hermetically.
+
+    Reuses the exact hermetic flags (target triple, resource-dir, sysroot,
+    stdlib, -std, ...) that a normal C++ compile with the libclang toolchain's
+    registered cc_toolchain would use, instead of hand-parsing LLVM installation
+    file layouts. This makes the parser action work with any cc_toolchain
+    (LLVM or otherwise) referenced by the libclang_toolchain.
+
+    Uses the toolchain's dedicated "c++-header-parsing" action_config
+    (ACTION_NAMES.cpp_header_parsing) rather than "c++-compile". This is the
+    same action Bazel's built-in `parse_headers` feature uses to syntax-check
+    a header standalone: its flag set is -fsyntax-only-style by construction.
+    Some cc_toolchains embed the translation unit's own source file directly
+    in this action's flags - either as a "-c <source_file>" pair (e.g.
+    toolchains_llvm < 1.8.0) or as a bare positional argument (e.g.
+    toolchains_llvm >= 1.8.0). _strip_source_file_flag() removes both forms
+    since clang-rs already supplies the real file separately (see below); if
+    left in, libclang treats the translation unit as specified twice and
+    fails with a CXError_ASTReadError ("AST deserialization failed").
+
+    source_file must be a real source path (not a placeholder like /dev/null)
+    and output_file must be left unset: clang-rs's Index::parser() already
+    supplies the real translation-unit filename via the libclang API
+    separately from these --extra-arg flags, so any -c/-o pair embedded here
+    would make clang try to compile a second, conflicting file.
+
+    Also explicitly appends -isystem for each of the cc_toolchain's
+    built_in_include_directories (e.g. its bundled libc++ headers,
+    resource-dir, and - once cc_toolchain.sysroot is set - the sysroot's own
+    include directories). Normally a compiler binary auto-detects these
+    relative to its own on-disk location, but here libclang.so is dlopen()'d
+    in-process by the clang_rs_parser Rust binary rather than executed as
+    `clang`, so that auto-detection resolves relative to the Rust binary's
+    path instead and silently fails to find them (e.g. "'vector' file not
+    found").
+    """
     feature_configuration = cc_common.configure_features(
         ctx = ctx,
         cc_toolchain = cc_toolchain,
-        # Request every standard feature so configure_features can see them.
         requested_features = ctx.features,
         unsupported_features = ctx.disabled_features,
     )
     compile_variables = cc_common.create_compile_variables(
         feature_configuration = feature_configuration,
         cc_toolchain = cc_toolchain,
-        # We only care about the flag shape, not a real file.
-        source_file = "/dev/null",
-        output_file = "/dev/null",
+        source_file = source_file,
+        user_compile_flags = user_compile_flags,
+        use_pic = True,
     )
     flags = cc_common.get_memory_inefficient_command_line(
         feature_configuration = feature_configuration,
-        action_name = "c++-compile",
+        action_name = ACTION_NAMES.cpp_header_parsing,
         variables = compile_variables,
     )
-
-    modern_default = "-std=c++11"
-
-    for flag in reversed(flags):
-        if flag.startswith("-std="):
-            return flag
-    return modern_default
-
-def _collect_required_llvm_include_args(cxx_builtin_include_files, extra_config_site_files):
-    """
-    Build required libc++/clang builtin include flags from LLVM toolchain attributes.
-
-    Derives all paths dynamically from the cxx_builtin_include and extra_config_site
-    filegroups exposed by the LLVM toolchain
-
-    Args:
-        cxx_builtin_include_files: Files from @llvm_toolchain_llvm//:cxx_builtin_include,
-            containing the libc++ headers directory (include/c++) and the clang resource
-            include directory (lib/clang/<version>/include).
-        extra_config_site_files: Files from @llvm_toolchain_llvm//:extra_config_site,
-            containing the arch-specific __config_site file(s) used to locate the ABI
-            include directory (include/<triple>/c++/v1).
-    """
-    libcxx_include = None
-    resource_include = None
-
-    for f in cxx_builtin_include_files:
-        if "/lib/clang/" in f.path:
-            resource_include = f.path
-        elif f.path.endswith("/include/c++"):
-            libcxx_include = f.path + "/v1"
-
-    if not libcxx_include or not resource_include:
-        fail("Could not derive LLVM include paths from cxx_builtin_include filegroup. " +
-             "Got files: %s" % [f.path for f in cxx_builtin_include_files])
-
-    resource_dir = resource_include.rpartition("/include")[0]
-
-    result = [
-        "-isystem",
-        libcxx_include,
-    ]
-
-    if len(extra_config_site_files) > 1:
-        fail("Expected at most one arch-specific __config_site file, got: %s" %
-             [f.path for f in extra_config_site_files])
-
-    for f in extra_config_site_files:
-        result += ["-isystem", f.dirname]
-
-    result += [
-        "-resource-dir",
-        resource_dir,
-        "-isystem",
-        resource_include,
-    ]
-
-    return result
+    isystem_flags = []
+    for include_dir in cc_toolchain.built_in_include_directories:
+        isystem_flags.append("-isystem")
+        isystem_flags.append(include_dir)
+    flags = _strip_source_file_flag(flags, source_file)
+    return flags + isystem_flags
 
 def run_cpp_parser_action(
         ctx,
@@ -262,13 +279,17 @@ def run_cpp_parser_action(
     """Register the libclang parser action and return its declared outputs.
 
     The target must be analyzed with cpp_parser_target_aspects() before this
-    helper is called. Use has_cpp_parser_inputs() when the caller accepts mixed
-    implementation target types. The calling rule must declare the toolchains
-    returned by cpp_parser_action_toolchains().
+    helper is called. Callers MUST check has_cpp_parser_inputs(target) before
+    calling this: it derives its hermetic flags from the target's first
+    source file, so a target with an empty SourceFilesInfo.files list (e.g. a
+    header-only target with no headers reachable from srcs/hdrs/CcInfo) would
+    otherwise crash on an out-of-bounds list access. The calling rule must
+    declare the toolchains returned by cpp_parser_action_toolchains().
     """
 
     libclang_info = ctx.toolchains[LIBCLANG_TOOLCHAIN_TYPE].libclang_info
     libclang = libclang_info.libclang
+    cc_toolchain = libclang_info.cc_toolchain
 
     class_fbs_output = ctx.actions.declare_file(
         "{}_{}".format(output_prefix, "class_diagram.fbs.bin"),
@@ -296,28 +317,28 @@ def run_cpp_parser_action(
 
     target_compilation_flags_list = target[CompilationFlagsInfo].flags.to_list()
 
-    cxx_builtin_include_files = libclang_info.cxx_builtin_include.to_list()
-    extra_config_site_files = libclang_info.extra_config_site.to_list()
-    llvm_include_args = _collect_required_llvm_include_args(cxx_builtin_include_files, extra_config_site_files)
-
-    parser_extra_args = [
-        _detect_standard_from_flags(ctx),
-        "-nostdinc++",
-    ]
-    parser_extra_args += llvm_include_args
-    parser_extra_args += target_compilation_flags_list + extra_args
-    for ea in parser_extra_args:
-        args += ["--extra-arg", ea]
-
     target_source_files_info = target[SourceFilesInfo]
     target_source_files_list = target_source_files_info.files.to_list()
     target_source_inputs_list = target_source_files_info.inputs.to_list()
+
+    if not target_source_files_list:
+        fail("run_cpp_parser_action requires a target with non-empty parse " +
+             "inputs (caller must check has_cpp_parser_inputs() first): %s" % target.label)
+
+    parser_extra_args = _get_hermetic_parser_flags(
+        ctx,
+        cc_toolchain,
+        target_compilation_flags_list + extra_args,
+        target_source_files_list[0].path,
+    )
+    for ea in parser_extra_args:
+        args += ["--extra-arg", ea]
 
     args += ["--input"] + [file.path for file in target_source_files_list]
 
     inputs = [
         libclang,
-    ] + target_source_inputs_list + cxx_builtin_include_files + extra_config_site_files
+    ] + target_source_inputs_list + cc_toolchain.all_files.to_list()
 
     outputs = [class_fbs_output]
     if debug_json_output:
@@ -334,10 +355,6 @@ def run_cpp_parser_action(
             "LIBCLANG_LOG": log_level,
         },
         mnemonic = "CppAnalyze",
-        # this is required to parse some system headers
-        execution_requirements = {
-            "no-sandbox": "1",
-        },
         progress_message = "Running C++ AST analysis: %s" % ctx.label,
     )
 
@@ -397,6 +414,6 @@ _cpp_parser_attrs.update(cpp_parser_action_internal_attrs())
 cpp_parser = rule(
     implementation = _cpp_parser_impl,
     attrs = _cpp_parser_attrs,
-    toolchains = cpp_parser_action_toolchains() + use_cc_toolchain(),
+    toolchains = cpp_parser_action_toolchains(),
     fragments = ["cpp"],
 )
