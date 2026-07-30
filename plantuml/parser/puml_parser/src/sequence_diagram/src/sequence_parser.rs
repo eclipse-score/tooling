@@ -67,6 +67,7 @@ impl PumlSequenceParser {
             .into_inner()
             .next()
             .ok_or_else(|| SequenceError::InvalidStatement("empty statement".to_string()))?;
+
         match inner.as_rule() {
             Rule::participant_def => Ok(vec![Statement::ParticipantDef(
                 Self::parse_participant_def(inner, source_location)?,
@@ -81,6 +82,10 @@ impl PumlSequenceParser {
                 source_location,
             )?)]),
             Rule::ref_stmt => Ok(vec![Statement::RefCmd(Self::parse_ref_cmd(
+                inner,
+                source_location,
+            ))]),
+            Rule::return_cmd => Ok(vec![Statement::ReturnCmd(Self::parse_return_cmd(
                 inner,
                 source_location,
             ))]),
@@ -282,9 +287,10 @@ impl PumlSequenceParser {
             }
         }
 
-        let (left, arrow, right) = Self::parse_message_body(body.ok_or_else(|| {
-            SequenceError::InvalidStatement("missing message body".to_string())
-        })?)?;
+        let (left, arrow, right) =
+            Self::parse_message_body(body.ok_or_else(|| {
+                SequenceError::InvalidStatement("missing message body".to_string())
+            })?)?;
 
         Ok(Message {
             left,
@@ -444,45 +450,120 @@ impl PumlSequenceParser {
         pair: pest::iterators::Pair<Rule>,
         source_location: SourceLocation,
     ) -> Result<GroupCmd, SequenceError> {
-        let mut group_type: Option<GroupType> = None;
-        let mut text: Option<String> = None;
+        let inner = pair
+            .into_inner()
+            .next()
+            .ok_or_else(|| SequenceError::InvalidStatement("empty group command".to_string()))?;
+
+        match inner.as_rule() {
+            Rule::group_start => Self::parse_group_start(inner, source_location),
+            Rule::group_branch => Self::parse_group_branch(inner, source_location),
+            Rule::group_end => Self::parse_group_end(inner, source_location),
+            _ => Err(SequenceError::InvalidStatement(format!(
+                "unsupported group command: {:?}",
+                inner.as_rule()
+            ))),
+        }
+    }
+
+    fn parse_group_start(
+        pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
+    ) -> Result<GroupCmd, SequenceError> {
+        let mut kind: Option<GroupKind> = None;
+        let mut label: Option<String> = None;
+        let mut is_parallel = false;
 
         for inner in pair.into_inner() {
             match inner.as_rule() {
-                Rule::group_type => {
-                    group_type = Self::parse_group_type(inner);
+                Rule::parallel_marker => {
+                    is_parallel = true;
                 }
-                Rule::group_condition => {
-                    text = Some(inner.as_str().trim().to_string());
+                Rule::group_start_type => {
+                    kind = Some(Self::parse_group_kind(inner)?);
+                }
+                Rule::group_label => {
+                    label = Some(inner.as_str().trim().to_string());
                 }
                 _ => {}
             }
         }
 
-        Ok(GroupCmd {
-            group_type: group_type
-                .ok_or_else(|| SequenceError::InvalidStatement("missing group type".to_string()))?,
-            text,
+        Ok(GroupCmd::Start(GroupStart {
+            kind: kind.ok_or_else(|| {
+                SequenceError::InvalidStatement("missing group start kind".to_string())
+            })?,
+            label,
+            is_parallel,
             source_location,
-        })
+        }))
     }
 
-    fn parse_group_type(pair: pest::iterators::Pair<Rule>) -> Option<GroupType> {
-        let text = pair.as_str().to_lowercase();
-        match text.as_str() {
-            "opt" => Some(GroupType::Opt),
-            "alt" => Some(GroupType::Alt),
-            "loop" => Some(GroupType::Loop),
-            "par" => Some(GroupType::Par),
-            "par2" => Some(GroupType::Par2),
-            "break" => Some(GroupType::Break),
-            "critical" => Some(GroupType::Critical),
-            "else" => Some(GroupType::Else),
-            "also" => Some(GroupType::Also),
-            "end" => Some(GroupType::End),
-            "group" => Some(GroupType::Group),
-            _ => None,
+    fn parse_group_branch(
+        pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
+    ) -> Result<GroupCmd, SequenceError> {
+        let mut has_else = false;
+        let mut label: Option<String> = None;
+
+        for inner in pair.into_inner() {
+            match inner.as_rule() {
+                Rule::group_branch_type => {
+                    has_else = true;
+                }
+                Rule::group_label => {
+                    label = Some(inner.as_str().trim().to_string());
+                }
+                _ => {}
+            }
         }
+
+        if !has_else {
+            return Err(SequenceError::InvalidStatement(
+                "missing group branch kind".to_string(),
+            ));
+        }
+
+        Ok(GroupCmd::Else(GroupElse {
+            label,
+            source_location,
+        }))
+    }
+
+    fn parse_group_end(
+        pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
+    ) -> Result<GroupCmd, SequenceError> {
+        let mut kind: Option<GroupKind> = None;
+
+        for inner in pair.into_inner() {
+            if inner.as_rule() == Rule::group_start_type {
+                kind = Some(Self::parse_group_kind(inner)?);
+            }
+        }
+
+        Ok(GroupCmd::End(GroupEnd {
+            kind,
+            source_location,
+        }))
+    }
+
+    fn parse_group_kind(pair: pest::iterators::Pair<Rule>) -> Result<GroupKind, SequenceError> {
+        let text = pair.as_str().to_lowercase();
+        Ok(match text.as_str() {
+            "alt" => GroupKind::Alt,
+            "opt" => GroupKind::Opt,
+            "loop" => GroupKind::Loop,
+            "par" => GroupKind::Par,
+            "break" => GroupKind::Break,
+            "critical" => GroupKind::Critical,
+            "group" => GroupKind::Group,
+            _ => {
+                return Err(SequenceError::InvalidStatement(format!(
+                    "unsupported group kind: {text}"
+                )));
+            }
+        })
     }
 
     fn parse_ref_cmd(pair: pest::iterators::Pair<Rule>, source_location: SourceLocation) -> RefCmd {
@@ -494,6 +575,22 @@ impl PumlSequenceParser {
         RefCmd {
             participants,
             text,
+            source_location,
+        }
+    }
+
+    fn parse_return_cmd(
+        pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
+    ) -> ReturnCmd {
+        let label = pair
+            .into_inner()
+            .find(|inner| inner.as_rule() == Rule::sequence_text_content)
+            .map(|inner| inner.as_str().trim().to_string())
+            .filter(|text| !text.is_empty());
+
+        ReturnCmd {
+            label,
             source_location,
         }
     }
@@ -525,6 +622,40 @@ impl PumlSequenceParser {
                 }
             }
         }
+    }
+
+    fn parse_create_cmd(
+        pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
+    ) -> Result<CreateCmd, SequenceError> {
+        let mut participant_type: Option<ParticipantType> = None;
+        let mut identifier: Option<ParticipantIdentifier> = None;
+        let mut stereotype: Option<String> = None;
+
+        for inner in pair.into_inner() {
+            match inner.as_rule() {
+                Rule::participant_type => {
+                    participant_type = Some(Self::parse_participant_type(inner)?);
+                }
+                Rule::participant_identifier => {
+                    identifier = Some(Self::parse_participant_identifier(inner)?);
+                }
+                Rule::stereotype => {
+                    stereotype = Some(Self::extract_stereotype(inner.as_str()));
+                }
+                Rule::order_clause => {}
+                _ => {}
+            }
+        }
+
+        Ok(CreateCmd {
+            participant_type: participant_type.unwrap_or(ParticipantType::Participant),
+            identifier: identifier.ok_or_else(|| {
+                SequenceError::InvalidStatement("missing participant identifier".to_string())
+            })?,
+            stereotype,
+            source_location,
+        })
     }
 
     fn parse_destroy_cmd(pair: pest::iterators::Pair<Rule>) -> Result<DestroyCmd, SequenceError> {
@@ -574,40 +705,6 @@ impl PumlSequenceParser {
             participant: participant.ok_or_else(|| {
                 SequenceError::InvalidStatement("missing participant in deactivate".to_string())
             })?,
-        })
-    }
-
-    fn parse_create_cmd(
-        pair: pest::iterators::Pair<Rule>,
-        source_location: SourceLocation,
-    ) -> Result<CreateCmd, SequenceError> {
-        let mut participant_type: Option<ParticipantType> = None;
-        let mut identifier: Option<ParticipantIdentifier> = None;
-        let mut stereotype: Option<String> = None;
-
-        for inner in pair.into_inner() {
-            match inner.as_rule() {
-                Rule::participant_type => {
-                    participant_type = Some(Self::parse_participant_type(inner)?);
-                }
-                Rule::participant_identifier => {
-                    identifier = Some(Self::parse_participant_identifier(inner)?);
-                }
-                Rule::stereotype => {
-                    stereotype = Some(Self::extract_stereotype(inner.as_str()));
-                }
-                Rule::order_clause => {}
-                _ => {}
-            }
-        }
-
-        Ok(CreateCmd {
-            participant_type: participant_type.unwrap_or(ParticipantType::Participant),
-            identifier: identifier.ok_or_else(|| {
-                SequenceError::InvalidStatement("missing participant identifier".to_string())
-            })?,
-            stereotype,
-            source_location,
         })
     }
 
@@ -673,6 +770,52 @@ impl PumlSequenceParser {
             _ => pair.as_str().trim().to_string(),
         }
     }
+
+    #[cfg(not(coverage))]
+    fn log_parse_tree_if_enabled(
+        pairs: &pest::iterators::Pairs<Rule>,
+        path: &Rc<PathBuf>,
+        log_level: LogLevel,
+    ) {
+        if matches!(log_level, LogLevel::Debug | LogLevel::Trace) {
+            let mut tree_output = String::new();
+            format_parse_tree(pairs.clone(), 0, &mut tree_output);
+            debug!(
+                "\n=== Parse Tree for {} ===\n{}=== End Parse Tree ===",
+                path.display(),
+                tree_output
+            );
+        }
+    }
+
+    fn parse_document(
+        pairs: pest::iterators::Pairs<Rule>,
+        source_path: &str,
+    ) -> Result<SeqPumlDocument, SequenceError> {
+        let mut document = SeqPumlDocument {
+            name: None,
+            statements: Vec::new(),
+        };
+
+        for inner_pair in pairs
+            .filter(|pair| pair.as_rule() == Rule::sequence_start)
+            .flat_map(|pair| pair.into_inner())
+        {
+            match inner_pair.as_rule() {
+                Rule::startuml => {
+                    document.name = Self::parse_startuml(inner_pair);
+                }
+                Rule::sequence_statement => {
+                    document
+                        .statements
+                        .extend(Self::parse_statement(inner_pair, source_path)?);
+                }
+                _ => {}
+            }
+        }
+
+        Ok(document)
+    }
 }
 
 impl DiagramParser for PumlSequenceParser {
@@ -695,45 +838,11 @@ impl DiagramParser for PumlSequenceParser {
         let pairs = PlantUmlCommonParser::parse(Rule::sequence_start, content)
             .map_err(|e| pest_to_syntax_error(e, path.as_ref().clone(), content))?;
 
-        // Debug-only, excluded to keep coverage focused on parser logic.
         #[cfg(not(coverage))]
-        if matches!(log_level, LogLevel::Debug | LogLevel::Trace) {
-            let mut tree_output = String::new();
-            format_parse_tree(pairs.clone(), 0, &mut tree_output);
-            debug!(
-                "\n=== Parse Tree for {} ===\n{}=== End Parse Tree ===",
-                path.display(),
-                tree_output
-            );
-        }
+        Self::log_parse_tree_if_enabled(&pairs, path, log_level);
 
         let source_path = path.as_ref().clone().to_string_lossy().to_string();
-        let mut document = SeqPumlDocument {
-            name: None,
-            statements: Vec::new(),
-        };
-
-        for pair in pairs {
-            if pair.as_rule() == Rule::sequence_start {
-                for inner_pair in pair.into_inner() {
-                    match inner_pair.as_rule() {
-                        Rule::startuml => {
-                            document.name = Self::parse_startuml(inner_pair);
-                        }
-                        Rule::sequence_statement => {
-                            let mut stmts = Self::parse_statement(inner_pair, &source_path)?;
-                            document.statements.append(&mut stmts);
-                        }
-                        Rule::empty_line => {
-                            // Skip empty lines
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        }
-
-        Ok(document)
+        Self::parse_document(pairs, &source_path)
     }
 }
 

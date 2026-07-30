@@ -229,7 +229,7 @@ destroy_suffix = { "!!" }
 activation_short = { participant_ref ~ (activate_suffix | deactivate_suffix) }
 
 // Return
-return_cmd = { parallel_marker? ~ ^"return" ~ sequence_text_content? }
+return_cmd = { ^"return" ~ sequence_text_content? }
 
 // Box
 box_start = { "box" ~ quoted_string? ~ color_spec? }
@@ -237,15 +237,28 @@ box_end = { ^"end" ~ WHITESPACE? ~ ^"box" }
 
 // Group commands (alt, opt, loop, etc.)
 group_cmd = {
-    parallel_marker? ~ group_type ~ group_condition?
+      group_start
+    | group_branch
+    | group_end
 }
-
-group_condition = @{ (!EOL ~ ANY)+ }
-
-group_type = @{
-    (^"critical" | ^"par2" | ^"par" | ^"opt" | ^"alt" | ^"loop" | ^"break" |
-     ^"else" | ^"also" | ^"group" | ^"end") ~ &(" " | "\t" | "\n" | "\r")
+group_start = {
+    parallel_marker? ~ group_start_type ~ group_label?
 }
+group_branch = {
+    group_branch_type ~ group_label?
+}
+group_end = { ^"end" ~ group_start_type? }
+group_start_type = @{
+      ^"alt"
+    | ^"opt"
+    | ^"loop"
+    | ^"par"
+    | ^"break"
+    | ^"critical"
+    | ^"group"
+}
+group_branch_type = @{ ^"else" }
+group_label = @{ (!EOL ~ ANY)+ }
 
 // Divider and delay
 divider = { "==" ~ divider_text? ~ "==" }

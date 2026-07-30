@@ -97,6 +97,16 @@ fn test_lifecycle_commands() {
 }
 
 #[test]
+fn test_group_commands() {
+    run_sequence_diagram_parser_case("group_commands");
+}
+
+#[test]
 fn test_ref_statement() {
     run_sequence_diagram_parser_case("ref_statement");
+}
+
+#[test]
+fn test_return_commands() {
+    run_sequence_diagram_parser_case("return_commands");
 }

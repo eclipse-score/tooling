@@ -1,0 +1,386 @@
+{
+  "group_commands.puml": {
+    "name": "group_commands",
+    "statements": [
+      {
+        "GroupCmd": {
+          "Start": {
+            "kind": "Alt",
+            "label": "successful path",
+            "is_parallel": false,
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Alice",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Bob",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": "success",
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "Else": {
+            "label": "fallback path",
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Alice",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Bob",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": "fallback",
+          "source_location": {
+            "file": "",
+            "line": 18
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "End": {
+            "kind": "Alt",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "Start": {
+            "kind": "Loop",
+            "label": "retry while pending",
+            "is_parallel": false,
+            "source_location": {
+              "file": "",
+              "line": 21
+            }
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Alice",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Bob",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": "retry",
+          "source_location": {
+            "file": "",
+            "line": 22
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "End": {
+            "kind": null,
+            "source_location": {
+              "file": "",
+              "line": 23
+            }
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "Start": {
+            "kind": "Group",
+            "label": "custom section",
+            "is_parallel": false,
+            "source_location": {
+              "file": "",
+              "line": 25
+            }
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Alice",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Bob",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": "custom",
+          "source_location": {
+            "file": "",
+            "line": 26
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "End": {
+            "kind": null,
+            "source_location": {
+              "file": "",
+              "line": 27
+            }
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "Start": {
+            "kind": "Par",
+            "label": "parallel branch",
+            "is_parallel": false,
+            "source_location": {
+              "file": "",
+              "line": 29
+            }
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Alice",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Bob",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": "branch",
+          "source_location": {
+            "file": "",
+            "line": 30
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "End": {
+            "kind": null,
+            "source_location": {
+              "file": "",
+              "line": 31
+            }
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "Start": {
+            "kind": "Break",
+            "label": "stop early",
+            "is_parallel": false,
+            "source_location": {
+              "file": "",
+              "line": 33
+            }
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Alice",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Bob",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": "stop",
+          "source_location": {
+            "file": "",
+            "line": 34
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "End": {
+            "kind": null,
+            "source_location": {
+              "file": "",
+              "line": 35
+            }
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "Start": {
+            "kind": "Critical",
+            "label": "exclusive section",
+            "is_parallel": false,
+            "source_location": {
+              "file": "",
+              "line": 37
+            }
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Alice",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Bob",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": "exclusive",
+          "source_location": {
+            "file": "",
+            "line": 38
+          }
+        }
+      },
+      {
+        "GroupCmd": {
+          "End": {
+            "kind": "Critical",
+            "source_location": {
+              "file": "",
+              "line": 39
+            }
+          }
+        }
+      }
+    ]
+  }
+}
