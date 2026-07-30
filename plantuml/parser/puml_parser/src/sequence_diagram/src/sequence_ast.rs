@@ -38,6 +38,7 @@ pub enum Statement {
     Message(Message),
     GroupCmd(GroupCmd),
     RefCmd(RefCmd),
+    ReturnCmd(ReturnCmd),
 }
 
 // Participant definitions
@@ -130,23 +131,48 @@ pub enum MessageSuffix {
 
 // Group commands (alt, opt, loop, etc.) - internal parsing structure
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct GroupCmd {
-    pub group_type: GroupType,
-    pub text: Option<String>,
+pub enum GroupCmd {
+    Start(GroupStart),
+    Else(GroupElse),
+    End(GroupEnd),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GroupStart {
+    pub kind: GroupKind,
+    pub label: Option<String>,
+    /// alt success
+    pub is_parallel: bool,
+    /// "& alt ..."
     pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum GroupType {
-    Opt,
+pub struct GroupElse {
+    pub label: Option<String>,
+    /// else success
+    pub source_location: SourceLocation,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GroupEnd {
+    pub kind: Option<GroupKind>,
+    pub source_location: SourceLocation,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GroupKind {
     Alt,
+    Opt,
     Loop,
     Par,
-    Par2,
     Break,
     Critical,
-    Else,
-    Also,
-    End,
     Group,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ReturnCmd {
+    pub label: Option<String>,
+    pub source_location: SourceLocation,
 }

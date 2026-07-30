@@ -28,20 +28,16 @@ fn endpoint_name(endpoint: &MessageEndpoint) -> String {
     }
 }
 
-/// Convert a syntax-level `GroupType` into the metamodel `ConditionType`.
-fn group_type_to_condition(gt: &GroupType) -> ConditionType {
-    match gt {
-        GroupType::Opt => ConditionType::Opt,
-        GroupType::Alt => ConditionType::Alt,
-        GroupType::Loop => ConditionType::Loop,
-        GroupType::Par => ConditionType::Par,
-        GroupType::Par2 => ConditionType::Par2,
-        GroupType::Break => ConditionType::Break,
-        GroupType::Critical => ConditionType::Critical,
-        GroupType::Else => ConditionType::Else,
-        GroupType::Also => ConditionType::Also,
-        GroupType::End => ConditionType::End,
-        GroupType::Group => ConditionType::Group,
+/// Convert a syntax-level `GroupKind` into the metamodel `ConditionType`.
+fn group_kind_to_condition(kind: &GroupKind) -> ConditionType {
+    match kind {
+        GroupKind::Opt => ConditionType::Opt,
+        GroupKind::Alt => ConditionType::Alt,
+        GroupKind::Loop => ConditionType::Loop,
+        GroupKind::Par => ConditionType::Par,
+        GroupKind::Break => ConditionType::Break,
+        GroupKind::Critical => ConditionType::Critical,
+        GroupKind::Group => ConditionType::Group,
     }
 }
 
@@ -55,12 +51,9 @@ pub fn build_tree(statements: &[Statement]) -> Vec<SequenceNode> {
             nodes.push(node);
             i += consumed;
         } else {
-            // Skip over else/also/end that are not handled
+            // Skip over branch/end markers that are not handled
             if let Some(Statement::GroupCmd(g)) = statements.get(i) {
-                if matches!(
-                    g.group_type,
-                    GroupType::Else | GroupType::Also | GroupType::End
-                ) {
+                if matches!(g, GroupCmd::Else(_) | GroupCmd::End(_)) {
                     i += 1;
                     continue;
                 }
@@ -77,20 +70,8 @@ pub(crate) fn box_nodes(nodes: Vec<SequenceNode>) -> Vec<SequenceNode> {
     nodes
 }
 
-fn is_group_start(group_type: &GroupType) -> bool {
-    matches!(
-        group_type,
-        GroupType::Alt
-            | GroupType::Opt
-            | GroupType::Loop
-            | GroupType::Par
-            | GroupType::Par2
-            | GroupType::Break
-            | GroupType::Critical
-            | GroupType::Group
-            | GroupType::Else
-            | GroupType::Also
-    )
+fn is_group_node(group: &GroupCmd) -> bool {
+    matches!(group, GroupCmd::Start(_) | GroupCmd::Else(_))
 }
 
 fn collect_group_statements(statements: &[Statement]) -> (Vec<Statement>, usize) {
@@ -100,8 +81,8 @@ fn collect_group_statements(statements: &[Statement]) -> (Vec<Statement>, usize)
 
     for stmt in &statements[1..] {
         if let Statement::GroupCmd(group) = stmt {
-            match group.group_type {
-                GroupType::End => {
+            match group {
+                GroupCmd::End(_) => {
                     if nesting_depth > 0 {
                         nesting_depth -= 1;
                         group_statements.push(stmt.clone());
@@ -109,18 +90,15 @@ fn collect_group_statements(statements: &[Statement]) -> (Vec<Statement>, usize)
                         break;
                     }
                 }
-                GroupType::Else | GroupType::Also => {
+                GroupCmd::Else(_) => {
                     if nesting_depth > 0 {
                         group_statements.push(stmt.clone());
                     } else {
                         break;
                     }
                 }
-                _ if is_group_start(&group.group_type) => {
+                GroupCmd::Start(_) => {
                     nesting_depth += 1;
-                    group_statements.push(stmt.clone());
-                }
-                _ => {
                     group_statements.push(stmt.clone());
                 }
             }
@@ -134,20 +112,43 @@ fn collect_group_statements(statements: &[Statement]) -> (Vec<Statement>, usize)
 }
 
 fn build_group_node(statements: &[Statement], group: &GroupCmd) -> (SequenceNode, usize) {
-    let condition = Condition {
-        condition_type: group_type_to_condition(&group.group_type),
-        condition_value: group.text.clone().unwrap_or_default(),
-    };
+    let (condition, source_location) = group_condition_and_location(group);
     let (group_statements, consumed) = collect_group_statements(statements);
 
     (
         SequenceNode {
             event: Event::Condition(condition),
-            source_location: group.source_location.clone(),
+            source_location,
             branches_node: box_nodes(build_tree(&group_statements)),
         },
         consumed,
     )
+}
+
+fn group_condition_and_location(group: &GroupCmd) -> (Condition, SourceLocation) {
+    match group {
+        GroupCmd::Start(start) => (
+            Condition {
+                condition_type: group_kind_to_condition(&start.kind),
+                condition_value: start.label.clone().unwrap_or_default(),
+            },
+            start.source_location.clone(),
+        ),
+        GroupCmd::Else(else_cmd) => (
+            Condition {
+                condition_type: ConditionType::Else,
+                condition_value: else_cmd.label.clone().unwrap_or_default(),
+            },
+            else_cmd.source_location.clone(),
+        ),
+        GroupCmd::End(end) => (
+            Condition {
+                condition_type: ConditionType::End,
+                condition_value: String::new(),
+            },
+            end.source_location.clone(),
+        ),
+    }
 }
 
 /// Build a single sequence node and return how many statements were consumed
@@ -235,11 +236,9 @@ fn build_node(statements: &[Statement]) -> Option<(SequenceNode, usize)> {
         }
         Statement::GroupCmd(group) => {
             // Handle group commands (alt, opt, loop, else, etc.)
-            match group.group_type {
-                GroupType::End => {
-                    None // End markers signal the close of a branch
-                }
-                _ if is_group_start(&group.group_type) => Some(build_group_node(statements, group)),
+            match group {
+                GroupCmd::End(_) => None, // End markers signal the close of a branch
+                _ if is_group_node(group) => Some(build_group_node(statements, group)),
                 _ => None,
             }
         }
