@@ -23,6 +23,21 @@ local_path_override(
     path = "../../../../../",
 )
 
+# score_tooling's own git_override for rules_distroless (needed for
+# apt.sources_list()/apt.sysroot()/dependency_set, used by its hermetic
+# libclang sysroot) is only honored when score_tooling is the root module.
+# Since score_tooling is merely a transitive dependency here, this module
+# must repeat the override, or the registry rules_distroless 0.8.0 (which
+# lacks those tag classes) is used instead and score_tooling's own
+# MODULE.bazel fails to load with "does not have a tag class named
+# sources_list".
+bazel_dep(name = "rules_distroless", version = "0.8.0")
+git_override(
+    module_name = "rules_distroless",
+    commit = "2cda8c523a2219593e91dbb044dd30c793d9d68f",
+    remote = "https://github.com/LittleHuba/rules_distroless.git",
+)
+
 # Some other llvm toolchain
 bazel_dep(name = "toolchains_llvm", version = "1.6.0", dev_dependency = True)
 

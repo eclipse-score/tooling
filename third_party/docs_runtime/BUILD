@@ -12,16 +12,12 @@
 # *******************************************************************************
 
 # Hermetic doc-tool runtime rootfs. The @docs_runtime repo (rules_distroless
-# apt.install) is defined in //MODULE.bazel; its manifest + lock live here.
+# apt.install(dependency_set = "docs_runtime", ...)) is defined in
+# //MODULE.bazel, which lists the pinned packages directly.
 
 load("//bazel/rules/exec_in_sysroot:exec_in_sysroot.bzl", "exec_in_sysroot", "prepare_sysroot")
 
 package(default_visibility = ["//visibility:public"])
-
-exports_files([
-    "docs_runtime.yaml",
-    "docs_runtime.lock.json",
-])
 
 # Rework the distroless rootfs once into a cached `dot`-ready sysroot archive.
 # The apt graphviz package ships /usr/bin/dot as a symlink to

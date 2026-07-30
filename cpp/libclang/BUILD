@@ -42,8 +42,7 @@ toolchain_type(
 # inherited by repositories that depend on score_tooling.
 libclang_toolchain(
     name = "score_tooling_libclang",
-    cxx_builtin_include = "@llvm_toolchain_llvm//:cxx_builtin_include",
-    extra_config_site = "@llvm_toolchain_llvm//:extra_config_site",
+    cc_toolchain = "@llvm_toolchain//:cc-clang-x86_64-linux",
     libclang = "@llvm_toolchain_llvm//:lib/libclang.so",
     visibility = ["//visibility:public"],
 )

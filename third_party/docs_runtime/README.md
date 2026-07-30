@@ -16,9 +16,9 @@
 The docs build needs Graphviz `dot` at action runtime (Sphinx graphviz extension
 and PlantUML `-graphvizdot`). This package makes that use hermetic:
 
-1. `@docs_runtime//:flat` provides a distroless rootfs tar (from
-   `docs_runtime.yaml` + `docs_runtime.lock.json`) containing `graphviz` and
-   `fakechroot`.
+1. `@docs_runtime//:flat` provides a distroless rootfs tar (from the
+   `apt.install(dependency_set = "docs_runtime", ...)` tag in `//MODULE.bazel`)
+   containing `graphviz` and `fakechroot`.
 2. `//third_party/docs_runtime:dot_sysroot` (a `prepare_sysroot` rule) unpacks
    that tar, prunes plugins with missing host dependencies, runs `dot -c` to
    generate the plugin manifest, and repackages the result as a single cached
@@ -49,11 +49,10 @@ remain:
 
 ## Updating packages
 
-Edit `docs_runtime.yaml`, then regenerate and commit the lock:
-
-```bash
-bazel run @docs_runtime//:lock
-```
+Edit the `packages` list of the `dependency_set = "docs_runtime"` `apt.install(...)`
+tag in `//MODULE.bazel`, then re-run any build that depends on `@docs_runtime`
+(rules_distroless resolves and re-locks the closure automatically via Bazel's
+module extension facts — no separate lock file to regenerate/commit).
 
 ## Targets in this package
 
