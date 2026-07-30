@@ -162,8 +162,8 @@ deactivate_cmd = { ^"deactivate" ~ participant_ref? }
 destroy_cmd = { ^"destroy" ~ participant_ref }
 
 // Sequence Arrow
-SEQUENCE_ARROW_PREFIX_CHAR = _{ "<" | "/" | "\\" | "|" | "*" | "(" | ")" | "#" | "^" | "@" }
-SEQUENCE_ARROW_SUFFIX_CHAR = _{ ">" | "/" | "\\" | "|" | "*" | "(" | ")" | "#" | "^" | "@" }
+SEQUENCE_ARROW_PREFIX_CHAR = _{ "<" | "/" | "\\" | "|" | "*" | "(" | ")" | "#" | "^" | "@" | "o" | "x" }
+SEQUENCE_ARROW_SUFFIX_CHAR = _{ ">" | "/" | "\\" | "|" | "*" | "(" | ")" | "#" | "^" | "@" | "o" | "x" }
 
 sequence_arrow_prefix = @{ SEQUENCE_ARROW_PREFIX_CHAR+ }
 sequence_arrow_suffix = @{ SEQUENCE_ARROW_SUFFIX_CHAR+ }
@@ -178,9 +178,21 @@ sequence_arrow = {
 
 // Messages
 message = {
-    parallel_marker? ~
-    message_endpoint ~ sequence_arrow ~ message_endpoint ~
-    message_suffix? ~ sequence_description?
+    parallel_marker? ~ message_body ~ message_suffix? ~ sequence_description?
+}
+message_body = {
+      message_full
+    | message_missing_left
+    | message_missing_right
+}
+message_full = {
+    message_endpoint ~ sequence_arrow ~ message_endpoint
+}
+message_missing_left = {
+    sequence_arrow ~ message_endpoint
+}
+message_missing_right = {
+    message_endpoint ~ !deactivate_suffix ~ sequence_arrow
 }
 
 parallel_marker = { "&" }
@@ -199,18 +211,16 @@ inline_participant = {
 lost_found_marker = {
       left_lost_found
     | right_lost_found
+    | short_lost_found
 }
-//  '[',  '[o',  '[x'
-left_lost_found = { "[" ~ ("o" | "x")? }
-//  ']',  'o]',  'x]'
-right_lost_found = { ("o" | "x")? ~ "]" }
+left_lost_found = { "[" }
+right_lost_found = { "]" }
+short_lost_found = { "?" }
 
 message_suffix = {
-      activate_suffix
-    | deactivate_suffix
-    | create_suffix
-    | destroy_suffix
+    message_lifecycle_suffix+
 }
+message_lifecycle_suffix = _{ activate_suffix | deactivate_suffix | create_suffix | destroy_suffix }
 activate_suffix = { "++" ~ color_spec? }
 deactivate_suffix = { "--" }
 create_suffix = { "**" }

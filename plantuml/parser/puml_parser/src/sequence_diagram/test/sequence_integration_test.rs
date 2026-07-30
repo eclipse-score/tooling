@@ -72,8 +72,18 @@ fn test_message_participants() {
 }
 
 #[test]
+fn test_message_suffixes() {
+    run_sequence_diagram_parser_case("message_suffixes");
+}
+
+#[test]
 fn test_message_lost_found() {
     run_sequence_diagram_parser_case("message_lost_found");
+}
+
+#[test]
+fn test_message_missing_endpoints() {
+    run_sequence_diagram_parser_case("message_missing_endpoints");
 }
 
 #[test]

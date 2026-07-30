@@ -264,29 +264,14 @@ impl PumlSequenceParser {
         pair: pest::iterators::Pair<Rule>,
         source_location: SourceLocation,
     ) -> Result<Message, SequenceError> {
-        let mut left: Option<MessageEndpoint> = None;
-        let mut arrow: Option<Arrow> = None;
-        let mut right: Option<MessageEndpoint> = None;
+        let mut body: Option<pest::iterators::Pair<Rule>> = None;
         let mut suffix: Option<MessageSuffix> = None;
         let mut description: Option<String> = None;
 
         for inner in pair.into_inner() {
             match inner.as_rule() {
-                Rule::message_endpoint => {
-                    let endpoint = Self::parse_message_endpoint(inner)?;
-                    // First participant goes to left, second to right
-                    if arrow.is_none() {
-                        left = Some(endpoint);
-                    } else {
-                        right = Some(endpoint);
-                    }
-                }
-                Rule::sequence_arrow => {
-                    arrow = Some(Self::parse_arrow(inner)?);
-                }
-                Rule::message_suffix => {
-                    suffix = Some(Self::parse_message_suffix(inner)?);
-                }
+                Rule::message_body => body = Some(inner),
+                Rule::message_suffix => suffix = Some(Self::parse_message_suffix(inner)?),
                 Rule::sequence_description => {
                     description = inner
                         .into_inner()
@@ -297,29 +282,92 @@ impl PumlSequenceParser {
             }
         }
 
+        let (left, arrow, right) = Self::parse_message_body(body.ok_or_else(|| {
+            SequenceError::InvalidStatement("missing message body".to_string())
+        })?)?;
+
         Ok(Message {
-            left: left.ok_or_else(|| {
-                SequenceError::InvalidStatement("message must contain left endpoint".to_string())
-            })?,
-            arrow: arrow.ok_or_else(|| {
-                SequenceError::InvalidStatement("missing arrow in message".to_string())
-            })?,
-            right: right.ok_or_else(|| {
-                SequenceError::InvalidStatement("message must contain right endpoint".to_string())
-            })?,
+            left,
+            arrow,
+            right,
             suffix,
             description,
             source_location,
         })
     }
 
+    fn parse_message_body(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<(MessageEndpoint, Arrow, MessageEndpoint), SequenceError> {
+        let body = pair
+            .into_inner()
+            .next()
+            .ok_or_else(|| SequenceError::InvalidStatement("empty message body".to_string()))?;
+        let body_rule = body.as_rule();
+        let mut endpoints = Vec::new();
+        let mut arrow = None;
+
+        for inner in body.into_inner() {
+            match inner.as_rule() {
+                Rule::message_endpoint => endpoints.push(Self::parse_message_endpoint(inner)?),
+                Rule::sequence_arrow => arrow = Some(Self::parse_arrow(inner)?),
+                _ => {}
+            }
+        }
+
+        let arrow = arrow.ok_or_else(|| {
+            SequenceError::InvalidStatement("message body must contain arrow".to_string())
+        })?;
+        let mut endpoints = endpoints.into_iter();
+
+        match body_rule {
+            Rule::message_full => Ok((
+                endpoints.next().ok_or_else(|| {
+                    SequenceError::InvalidStatement(
+                        "message_full must contain left endpoint".to_string(),
+                    )
+                })?,
+                arrow,
+                endpoints.next().ok_or_else(|| {
+                    SequenceError::InvalidStatement(
+                        "message_full must contain right endpoint".to_string(),
+                    )
+                })?,
+            )),
+            Rule::message_missing_left => Ok((
+                Self::missing_message_endpoint(),
+                arrow,
+                endpoints.next().ok_or_else(|| {
+                    SequenceError::InvalidStatement(
+                        "message_missing_left must contain right endpoint".to_string(),
+                    )
+                })?,
+            )),
+            Rule::message_missing_right => Ok((
+                endpoints.next().ok_or_else(|| {
+                    SequenceError::InvalidStatement(
+                        "message_missing_right must contain left endpoint".to_string(),
+                    )
+                })?,
+                arrow,
+                Self::missing_message_endpoint(),
+            )),
+            _ => Err(SequenceError::InvalidStatement(format!(
+                "unsupported message body: {:?}",
+                body_rule
+            ))),
+        }
+    }
+
+    fn missing_message_endpoint() -> MessageEndpoint {
+        MessageEndpoint::LostFound("?".to_string())
+    }
+
     fn parse_message_endpoint(
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<MessageEndpoint, SequenceError> {
         let endpoint = pair.into_inner().next().ok_or_else(|| {
-            SequenceError::InvalidStatement(
-                "message_endpoint must contain an endpoint".to_string(),
-            )
+            SequenceError::InvalidStatement("message_endpoint must contain an endpoint".to_string())
         })?;
 
         Ok(match endpoint.as_rule() {
@@ -346,7 +394,9 @@ impl PumlSequenceParser {
         })?;
 
         match marker.as_rule() {
-            Rule::left_lost_found | Rule::right_lost_found => Ok(marker.as_str().trim().to_string()),
+            Rule::left_lost_found | Rule::right_lost_found | Rule::short_lost_found => {
+                Ok(marker.as_str().trim().to_string())
+            }
             _ => Err(SequenceError::InvalidStatement(format!(
                 "lost_found_marker grammar produced unsupported value: {:?}",
                 marker.as_rule()
@@ -354,12 +404,24 @@ impl PumlSequenceParser {
         }
     }
 
-    fn parse_message_suffix(pair: pest::iterators::Pair<Rule>) -> Result<MessageSuffix, SequenceError> {
-        let suffix = pair.into_inner().next().ok_or_else(|| {
-            SequenceError::InvalidStatement("message_suffix must contain a suffix".to_string())
-        })?;
+    fn parse_message_suffix(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<MessageSuffix, SequenceError> {
+        let suffixes: Vec<_> = pair
+            .into_inner()
+            .map(Self::parse_message_suffix_part)
+            .collect::<Result<_, _>>()?;
 
-        Ok(match suffix.as_rule() {
+        match suffixes.as_slice() {
+            [suffix] => Ok(suffix.clone()),
+            _ => Ok(MessageSuffix::Combined(suffixes)),
+        }
+    }
+
+    fn parse_message_suffix_part(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<MessageSuffix, SequenceError> {
+        Ok(match pair.as_rule() {
             Rule::activate_suffix => MessageSuffix::Activate,
             Rule::deactivate_suffix => MessageSuffix::Deactivate,
             Rule::create_suffix => MessageSuffix::Create,
@@ -367,7 +429,7 @@ impl PumlSequenceParser {
             _ => {
                 return Err(SequenceError::InvalidStatement(format!(
                     "message_suffix grammar produced unsupported value: {:?}",
-                    suffix.as_rule()
+                    pair.as_rule()
                 )));
             }
         })

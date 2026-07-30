@@ -24,7 +24,7 @@
             }
           },
           "suffix": null,
-          "description": "left lost bracket",
+          "description": null,
           "source_location": {
             "file": "",
             "line": 15
@@ -34,10 +34,12 @@
       {
         "Message": {
           "left": {
-            "LostFound": "[o"
+            "LostFound": "["
           },
           "arrow": {
-            "left": null,
+            "left": {
+              "raw": "o"
+            },
             "line": {
               "raw": "-"
             },
@@ -52,8 +54,8 @@
               "alias": null
             }
           },
-          "suffix": "Activate",
-          "description": "left lost bracket o",
+          "suffix": null,
+          "description": null,
           "source_location": {
             "file": "",
             "line": 16
@@ -63,10 +65,43 @@
       {
         "Message": {
           "left": {
-            "LostFound": "[x"
+            "LostFound": "["
           },
           "arrow": {
-            "left": null,
+            "left": {
+              "raw": "o"
+            },
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">o"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "LostFound": "["
+          },
+          "arrow": {
+            "left": {
+              "raw": "x"
+            },
             "line": {
               "raw": "-"
             },
@@ -81,11 +116,69 @@
               "alias": null
             }
           },
-          "suffix": "Create",
-          "description": "left lost bracket x",
+          "suffix": null,
+          "description": null,
           "source_location": {
             "file": "",
-            "line": 17
+            "line": 18
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "LostFound": "["
+          },
+          "arrow": {
+            "left": {
+              "raw": "<"
+            },
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": null
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "LostFound": "["
+          },
+          "arrow": {
+            "left": {
+              "raw": "x<"
+            },
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": null
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 20
           }
         }
       },
@@ -93,7 +186,7 @@
         "Message": {
           "left": {
             "Participant": {
-              "display_name": "Worker",
+              "display_name": "Service",
               "alias": null
             }
           },
@@ -111,10 +204,186 @@
             "LostFound": "]"
           },
           "suffix": null,
-          "description": "right lost bracket",
+          "description": null,
           "source_location": {
             "file": "",
-            "line": 18
+            "line": 21
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">o"
+            }
+          },
+          "right": {
+            "LostFound": "]"
+          },
+          "suffix": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 22
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": {
+              "raw": "o"
+            },
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">o"
+            }
+          },
+          "right": {
+            "LostFound": "]"
+          },
+          "suffix": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">x"
+            }
+          },
+          "right": {
+            "LostFound": "]"
+          },
+          "suffix": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 24
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": {
+              "raw": "<"
+            },
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": null
+          },
+          "right": {
+            "LostFound": "]"
+          },
+          "suffix": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 25
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": {
+              "raw": "x<"
+            },
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": null
+          },
+          "right": {
+            "LostFound": "]"
+          },
+          "suffix": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 26
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "LostFound": "?"
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Worker",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": "short to Worker",
+          "source_location": {
+            "file": "",
+            "line": 27
           }
         }
       },
@@ -137,42 +406,13 @@
             }
           },
           "right": {
-            "LostFound": "o]"
+            "LostFound": "?"
           },
-          "suffix": "Deactivate",
-          "description": "right lost o bracket",
+          "suffix": null,
+          "description": "short from Worker",
           "source_location": {
             "file": "",
-            "line": 19
-          }
-        }
-      },
-      {
-        "Message": {
-          "left": {
-            "Participant": {
-              "display_name": "Worker",
-              "alias": null
-            }
-          },
-          "arrow": {
-            "left": null,
-            "line": {
-              "raw": "-"
-            },
-            "middle": null,
-            "right": {
-              "raw": ">"
-            }
-          },
-          "right": {
-            "LostFound": "x]"
-          },
-          "suffix": "Destroy",
-          "description": "right lost x bracket",
-          "source_location": {
-            "file": "",
-            "line": 20
+            "line": 28
           }
         }
       }
