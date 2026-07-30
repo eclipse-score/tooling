@@ -80,6 +80,10 @@ impl PumlSequenceParser {
                 inner,
                 source_location,
             )?)]),
+            Rule::ref_stmt => Ok(vec![Statement::RefCmd(Self::parse_ref_cmd(
+                inner,
+                source_location,
+            ))]),
             // Grammar-valid directives that are intentionally not modeled as statements
             _ => Ok(vec![]),
         }
@@ -419,6 +423,48 @@ impl PumlSequenceParser {
         }
     }
 
+    fn parse_ref_cmd(pair: pest::iterators::Pair<Rule>, source_location: SourceLocation) -> RefCmd {
+        let mut participants = Vec::new();
+        let mut text = None;
+
+        Self::extract_ref_parts(pair, &mut participants, &mut text);
+
+        RefCmd {
+            participants,
+            text,
+            source_location,
+        }
+    }
+
+    fn extract_ref_parts(
+        pair: pest::iterators::Pair<Rule>,
+        participants: &mut Vec<ParticipantRef>,
+        text: &mut Option<String>,
+    ) {
+        match pair.as_rule() {
+            Rule::participant_list => {
+                participants.extend(pair.into_inner().filter_map(|inner| {
+                    if inner.as_rule() == Rule::participant_ref {
+                        Some(Self::parse_participant_ref(inner))
+                    } else {
+                        None
+                    }
+                }));
+            }
+            Rule::sequence_text_content | Rule::ref_body => {
+                let value = pair.as_str().trim();
+                if !value.is_empty() {
+                    *text = Some(value.to_string());
+                }
+            }
+            _ => {
+                for inner in pair.into_inner() {
+                    Self::extract_ref_parts(inner, participants, text);
+                }
+            }
+        }
+    }
+
     fn parse_destroy_cmd(pair: pest::iterators::Pair<Rule>) -> Result<DestroyCmd, SequenceError> {
         let mut participant: Option<ParticipantRef> = None;
 
@@ -552,45 +598,16 @@ impl PumlSequenceParser {
             .to_string()
     }
 
-    /// Sequence participant names are stored as semantic identifiers, not as
-    /// source literals. Quotation marks are PlantUML delimiters and are not
-    /// part of the participant name in the parsed model.
-    fn normalize_participant_name(s: &str) -> String {
-        let value = s.trim();
-        if value.starts_with('"') {
-            Self::extract_quoted_string(value)
-        } else {
-            value.to_string()
-        }
-    }
-
     fn extract_participant_ref(pair: pest::iterators::Pair<Rule>) -> String {
         match pair.as_rule() {
             Rule::participant_ref => {
-                let fallback = pair.as_str().trim();
-
+                let fallback = pair.as_str().trim().to_string();
                 pair.into_inner()
                     .next()
                     .map(Self::extract_participant_ref)
-                    .unwrap_or_else(|| Self::normalize_participant_name(fallback))
+                    .unwrap_or(fallback)
             }
-
-            Rule::quoted_string => Self::extract_quoted_string(pair.as_str()),
-
-            Rule::CNAME => Self::normalize_participant_name(pair.as_str()),
-
-            Rule::quoted_display_with_alias | Rule::display_with_alias => pair
-                .into_inner()
-                .nth(1)
-                .map(|p| p.as_str().trim().to_string())
-                .unwrap_or_default(),
-
-            Rule::alias_with_quoted_display => pair
-                .into_inner()
-                .next()
-                .map(|p| p.as_str().trim().to_string())
-                .unwrap_or_default(),
-
+            Rule::CNAME => pair.as_str().trim().to_string(),
             _ => pair.as_str().trim().to_string(),
         }
     }
@@ -758,5 +775,29 @@ mod dispatch_style_tests {
             message.source_location.file.as_ref(),
             expected_file.as_str()
         );
+    }
+
+    #[test]
+    fn test_statement_after_multiline_ref_is_preserved() {
+        let input = "@startuml\nref over Alice, Bob\n  initialize service\nend ref\nAlice -> Bob : done\n@enduml";
+        let mut parser = PumlSequenceParser;
+        let doc = parser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("statement after multiline ref must parse");
+
+        match &doc.statements[0] {
+            Statement::RefCmd(ref_cmd) => {
+                assert_eq!(ref_cmd.text.as_deref(), Some("initialize service"));
+            }
+            actual => panic!("expected ref statement, got {:?}", actual),
+        }
+
+        match &doc.statements[1] {
+            Statement::Message(message) => {
+                assert_eq!(message.description.as_deref(), Some("done"));
+                assert_eq!(message.source_location.line, 5);
+            }
+            actual => panic!("expected message after ref statement, got {:?}", actual),
+        }
     }
 }

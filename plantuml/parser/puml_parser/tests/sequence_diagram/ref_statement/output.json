@@ -1,0 +1,41 @@
+{
+  "ref_statement.puml": {
+    "name": "ref_statement",
+    "statements": [
+      {
+        "RefCmd": {
+          "participants": [
+            {
+              "identifier": "Alice"
+            },
+            {
+              "identifier": "Bob"
+            }
+          ],
+          "text": "initialize service",
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
+        }
+      },
+      {
+        "RefCmd": {
+          "participants": [
+            {
+              "identifier": "Alice"
+            },
+            {
+              "identifier": "Bob"
+            }
+          ],
+          "text": "perform remote operation\n  validate response",
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
+        }
+      }
+    ]
+  }
+}
