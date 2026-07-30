@@ -622,25 +622,70 @@ dependable_element(
 
 # Minimal dependable element used as a dependency target to test
 # the deps attribute of dependable_element (i.e. SEooC depending on another SEooC).
+# Composed of a single component/unit pair so it satisfies the
+# non-empty-composition validation (see check_non_empty_composition).
+unit(
+    name = "dep_unit",
+    testonly = True,
+    scope = ["//:mock_lib1"],
+    tests = [],
+    unit_design = [":test_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "dep_component",
+    testonly = True,
+    components = [":dep_unit"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
 dependable_element(
     name = "dep_seooc_lib",
     architectural_design = [":arch_design_dep"],
     assumptions_of_use = [":aous"],
-    components = [],
+    components = [":dep_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
+    maturity = "development",
     requirements = [":feat_req"],
     tests = [],
     deps = [],
 )
 
+unit(
+    name = "seooc_test_unit",
+    testonly = True,
+    scope = ["//:mock_lib1"],
+    tests = [],
+    unit_design = [":test_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "seooc_test_component",
+    testonly = True,
+    components = [":seooc_test_unit"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
+# maturity = "development": same rationale as dep_seooc_lib above.
 dependable_element(
     name = "seooc_test_lib",
     architectural_design = [":arch_design"],
     assumptions_of_use = [":aous"],
-    components = [],
+    components = [":seooc_test_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
+    maturity = "development",
     requirements = [":feat_req"],
     tests = [],
     deps = [":dep_seooc_lib"],  # dependency to other seoocs/score_components

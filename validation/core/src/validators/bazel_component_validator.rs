@@ -17,7 +17,7 @@
 //! [`BazelComponentValidator`] performs a two-way set-difference between a
 //! [`BazelArchitecture`] and a [`ComponentDiagramArchitecture`].
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::models::{BazelArchitecture, ComponentDiagramArchitecture, LogicComponent};
 use crate::results::{ErrorBuilder, ErrorCategory};
@@ -76,6 +76,7 @@ impl BazelComponentValidator {
             "unit",
             "(no parent?)",
         );
+        self.check_non_empty_composition(bazel);
         self.result
     }
 
@@ -121,6 +122,52 @@ impl BazelComponentValidator {
         parent
             .as_ref()
             .map_or(default_parent.to_string(), |value| value.clone())
+    }
+
+    /// Verify every Bazel `dependable_element`/`component` target decomposes
+    /// into at least one nested `component` or `unit`.
+    ///
+    /// A childless entry (both `units` and `components` empty in the
+    /// architecture JSON) can silently agree with an equally childless
+    /// PlantUML entity, so the set-difference checks above never flag it.
+    /// This scans the Bazel side directly instead, since it reflects what is
+    /// actually built.
+    fn check_non_empty_composition(&mut self, bazel: &BazelArchitecture) {
+        let mut parents_with_children: BTreeSet<String> = BTreeSet::new();
+        for (_, parent) in bazel.comp_set.keys() {
+            if let Some(parent) = parent {
+                parents_with_children.insert(parent.clone());
+            }
+        }
+        for (_, parent) in bazel.unit_set.keys() {
+            if let Some(parent) = parent {
+                parents_with_children.insert(parent.clone());
+            }
+        }
+
+        for (key, label) in &bazel.seooc_set {
+            let (name, _) = key;
+            if !parents_with_children.contains(name) {
+                self.result
+                    .add_failure(Self::format_empty("dependable element", name, label));
+            }
+        }
+        for (key, label) in &bazel.comp_set {
+            let (name, _) = key;
+            if !parents_with_children.contains(name) {
+                self.result
+                    .add_failure(Self::format_empty("component", name, label));
+            }
+        }
+    }
+
+    fn format_empty(display_type: &str, name: &str, label: &str) -> String {
+        format!(
+            "Empty {display_type} in Bazel build graph:\n\
+               Alias          : \"{name}\"\n\
+               Bazel label    : {label}\n\
+               Required       : A {display_type} must decompose into at least one nested unit or component; add one or remove the empty {display_type}",
+        )
     }
 
     fn format_missing(
@@ -525,11 +572,73 @@ mod tests {
     fn test_entity_without_alias_uses_id_as_key() {
         let arch = make_arch(vec![
             ("my_de", vec![], vec!["@//pkg:comp_a"]),
-            ("@//pkg:comp_a", vec![], vec![]),
+            ("@//pkg:comp_a", vec!["@//pkg/u1:unit_1"], vec![]),
         ]);
         let diagram = diagram(vec![
             entity("my_de", None, None, Some("SEooC")),
             entity("comp_a", None, Some("my_de"), Some("component")),
+            entity("unit_1", None, Some("comp_a"), Some("unit")),
+        ]);
+        let errs = run_arch_validation(&arch, &diagram);
+        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
+    }
+
+    #[test]
+    fn test_empty_component_detected() {
+        let arch = make_arch(vec![
+            ("my_de", vec![], vec!["@//pkg:comp_a"]),
+            ("@//pkg:comp_a", vec![], vec![]),
+        ]);
+        let diagram = diagram(vec![
+            entity("MyDE", Some("my_de"), None, Some("SEooC")),
+            entity("CompA", Some("comp_a"), Some("MyDE"), Some("component")),
+        ]);
+        let errs = run_arch_validation(&arch, &diagram);
+        assert!(
+            errs.failures.iter().any(|m| m.contains("Empty component")),
+            "Expected empty component error, got: {:?}",
+            errs.failures
+        );
+    }
+
+    #[test]
+    fn test_empty_dependable_element_detected() {
+        let arch = make_arch(vec![("my_de", vec![], vec![])]);
+        let diagram = diagram(vec![entity("MyDE", Some("my_de"), None, Some("SEooC"))]);
+        let errs = run_arch_validation(&arch, &diagram);
+        assert!(
+            errs.failures
+                .iter()
+                .any(|m| m.contains("Empty dependable element")),
+            "Expected empty dependable element error, got: {:?}",
+            errs.failures
+        );
+    }
+
+    #[test]
+    fn test_component_with_nested_component_not_flagged_empty() {
+        // "bindings" has no direct units but decomposes into a nested
+        // component ("lola_component") - it must not be reported as empty.
+        let arch = make_arch(vec![
+            ("my_de", vec![], vec!["@//pkg:bindings"]),
+            ("@//pkg:bindings", vec![], vec!["@//pkg:lola_component"]),
+            ("@//pkg:lola_component", vec!["@//pkg/u1:unit_1"], vec![]),
+        ]);
+        let diagram = diagram(vec![
+            entity("MyDE", Some("my_de"), None, Some("SEooC")),
+            entity(
+                "Bindings",
+                Some("bindings"),
+                Some("MyDE"),
+                Some("component"),
+            ),
+            entity(
+                "LolaComponent",
+                Some("lola_component"),
+                Some("Bindings"),
+                Some("component"),
+            ),
+            entity("Unit1", Some("unit_1"), Some("LolaComponent"), Some("unit")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
