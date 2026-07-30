@@ -17,7 +17,7 @@ error_contains: |
   Field                 : relationship type
   Design value          : Engine -> Aggregation -> Manufacturer
   Design source file    : class_diagram.puml
-  Design source line    : 16
+  Design source line    : 18
   Implement value       : Engine -> Composition -> Manufacturer
   Implement source file : validation/core/integration_test/class_design_implementation/negative_relationship_type_mismatch/transport.cpp
   Implement source line : 18

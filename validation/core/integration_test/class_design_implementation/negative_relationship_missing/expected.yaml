@@ -16,5 +16,5 @@ error_contains: |
   Entity ID          : Manufacturer
   Member             : Manufacturer -> Composition -> Engine
   Design source file : class_diagram.puml
-  Design source line : 7
+  Design source line : 17
   Required Action    : Implement the member or update the unit design

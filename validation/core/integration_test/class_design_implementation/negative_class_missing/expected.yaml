@@ -15,5 +15,5 @@ error_contains: |
   Missing implementation class for unit design entity:
   Entity ID          : Manufacturer
   Design source file : class_diagram.puml
-  Design source line : 16
+  Design source line : 18
   Required Action    : Add a matching implementation class or update the unit design
