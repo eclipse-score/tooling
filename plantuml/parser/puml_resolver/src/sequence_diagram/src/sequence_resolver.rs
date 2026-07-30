@@ -17,7 +17,7 @@ use sequence_logic::{
     ParticipantType as LogicParticipantType, SequenceParticipant, SequenceTree, SourceLocation,
 };
 use sequence_parser::sequence_ast::{
-    MessageEndpoint, ParticipantDef, ParticipantIdentifier,
+    CreateCmd, MessageEndpoint, ParticipantDef, ParticipantIdentifier,
     ParticipantType as SyntaxParticipantType, Statement,
 };
 use sequence_parser::SeqPumlDocument;
@@ -76,12 +76,22 @@ fn add_explicit_participants(
     resolved_names: &mut HashSet<String>,
 ) {
     for stmt in statements {
-        if let Statement::ParticipantDef(participant_def) = stmt {
-            add_participant(
-                participants,
-                resolved_names,
-                explicit_participant(participant_def),
-            );
+        match stmt {
+            Statement::ParticipantDef(participant_def) => {
+                add_participant(
+                    participants,
+                    resolved_names,
+                    explicit_participant(participant_def),
+                );
+            }
+            Statement::CreateCmd(create_cmd) => {
+                add_participant(
+                    participants,
+                    resolved_names,
+                    created_participant(create_cmd),
+                );
+            }
+            _ => {}
         }
     }
 }
@@ -147,6 +157,16 @@ fn explicit_participant(participant_def: &ParticipantDef) -> SequenceParticipant
         participant_type: map_parser_participant_type(&participant_def.participant_type),
         source_location: participant_def.source_location.clone(),
         stereotype: participant_def.stereotype.clone(),
+    }
+}
+
+fn created_participant(create_cmd: &CreateCmd) -> SequenceParticipant {
+    SequenceParticipant {
+        display_name: create_cmd.identifier.display_name.clone(),
+        alias: create_cmd.identifier.alias.clone(),
+        participant_type: map_parser_participant_type(&create_cmd.participant_type),
+        source_location: create_cmd.source_location.clone(),
+        stereotype: create_cmd.stereotype.clone(),
     }
 }
 
@@ -315,7 +335,6 @@ mod sequence_resolver_tests {
 
     fn make_participant(name: &str) -> Statement {
         Statement::ParticipantDef(ParticipantDef {
-            is_create: false,
             participant_type: SyntaxParticipantType::Participant,
             identifier: ParticipantIdentifier {
                 display_name: name.to_string(),
@@ -328,7 +347,6 @@ mod sequence_resolver_tests {
 
     fn make_participant_with_alias(display_name: &str, alias: &str) -> Statement {
         Statement::ParticipantDef(ParticipantDef {
-            is_create: false,
             participant_type: SyntaxParticipantType::Participant,
             identifier: ParticipantIdentifier {
                 display_name: display_name.to_string(),

@@ -71,6 +71,7 @@ impl PumlSequenceParser {
             Rule::participant_def => Ok(vec![Statement::ParticipantDef(
                 Self::parse_participant_def(inner, source_location)?,
             )]),
+            Rule::lifecycle_cmd => Self::parse_lifecycle_cmd(inner, source_location),
             Rule::message => Ok(vec![Statement::Message(Self::parse_message(
                 inner,
                 source_location,
@@ -79,16 +80,36 @@ impl PumlSequenceParser {
                 inner,
                 source_location,
             )?)]),
+            // Grammar-valid directives that are intentionally not modeled as statements
+            _ => Ok(vec![]),
+        }
+    }
+
+    fn parse_lifecycle_cmd(
+        pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
+    ) -> Result<Vec<Statement>, SequenceError> {
+        let inner = pair.into_inner().next().ok_or_else(|| {
+            SequenceError::InvalidStatement("empty lifecycle command".to_string())
+        })?;
+
+        match inner.as_rule() {
+            Rule::create_cmd => Ok(vec![Statement::CreateCmd(Self::parse_create_cmd(
+                inner,
+                source_location,
+            )?)]),
             Rule::destroy_cmd => Ok(vec![Statement::DestroyCmd(Self::parse_destroy_cmd(inner)?)]),
-            Rule::create_cmd => Ok(vec![Statement::CreateCmd(Self::parse_create_cmd(inner)?)]),
             Rule::activate_cmd => Ok(vec![Statement::ActivateCmd(Self::parse_activate_cmd(
                 inner,
             )?)]),
             Rule::deactivate_cmd => Ok(vec![Statement::DeactivateCmd(Self::parse_deactivate_cmd(
                 inner,
             )?)]),
-            // Grammar-valid directives that are intentionally not modeled as statements
-            _ => Ok(vec![]),
+            Rule::activation_short => Self::parse_activation_short(inner),
+            _ => Err(SequenceError::InvalidStatement(format!(
+                "unsupported lifecycle command: {:?}",
+                inner.as_rule()
+            ))),
         }
     }
 
@@ -96,16 +117,12 @@ impl PumlSequenceParser {
         pair: pest::iterators::Pair<Rule>,
         source_location: SourceLocation,
     ) -> Result<ParticipantDef, SequenceError> {
-        let mut is_create = false;
         let mut participant_type: Option<ParticipantType> = None;
         let mut identifier: Option<ParticipantIdentifier> = None;
         let mut stereotype: Option<String> = None;
 
         for inner in pair.into_inner() {
             match inner.as_rule() {
-                Rule::create_kw => {
-                    is_create = true;
-                }
                 Rule::participant_type => {
                     participant_type = Some(Self::parse_participant_type(inner)?);
                 }
@@ -123,7 +140,6 @@ impl PumlSequenceParser {
         }
 
         Ok(ParticipantDef {
-            is_create,
             participant_type: participant_type.ok_or_else(|| {
                 SequenceError::InvalidStatement("missing participant type".to_string())
             })?,
@@ -138,10 +154,11 @@ impl PumlSequenceParser {
     fn parse_participant_identifier(
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<ParticipantIdentifier, SequenceError> {
-        let participant = pair
-            .into_inner()
-            .next()
-            .expect("participant_identifier must contain a participant identifier");
+        let participant = pair.into_inner().next().ok_or_else(|| {
+            SequenceError::InvalidStatement(
+                "participant_identifier must contain a participant identifier".to_string(),
+            )
+        })?;
         let participant_rule = participant.as_rule();
 
         Ok(match participant_rule {
@@ -264,7 +281,7 @@ impl PumlSequenceParser {
                     arrow = Some(Self::parse_arrow(inner)?);
                 }
                 Rule::message_suffix => {
-                    suffix = Some(Self::parse_message_suffix(inner));
+                    suffix = Some(Self::parse_message_suffix(inner)?);
                 }
                 Rule::sequence_description => {
                     description = inner
@@ -277,11 +294,15 @@ impl PumlSequenceParser {
         }
 
         Ok(Message {
-            left: left.expect("message must contain left endpoint"),
+            left: left.ok_or_else(|| {
+                SequenceError::InvalidStatement("message must contain left endpoint".to_string())
+            })?,
             arrow: arrow.ok_or_else(|| {
                 SequenceError::InvalidStatement("missing arrow in message".to_string())
             })?,
-            right: right.expect("message must contain right endpoint"),
+            right: right.ok_or_else(|| {
+                SequenceError::InvalidStatement("message must contain right endpoint".to_string())
+            })?,
             suffix,
             description,
             source_location,
@@ -291,56 +312,61 @@ impl PumlSequenceParser {
     fn parse_message_endpoint(
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<MessageEndpoint, SequenceError> {
-        let endpoint = pair
-            .into_inner()
-            .next()
-            .expect("message_endpoint must contain an endpoint");
+        let endpoint = pair.into_inner().next().ok_or_else(|| {
+            SequenceError::InvalidStatement(
+                "message_endpoint must contain an endpoint".to_string(),
+            )
+        })?;
 
         Ok(match endpoint.as_rule() {
             Rule::inline_participant => {
                 MessageEndpoint::Participant(Self::parse_participant_identifier(endpoint)?)
             }
             Rule::lost_found_marker => {
-                MessageEndpoint::LostFound(Self::parse_lost_found_marker(endpoint))
+                MessageEndpoint::LostFound(Self::parse_lost_found_marker(endpoint)?)
             }
-            _ => unreachable!(
-                "message_endpoint grammar produced unsupported value: {:?}",
-                endpoint.as_rule()
-            ),
+            _ => {
+                return Err(SequenceError::InvalidStatement(format!(
+                    "message_endpoint grammar produced unsupported value: {:?}",
+                    endpoint.as_rule()
+                )));
+            }
         })
     }
 
-    fn parse_lost_found_marker(pair: pest::iterators::Pair<Rule>) -> String {
-        let marker = pair
-            .into_inner()
-            .next()
-            .expect("lost_found_marker must contain a lost-found endpoint");
+    fn parse_lost_found_marker(pair: pest::iterators::Pair<Rule>) -> Result<String, SequenceError> {
+        let marker = pair.into_inner().next().ok_or_else(|| {
+            SequenceError::InvalidStatement(
+                "lost_found_marker must contain a lost-found endpoint".to_string(),
+            )
+        })?;
 
         match marker.as_rule() {
-            Rule::left_lost_found | Rule::right_lost_found => marker.as_str().trim().to_string(),
-            _ => unreachable!(
+            Rule::left_lost_found | Rule::right_lost_found => Ok(marker.as_str().trim().to_string()),
+            _ => Err(SequenceError::InvalidStatement(format!(
                 "lost_found_marker grammar produced unsupported value: {:?}",
                 marker.as_rule()
-            ),
+            ))),
         }
     }
 
-    fn parse_message_suffix(pair: pest::iterators::Pair<Rule>) -> MessageSuffix {
-        let suffix = pair
-            .into_inner()
-            .next()
-            .expect("message_suffix must contain a suffix");
+    fn parse_message_suffix(pair: pest::iterators::Pair<Rule>) -> Result<MessageSuffix, SequenceError> {
+        let suffix = pair.into_inner().next().ok_or_else(|| {
+            SequenceError::InvalidStatement("message_suffix must contain a suffix".to_string())
+        })?;
 
-        match suffix.as_rule() {
+        Ok(match suffix.as_rule() {
             Rule::activate_suffix => MessageSuffix::Activate,
             Rule::deactivate_suffix => MessageSuffix::Deactivate,
             Rule::create_suffix => MessageSuffix::Create,
             Rule::destroy_suffix => MessageSuffix::Destroy,
-            _ => unreachable!(
-                "message_suffix grammar produced unsupported value: {:?}",
-                suffix.as_rule()
-            ),
-        }
+            _ => {
+                return Err(SequenceError::InvalidStatement(format!(
+                    "message_suffix grammar produced unsupported value: {:?}",
+                    suffix.as_rule()
+                )));
+            }
+        })
     }
 
     fn parse_arrow(pair: pest::iterators::Pair<Rule>) -> Result<Arrow, SequenceError> {
@@ -394,11 +420,11 @@ impl PumlSequenceParser {
     }
 
     fn parse_destroy_cmd(pair: pest::iterators::Pair<Rule>) -> Result<DestroyCmd, SequenceError> {
-        let mut participant: Option<String> = None;
+        let mut participant: Option<ParticipantRef> = None;
 
         for inner in pair.into_inner() {
             if inner.as_rule() == Rule::participant_ref {
-                participant = Some(Self::extract_participant_ref(inner));
+                participant = Some(Self::parse_participant_ref(inner));
             }
         }
 
@@ -409,28 +435,12 @@ impl PumlSequenceParser {
         })
     }
 
-    fn parse_create_cmd(pair: pest::iterators::Pair<Rule>) -> Result<CreateCmd, SequenceError> {
-        let mut participant: Option<String> = None;
-
-        for inner in pair.into_inner() {
-            if inner.as_rule() == Rule::participant_ref {
-                participant = Some(Self::extract_participant_ref(inner));
-            }
-        }
-
-        Ok(CreateCmd {
-            participant: participant.ok_or_else(|| {
-                SequenceError::InvalidStatement("missing participant in create".to_string())
-            })?,
-        })
-    }
-
     fn parse_activate_cmd(pair: pest::iterators::Pair<Rule>) -> Result<ActivateCmd, SequenceError> {
-        let mut participant: Option<String> = None;
+        let mut participant: Option<ParticipantRef> = None;
 
         for inner in pair.into_inner() {
             if inner.as_rule() == Rule::participant_ref {
-                participant = Some(Self::extract_participant_ref(inner));
+                participant = Some(Self::parse_participant_ref(inner));
             }
         }
 
@@ -444,15 +454,87 @@ impl PumlSequenceParser {
     fn parse_deactivate_cmd(
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<DeactivateCmd, SequenceError> {
-        let mut participant: Option<String> = None;
+        let mut participant: Option<ParticipantRef> = None;
 
         for inner in pair.into_inner() {
             if inner.as_rule() == Rule::participant_ref {
-                participant = Some(Self::extract_participant_ref(inner));
+                participant = Some(Self::parse_participant_ref(inner));
             }
         }
 
-        Ok(DeactivateCmd { participant })
+        Ok(DeactivateCmd {
+            participant: participant.ok_or_else(|| {
+                SequenceError::InvalidStatement("missing participant in deactivate".to_string())
+            })?,
+        })
+    }
+
+    fn parse_create_cmd(
+        pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
+    ) -> Result<CreateCmd, SequenceError> {
+        let mut participant_type: Option<ParticipantType> = None;
+        let mut identifier: Option<ParticipantIdentifier> = None;
+        let mut stereotype: Option<String> = None;
+
+        for inner in pair.into_inner() {
+            match inner.as_rule() {
+                Rule::participant_type => {
+                    participant_type = Some(Self::parse_participant_type(inner)?);
+                }
+                Rule::participant_identifier => {
+                    identifier = Some(Self::parse_participant_identifier(inner)?);
+                }
+                Rule::stereotype => {
+                    stereotype = Some(Self::extract_stereotype(inner.as_str()));
+                }
+                Rule::order_clause => {}
+                _ => {}
+            }
+        }
+
+        Ok(CreateCmd {
+            participant_type: participant_type.unwrap_or(ParticipantType::Participant),
+            identifier: identifier.ok_or_else(|| {
+                SequenceError::InvalidStatement("missing participant identifier".to_string())
+            })?,
+            stereotype,
+            source_location,
+        })
+    }
+
+    fn parse_activation_short(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<Vec<Statement>, SequenceError> {
+        let mut parts = pair.into_inner();
+        let participant = parts
+            .next()
+            .filter(|part| part.as_rule() == Rule::participant_ref)
+            .map(Self::parse_participant_ref)
+            .ok_or_else(|| {
+                SequenceError::InvalidStatement(
+                    "missing participant in short activation".to_string(),
+                )
+            })?;
+
+        match parts.next().map(|part| part.as_rule()).ok_or_else(|| {
+            SequenceError::InvalidStatement("missing short activation suffix".to_string())
+        })? {
+            Rule::activate_suffix => Ok(vec![Statement::ActivateCmd(ActivateCmd { participant })]),
+            Rule::deactivate_suffix => Ok(vec![Statement::DeactivateCmd(DeactivateCmd {
+                participant,
+            })]),
+            other => Err(SequenceError::InvalidStatement(format!(
+                "unsupported short activation suffix: {:?}",
+                other
+            ))),
+        }
+    }
+
+    fn parse_participant_ref(pair: pest::iterators::Pair<Rule>) -> ParticipantRef {
+        ParticipantRef {
+            identifier: Self::extract_participant_ref(pair),
+        }
     }
 
     // Helper functions

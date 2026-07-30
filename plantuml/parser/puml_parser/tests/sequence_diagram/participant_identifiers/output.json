@@ -74,21 +74,6 @@
       },
       {
         "ParticipantDef": {
-          "is_create": true,
-          "participant_type": "Participant",
-          "identifier": {
-            "display_name": "Created Worker",
-            "alias": "Worker"
-          },
-          "stereotype": null,
-          "source_location": {
-            "file": "",
-            "line": 23
-          }
-        }
-      },
-      {
-        "ParticipantDef": {
           "participant_type": "Participant",
           "identifier": {
             "display_name": "LastOrder",
@@ -97,7 +82,7 @@
           "stereotype": "component",
           "source_location": {
             "file": "",
-            "line": 26
+            "line": 23
           }
         }
       }

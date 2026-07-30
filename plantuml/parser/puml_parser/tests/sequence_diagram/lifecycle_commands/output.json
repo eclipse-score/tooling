@@ -1,0 +1,49 @@
+{
+  "lifecycle_commands.puml": {
+    "name": "lifecycle_commands",
+    "statements": [
+      {
+        "ActivateCmd": {
+          "participant": {
+            "identifier": "alice"
+          }
+        }
+      },
+      {
+        "ActivateCmd": {
+          "participant": {
+            "identifier": "bob"
+          }
+        }
+      },
+      {
+        "DeactivateCmd": {
+          "participant": {
+            "identifier": "alice"
+          }
+        }
+      },
+      {
+        "DestroyCmd": {
+          "participant": {
+            "identifier": "bob"
+          }
+        }
+      },
+      {
+        "ActivateCmd": {
+          "participant": {
+            "identifier": "peter"
+          }
+        }
+      },
+      {
+        "DeactivateCmd": {
+          "participant": {
+            "identifier": "peter"
+          }
+        }
+      }
+    ]
+  }
+}

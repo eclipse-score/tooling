@@ -10,16 +10,13 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-@startuml participant_identifiers
+@startuml lifecycle_commands
 
-' normal participant declaration
-actor "External User" as User
-participant Service as "Sample Service"
-boundary Gateway as GatewayAlias
-control Controller
-queue "Work Queue"
-
-' participant declaration with stereotype and order
-participant LastOrder <<component>>  order 1
+activate alice
+activate bob #Gold
+deactivate alice
+destroy bob
+peter++
+peter --
 
 @enduml

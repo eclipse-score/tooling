@@ -75,3 +75,13 @@ fn test_message_participants() {
 fn test_message_lost_found() {
     run_sequence_diagram_parser_case("message_lost_found");
 }
+
+#[test]
+fn test_create_participants() {
+    run_sequence_diagram_parser_case("create_participants");
+}
+
+#[test]
+fn test_lifecycle_commands() {
+    run_sequence_diagram_parser_case("lifecycle_commands");
+}
