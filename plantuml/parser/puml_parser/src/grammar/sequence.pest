@@ -13,7 +13,7 @@
 
 // PlantUML Sequence Diagram Grammar for Pest Parser
 
-sequence_start = { empty_line* ~ startuml ~ (note_multiline | ref_multiline | sequence_statement | empty_line)* ~ enduml }
+sequence_start = { empty_line* ~ startuml ~ (note_multiline | sequence_statement | empty_line)* ~ enduml }
 
 sequence_statement = {
     (
@@ -30,7 +30,7 @@ sequence_statement = {
         group_cmd |
         divider | delay |
         return_cmd |
-        ref_inline | ref_block_start |
+        ref_stmt |
         skin | autonumber | autonumber_stop | autonumber_resume | autonumber_inc |
         autoactivate | footbox_cmd | ellipsis |
         function_def | function_return | function_end
@@ -217,7 +217,6 @@ create_suffix = { "**" }
 destroy_suffix = { "!!" }
 
 activation_short = { participant_ref ~ (activate_suffix | deactivate_suffix) }
-participant_ref = { CNAME | quoted_string }
 
 // Return
 return_cmd = { parallel_marker? ~ ^"return" ~ sequence_text_content? }
@@ -245,30 +244,31 @@ delay = { ("||" ~ NUMBER? ~ "|"+) | ("…" ~ sequence_text_content? ~ "…") | (
 ellipsis = { ("..." ~ sequence_text_content? ~ "...") | ("…" ~ sequence_text_content? ~ "…") | "..." | "…" }
 
 // Reference
+ref_stmt = {
+      ref_inline
+    | ref_block
+}
+
 ref_inline = {
     ^"ref" ~ ^"over" ~ participant_list ~ ":" ~ sequence_text_content
 }
 
-ref_multiline = @{
-    ^"ref" ~
-    (!NEWLINE ~ ANY)* ~  // rest of header line ("over participant")
-    NEWLINE ~
+ref_block = {
+    ^"ref" ~ ^"over" ~ participant_list ~ EOL
+    ~ ref_body
+    ~ ref_end
+}
+
+ref_body = {
     (
-        !(WHITESPACE* ~ (^"endref" | (^"end" ~ WHITESPACE ~ ^"ref") | (^"end" ~ WHITESPACE* ~ NEWLINE))) ~
-        (!NEWLINE ~ ANY)* ~
-        NEWLINE
-    )* ~
-    WHITESPACE* ~ (^"endref" | (^"end" ~ WHITESPACE ~ ^"ref") | (^"end" ~ WHITESPACE* ~ NEWLINE)) ~
-    EOL?
+        !(WHITESPACE* ~ ref_end)
+        ~ ANY
+    )*
 }
-
-ref_block_start = {
-    ^"ref" ~ ^"over" ~ participant_list
-}
-
-ref_block_end = { ^"end" ~ WHITESPACE? ~ (^"ref")? }
+ref_end = { ^"end" ~ ^"ref" }
 
 participant_list = { participant_ref ~ ("," ~ participant_ref)* }
+participant_ref = { CNAME }
 
 // Skin
 skin = { ^"skin" ~ sequence_qualified_name }

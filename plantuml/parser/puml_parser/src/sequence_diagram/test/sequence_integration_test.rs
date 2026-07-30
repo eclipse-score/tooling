@@ -85,3 +85,8 @@ fn test_create_participants() {
 fn test_lifecycle_commands() {
     run_sequence_diagram_parser_case("lifecycle_commands");
 }
+
+#[test]
+fn test_ref_statement() {
+    run_sequence_diagram_parser_case("ref_statement");
+}

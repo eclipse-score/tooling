@@ -37,6 +37,7 @@ pub enum Statement {
     ParticipantDef(ParticipantDef),
     Message(Message),
     GroupCmd(GroupCmd),
+    RefCmd(RefCmd),
 }
 
 // Participant definitions
@@ -94,6 +95,13 @@ pub struct DeactivateCmd {
     pub participant: ParticipantRef,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RefCmd {
+    pub participants: Vec<ParticipantRef>,
+    pub text: Option<String>,
+    pub source_location: SourceLocation,
+}
+
 // Messages (internal parsing structure)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Message {
@@ -117,12 +125,6 @@ pub enum MessageSuffix {
     Deactivate, // --
     Create,     // **
     Destroy,    // !!
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum ActivationType {
-    Activate,   // ++
-    Deactivate, // --
 }
 
 // Group commands (alt, opt, loop, etc.) - internal parsing structure
