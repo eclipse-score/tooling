@@ -110,3 +110,8 @@ fn test_ref_statement() {
 fn test_return_commands() {
     run_sequence_diagram_parser_case("return_commands");
 }
+
+#[test]
+fn test_ignored_blocks() {
+    run_sequence_diagram_parser_case("ignored_blocks");
+}

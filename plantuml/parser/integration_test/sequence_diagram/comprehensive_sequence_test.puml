@@ -339,7 +339,7 @@ group Extended Patterns: Lost and Found Messages
 
     ' Lost/found with brackets on different sides
     [o-> Actor1 : Right bracket on left
-    Actor1 -->o[ : Left bracket on right
+    Actor1 -->o] : Left bracket on right
 end group
 
 group Extended Patterns: Activation Markers
@@ -364,7 +364,7 @@ group Extended Patterns: Ref Blocks
 
     ref over Builder
         Another reference block
-    end
+    end ref
 end group
 
 group Extended Patterns: Dividers with URLs

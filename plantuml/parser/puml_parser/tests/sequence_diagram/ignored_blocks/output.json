@@ -1,0 +1,39 @@
+{
+  "ignored_blocks.puml": {
+    "name": "ignored_blocks",
+    "statements": [
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Alice",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Bob",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": "after ignored blocks",
+          "source_location": {
+            "file": "",
+            "line": 33
+          }
+        }
+      }
+    ]
+  }
+}

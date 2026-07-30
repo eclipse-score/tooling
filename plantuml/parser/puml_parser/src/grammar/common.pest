@@ -84,23 +84,33 @@ COMMENT = _{
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Ignored Statements
+// Ignored Blocks and Statements
 //
 // Non-structural PlantUML directives such as title, style, layout, and scaling.
 // Parsed for completeness but generally skipped in AST construction.
 //
 // Examples:
+//   <style> ... </style>
 //   title System Overview
 //   skinparam shadowing false
 //   left to right direction
 //   scale 1.2
 ////////////////////////////////////////////////////////////////////////////////
+ignored_block = _{
+    style_block
+  | note_multiline
+}
+
+style_block = { "<style>" ~ EOL ~ (!style_block_end ~ ANY)* ~ style_block_end }
+style_block_end = { "</style>" ~ EOL? }
+
 ignored_stmt = _{
       direction_stmt
     | skinparam_stmt
     | title_stmt
+    | note_single_line
     | scale_stmt
-  | namespace_separator_stmt
+    | namespace_separator_stmt
 }
 
 skinparam_stmt = @{ ^"skinparam" ~ LINE_REST }
