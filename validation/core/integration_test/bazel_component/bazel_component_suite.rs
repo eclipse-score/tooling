@@ -84,3 +84,8 @@ fn negative_extra_component_suite_case() {
 fn negative_wrong_stereotype_suite_case() {
     assert_case("negative_wrong_stereotype");
 }
+
+#[test]
+fn negative_empty_component_suite_case() {
+    assert_case("negative_empty_component");
+}
