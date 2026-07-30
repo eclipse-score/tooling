@@ -104,3 +104,8 @@ fn negative_duplicate_component_key_suite_case() {
 fn negative_empty_target_name_label_suite_case() {
     assert_case("negative_empty_target_name_label");
 }
+
+#[test]
+fn negative_empty_component_suite_case() {
+    assert_case("negative_empty_component");
+}

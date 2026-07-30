@@ -72,6 +72,16 @@ section "Tool Requirements" {
                 satisfied_by = Verifier
             }
 
+            ToolQualification.ToolRequirement BazelComponentNonEmptyComposition {
+                description = '''The validator shall report an error when a
+                Bazel `dependable_element` or `component` target decomposes
+                into zero nested `component` or `unit` targets, even when the
+                corresponding PlantUML entity likewise shows no nested
+                elements.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
         }
 
         section "Component Sequence Validator" {

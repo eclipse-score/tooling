@@ -127,6 +127,25 @@ entity defined in the same component diagram. An entity referencing an
 undefined parent is rejected with a `[Design]` error naming the missing
 parent ID.
 
+### Non-Empty Composition
+
+Every Bazel `dependable_element` and `component` target must decompose into
+at least one nested `component` or `unit`. A target with an empty
+`components` attribute (and, for components, no nested `unit`) is reported
+even if the PlantUML diagram agrees and shows the same element as empty --
+the set-difference checks above only compare presence between Bazel and
+PlantUML, so a childless entry that matches on both sides would otherwise go
+unnoticed.
+*(Requirement: {requirement:downstream-ref}`Tools.BazelComponentNonEmptyComposition`)*
+
+```starlark
+# Flagged: component_example has no nested unit() or component().
+component(
+  name = "component_example",
+  components = [],
+)
+```
+
 ## Failure Cases
 
 | Failure case | Validation rule |
@@ -141,6 +160,8 @@ parent ID.
 | Duplicate Bazel entity key (same name/parent from different labels) | Duplicate Entity Detection |
 | Duplicate PlantUML entity ID (case-insensitive collision) | Duplicate Entity Detection |
 | PlantUML entity references an undefined parent | Parent Reference Validity |
+| Empty dependable element in Bazel build graph | Non-Empty Composition |
+| Empty component in Bazel build graph | Non-Empty Composition |
 
 ## PlantUML Stereotype Reference
 

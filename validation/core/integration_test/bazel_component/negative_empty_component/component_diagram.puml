@@ -1,5 +1,5 @@
 ' *******************************************************************************
-' Copyright (c) 2025 Contributors to the Eclipse Foundation
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
 '
 ' See the NOTICE file(s) distributed with this work for additional
 ' information regarding copyright ownership.
@@ -11,11 +11,10 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml dep_seooc_lib
+@startuml component_diagram
 
-package "Dependency SEooC Library" as dep_seooc_lib <<SEooC>> {
-    component "Dep Component" as dep_component <<component>> {
-        component "Dep Unit" as dep_unit <<unit>>
+package "Sample Seooc" as safety_software_seooc_example <<SEooC>> {
+    component "Component Example" as component_example <<component>> {
     }
 }
 

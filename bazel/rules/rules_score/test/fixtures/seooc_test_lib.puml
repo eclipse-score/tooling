@@ -13,6 +13,10 @@
 
 @startuml seooc_test_lib
 
-package "SEooC Test Library" as seooc_test_lib <<SEooC>>
+package "SEooC Test Library" as seooc_test_lib <<SEooC>> {
+    component "SEooC Test Component" as seooc_test_component <<component>> {
+        component "SEooC Test Unit" as seooc_test_unit <<unit>>
+    }
+}
 
 @enduml
