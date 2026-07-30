@@ -13,6 +13,7 @@
 
 use serde::{Deserialize, Serialize};
 pub use source_location::SourceLocation;
+use std::sync::Arc;
 
 /// A single item inside a function/branch/loop body, emitted in execution order.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,61 +41,135 @@ pub struct FunctionDef {
     pub body: Vec<BodyItem>,
 }
 
-// ─── PlantUML sequence-diagram logic-tree types ─────────────────────────────
+/// For a PlantUML sequence diagram, this is the resolved participant identifier
+/// (typically the alias if present, otherwise the display name).
+///
+/// For C++ code, this is typically the object/class identifier resolved from
+/// the call site.
+pub type ParticipantId = Arc<str>;
 
-/// The kind of condition / group block in a sequence diagram.
+/// A reference fragment.
+///
+/// PlantUML: ref over A,B : Authentication
+/// C++: Optional for the first version
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum ConditionType {
-    Opt,
-    Alt,
-    Loop,
-    Par,
-    Par2,
-    Break,
-    Critical,
-    Else,
-    Also,
-    End,
-    Group,
+pub struct Reference {
+    pub participants: Vec<ParticipantId>,
+    pub text: Option<String>,
+    pub source_location: SourceLocation,
 }
 
-/// A condition / group block header in a sequence diagram.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Condition {
-    pub condition_type: ConditionType,
-    pub condition_value: String,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LifecycleAction {
+    Create,
+    Activate,
+    Deactivate,
+    Destroy,
 }
 
-/// A method-call interaction between two participants.
+/// Participant lifecycle.
+///
+/// create: auto foo = std::make_shared<Foo>();
+/// activate:
+/// deactivate
+/// destroy: delete foo;
+/// C++: Optional for the first version
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ParticipantLifecycle {
+    pub participant: ParticipantId,
+    pub action: LifecycleAction,
+    pub source_location: SourceLocation,
+}
+
+/// Early exit from the current interaction.
+///
+/// PlantUML: break
+/// C++: return
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EarlyExit {
+    pub reason: Option<String>,
+    pub block: Block,
+    pub source_location: SourceLocation,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ParallelBranch {
+    pub label: Option<String>,
+    pub block: Block,
+    pub source_location: SourceLocation,
+}
+
+/// Parallel execution.
+///
+/// PlantUML: par-else
+/// C++: std::thread / std::async / co_await
+///
+/// Note: First version can ignore the C++ mapping, as it is not a direct equivalent
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Parallel {
+    pub branches: Vec<ParallelBranch>,
+}
+
+/// Loop execution.
+///
+/// PlantUML: loop ...
+/// C++: while (...) / do-while (...) / for (...)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Loop {
+    pub condition: Option<String>,
+    pub block: Block,
+    pub source_location: SourceLocation,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BranchCase {
+    pub condition: Option<String>,
+    pub block: Block,
+    pub source_location: SourceLocation,
+}
+
+/// Conditional execution.
+///
+/// PlantUML: alt-else, opt
+/// C++: `if` / `else if` / `else`
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Branch {
+    pub cases: Vec<BranchCase>,
+}
+
+/// A message between two participants.
+///
+/// PlantUML:
+///     1) A -> B : foo()
+///     2) return xxx
+/// C++:
+///     class A {
+///         void func(B& b) { b.foo(); }
+///     }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Interaction {
-    pub caller: String,
-    pub callee: String,
-    pub method: String,
-}
-
-/// A return message between two participants.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Return {
-    pub caller: String,
-    pub callee: String,
-    pub return_content: String,
-}
-
-/// An event in a sequence diagram: a call, a return, or a condition block.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum Event {
-    Interaction(Interaction),
-    Return(Return),
-    Condition(Condition),
-}
-
-/// A node in the hierarchical sequence-diagram logic tree.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SequenceNode {
-    pub event: Event,
+    /// None represents a PlantUML lost/found endpoint.
+    pub sender: Option<ParticipantId>,
+    /// None represents a PlantUML lost/found endpoint.
+    pub receiver: Option<ParticipantId>,
+    pub message: Option<String>,
     pub source_location: SourceLocation,
-    pub branches_node: Vec<SequenceNode>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Node {
+    Interaction(Interaction),
+    Branch(Branch),
+    Loop(Loop),
+    Parallel(Parallel),
+    EarlyExit(EarlyExit),
+    Lifecycle(ParticipantLifecycle),
+    Reference(Reference),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct Block {
+    pub items: Vec<Node>,
 }
 
 /// A participant in a sequence diagram.
@@ -121,11 +196,29 @@ pub struct SequenceParticipant {
     pub stereotype: Option<String>,
 }
 
-/// Root container for a sequence-diagram logic tree.
+/// Root of a resolved sequence behavior tree.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SequenceTree {
     pub name: Option<String>,
     #[serde(default)]
     pub participants: Vec<SequenceParticipant>,
-    pub root_interactions: Vec<SequenceNode>,
+    pub root: Block,
+}
+
+impl SequenceTree {
+    /// Return owned names used to reference this tree's participants.
+    ///
+    /// PlantUML references a participant by its alias when one exists;
+    /// otherwise it uses the participant's display name. Callers choose their
+    /// own collection type so they can preserve the ordering and deduplication
+    /// semantics needed by their use case.
+    pub fn participant_reference_names(&self) -> impl Iterator<Item = String> + '_ {
+        self.participants.iter().map(|participant| {
+            participant
+                .alias
+                .as_deref()
+                .unwrap_or(&participant.display_name)
+                .to_string()
+        })
+    }
 }
