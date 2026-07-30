@@ -155,9 +155,7 @@ class TestMergeHtmlDirs(unittest.TestCase):
             extra_static=[(str(extra), "logo.svg")],
         )
 
-        self.assertEqual(
-            (self.output / "_static" / "logo.svg").read_text(), "custom-logo"
-        )
+        self.assertEqual((self.output / "_static" / "logo.svg").read_text(), "custom-logo")
 
     def test_nested_sibling_module_copy_is_skipped(self) -> None:
         """Regression test: if a dependency's own HTML tree happens to contain

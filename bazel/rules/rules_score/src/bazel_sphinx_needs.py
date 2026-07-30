@@ -79,15 +79,11 @@ def load_external_needs() -> List[Dict[str, Any]]:
     external_needs = []
     for key, config in needs_dict.items():
         if "json_path" not in config:
-            logger.warning(
-                f"External needs config for '{key}' missing 'json_path', skipping"
-            )
+            logger.warning(f"External needs config for '{key}' missing 'json_path', skipping")
             continue
 
         if "version" not in config:
-            logger.warning(
-                f"External needs config for '{key}' missing 'version', skipping"
-            )
+            logger.warning(f"External needs config for '{key}' missing 'version', skipping")
             continue
         # Resolve relative path to absolute path
         # Bazel provides relative paths like: bazel-out/k8-fastbuild/bin/.../needs.json
@@ -118,9 +114,7 @@ def log_config_info(project_name: str) -> None:
     logger.info("=" * 80)
 
 
-def verify_config(
-    app: Any, config: Any, needs_external_needs: List[Dict[str, Any]]
-) -> None:
+def verify_config(app: Any, config: Any, needs_external_needs: List[Dict[str, Any]]) -> None:
     """
     Verify and update Sphinx configuration with external needs.
 
@@ -137,9 +131,7 @@ def verify_config(
     logger.info("=" * 80)
 
 
-def setup_sphinx_extension(
-    app: Any, needs_external_needs: List[Dict[str, Any]]
-) -> Dict[str, Any]:
+def setup_sphinx_extension(app: Any, needs_external_needs: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Setup function for Sphinx extension.
 

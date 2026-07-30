@@ -75,23 +75,17 @@ class TestRunner:
             raise ValueError(f"Failed to parse {lobster_file} as JSON: {e}") from e
 
         if "data" not in content:
-            raise ValueError(
-                f"{lobster_file} invalid .lobster file: missing 'data' key"
-            )
+            raise ValueError(f"{lobster_file} invalid .lobster file: missing 'data' key")
         return content
 
-    def verify_lobster_tags(
-        self, lobster_file: Path, expected_tags: List[str]
-    ) -> Set[str]:
+    def verify_lobster_tags(self, lobster_file: Path, expected_tags: List[str]) -> Set[str]:
         """
         Parse a .lobster file and verify it contains all expected tag names.
         """
 
         content = self._read_lobster_file(lobster_file)
 
-        found_tags: Set[str] = {
-            item["tag"] for item in content["data"] if "tag" in item
-        }
+        found_tags: Set[str] = {item["tag"] for item in content["data"] if "tag" in item}
         return set(expected_tags) - found_tags
 
     def extract_lobster_file_names(self, lobster_file: Path) -> Set[str]:
@@ -101,7 +95,5 @@ class TestRunner:
 
         content = self._read_lobster_file(lobster_file)
 
-        found_file_names: Set[str] = {
-            Path(item["location"]["file"]).name for item in content["data"]
-        }
+        found_file_names: Set[str] = {Path(item["location"]["file"]).name for item in content["data"]}
         return found_file_names

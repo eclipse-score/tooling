@@ -109,9 +109,7 @@ def configure_logging(log_file_path: Path | None = None, verbose: bool = False) 
     LOGGER.addHandler(handler)
 
 
-def format_line(
-    line: str, regex: str = r"([a-zA-Z0-9_-]+)==([a-zA-Z0-9.\-_]+)"
-) -> str | None:
+def format_line(line: str, regex: str = r"([a-zA-Z0-9_-]+)==([a-zA-Z0-9.\-_]+)") -> str | None:
     """
     Formats a line of text by matching a specified regex pattern and
     extracting components.
@@ -218,9 +216,7 @@ def convert_cargo_to_dash_format(
                 LOGGER.debug(f"Extracted package: {line}")
                 outfile.write(line + "\n")
 
-    LOGGER.info(
-        f"Successfully converted {len(packages)} packages from Cargo.lock to {output_file}"
-    )
+    LOGGER.info(f"Successfully converted {len(packages)} packages from Cargo.lock to {output_file}")
 
     return 0
 
@@ -333,9 +329,7 @@ def main(argv: list[str] | None) -> int:
     args = parse_arguments(argv if argv is not None else sys.argv[1:])
     configure_logging(args.log_file, args.verbose)
     if args.type == "cargo":
-        ret = convert_cargo_to_dash_format(
-            args.input, args.output, args.skip_source_filter, args.filter_keywords
-        )
+        ret = convert_cargo_to_dash_format(args.input, args.output, args.skip_source_filter, args.filter_keywords)
     else:
         ret = convert_to_dash_format(args.input, args.output)
     return 0

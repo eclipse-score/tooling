@@ -25,6 +25,32 @@ A ``unit_design`` target is referenced by a ``unit`` target (see
 :doc:`architectural_design` — *Implementation Architecture in Bazel*) to attach
 code-level design artefacts to the unit.
 
+Designing the internals of a unit
+----------------------------------
+
+Before drawing the class diagram, decide *what belongs inside the unit*. Follow
+the unit criteria in :doc:`architectural_design` (*Determining Components and
+Units*). At the code level, aim for:
+
+- **One cohesive responsibility per class** — the class diagram should read as a
+  small set of classes that share data and collaborate for a single purpose. If
+  two clusters of classes never reference each other, the unit is probably two
+  units.
+- **A narrow, intentional interface** — expose only the methods the unit's
+  requirements and the internal/public API demand. Every public method becomes a
+  test obligation and, for public interfaces, a safety-analysis entry point.
+- **Explicit ownership of resources and lifetime** — model how objects are
+  constructed and owned (e.g. ``unique_ptr`` composition, as ``Bar`` owns
+  ``Foo`` below). Unclear ownership is a frequent source of failure modes.
+- **Design is the contract** — the diagram is validated against the code:
+  implementation-only members are allowed, but design-only members that do not
+  exist in the code fail the build. Model what must be reviewed and traced; leave
+  purely incidental helpers out.
+
+Keep the unit design focused on structure that a reviewer needs to reason about
+the unit's correctness and testability — not an exhaustive dump of every private
+helper.
+
 ``unit_design`` — Code-Level Design Diagrams
 -----------------------------------------------
 

@@ -110,16 +110,12 @@ def _parse_results(content: str) -> AnalysisResults:
     try:
         parsed = json.loads(json_text)
     except json.JSONDecodeError as exc:
-        raise ValueError(
-            f"Model returned invalid JSON: {exc}\n"
-            f"--- LLM output ---\n{content}\n--- end ---"
-        ) from exc
+        raise ValueError(f"Model returned invalid JSON: {exc}\n--- LLM output ---\n{content}\n--- end ---") from exc
     try:
         return AnalysisResults.model_validate(parsed)
     except Exception as exc:
         raise ValueError(
-            f"Model output did not match the expected schema: {exc}\n"
-            f"--- LLM output ---\n{content}\n--- end ---"
+            f"Model output did not match the expected schema: {exc}\n--- LLM output ---\n{content}\n--- end ---"
         ) from exc
 
 
@@ -175,8 +171,7 @@ class CopilotAgent(AnalysisAgent):
             raise
         except Exception as exc:
             raise CopilotSetupError(
-                f"Unexpected error initialising Copilot SDK: "
-                f"{type(exc).__name__}: {exc}\n\n" + describe_auth_sources()
+                f"Unexpected error initialising Copilot SDK: {type(exc).__name__}: {exc}\n\n" + describe_auth_sources()
             ) from exc
 
         system_content = system_prompt + self._json_instruction

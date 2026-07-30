@@ -249,17 +249,9 @@ class TracingClassifier:
             ml = msg.lower()
             if "up reference" in ml or "missing upward" in ml or "upward tracing" in ml:
                 up.append(msg)
-            elif (
-                "down reference" in ml
-                or "missing downward" in ml
-                or "missing reference to" in ml
-            ):
+            elif "down reference" in ml or "missing downward" in ml or "missing reference to" in ml:
                 down.append(msg)
-            elif (
-                "tracing destination" in ml
-                or "unknown tracing target" in ml
-                or "downward tracing" in ml
-            ):
+            elif "tracing destination" in ml or "unknown tracing target" in ml or "downward tracing" in ml:
                 down.append(msg)
             else:
                 general.append(msg)
@@ -350,9 +342,7 @@ class PolicyDiagramBuilder:
         lines = []
         lines.append("digraph tracing_policy {")
         lines.append("   rankdir=TB;")
-        lines.append(
-            '   node [shape=box, style=filled, fontname="Helvetica", margin="0.3,0.1"];'
-        )
+        lines.append('   node [shape=box, style=filled, fontname="Helvetica", margin="0.3,0.1"];')
         lines.append("   edge [arrowhead=open];")
         lines.append("")
         for level_name, level in report.config.items():
@@ -411,8 +401,7 @@ class PolicyDiagramBuilder:
             f"because the Graphviz ``dot`` utility was not found."
         )
         out.append(
-            f"{nested_indent}Install `Graphviz <https://graphviz.org>`__ and rebuild "
-            f"to see the diagram as an image."
+            f"{nested_indent}Install `Graphviz <https://graphviz.org>`__ and rebuild to see the diagram as an image."
         )
         out.append("")
         out.append(f"{nested_indent}.. code-block:: dot")

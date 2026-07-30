@@ -94,9 +94,7 @@ class AIChecker:
             file_handler.setFormatter(file_formatter)
             self._logger.addHandler(file_handler)
 
-    def _generate_cache_key(
-        self, artefacts: dict[str, dict[str, Any]], guidelines_content: str
-    ) -> str:
+    def _generate_cache_key(self, artefacts: dict[str, dict[str, Any]], guidelines_content: str) -> str:
         """
         Generate a unique cache key for the given artefacts.
 
@@ -116,9 +114,7 @@ class AIChecker:
         combined = f"{artefact_data}:{guidelines_content}:{self._model_name}:{schema}"
         return hashlib.sha256(combined.encode("utf-8")).hexdigest()
 
-    def _format_artefacts_for_analysis(
-        self, artefacts: dict[str, dict[str, Any]]
-    ) -> str:
+    def _format_artefacts_for_analysis(self, artefacts: dict[str, dict[str, Any]]) -> str:
         """
         Format extracted artefacts for AI analysis.
 
@@ -141,9 +137,7 @@ class AIChecker:
 
         return formatted
 
-    def _create_batches(
-        self, artefacts: dict[str, dict[str, Any]]
-    ) -> list[dict[str, dict[str, Any]]]:
+    def _create_batches(self, artefacts: dict[str, dict[str, Any]]) -> list[dict[str, dict[str, Any]]]:
         """
         Create batches based on both count and total character size.
 
@@ -163,9 +157,7 @@ class AIChecker:
             char_count = len(artefact_text)
 
             # Check if adding this artefact would exceed limits
-            would_exceed_count = (
-                self._batch_size and len(current_batch) >= self._batch_size
-            )
+            would_exceed_count = self._batch_size and len(current_batch) >= self._batch_size
             would_exceed_chars = current_char_count + char_count > self._max_batch_chars
 
             # Start new batch if necessary
@@ -213,21 +205,15 @@ class AIChecker:
         num_batches = len(batches)
 
         if num_batches > 1:
+            self._logger.info(f"--> Created {num_batches} batches based on size and count limits")
             self._logger.info(
-                f"--> Created {num_batches} batches based on size and count limits"
-            )
-            self._logger.info(
-                f"--> Processing {num_batches} batches concurrently "
-                f"(max {self._max_concurrent_requests} at a time)"
+                f"--> Processing {num_batches} batches concurrently (max {self._max_concurrent_requests} at a time)"
             )
 
         total_start_time = time.time()
 
         # Create tasks for all batches to process concurrently
-        batch_tasks = [
-            self._analyze_batch_async(i + 1, batch, system_prompt, agent)
-            for i, batch in enumerate(batches)
-        ]
+        batch_tasks = [self._analyze_batch_async(i + 1, batch, system_prompt, agent) for i, batch in enumerate(batches)]
 
         # Execute all batch tasks concurrently with rate limiting
         # Use return_exceptions=True to continue even if some batches fail
@@ -239,10 +225,7 @@ class AIChecker:
         for i, batch_results in enumerate(all_batch_results):
             if isinstance(batch_results, Exception):
                 failed_batch_numbers.append(i + 1)
-                self._logger.error(
-                    f"--> Batch {i + 1} failed: "
-                    f"{type(batch_results).__name__}: {str(batch_results)}"
-                )
+                self._logger.error(f"--> Batch {i + 1} failed: {type(batch_results).__name__}: {str(batch_results)}")
             else:
                 all_analyses.extend(batch_results)
 
@@ -299,13 +282,9 @@ class AIChecker:
         """
         # Log batch start
         batch_size = len(artefacts)
-        self._logger.info(
-            f"--> Batch {batch_number}: Processing {batch_size} requirement(s)..."
-        )
+        self._logger.info(f"--> Batch {batch_number}: Processing {batch_size} requirement(s)...")
 
-        self._logger.debug(
-            f"Batch {batch_number} contains artefact IDs: {', '.join(artefacts.keys())}"
-        )
+        self._logger.debug(f"Batch {batch_number} contains artefact IDs: {', '.join(artefacts.keys())}")
         self._logger.debug(f"System prompt length: {len(system_prompt)} characters")
 
         # Check cache first
@@ -322,35 +301,23 @@ class AIChecker:
                 formatted_artefacts = self._format_artefacts_for_analysis(artefacts)
 
                 self._logger.debug(
-                    f"Batch {batch_number}: Formatted artefacts length: "
-                    f"{len(formatted_artefacts)} characters"
+                    f"Batch {batch_number}: Formatted artefacts length: {len(formatted_artefacts)} characters"
                 )
-                self._logger.debug(
-                    f"Batch {batch_number}: ===== RAW AI MODEL INPUT ====="
-                )
-                self._logger.debug(
-                    f"Batch {batch_number}: System Prompt (Guidelines + Context):"
-                )
+                self._logger.debug(f"Batch {batch_number}: ===== RAW AI MODEL INPUT =====")
+                self._logger.debug(f"Batch {batch_number}: System Prompt (Guidelines + Context):")
                 self._logger.debug(system_prompt)
                 self._logger.debug(f"Batch {batch_number}: ---")
                 self._logger.debug(f"Batch {batch_number}: Human Message (Artefacts):")
                 self._logger.debug(formatted_artefacts)
-                self._logger.debug(
-                    f"Batch {batch_number}: ===== END RAW AI MODEL INPUT ====="
-                )
-                self._logger.debug(
-                    f"Batch {batch_number}: Sending request to AI model "
-                    f"({self._model_name})..."
-                )
+                self._logger.debug(f"Batch {batch_number}: ===== END RAW AI MODEL INPUT =====")
+                self._logger.debug(f"Batch {batch_number}: Sending request to AI model ({self._model_name})...")
 
                 # Call the agent (single structured-output request)
                 start_time = time.time()
                 response = await agent.analyze(system_prompt, formatted_artefacts)
                 elapsed = time.time() - start_time
 
-                self._logger.debug(
-                    f"Batch {batch_number}: Received response in {elapsed:.2f}s"
-                )
+                self._logger.debug(f"Batch {batch_number}: Received response in {elapsed:.2f}s")
 
                 # Validate that we got a proper response
                 if not hasattr(response, "analyses") or not response.analyses:
@@ -369,10 +336,7 @@ class AIChecker:
                 return response.analyses
 
             except ValidationError as e:
-                self._logger.error(
-                    f"\n\n--> Batch {batch_number}: AI Model Error "
-                    f"(returned invalid response):"
-                )
+                self._logger.error(f"\n\n--> Batch {batch_number}: AI Model Error (returned invalid response):")
                 self._logger.error("--> Validation errors:")
                 for error in e.errors():
                     field = error.get("loc", ["unknown"])[0]
@@ -380,13 +344,8 @@ class AIChecker:
                     input_val = error.get("input", "N/A")
                     self._logger.error(f"    - Field '{field}': {msg}")
                     if input_val != "N/A":
-                        self._logger.error(
-                            f"      Received: {json.dumps(input_val, indent=6)}"
-                        )
+                        self._logger.error(f"      Received: {json.dumps(input_val, indent=6)}")
                 raise
             except Exception as e:
-                self._logger.error(
-                    f"--> Batch {batch_number}: AI Model Error: "
-                    f"{type(e).__name__}: {str(e)}"
-                )
+                self._logger.error(f"--> Batch {batch_number}: AI Model Error: {type(e).__name__}: {str(e)}")
                 raise

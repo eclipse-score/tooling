@@ -66,6 +66,106 @@ loss, delay, corruption, non-determinism). The ``Guideword`` enum in the
 The description below covers the FMEA-based **safety** analysis for a
 software module.
 
+Performing the Analysis
+-----------------------
+
+The Bazel rule and traceability check only verify that the artifacts are
+*linked* — they cannot tell you whether the analysis is *complete or correct*.
+Identifying failure modes, reasoning about causes, and choosing countermeasures
+is a safety-engineering activity governed by the S-CORE
+`Safety Analysis process area <https://eclipse-score.github.io/process_description/main/process_areas/safety_analysis/index.html>`_
+and its
+`FMEA fault models guideline <https://eclipse-score.github.io/process_description/main/process_areas/safety_analysis/guidance/fault_models_guideline.html>`_.
+Work through it in this order.
+
+Step 1 — Identify failure modes per interface
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Go through the ``public_api`` **method by method**. For each method, walk the
+applicable fault models and ask *"can this occur, and would it violate a safety
+goal?"* Record only the plausible, safety-relevant ones — the guideline marks
+many models as *low relevance* (e.g. "message received too early") that you can
+dismiss with a short rationale.
+
+The ``Guideword`` enum labels the fault-model category on each ``FailureMode``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 33 45
+
+   * - Fault-model category
+     - Example fault models
+     - ``Guideword`` labels
+   * - **Message** (send/receive)
+     - not sent / not received, corrupted, lost, unintended (``MF_01_*``)
+     - ``LossOfFunction``, ``PartialFunction``, ``Corrupted``,
+       ``UnintendedFunction``, ``Wrong``
+   * - **Timing / duration constraint**
+     - too late / too early, boundary violated (``CO_01_*``)
+     - ``TooEarly``, ``TooLate``, ``DelayedFunction``
+   * - **Execution**
+     - wrong result, loss of execution, arbitrary/incomplete (``EX_01_*``)
+     - ``Wrong``, ``LossOfFunction``, ``ExceedingFunction``, ``ArbitraryExecution``
+
+**Clustering:** create **one** ``FailureMode`` record per *(interface, guideword)*
+effect, not one per method blindly. If the same root cause produces the same
+effect across several methods, list them together in the ``interface`` field. A
+single root cause that manifests under two guide words needs two records (TRLC
+allows one ``guidewords`` classification per record).
+
+Step 2 — Analyse the effect, then decompose to causes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- **Effect** (``failureeffect``) — describe the consequence **from the caller /
+  system perspective**, in worst-case terms, relative to the safety goal. "Returns
+  a stale value that the controller uses to actuate" is a usable effect; "function
+  returns wrong data" is not.
+- **Causes** — build the Fault Tree (FTA) top-down from the failure mode to its
+  **root causes**:
+
+  - Use an **OR gate** when *any single* child cause is sufficient to produce the
+    parent — this is the default for independent causes.
+  - Use an **AND gate** only when *all* children must occur together (e.g. a fault
+    plus the failure of a safety mechanism) — this is what justifies a lower
+    residual risk.
+  - Decompose until each leaf (``$BasicEvent``) is an **actionable root cause** you
+    can place a measure on — not a vague restatement of the failure.
+
+Step 3 — Choose a countermeasure for every root cause
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Every ``$BasicEvent`` needs exactly one measure record. Pick the type by *when* it
+acts:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 46 30
+
+   * - Type
+     - Use when the measure…
+     - Acts
+   * - ``PreventiveMeasure``
+     - removes the cause so the fault cannot occur.
+     - before
+   * - ``ControlMeasure``
+     - detects and handles the fault at runtime (plausibility check, monitor).
+     - during
+   * - ``Mitigation``
+     - reduces severity/probability after the fault has occurred.
+     - after
+   * - ``AoU`` (Assumption of Use)
+     - can only be guaranteed by the **integrator/caller**, not inside the SEooC.
+     - at integration
+
+An ``AoU`` is how you *push an obligation outward* when the SEooC cannot close a
+root cause itself — it must be forwarded to the integrating project (see
+:doc:`assumptions_of_use`).
+
+**ASIL rationale:** the ``safety`` level on a ``FailureMode`` follows the safety
+goal it can violate; a ``ControlMeasure`` that an ASIL argument relies on inherits
+that level. Record *why* a measure is sufficient — an AND-gate decomposition or a
+diagnostic coverage claim — rather than only *that* it exists.
+
 Bazel Rule ``dependability_analysis``
 ----------------------------------------
 

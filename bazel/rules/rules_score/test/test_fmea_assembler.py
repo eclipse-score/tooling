@@ -45,9 +45,7 @@ class _FakeRenderer:
     def objects_by_fqn(self):
         return self._objs
 
-    def render_table_to_string(
-        self, columns, fqns=None, name_header="Name", link_fn=None
-    ):
+    def render_table_to_string(self, columns, fqns=None, name_header="Name", link_fn=None):
         if fqns is None:
             fqns = list(self._objs)
         if link_fn is not None:
@@ -76,12 +74,8 @@ def _objs():
                 "description": "fm a description",
             },
         ),
-        "Lib.FM_Orphan": _Obj(
-            "FM_Orphan", "FailureMode", {"safety": "QM", "guideword": "TooLate"}
-        ),
-        "Lib.CM_1": _Obj(
-            "CM_1", "ControlMeasure", {"safety": "B", "description": "cm one"}
-        ),
+        "Lib.FM_Orphan": _Obj("FM_Orphan", "FailureMode", {"safety": "QM", "guideword": "TooLate"}),
+        "Lib.CM_1": _Obj("CM_1", "ControlMeasure", {"safety": "B", "description": "cm one"}),
         "Lib.CM_Orphan": _Obj("CM_Orphan", "ControlMeasure", {"safety": "D"}),
     }
 

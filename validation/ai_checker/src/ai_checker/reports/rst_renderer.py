@@ -71,9 +71,7 @@ class RstRenderer(ReportRenderer):
 
         # Per-artefact sections
         for analysis in analyses:
-            parts.append(
-                _heading(f"{analysis.requirement_id} ({analysis.score:.1f}/10)", "-")
-            )
+            parts.append(_heading(f"{analysis.requirement_id} ({analysis.score:.1f}/10)", "-"))
             parts.append("")
             desc = strip_markup(analysis.description).replace("\n", " ")
             parts.append(f"**Description:** {desc}")

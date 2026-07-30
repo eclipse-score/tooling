@@ -120,11 +120,7 @@ def read_gtest_lobster(lobster_path: Path) -> list[TestRecord]:
         if item.tag.namespace != "gtest":
             continue
 
-        refs = [
-            ref.tag
-            for ref in item.unresolved_references
-            if ref.namespace == "req"
-        ]
+        refs = [ref.tag for ref in item.unresolved_references if ref.namespace == "req"]
         if not refs:
             continue
 

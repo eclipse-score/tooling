@@ -251,9 +251,7 @@ def test_process_files_fix_inserts_header_after_shebang(tmp_path):
     assert results["fixed"] == 1
     assert results["no_copyright"] == 1
     expected_header = header_template.format(year=current_year, author=author)
-    assert script.read_text(encoding="utf-8") == (
-        "#!/usr/bin/env python3\n" + expected_header + "\n" + "print('hi')\n"
-    )
+    assert script.read_text(encoding="utf-8") == ("#!/usr/bin/env python3\n" + expected_header + "\n" + "print('hi')\n")
 
 
 # test that process_files function validates a license header without the shebang line
@@ -302,9 +300,7 @@ def test_process_files_fix_inserts_header_without_shebang(tmp_path):
     assert results["fixed"] == 1
     assert results["no_copyright"] == 1
     expected_header = header_template.format(year=current_year, author=author)
-    assert (
-        script.read_text(encoding="utf-8") == expected_header + "\n" + "print('hi')\n"
-    )
+    assert script.read_text(encoding="utf-8") == expected_header + "\n" + "print('hi')\n"
 
 
 # test that border lines with different fill characters are accepted (flexible matching)
@@ -399,9 +395,7 @@ def test_has_duplicate_copyright_detects_duplicate(tmp_path):
     header = header_template.format(year=current_year, author="Author")
     test_file.write_text(header + header + "some content\n", encoding="utf-8")
 
-    result = cr_checker.has_duplicate_copyright(
-        test_file, header_template, False, "utf-8", 0
-    )
+    result = cr_checker.has_duplicate_copyright(test_file, header_template, False, "utf-8", 0)
 
     assert result is True
 
@@ -415,9 +409,7 @@ def test_has_duplicate_copyright_single_header(tmp_path):
     header = header_template.format(year=current_year, author="Author")
     test_file.write_text(header + "some content\n", encoding="utf-8")
 
-    result = cr_checker.has_duplicate_copyright(
-        test_file, header_template, False, "utf-8", 0
-    )
+    result = cr_checker.has_duplicate_copyright(test_file, header_template, False, "utf-8", 0)
 
     assert result is False
 
@@ -454,8 +446,6 @@ def test_has_duplicate_copyright_detects_different_year_ranges(tmp_path):
     header2 = header_template.format(year="2024-2026", author="Author")
     test_file.write_text(header1 + header2 + "some content\n", encoding="utf-8")
 
-    result = cr_checker.has_duplicate_copyright(
-        test_file, header_template, False, "utf-8", 0
-    )
+    result = cr_checker.has_duplicate_copyright(test_file, header_template, False, "utf-8", 0)
 
     assert result is True

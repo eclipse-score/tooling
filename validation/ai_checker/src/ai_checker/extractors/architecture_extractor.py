@@ -59,9 +59,7 @@ class ArchitectureExtractor(ArtefactExtractor):
                 with open(file_path, encoding="utf-8") as f:
                     content = f.read()
             except OSError as exc:
-                logger.warning(
-                    "Skipping unreadable PlantUML file %s: %s", file_path, exc
-                )
+                logger.warning("Skipping unreadable PlantUML file %s: %s", file_path, exc)
                 continue
             if not content.strip():
                 continue

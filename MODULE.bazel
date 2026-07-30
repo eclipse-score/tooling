@@ -22,8 +22,9 @@ module(
 ###############################################################################
 bazel_dep(name = "aspect_rules_py", version = "1.4.0")  # py_binary/py_library loads in cli_helper.bzl:13, cr_checker.bzl:16, defs.bzl:16, etc.
 
-bazel_dep(name = "aspect_rules_lint", version = "1.5.3", dev_dependency = True)
+bazel_dep(name = "aspect_rules_lint", version = "2.5.0", dev_dependency = True)
 
+bazel_dep(name = "rules_multitool", version = "1.9.0")
 bazel_dep(name = "rules_java", version = "8.15.1")  # required for dash
 
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2", dev_dependency = True)
@@ -246,6 +247,32 @@ use_repo(pip, "pip_lobster_bazel")
 ]
 
 use_repo(pip, "pip_rules_score")
+
+###############################################################################
+# Multitool Hub (for ruff, pyright, actionlint, etc.)
+###############################################################################
+# Note: the default "multitool" hub (ruff, ty, yamlfmt, etc.) is
+# already populated by aspect_rules_lint's own multitool.hub() calls (see its
+# format/multitool.lock.json and lint/multitool.lock.json), since
+# rules_multitool merges all hub() calls sharing the same hub_name across the
+# module graph. score_tooling doesn't declare its own lockfile for that
+# default hub to avoid overriding those (pinned, multi-platform) entries with
+# a narrower one, and doesn't `use_repo` it either: third_party/format and
+# third_party/lint consume those tools indirectly via
+# @aspect_rules_lint//lint:ruff_bin, //lint:ty_bin, //format:ruff,
+# //format:yamlfmt -- none of which require score_tooling itself to see the
+# "multitool" repo name.
+multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
+
+# Actionlint Hub -- actionlint has no equivalent in aspect_rules_lint's bundled
+# hub, so score_tooling keeps its own dedicated hub for it.
+multitool.hub(
+    hub_name = "actionlint_hub",
+    lockfile = "tools/actionlint.lock.json",
+)
+use_repo(multitool, "actionlint_hub")
+
+register_toolchains("@actionlint_hub//toolchains:all")
 
 ###############################################################################
 # lcov deb package (provides genhtml + lcov for combined coverage reports)

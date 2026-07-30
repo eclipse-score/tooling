@@ -25,6 +25,10 @@ build --@rules_rust//rust/settings:extra_rustc_flag=-Clink-arg=-fuse-ld=bfd
 build:clippy --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect
 build:clippy --output_groups=+clippy_checks
 
+# Python linters (ruff, pylint, ty)
+build:lint --aspects=//third_party/lint:linters.bzl%ruff,//third_party/lint:linters.bzl%pylint,//third_party/lint:linters.bzl%ty
+build:lint --output_groups=+rules_lint_human
+
 # Log level configuration for rules_score build output
 # normal build: only errors and warnings (default – no flag needed)
 # info build:   additionally show info messages from all tools

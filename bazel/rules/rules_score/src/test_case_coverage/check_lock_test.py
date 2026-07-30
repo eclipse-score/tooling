@@ -92,12 +92,8 @@ def test_version_unchanged_passes():
 
 def test_description_change_does_not_fail():
     """Description is display-only — a change must not affect the drift verdict."""
-    committed = _lock(
-        RequirementEntry(id="P.R", version="1", description="old", test_cases=[_tc()])
-    )
-    computed = _lock(
-        RequirementEntry(id="P.R", version="1", description="new", test_cases=[_tc()])
-    )
+    committed = _lock(RequirementEntry(id="P.R", version="1", description="old", test_cases=[_tc()]))
+    computed = _lock(RequirementEntry(id="P.R", version="1", description="new", test_cases=[_tc()]))
     ok, diff = compare_lock_files(committed, computed)
     assert ok
 

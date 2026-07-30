@@ -177,9 +177,7 @@ class _PrefillState:
         value = self._pop(self._repeat_until_by_description, description)
         if isinstance(value, list):
             return [v for v in value if isinstance(v, str)]
-        iteration_count = self._pop(
-            self._repeat_iteration_count_by_description, description
-        )
+        iteration_count = self._pop(self._repeat_iteration_count_by_description, description)
         if isinstance(iteration_count, int) and iteration_count > 0:
             if iteration_count == 1:
                 return [break_answer]

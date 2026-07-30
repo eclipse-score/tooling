@@ -10,18 +10,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-name: pre-commit
-on:
-  pull_request:
-    types: [opened, reopened, synchronize]
-jobs:
-  self_test:
-    name: 🔬 Self Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📥 Check out
-        uses: actions/checkout@v7.0.0
-      - name: ⚙️ Setup uv
-        uses: astral-sh/setup-uv@v7
-      - name: 🛠️ Run pre-commit
-        run: uvx pre-commit run --all-files
+
+package(default_visibility = ["//visibility:public"])
+
+# Only directories following the "score-*" naming convention are considered
+# skills that are shared with downstream repositories via //:sync_skills.
+# Skills that do not follow this convention (e.g. "rules-score") are kept
+# local to this repository and are not distributed.
+filegroup(
+    name = "skills",
+    srcs = glob(
+        ["score-*/**"],
+        allow_empty = True,
+    ),
+)

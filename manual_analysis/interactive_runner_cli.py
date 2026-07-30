@@ -66,9 +66,7 @@ def main(argv: list[str] | None = None) -> None:
 
     results_path = resolve_path(args.results_file)
     steps, _ = load_analysis(analysis_path)
-    prefill = (
-        _PrefillState.load(results_path) if not args.no_prefill_from_last_run else None
-    )
+    prefill = _PrefillState.load(results_path) if not args.no_prefill_from_last_run else None
     ui = _SplitPaneUI()
 
     try:

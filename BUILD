@@ -11,9 +11,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load("//cr_checker:cr_checker.bzl", "copyright_checker")
-load("//format_checker:macros.bzl", "use_format_targets")
+load("//third_party/format:macros.bzl", "use_format_targets")
 
 package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "pyproject.toml",
+])
 
 copyright_checker(
     name = "copyright",
@@ -24,7 +28,7 @@ copyright_checker(
         "cli_helper",
         "cr_checker",
         "dash",
-        "format_checker",
+        "third_party/format",
         "python_basics",
         "starpls",
         "tools",
@@ -33,8 +37,13 @@ copyright_checker(
         "manual_analysis",
         "plantuml",
         "validation",
+        "third_party/lint",
+        "skills_sync",
 
         # Add other directories/files you want to check
+        # Note: .github/skills is intentionally excluded; those SKILL.md /
+        # README.md files are distributed verbatim to downstream repos via
+        # //:sync_skills and are not subject to this repo's copyright checker.
     ],
     config = "//cr_checker/resources:config",
     exclusion = "//cr_checker/resources:exclusion",

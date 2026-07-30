@@ -58,12 +58,8 @@ class RequirementExtractor(ArtefactExtractor):
         # Use realpath (not abspath) so the scope check in
         # extract_requirements_data() is symlink-safe: a symlinked source file
         # is compared on its resolved path against the resolved scope.
-        self.input_directory = (
-            os.path.realpath(input_directory) if input_directory else None
-        )
-        self.dependency_directories = [
-            os.path.realpath(d) for d in (dependency_directories or [])
-        ]
+        self.input_directory = os.path.realpath(input_directory) if input_directory else None
+        self.dependency_directories = [os.path.realpath(d) for d in (dependency_directories or [])]
         self.req_files = [os.path.realpath(f) for f in (req_files or [])]
         self.symbols: trlc.ast.Symbol_Table | None = None
 
@@ -101,9 +97,7 @@ class RequirementExtractor(ArtefactExtractor):
         else:
             # Original behaviour: register all directories (input + deps).
             # Collect all directories and filter out overlapping ones.
-            all_dirs = (
-                [self.input_directory] if self.input_directory else []
-            ) + self.dependency_directories
+            all_dirs = ([self.input_directory] if self.input_directory else []) + self.dependency_directories
 
             # Remove duplicates and filter out directories that are
             # subdirectories of others
@@ -141,9 +135,7 @@ class RequirementExtractor(ArtefactExtractor):
         self.symbols = symbols
         return symbols
 
-    def extract_field_value(
-        self, obj: trlc.ast.Record_Object, field_name: str
-    ) -> Any | None:
+    def extract_field_value(self, obj: trlc.ast.Record_Object, field_name: str) -> Any | None:
         """
         Extract a field value from a TRLC Record_Object.
 
@@ -237,19 +229,13 @@ class RequirementExtractor(ArtefactExtractor):
             parent_requirement = self.extract_field_value(obj, "parent")
 
             # Get requirement type
-            requirement_type = (
-                obj.n_typ.name
-                if hasattr(obj, "n_typ") and hasattr(obj.n_typ, "name")
-                else "Unknown"
-            )
+            requirement_type = obj.n_typ.name if hasattr(obj, "n_typ") and hasattr(obj.n_typ, "name") else "Unknown"
 
             requirements.append(
                 {
                     "unique_id": unique_id,
                     "description": str(description),
-                    "parent_requirement": str(parent_requirement)
-                    if parent_requirement
-                    else None,
+                    "parent_requirement": str(parent_requirement) if parent_requirement else None,
                     "requirement_type": requirement_type,
                 }
             )

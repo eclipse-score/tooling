@@ -42,9 +42,7 @@ project = "{PROJECT_NAME}"
 author = "S-CORE"
 version = "1.0"
 release = "1.0.0"
-project_url = (
-    "https://github.com/eclipse-score"  # Required by score_metamodel extension
-)
+project_url = "https://github.com/eclipse-score"  # Required by score_metamodel extension
 
 # Sphinx extensions - comprehensive list for SCORE modules
 extensions = [

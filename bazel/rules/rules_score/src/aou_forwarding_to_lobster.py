@@ -46,9 +46,7 @@ def parse_forwarding_yaml(yaml_path: str) -> list[dict[str, str]]:
         raise SystemExit(f"Failed to parse YAML {yaml_path}: {e}") from e
 
     if not isinstance(data, dict) or "forwarded_aous" not in data:
-        raise SystemExit(
-            f"YAML {yaml_path} must contain a 'forwarded_aous' key with a list of entries."
-        )
+        raise SystemExit(f"YAML {yaml_path} must contain a 'forwarded_aous' key with a list of entries.")
 
     entries = data["forwarded_aous"]
     if not isinstance(entries, list):
@@ -57,15 +55,11 @@ def parse_forwarding_yaml(yaml_path: str) -> list[dict[str, str]]:
     result = []
     for i, entry in enumerate(entries):
         if not isinstance(entry, dict):
-            raise SystemExit(
-                f"YAML {yaml_path}: entry {i} must be a mapping with 'aou_id' and 'justification'."
-            )
+            raise SystemExit(f"YAML {yaml_path}: entry {i} must be a mapping with 'aou_id' and 'justification'.")
         aou_id = entry.get("aou_id")
         justification = entry.get("justification")
         if not aou_id:
-            raise SystemExit(
-                f"YAML {yaml_path}: entry {i} is missing required field 'aou_id'."
-            )
+            raise SystemExit(f"YAML {yaml_path}: entry {i} is missing required field 'aou_id'.")
         if not justification:
             raise SystemExit(
                 f"YAML {yaml_path}: entry {i} (aou_id='{aou_id}') is missing required field 'justification'."
@@ -138,8 +132,7 @@ def filter_forwarded_aous(
         if aou_id not in item_by_id:
             available = ", ".join(sorted(item_by_id.keys())) if item_by_id else "(none)"
             raise SystemExit(
-                f"AoU ID '{aou_id}' listed in forwarding YAML not found in received AoUs. "
-                f"Available IDs: {available}"
+                f"AoU ID '{aou_id}' listed in forwarding YAML not found in received AoUs. Available IDs: {available}"
             )
         filtered.append(item_by_id[aou_id])
 
@@ -158,9 +151,7 @@ def create_lobster_output(items: list[dict]) -> dict:
 
 def main() -> None:
     """Entry point for the AoU forwarding filter tool."""
-    parser = argparse.ArgumentParser(
-        description="Filter received AoU lobster entries for chain-forwarding."
-    )
+    parser = argparse.ArgumentParser(description="Filter received AoU lobster entries for chain-forwarding.")
     parser.add_argument(
         "--yaml",
         required=True,

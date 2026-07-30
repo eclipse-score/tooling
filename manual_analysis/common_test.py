@@ -34,9 +34,7 @@ class CommonTest(unittest.TestCase):
             runfiles = mock.Mock()
             runfiles.Rlocation.return_value = str(runfile)
 
-            with mock.patch(
-                "manual_analysis.common._create_runfiles", return_value=runfiles
-            ):
+            with mock.patch("manual_analysis.common._create_runfiles", return_value=runfiles):
                 resolved = resolve_path("_main/manual_analysis/tool.txt")
 
             self.assertEqual(resolved, runfile)
@@ -46,9 +44,7 @@ class CommonTest(unittest.TestCase):
         runfiles = mock.Mock()
         runfiles.Rlocation.return_value = None
 
-        with mock.patch(
-            "manual_analysis.common._create_runfiles", return_value=runfiles
-        ):
+        with mock.patch("manual_analysis.common._create_runfiles", return_value=runfiles):
             resolved = resolve_path("missing/in/runfiles.txt")
 
         self.assertEqual(resolved, Path("missing/in/runfiles.txt"))

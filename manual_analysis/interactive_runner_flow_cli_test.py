@@ -85,9 +85,7 @@ class _FakeUi:
         _args: list[AutomatedActionArg],
         initial_values: dict[str, str] | None = None,
     ) -> dict[str, str]:
-        return (
-            {} if initial_values is None else cast(dict[str, str], dict(initial_values))
-        )
+        return {} if initial_values is None else cast(dict[str, str], dict(initial_values))
 
     def run_command(self, _command: str) -> int:
         return 0

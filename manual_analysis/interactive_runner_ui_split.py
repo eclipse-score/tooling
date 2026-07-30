@@ -36,11 +36,7 @@ class _SplitPaneUI:
 
     def _history_text(self) -> str:
         with self._history_lock:
-            return (
-                "\n\n".join(self._history)
-                if self._history
-                else "No analysis output yet."
-            )
+            return "\n\n".join(self._history) if self._history else "No analysis output yet."
 
     def _append_history(self, title: str, body: str, separator: str) -> None:
         entry = f"{separator}\n{title}\n{separator}"
@@ -307,9 +303,7 @@ class _SplitPaneUI:
             )
             status_area.text = _get_keys_text()
 
-            app = Application(
-                layout=layout, key_bindings=key_bindings, full_screen=True
-            )
+            app = Application(layout=layout, key_bindings=key_bindings, full_screen=True)
             pre_run_callables = getattr(app, "pre_run_callables", None)
             if isinstance(pre_run_callables, list):
                 pre_run_callables.append(lambda: self._set_left_panel_scroll(left_area))
@@ -464,19 +458,11 @@ class _SplitPaneUI:
             def _status_text() -> str:
                 index = _focused_index()
                 if focus_order[index] is answer_area:
-                    return (
-                        "Tab/Shift-Tab: switch focus | Ctrl-S/F2: submit | Answer field"
-                    )
+                    return "Tab/Shift-Tab: switch focus | Ctrl-S/F2: submit | Answer field"
                 if focus_order[index] is justification_area:
-                    return (
-                        "Tab/Shift-Tab: switch focus | Ctrl-S/F2: submit | "
-                        "Justification field"
-                    )
+                    return "Tab/Shift-Tab: switch focus | Ctrl-S/F2: submit | Justification field"
                 if focus_order[index] is left_area:
-                    return (
-                        "Tab/Shift-Tab: switch focus | Up/Down/PgUp/PgDn: "
-                        "scroll history"
-                    )
+                    return "Tab/Shift-Tab: switch focus | Up/Down/PgUp/PgDn: scroll history"
                 return "Tab/Shift-Tab: switch focus | Ctrl-S/F2: submit"
 
             @key_bindings.add("tab")
@@ -553,9 +539,7 @@ class _SplitPaneUI:
             pre_run_callables = getattr(app, "pre_run_callables", None)
             if isinstance(pre_run_callables, list):
                 pre_run_callables.append(lambda: self._set_left_panel_scroll(left_area))
-                pre_run_callables.append(
-                    lambda: setattr(status_area, "text", _status_text())
-                )
+                pre_run_callables.append(lambda: setattr(status_area, "text", _status_text()))
             else:
                 self._set_left_panel_scroll(left_area)
                 status_area.text = _status_text()
@@ -596,9 +580,7 @@ class _SplitPaneUI:
 
     def prompt_multiline(self, prompt: str, initial_text: str = "") -> str:
         instructions = (
-            f"{prompt}\n\n"
-            "Enter your content in the right panel. "
-            "Use F4 to open the default editor ($VISUAL/$EDITOR)."
+            f"{prompt}\n\nEnter your content in the right panel. Use F4 to open the default editor ($VISUAL/$EDITOR)."
         )
         return self._prompt_text(
             title="Current Action Input",
@@ -651,14 +633,8 @@ class _SplitPaneUI:
                 field_kwargs["placeholder"] = f"Enter value for {arg.name}"
             area = TextArea(**field_kwargs)
             field_areas.append(area)
-            title = (
-                f"{arg.name}"
-                if arg.default is None
-                else f"{arg.name} (default: {arg.default})"
-            )
-            field_frames.append(
-                Frame(area, title=title, height=Dimension(min=3, max=3))
-            )
+            title = f"{arg.name}" if arg.default is None else f"{arg.name} (default: {arg.default})"
+            field_frames.append(Frame(area, title=title, height=Dimension(min=3, max=3)))
 
         instructions_area = TextArea(
             text=(
@@ -678,15 +654,11 @@ class _SplitPaneUI:
             scrollbar=True,
             wrap_lines=False,
         )
-        status_area = TextArea(
-            text="", read_only=True, focusable=False, wrap_lines=True
-        )
+        status_area = TextArea(text="", read_only=True, focusable=False, wrap_lines=True)
         key_bindings = KeyBindings()
 
         form_body = HSplit(field_frames)
-        form_container = (
-            ScrollablePane(form_body) if ScrollablePane is not None else form_body
-        )
+        form_container = ScrollablePane(form_body) if ScrollablePane is not None else form_body
 
         def _focused_field_index() -> int:
             for index, field in enumerate(field_areas):
@@ -779,9 +751,7 @@ class _SplitPaneUI:
         pre_run_callables = getattr(app, "pre_run_callables", None)
         if isinstance(pre_run_callables, list):
             pre_run_callables.append(lambda: self._set_left_panel_scroll(left_area))
-            pre_run_callables.append(
-                lambda: setattr(status_area, "text", _status_text())
-            )
+            pre_run_callables.append(lambda: setattr(status_area, "text", _status_text()))
         else:
             self._set_left_panel_scroll(left_area)
             status_area.text = _status_text()

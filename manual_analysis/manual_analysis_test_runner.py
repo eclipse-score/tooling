@@ -38,18 +38,12 @@ def _required_path(name: str) -> Path:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        description=(
-            "Check lock and results for a manual analysis and optionally emit "
-            "a LOBSTER artifact."
-        ),
+        description=("Check lock and results for a manual analysis and optionally emit a LOBSTER artifact."),
     )
     parser.add_argument(
         "--allow-check-failures",
         action="store_true",
-        help=(
-            "Return success even when lock/results checks fail. "
-            "Useful for artifact-generation actions."
-        ),
+        help=("Return success even when lock/results checks fail. Useful for artifact-generation actions."),
     )
     args = parser.parse_args(argv)
 
