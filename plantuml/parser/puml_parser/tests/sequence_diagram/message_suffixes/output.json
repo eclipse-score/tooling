@@ -1,0 +1,108 @@
+{
+  "message_suffixes.puml": {
+    "name": "message_suffixes",
+    "statements": [
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "alice",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "bob",
+              "alias": null
+            }
+          },
+          "suffix": "Activate",
+          "description": "hello1",
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "bob",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "-"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "charlie",
+              "alias": null
+            }
+          },
+          "suffix": {
+            "Combined": [
+              "Deactivate",
+              "Activate"
+            ]
+          },
+          "description": "hello2",
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "charlie",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "alice",
+              "alias": null
+            }
+          },
+          "suffix": "Deactivate",
+          "description": "ok",
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
+        }
+      }
+    ]
+  }
+}

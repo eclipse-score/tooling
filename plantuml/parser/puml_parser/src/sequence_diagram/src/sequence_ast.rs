@@ -125,6 +125,7 @@ pub enum MessageSuffix {
     Deactivate, // --
     Create,     // **
     Destroy,    // !!
+    Combined(Vec<MessageSuffix>),
 }
 
 // Group commands (alt, opt, loop, etc.) - internal parsing structure

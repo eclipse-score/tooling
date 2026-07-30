@@ -1,0 +1,123 @@
+{
+  "message_missing_endpoints.puml": {
+    "name": "message_missing_endpoints",
+    "statements": [
+      {
+        "Message": {
+          "left": {
+            "LostFound": "?"
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": "missing left",
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Worker",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": {
+              "raw": "<"
+            },
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": null
+          },
+          "right": {
+            "LostFound": "?"
+          },
+          "suffix": null,
+          "description": "missing right",
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "LostFound": "?"
+          },
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "right": {
+            "Participant": {
+              "display_name": "Service",
+              "alias": null
+            }
+          },
+          "suffix": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
+        }
+      },
+      {
+        "Message": {
+          "left": {
+            "Participant": {
+              "display_name": "Worker",
+              "alias": null
+            }
+          },
+          "arrow": {
+            "left": {
+              "raw": "<"
+            },
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": null
+          },
+          "right": {
+            "LostFound": "?"
+          },
+          "suffix": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 18
+          }
+        }
+      }
+    ]
+  }
+}

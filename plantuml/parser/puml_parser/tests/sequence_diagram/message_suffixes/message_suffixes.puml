@@ -10,21 +10,10 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-@startuml message_lost_found
+@startuml message_suffixes
 
-[-> Service
-[o-> Service
-[o->o Service
-[x-> Service
-[<- Service
-[x<- Service
-Service ->]
-Service ->o]
-Service o->o]
-Service ->x]
-Service <-]
-Service x<-]
-?-> Worker : short to Worker
-Worker ->? : short from Worker
+alice -> bob ++ #LightBlue : hello1
+bob -> charlie --++ : hello2
+charlie --> alice -- : ok
 
 @enduml
