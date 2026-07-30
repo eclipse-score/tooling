@@ -1,9 +1,3 @@
-load(
-    "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
-    "assumptions_of_use",
-    "glossary",
-)
-
 # *******************************************************************************
 # Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
@@ -16,6 +10,12 @@ load(
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+
+load(
+    "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
+    "assumptions_of_use",
+    "glossary",
+)
 load("@trlc//:trlc.bzl", "trlc_requirements_test")
 
 assumptions_of_use(
