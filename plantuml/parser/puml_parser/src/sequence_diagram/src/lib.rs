@@ -16,8 +16,8 @@ mod sequence_parser;
 
 pub use sequence_ast::{
     ActivateCmd, Arrow, CreateCmd, DeactivateCmd, DestroyCmd, GroupCmd, GroupType, Message,
-    MessageEndpoint, MessageSuffix, ParticipantIdentifier, ParticipantType, SeqPumlDocument,
-    Statement,
+    MessageEndpoint, MessageSuffix, ParticipantIdentifier, ParticipantRef, ParticipantType,
+    SeqPumlDocument, Statement,
 };
 
 pub use sequence_parser::{PumlSequenceParser, SequenceError};

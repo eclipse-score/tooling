@@ -1,0 +1,49 @@
+{
+  "create_participants.puml": {
+    "name": "create_participants",
+    "statements": [
+      {
+        "CreateCmd": {
+          "participant_type": "Participant",
+          "identifier": {
+            "display_name": "Created Worker",
+            "alias": "Worker"
+          },
+          "stereotype": null,
+          "source_location": {
+            "file": "",
+            "line": 15
+          }
+        }
+      },
+      {
+        "CreateCmd": {
+          "participant_type": "Participant",
+          "identifier": {
+            "display_name": "Other",
+            "alias": null
+          },
+          "stereotype": null,
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
+        }
+      },
+      {
+        "CreateCmd": {
+          "participant_type": "Control",
+          "identifier": {
+            "display_name": "String",
+            "alias": null
+          },
+          "stereotype": null,
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
+        }
+      }
+    ]
+  }
+}

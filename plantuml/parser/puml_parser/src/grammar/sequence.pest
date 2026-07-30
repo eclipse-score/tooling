@@ -24,7 +24,8 @@ sequence_statement = {
         sprite_inline | sprite_block_start |
         hide_show_member | hide_show_stereotype |
         participant_def |
-        activate_cmd | deactivate_cmd | destroy_cmd | create_cmd |
+        message |
+        lifecycle_cmd |
         box_start | box_end |
         group_cmd |
         divider | delay |
@@ -32,9 +33,7 @@ sequence_statement = {
         ref_inline | ref_block_start |
         skin | autonumber | autonumber_stop | autonumber_resume | autonumber_inc |
         autoactivate | footbox_cmd | ellipsis |
-        function_def | function_return | function_end |
-        message |
-        activation_short
+        function_def | function_return | function_end
     ) ~ EOL
 }
 
@@ -106,13 +105,11 @@ stereotype_elem = {
 
 // Participant definitions
 participant_def = {
-    create_kw?
-    ~ participant_type
+    participant_type
     ~ participant_identifier
     ~ stereotype? ~ order_clause? ~ color_spec?
 }
 
-create_kw = { ^"create" }
 participant_type = @{
     (^"participant" | ^"collections" | ^"database" | ^"boundary" | ^"control" |
      ^"entity" | ^"queue" | ^"actor") ~ &(" " | "\t" | "\n" | "\r")
@@ -145,11 +142,24 @@ color_spec = @{ BASIC_COLOR }
 order_clause = { ^"order" ~ signed_number }
 signed_number = { "-"? ~ NUMBER }
 
-// Activate/Deactivate/Destroy/Create commands
-activate_cmd = { ^"activate" ~ participant_ref }
+// Lifecycle commands
+lifecycle_cmd = {
+      create_cmd
+    | activate_cmd
+    | deactivate_cmd
+    | destroy_cmd
+    | activation_short
+}
+
+create_cmd = {
+    ^"create"
+    ~ participant_type?
+    ~ participant_identifier
+    ~ stereotype? ~ order_clause? ~ color_spec?
+}
+activate_cmd = { ^"activate" ~ participant_ref ~ color_spec? }
 deactivate_cmd = { ^"deactivate" ~ participant_ref? }
 destroy_cmd = { ^"destroy" ~ participant_ref }
-create_cmd = { ^"create" ~ participant_ref }
 
 // Sequence Arrow
 SEQUENCE_ARROW_PREFIX_CHAR = _{ "<" | "/" | "\\" | "|" | "*" | "(" | ")" | "#" | "^" | "@" }
@@ -206,8 +216,7 @@ deactivate_suffix = { "--" }
 create_suffix = { "**" }
 destroy_suffix = { "!!" }
 
-// Short activation syntax
-activation_short = { participant_ref ~ ("++" | "--") }
+activation_short = { participant_ref ~ (activate_suffix | deactivate_suffix) }
 participant_ref = { CNAME | quoted_string }
 
 // Return

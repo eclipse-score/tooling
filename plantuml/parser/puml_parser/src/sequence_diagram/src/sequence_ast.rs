@@ -30,8 +30,8 @@ pub struct SeqPumlDocument {
 // expected to be revisited as the sequence parser/resolver model settles.
 #[allow(clippy::large_enum_variant)]
 pub enum Statement {
-    DestroyCmd(DestroyCmd),
     CreateCmd(CreateCmd),
+    DestroyCmd(DestroyCmd),
     ActivateCmd(ActivateCmd),
     DeactivateCmd(DeactivateCmd),
     ParticipantDef(ParticipantDef),
@@ -42,8 +42,14 @@ pub enum Statement {
 // Participant definitions
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParticipantDef {
-    #[serde(default)]
-    pub is_create: bool,
+    pub participant_type: ParticipantType,
+    pub identifier: ParticipantIdentifier,
+    pub stereotype: Option<String>,
+    pub source_location: SourceLocation,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CreateCmd {
     pub participant_type: ParticipantType,
     pub identifier: ParticipantIdentifier,
     pub stereotype: Option<String>,
@@ -68,26 +74,24 @@ pub struct ParticipantIdentifier {
     pub alias: Option<String>,
 }
 
-// Destroy/Create commands
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ParticipantRef {
+    pub identifier: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DestroyCmd {
-    pub participant: String,
+    pub participant: ParticipantRef,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CreateCmd {
-    pub participant: String,
-}
-
-// Activate/Deactivate commands
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ActivateCmd {
-    pub participant: String,
+    pub participant: ParticipantRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeactivateCmd {
-    pub participant: Option<String>,
+    pub participant: ParticipantRef,
 }
 
 // Messages (internal parsing structure)
