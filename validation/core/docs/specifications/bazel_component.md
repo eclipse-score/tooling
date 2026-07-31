@@ -97,6 +97,25 @@ the dependable element alias as parent. More deeply nested components use their
 immediate enclosing component alias as parent.
 *(Requirements: {requirement:downstream-ref}`Tools.BazelComponentNameCaseInsensitive`, {requirement:downstream-ref}`Tools.BazelComponentParentContext`)*
 
+### Non-Empty Composition
+
+Every Bazel `dependable_element` and `component` target must decompose into
+at least one nested `component` or `unit`. A target with an empty
+`components` attribute (and, for components, no nested `unit`) is reported
+even if the PlantUML diagram agrees and shows the same element as empty --
+the set-difference checks above only compare presence between Bazel and
+PlantUML, so a childless entry that matches on both sides would otherwise go
+unnoticed.
+*(Requirement: {requirement:downstream-ref}`Tools.BazelComponentNonEmptyComposition`)*
+
+```starlark
+# Flagged: component_example has no nested unit() or component().
+component(
+  name = "component_example",
+  components = [],
+)
+```
+
 ## Failure Cases
 
 | Failure case | Validation rule |
@@ -107,6 +126,8 @@ immediate enclosing component alias as parent.
 | Extra component in PlantUML | Component Consistency |
 | Missing unit in PlantUML | Unit Consistency |
 | Extra unit in PlantUML | Unit Consistency |
+| Empty dependable element in Bazel build graph | Non-Empty Composition |
+| Empty component in Bazel build graph | Non-Empty Composition |
 
 ## PlantUML Stereotype Reference
 
