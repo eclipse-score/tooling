@@ -493,7 +493,8 @@ def test_classify_scores_formatting_drift_highly(tmp_path):
 
 def test_classify_scores_unrelated_license_low(tmp_path):
     """A header for a genuinely different license must score well below the
-    auto-fix threshold, so `--fix` never silently overwrites it."""
+    auto-fix threshold, AND be caught by the SPDX mismatch guard -- either
+    would prevent `--fix` from silently overwriting it."""
     cr_checker = load_cr_checker_module()
     header_template = load_template("rs")
     config_file = write_config(tmp_path, "Author")
@@ -507,8 +508,22 @@ def test_classify_scores_unrelated_license_low(tmp_path):
     layout = cr_checker.locate_header(unrelated_header)
     status, similarity = cr_checker.classify(layout, header_template, config_file)
 
-    assert status is cr_checker.Status.WRONG_FORMAT
+    assert status is cr_checker.Status.LICENSE_MISMATCH
     assert similarity < cr_checker.HEADER_SIMILARITY_THRESHOLD
+
+
+def test_spdx_mismatch_ignores_spacing_dots_and_hyphens(tmp_path):
+    """A harmless formatting variant of the SAME identifier (spacing/dots/
+    hyphens differ but the license doesn't) must NOT trip the mismatch guard."""
+    cr_checker = load_cr_checker_module()
+    header_template = load_template("py")
+    config_file = write_config(tmp_path, "Author")
+    variant_header = "# Copyright (c) 2024 Author\n#\n# SPDX-License-Identifier: apache 2.0\n"
+
+    layout = cr_checker.locate_header(variant_header)
+    status, _ = cr_checker.classify(layout, header_template, config_file)
+
+    assert status is not cr_checker.Status.LICENSE_MISMATCH
 
 
 # --- duplicate_similarity (diagnostics for DUPLICATE status) ---
@@ -799,16 +814,17 @@ def test_process_files_check_mode_ignores_remove_offset(tmp_path):
 
 def test_process_files_fix_without_force_leaves_low_similarity_header_untouched(tmp_path):
     """Baseline: a WRONG_FORMAT header that scores below
-    `HEADER_SIMILARITY_THRESHOLD` (a genuinely different license, not just a
-    formatting drift) must be left alone by `--fix` without `--force`."""
+    `HEADER_SIMILARITY_THRESHOLD` (unrecognizable boilerplate, though it
+    carries the same SPDX identifier so it isn't a LICENSE_MISMATCH) must be
+    left alone by `--fix` without `--force`."""
     cr_checker = load_cr_checker_module()
     header_template = load_template("py")
     config = write_config(tmp_path, "Author")
     unrelated_header = (
-        "# Copyright (c) 2020 Some Other Corp. All rights reserved.\n"
-        "# Licensed under the MIT License; see the LICENSE file for details.\n"
+        "# Copyright presence only, then completely different padding text follows\n"
+        "# padding padding padding padding padding padding padding\n"
         "#\n"
-        "# SPDX-License-Identifier: MIT\n"
+        "# SPDX-License-Identifier: Apache-2.0\n"
     )
     test_file = tmp_path / "file.py"
     test_file.write_text(unrelated_header + "print('hi')\n", encoding="utf-8")
@@ -828,8 +844,46 @@ def test_process_files_fix_without_force_leaves_low_similarity_header_untouched(
 
 
 def test_process_files_fix_force_rewrites_low_similarity_header(tmp_path):
-    """With `force=True`, the same low-similarity header IS rewritten --
-    `--force` is an explicit, opt-in override of the similarity guard."""
+    """With `force=True`, the same low-similarity (but same-license) header IS
+    rewritten -- `--force` is an explicit, opt-in override of the similarity
+    guard, though never of the separate SPDX mismatch guard (see
+    `test_process_files_fix_force_does_not_touch_license_mismatch`)."""
+    cr_checker = load_cr_checker_module()
+    header_template = load_template("py")
+    config = write_config(tmp_path, "Author")
+    unrelated_header = (
+        "# Copyright presence only, then completely different padding text follows\n"
+        "# padding padding padding padding padding padding padding\n"
+        "#\n"
+        "# SPDX-License-Identifier: Apache-2.0\n"
+    )
+    test_file = tmp_path / "file.py"
+    test_file.write_text(unrelated_header + "print('hi')\n", encoding="utf-8")
+
+    results = cr_checker.process_files(
+        [test_file],
+        {"py": header_template},
+        True,
+        config=config,
+        use_mmap=False,
+        encoding="utf-8",
+        force=True,
+    )
+
+    expected_header = header_template.format(year=datetime.now().year, author="Author")
+    fixed = test_file.read_text(encoding="utf-8")
+    assert results["fixed"] == 1
+    assert "padding" not in fixed
+    assert fixed == expected_header + "\n" + "print('hi')\n"
+
+
+def test_process_files_fix_force_does_not_touch_license_mismatch(tmp_path):
+    """`force` only bypasses the *similarity* guard for WRONG_FORMAT /
+    MISPLACED_AND_WRONG_FORMAT; LICENSE_MISMATCH is not in `FIXABLE_STATUSES`
+    at all and must still be left for manual review even with `force=True`,
+    since silently overwriting a genuinely different license's SPDX
+    identifier is a legal/compliance-significant action, not cosmetic
+    drift."""
     cr_checker = load_cr_checker_module()
     header_template = load_template("py")
     config = write_config(tmp_path, "Author")
@@ -852,11 +906,9 @@ def test_process_files_fix_force_rewrites_low_similarity_header(tmp_path):
         force=True,
     )
 
-    expected_header = header_template.format(year=datetime.now().year, author="Author")
-    fixed = test_file.read_text(encoding="utf-8")
-    assert results["fixed"] == 1
-    assert "Some Other Corp" not in fixed
-    assert fixed == expected_header + "\n" + "print('hi')\n"
+    assert results["fixed"] == 0
+    assert results["license_mismatch"] == 1
+    assert test_file.read_text(encoding="utf-8") == unrelated_header + "print('hi')\n"
 
 
 def test_process_files_fix_force_does_not_touch_duplicate(tmp_path):
@@ -913,7 +965,7 @@ def test_process_files_check_mode_ignores_force(tmp_path):
     )
 
     assert results["fixed"] == 0
-    assert results["wrong_format"] == 1
+    assert results["license_mismatch"] == 1
     assert test_file.read_text(encoding="utf-8") == unrelated_header + "print('hi')\n"
 
 

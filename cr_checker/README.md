@@ -55,7 +55,7 @@ python cr_checker.py -t <template_file> [options] <inputs>
 - **--offset**: Force this many characters (plus any trailing blank lines) at the start of the file to be treated as a recognized preamble, overriding auto-detection. Character-based, not byte-based. Rarely needed: a leading shebang is detected and preserved automatically; use this only for other preamble kinds the tool doesn't (yet) recognize.
 - **-f**, **--fix**: Setting script into fix mode where copyright header will be added to the files if it's missing from same.
 - **--remove-offset**: Number of characters to remove before appending proper copyright header (works only with `--fix` option).
-- **--force**: With `--fix`, also rewrite headers whose similarity to the template is below the auto-fix threshold (normally left untouched and only reported, since they may be a genuinely different license text). Never affects a duplicate-header file, which always requires manual review. Ignored without `--fix`.
+- **--force**: With `--fix`, also rewrite headers whose similarity to the template is below the auto-fix threshold (normally left untouched and only reported, since they may be a genuinely different license text). Never affects a duplicate-header file or one with a genuine SPDX license mismatch, both of which always require manual review. Ignored without `--fix`.
 - **--modified-only**: Only check files that differ from `HEAD` (staged and/or unstaged), e.g. for a fast, incremental pre-commit run. Takes precedence over `inputs`.
 - **inputs**: Directories or files to parse, or a parameter file prefixed with @ that lists files or directories. Optional -- when omitted, the whole repository (per `git ls-files`) is checked.
 
@@ -132,8 +132,16 @@ bazel run //:copyright.fix -- --force
 ```
 
 `--force` never touches a file with a *duplicate* copyright header --
-that always requires manual review, regardless of similarity. **Always
-review the resulting diff afterwards**, since a low similarity score can
+that always requires manual review, regardless of similarity. It also never
+touches a header with a genuine *SPDX license mismatch* (e.g. an existing
+`MIT` header where the template expects `Apache-2.0`) -- that's detected
+separately from the overall similarity score (a short header can score
+high similarity overall while still naming a different license), and is
+always left for manual review since silently overwriting someone else's
+license declaration is a legal/compliance decision, not a formatting fix.
+The comparison is lenient about spacing, dots and hyphens (`Apache-2.0` ==
+`Apache 2.0` == `apache2.0`), so only an actual license difference trips it.
+**Always review the resulting diff afterwards**, since a low similarity score can
 also mean the existing text is a genuinely different, unrelated license.
 
 `--offset=<NUM>` is only needed to force-treat a preamble kind the tool
