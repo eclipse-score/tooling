@@ -22,9 +22,16 @@ pub struct ComponentSerializer;
 impl ComponentSerializer {
     pub fn serialize(elements: &HashMap<String, LogicComponent>) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
-        let source_file = elements
-            .values()
-            .next()
+
+        // Iterate in key-sorted order: `HashMap`'s default hasher is randomized
+        // per process, so `.values()` order is non-deterministic and would make
+        // this Bazel action non-reproducible across runs.
+        let mut sorted_keys: Vec<&String> = elements.keys().collect();
+        sorted_keys.sort();
+
+        let source_file = sorted_keys
+            .first()
+            .and_then(|key| elements.get(*key))
             .map(|e| builder.create_string(e.source_location.file.as_ref()));
 
         // --------------------------
@@ -32,7 +39,8 @@ impl ComponentSerializer {
         // --------------------------
         let mut comps_map = Vec::with_capacity(elements.len());
 
-        for element in elements.values() {
+        for key in &sorted_keys {
+            let element = &elements[*key];
             let mut relation_offsets = Vec::new();
 
             for r in &element.relations {
