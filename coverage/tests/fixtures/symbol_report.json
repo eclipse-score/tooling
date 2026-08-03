@@ -1,7 +1,0 @@
-{
-  "symbols": [
-    {"filename": "/workspace/src/lib.rs"},
-    {"filename": "/other/location/ignored.rs"},
-    {"filename": "src/rel.rs"}
-  ]
-}

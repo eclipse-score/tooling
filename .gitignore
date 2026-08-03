@@ -15,3 +15,8 @@ user.bazelrc
 __pycache__
 .ruff_cache/
 coverage-html/
+
+# Outputs of coverage/integration_tests/run_integration_test.sh
+coverage/integration_tests/coverage_artifacts.zip
+coverage/integration_tests/lcov.dat
+coverage/integration_tests/coverage_linux/

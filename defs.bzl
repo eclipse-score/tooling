@@ -17,7 +17,11 @@
 load("//cli_helper:cli_helper.bzl", _cli_helper = "cli_helper")
 
 # --- coverage ---
-load("//coverage:coverage.bzl", _rust_coverage_report = "rust_coverage_report")
+load(
+    "//coverage:defs.bzl",
+    _score_coverage_reporter = "score_coverage_reporter",
+    _score_coverage_scope = "score_coverage_scope",
+)
 
 # --- dash ---
 load("//dash:dash.bzl", _dash_license_checker = "dash_license_checker")
@@ -44,6 +48,7 @@ score_py_pytest = _score_py_pytest
 dash_license_checker = _dash_license_checker
 cli_helper = _cli_helper
 setup_starpls = _setup_starpls
-rust_coverage_report = _rust_coverage_report
+score_coverage_scope = _score_coverage_scope
+score_coverage_reporter = _score_coverage_reporter
 trlc_requirements_ai_test = _trlc_requirements_ai_test
 architecture_ai_test = _architecture_ai_test

@@ -87,6 +87,9 @@ jobs:
             run: |
               cd cr_checker/tests
               bazel test //...
+          - name: coverage
+            run: |
+              coverage/integration_tests/run_integration_test.sh
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
