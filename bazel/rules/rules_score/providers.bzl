@@ -84,6 +84,7 @@ UnitInfo = provider(
         "implementation": "Depset of implementation targets (cc_library, rust_library, etc.).",
         "tests": "Depset of test targets (cc_test, rust_test, etc.).",
         "dependent_labels": "Depset of Labels that this unit's implementation depends on transitively (used for certification scope validation).",
+        "validation_log": "Struct with file and name fields describing the UnitValidate (design-vs-implementation) log entry produced by this unit target.",
     },
 )
 
