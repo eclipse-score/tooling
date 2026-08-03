@@ -86,29 +86,20 @@ llvm.toolchain(
 use_repo(llvm, "llvm_toolchain", "llvm_toolchain_llvm")
 ```
 
-For Rust, additionally instantiate a Ferrocene toolchain **with coverage
-tools** (see [integration_tests/MODULE.bazel](integration_tests/MODULE.bazel)
-for the full block — `coverage_tools_url`/`sha256` from the
-ferrocene_toolchain_builder 1.3.1 release):
+For Rust, **no coverage-specific toolchain is needed**: the standard
+toolchains shipped by score_toolchains_rust >= 0.10.0 already attach
+`llvm-cov`/`llvm-profdata` (from the ferrocene_toolchain_builder >= 1.3.1
+coverage-tools tarball, built from the same LLVM as rustc). Just register the
+standard toolchain as usual:
 
-```starlark
-llvm_ferrocene = use_extension(
-    "@score_toolchains_rust//extensions:ferrocene_toolchain_ext.bzl",
-    "ferrocene_toolchain_ext",
-    dev_dependency = True,
-)
-llvm_ferrocene.toolchain(
-    name = "ferrocene_x86_64_unknown_linux_gnu_llvm",
-    coverage_tools_url = "...",     # coverage-tools tarball, builder >= 1.3.1
-    coverage_tools_sha256 = "...",
-    ...
-)
-use_repo(llvm_ferrocene, "ferrocene_x86_64_unknown_linux_gnu_llvm")
+```
+common --extra_toolchains=@score_toolchains_rust//toolchains/ferrocene:ferrocene_x86_64_unknown_linux_gnu
 ```
 
 rules_rust only instruments crates when the `rust_toolchain` declares
-`llvm_cov` — a Ferrocene instance *without* `coverage_tools_url` silently
-produces no Rust coverage.
+`llvm_cov` — a Ferrocene toolchain from an older score_toolchains_rust (or a
+custom instance without `coverage_tools_url`) silently produces no Rust
+coverage.
 
 ## 3. Declare scope and reporter (BUILD)
 

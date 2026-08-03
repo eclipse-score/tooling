@@ -297,10 +297,11 @@ Solved at the source, no consumer configuration needed:
   `bazel coverage` and exports `RUST_LLVM_COV`/`RUST_LLVM_PROFDATA` to the
   coverage runner.
 
-Consequently consumers need no hand-written `rust_toolchain`: a bazelrc line
-registers the extension-generated
-`@<ferrocene_instance>//:rust_ferrocene_toolchain` directly, and the
-MODULE.bazel Ferrocene instance just pins the coverage-tools tarball.
+Consequently consumers need no coverage-specific Rust toolchain at all: the
+**standard** toolchains declared in score_toolchains_rust's own MODULE.bazel
+(e.g. `@score_toolchains_rust//toolchains/ferrocene:ferrocene_x86_64_unknown_linux_gnu`)
+already pin the coverage-tools tarball, so the toolchain registered for
+regular builds is the one that produces coverage — same rustc, same LLVM.
 
 ---
 
