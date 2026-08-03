@@ -1,0 +1,88 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml seooc_validation_layers
+
+top to bottom direction
+skinparam linetype ortho
+skinparam defaultTextAlignment center
+skinparam ArrowFontSize 10
+skinparam packageStyle rectangle
+skinparam packageTitleAlignment left
+skinparam nodesep 110
+skinparam ranksep 110
+hide stereotype
+
+skinparam rectangle<<spacer>> {
+    BorderColor #FFFFFF
+    BackgroundColor #FFFFFF
+    FontColor #FFFFFF
+    Shadowing false
+}
+
+' Layer 1: build target validity.
+rectangle "<b>Layer 1: Bazel Target</b> <color:#FFFFFF>................................................</color>" as layer1
+
+' Layer 2: architecture design and cross-view consistency.
+package "Layer 2: Arch Design" as layer2 {
+    rectangle "................................" as layer2_top_padding <<spacer>>
+
+    together {
+        rectangle "Static Design\n(Component Diagram)" as arch_static
+        rectangle "Internal API\n(Class Diagram)" as arch_api
+        rectangle "Dynamic Design\n(Sequence Diagram)" as arch_dynamic
+    }
+
+    arch_static -[hidden]right-> arch_api
+    arch_api -[hidden]right-> arch_dynamic
+    layer2_top_padding -[hidden]down-> arch_api
+}
+
+' Layer 3: detailed design consistency.
+package "Layer 3: Detail Design" as layer3 {
+    together {
+        rectangle "Dynamic Design\n(Sequence Diagram)" as detail_dynamic
+        rectangle "Static Design\n(Class Diagram)" as detail_static
+    }
+
+    detail_dynamic -[hidden]right-> detail_static
+}
+
+' Layer 4: implementation mapping.
+rectangle "<b>Layer 4: C++ Implementation</b> <color:#FFFFFF>................................</color>" as layer4
+rectangle " " as layer4_alignment_anchor <<spacer>>
+
+' Keep all four layer containers in a strict top-to-bottom order.
+layer1 -[hidden]down-> layer2_top_padding
+arch_api -[hidden]down-> detail_dynamic
+detail_dynamic -[hidden]down-> layer4_alignment_anchor
+layer4 -[hidden]right-> layer4_alignment_anchor
+
+' Layer 1 validation.
+layer1 -down-> arch_static : SEooC, Components, Units exist
+
+' Layer 2 validation.
+arch_static <-> arch_api : Unit interfaces consistency
+arch_dynamic -left-> arch_api : Interaction methods exist
+arch_dynamic -up-> arch_static : Unit <-> Participant consistency
+
+' Cross-layer design consistency.
+arch_api -down[dashed]-> detail_static
+arch_dynamic -down[dashed]-> detail_dynamic
+
+' Layer 3 validation and implementation mapping.
+detail_dynamic -right[dashed]-> detail_static : Consistency
+detail_static -down-> layer4 : Class/Struct Consistency
+detail_dynamic -down[dashed]-> layer4 : Interaction Consistency
+
+@enduml
