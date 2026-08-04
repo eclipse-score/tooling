@@ -253,6 +253,32 @@ section "Tool Requirements" {
 
         }
 
+        section "Class Design Sequence Validator" {
+
+            ToolQualification.ToolRequirement ClassDesignSequenceParticipantClassConsistency {
+                description = '''The validator shall report an error when a
+                sequence participant that represents a designed runtime
+                element has no matching class in the unit design class
+                diagram, or when the participant matches multiple design
+                classes ambiguously.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ClassDesignSequenceMessageOperationConsistency {
+                description = '''The validator shall report an error when a
+                message or self-call in a sequence diagram targets a design
+                class that neither declares nor inherits the called
+                operation through its base classes or interfaces. The
+                comparison shall match at least the operation name and may
+                additionally compare parameter arity and normalized parameter
+                types when both diagrams provide that information.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+        }
+
     }
 
 }
