@@ -21,6 +21,7 @@ prefer to import and wire it up explicitly instead of registering an
 extension. See bazel_sphinx_needs.py's module docstring for that alternative.
 """
 
+from pathlib import Path
 from typing import Any, Dict
 
 from bazel_sphinx_needs import load_external_needs
@@ -30,12 +31,17 @@ def init_external_needs(app: Any, config: Any) -> None:
     """
     Initialize external needs configuration.
 
+    "config-inited" fires with cwd == execroot, not confdir -- Sphinx's
+    chdir(confdir) only wraps evaluating conf.py itself, and that context
+    has already exited by the time this listener runs. needs_external_needs.json
+    lives beside conf.py in confdir, so it must be looked up explicitly.
+
     Args:
         app: Sphinx application object
         config: Sphinx configuration object
     """
 
-    config.needs_external_needs = load_external_needs()
+    config.needs_external_needs = load_external_needs(Path(app.confdir))
 
 
 def setup(app: Any) -> Dict[str, Any]:

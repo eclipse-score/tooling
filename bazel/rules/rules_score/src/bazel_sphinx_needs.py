@@ -16,7 +16,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # Create a logger with the Sphinx namespace
 logger = logging.getLogger(__name__)
@@ -45,17 +45,27 @@ def find_workspace_root() -> Path:
     return Path.cwd()
 
 
-def load_external_needs() -> List[Dict[str, Any]]:
+def load_external_needs(base_dir: Optional[Path] = None) -> List[Dict[str, Any]]:
     """
     Load external needs configuration from JSON file.
 
     This function reads the needs_external_needs.json file if it exists and
     resolves relative paths to absolute paths based on the workspace root.
 
+    Args:
+        base_dir: Directory to look for needs_external_needs.json in. Defaults
+            to Path.cwd(). A conf.py author calling this at module level runs
+            inside Sphinx's temporary chdir(confdir) (see
+            sphinx.config.eval_config_file) and can rely on that default, but
+            a "config-inited" event listener (e.g. sphinx_module_ext.py) fires
+            after that chdir has already been undone, with cwd back to
+            whatever it was before -- it must pass app.confdir explicitly.
+
     Returns:
         List of external needs configurations with resolved paths
     """
-    needs_file = Path(NEEDS_EXTERNAL_FILE)
+    base = Path(base_dir) if base_dir is not None else Path.cwd()
+    needs_file = base / NEEDS_EXTERNAL_FILE
 
     if not needs_file.exists():
         logger.info(f"{NEEDS_EXTERNAL_FILE} not found - no external dependencies")
