@@ -12,6 +12,7 @@
 # *******************************************************************************
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -26,6 +27,14 @@ def test_venv_ok():
         import pytest  # type ignore
 
         python_venv_folder = [x for x in packages if "python_3_12_" in x][0]
+
+        # Since rules_python 1.7.0, PYTHONPATH is no longer populated for
+        # --bootstrap_impl=system_python, so the raw toolchain interpreter
+        # invoked below no longer inherits the import paths this process
+        # was started with. Rebuild PYTHONPATH from our own sys.path (which
+        # is known-good, since `import pytest` above already succeeded) and
+        # pass it explicitly so the subprocess can find pytest too.
+        env = os.environ | {"PYTHONPATH": os.pathsep.join(filter(None, sys.path))}
 
         # Trying to actually use pytest module and collect current test & file.
         # Scope collection to "_main" (this workspace's own sources, canonical
@@ -44,6 +53,7 @@ def test_venv_ok():
             cwd=runfiles,
             check=True,
             capture_output=True,
+            env=env,
         )
         assert "test_venv_ok.py" in str(proc.stdout), (
             "test_venv_ok.py, file not found in pytest collect"
