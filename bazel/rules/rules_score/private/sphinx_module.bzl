@@ -501,13 +501,21 @@ def sphinx_module(
     """
     package = native.package_name()
     resolved_strip_prefix = strip_prefix if strip_prefix else (package + "/" if package else "")
+
+    # conf.py generation is a private implementation detail consumed only by
+    # the sibling _score_needs/_score_html targets below (same package) --
+    # must not inherit the macro's own (often public) visibility via kwargs.
+    conf_kwargs = dict(kwargs)
+    conf_kwargs.pop("visibility", None)
+
     _score_conf(
         name = name + "_needs_conf",
         builder = "needs",
         project_name = (name + "_needs").replace("_", " ").title(),
         output_prefix = name + "_needs",
         testonly = testonly,
-        **kwargs
+        visibility = ["//visibility:private"],
+        **conf_kwargs
     )
     _score_conf(
         name = name + "_conf",
@@ -515,7 +523,8 @@ def sphinx_module(
         project_name = name.replace("_", " ").title(),
         output_prefix = name,
         testonly = testonly,
-        **kwargs
+        visibility = ["//visibility:private"],
+        **conf_kwargs
     )
     _score_needs(
         name = name + "_needs",
