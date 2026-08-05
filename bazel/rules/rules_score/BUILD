@@ -267,9 +267,28 @@ py_library(
 py_binary(
     name = "raw_build",
     srcs = ["src/sphinx_wrapper.py"],
+    data = ["@rules_python//sphinxdocs/private:sphinx_build.py"],
     main = "src/sphinx_wrapper.py",
     visibility = ["//visibility:public"],
-    deps = [":sphinx_base_deps"],
+    deps = [
+        ":sphinx_base_deps",
+        "@rules_python//python/runfiles",
+    ],
+)
+
+# Same srcs as :raw_build, exposed as a py_library so test/test_sphinx_wrapper.py
+# can import the wrapper's functions directly (mirrors :sphinx_html_merge_lib's
+# role for :sphinx_html_merge above).
+py_library(
+    name = "sphinx_wrapper_lib",
+    srcs = ["src/sphinx_wrapper.py"],
+    data = ["@rules_python//sphinxdocs/private:sphinx_build.py"],
+    imports = ["src"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":sphinx_base_deps",
+        "@rules_python//python/runfiles",
+    ],
 )
 
 sphinx_toolchain(

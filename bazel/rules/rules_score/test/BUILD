@@ -80,6 +80,8 @@ load(
     "transitive_modules_dedup_test",
     "two_phase_html_second_test",
     "two_phase_needs_first_test",
+    "worker_gating_html_test",
+    "worker_gating_needs_test",
 )
 load(
     ":seooc_test.bzl",
@@ -185,6 +187,21 @@ sphinx_module(
         ":module_b_lib",
         ":module_c_lib",
     ],
+)
+
+# Fixture with allow_persistent_workers = True, used only to assert on the
+# resulting Sphinx-build action argv: the HTML pass must drop "--jobs auto"
+# (see worker_enabled in sphinx_module.bzl's _add_sphinx_args), while the
+# needs pass -- which never opts into worker mode regardless of this attr,
+# since its source dir is the real checkout, not a generated tree -- must
+# keep it. No target ever sets this True outside this test fixture; workers
+# stay off by default across the whole repo.
+sphinx_module(
+    name = "module_worker_enabled_lib",
+    testonly = True,
+    srcs = glob(["fixtures/module_c/*.rst"]),
+    allow_persistent_workers = True,
+    index = "fixtures/module_c/index.rst",
 )
 
 # Test 3: SEooC (Safety Element out of Context) Module
@@ -1104,6 +1121,16 @@ score_toolchain_override_test(
     target_under_test = ":module_c_lib",
 )
 
+worker_gating_html_test(
+    name = "worker_gating_html_test",
+    target_under_test = ":module_worker_enabled_lib",
+)
+
+worker_gating_needs_test(
+    name = "worker_gating_needs_test",
+    target_under_test = ":module_worker_enabled_lib_needs",
+)
+
 deps_html_merging_test(
     name = "deps_html_merging_test",
     target_under_test = ":module_a_lib",
@@ -1382,6 +1409,13 @@ py_test(
 )
 
 py_test(
+    name = "test_sphinx_wrapper",
+    size = "small",
+    srcs = ["test_sphinx_wrapper.py"],
+    deps = ["@score_tooling//bazel/rules/rules_score:sphinx_wrapper_lib"],
+)
+
+py_test(
     name = "test_bazel_sphinx_needs",
     size = "small",
     srcs = ["test_bazel_sphinx_needs.py"],
@@ -1429,6 +1463,7 @@ test_suite(
         ":test_rst_to_trlc",
         ":test_sphinx_html_merge",
         ":test_sphinx_module_ext",
+        ":test_sphinx_wrapper",
         ":test_trlc_rst_image_rendering",
         ":transitive_modules_dedup_test",
         ":unit_component_tests",

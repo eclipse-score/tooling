@@ -91,10 +91,14 @@ def score_sphinx_toolchain(
         name = name + "_binary",
         srcs = ["@score_tooling//bazel/rules/rules_score:src/sphinx_wrapper.py"],
         main = "@score_tooling//bazel/rules/rules_score:src/sphinx_wrapper.py",
-        data = extra_data,
+        # sphinx_build.py is rules_python's persistent-worker entry point,
+        # loaded at runtime via runfiles (not ported/copied). Must always be
+        # present so the import succeeds if Bazel ever invokes this binary
+        # with --persistent_worker, regardless of `deps`/`extra_deps` mode.
+        data = extra_data + ["@rules_python//sphinxdocs/private:sphinx_build.py"],
         package_collisions = package_collisions,
         visibility = ["//visibility:private"],
-        deps = binary_deps,
+        deps = binary_deps + ["@rules_python//python/runfiles"],
     )
 
     toolchain_kwargs = {}

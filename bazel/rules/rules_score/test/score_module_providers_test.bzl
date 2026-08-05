@@ -360,6 +360,89 @@ def _score_toolchain_override_test_impl(ctx):
 score_toolchain_override_test = analysistest.make(_score_toolchain_override_test_impl)
 
 # ============================================================================
+# Persistent Worker Gating Tests
+# ============================================================================
+#
+# Bazel's Starlark Action object has no execution_requirements/execution_info
+# field (verified empirically: accessing it raises "'Action' value has no
+# field or method 'execution_requirements'"), so these can't assert on the
+# worker exec-requirements dict directly. They instead assert on the argv
+# side effect of the same worker_enabled boolean that drives it (see
+# _add_sphinx_args and _worker_execution_requirements in sphinx_module.bzl):
+# "--jobs auto" is present exactly when worker_enabled is False.
+
+def _find_flag_value(argv, flag):
+    for i, arg in enumerate(argv):
+        if arg == flag and i + 1 < len(argv):
+            return argv[i + 1]
+    return None
+
+def _worker_gating_html_test_impl(ctx):
+    """Test that the HTML pass drops --jobs auto under allow_persistent_workers.
+
+    See worker_enabled in sphinx_module.bzl's _add_sphinx_args. Also checks
+    --doctree-dir is suffixed with the builder name.
+    """
+    env = analysistest.begin(ctx)
+
+    actions = analysistest.target_actions(env)
+    html_build_actions = [a for a in actions if a.mnemonic == "SphinxHtmlBuild"]
+    asserts.equals(env, 1, len(html_build_actions), "Expected exactly one SphinxHtmlBuild action")
+    argv = html_build_actions[0].argv
+
+    asserts.false(
+        env,
+        "--jobs" in argv,
+        "HTML pass with allow_persistent_workers=True must not pass --jobs " +
+        "auto (parallel read inside a long-lived worker process is untested); got argv: %s" % argv,
+    )
+
+    doctree_dir = _find_flag_value(argv, "--doctree-dir")
+    asserts.true(
+        env,
+        doctree_dir != None and doctree_dir.endswith("_html_doctrees"),
+        "--doctree-dir must be suffixed with the builder name ('_html_doctrees'); got: %s" % doctree_dir,
+    )
+
+    return analysistest.end(env)
+
+worker_gating_html_test = analysistest.make(_worker_gating_html_test_impl)
+
+def _worker_gating_needs_test_impl(ctx):
+    """Test that the needs pass keeps --jobs auto even under allow_persistent_workers.
+
+    Its source dir is the real checkout, not a generated tree, so Worker's
+    per-request write into srcdir (_bazel_worker_request_info.json) would
+    otherwise land there. See worker_enabled in sphinx_module.bzl's
+    _score_needs_impl.
+    """
+    env = analysistest.begin(ctx)
+
+    actions = analysistest.target_actions(env)
+    needs_build_actions = [a for a in actions if a.mnemonic == "SphinxNeedsBuild"]
+    asserts.equals(env, 1, len(needs_build_actions), "Expected exactly one SphinxNeedsBuild action")
+    argv = needs_build_actions[0].argv
+
+    asserts.equals(
+        env,
+        "auto",
+        _find_flag_value(argv, "--jobs"),
+        "needs pass must always pass --jobs auto, regardless of " +
+        "allow_persistent_workers, since it never runs as a worker; got argv: %s" % argv,
+    )
+
+    doctree_dir = _find_flag_value(argv, "--doctree-dir")
+    asserts.true(
+        env,
+        doctree_dir != None and doctree_dir.endswith("_needs_doctrees"),
+        "--doctree-dir must be suffixed with the builder name ('_needs_doctrees'); got: %s" % doctree_dir,
+    )
+
+    return analysistest.end(env)
+
+worker_gating_needs_test = analysistest.make(_worker_gating_needs_test_impl)
+
+# ============================================================================
 # Test Suite
 # ============================================================================
 
@@ -400,5 +483,9 @@ def sphinx_module_providers_test_suite(name):
 
             # Toolchain resolution tests
             ":score_toolchain_override_test",
+
+            # Persistent worker gating tests
+            ":worker_gating_html_test",
+            ":worker_gating_needs_test",
         ],
     )

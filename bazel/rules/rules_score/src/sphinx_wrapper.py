@@ -13,47 +13,41 @@
 """
 Wrapper script for running Sphinx builds in Bazel environments.
 
-This script provides a command-line interface to Sphinx documentation builds,
-handling argument parsing, environment configuration, and build execution.
-It's designed to be used as part of Bazel build rules for Score modules.
+Thin shim around `@rules_python//sphinxdocs/private:sphinx_build.py`: this
+module keeps only what upstream's sphinx-build entry point doesn't already do
+-- the hermetic tool-env abspath fixup needed before Sphinx starts, and
+one-shot stdout/stderr prefixing. Persistent-worker support (the Worker
+class, digest diffing, the JSON worker protocol, retry-on-exit-code-2) is
+loaded directly from rules_python at runtime, not ported/copied.
+sphinx_module.bzl builds the full sphinx-build CLI (source dir, output dir,
+-c/-b/... flags) itself, so this wrapper never parses its own custom flags.
 """
 
-import argparse
+import importlib.util
 import logging
 import os
 import re
 import sys
 import time
-from contextlib import redirect_stdout, redirect_stderr
-from pathlib import Path
-from typing import List
+from contextlib import redirect_stderr, redirect_stdout
+from typing import List, Optional
 
+from python.runfiles import runfiles
 from sphinx.cmd.build import main as sphinx_main
-
-# Constants
-DEFAULT_SOURCE_DIR = "."
-
-_LEVEL_MAP = {
-    "error": logging.ERROR,
-    "warn": logging.WARNING,
-    "info": logging.INFO,
-    "debug": logging.DEBUG,
-}
-
-# Mapping from --log-level to sphinx-build verbosity flags.
-# warn  → -q  (suppress info; show warnings/errors only)
-# info  → (nothing; sphinx default output)
-# debug → -vv (verbose sphinx output)
-_SPHINX_VERBOSITY_FLAGS = {
-    "error": ["-Q"],
-    "warn": ["-q"],
-    "info": [],
-    "debug": ["-vv"],
-}
 
 logger = logging.getLogger(__name__)
 
 SANDBOX_PATH = re.compile(r"^.*_main/")
+
+# Env vars sphinx_module.bzl's _hermetic_tool_env() passes as execroot-relative
+# paths; conf.py needs them absolute since Sphinx chdirs into confdir first.
+_HERMETIC_TOOL_ENV_VARS = ("GRAPHVIZ_DOT", "PLANTUML_BIN", "FTA_METAMODEL_DIR")
+
+# Runfiles path of upstream's sphinx-build entry point, using the *apparent*
+# repo name ("rules_python", as declared in this repo's own MODULE.bazel) so
+# Rlocation() resolves it via repo mapping regardless of bzlmod's canonical
+# repo-name format.
+_SPHINX_BUILD_RLOCATION = "rules_python/sphinxdocs/private/sphinx_build.py"
 
 
 class StdoutProcessor:
@@ -76,180 +70,116 @@ class StderrProcessor:
         sys.__stderr__.flush()
 
 
-def validate_arguments(args: argparse.Namespace) -> None:
+def fixup_hermetic_tool_env() -> None:
     """
-    Validate required command-line arguments.
+    Resolve execroot-relative tool paths to absolute paths.
 
-    Args:
-        args: Parsed command-line arguments
-
-    Raises:
-        ValueError: If required arguments are missing or invalid
+    Must run now, while cwd is still the execroot (Bazel guarantees cwd ==
+    execroot at process start) -- Sphinx changes its working directory to
+    the confdir before evaluating conf.py, so os.path.abspath() calls inside
+    conf.py itself would resolve against the wrong base. Runs once per
+    worker process too, since these are tool paths, not per-request data.
     """
-    if not args.index_file:
-        raise ValueError("--index_file is required")
-    if not args.output_dir:
-        raise ValueError("--output_dir is required")
-    if not args.builder:
-        raise ValueError("--builder is required")
-
-    # Validate that index file exists if it's a real path
-    index_path = Path(args.index_file)
-    if not index_path.exists():
-        raise ValueError(f"Index file does not exist: {args.index_file}")
+    for var in _HERMETIC_TOOL_ENV_VARS:
+        value = os.environ.get(var)
+        if value and not os.path.isabs(value):
+            os.environ[var] = os.path.abspath(value)
 
 
-def build_sphinx_arguments(args: argparse.Namespace, extra_args: List[str] = None) -> List[str]:
+def expand_param_files(argv: List[str]) -> List[str]:
     """
-    Build the argument list for Sphinx.
+    Expand `@file` tokens, one argument per non-blank line.
 
-    Args:
-        args: Parsed command-line arguments
-        extra_args: Additional arguments to forward to Sphinx (e.g., -D options from extra_opts)
-
-    Returns:
-        List of arguments to pass to Sphinx
+    sphinx_module.bzl always builds its Args with `use_param_file(...,
+    use_always=True)`, so a one-shot invocation's argv is always a single
+    `@file` token; persistent-worker requests arrive already expanded via
+    the JSON protocol and never go through this function.
     """
-    source_dir = str(Path(args.index_file).parent) if args.index_file else DEFAULT_SOURCE_DIR
-    config_dir = str(Path(args.config).parent) if args.config else source_dir
-
-    base_arguments = [
-        source_dir,  # source dir
-        args.output_dir,  # output dir
-        "-c",
-        config_dir,  # config directory
-        # "-W",                # treat warning as errors - disabled for modular builds
-        # --keep-going is intentionally omitted: it only has an effect combined
-        # with -W (report all errors before exiting instead of just the first),
-        # so it is a no-op while -W stays disabled above.
-        "-T",  # show details in case of errors in extensions
-        "--jobs",
-        "auto",
-    ]
-
-    base_arguments.extend(["-b", args.builder])
-
-    # Apply sphinx-build verbosity flags derived from --log-level
-    sphinx_verbosity = _SPHINX_VERBOSITY_FLAGS.get(getattr(args, "log_level", "warn"), [])
-    base_arguments.extend(sphinx_verbosity)
-
-    # Forward extra options (e.g., -D flags) to Sphinx
-    if extra_args:
-        base_arguments.extend(extra_args)
-
-    return base_arguments
+    expanded = []
+    for arg in argv:
+        if arg.startswith("@"):
+            with open(arg[1:]) as fp:
+                expanded.extend(line.strip() for line in fp if line.strip())
+        else:
+            expanded.append(arg)
+    return expanded
 
 
-def run_sphinx_build(sphinx_args: List[str], builder: str) -> int:
+def _load_sphinx_build_module():
     """
-    Execute the Sphinx build and measure duration.
+    Load rules_python's sphinx_build.py module by its runfiles path.
 
-    Args:
-        sphinx_args: Arguments to pass to Sphinx
-        builder: The builder type (for logging purposes)
-
-    Returns:
-        The exit code from Sphinx build
+    Loaded at runtime (not ported/copied) so this repo depends directly on
+    upstream's Worker/persistent-worker-protocol implementation instead of
+    maintaining a local copy of it.
     """
-    logger.info(f"Starting Sphinx build with builder: {builder}")
+    r = runfiles.Create()
+    path = r.Rlocation(_SPHINX_BUILD_RLOCATION)
+    if not path:
+        raise RuntimeError(f"Could not locate {_SPHINX_BUILD_RLOCATION} in runfiles")
+    spec = importlib.util.spec_from_file_location("sphinx_build", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["sphinx_build"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_persistent_worker() -> int:
+    """Hand off to upstream's Worker for the lifetime of this process."""
+    sphinx_build = _load_sphinx_build_module()
+    with sphinx_build.Worker(sys.stdin, sys.stdout, os.getcwd()) as worker:
+        worker.run()
+    return 0
+
+
+def _infer_wrapper_log_level(sphinx_args: List[str]) -> int:
+    """Derive this wrapper's own logging level from sphinx-build's verbosity flags.
+
+    Mirrors sphinx_module.bzl's `_SPHINX_VERBOSITY_FLAGS` mapping. Reads flags
+    sphinx_module.bzl already adds for sphinx-build's own consumption rather
+    than parsing a new flag of this wrapper's own, so the verbosity build
+    setting keeps controlling the wrapper's diagnostics (build duration,
+    computed args) too, not just sphinx-build's own output.
+    """
+    if "-vvv" in sphinx_args or "-vv" in sphinx_args:
+        return logging.DEBUG
+    if "-q" in sphinx_args:
+        return logging.WARNING
+    return logging.INFO
+
+
+def run_one_shot(sphinx_args: List[str]) -> int:
+    """Run a single Sphinx build, with prefixed/sandbox-stripped stdout/stderr."""
+    logging.getLogger().setLevel(_infer_wrapper_log_level(sphinx_args))
     logger.debug(f"Sphinx arguments: {sphinx_args}")
-
     start_time = time.perf_counter()
-
-    try:
-        exit_code = sphinx_main(sphinx_args)
-    except Exception:
-        logger.exception("Sphinx build failed with exception")
-        return 1
-
-    end_time = time.perf_counter()
-    duration = end_time - start_time
-
+    with redirect_stderr(StderrProcessor()), redirect_stdout(StdoutProcessor()):
+        try:
+            exit_code = sphinx_main(sphinx_args)
+        except Exception:
+            logger.exception("Sphinx build failed with exception")
+            return 1
+    duration = time.perf_counter() - start_time
     if exit_code == 0:
-        logger.info(f"docs ({builder}) finished successfully in {duration:.1f} seconds")
+        logger.info(f"Sphinx build finished successfully in {duration:.1f} seconds")
     else:
-        logger.error(f"docs ({builder}) failed with exit code {exit_code} after {duration:.1f} seconds")
-
+        logger.error(f"Sphinx build failed with exit code {exit_code} after {duration:.1f} seconds")
     return exit_code
 
 
-def parse_arguments() -> argparse.Namespace:
-    """
-    Parse command-line arguments.
-
-    Returns:
-        Parsed command-line arguments
-    """
-    parser = argparse.ArgumentParser(description="Wrapper for Sphinx documentation builds in Bazel environments")
-
-    # Required arguments
-    parser.add_argument(
-        "--index_file",
-        required=True,
-        help="Path to the index file (e.g., index.rst)",
-    )
-    parser.add_argument(
-        "--output_dir",
-        required=True,
-        help="Build output directory",
-    )
-    parser.add_argument(
-        "--builder",
-        required=True,
-        help="Sphinx builder to use (e.g., html, needs, json)",
-    )
-
-    # Optional arguments
-    parser.add_argument(
-        "--config",
-        help="Path to config file (conf.py)",
-    )
-    parser.add_argument(
-        "--log-level",
-        choices=["error", "warn", "info", "debug"],
-        default="warn",
-        dest="log_level",
-        help="Log level for wrapper and sphinx-build output (default: warn).",
-    )
-
-    return parser.parse_known_args()
-
-
-def main() -> int:
+def main(argv: Optional[List[str]] = None) -> int:
     """
     Main entry point for the Sphinx wrapper script.
 
     Returns:
         Exit code (0 for success, non-zero for failure)
     """
-    try:
-        args, extra_args = parse_arguments()
-        logging.basicConfig(level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s")
-        validate_arguments(args)
-        # Resolve execroot-relative tool paths to absolute paths NOW, while cwd
-        # is still the execroot (Bazel guarantees cwd = execroot at action start).
-        # Sphinx changes its working directory to the source/staging directory
-        # before evaluating conf.py, so os.path.abspath() inside conf.py would
-        # resolve against the wrong base.  Converting here is safe and means
-        # conf.py receives already-absolute values via the environment.
-        for _tool_var in ("GRAPHVIZ_DOT", "PLANTUML_BIN", "FTA_METAMODEL_DIR"):
-            _tool_path = os.environ.get(_tool_var)
-            if _tool_path and not os.path.isabs(_tool_path):
-                os.environ[_tool_var] = os.path.abspath(_tool_path)
-        # Create processor instance
-        stdout_processor = StdoutProcessor()
-        stderr_processor = StderrProcessor()
-        # Redirect stdout and stderr
-        with redirect_stderr(stderr_processor), redirect_stdout(stdout_processor):
-            sphinx_args = build_sphinx_arguments(args, extra_args)
-            exit_code = run_sphinx_build(sphinx_args, args.builder)
-        return exit_code
-    except ValueError as e:
-        logger.error(f"Validation error: {e}")
-        return 1
-    except Exception:
-        logger.exception("Unexpected error")
-        return 1
+    argv = sys.argv[1:] if argv is None else argv
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
+    fixup_hermetic_tool_env()
+    if "--persistent_worker" in argv:
+        return run_persistent_worker()
+    return run_one_shot(expand_param_files(argv))
 
 
 if __name__ == "__main__":
