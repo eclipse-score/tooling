@@ -37,6 +37,43 @@ _LEVEL_MAP = {
     "debug": logging.DEBUG,
 }
 
+# Element BODIES whose contents must never be touched by the link-rewriting
+# regexes below: literal code samples (<pre>, <code>) and script bodies can
+# legitimately contain the text `href="..."` / `src="..."` (e.g. an example
+# snippet showing how to write a link) without it being an actual
+# navigational attribute. Only the body (group 3) is protected — the opening
+# tag itself (group 1) is left live, since a real `<script src="...">` has
+# its src attribute *in the tag*, not the body, and must still be rewritten.
+_PROTECTED_BLOCK_PATTERN = re.compile(
+    r"(<(pre|code|script)\b[^>]*>)(.*?)(</\2>)",
+    re.IGNORECASE | re.DOTALL,
+)
+_PROTECTED_PLACEHOLDER = "\x00PROTECTED_BLOCK_{}\x00"
+
+
+def _protect_blocks(content):
+    """Replace <pre>/<code>/<script> BODIES with placeholders.
+
+    The opening/closing tags are left in place so link-rewriting regexes can
+    still rewrite a real `<script src="...">` / `<code src="...">` attribute;
+    only the body text between the tags is hidden. Returns
+    (content_with_placeholders, blocks) so _restore_blocks() can put the
+    original, untouched body content back afterwards.
+    """
+    blocks = []
+
+    def _stash(match):
+        blocks.append(match.group(3))
+        return match.group(1) + _PROTECTED_PLACEHOLDER.format(len(blocks) - 1) + match.group(4)
+
+    return _PROTECTED_BLOCK_PATTERN.sub(_stash, content), blocks
+
+
+def _restore_blocks(content, blocks):
+    for i, block in enumerate(blocks):
+        content = content.replace(_PROTECTED_PLACEHOLDER.format(i), block)
+    return content
+
 
 # Sphinx build-cache artifacts that must never reach the published site.
 # .doctrees holds pickled BuildEnvironment state (absolute execroot paths,
@@ -89,6 +126,12 @@ def copy_html_files(src_dir, dst_dir, is_dependency=False, sibling_modules=None)
             try:
                 content = src_file.read_text(encoding="utf-8")
 
+                # Shield <pre>/<code>/<script> bodies before running the
+                # link-rewriting regexes below, so example text or JS string
+                # literals that happen to contain `href="..."` / `src="..."`
+                # is never mistaken for a real attribute.
+                content, protected_blocks = _protect_blocks(content)
+
                 # Both rewrites below must agree on how many directory levels
                 # this page now sits below the merged site root, so compute
                 # the prefix once and share it.
@@ -106,6 +149,7 @@ def copy_html_files(src_dir, dst_dir, is_dependency=False, sibling_modules=None)
                     return f"{match.group(1)}{parent_prefix}{match.group(3)}/"
 
                 modified_content = static_pattern.sub(replace_static, content)
+                modified_content = _restore_blocks(modified_content, protected_blocks)
 
                 # Write modified content
                 dst_file.parent.mkdir(parents=True, exist_ok=True)

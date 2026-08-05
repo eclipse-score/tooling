@@ -21,19 +21,16 @@ It's designed to be used as part of Bazel build rules for Score modules.
 import argparse
 import logging
 import os
-import sys
-import time
-from pathlib import Path
-from typing import List, Optional
 import re
 import sys
+import time
 from contextlib import redirect_stdout, redirect_stderr
+from pathlib import Path
+from typing import List
 
 from sphinx.cmd.build import main as sphinx_main
 
 # Constants
-DEFAULT_PORT = 8000
-DEFAULT_GITHUB_VERSION = "main"
 DEFAULT_SOURCE_DIR = "."
 
 _LEVEL_MAP = {
@@ -79,27 +76,6 @@ class StderrProcessor:
         sys.__stderr__.flush()
 
 
-def get_env(name: str, required: bool = True) -> Optional[str]:
-    """
-    Get an environment variable value.
-
-    Args:
-        name: The name of the environment variable
-        required: Whether the variable is required (raises error if not set)
-
-    Returns:
-        The value of the environment variable, or None if not required and not set
-
-    Raises:
-        ValueError: If the variable is required but not set
-    """
-    val = os.environ.get(name)
-    logger.debug(f"Environment variable {name} = {val}")
-    if val is None and required:
-        raise ValueError(f"Required environment variable {name} is not set")
-    return val
-
-
 def validate_arguments(args: argparse.Namespace) -> None:
     """
     Validate required command-line arguments.
@@ -143,26 +119,13 @@ def build_sphinx_arguments(args: argparse.Namespace, extra_args: List[str] = Non
         "-c",
         config_dir,  # config directory
         # "-W",                # treat warning as errors - disabled for modular builds
-        "--keep-going",  # do not abort after one error
+        # --keep-going is intentionally omitted: it only has an effect combined
+        # with -W (report all errors before exiting instead of just the first),
+        # so it is a no-op while -W stays disabled above.
         "-T",  # show details in case of errors in extensions
         "--jobs",
         "auto",
     ]
-
-    # Configure sphinx build with GitHub user and repo from CLI
-    if args.github_user and args.github_repo:
-        base_arguments.extend(
-            [
-                f"-A=github_user={args.github_user}",
-                f"-A=github_repo={args.github_repo}",
-                f"-A=github_version={DEFAULT_GITHUB_VERSION}",
-            ]
-        )
-
-        # Add doc_path if SOURCE_DIRECTORY environment variable is set
-        source_directory = get_env("SOURCE_DIRECTORY", required=False)
-        if source_directory:
-            base_arguments.append(f"-A=doc_path='{source_directory}'")
 
     base_arguments.extend(["-b", args.builder])
 
@@ -195,8 +158,8 @@ def run_sphinx_build(sphinx_args: List[str], builder: str) -> int:
 
     try:
         exit_code = sphinx_main(sphinx_args)
-    except Exception as e:
-        logger.error(f"Sphinx build failed with exception: {e}")
+    except Exception:
+        logger.exception("Sphinx build failed with exception")
         return 1
 
     end_time = time.perf_counter()
@@ -242,20 +205,6 @@ def parse_arguments() -> argparse.Namespace:
         help="Path to config file (conf.py)",
     )
     parser.add_argument(
-        "--github_user",
-        help="GitHub username to embed in the Sphinx build",
-    )
-    parser.add_argument(
-        "--github_repo",
-        help="GitHub repository to embed in the Sphinx build",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=DEFAULT_PORT,
-        help=f"Port to use for live preview (default: {DEFAULT_PORT}). Use 0 for auto-detection.",
-    )
-    parser.add_argument(
         "--log-level",
         choices=["error", "warn", "info", "debug"],
         default="warn",
@@ -298,8 +247,8 @@ def main() -> int:
     except ValueError as e:
         logger.error(f"Validation error: {e}")
         return 1
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+    except Exception:
+        logger.exception("Unexpected error")
         return 1
 
 

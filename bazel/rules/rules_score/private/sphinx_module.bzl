@@ -33,21 +33,26 @@ def _get_index_file(ctx):
         fail("'index' target must provide SphinxIndexFileInfo or produce exactly one file, got %d files" % len(files))
     return files[0]
 
-def _create_config_py(ctx):
+def _create_config_py(ctx, builder):
     """Get or generate the conf.py configuration file.
     Args:
         ctx: Rule context
+        builder: The Sphinx builder this conf.py is generated for (e.g.
+            "needs" or "html"). Substituted as {BUILDER} so the template can
+            scope builder-specific behavior (see suppress_warnings_for_builder
+            in sphinx_conf_helpers.py).
     """
     sphinx_toolchain = ctx.toolchains["//bazel/rules/rules_score:toolchain_type"].sphinxinfo
     config_file = ctx.actions.declare_file(ctx.label.name + "/conf.py")
     template = sphinx_toolchain.conf_template.files.to_list()[0]
 
-    # Read template and substitute PROJECT_NAME
+    # Read template and substitute PROJECT_NAME / BUILDER
     ctx.actions.expand_template(
         template = template,
         output = config_file,
         substitutions = {
             "{PROJECT_NAME}": ctx.label.name.replace("_", " ").title(),
+            "{BUILDER}": builder,
         },
     )
     return config_file
@@ -129,7 +134,7 @@ def _score_needs_impl(ctx):
     needs_output = ctx.actions.declare_file(output_path)
 
     # Get config file (generate or use provided)
-    config_file = _create_config_py(ctx)
+    config_file = _create_config_py(ctx, "needs")
 
     # Phase 1: Build needs.json (without external needs).
     # The needs builder (sphinx-needs NeedsBuilder) only collects `.. need::`
@@ -255,7 +260,7 @@ def _score_html_impl(ctx):
         if len(src_files) != 1:
             fail("renamed_srcs entry must be exactly 1 file, got %d files: %s" % (len(src_files), src_files))
         _relocate(src_files[0], dest)
-    config_file = _create_config_py(ctx)
+    config_file = _create_config_py(ctx, "html")
 
     # Sphinx only accepts a single directory to read its doc sources from.
     # Because plain files and generated files are in different directories,
@@ -439,6 +444,8 @@ def sphinx_module(
                     (e.g. filter_execpath targets).
         visibility: Bazel visibility
     """
+    package = native.package_name()
+    resolved_strip_prefix = strip_prefix if strip_prefix else (package + "/" if package else "")
     _score_needs(
         name = name + "_needs",
         srcs = srcs,
@@ -454,6 +461,7 @@ def sphinx_module(
         deps = deps,
         docs_library_deps = docs_library_deps,
         renamed_srcs = renamed_srcs,
+        strip_prefix = resolved_strip_prefix,
         needs = [d + "_needs" for d in deps],
         extra_opts = extra_opts,
         extra_opts_targets = extra_opts_targets,

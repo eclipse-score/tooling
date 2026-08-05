@@ -213,6 +213,94 @@ class TestMergeHtmlDirs(unittest.TestCase):
         content = (self.output / "guide" / "page.html").read_text()
         self.assertIn('href="dep_a/index.html">link', content)
 
+    def test_literal_href_text_in_code_block_is_not_rewritten(self) -> None:
+        """Regression test: a <pre>/<code> block showing example markup that
+        happens to contain the literal text `href="dep_b/..."` (e.g. a code
+        sample explaining how to write a link) must not be mistaken for a
+        real navigational attribute and rewritten - only genuine anchors
+        outside the protected block are link-rewriting targets.
+        """
+        main = self.root / "main"
+        _write(main / "index.html", "<html></html>")
+
+        dep_a = self.root / "dep_a"
+        _write(
+            dep_a / "sub" / "page.html",
+            '<pre>&lt;a href="dep_b/index.html"&gt;example&lt;/a&gt;</pre><a href="dep_b/index.html">real link</a>',
+        )
+
+        dep_b = self.root / "dep_b"
+        _write(dep_b / "index.html", "<html></html>")
+
+        merge_html_dirs(
+            self.output,
+            main,
+            [("dep_a", dep_a), ("dep_b", dep_b)],
+        )
+
+        content = (self.output / "dep_a" / "sub" / "page.html").read_text()
+        # The real anchor outside <pre> is rewritten for the new nesting depth.
+        self.assertIn('<a href="../../dep_b/index.html">real link</a>', content)
+        # The escaped example text inside <pre> is left exactly as authored.
+        self.assertIn(
+            '<pre>&lt;a href="dep_b/index.html"&gt;example&lt;/a&gt;</pre>',
+            content,
+        )
+
+    def test_href_text_in_script_block_is_not_rewritten(self) -> None:
+        """Regression test: a JS string literal inside <script> that contains
+        `href="..."` (e.g. code building a link programmatically) must not be
+        rewritten by the HTML link-fixing regexes - <script> bodies are
+        opaque to them.
+        """
+        main = self.root / "main"
+        _write(main / "index.html", "<html></html>")
+
+        dep_a = self.root / "dep_a"
+        _write(
+            dep_a / "sub" / "page.html",
+            '<script>var link = \'<a href="dep_b/x.html">\';</script><a href="dep_b/index.html">real link</a>',
+        )
+
+        dep_b = self.root / "dep_b"
+        _write(dep_b / "index.html", "<html></html>")
+
+        merge_html_dirs(
+            self.output,
+            main,
+            [("dep_a", dep_a), ("dep_b", dep_b)],
+        )
+
+        content = (self.output / "dep_a" / "sub" / "page.html").read_text()
+        self.assertIn('<a href="../../dep_b/index.html">real link</a>', content)
+        self.assertIn("var link = '<a href=\"dep_b/x.html\">';", content)
+
+    def test_script_src_attribute_is_still_rewritten(self) -> None:
+        """Regression test: a real `<script src="_static/...">` tag - e.g.
+        Sphinx's own documentation_options.js / theme.js includes - has its
+        src attribute in the OPENING TAG, not the body. Protecting the whole
+        <script>...</script> element (including the opening tag) would hide
+        this attribute from the rewriting regexes and silently break every
+        JS asset link on dependency pages. Only the body must be protected.
+        """
+        main = self.root / "main"
+        _write(main / "index.html", "<html></html>")
+
+        dep_a = self.root / "dep_a"
+        _write(
+            dep_a / "sub" / "page.html",
+            '<script src="../_static/documentation_options.js"></script>'
+            "<script>var link = '<a href=\"dep_b/x.html\">';</script>",
+        )
+
+        merge_html_dirs(self.output, main, [("dep_a", dep_a)])
+
+        content = (self.output / "dep_a" / "sub" / "page.html").read_text()
+        # The real src attribute on the opening tag is rewritten for the new depth.
+        self.assertIn('<script src="../../_static/documentation_options.js"></script>', content)
+        # The unrelated script body's example text is still left untouched.
+        self.assertIn("var link = '<a href=\"dep_b/x.html\">';", content)
+
 
 if __name__ == "__main__":
     unittest.main()

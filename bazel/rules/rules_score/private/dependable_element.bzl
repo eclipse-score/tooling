@@ -20,6 +20,7 @@ element is a safety-critical component with comprehensive documentation includin
 assumptions of use, requirements, design, and safety analysis.
 """
 
+load("@bazel_skylib//lib:paths.bzl", "paths")
 load(
     "@lobster//:lobster.bzl",
     "subrule_lobster_html_report",
@@ -150,7 +151,28 @@ def _filter_doc_files(files):
     Returns:
         List of documentation files
     """
-    return [f for f in files if f.extension in ["rst", "md", "puml", "plantuml", "png", "svg", "inc", "json"]]
+    return [
+        f
+        for f in files
+        if f.extension in [
+            "rst",
+            "md",
+            "puml",
+            "plantuml",
+            "png",
+            "svg",
+            "inc",
+            "json",
+            "jpg",
+            "jpeg",
+            "gif",
+            "pdf",
+            "csv",
+            "txt",
+            "yaml",
+            "yml",
+        ]
+    ]
 
 def _find_common_directory(files):
     """Find the longest common directory path for a list of files.
@@ -164,8 +186,17 @@ def _find_common_directory(files):
     if not files:
         return ""
 
-    # Get all directory paths
-    dirs = [f.dirname for f in files]
+    # Use short_path (workspace-relative), not dirname/.path (execroot-relative):
+    # a source file's .path is under the source tree while a generated file's
+    # .path is under bazel-out/<cfg>/bin/..., so mixing source and generated
+    # files in the same call would make their dirnames share no common prefix
+    # at all and collapse `common` to "" here, and in _compute_relative_path
+    # make every file fail the startswith check and fall back to its bare
+    # basename — silently flattening the staged tree and risking
+    # declare_file() collisions between same-named files from different dirs.
+    # short_path is normalized to the same source-relative shape regardless
+    # of whether the file is a source or a generated artifact.
+    dirs = [paths.dirname(f.short_path) for f in files]
 
     if not dirs:
         return ""
@@ -205,15 +236,21 @@ def _compute_relative_path(file, common_dir):
     Returns:
         String containing the relative path
     """
-    file_dir = file.dirname
+
+    # Must match the short_path basis _find_common_directory() computed
+    # common_dir from — see the comment there for why .dirname (execroot
+    # path) would silently mismatch generated files.
+    file_dir = paths.dirname(file.short_path)
 
     if not common_dir:
         return file.basename
 
-    if not file_dir.startswith(common_dir):
+    if file_dir == common_dir:
         return file.basename
 
-    if file_dir == common_dir:
+    # Match on path segments, not raw string prefix: "docs2".startswith("docs")
+    # is true but "docs2" is not nested under "docs".
+    if not file_dir.startswith(common_dir + "/"):
         return file.basename
 
     relative_subdir = file_dir[len(common_dir):].lstrip("/")
@@ -307,9 +344,8 @@ def _process_artifact_files(ctx, artifact_name, label):
 
         # Add to toctree index only for files directly owned by this rule.
         if _is_document_file(artifact_file):
-            doc_ref = (artifact_name + "/" + relative_path) \
-                .replace(".rst", "") \
-                .replace(".md", "")
+            doc_path = artifact_name + "/" + relative_path
+            doc_ref = doc_path.removesuffix(".rst").removesuffix(".md")
             index_refs.append(doc_ref)
 
     # Process aux_srcs: symlink without adding to outer toctree index.
@@ -589,9 +625,8 @@ def _generate_component_doc(ctx, comp_target, comp_name, unit_names):
                 req_files.append(output_file)
 
                 if _is_document_file(f):
-                    doc_ref = (comp_name + "_requirements/" + relative_path) \
-                        .replace(".rst", "") \
-                        .replace(".md", "")
+                    doc_path = comp_name + "_requirements/" + relative_path
+                    doc_ref = doc_path.removesuffix(".rst").removesuffix(".md")
                     req_refs.append("   " + doc_ref)
 
     # Generate RST content using template
@@ -1705,7 +1740,13 @@ def dependable_element(
             exposes its RST sources, so that an external Sphinx build can embed it via
             `docs_library_deps`. Defaults to "docs/sphinx/" (the doc root convention used
             by the communication repo); override when consuming from a different
-            directory layout (e.g. "bazel/rules/rules_score/docs/sphinx/").
+            directory layout (e.g. "documentation/sphinx/"). `sphinx_module`'s
+            own srcs are staged with the consuming package's name stripped, so
+            this prefix must be relative to that stripped source root, not the
+            full Bazel package path — do not prepend the package path (e.g. NOT
+            "bazel/rules/rules_score/docs/sphinx/"), or the generated RST will
+            land outside the embedding build's source directory and be
+            unreachable.
 
     Generated Targets:
         <name>_index: Internal rule that generates index.rst and copies artifacts

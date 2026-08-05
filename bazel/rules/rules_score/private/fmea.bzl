@@ -66,7 +66,7 @@ def _process_root_causes(ctx):
     ``fmea.rst`` so ``.. uml:: <basename>`` resolves to the authored diagram.
     Its ``!include fta_metamodel.puml`` is resolved at render time via the docs
     toolchain's global PlantUML include path (the metamodel is shipped with
-    ``//tools/sphinx:sphinx-build``), so the metamodel is not staged here.
+    the registered ``sphinx_toolchain``), so the metamodel is not staged here.
 
     Returns:
         Tuple ``(diagram_aux_files, root_causes_lobster_or_None, chains_json)``.
