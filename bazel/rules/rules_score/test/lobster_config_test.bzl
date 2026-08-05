@@ -150,3 +150,60 @@ def lobster_config_test_suite(name):
             trace_to = ["Failure Modes", "Control Measures"],
         ),
     )
+
+    # --- format_lobster_block: requires (OR-of-sources override) --------------
+    # By default, when multiple different levels each `trace to:` the same
+    # target, LOBSTER requires ALL of them to independently cover every item
+    # (AND across sources). `requires` overrides this to "any one of these is
+    # sufficient" for a given target level -- see e.g. Received AoUs, which
+    # must be covered by EITHER Component Requirements OR Forwarded AoUs, not
+    # both at once.
+
+    loadingtest.equals(
+        env,
+        "block_with_requires_or_group",
+        'requirements "Received AoUs" {\n  source: "aou.lobster";\n  requires: "Component Requirements" or "Forwarded AoUs";\n}',
+        format_lobster_block(
+            "requirements",
+            "Received AoUs",
+            [_fake_file("aou.lobster")],
+            requires = [["Component Requirements", "Forwarded AoUs"]],
+        ),
+    )
+
+    loadingtest.equals(
+        env,
+        "block_with_requires_single_name",
+        'requirements "Received AoUs" {\n  source: "aou.lobster";\n  requires: "Component Requirements";\n}',
+        format_lobster_block(
+            "requirements",
+            "Received AoUs",
+            [_fake_file("aou.lobster")],
+            requires = [["Component Requirements"]],
+        ),
+    )
+
+    loadingtest.equals(
+        env,
+        "block_with_requires_empty_group_omitted",
+        'requirements "Received AoUs" {\n  source: "aou.lobster";\n}',
+        format_lobster_block(
+            "requirements",
+            "Received AoUs",
+            [_fake_file("aou.lobster")],
+            requires = [[]],
+        ),
+    )
+
+    loadingtest.equals(
+        env,
+        "block_with_trace_to_and_requires_combined",
+        'requirements "Component Requirements" {\n  source: "comp.lobster";\n  trace to: "Feature Requirements";\n  requires: "Feature Requirements" or "Received AoUs";\n}',
+        format_lobster_block(
+            "requirements",
+            "Component Requirements",
+            [_fake_file("comp.lobster")],
+            trace_to = ["Feature Requirements"],
+            requires = [["Feature Requirements", "Received AoUs"]],
+        ),
+    )

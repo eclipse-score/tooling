@@ -34,11 +34,19 @@ feature_requirements(
 
 component_requirements(
     name = "component_requirements",
+    # seooc's dependable_element defaults to testonly = True, so its
+    # auto-generated "..._received_aous" target below is testonly too; a
+    # non-testonly target may not depend on a testonly one.
+    testonly = True,
     srcs = [
         "component_requirements.trlc",
     ],
     visibility = ["//visibility:public"],
     deps = [
         ":feature_requirements",
+        # Exposes both AoUs the integrator receives from seooc (own
+        # SampleType.SampleAoU + chain-forwarded OtherLibrary.TimingConstraint)
+        # as typed TRLC references for derived_from.
+        "@seooc//:safety_software_seooc_example_received_aous",
     ],
 )

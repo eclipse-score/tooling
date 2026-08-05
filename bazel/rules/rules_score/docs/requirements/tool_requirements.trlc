@@ -130,7 +130,7 @@ section "Tool Requirements" {
                 The dependable_element rule shall automatically include lobster
                 traceability entries for all assumptions of use defined by its
                 direct dependencies in the dependee's traceability report as
-                a "Forwarded AoUs" tier.
+                a "Received AoUs" tier.
             '''
             mitigates = [AoU_Silently_Dropped]
             derived_from = [Forward_AoU_To_Dependees]
@@ -162,12 +162,35 @@ section "Tool Requirements" {
             satisfied_by = Tools.Bazel
         }
 
+        ToolQualification.ToolRequirement Cover_Received_AoU_Via_Component_Requirement {
+            description = '''
+                The CompReq requirement type's derived_from field
+                (CompReqSourceId) shall accept versioned, typed cross-module
+                TRLC references to AoU records alongside its usual FeatReq/
+                AssumedSystemReq references. Resolving an AoU reference shall
+                require the enclosing dependable_element's auto-generated
+                "<name>_received_aous" target to be listed in the CompReq
+                target's deps, exposing exactly the AoUs this element owns or
+                receives without creating a dependency cycle back through the
+                element's own requirements. The dependable_element rule shall
+                convert such references to lobster trace references resolved
+                against the "Received AoUs" tier, so a component requirement
+                can cover a received AoU it handles locally without requiring
+                that AoU to be chain-forwarded.
+            '''
+            mitigates = [AoU_Silently_Dropped]
+            derived_from = [Forward_AoU_To_Dependees, Gate_Traceability_At_Test_Time]
+            satisfied_by = Tools.Lobster
+        }
+
         ToolQualification.ToolRequirement Include_Forwarded_AoUs_In_Traceability {
             description = '''
-                The lobster traceability report of a dependee shall include
-                forwarded AoUs as traceable items so that the existing
-                lobster-ci-report test fails when forwarded AoUs are not
-                handled (linked to a requirement, test, or justification).
+                The lobster traceability report of a dependable element shall
+                require every item in its "Received AoUs" tier to be covered
+                by at least one of: a component requirement (via
+                derived_from) or a chain-forwarding entry (via
+                aou_forwarding), so that the existing lobster-ci-report test
+                fails when a received AoU is neither handled nor forwarded.
             '''
             mitigates = [AoU_Silently_Dropped]
             derived_from = [Forward_AoU_To_Dependees, Gate_Traceability_At_Test_Time]

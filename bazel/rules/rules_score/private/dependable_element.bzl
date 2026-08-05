@@ -27,6 +27,7 @@ load(
     "subrule_lobster_report",
 )
 load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
+load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load(
     "//bazel/rules/rules_score:providers.bzl",
     "ArchitecturalDesignInfo",
@@ -750,8 +751,80 @@ def _symlink_validation_log(ctx, validation_log):
     return output_log
 
 # ============================================================================
+# Received-AoUs Rule (breaks the CompReq <-> _index dependency cycle)
+# ============================================================================
+#
+# A component_requirements target cannot depend on its own enclosing
+# dependable_element's `_index` target (that would be a cycle: `_index`
+# depends on `requirements`, which would then depend back on `_index`). This
+# sibling target has no `requirements` input at all -- only `deps` and this
+# element's own `assumptions_of_use` -- so it can sit in a CompReq's `deps`
+# without ever creating a cycle, while still exposing every AoU this element
+# owns or receives (as real TrlcProviderInfo) for typed `derived_from`
+# (CompReqSourceId) references.
+
+def _dependable_element_aou_reqs_impl(ctx):
+    own_aou_trlc_files = []
+    own_aou_spec_files = []
+    for aou_target in ctx.attr.assumptions_of_use:
+        if TrlcProviderInfo in aou_target:
+            own_aou_trlc_files.append(aou_target[TrlcProviderInfo].reqs)
+            own_aou_spec_files.append(aou_target[TrlcProviderInfo].spec)
+
+    received_aou_trlc_files = list(own_aou_trlc_files)
+    received_aou_spec_files = list(own_aou_spec_files)
+    for dep in ctx.attr.processed_deps:
+        if ForwardedAoUInfo in dep:
+            fwd_info = dep[ForwardedAoUInfo]
+            received_aou_trlc_files.append(fwd_info.own_aou_trlc)
+            received_aou_trlc_files.append(fwd_info.chain_forwarded_trlc)
+            received_aou_spec_files.append(fwd_info.spec)
+
+    all_received_trlc_depset = depset(transitive = received_aou_trlc_files)
+
+    return [
+        DefaultInfo(files = all_received_trlc_depset),
+        TrlcProviderInfo(
+            spec = depset(transitive = received_aou_spec_files),
+            reqs = all_received_trlc_depset,
+            deps = depset(),
+        ),
+    ]
+
+_dependable_element_aou_reqs = rule(
+    implementation = _dependable_element_aou_reqs_impl,
+    doc = """Exposes this dependable element's own + received AoUs as TrlcProviderInfo.
+
+    Intended to be added to a component_requirements target's `deps` so that
+    its CompReq records can type-reference a received AoU from their
+    `derived_from` field (CompReqSourceId's item type includes AoU) without
+    creating a dependency cycle through the enclosing dependable_element's
+    `_index` target.
+    """,
+    attrs = {
+        "assumptions_of_use": attr.label_list(
+            default = [],
+            doc = "This element's own Assumptions of Use targets or files.",
+        ),
+        "processed_deps": attr.label_list(
+            default = [],
+            doc = "This element's deps, mapped to their '<dep>_index' targets.",
+        ),
+    },
+)
+
+# ============================================================================
 # Index Generation Rule Implementation
 # ============================================================================
+
+def _cond_names(*conditioned_names):
+    """Flatten (condition, level_name) pairs into a name list, dropping false conditions.
+
+    Reduces the `(["X"] if cond else []) + (["Y"] if cond2 else [])`
+    repetition used to build `trace_to`/`requires` level-name lists below to
+    a flat, readable argument list.
+    """
+    return [name for condition, name in conditioned_names if condition]
 
 def _dependable_element_index_impl(ctx):
     """Generate index.rst file with references to all dependable element artifacts.
@@ -1059,15 +1132,18 @@ def _dependable_element_index_impl(ctx):
 
     feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)
 
-    # Collect component requirement and test .lobster files from ComponentInfo
+    # Collect component requirement and test .lobster files from ComponentInfo.
+    # requirements_transitive rolls up every nested component's own
+    # requirements too (unlike ComponentInfo.requirements, which is scoped to
+    # a single component and used only by the test-case-coverage check below).
     comp_req_lobster_files = []
     comp_test_lobster_files = []
     comp_arch_lobster_files = []
     for comp_target in ctx.attr.components:
         if ComponentInfo in comp_target:
             comp_info = comp_target[ComponentInfo]
-            if comp_info.requirements:
-                comp_req_lobster_files.append(comp_info.requirements)
+            if comp_info.requirements_transitive:
+                comp_req_lobster_files.append(comp_info.requirements_transitive)
             if comp_info.tests:
                 comp_test_lobster_files.append(comp_info.tests)
             if comp_info.architecture:
@@ -1160,6 +1236,11 @@ def _dependable_element_index_impl(ctx):
 
     # Build the DE-level lobster report if feature and component traces exist
     feat_req_list = feat_req_lobster_depset.to_list()
+
+    # Component requirement .lobster files always include `derived_from`
+    # refs, including any AoU entries within it (so a component requirement
+    # can cover a received AoU); this is the only lobster-report/CI-test built
+    # for these files — component() builds no report of its own.
     comp_req_list = comp_req_lobster_depset.to_list()
     comp_test_list = comp_test_lobster_depset.to_list()
     comp_arch_list = comp_arch_lobster_depset.to_list()
@@ -1172,51 +1253,110 @@ def _dependable_element_index_impl(ctx):
     # AoU Forwarding: collect own AoUs and received AoUs from deps
     # =========================================================================
 
-    # Collect own AoU lobster files from assumptions_of_use targets
+    # Collect own AoU lobster + trlc files from assumptions_of_use targets.
+    # (own_assumptions_of_use_info -- an AssumptionsOfUseInfo built from these
+    # -- used to be returned here too, but nothing ever consumed it: only leaf
+    # assumptions_of_use targets' AssumptionsOfUseInfo is read anywhere in
+    # this rule set. Removed; own_aou_lobster_depset below already carries the
+    # same data via ForwardedAoUInfo.)
     own_aou_lobster_files = []
+    own_aou_trlc_files = []
+    own_aou_spec_files = []
     for aou_target in ctx.attr.assumptions_of_use:
         if AssumptionsOfUseInfo in aou_target:
             own_aou_lobster_files.append(aou_target[AssumptionsOfUseInfo].aou_lobster)
+        if TrlcProviderInfo in aou_target:
+            own_aou_trlc_files.append(aou_target[TrlcProviderInfo].reqs)
+            own_aou_spec_files.append(aou_target[TrlcProviderInfo].spec)
 
     own_aou_lobster_depset = depset(transitive = own_aou_lobster_files)
+    own_aou_trlc_depset = depset(transitive = own_aou_trlc_files)
 
-    own_assumptions_of_use_info = AssumptionsOfUseInfo(
-        aou_lobster = own_aou_lobster_depset,
-        name = ctx.label.name,
-    )
-
-    # Collect forwarded AoU lobster files from deps (received AoUs)
+    # Collect forwarded AoU lobster + trlc files from deps (received AoUs)
     received_aou_lobster_files = []
+    received_aou_trlc_files = []
+    received_aou_spec_files = []
     for dep in ctx.attr.processed_deps:
         if ForwardedAoUInfo in dep:
             fwd_info = dep[ForwardedAoUInfo]
             received_aou_lobster_files.append(fwd_info.own_aou_lobster)
             received_aou_lobster_files.append(fwd_info.chain_forwarded_lobster)
+            received_aou_trlc_files.append(fwd_info.own_aou_trlc)
+            received_aou_trlc_files.append(fwd_info.chain_forwarded_trlc)
+            received_aou_spec_files.append(fwd_info.spec)
 
     received_aou_lobster_depset = depset(transitive = received_aou_lobster_files)
     received_aou_list = received_aou_lobster_depset.to_list()
+    received_aou_trlc_list = depset(transitive = received_aou_trlc_files).to_list()
+    received_aou_spec_depset = depset(transitive = received_aou_spec_files)
 
-    # Chain-forwarding: if aou_forwarding YAML is provided, filter received AoUs
+    # Chain-forwarding: if aou_forwarding YAML is provided, filter received AoUs.
+    # Also produces a "markers" file: synthetic items (distinct tags, `refs`
+    # pointing at the original received AoU tags) used only in THIS element's
+    # own report as the "Forwarded AoUs" level -- the identity-preserved
+    # chain_forwarded_lobster_file above cannot be reused there because it would
+    # collide (same tag) with the "Received AoUs" level in the same report.
     chain_forwarded_lobster_depset = depset()
+    forwarded_aou_markers_list = []
     if ctx.file.aou_forwarding and received_aou_list:
         chain_forwarded_lobster_file = ctx.actions.declare_file(
             ctx.label.name + "/chain_forwarded_aous.lobster",
         )
+        forwarded_aou_markers_file = ctx.actions.declare_file(
+            ctx.label.name + "/forwarded_aou_markers.lobster",
+        )
         fwd_args = ctx.actions.args()
         fwd_args.add("--yaml", ctx.file.aou_forwarding)
         fwd_args.add("--output", chain_forwarded_lobster_file)
+        fwd_args.add("--markers-output", forwarded_aou_markers_file)
         fwd_args.add("--input-lobster")
         fwd_args.add_all(received_aou_list)
         ctx.actions.run(
             inputs = [ctx.file.aou_forwarding] + received_aou_list,
-            outputs = [chain_forwarded_lobster_file],
+            outputs = [chain_forwarded_lobster_file, forwarded_aou_markers_file],
             executable = ctx.executable._aou_forwarding_tool,
             arguments = [fwd_args],
             progress_message = "Filtering chain-forwarded AoUs for %s" % ctx.label.name,
             mnemonic = "AoUForwarding",
         )
         chain_forwarded_lobster_depset = depset([chain_forwarded_lobster_file])
+        forwarded_aou_markers_list = [forwarded_aou_markers_file]
         output_files.append(chain_forwarded_lobster_file)
+        output_files.append(forwarded_aou_markers_file)
+
+    # TRLC-level analog of the chain-forwarding above: filters received AoU
+    # .trlc records to the same selection (aou_forwarding YAML), so that a
+    # dependee's component_requirements can type-reference a chain-forwarded
+    # AoU. Output files are declared 1:1 with received_aou_trlc_list (paired
+    # positionally) since the actual per-package split is only known once the
+    # YAML is read at action-execution time, not at analysis time.
+    chain_forwarded_trlc_depset = depset()
+    if ctx.file.aou_forwarding and received_aou_trlc_list:
+        chain_forwarded_trlc_files = [
+            ctx.actions.declare_file(
+                "{}/chain_forwarded_trlc/{}.trlc".format(ctx.label.name, i),
+            )
+            for i in range(len(received_aou_trlc_list))
+        ]
+        spec_files = received_aou_spec_depset.to_list()
+        fwd_trlc_args = ctx.actions.args()
+        fwd_trlc_args.add("--yaml", ctx.file.aou_forwarding)
+        fwd_trlc_args.add("--spec")
+        fwd_trlc_args.add_all(spec_files)
+        fwd_trlc_args.add("--input-trlc")
+        fwd_trlc_args.add_all(received_aou_trlc_list)
+        fwd_trlc_args.add("--output-trlc")
+        fwd_trlc_args.add_all(chain_forwarded_trlc_files)
+        ctx.actions.run(
+            inputs = [ctx.file.aou_forwarding] + spec_files + received_aou_trlc_list,
+            outputs = chain_forwarded_trlc_files,
+            executable = ctx.executable._aou_forwarding_trlc_tool,
+            arguments = [fwd_trlc_args],
+            progress_message = "Filtering chain-forwarded AoU trlc records for %s" % ctx.label.name,
+            mnemonic = "AoUForwardingTrlc",
+        )
+        chain_forwarded_trlc_depset = depset(chain_forwarded_trlc_files)
+        output_files.extend(chain_forwarded_trlc_files)
 
     lobster_report_file = None
     lobster_html_report = None
@@ -1272,6 +1412,7 @@ def _dependable_element_index_impl(ctx):
 
         has_feat_req = bool(feat_req_list)
         has_comp_req = bool(comp_req_list)
+        has_received_aou = bool(received_aou_list)
         has_public_api = bool(interface_req_list) or strict
         has_fm = bool(fm_list) or strict
         has_cm = bool(cm_list) or strict
@@ -1283,32 +1424,65 @@ def _dependable_element_index_impl(ctx):
             output = lobster_config,
             substitutions = {
                 "{FEAT_REQ_BLOCK}": format_lobster_block("requirements", "Feature Requirements", feat_req_list),
-                "{FORWARDED_AOU_BLOCK}": format_lobster_block("requirements", "Forwarded AoUs", received_aou_list),
+                # Target level: every item here must be covered, either by a
+                # Component Requirement (`derived_from`) or by being
+                # further chain-forwarded (Forwarded AoUs, below). Without the
+                # `requires` override, LOBSTER would instead require BOTH
+                # sources to independently cover every item (its default
+                # AND-across-sources behaviour for multiple `trace to:`
+                # declarations), which no single AoU could ever satisfy.
+                "{RECEIVED_AOU_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Received AoUs",
+                    received_aou_list,
+                    requires = [_cond_names(
+                        (has_comp_req, "Component Requirements"),
+                        (forwarded_aou_markers_list or strict, "Forwarded AoUs"),
+                    )],
+                ),
+                # Checking level: markers for received AoUs this element chain-
+                # forwards onward instead of handling locally. Force-emitted
+                # empty in release mode (when there are received AoUs) so the
+                # "trace to: Received AoUs" edge stays active even without an
+                # aou_forwarding.yaml -- otherwise an element that receives
+                # AoUs but neither forwards nor handles any of them would have
+                # no checking level at all, and the missing coverage would
+                # silently pass instead of failing the build.
+                "{FORWARDED_AOU_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Forwarded AoUs",
+                    forwarded_aou_markers_list,
+                    trace_to = _cond_names((has_received_aou, "Received AoUs")),
+                    emit_empty = strict and has_received_aou,
+                ),
                 "{COMP_REQ_BLOCK}": format_lobster_block(
                     "requirements",
                     "Component Requirements",
                     comp_req_list,
-                    trace_to = ["Feature Requirements"] if has_feat_req else [],
+                    trace_to = _cond_names(
+                        (has_feat_req, "Feature Requirements"),
+                        (has_received_aou, "Received AoUs"),
+                    ),
                 ),
                 "{UNIT_TEST_BLOCK}": format_lobster_block(
                     "activity",
                     "Unit Test",
                     comp_test_list,
-                    trace_to = ["Component Requirements"] if has_comp_req else [],
+                    trace_to = _cond_names((has_comp_req, "Component Requirements")),
                     emit_empty = strict,
                 ),
                 "{COVERAGE_BLOCK}": format_lobster_block(
                     "activity",
                     "Test Case Coverage",
                     coverage_lobster_files,
-                    trace_to = ["Component Requirements"] if has_comp_req else [],
+                    trace_to = _cond_names((has_comp_req, "Component Requirements")),
                     emit_empty = strict,
                 ),
                 "{ARCH_BLOCK}": format_lobster_block(
                     "implementation",
                     "Architecture",
                     comp_arch_list,
-                    trace_to = ["Component Requirements"] if has_comp_req else [],
+                    trace_to = _cond_names((has_comp_req, "Component Requirements")),
                     emit_empty = strict,
                 ),
                 "{PUBLIC_API_BLOCK}": format_lobster_block(
@@ -1321,7 +1495,7 @@ def _dependable_element_index_impl(ctx):
                     "requirements",
                     "Failure Modes",
                     fm_list,
-                    trace_to = ["Public API"] if has_public_api else [],
+                    trace_to = _cond_names((has_public_api, "Public API")),
                     emit_empty = strict,
                 ),
                 "{CM_BLOCK}": format_lobster_block(
@@ -1334,13 +1508,13 @@ def _dependable_element_index_impl(ctx):
                     "activity",
                     "Root Causes",
                     rc_list,
-                    trace_to = (["Failure Modes"] if has_fm else []) + (["Control Measures"] if has_cm else []),
+                    trace_to = _cond_names((has_fm, "Failure Modes"), (has_cm, "Control Measures")),
                     emit_empty = strict,
                 ),
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list + coverage_lobster_files
+        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_files = [lobster_config, lobster_report_file]
 
@@ -1435,8 +1609,10 @@ def _dependable_element_index_impl(ctx):
         ForwardedAoUInfo(
             own_aou_lobster = own_aou_lobster_depset,
             chain_forwarded_lobster = chain_forwarded_lobster_depset,
+            own_aou_trlc = own_aou_trlc_depset,
+            chain_forwarded_trlc = chain_forwarded_trlc_depset,
+            spec = depset(transitive = own_aou_spec_files + received_aou_spec_files),
         ),
-        own_assumptions_of_use_info,
         OutputGroupInfo(debug = depset(validation_output_files + unit_validation_output_files)),
     ]
 
@@ -1533,6 +1709,12 @@ def _dependable_element_index_attrs():
             executable = True,
             cfg = "exec",
             doc = "Tool for filtering received AoU lobster entries based on chain-forwarding YAML.",
+        ),
+        "_aou_forwarding_trlc_tool": attr.label(
+            default = Label("//bazel/rules/rules_score:aou_forwarding_to_trlc"),
+            executable = True,
+            cfg = "exec",
+            doc = "Tool for filtering received AoU trlc records based on chain-forwarding YAML.",
         ),
         "_test_runner": attr.label(
             default = Label("//bazel/rules/rules_score/src/test_case_coverage:test_runner"),
@@ -1752,12 +1934,29 @@ def dependable_element(
         <name>_index: Internal rule that generates index.rst and copies artifacts
         <name>: Main dependable element target (sphinx_module) with HTML documentation
         <name>_needs: Sphinx-needs JSON target (created by sphinx_module for cross-referencing)
+        <name>_received_aous: TrlcProviderInfo target exposing this element's own
+            + received AoUs; add to a component_requirements target's `deps` to
+            type-reference a received AoU from `derived_from`.
 
     """
 
     processed_deps = []
     for dep in deps:
         processed_deps.append("{}_index".format(dep))
+
+    # Step 0: Expose this element's own + received AoUs as TrlcProviderInfo,
+    # for component_requirements targets to reference via `derived_from`. Kept
+    # deliberately separate from _dependable_element_index (which depends on
+    # `requirements`): a CompReq target listing this in its own `deps` must
+    # never create a cycle back through `requirements` -> `_index`.
+    _dependable_element_aou_reqs(
+        name = name + "_received_aous",
+        assumptions_of_use = assumptions_of_use,
+        processed_deps = processed_deps,
+        testonly = testonly,
+        tags = kwargs.get("tags"),
+        visibility = kwargs.get("visibility"),
+    )
 
     # Step 1: Generate index.rst and collect all artifacts
     # Note: validation runs as a subrule within the index generation

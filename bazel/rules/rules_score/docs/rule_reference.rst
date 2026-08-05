@@ -274,6 +274,14 @@ testable within that component.
 
 **Generated targets:** ``<name>`` (documentation), ``<name>_test`` (TRLC validation)
 
+A ``CompReq`` record's ``derived_from`` field (``CompReqSourceId``) may also
+reference AoUs received by the enclosing ``dependable_element`` that this
+requirement implements, alongside its usual ``FeatReq``/``AssumedSystemReq``
+references (e.g. ``[SampleType.SampleAoU@1]``). This requires importing the
+AoU's package and listing the enclosing ``dependable_element``'s
+auto-generated ``<name>_received_aous`` target in this target's ``deps`` —
+see :doc:`user_guide/assumptions_of_use`.
+
 .. _rule-assumptions-of-use:
 
 assumptions_of_use
@@ -815,3 +823,5 @@ and scope checks at build/test time.
      - Internal ``sphinx_module`` target; usable as ``deps`` in other Sphinx builds
    * - ``<name>_index``
      - Internal artefact-collection and architecture-validation target
+   * - ``<name>_received_aous``
+     - Exposes this element's own + received AoUs as typed TRLC references; add to a ``component_requirements`` target's ``deps`` to reference them from ``derived_from`` (see :doc:`user_guide/assumptions_of_use`)

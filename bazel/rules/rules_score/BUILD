@@ -109,6 +109,20 @@ py_binary(
     main = "src/aou_forwarding_to_lobster.py",
     visibility = ["//visibility:public"],
     deps = [
+        "@lobster//lobster/common",
+        requirement("pyyaml"),
+    ],
+)
+
+# AoU forwarding filter (TRLC level): filters received AoU trlc records for chain-forwarding
+py_binary(
+    name = "aou_forwarding_to_trlc",
+    srcs = ["src/aou_forwarding_to_trlc.py"],
+    imports = ["src"],
+    main = "src/aou_forwarding_to_trlc.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@trlc//trlc",
         requirement("pyyaml"),
     ],
 )

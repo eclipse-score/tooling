@@ -99,7 +99,7 @@ FeatureRequirementsInfo = provider(
 ComponentRequirementsInfo = provider(
     doc = "Provider for component requirements artifacts.",
     fields = {
-        "srcs": "Depset of .lobster traceability files generated from TRLC requirement sources.",
+        "srcs": "Depset of .lobster traceability files generated from TRLC requirement sources. Includes `derived_from` as a tracing target, including any AoU references within it.",
         "name": "Name of the requirements target.",
     },
 )
@@ -130,7 +130,7 @@ AssumptionsOfUseInfo = provider(
 )
 
 ForwardedAoUInfo = provider(
-    doc = """Carries AoU lobster files that dependees must satisfy.
+    doc = """Carries AoU lobster/trlc files that dependees must satisfy.
 
     When a dependable element is listed in another element's `deps`, the
     dependee receives this element's AoUs and must either link them in its
@@ -139,6 +139,9 @@ ForwardedAoUInfo = provider(
     fields = {
         "own_aou_lobster": "Depset of .lobster files from this element's own assumptions_of_use (always forwarded to dependees).",
         "chain_forwarded_lobster": "Depset of .lobster files for received AoUs being further-forwarded (selected via aou_forwarding YAML).",
+        "own_aou_trlc": "Depset of .trlc files from this element's own assumptions_of_use (always forwarded to dependees; mirrors own_aou_lobster). Consumed only by the sibling '<name>_received_aous' target, not lobster tooling.",
+        "chain_forwarded_trlc": "Depset of .trlc files for received AoUs being further-forwarded, filtered to the same selection as chain_forwarded_lobster (via aou_forwarding YAML). Consumed only by the sibling '<name>_received_aous' target.",
+        "spec": "Depset of RSL spec files needed to parse own_aou_trlc and chain_forwarded_trlc (union of this element's own assumptions_of_use spec and any spec received from deps). Lets downstream elements parse forwarded AoU records without assuming a fixed RSL model.",
     },
 )
 
@@ -146,7 +149,8 @@ ComponentInfo = provider(
     doc = "Provider for component artifacts.",
     fields = {
         "name": "Name of the component target.",
-        "requirements": "Depset of component requirement traceability files (.lobster) collected from ComponentRequirementsInfo targets only (CompReq kind). Does not include feature or assumed-system requirement files.",
+        "requirements": "Depset of component requirement traceability files (.lobster) collected from this component's own ComponentRequirementsInfo targets only (CompReq kind); not rolled up from nested components. Does not include feature or assumed-system requirement files. Consumed only by dependable_element's test-case-coverage-lock check. Includes `derived_from` tracing targets, including any AoU references within it (resolved only at the dependable_element level).",
+        "requirements_transitive": "Depset of component requirement traceability files (.lobster), rolled up transitively from this component and all nested components. Consumed by dependable_element to build the aggregated 'Component Requirements' traceability report tier.",
         "components": "Depset of nested component and/or unit Targets that comprise this component.",
         "tests": "Depset of test traceability files (.lobster) generated from unit test results, collected transitively from all nested components and units.",
         "architecture": "Depset of architecture traceability files (.lobster) generated from unit architectural designs, collected transitively from all nested components and units.",

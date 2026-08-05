@@ -596,6 +596,14 @@ dependable_element(
     components = [],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
+    # This fixture is reused by several unrelated tests (Sphinx module
+    # generation, needs providers, index generation, ...) and reuses the same
+    # `:aous` fixture as its dependency `dep_seooc_lib`, so the AoUs it
+    # receives are neither locally handled (no components/derived_from)
+    # nor chain-forwarded (no aou_forwarding.yaml). "development" keeps the
+    # AoU traceability check advisory here; see the dedicated AoU coverage
+    # tests for release-mode enforcement.
+    maturity = "development",
     requirements = [":feat_req"],
     tests = [],
     deps = [":dep_seooc_lib"],  # dependency to other seoocs/score_components
@@ -1337,7 +1345,20 @@ py_test(
     name = "test_aou_forwarding_to_lobster",
     size = "small",
     srcs = ["test_aou_forwarding_to_lobster.py"],
-    deps = ["@score_tooling//bazel/rules/rules_score:aou_forwarding_to_lobster"],
+    deps = [
+        "@lobster//lobster/common",
+        "@score_tooling//bazel/rules/rules_score:aou_forwarding_to_lobster",
+    ],
+)
+
+py_test(
+    name = "test_aou_forwarding_to_trlc",
+    size = "small",
+    srcs = ["test_aou_forwarding_to_trlc.py"],
+    deps = [
+        "@score_tooling//bazel/rules/rules_score:aou_forwarding_to_trlc",
+        "@trlc//trlc",
+    ],
 )
 
 py_test(
@@ -1376,6 +1397,7 @@ test_suite(
         ":seooc_tests",
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",
+        ":test_aou_forwarding_to_trlc",
         ":test_fmea_assembler",
         ":test_rst_to_trlc",
         ":test_sphinx_html_merge",
