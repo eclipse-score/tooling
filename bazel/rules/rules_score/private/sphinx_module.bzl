@@ -366,13 +366,16 @@ def _score_html_impl(ctx):
     ]
     merge_inputs = [sphinx_html_output]
 
-    # Add each dependency
-    for dep in ctx.attr.deps:
-        if SphinxModuleInfo in dep:
-            dep_html_dir = dep[SphinxModuleInfo].html_dir
-            dep_name = dep.label.name
-            merge_inputs.append(dep_html_dir)
-            merge_args.extend(["--dep", dep_name + ":" + dep_html_dir.path])
+    # Every module transitively required by this one, each contributing its
+    # own_html_dir (never another module's already-merged html_dir), so each
+    # lands exactly once, at depth 1, regardless of how many paths reach it
+    # in a diamond dependency graph (see SphinxModuleInfo.transitive_modules).
+    transitive_modules_from_deps = depset(
+        transitive = [dep[SphinxModuleInfo].transitive_modules for dep in ctx.attr.deps if SphinxModuleInfo in dep],
+    ).to_list()
+    for module in transitive_modules_from_deps:
+        merge_inputs.append(module.own_html_dir)
+        merge_args.extend(["--dep", module.name + ":" + module.own_html_dir.path])
 
     # Auto-detect static files from srcs: any file whose short_path contains
     # '/_static/' is a static asset that Sphinx may not copy correctly in the
@@ -400,6 +403,13 @@ def _score_html_impl(ctx):
         DefaultInfo(files = depset([html_output])),
         SphinxModuleInfo(
             html_dir = html_output,
+            own_html_dir = sphinx_html_output,
+            # Reuses the already-flattened transitive_modules_from_deps list
+            # collected above for the merge step, plus this module itself.
+            transitive_modules = depset(
+                [struct(name = ctx.label.name, own_html_dir = sphinx_html_output)] +
+                transitive_modules_from_deps,
+            ),
         ),
         OutputGroupInfo(
             sphinx_sources = depset([config_file] + sphinx_source_files),

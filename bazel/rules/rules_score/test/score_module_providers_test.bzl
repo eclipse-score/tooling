@@ -49,6 +49,32 @@ def _sphinx_module_info_fields_test_impl(ctx):
 
 sphinx_module_info_fields_test = analysistest.make(_sphinx_module_info_fields_test_impl)
 
+def _transitive_modules_dedup_test_impl(ctx):
+    """Regression test: a module reachable via multiple dependency paths (a
+    diamond — module_d_lib is a dep of both module_b_lib and module_c_lib,
+    never directly of module_a_lib) must appear exactly once in
+    transitive_modules, not once per path that reaches it.
+    """
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    score_info = target_under_test[SphinxModuleInfo]
+    transitive_modules = score_info.transitive_modules.to_list()
+
+    matches = [m for m in transitive_modules if m.name == "module_d_lib"]
+    asserts.equals(
+        env,
+        1,
+        len(matches),
+        "module_d_lib is reachable via two paths (module_b_lib and " +
+        "module_c_lib) but must appear exactly once in transitive_modules, " +
+        "got: %s" % matches,
+    )
+
+    return analysistest.end(env)
+
+transitive_modules_dedup_test = analysistest.make(_transitive_modules_dedup_test_impl)
+
 # ============================================================================
 # SphinxNeedsInfo Provider Tests
 # ============================================================================
@@ -353,6 +379,7 @@ def sphinx_module_providers_test_suite(name):
         tests = [
             # Provider field tests
             ":sphinx_module_info_fields_test",
+            ":transitive_modules_dedup_test",
             ":score_needs_info_fields_test",
             ":score_needs_transitive_collection_test",
 
