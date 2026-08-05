@@ -258,7 +258,21 @@ SphinxIndexFileInfo = provider(
 SphinxModuleInfo = provider(
     doc = "Provider for Sphinx HTML module documentation",
     fields = {
-        "html_dir": "Directory containing HTML files",
+        "html_dir": "Directory containing this module's HTML, merged with its " +
+                    "transitive dependencies (what sphinx_html_merge.py produces).",
+        "own_html_dir": "Directory containing only this module's own HTML, before " +
+                        "any dependency is merged in. What the flat merge (see " +
+                        "transitive_modules) copies from — each transitive module " +
+                        "contributes its own_html_dir, never another module's " +
+                        "already-merged html_dir, so a diamond dependency doesn't " +
+                        "get copied once per path to it.",
+        "transitive_modules": "Depset of struct(name, own_html_dir), one entry per " +
+                              "module transitively required by this one, including " +
+                              "this module itself. Self-inclusive union: each dep's " +
+                              "own transitive_modules already contains itself, so " +
+                              "unioning deps' depsets yields the full flat closure " +
+                              "without this module needing to add each dep " +
+                              "individually on top.",
     },
 )
 

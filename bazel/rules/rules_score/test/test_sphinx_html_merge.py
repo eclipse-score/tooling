@@ -157,21 +157,28 @@ class TestMergeHtmlDirs(unittest.TestCase):
 
         self.assertEqual((self.output / "_static" / "logo.svg").read_text(), "custom-logo")
 
-    def test_nested_sibling_module_copy_is_skipped(self) -> None:
-        """Regression test: if a dependency's own HTML tree happens to contain
-        a subdirectory named after a sibling module (e.g. because that
-        dependency was itself built with sphinx_html_merge and already
-        embeds the sibling), that nested copy must be skipped rather than
-        duplicated into the merged output - the sibling is placed once, at
-        the site root, by its own top-level merge entry.
+    def test_deps_are_always_a_flat_transitive_set_no_nested_skip_needed(self) -> None:
+        """sphinx_module.bzl always passes --dep as the transitive closure
+        (SphinxModuleInfo.transitive_modules), each pointing at that module's
+        own_html_dir — a module's own, unmerged Sphinx output, never another
+        module's already-merged tree. There is therefore nothing nested to
+        skip: this merge script has no special-casing for a dep's
+        subdirectory happening to share a name with another dep, and copies
+        it verbatim. Guards against reintroducing the old nested-sibling-skip
+        heuristic, which existed only because deps used to be each other's
+        *merged* trees (recursively containing further-nested deps) before
+        the merge was flattened.
         """
         main = self.root / "main"
         _write(main / "index.html", "<html></html>")
 
         dep_a = self.root / "dep_a"
         _write(dep_a / "index.html", "<html></html>")
-        # dep_a already contains its own nested (stale) copy of dep_b.
-        _write(dep_a / "dep_b" / "index.html", "<html>stale nested copy</html>")
+        # Coincidentally named the same as another --dep entry below. Under
+        # the old nested-merge design this could only happen via actual
+        # nesting and had to be skipped; under the flat design it's just a
+        # same-named subdirectory in dep_a's own tree, copied like any other.
+        _write(dep_a / "dep_b" / "page.html", "<html>dep_a's own dep_b/ subdirectory</html>")
 
         dep_b = self.root / "dep_b"
         _write(dep_b / "index.html", "<html>canonical dep_b</html>")
@@ -182,9 +189,10 @@ class TestMergeHtmlDirs(unittest.TestCase):
             [("dep_a", dep_a), ("dep_b", dep_b)],
         )
 
-        # The nested copy under dep_a/dep_b/ must not have been copied.
-        self.assertFalse((self.output / "dep_a" / "dep_b").exists())
-        # The canonical dep_b, copied from its own top-level entry, is intact.
+        self.assertEqual(
+            (self.output / "dep_a" / "dep_b" / "page.html").read_text(),
+            "<html>dep_a's own dep_b/ subdirectory</html>",
+        )
         self.assertEqual(
             (self.output / "dep_b" / "index.html").read_text(),
             "<html>canonical dep_b</html>",

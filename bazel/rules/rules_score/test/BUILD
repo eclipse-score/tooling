@@ -77,6 +77,7 @@ load(
     "score_toolchain_override_test",
     "sphinx_module_info_fields_test",
     "sphinx_module_providers_test_suite",
+    "transitive_modules_dedup_test",
     "two_phase_html_second_test",
     "two_phase_needs_first_test",
 )
@@ -148,17 +149,32 @@ toolchain(
 # Test 1: Multi-Module Aggregation
 # Dependency graph: module_a_lib -> module_b_lib -> module_c_lib
 #                   module_a_lib -> module_c_lib (also direct)
+# module_d_lib is a diamond dependency reachable only transitively, via
+# module_b_lib AND module_c_lib (never directly from module_a_lib) -- a
+# regression fixture for the HTML-merge flattening: module_d_lib's HTML must
+# be merged into module_a_lib's published site exactly once, not once per
+# path that reaches it.
+sphinx_module(
+    name = "module_d_lib",
+    srcs = glob(["fixtures/module_d/*.rst"]),
+    index = "fixtures/module_d/index.rst",
+)
+
 sphinx_module(
     name = "module_c_lib",
     srcs = glob(["fixtures/module_c/*.rst"]),
     index = "fixtures/module_c/index.rst",
+    deps = [":module_d_lib"],
 )
 
 sphinx_module(
     name = "module_b_lib",
     srcs = glob(["fixtures/module_b/*.rst"]),
     index = "fixtures/module_b/index.rst",
-    deps = [":module_c_lib"],
+    deps = [
+        ":module_c_lib",
+        ":module_d_lib",
+    ],
 )
 
 sphinx_module(
@@ -878,6 +894,17 @@ sh_test(
     tags = ["manual"],
 )
 
+# End-to-end regression test: module_d_lib (a diamond dep of both
+# module_b_lib and module_c_lib, never directly of module_a_lib) must be
+# merged into module_a_lib's published site exactly once, flat, not once
+# per dependency path that reaches it.
+sh_test(
+    name = "module_d_dedup_test",
+    srcs = ["check_module_d_dedup.sh"],
+    data = [":module_a_lib"],
+    tags = ["manual"],
+)
+
 # ============================================================================
 # SEooC-Specific Tests
 # ============================================================================
@@ -1089,6 +1116,14 @@ deps_needs_collection_test(
 
 sphinx_module_info_fields_test(
     name = "sphinx_module_info_fields_test",
+    target_under_test = ":module_a_lib",
+)
+
+# Regression test for the diamond-dependency HTML-merge flattening:
+# module_d_lib is a dep of both module_b_lib and module_c_lib (never
+# directly of module_a_lib), so it's reachable via two paths.
+transitive_modules_dedup_test(
+    name = "transitive_modules_dedup_test",
     target_under_test = ":module_a_lib",
 )
 
@@ -1395,6 +1430,7 @@ test_suite(
         ":test_sphinx_html_merge",
         ":test_sphinx_module_ext",
         ":test_trlc_rst_image_rendering",
+        ":transitive_modules_dedup_test",
         ":unit_component_tests",
         "//fixtures/image_srcs:requirements_image_tests",
     ],

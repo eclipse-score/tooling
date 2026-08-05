@@ -15,9 +15,14 @@
 """Merge multiple Sphinx HTML output directories.
 
 This script merges Sphinx HTML documentation from multiple modules into a single
-output directory. It copies the main module's HTML as-is, and then copies each
-dependency module's HTML into a subdirectory, excluding nested module directories
-to avoid duplication.
+output directory. It copies the main module's HTML as-is, then copies every
+transitively required module's *own* (unmerged) HTML into a subdirectory --
+flat, one level deep, one copy per module regardless of how many dependency
+paths reach it. sphinx_module.bzl is responsible for passing --dep as the
+transitive closure (SphinxModuleInfo.transitive_modules), with each --dep
+pointing at that module's own_html_dir rather than its (possibly
+further-merged) html_dir -- this script has no way to tell the two apart and
+would duplicate a diamond dependency if handed the latter.
 
 Usage:
     sphinx_html_merge.py --output OUTPUT_DIR --main MAIN_HTML_DIR [--dep NAME:PATH ...]
@@ -94,10 +99,12 @@ def copy_html_files(src_dir, dst_dir, is_dependency=False, sibling_modules=None)
                      dropped (the merged site uses one shared _static/ at the
                      root) and their internal links rewritten for the new
                      nesting depth.
-        sibling_modules: Set of sibling module directory names to skip (so nested
-                        copies of other modules already merged elsewhere aren't
-                        duplicated) and to rewrite intra-site links for. Only
-                        meaningful when is_dependency is True.
+        sibling_modules: Set of other module directory names to rewrite intra-site
+                        links for (e.g. href="other_module/..." needs a "../" prefix
+                        added for the new nesting depth). Only meaningful when
+                        is_dependency is True. src_dir is always a module's own,
+                        unmerged HTML now (never another module's already-merged
+                        tree), so there is nothing nested under it to skip.
     """
     src_path = Path(src_dir)
     dst_path = Path(dst_dir)
@@ -175,9 +182,6 @@ def copy_html_files(src_dir, dst_dir, is_dependency=False, sibling_modules=None)
                 # Never publish Sphinx's own build cache.
                 if item.name in BUILD_ARTIFACT_DIRS:
                     continue
-                # Skip nested copies of sibling modules to avoid duplication.
-                if item.name in sibling_modules:
-                    continue
                 # Dependencies use the merged site's shared _static/ instead
                 # of their own.
                 if is_dependency and item.name in (
@@ -217,15 +221,14 @@ def merge_html_dirs(output_dir, main_html_dir, dependencies, extra_static=None):
         shutil.copy2(src_file, dst)
         logging.info("Copied extra static %s → _static/%s", src_file, dest_subpath)
 
-    # Collect all dependency names for link fixing and exclusion
+    # Collect all dependency names for intra-site link rewriting.
     dep_names = [name for name, _ in dependencies]
 
     # Then copy each dependency into a subdirectory with link fixing
     for dep_name, dep_html_dir in dependencies:
         dep_output = output_path / dep_name
         logging.info("Copying dependency %s from %s to %s", dep_name, dep_html_dir, dep_output)
-        # Exclude other module directories to avoid nested modules
-        # Remove current module from the list to get actual siblings to exclude
+        # Other modules in this merge, to rewrite intra-site links for.
         sibling_modules = set(n for n in dep_names if n != dep_name)
         copy_html_files(
             dep_html_dir,
