@@ -1348,6 +1348,20 @@ py_test(
 )
 
 py_test(
+    name = "test_bazel_sphinx_needs",
+    size = "small",
+    srcs = ["test_bazel_sphinx_needs.py"],
+    deps = ["@score_tooling//bazel/rules/rules_score:bazel_sphinx_needs"],
+)
+
+py_test(
+    name = "test_sphinx_module_ext",
+    size = "small",
+    srcs = ["test_sphinx_module_ext.py"],
+    deps = ["@score_tooling//bazel/rules/rules_score:sphinx_module_ext"],
+)
+
+py_test(
     name = "test_rst_to_trlc",
     size = "small",
     srcs = ["rst_to_trlc_test.py"],
@@ -1376,9 +1390,11 @@ test_suite(
         ":seooc_tests",
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",
+        ":test_bazel_sphinx_needs",
         ":test_fmea_assembler",
         ":test_rst_to_trlc",
         ":test_sphinx_html_merge",
+        ":test_sphinx_module_ext",
         ":test_trlc_rst_image_rendering",
         ":unit_component_tests",
         "//fixtures/image_srcs:requirements_image_tests",
