@@ -40,7 +40,7 @@ bazel_dep(name = "bazel_skylib", version = "1.7.1")
 bazel_dep(name = "flatbuffers", version = "25.9.23")
 bazel_dep(name = "download_utils", version = "1.2.2")
 bazel_dep(name = "trlc", version = "3.0.0")
-bazel_dep(name = "lobster", version = "1.0.4")
+bazel_dep(name = "lobster", version = "1.0.6")
 bazel_dep(name = "rules_distroless", version = "0.8.0")
 
 # The released 0.8.0 only supports the old manifest/lock apt.install() API.
@@ -52,7 +52,7 @@ bazel_dep(name = "rules_distroless", version = "0.8.0")
 # when score_tooling is a non-root dependency).
 git_override(
     module_name = "rules_distroless",
-    commit = "2cda8c523a2219593e91dbb044dd30c793d9d68f",
+    commit = "e1df344fde5adaef7397c34076b56f27771d08b8",
     remote = "https://github.com/LittleHuba/rules_distroless.git",
 )
 
