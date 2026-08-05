@@ -63,11 +63,37 @@ DEFAULT_EXCLUDE_PATTERNS: List[str] = [
 # The needs builder phase runs against only the static docs/ checkout;
 # generated files (trlc_rst outputs, renamed_srcs, docs_library_deps) live in
 # bazel-out/ and are invisible to it, producing cosmetic toc.not_readable
-# warnings. Safe to suppress: the needs builder (sphinx-needs NeedsBuilder)
-# only captures `.. need::` directives, so needs.json content is unaffected
-# by missing toctree targets. The HTML phase never hits this warning, since
-# it relocates every file into one staging directory first.
-DEFAULT_SUPPRESS_WARNINGS: List[str] = ["toc.not_readable"]
+# warnings. Safe to suppress there: the needs builder (sphinx-needs
+# NeedsBuilder) only captures `.. need::` directives, so needs.json content is
+# unaffected by missing toctree targets.
+#
+# This must NOT be applied to the HTML phase: it relocates every file into one
+# staging directory first, so a toc.not_readable warning there means a
+# genuinely broken toctree entry (typo, moved/renamed file), not a cosmetic
+# artifact of the needs phase's incomplete tree. Suppressing it globally would
+# silence real dead links. Use suppress_warnings_for_builder() to scope it.
+NEEDS_PHASE_SUPPRESS_WARNINGS: List[str] = ["toc.not_readable"]
+
+
+def suppress_warnings_for_builder(builder: str) -> List[str]:
+    """Return the `suppress_warnings` list appropriate for the given Sphinx builder.
+
+    Only the `needs` builder's known-cosmetic toc.not_readable warnings are
+    suppressed (see NEEDS_PHASE_SUPPRESS_WARNINGS); every other builder,
+    notably `html`, gets no suppression so a genuinely broken toctree entry
+    is reported.
+    """
+    return NEEDS_PHASE_SUPPRESS_WARNINGS if builder == "needs" else []
+
+
+# Deprecated: kept only so a custom `conf_template` (score_sphinx_toolchain's
+# conf_template attr is overridable — see sphinx_toolchain.bzl) that still
+# references this pre-existing unconditional constant doesn't hard-fail with
+# AttributeError at conf.py exec time. This unconditionally suppresses
+# toc.not_readable for BOTH phases, which is the bug fixed above — new
+# templates must use suppress_warnings_for_builder() instead, which scopes the
+# suppression to the needs phase only.
+DEFAULT_SUPPRESS_WARNINGS: List[str] = NEEDS_PHASE_SUPPRESS_WARNINGS
 
 DEFAULT_MYST_ENABLE_EXTENSIONS: List[str] = ["colon_fence"]
 
@@ -227,7 +253,9 @@ def load_metamodel_needs_schema() -> Dict[str, Any]:
 
 __all__ = [
     "DEFAULT_EXCLUDE_PATTERNS",
-    "DEFAULT_SUPPRESS_WARNINGS",
+    "NEEDS_PHASE_SUPPRESS_WARNINGS",
+    "suppress_warnings_for_builder",
+    "DEFAULT_SUPPRESS_WARNINGS",  # deprecated, see definition
     "DEFAULT_MYST_ENABLE_EXTENSIONS",
     "resolve_graphviz_dot",
     "resolve_fta_metamodel_dir",

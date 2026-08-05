@@ -58,7 +58,6 @@ dependable_element(
     assumptions_of_use = [":other_library_aous"],
     components = [":component_example"],
     dependability_analysis = [],
-    docs_prefix = "bazel/rules/rules_score/docs/sphinx/",
     integrity_level = "D",
     requirements = [],
     tests = [],

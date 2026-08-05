@@ -71,9 +71,11 @@ exclude_patterns = sphinx_conf_helpers.DEFAULT_EXCLUDE_PATTERNS
 # warnings that are cosmetic: the needs builder (sphinx-needs NeedsBuilder)
 # captures only `.. need::` directives, not trlc `.. requirement:definition::`
 # directives, so needs.json content is unaffected by missing files.
-# This suppression is safe for the HTML phase because that phase relocates every
-# file into a unified staging directory, so it never encounters toc.not_readable.
-suppress_warnings = sphinx_conf_helpers.DEFAULT_SUPPRESS_WARNINGS
+# Scoped to the needs builder only ({BUILDER} is substituted by
+# sphinx_module.bzl) -- the HTML phase relocates every file into a unified
+# staging directory, so a toc.not_readable warning there is a genuinely broken
+# toctree entry, not a cosmetic one, and must not be suppressed.
+suppress_warnings = sphinx_conf_helpers.suppress_warnings_for_builder("{BUILDER}")
 
 # Enable markdown rendering
 source_suffix = {

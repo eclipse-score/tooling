@@ -175,7 +175,7 @@ py_library(
 sphinx_docs_library(
     name = "tool_readme_ai_checker_assets",
     srcs = ["//validation/ai_checker:doc_assets"],
-    prefix = "bazel/rules/rules_score/docs/tool_reference/",
+    prefix = "docs/tool_reference/",
     strip_prefix = "validation/ai_checker/",
 )
 
@@ -183,7 +183,7 @@ sphinx_docs_library(
 sphinx_docs_library(
     name = "validation_specs",
     srcs = ["//validation/core:specifications"],
-    prefix = "bazel/rules/rules_score/docs/tool_reference/specs/",
+    prefix = "docs/tool_reference/specs/",
     strip_prefix = "validation/core/docs/specifications/",
 )
 
@@ -192,7 +192,7 @@ sphinx_docs_library(
 sphinx_docs_library(
     name = "clickable_plantuml_doc_assets",
     srcs = ["//plantuml/sphinx/clickable_plantuml:doc_assets"],
-    prefix = "bazel/rules/rules_score/docs/tool_reference/",
+    prefix = "docs/tool_reference/",
     strip_prefix = "plantuml/sphinx/clickable_plantuml/",
 )
 
@@ -201,7 +201,7 @@ sphinx_docs_library(
 sphinx_docs_library(
     name = "minimal_example_srcs",
     srcs = ["//bazel/rules/rules_score/examples/minimal:doc_sources"],
-    prefix = "bazel/rules/rules_score/docs/examples/minimal/",
+    prefix = "docs/examples/minimal/",
     strip_prefix = "bazel/rules/rules_score/examples/minimal/",
 )
 
@@ -229,13 +229,13 @@ sphinx_module(
     ],
     index = "docs/index.rst",
     renamed_srcs = {
-        "//plantuml/parser:readme_md": "bazel/rules/rules_score/docs/tool_reference/plantuml_parser.md",
-        "//validation/core:README.md": "bazel/rules/rules_score/docs/tool_reference/validation_core.md",
-        "//validation/ai_checker:readme_md": "bazel/rules/rules_score/docs/tool_reference/ai_checker.md",
-        "//plantuml/sphinx/clickable_plantuml:readme_md": "bazel/rules/rules_score/docs/tool_reference/clickable_plantuml.md",
-        "//lobster_bazel:readme_md": "bazel/rules/rules_score/docs/tool_reference/lobster_bazel.md",
-        "//manual_analysis:readme_md": "bazel/rules/rules_score/docs/tool_reference/manual_analysis.md",
-        "//validation/core/docs/requirements:requirements_rst": "bazel/rules/rules_score/docs/requirements/validation_core_requirements_rst.rst",
+        "//plantuml/parser:readme_md": "docs/tool_reference/plantuml_parser.md",
+        "//validation/core:README.md": "docs/tool_reference/validation_core.md",
+        "//validation/ai_checker:readme_md": "docs/tool_reference/ai_checker.md",
+        "//plantuml/sphinx/clickable_plantuml:readme_md": "docs/tool_reference/clickable_plantuml.md",
+        "//lobster_bazel:readme_md": "docs/tool_reference/lobster_bazel.md",
+        "//manual_analysis:readme_md": "docs/tool_reference/manual_analysis.md",
+        "//validation/core/docs/requirements:requirements_rst": "docs/requirements/validation_core_requirements_rst.rst",
     },
     visibility = ["//visibility:public"],
 )
@@ -267,11 +267,6 @@ py_library(
 py_binary(
     name = "raw_build",
     srcs = ["src/sphinx_wrapper.py"],
-    env = {
-        "SOURCE_DIRECTORY": "",
-        "DATA": "",
-        "ACTION": "check",
-    },
     main = "src/sphinx_wrapper.py",
     visibility = ["//visibility:public"],
     deps = [":sphinx_base_deps"],

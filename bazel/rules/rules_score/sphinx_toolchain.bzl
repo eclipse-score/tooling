@@ -92,11 +92,6 @@ def score_sphinx_toolchain(
         srcs = ["@score_tooling//bazel/rules/rules_score:src/sphinx_wrapper.py"],
         main = "@score_tooling//bazel/rules/rules_score:src/sphinx_wrapper.py",
         data = extra_data,
-        env = {
-            "SOURCE_DIRECTORY": "",
-            "DATA": "",
-            "ACTION": "check",
-        },
         package_collisions = package_collisions,
         visibility = ["//visibility:private"],
         deps = binary_deps,
