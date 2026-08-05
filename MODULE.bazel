@@ -41,6 +41,9 @@ bazel_dep(name = "flatbuffers", version = "25.9.23")
 bazel_dep(name = "download_utils", version = "1.2.2")
 bazel_dep(name = "trlc", version = "3.0.0")
 bazel_dep(name = "lobster", version = "1.0.4")
+
+bazel_dep(name = "score_docs_as_code", version = "4.6.1", dev_dependency = True)
+
 bazel_dep(name = "rules_distroless", version = "0.8.0")
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
 
@@ -321,6 +324,11 @@ apt.install(
     mergedusr = True,
 )
 use_repo(apt, "docs_runtime")
+
+register_toolchains(
+    "//bazel/rules/rules_score:sphinx_score_layout_toolchain",
+    dev_dependency = True,
+)
 
 register_toolchains(
     "//bazel/rules/rules_score:sphinx_default_toolchain",

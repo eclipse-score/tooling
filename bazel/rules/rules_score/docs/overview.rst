@@ -15,6 +15,9 @@
 Overview
 ========
 
+Overview
+--------
+
 ``rules_score`` organises safety-critical software artefacts into four groups:
 
 **Documentation Rules** — Sphinx builder and supporting helpers:
@@ -41,6 +44,8 @@ Overview
 - :ref:`dependable_element <rule-dependable-element>` — Complete SEooC with all artefacts assembled and validated
 
 All rules support cross-module dependencies for sphinx-needs integration and HTML merging.
+
+.. _overview-quick-reference:
 
 Quick Reference
 ---------------

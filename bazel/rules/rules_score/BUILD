@@ -19,7 +19,11 @@ load(
     "//bazel/rules/rules_score:rules_score.bzl",
     "sphinx_module",
 )
-load("//bazel/rules/rules_score:sphinx_toolchain.bzl", "sphinx_toolchain")
+load(
+    "//bazel/rules/rules_score:sphinx_toolchain.bzl",
+    "score_sphinx_toolchain",
+    "sphinx_toolchain",
+)
 load("//lobster_bazel:lobster_bazel.bzl", "lobster_linker")
 
 config_setting(
@@ -34,6 +38,7 @@ exports_files([
     "src/bazel_sphinx_needs.py",
     "src/sphinx_wrapper.py",
     "templates/conf.template.py",
+    "templates/conf.score_layout.template.py",
     "templates/dependable_element_index.template.rst",
     "templates/section_page.template.rst",
     "templates/unit.template.rst",
@@ -286,6 +291,29 @@ toolchain(
     name = "sphinx_default_toolchain",
     toolchain = ":default_toolchain",
     toolchain_type = ":toolchain_type",
+)
+
+# Scoped Sphinx toolchain that renders with the shared S-CORE layout
+# (score_layout extension from score_docs_as_code) instead of the stock
+# Read-the-Docs theme, so this repository's own documentation site matches the
+# baselibs / lifecycle sites (top navigation bar instead of the RTD expandable
+# left sidebar). Registered ahead of :sphinx_default_toolchain in the root
+# MODULE.bazel so it wins toolchain resolution for this module's sphinx_module
+# targets, while downstream consumers keep the default RTD toolchain.
+score_sphinx_toolchain(
+    name = "sphinx_score_layout_toolchain",
+    conf_template = "//bazel/rules/rules_score:templates/conf.score_layout.template.py",
+    extra_deps = [
+        # score_layout provides the shared S-CORE theme (top navigation). We
+        # deliberately depend on it directly rather than on score_sphinx_bundle
+        # so score_metamodel is NOT importable: the shared sphinx_conf_helpers
+        # then stays on its ImportError fallback (empty needs schema, matching
+        # the current default RTD build) instead of hitting score_metamodel's
+        # 4.6.1 API which differs from the helper's expectations.
+        "@score_docs_as_code//src/extensions/score_layout",
+        "@score_docs_as_code//src/helper_lib",
+    ],
+    visibility = ["//visibility:public"],
 )
 
 # ---------------------------------------------------------------------------
