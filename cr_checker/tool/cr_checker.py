@@ -61,6 +61,11 @@ COPYRIGHT_BLOCK_PATTERN = re.compile(
     rf"Copyright.{{0,{COPYRIGHT_BLOCK_MAX_GAP}}}?SPDX-License-Identifier\s*:[^\n]*\n?",
     re.IGNORECASE | re.DOTALL,
 )
+SPDX_IDENTIFIER_PATTERN = re.compile(r"SPDX-License-Identifier\s*:\s*([^\n]*)", re.IGNORECASE)
+# Chars ignored when comparing two SPDX identifiers, so harmless formatting
+# variants ("Apache-2.0" vs "Apache 2.0" vs "apache2.0") aren't mistaken for a
+# genuine license difference ("MIT" vs "Apache-2.0").
+SPDX_IGNORED_CHARS_PATTERN = re.compile(r"[\s.\-]+")
 
 LOGGER = logging.getLogger()
 
@@ -591,13 +596,15 @@ class Status(enum.Enum):
     WRONG_FORMAT = "wrong_format"
     MISPLACED_AND_WRONG_FORMAT = "misplaced_and_wrong_format"
     DUPLICATE = "duplicate"
+    LICENSE_MISMATCH = "license_mismatch"
 
 
 # Statuses `--fix` is allowed to act on automatically. WRONG_FORMAT and
 # MISPLACED_AND_WRONG_FORMAT are additionally gated on the similarity
 # threshold at the call site (see `_process_file_fix`) -- a low score means
 # the text is probably an unrelated license, which must never be silently
-# rewritten.
+# rewritten. LICENSE_MISMATCH, like DUPLICATE, is never in this set --
+# unlike the similarity gate, `--force` cannot bypass it either.
 FIXABLE_STATUSES = {
     Status.MISSING,
     Status.MISPLACED,
@@ -701,6 +708,34 @@ def _strip_old_wrapper_suffix(remainder, template):
     return remainder[len(first_line) :].lstrip("\n")
 
 
+def _extract_spdx_id(text):
+    """Returns the raw ``SPDX-License-Identifier`` value in `text` (e.g.
+    ``"Apache-2.0"``), or None if it doesn't contain one."""
+    match = SPDX_IDENTIFIER_PATTERN.search(text)
+    return match.group(1).strip() if match else None
+
+
+def _normalize_spdx_id(spdx_id):
+    """Folds an SPDX identifier down for lenient comparison (see
+    `SPDX_IGNORED_CHARS_PATTERN`): case-insensitive, ignoring spaces, dots
+    and hyphens."""
+    return SPDX_IGNORED_CHARS_PATTERN.sub("", spdx_id).casefold()
+
+
+def _spdx_mismatch(existing_text, template):
+    """True if `existing_text` and `template` each carry an SPDX identifier
+    and they genuinely differ (e.g. ``MIT`` vs ``Apache-2.0``) -- as opposed
+    to just a formatting variant of the same one (see `_normalize_spdx_id`).
+    False if either side has no SPDX identifier at all, since that's not
+    this check's concern (missing/wrong-format handling already covers it).
+    """
+    existing = _extract_spdx_id(existing_text)
+    expected = _extract_spdx_id(template)
+    if not existing or not expected:
+        return False
+    return _normalize_spdx_id(existing) != _normalize_spdx_id(expected)
+
+
 def classify(layout, template, config):
     """Classifies a file's header state from its `HeaderLayout`.
 
@@ -726,6 +761,14 @@ def classify(layout, template, config):
         the file (e.g. an example header, or literally this module's own
         ``COPYRIGHT_BLOCK_PATTERN`` regex source) isn't mistaken for a
         duplicate of a real header near the top.
+
+        A wrong-format header whose own SPDX identifier genuinely differs
+        from the template's (see `_spdx_mismatch`) is classified
+        LICENSE_MISMATCH instead of WRONG_FORMAT/MISPLACED_AND_WRONG_FORMAT,
+        regardless of how similar the rest of the boilerplate text looks --
+        a whole-block similarity score alone can't be trusted to catch this,
+        since a short header is mostly shared boilerplate around the one
+        line that actually matters.
     """
     if not layout.blocks:
         return Status.MISSING, None
@@ -754,6 +797,8 @@ def classify(layout, template, config):
     correct_format = bool(template_regex.match(block.text))
     misplaced = bool(layout.leading_junk) and not _is_old_wrapper_prefix(layout.leading_junk, template)
 
+    if not correct_format and _spdx_mismatch(block.text, template):
+        return Status.LICENSE_MISMATCH, similarity
     if correct_format and not misplaced:
         return Status.COMPLIANT, similarity
     if correct_format and misplaced:
@@ -1038,18 +1083,28 @@ def _tally(status, results):
         results["missing"] += 1
     elif status is Status.DUPLICATE:
         results["duplicate"] += 1
+    elif status is Status.LICENSE_MISMATCH:
+        results["license_mismatch"] += 1
     elif status is Status.MISPLACED:
         results["misplaced"] += 1
     elif status in (Status.WRONG_FORMAT, Status.MISPLACED_AND_WRONG_FORMAT):
         results["wrong_format"] += 1
 
 
-def _log_status(item, status, layout, similarity):
+def _log_status(item, status, layout, similarity, template):
     """Logs a diagnostic message for a classified `status`."""
     if status is Status.COMPLIANT:
         LOGGER.debug("File %s has copyright.", item)
     elif status is Status.MISSING:
         LOGGER.error("Missing copyright header in: %s, use --fix to introduce it", item)
+    elif status is Status.LICENSE_MISMATCH:
+        LOGGER.error(
+            "License mismatch in: %s (found %r, expected %r) -- this looks like a genuinely "
+            "different license and is never auto-fixed, not even with --force; resolve manually",
+            item,
+            _extract_spdx_id(layout.blocks[0].text),
+            _extract_spdx_id(template),
+        )
     elif status is Status.MISPLACED:
         LOGGER.error(
             "Copyright header in %s is correctly formatted but preceded by other content "
@@ -1099,7 +1154,7 @@ def _process_file_check(item, template, encoding, offset, use_mmap, config, resu
 
     layout = locate_header(text, manual_prefix_offset=offset)
     status, similarity = classify(layout, template, config)
-    _log_status(item, status, layout, similarity)
+    _log_status(item, status, layout, similarity, template)
     _tally(status, results)
 
 
@@ -1120,7 +1175,7 @@ def _process_file_fix(item, template, encoding, offset, remove_offset, config, r
 
     layout = locate_header(text, manual_prefix_offset=offset)
     status, similarity = classify(layout, template, config)
-    _log_status(item, status, layout, similarity)
+    _log_status(item, status, layout, similarity, template)
     _tally(status, results)
 
     if status not in FIXABLE_STATUSES:
@@ -1183,11 +1238,12 @@ def process_files(
                      WRONG_FORMAT/MISPLACED_AND_WRONG_FORMAT, rewriting the
                      header regardless of how different it looks from the
                      template. Only used in ``--fix`` mode. Never applies to
-                     DUPLICATE, which is always left for manual review.
+                     DUPLICATE or LICENSE_MISMATCH, which are always left for
+                     manual review.
 
     Returns:
         dict: Counters for ``missing``, ``misplaced``, ``wrong_format``,
-        ``duplicate`` and ``fixed``.
+        ``duplicate``, ``license_mismatch`` and ``fixed``.
 
     Note:
         A wrong-format or misplaced-and-wrong-format header is only
@@ -1199,10 +1255,20 @@ def process_files(
         untouched and only reported, since it may be a genuinely different
         license text that must never be silently overwritten. Duplicate
         headers are never auto-fixed, regardless of similarity or ``force``.
+        Nor is a header whose own SPDX identifier genuinely differs from the
+        template's (``LICENSE_MISMATCH``) -- similarity alone can't be
+        trusted there, and ``force`` does not override it either.
     """
     if exclusion is None:
         exclusion = []
-    results = {"missing": 0, "misplaced": 0, "wrong_format": 0, "duplicate": 0, "fixed": 0}
+    results = {
+        "missing": 0,
+        "misplaced": 0,
+        "wrong_format": 0,
+        "duplicate": 0,
+        "license_mismatch": 0,
+        "fixed": 0,
+    }
 
     for item in files:
         key = extension_key(item)
@@ -1330,7 +1396,8 @@ def parse_arguments(argv):
         help="With --fix, also rewrite WRONG_FORMAT/MISPLACED_AND_WRONG_FORMAT headers whose "
         "similarity to the template is below HEADER_SIMILARITY_THRESHOLD (normally left "
         "untouched since they may be a genuinely different license text). Never affects "
-        "DUPLICATE, which always requires manual review. Ignored without --fix.",
+        "DUPLICATE or LICENSE_MISMATCH (a header whose own SPDX identifier genuinely differs "
+        "from the template's), which always require manual review. Ignored without --fix.",
     )
 
     parser.add_argument(
@@ -1453,8 +1520,11 @@ def main(argv=None):
     total_misplaced = results["misplaced"]
     total_wrong_format = results["wrong_format"]
     total_duplicates = results["duplicate"]
+    total_license_mismatches = results["license_mismatch"]
     total_fixes = results["fixed"]
-    total_violations = total_missing + total_misplaced + total_wrong_format + total_duplicates
+    total_violations = (
+        total_missing + total_misplaced + total_wrong_format + total_duplicates + total_license_mismatches
+    )
 
     LOGGER.info("=" * 64)
     LOGGER.info("Process completed.")
@@ -1480,6 +1550,12 @@ def main(argv=None):
         "Total files with duplicate copyright: %s%d%s",
         COLORS["RED"] if total_duplicates > 0 else COLORS["GREEN"],
         total_duplicates,
+        COLORS["ENDC"],
+    )
+    LOGGER.info(
+        "Total files with a license mismatch: %s%d%s",
+        COLORS["RED"] if total_license_mismatches > 0 else COLORS["GREEN"],
+        total_license_mismatches,
         COLORS["ENDC"],
     )
     if not exclusion_valid:
