@@ -173,7 +173,7 @@ Write a PlantUML class or component diagram that names every ``component`` and `
 
             interface "InternalInterface" as InternalInterface
             unit_1 -l-( InternalInterface
-            unit_2 )-r- InternalInterface
+            unit_2 -r- InternalInterface
         }
     }
 
@@ -225,7 +225,7 @@ Any component-type element (``<<SEooC>>``, ``<<component>>``, or ``<<unit>>``) c
 
             interface "InternalInterface" as InternalInterface
             unit_1 -l-( InternalInterface
-            unit_2 )-r- InternalInterface
+            unit_2 -r- InternalInterface
         }
     }
 
