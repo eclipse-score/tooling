@@ -25,10 +25,10 @@ Instead, test intent is captured as a **Given-When-Then** description right
 next to the code as record properties in the test name/body itself. The specification will
 then be rendered in the traceability report, together with the test results and coverage information.
 
-test/my_unit_test.cpp
+src/my_unit_test.cpp
 ----------------------
 
-.. literalinclude:: ../../examples/minimal/test/my_unit_test.cpp
+.. literalinclude:: ../../examples/minimal/src/my_unit_test.cpp
    :language: cpp
    :lines: 14-
 
@@ -45,6 +45,7 @@ They are picked up the same way as ``lobster-tracing`` — as plain
 traceability report. Test cases without them are still traced, but show up
 without a Given-When-Then specification.
 
+How do we generate the lobster report to see the given when then output?
 BUILD
 ------
 
@@ -73,4 +74,4 @@ Run the tests with:
 
    bazel test //:my_unit_test
 
-→ Full guide: :doc:`../unit_design`
+→ Full guide: :doc:`../validation`
