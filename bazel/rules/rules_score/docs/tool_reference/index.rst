@@ -41,6 +41,7 @@ of truth.
    validation_core
    Clickable PlantUML <clickable_plantuml>
    bazel
+   scope_check
 
 .. toctree::
    :maxdepth: 1

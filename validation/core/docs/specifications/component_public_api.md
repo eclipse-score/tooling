@@ -36,6 +36,14 @@ For this validator, a public API interface is a top-level interface declared in
 the static design. Interfaces declared inside the SEooC, components, or units
 are treated as internal API interfaces.
 
+Public API diagram entities must be declared as interfaces to be matched.
+Other entity types (e.g. a `class` with the same name) are not indexed as
+public API interfaces, so a same-named class does not satisfy the check.
+
+Matching is done by the public API diagram entity's **name** (not its fully
+qualified ID), compared case-sensitively against the static design interface's
+ID.
+
 ### Interface Declaration Consistency
 
 Every public API interface declared in the static design diagram must resolve
@@ -53,12 +61,20 @@ package "Sample SEooC" as sample_seooc <<SEooC>> {
 
 interface "Sample Library API" as SampleLibraryAPI
 sample_seooc )- SampleLibraryAPI
+```
 
+```text
 ' public API diagram
 interface "Sample Library API" as SampleLibraryAPI <<interface>> {
   +GetNumber(): int
 }
 ```
+
+When one or more public API interfaces are missing, they are all reported in a
+single failure message, each with the static design's source file and line.
+If the missing name differs from a declared public API interface only by case,
+the message also suggests the correctly-cased name, e.g. `use "SampleLibraryAPI"
+(case-sensitive)`.
 
 ### SEooC Relationship Consistency
 
@@ -80,7 +96,11 @@ sample_seooc )- SampleLibraryAPI
 
 The validator collects relationships from SEooC entities and checks whether the
 public API interface is a relation target. Relations from components or units do
-not satisfy this rule.
+not satisfy this rule. Any PlantUML relation type (interface binding, plain
+association, or dependency) and any endpoint role (required, provided, or
+none) is accepted as long as the SEooC entity is the source and the public API
+interface is the target; the validator does not require the `)-`/`-(`
+interface-binding notation specifically.
 
 ## Failure Cases
 

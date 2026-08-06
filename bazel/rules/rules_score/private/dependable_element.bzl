@@ -1547,7 +1547,15 @@ def _dependable_element_index_attrs():
 
 _dependable_element_index = rule(
     implementation = _dependable_element_index_impl,
-    doc = "Generates index.rst file with references to dependable element artifacts",
+    doc = """Generates index.rst file with references to dependable element artifacts.
+
+    Despite the name, this is not merely an internal implementation detail:
+    it is the actual cross-element provider surface. A dependable_element's
+    `deps` on another dependable_element resolve to that element's
+    `<dep>_index` target (see `processed_deps` below), because ForwardedAoUInfo,
+    CertifiedScope and DependableElementLobsterInfo are only returned here, not
+    by the public `<name>` target.
+    """,
     attrs = _dependable_element_index_attrs(),
     subrules = [subrule_lobster_report, subrule_lobster_html_report],
 )
@@ -1749,7 +1757,11 @@ def dependable_element(
             unreachable.
 
     Generated Targets:
-        <name>_index: Internal rule that generates index.rst and copies artifacts
+        <name>_index: Generates index.rst and copies artifacts. Also the actual
+            cross-element provider API — ForwardedAoUInfo, CertifiedScope and
+            DependableElementLobsterInfo are only exposed here, so a sibling
+            dependable_element's `deps` are resolved against `<dep>_index`
+            (see `processed_deps`), not against `<dep>` itself.
         <name>: Main dependable element target (sphinx_module) with HTML documentation
         <name>_needs: Sphinx-needs JSON target (created by sphinx_module for cross-referencing)
 

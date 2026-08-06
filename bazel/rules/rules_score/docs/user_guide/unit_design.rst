@@ -15,15 +15,19 @@
 Software Unit Design
 =====================
 
-The ``unit_design`` rule documents the **internal implementation** of a single
+The ``unit_design`` documents the **internal implementation** of a single
 software unit — how its source code is structured, what data flows through it,
 and how it behaves at the code level. This is distinct from the higher-level
 architectural design diagrams (see :doc:`architectural_design`), which describe
 the intended component structure of the SEooC as a whole.
 
-A ``unit_design`` target is referenced by a ``unit`` target (see
+A ``unit_design`` is referenced by a ``unit`` target (see
 :doc:`architectural_design` — *Implementation Architecture in Bazel*) to attach
 code-level design artefacts to the unit.
+
+The intent of a unit design is not to be a 1:1 representation of the code —
+it is an abstraction that conveys the concept: the classes, relationships and
+behaviour. It should mainly help to understand the unit´s intention and abstraction.
 
 Designing the internals of a unit
 ----------------------------------

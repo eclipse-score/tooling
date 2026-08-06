@@ -20,10 +20,17 @@ During Development you can enable a build with warnings instead of errors for al
 
 ``maturity = "development"``
 
+Each example under ``examples/`` (e.g. ``examples/minimal/``) is its own standalone
+Bazel module with its own ``MODULE.bazel``, separate from the main ``rules_score``
+module. Bazel commands therefore need to be run from within that module's
+directory, not from the repository root — the code blocks below include the
+``cd`` step so they can be copy-pasted as-is from the repository root.
+
 Run the build from within the ``examples/minimal/`` standalone module:
 
 .. code-block:: bash
 
+   cd bazel/rules/rules_score/examples/minimal
    bazel build //:my_element
 
 Expected output files:
@@ -31,16 +38,3 @@ Expected output files:
 .. code-block:: text
 
    bazel-bin/my_element_doc/html/          ← Sphinx HTML documentation
-
-When integrating the element into your own workspace, reference it by its full
-package label:
-
-.. code-block:: bash
-
-   bazel build //my/package:my_element
-
-Run all validations (architecture consistency, scope checks, traceability):
-
-.. code-block:: bash
-
-   bazel test //my/package:my_element

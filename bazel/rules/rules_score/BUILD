@@ -213,6 +213,8 @@ sphinx_module(
             "docs/**/*.rst",
             "docs/**/*.puml",
             "docs/**/*.md",
+            "docs/**/*.svg",
+            "docs/**/*.png",
         ],
         allow_empty = True,
     ) + [
