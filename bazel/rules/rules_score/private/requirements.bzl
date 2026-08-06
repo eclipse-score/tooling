@@ -24,6 +24,8 @@ load("@trlc//:trlc.bzl", "TrlcProviderInfo", "subrule_trlc_image_stage")
 load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
+_DEFAULT_SPEC = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")
+
 # ============================================================================
 # Private Rule Implementation
 # ============================================================================
@@ -50,7 +52,7 @@ def _requirements_impl(ctx):
         transitive_reqs.append(trlc_info.reqs)
         transitive_reqs.append(trlc_info.deps)
 
-    own_spec_files = ctx.attr.spec[DefaultInfo].files
+    own_spec_files = depset(transitive = [t[DefaultInfo].files for t in ctx.attr.spec])
     spec_depset = depset(transitive = [own_spec_files] + transitive_spec)
     deps_depset = depset(transitive = transitive_reqs)
 
@@ -167,9 +169,9 @@ _score_requirements_rule = rule(
             mandatory = True,
             doc = "Lobster YAML configuration file for traceability extraction.",
         ),
-        "spec": attr.label(
-            default = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
-            doc = "TRLC specification target providing the RSL files that define the requirement types. Defaults to the S-CORE requirements model.",
+        "spec": attr.label_list(
+            default = [_DEFAULT_SPEC],
+            doc = "TRLC specification targets providing the RSL files that define the requirement types. The S-CORE requirements model is always included; this adds zero or more additional spec targets on top of it. Populated by the score_requirements_rule macro, which performs the merge.",
         ),
         "image_srcs": attr.label_list(
             allow_files = [".svg", ".png", ".puml"],
@@ -192,7 +194,7 @@ def score_requirements_rule(
         req_kind,
         lobster_config,
         deps = [],
-        spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
+        spec = [],
         ref_package = "",
         **kwargs):
     """Macro wrapper around _score_requirements_rule with RST support.
@@ -207,6 +209,9 @@ def score_requirements_rule(
         listed in the underlying rule's ``srcs``.
 
     Args:
+        spec: Additional TRLC specification target(s) (single label or list)
+            to merge in on top of the S-CORE requirements model, which is
+            always included automatically -- do not re-list it here.
         ref_package: TRLC package prefix used for derived_from cross-references
             when converting RST sources (e.g. "AssumedSystemRequirements" for
             feature requirements that derive from ASR).
@@ -216,6 +221,8 @@ def score_requirements_rule(
         conversion), in the same order. Useful for callers that need to run
         trlc_requirements_test against the same source set.
     """
+    extra_spec = spec if type(spec) == type([]) else [spec]
+    merged_spec = [_DEFAULT_SPEC] + [s for s in extra_spec if s != _DEFAULT_SPEC]
     trlc_srcs = []
     extra_deps = []
     resolved_srcs = []
@@ -242,7 +249,7 @@ def score_requirements_rule(
         deps = deps + extra_deps,
         req_kind = req_kind,
         lobster_config = lobster_config,
-        spec = spec,
+        spec = merged_spec,
         **kwargs
     )
 
