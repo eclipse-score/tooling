@@ -1,5 +1,5 @@
 # *******************************************************************************
-# Copyright (c) 2025 Contributors to the Eclipse Foundation
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -11,32 +11,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@rules_python//python:defs.bzl", "py_test")
 
-package(default_visibility = ["//visibility:public"])
-
-sh_test(
-    name = "parse_line_coverage_test",
-    srcs = ["parse_line_coverage_test.sh"],
-    data = [
-        "fixtures/blanket_index.html",
-        "//coverage:scripts/parse_line_coverage.py",
-    ],
+py_test(
+    name = "merger_test",
+    srcs = ["merger_test.py"],
+    deps = ["//coverage:merger_lib"],
 )
 
-sh_test(
-    name = "ferrocene_report_help_test",
-    srcs = ["ferrocene_report_help_test.sh"],
-    data = [
-        "//coverage:ferrocene_report",
-    ],
-)
-
-sh_test(
-    name = "normalize_symbol_report_test",
-    srcs = ["normalize_symbol_report_test.sh"],
-    data = [
-        "fixtures/symbol_report.json",
-        "//coverage:scripts/normalize_symbol_report.py",
-    ],
+py_test(
+    name = "reporter_test",
+    srcs = ["reporter_test.py"],
+    deps = ["//coverage:reporter_lib"],
 )
