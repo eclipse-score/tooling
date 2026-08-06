@@ -117,7 +117,6 @@ exports_files(["template/conf.template.py"])
 score_sphinx_toolchain(
     name = "score_toolchain",
     conf_template = "//:template/conf.template.py",
-    package_collisions = "warning",
     deps = [
         "@score_docs_as_code//src:plantuml_for_python",
         "@score_docs_as_code//src/extensions/score_sphinx_bundle",
@@ -1409,13 +1408,6 @@ py_test(
 )
 
 py_test(
-    name = "test_sphinx_wrapper",
-    size = "small",
-    srcs = ["test_sphinx_wrapper.py"],
-    deps = ["@score_tooling//bazel/rules/rules_score:sphinx_wrapper_lib"],
-)
-
-py_test(
     name = "test_bazel_sphinx_needs",
     size = "small",
     srcs = ["test_bazel_sphinx_needs.py"],
@@ -1463,7 +1455,6 @@ test_suite(
         ":test_rst_to_trlc",
         ":test_sphinx_html_merge",
         ":test_sphinx_module_ext",
-        ":test_sphinx_wrapper",
         ":test_trlc_rst_image_rendering",
         ":transitive_modules_dedup_test",
         ":unit_component_tests",
