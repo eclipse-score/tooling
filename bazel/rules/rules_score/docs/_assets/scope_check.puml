@@ -1,0 +1,39 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml scope_check
+
+skinparam defaultTextAlignment center
+skinparam ArrowFontSize 10
+skinparam packageStyle rectangle
+hide stereotype
+
+package "dependable_element" as de {
+    rectangle "unit MyUnit\nscope = [\"//third_party/foo:__subpackages__\"]" as MyUnit
+
+    rectangle "//pkg:my_unit_lib\n(implementation)" as impl #LightBlue
+    rectangle "//third_party/foo/bar:baz\n(transitive dep)" as instscope #LightGreen
+    rectangle "//other/unrelated:thing\n(transitive dep)" as outofscope #Pink
+
+    MyUnit -down-> impl
+    impl -down-> instscope : in certified scope
+    impl -down-> outofscope : NOT in any certified scope
+}
+
+note bottom of outofscope
+  Rejected: "Not in certified scope
+  //third_party/foo:__subpackages__,
+  stopping at other"
+end note
+
+@enduml

@@ -161,27 +161,9 @@ Write a PlantUML class or component diagram that names every ``component`` and `
    :align: center
    :alt: SEooC example static architecture
 
-.. code-block:: text
-
-    @startuml static_design
-
-    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
-        component "ComponentExample" as component_example <<component>> {
-            component "Unit 1" as unit_1 <<unit>>
-            component "Unit 2" as unit_2 <<unit>>
-            component "Sub Component Example" as sub_component_example <<component>>
-
-            interface "InternalInterface" as InternalInterface
-            unit_1 -l-( InternalInterface
-            unit_2 )-r- InternalInterface
-        }
-    }
-
-    package "SampleLibraryAPI" as SampleLibraryAPI
-
-    component_example --> SampleLibraryAPI
-
-    @enduml
+.. literalinclude:: ../_assets/SeoocExample_StaticDesign.puml
+   :language: text
+   :lines: 14-
 
 Valid PlantUML Definitions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -229,9 +211,9 @@ Any component-type element (``<<SEooC>>``, ``<<component>>``, or ``<<unit>>``) c
         }
     }
 
-    package "SampleLibraryAPI" as SampleLibraryAPI
+    interface "SampleLibraryAPI" as SampleLibraryAPI
 
-    component_example --> SampleLibraryAPI
+    safety_software_seooc_example )-d- SampleLibraryAPI
 
     @enduml
 
@@ -242,22 +224,22 @@ When an element needs an explicitly named, standalone binding point — for exam
 
 .. code-block:: text
 
-    @startuml MySeooc_StaticDesign
+    @startuml SeoocExample_StaticDesign
 
-    package "MySeooc" as MySeooc <<SEooC>> {
-        component "KvsComponent" as KvsComponent <<component>> {
-            component "KeyValueStore" as KeyValueStore <<unit>>
+    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
+        component "ComponentExample" as component_example <<component>> {
+            component "Unit 1" as unit_1 <<unit>>
         }
 
-        portin  " " as p_storage   ' required interface port
-        portout " " as p_api       ' provided interface port
+        portin  " " as p_required   ' required interface port
+        portout " " as p_public     ' provided interface port
     }
 
-    interface "score::storage" as storage
-    interface "kvsapi"         as kvsapi
+    interface "RequiredInterface"  as RequiredInterface
+    interface "SampleLibraryAPI"   as SampleLibraryAPI
 
-    p_storage -( storage : requires
-    p_api     )- kvsapi  : provides
+    p_required -( RequiredInterface : requires
+    p_public   )- SampleLibraryAPI : provides
 
     @enduml
 
@@ -284,26 +266,26 @@ unit
 
     load("@score_tooling//bazel/rules/rules_score:rules_score.bzl", "unit")
 
-    # Unit for KeyValueStore
-    cc_library(name = "kvs_lib",       srcs = ["kvs.cpp"],      hdrs = ["kvs.h"])
-    cc_test   (name = "kvs_unit_test", srcs = ["kvs_test.cpp"], deps = [":kvs_lib"])
+    # Unit 1
+    cc_library(name = "unit_1_lib",  srcs = ["foo.cpp"],      hdrs = ["foo.h"])
+    cc_test   (name = "unit_1_test", srcs = ["foo_test.cpp"], deps = [":unit_1_lib"])
 
     unit(
-        name           = "KeyValueStore",
-        unit_design    = [":kvs_unit_design"],
-        implementation = [":kvs_lib"],
-        tests          = [":kvs_unit_test"],
+        name           = "unit_1",
+        unit_design    = ["//unit_1/docs:unit_design"],
+        implementation = [":unit_1_lib"],
+        tests          = [":unit_1_test"],
     )
 
-    # Unit for StorageBackend
-    cc_library(name = "storage_lib",       srcs = ["storage_backend.cpp"], hdrs = ["storage_backend.h"])
-    cc_test   (name = "storage_unit_test", srcs = ["storage_test.cpp"],   deps = [":storage_lib"])
+    # Unit 2
+    cc_library(name = "unit_2_lib",  srcs = ["bar.cpp"],      hdrs = ["bar.h"])
+    cc_test   (name = "unit_2_test", srcs = ["bar_test.cpp"], deps = [":unit_2_lib"])
 
     unit(
-        name           = "StorageBackend",
-        unit_design    = [":storage_unit_design"],
-        implementation = [":storage_lib"],
-        tests          = [":storage_unit_test"],
+        name           = "unit_2",
+        unit_design    = ["//unit_2/docs:unit_design"],
+        implementation = [":unit_2_lib"],
+        tests          = [":unit_2_test"],
     )
 
 component
@@ -315,16 +297,16 @@ component
          "component", "component_requirements")
 
     component_requirements(
-        name = "kvs_comp_req",
+        name = "component_requirements",
         srcs = ["component_requirements.trlc"],
-        deps = [":feature_req"],
+        deps = [":feature_requirements"],
     )
 
-    # The component maps to KvsComponent in the PlantUML diagram
+    # The component maps to ComponentExample in the PlantUML diagram
     component(
-        name         = "KvsComponent",
-        requirements = [":kvs_comp_req"],
-        components   = [":KeyValueStore", ":StorageBackend"],
+        name         = "component_example",
+        requirements = [":component_requirements"],
+        components   = [":unit_1", ":unit_2"],
         tests        = [],
     )
 
@@ -340,17 +322,9 @@ PlantUML
    :align: center
    :alt: SEooC example dynamic sequence
 
-.. code-block:: text
-
-    @startuml SeoocExample_DynamicDesign
-
-    participant "Unit 1" as unit_1 <<unit>>
-    participant "Unit 2" as unit_2 <<unit>>
-
-    unit_1 -> unit_2 : GetData()
-    unit_2 --> unit_1 : return : Data*
-
-    @enduml
+.. literalinclude:: ../_assets/SeoocExample_DynamicDesign.puml
+   :language: text
+   :lines: 14-
 
 Bazel
 ~~~~~~
@@ -366,7 +340,12 @@ Bazel
 Public API
 ------------
 
-The public API view describes the **interface your SEooC exposes to its environment**. These diagrams are linked to safety analysis: ``FailureMode`` records reference interface items by name (via the ``interface`` field), enabling traceability from each failure mode back to the architecture.
+The public API view describes the **interface your SEooC exposes to its environment**. They define a clear interface
+for the user of the dependable element and state which functions of the dependable element are carrying the safety
+related information.
+
+As a proof for their safety relevance for each public method a FMEA should be carried out. This is documented by linking each method to a safety analysis:
+``FailureMode`` records reference interface items by name (via the ``interface`` field), enabling traceability from each failure mode back to the architecture.
 
 PlantUML
 ~~~~~~~~~
@@ -375,15 +354,9 @@ PlantUML
    :align: center
    :alt: SEooC example public API
 
-.. code-block:: text
-
-    @startuml SeoocExample_PublicApi
-
-    package "SampleLibraryAPI" as SampleLibraryAPI {
-        interface "GetNumber" as GetNumber
-    }
-
-    @enduml
+.. literalinclude:: ../_assets/SeoocExample_PublicApi.puml
+   :language: text
+   :lines: 14-
 
 Bazel
 ~~~~~~
@@ -411,19 +384,9 @@ Model the interface inside the namespace of the owning component so its fully-qu
    :align: center
    :alt: SEooC example internal API
 
-.. code-block:: text
-
-    @startuml
-
-    namespace safety_software_seooc_example {
-      namespace component_example {
-        interface "InternalInterface" as InternalInterface <<interface>> {
-          {abstract} GetData(BindingType binding): Data*
-        }
-      }
-    }
-
-    @enduml
+.. literalinclude:: ../_assets/SeoocExample_InternalApi.puml
+   :language: text
+   :lines: 14-
 
 Bazel
 ~~~~~~

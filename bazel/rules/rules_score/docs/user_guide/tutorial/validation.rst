@@ -25,10 +25,10 @@ Instead, test intent is captured as a **Given-When-Then** description right
 next to the code as record properties in the test name/body itself. The specification will
 then be rendered in the traceability report, together with the test results and coverage information.
 
-test/my_unit_test.cpp
+src/my_unit_test.cpp
 ----------------------
 
-.. literalinclude:: ../../examples/minimal/test/my_unit_test.cpp
+.. literalinclude:: ../../examples/minimal/src/my_unit_test.cpp
    :language: cpp
    :lines: 14-
 
@@ -52,7 +52,7 @@ BUILD
 
    cc_test(
        name = "my_unit_test",
-       srcs = ["test/my_unit_test.cpp"],
+       srcs = ["src/my_unit_test.cpp"],
        deps = [
            ":my_unit_lib",
            "@googletest//:gtest_main",
@@ -73,4 +73,4 @@ Run the tests with:
 
    bazel test //:my_unit_test
 
-→ Full guide: :doc:`../unit_design`
+→ Full guide: :doc:`../validation.rst`

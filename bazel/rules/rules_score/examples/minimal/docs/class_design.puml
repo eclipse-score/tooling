@@ -16,9 +16,9 @@
 ' Class diagram for MyUnit — internal design of the key-value store unit.
 
 class MyUnit {
-    - _store : dict[str, str]
-    + configure(key : str, value : str) : void
-    + get(key : str) : str
+    - store_ : std::unordered_map<std::string, std::string>
+    + configure(key : const string&, value : const string&) : void
+    + get(key : const string&) : string
 }
 
 @enduml

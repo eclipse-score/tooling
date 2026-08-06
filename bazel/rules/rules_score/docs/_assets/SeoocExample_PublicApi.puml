@@ -13,9 +13,10 @@
 
 @startuml SeoocExample_PublicApi
 
-package "SampleLibraryAPI" as SampleLibraryAPI {
-    interface "GetNumber" as GetNumber
-    ' interface "SetNumber" as SetNumber
+namespace safety_software_seooc_example {
+    interface "SampleLibraryAPI" as SampleLibraryAPI {
+        + GetNumber()
+    }
 }
 
 @enduml
