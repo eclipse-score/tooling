@@ -13,6 +13,8 @@
 
 load("@pip_tooling_test//:requirements.bzl", "requirement")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_python//python:defs.bzl", "py_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(
     "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
@@ -30,7 +32,7 @@ load(
 )
 load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphinx_toolchain")
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
-load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test")
+load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test", "trlc_specification")
 load(
     ":html_generation_test.bzl",
     "auto_config_generation_test",
@@ -48,9 +50,11 @@ load(
     "lobster_config_test_suite",
 )
 load(
-    ":requirements_image_test.bzl",
-    "image_srcs_sphinx_sources_test",
-    "requirements_image_test_suite",
+    ":requirements_multi_spec_test.bzl",
+    "asr_multi_spec_provider_test",
+    "comp_req_multi_spec_provider_test",
+    "feat_req_multi_spec_provider_test",
+    "requirements_multi_spec_test_suite",
 )
 load(
     ":requirements_rst_test.bzl",
@@ -1370,6 +1374,65 @@ aous_rst_sphinx_test(
 requirements_rst_test_suite(name = "requirements_rst_tests")
 
 # ============================================================================
+# Multi-spec Requirements Tests
+# ============================================================================
+
+trlc_specification(
+    name = "extra_spec_fixture",
+    srcs = ["fixtures/multi_spec/extra_model.rsl"],
+)
+
+assumed_system_requirements(
+    name = "asr_multi_spec",
+    srcs = ["fixtures/rst_requirements/assumed_system_requirements.rst"],
+    spec = [":extra_spec_fixture"],
+)
+
+feature_requirements(
+    name = "feat_req_multi_spec",
+    srcs = ["fixtures/rst_requirements/feature_requirements.rst"],
+    ref_package = "AssumedSystemRequirements",
+    spec = [":extra_spec_fixture"],
+    deps = [":asr_multi_spec"],
+)
+
+component_requirements(
+    name = "comp_req_multi_spec",
+    srcs = ["fixtures/rst_requirements/component_requirements.rst"],
+    ref_package = "FeatureRequirements",
+    spec = [":extra_spec_fixture"],
+    deps = [
+        ":asr_multi_spec",
+        ":feat_req_multi_spec",
+    ],
+)
+
+asr_multi_spec_provider_test(
+    name = "asr_multi_spec_provider_test",
+    target_under_test = ":asr_multi_spec",
+)
+
+feat_req_multi_spec_provider_test(
+    name = "feat_req_multi_spec_provider_test",
+    target_under_test = ":feat_req_multi_spec",
+)
+
+comp_req_multi_spec_provider_test(
+    name = "comp_req_multi_spec_provider_test",
+    target_under_test = ":comp_req_multi_spec",
+)
+
+# Integration target: TRLC file using types from both specs; trlc --verify
+# runs on build, confirming both RSL files are reachable at parse time.
+assumed_system_requirements(
+    name = "asr_multi_spec_inttest",
+    srcs = ["fixtures/multi_spec/multi_spec.trlc"],
+    spec = [":extra_spec_fixture"],
+)
+
+requirements_multi_spec_test_suite(name = "requirements_multi_spec_tests")
+
+# ============================================================================
 # lobster_config.bzl unit tests (format_lobster_sources / format_lobster_block)
 # ============================================================================
 lobster_config_test_suite(name = "lobster_config")
@@ -1464,6 +1527,7 @@ test_suite(
     name = "all_tests",
     tests = [
         ":lobster_config_tests",
+        ":requirements_multi_spec_tests",
         ":requirements_rst_tests",
         ":seooc_tests",
         ":sphinx_module_tests",
