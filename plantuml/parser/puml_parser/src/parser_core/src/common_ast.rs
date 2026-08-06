@@ -25,6 +25,22 @@ pub struct Arrow {
     pub right: Option<ArrowDecor>,
 }
 
+/// Formats an arrow from its parsed tokens.
+///
+/// This intentionally avoids using `Display`. The current `Arrow` structure
+/// does not distinguish whether the line segment is located before or after
+/// the middle part of the arrow, so a `Display` implementation may render an
+/// ambiguous representation. Use this token-based formatting as a temporary
+/// solution until the `Arrow` model preserves the original syntax layout.
+pub fn format_arrow(arrow: &Arrow) -> String {
+    format!(
+        "{}{}{}",
+        arrow.left.as_ref().map_or("", |d| d.raw.as_str()),
+        arrow.line.raw,
+        arrow.right.as_ref().map_or("", |d| d.raw.as_str()),
+    )
+}
+
 // ---------- Decorator ----------
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct ArrowDecor {

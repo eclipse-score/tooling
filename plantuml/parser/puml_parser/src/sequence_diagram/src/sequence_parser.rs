@@ -107,14 +107,19 @@ impl PumlSequenceParser {
                 inner,
                 source_location,
             )?)]),
-            Rule::destroy_cmd => Ok(vec![Statement::DestroyCmd(Self::parse_destroy_cmd(inner)?)]),
+            Rule::destroy_cmd => Ok(vec![Statement::DestroyCmd(Self::parse_destroy_cmd(
+                inner,
+                source_location,
+            )?)]),
             Rule::activate_cmd => Ok(vec![Statement::ActivateCmd(Self::parse_activate_cmd(
                 inner,
+                source_location,
             )?)]),
             Rule::deactivate_cmd => Ok(vec![Statement::DeactivateCmd(Self::parse_deactivate_cmd(
                 inner,
+                source_location,
             )?)]),
-            Rule::activation_short => Self::parse_activation_short(inner),
+            Rule::activation_short => Self::parse_activation_short(inner, source_location),
             _ => Err(SequenceError::InvalidStatement(format!(
                 "unsupported lifecycle command: {:?}",
                 inner.as_rule()
@@ -658,7 +663,10 @@ impl PumlSequenceParser {
         })
     }
 
-    fn parse_destroy_cmd(pair: pest::iterators::Pair<Rule>) -> Result<DestroyCmd, SequenceError> {
+    fn parse_destroy_cmd(
+        pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
+    ) -> Result<DestroyCmd, SequenceError> {
         let mut participant: Option<ParticipantRef> = None;
 
         for inner in pair.into_inner() {
@@ -671,10 +679,14 @@ impl PumlSequenceParser {
             participant: participant.ok_or_else(|| {
                 SequenceError::InvalidStatement("missing participant in destroy".to_string())
             })?,
+            source_location,
         })
     }
 
-    fn parse_activate_cmd(pair: pest::iterators::Pair<Rule>) -> Result<ActivateCmd, SequenceError> {
+    fn parse_activate_cmd(
+        pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
+    ) -> Result<ActivateCmd, SequenceError> {
         let mut participant: Option<ParticipantRef> = None;
 
         for inner in pair.into_inner() {
@@ -687,11 +699,13 @@ impl PumlSequenceParser {
             participant: participant.ok_or_else(|| {
                 SequenceError::InvalidStatement("missing participant in activate".to_string())
             })?,
+            source_location,
         })
     }
 
     fn parse_deactivate_cmd(
         pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
     ) -> Result<DeactivateCmd, SequenceError> {
         let mut participant: Option<ParticipantRef> = None;
 
@@ -705,11 +719,13 @@ impl PumlSequenceParser {
             participant: participant.ok_or_else(|| {
                 SequenceError::InvalidStatement("missing participant in deactivate".to_string())
             })?,
+            source_location,
         })
     }
 
     fn parse_activation_short(
         pair: pest::iterators::Pair<Rule>,
+        source_location: SourceLocation,
     ) -> Result<Vec<Statement>, SequenceError> {
         let mut parts = pair.into_inner();
         let participant = parts
@@ -725,9 +741,13 @@ impl PumlSequenceParser {
         match parts.next().map(|part| part.as_rule()).ok_or_else(|| {
             SequenceError::InvalidStatement("missing short activation suffix".to_string())
         })? {
-            Rule::activate_suffix => Ok(vec![Statement::ActivateCmd(ActivateCmd { participant })]),
+            Rule::activate_suffix => Ok(vec![Statement::ActivateCmd(ActivateCmd {
+                participant,
+                source_location,
+            })]),
             Rule::deactivate_suffix => Ok(vec![Statement::DeactivateCmd(DeactivateCmd {
                 participant,
+                source_location,
             })]),
             other => Err(SequenceError::InvalidStatement(format!(
                 "unsupported short activation suffix: {:?}",
@@ -946,6 +966,34 @@ mod dispatch_style_tests {
             message.source_location.file.as_ref(),
             expected_file.as_str()
         );
+    }
+
+    #[test]
+    fn test_lifecycle_command_source_locations_are_preserved() {
+        let input = "@startuml\nactivate A\ndeactivate A\ndestroy A\n@enduml";
+        let path = Rc::new(PathBuf::from("lifecycle.puml"));
+        let mut parser = PumlSequenceParser;
+        let doc = parser
+            .parse_file(&path, input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        let expected_file = path.as_ref().clone().to_string_lossy().to_string();
+        let source_locations = doc
+            .statements
+            .iter()
+            .map(|statement| match statement {
+                Statement::ActivateCmd(command) => &command.source_location,
+                Statement::DeactivateCmd(command) => &command.source_location,
+                Statement::DestroyCmd(command) => &command.source_location,
+                actual => panic!("expected lifecycle command, got {:?}", actual),
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(source_locations.len(), 3);
+        for (location, expected_line) in source_locations.iter().zip([2, 3, 4]) {
+            assert_eq!(location.line, expected_line);
+            assert_eq!(location.file.as_ref(), expected_file.as_str());
+        }
     }
 
     #[test]

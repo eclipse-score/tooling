@@ -84,16 +84,19 @@ pub struct ParticipantRef {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DestroyCmd {
     pub participant: ParticipantRef,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ActivateCmd {
     pub participant: ParticipantRef,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeactivateCmd {
     pub participant: ParticipantRef,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -140,17 +143,14 @@ pub enum GroupCmd {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GroupStart {
     pub kind: GroupKind,
-    pub label: Option<String>,
-    /// alt success
-    pub is_parallel: bool,
-    /// "& alt ..."
+    pub label: Option<String>, // alt success
+    pub is_parallel: bool,     // "& alt ..."
     pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GroupElse {
-    pub label: Option<String>,
-    /// else success
+    pub label: Option<String>, // else success
     pub source_location: SourceLocation,
 }
 
