@@ -527,8 +527,16 @@ fn resolve_named_type(original: &Type, canonical: &Type) -> ResolvedType {
     }
 
     // For typedef/type-alias, canonical declaration usually yields stable target id.
+    // Exception: well-known system/STL aliases (e.g. `std::string`) canonicalize into
+    // deep, unreadable implementation-detail templates (`basic_string<char, ...>`) that
+    // no one writes in a design diagram -- keep just the alias's own name instead,
+    // ignoring any (possibly partially-defaulted) template arguments of its target.
     if is_alias_type(original) {
-        if let Some(resolved) = resolve_decl_based(canonical) {
+        if is_declared_in_external_or_system_header(original) {
+            if let Some(decl) = original.get_declaration() {
+                return ResolvedType::UserDefined(build_entity_id_from_decl(&decl));
+            }
+        } else if let Some(resolved) = resolve_decl_based(canonical) {
             return resolved;
         }
     }
