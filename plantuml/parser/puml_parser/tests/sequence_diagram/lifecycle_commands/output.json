@@ -6,6 +6,10 @@
         "ActivateCmd": {
           "participant": {
             "identifier": "alice"
+          },
+          "source_location": {
+            "file": "",
+            "line": 15
           }
         }
       },
@@ -13,6 +17,10 @@
         "ActivateCmd": {
           "participant": {
             "identifier": "bob"
+          },
+          "source_location": {
+            "file": "",
+            "line": 16
           }
         }
       },
@@ -20,6 +28,10 @@
         "DeactivateCmd": {
           "participant": {
             "identifier": "alice"
+          },
+          "source_location": {
+            "file": "",
+            "line": 17
           }
         }
       },
@@ -27,6 +39,10 @@
         "DestroyCmd": {
           "participant": {
             "identifier": "bob"
+          },
+          "source_location": {
+            "file": "",
+            "line": 18
           }
         }
       },
@@ -34,6 +50,10 @@
         "ActivateCmd": {
           "participant": {
             "identifier": "peter"
+          },
+          "source_location": {
+            "file": "",
+            "line": 19
           }
         }
       },
@@ -41,6 +61,10 @@
         "DeactivateCmd": {
           "participant": {
             "identifier": "peter"
+          },
+          "source_location": {
+            "file": "",
+            "line": 20
           }
         }
       }
