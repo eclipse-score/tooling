@@ -197,6 +197,37 @@ def resolve_plantuml_command(required: bool = True, graphviz_dot_path: Optional[
     return "%s%s%s" % (plantuml_path, include_flag, layout_flag)
 
 
+def init_hermetic_tools(app: Any, config: Any) -> None:
+    """Sphinx "config-inited" listener: resolve the hermetic PlantUML/Graphviz
+    tool paths into config.graphviz_dot / config.plantuml.
+
+    Must run as a "config-inited" listener, not a module-level conf.py
+    assignment. Sphinx's chdir(confdir) (see sphinx.config.eval_config_file)
+    only wraps evaluating conf.py itself, so cwd is back at the execroot by
+    the time "config-inited" fires -- which is exactly what
+    resolve_graphviz_dot()/resolve_plantuml_command()'s internal
+    os.path.abspath() calls need, since sphinx_module.bzl's
+    _hermetic_tool_env() hands them execroot-relative paths. A module-level
+    call running inside the chdir would resolve those paths against confdir
+    instead, silently producing a wrong (but plausible-looking) absolute
+    path. Mirrors sphinx_module_ext.py's init_external_needs, which fixes
+    the identical cwd mismatch for needs_external_needs.json.
+
+    config.graphviz_dot / config.plantuml are config values already
+    registered by sphinx.ext.graphviz / sphinxcontrib.plantuml's own
+    setup() (via app.add_config_value); this only overrides their value,
+    the same pattern sphinx_module_ext.py uses for config.needs_external_needs.
+
+    Args:
+        app: Sphinx application object (unused; kept for the "config-inited"
+            listener signature).
+        config: Sphinx configuration object.
+    """
+    graphviz_dot = resolve_graphviz_dot()
+    config.graphviz_dot = graphviz_dot
+    config.plantuml = resolve_plantuml_command(graphviz_dot_path=graphviz_dot)
+
+
 # ---------------------------------------------------------------------------
 # sphinx-needs schema, loaded from the upstream S-CORE metamodel
 # ---------------------------------------------------------------------------
@@ -260,6 +291,7 @@ __all__ = [
     "resolve_graphviz_dot",
     "resolve_fta_metamodel_dir",
     "resolve_plantuml_command",
+    "init_hermetic_tools",
     "load_metamodel_needs_schema",
     # Re-exported so consumers only need one import for both needs-loading
     # and hermetic-tool concerns.

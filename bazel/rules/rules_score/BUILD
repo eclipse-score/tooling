@@ -135,6 +135,7 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         ":bazel_sphinx_needs",
+        ":sphinx_conf_helpers",
         requirement("sphinx"),
     ],
 )

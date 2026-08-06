@@ -115,18 +115,23 @@ needs_id_regex = _needs_schema["needs_id_regex"]
 # ---------------------------------------------------------------------------
 # PLANTUML_BIN, GRAPHVIZ_DOT and FTA_METAMODEL_DIR are injected by the
 # sphinx_module Bazel rule via the action env (see _hermetic_tool_env() in
-# sphinx_module.bzl). Resolution (path rationale, hermeticity requirements,
-# the FTA include-path JVM flag, etc.) is centralised in sphinx_conf_helpers
-# so every conf.py -- this default template and any custom conf_template --
-# shares one implementation. See docs/tooling_architecture.rst
-# §"Hermetic tool path resolution".
-graphviz_dot = sphinx_conf_helpers.resolve_graphviz_dot()
+# sphinx_module.bzl). The actual `graphviz_dot`/`plantuml` config values are
+# NOT set here: this module-level scope runs inside Sphinx's chdir(confdir)
+# (see sphinx.config.eval_config_file), so os.path.abspath() calls against
+# those execroot-relative env vars would resolve against the wrong base.
+# sphinx_module_ext (listed in `extensions` above) sets them instead, from a
+# "config-inited" listener that fires once cwd is back at the execroot --
+# see sphinx_conf_helpers.init_hermetic_tools. Resolution itself (path
+# rationale, hermeticity requirements, the FTA include-path JVM flag, etc.)
+# is centralised there so every conf.py -- this default template and any
+# custom conf_template that also loads sphinx_module_ext -- shares one
+# implementation. See docs/tooling_architecture.rst §"Hermetic tool path
+# resolution".
+#
+# The two lines below are fixed literals, not tool-path dependent, so they
+# stay as ordinary module-level conf.py assignments.
 graphviz_output_format = "svg"
-
 plantuml_output_format = "svg_obj"
-# Reuses the graphviz_dot already resolved above instead of re-resolving
-# GRAPHVIZ_DOT a second time.
-plantuml = sphinx_conf_helpers.resolve_plantuml_command(graphviz_dot_path=graphviz_dot)
 
 # HTML theme
 html_theme = "sphinx_rtd_theme"
