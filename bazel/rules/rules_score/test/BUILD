@@ -189,6 +189,20 @@ sphinx_module(
     ],
 )
 
+# Regression fixture for two-hop needs resolution: module_e_lib depends only
+# on module_b_lib, with no direct edge to module_c_lib or module_d_lib, yet
+# its index.rst references a need defined in module_d_lib (reachable only via
+# module_b_lib -> module_d_lib). needs_external_needs.json must be built from
+# the full transitive closure of needs modules (SphinxNeedsInfo.needs_modules)
+# for this to resolve -- building it from direct deps only (the pre-fix
+# behavior) can never see past one hop.
+sphinx_module(
+    name = "module_e_lib",
+    srcs = glob(["fixtures/module_e/*.rst"]),
+    index = "fixtures/module_e/index.rst",
+    deps = [":module_b_lib"],
+)
+
 # Fixture with allow_persistent_workers = True, used only to assert on the
 # resulting Sphinx-build action argv: the HTML pass must drop "--jobs auto"
 # (see worker_enabled in sphinx_module.bzl's _add_sphinx_args), while the
@@ -901,13 +915,17 @@ explicit_config_test(
 # HTML Content Validation Tests
 # ============================================================================
 
-# Test that generated HTML does not contain "Unknown need" statements
-# TODO: fix hardcoded path in check_unknown_needs.sh — pass the HTML output dir
-# via args = ["$(rootpath :module_a_lib)"] and update the script to use "$1/index.html".
+# Test that generated HTML does not contain "Unknown need" statements.
+# Covers both direct-dep needs resolution (module_a_lib) and the two-hop case
+# (module_e_lib) -- see check_unknown_needs.sh's TODO for the hardcoded-path
+# cleanup this could still use.
 sh_test(
     name = "no_unknown_needs_test",
     srcs = ["check_unknown_needs.sh"],
-    data = [":module_a_lib"],
+    data = [
+        ":module_a_lib",
+        ":module_e_lib",
+    ],
     tags = ["manual"],
 )
 

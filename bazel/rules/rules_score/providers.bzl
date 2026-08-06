@@ -281,6 +281,14 @@ SphinxNeedsInfo = provider(
     fields = {
         "needs_json_file": "Direct needs.json file for this module",
         "needs_json_files": "Depset of needs.json files including transitive dependencies",
+        "needs_modules": "Depset of struct(name, needs_json_file), one entry per " +
+                         "module transitively required by this one, including this " +
+                         "module itself. Self-inclusive union, same shape/rationale " +
+                         "as SphinxModuleInfo.transitive_modules -- used to build " +
+                         "needs_external_needs.json from the full transitive closure " +
+                         "(direct deps only would miss a need defined more than one " +
+                         "hop away), with base_url = <module_name> truthful for every " +
+                         "entry only because the HTML merge is flat.",
     },
 )
 FilteredExecpathInfo = provider(
