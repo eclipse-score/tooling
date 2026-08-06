@@ -51,10 +51,10 @@ def feature_requirements(
         deps: Optional list of requirement targets (e.g. assumed_system_requirements)
             whose TRLC records are needed for cross-reference parsing.  These
             targets must provide TrlcProviderInfo.
-        spec: Optional TRLC specification target providing RSL type definitions.
-            Defaults to the S-CORE requirements model
+        spec: TRLC specification target(s) providing RSL type definitions.
+            Accepts a single label or a list of labels; all are merged into the
+            spec passed to TRLC.  Defaults to the S-CORE requirements model
             (``@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model``).
-            Override this when using a custom requirements model.
         lobster_config: Optional Lobster extraction config label. Defaults to the
             S-CORE feature requirement config.
         visibility: Bazel visibility specification for the generated targets.

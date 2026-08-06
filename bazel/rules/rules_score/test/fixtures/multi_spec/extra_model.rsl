@@ -1,0 +1,22 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+
+// Project-specific model extension (fixture for multi-spec tests).
+// Uses a distinct package name — TRLC does not allow two RSL files with the
+// same package declaration.
+package ProjectReq
+
+type ProjectNote "A project-specific note for internal tracking." {
+    description "Note content."
+                String
+}
