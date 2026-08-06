@@ -320,6 +320,19 @@ def _score_needs_impl(ctx):
     )
     transitive_needs = [dep[SphinxNeedsInfo].needs_json_files for dep in ctx.attr.deps if SphinxNeedsInfo in dep]
     needs_json_files = depset([needs_output], transitive = transitive_needs)
+
+    # Self-inclusive union (mirrors SphinxModuleInfo.transitive_modules): each
+    # dep's own needs_modules already contains itself, so unioning deps'
+    # depsets yields the full flat closure without this module needing to add
+    # each dep individually on top. Consumed by _score_html_impl to build
+    # needs_external_needs.json from every module transitively required, not
+    # just direct deps -- otherwise a :need: reference more than one hop away
+    # can never resolve.
+    transitive_needs_modules = [dep[SphinxNeedsInfo].needs_modules for dep in ctx.attr.deps if SphinxNeedsInfo in dep]
+    needs_modules = depset(
+        [struct(name = _needs_output_prefix(ctx.label.name), needs_json_file = needs_output)],
+        transitive = transitive_needs_modules,
+    )
     return [
         DefaultInfo(
             files = needs_json_files,
@@ -327,6 +340,7 @@ def _score_needs_impl(ctx):
         SphinxNeedsInfo(
             needs_json_file = needs_output,  # Direct file only
             needs_json_files = needs_json_files,  # Transitive depset
+            needs_modules = needs_modules,  # Transitive, self-inclusive, keyed by base module name
         ),
     ]
 
@@ -345,17 +359,27 @@ def _score_html_impl(ctx):
     source_prefix = ctx.label.name
 
     sphinx_toolchain = ctx.toolchains["//bazel/rules/rules_score:toolchain_type"].sphinxinfo
-    needs_external_needs = {}
-    for dep in ctx.attr.needs:
-        if SphinxNeedsInfo in dep:
-            dep_name = _needs_output_prefix(dep.label.name)
-            needs_external_needs[dep.label.name] = {
-                "base_url": dep_name,  # Relative path to the subdirectory where dep HTML is copied
-                "json_path": dep[SphinxNeedsInfo].needs_json_file.path,  # Use direct file
-                "id_prefix": "",
-                "css_class": "",
-                "version": "1.0",
-            }
+
+    # Built from the full transitive closure (each direct needs-dep's own
+    # SphinxNeedsInfo.needs_modules is already self-inclusive), not just
+    # direct deps -- a :need: reference more than one hop away could
+    # otherwise never resolve. base_url = module.name (no path prefix) is
+    # only truthful because the HTML merge below is flat: every transitive
+    # module lands at that exact depth-1 path in the published site,
+    # regardless of how many dependency hops away it is.
+    transitive_needs_modules = depset(
+        transitive = [dep[SphinxNeedsInfo].needs_modules for dep in ctx.attr.needs if SphinxNeedsInfo in dep],
+    ).to_list()
+    needs_external_needs = {
+        module.name: {
+            "base_url": module.name,  # Relative path to the subdirectory where dep HTML is copied
+            "json_path": module.needs_json_file.path,
+            "id_prefix": "",
+            "css_class": "",
+            "version": "1.0",
+        }
+        for module in transitive_needs_modules
+    }
     needs_external_needs_json = ctx.actions.declare_file(ctx.label.name + "/needs_external_needs.json")
     ctx.actions.write(
         output = needs_external_needs_json,
@@ -400,11 +424,42 @@ def _score_html_impl(ctx):
     # Because plain files and generated files are in different directories,
     # we need to merge the two into a single directory.
     index_source_file = _get_index_file(ctx)
+
+    # An index also listed in renamed_srcs would relocate to two different
+    # destinations under the two relocation formulas below (srcs: strip
+    # ctx.attr.strip_prefix from short_path; renamed_srcs: the dict's own
+    # explicit destination path), so --index_file would end up pointing at
+    # the wrong one -- surfacing as an opaque "index file does not exist"
+    # from the Sphinx build action instead of a clear build-time error.
+    # docs_library_deps can't be checked here: its relocation is
+    # provider-driven, not visible until the srcs loop below has already
+    # run, so that combination remains an unguarded gap.
+    for renamed_src_target in ctx.attr.renamed_srcs.keys():
+        if renamed_src_target.label == ctx.attr.index.label:
+            fail(
+                "sphinx_module '{}': 'index' ({}) must not also appear as a renamed_srcs key -- ".format(
+                    ctx.label.name,
+                    ctx.attr.index.label,
+                ) +
+                "srcs and renamed_srcs relocate a file to two different destinations, so " +
+                "--index_file would point at the wrong one. Remove it from renamed_srcs.",
+            )
+
     relocated_index_file = ""
     for orig_file in ctx.files.srcs:
         dest = _relocate(orig_file)
         if orig_file.path == index_source_file.path:
             relocated_index_file = dest.path
+
+    if not relocated_index_file:
+        fail(
+            "sphinx_module '{}': 'index' ({}) did not resolve to a relocated path -- ".format(
+                ctx.label.name,
+                ctx.attr.index.label,
+            ) +
+            "its file must also appear in 'srcs'. An index reachable only via 'renamed_srcs' " +
+            "or 'docs_library_deps' is not currently supported.",
+        )
 
     sphinx_html_output = ctx.actions.declare_directory(ctx.label.name + "/_html")
 
@@ -579,7 +634,7 @@ def sphinx_module(
         deps = [],
         docs_library_deps = [],
         renamed_srcs = {},
-        strip_prefix = "",
+        strip_prefix = None,
         extra_opts = [],
         extra_opts_targets = [],
         allow_persistent_workers = False,
@@ -598,10 +653,13 @@ def sphinx_module(
         docs_library_deps: {type}`list[label]` of {obj}`sphinx_docs_library` targets.
         renamed_srcs: {type}`dict[label, str]` Doc source files that are renamed
                     on their way into the Sphinx source tree.
-        strip_prefix: {type}`str` A prefix to remove from the file paths of the
+        strip_prefix: {type}`str | None` A prefix to remove from the file paths of the
                     source files. e.g., given `//sphinxdocs/docs:foo.md`, stripping `docs/` makes
                     Sphinx see `foo.md` in its generated source directory. If not
-                    specified, then {any}`native.package_name` is used.
+                specified (None, the default), {any}`native.package_name` + "/" is
+                used. Pass "" explicitly to strip nothing -- unlike a plain string
+                default, None lets that explicit "" survive, since "" and "not
+                specified" are different intents.
         extra_opts: {type}`list[str]` Additional string options to pass onto Sphinx building.
                     On each provided option, a location expansion is performed.
                     See {any}`ctx.expand_location`.
@@ -616,7 +674,7 @@ def sphinx_module(
         visibility: Bazel visibility
     """
     package = native.package_name()
-    resolved_strip_prefix = strip_prefix if strip_prefix else (package + "/" if package else "")
+    resolved_strip_prefix = strip_prefix if strip_prefix != None else (package + "/" if package else "")
 
     # conf.py generation is a private implementation detail consumed only by
     # the sibling _score_needs/_score_html targets below (same package) --
