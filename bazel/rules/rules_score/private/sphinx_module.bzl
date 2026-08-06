@@ -20,9 +20,10 @@ load("//bazel/rules/rules_score:providers.bzl", "FilteredExecpathInfo", "SphinxI
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 # Maps the //bazel/rules/rules_score:verbosity build setting (see
-# verbosity.bzl) to the sphinx-build CLI flags that achieve it. Kept in
-# Starlark (not sphinx_wrapper.py) now that the wrapper is a thin,
-# argv-passthrough shim -- see sphinx_wrapper.py's module docstring.
+# verbosity.bzl) to the sphinx-build CLI flags that achieve it. Lives here in
+# Starlark rather than in a wrapper script: the Sphinx build binary is
+# rules_python's own sphinx_build.py (see score_sphinx_toolchain), which
+# takes plain sphinx-build argv with no score-specific flags of its own.
 _SPHINX_VERBOSITY_FLAGS = {
     "warn": ["-q"],
     "info": [],
