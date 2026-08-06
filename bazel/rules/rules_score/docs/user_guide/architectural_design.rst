@@ -207,7 +207,7 @@ Any component-type element (``<<SEooC>>``, ``<<component>>``, or ``<<unit>>``) c
 
             interface "InternalInterface" as InternalInterface
             unit_1 -l-( InternalInterface
-            unit_2 )-r- InternalInterface
+            unit_2 -r- InternalInterface
         }
     }
 
