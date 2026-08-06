@@ -18,20 +18,31 @@
 TEST(MyUnitTest, ConfigureAndGet) {
   ::testing::Test::RecordProperty(
       "lobster-tracing", "MinimalExample.FEAT_001 MinimalExample.FEAT_002");
+
   ::testing::Test::RecordProperty("given",
                                   "a default-constructed MyUnit instance");
-  ::testing::Test::RecordProperty("when",
-                                  "configure is called with a known key");
-  ::testing::Test::RecordProperty("then", "get returns the configured value");
+  MyUnit unit{};
 
-  MyUnit unit;
+  ::testing::Test::RecordProperty(
+      "when",
+      "When configure is called with a key that hasn't been configured yet");
   unit.configure("mode", "fast");
+
+  ::testing::Test::RecordProperty("then", "get returns the configured value");
   EXPECT_EQ(unit.get("mode"), "fast");
 }
 
 TEST(MyUnitTest, MissingKeyReturnsEmpty) {
   ::testing::Test::RecordProperty("lobster-tracing", "MinimalExample.FEAT_002");
 
-  MyUnit unit;
-  EXPECT_EQ(unit.get("undefined"), "");
+  ::testing::Test::RecordProperty("given",
+                                  "a default-constructed MyUnit instance");
+  MyUnit unit{};
+
+  ::testing::Test::RecordProperty(
+      "when", "When get is called with a key that hasn't been configured yet");
+  const auto retrieved_value = unit.get("undefined");
+
+  ::testing::Test::RecordProperty("then", "get returns an empty value");
+  EXPECT_EQ(retrieved_value, "");
 }

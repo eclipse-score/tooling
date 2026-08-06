@@ -22,9 +22,13 @@ It shall make sure that the same architectural elements exist on both sides and 
 
 ## What is Validated
 
-All comparisons are case-insensitive. Names are derived from the PlantUML
-`alias` when present, otherwise from the `id`. On the Bazel IDs are generated
-from the target name.
+All comparisons are case-insensitive: both Bazel target short names and
+PlantUML aliases/IDs are normalized to lowercase before matching, so a Bazel
+target `Component_X` matches a PlantUML entity `as COMPONENT_X`. Names are
+derived from the PlantUML `alias` when present, otherwise from the `id`. On
+the Bazel side, IDs are generated from the target's short name (the part
+after the last `:` in the label), also lowercased. Parent aliases are
+lowercased the same way when resolving parent-child relationships.
 
 ### Dependable Element Consistency
 
@@ -97,6 +101,32 @@ the dependable element alias as parent. More deeply nested components use their
 immediate enclosing component alias as parent.
 *(Requirements: {requirement:downstream-ref}`Tools.BazelComponentNameCaseInsensitive`, {requirement:downstream-ref}`Tools.BazelComponentParentContext`)*
 
+### Bazel Label Format Validation
+
+Every Bazel label must define a target name. A label such as `@//pkg:` (a
+colon with nothing following it) has no target name and is rejected with a
+`[Design]` error before any entity matching happens.
+
+### Duplicate Entity Detection
+
+The validator detects when two entities of the same kind normalize to the same
+key (same lowercased name under the same parent):
+
+- **In Bazel:** if two different Bazel targets (e.g. under different
+  packages) would both map to the same dependable-element, component, or unit
+  key, a `[Design]` error is reported naming both Bazel labels.
+- **In the PlantUML diagram:** entity IDs are matched case-insensitively, so
+  two entities such as `MyDE` and `myDE` collide. A `[Design]` error is
+  reported showing both source file locations, even if their stereotypes
+  differ.
+
+### Parent Reference Validity
+
+Every PlantUML entity's `parent_id` (if present) must resolve to another
+entity defined in the same component diagram. An entity referencing an
+undefined parent is rejected with a `[Design]` error naming the missing
+parent ID.
+
 ## Failure Cases
 
 | Failure case | Validation rule |
@@ -107,40 +137,24 @@ immediate enclosing component alias as parent.
 | Extra component in PlantUML | Component Consistency |
 | Missing unit in PlantUML | Unit Consistency |
 | Extra unit in PlantUML | Unit Consistency |
+| Invalid Bazel label (no target name after `:`) | Bazel Label Format Validation |
+| Duplicate Bazel entity key (same name/parent from different labels) | Duplicate Entity Detection |
+| Duplicate PlantUML entity ID (case-insensitive collision) | Duplicate Entity Detection |
+| PlantUML entity references an undefined parent | Parent Reference Validity |
 
 ## PlantUML Stereotype Reference
 
-The validator identifies elements by their **stereotype**, not by the PlantUML keyword. Both `package` and `component` keywords are accepted for each role.
+The validator identifies elements by their **stereotype**, not by the PlantUML keyword. Both `package` and `component` keywords are accepted for each role, but the stereotype must match exactly: a Bazel `component` target will not match a PlantUML entity marked `<<SEooC>>`, even though both use compatible keywords.
 
 | Stereotype | Valid PlantUML keywords | Meaning | Bazel rule |
 |---|---|---|---|
-| `<<SEooC>>` | `package`, `component` | Safety Element out of Context boundary; may own `portin`/`portout` ports | `dependable_element` |
-| `<<component>>` | `component`, `package` | Architectural component; may own `portin`/`portout` ports | `component` |
+| `<<SEooC>>` | `package`, `component` | Safety Element out of Context boundary | `dependable_element` |
+| `<<component>>` | `component`, `package` | Architectural component | `component` |
 | `<<unit>>` | `component`, `package` | Leaf implementation unit | `unit` |
 
-### Port and Interface Binding
-
-Elements with stereotype `<<SEooC>>` or `<<component>>` may declare ports and bind them to interfaces:
-
-```text
-package "MySeooc" as MySeooc <<SEooC>> {
-    portin  " " as p_in   ' required interface port
-    portout " " as p_out  ' provided interface port
-}
-
-interface "IRequired" as IRequired
-interface "IProvided"  as IProvided
-
-p_in  -( IRequired : requires   ' required binding
-p_out )- IProvided : provides   ' provided binding
-```
-
-**Rules:**
-
-- `portin` / `portout` must be declared inside the `<<SEooC>>` or `<<component>>` element.
-- Use `-(` for required (incoming) and `)-` for provided (outgoing) interface bindings.
-- Plain `package` **without** a stereotype cannot carry interface bindings.
-- Elements with other stereotypes (e.g. `actor`, `database`) are not valid on the left side of a binding.
+Port declarations and interface bindings (`portin`/`portout`, `-(`/`)-`) are
+not validated by this validator; they are checked by the internal/public API
+and sequence validators instead.
 
 ## Debug Output
 

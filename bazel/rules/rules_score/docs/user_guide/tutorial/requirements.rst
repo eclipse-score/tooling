@@ -28,6 +28,7 @@ surrounding system context:
 
 .. literalinclude:: ../../examples/minimal/requirements/asr.trlc
    :language: text
+   :lines: 14-
 
 Feature Requirements
 ---------------------
@@ -38,6 +39,7 @@ requirement via ``derived_from``:
 
 .. literalinclude:: ../../examples/minimal/requirements/feature_requirements.trlc
    :language: text
+   :lines: 14-
 
 BUILD
 ------
@@ -74,7 +76,8 @@ BUILD
    )
 
 To validate TRLC syntax and Traceability within the requirements, each of the requirements
-bazel targets exposes via a marco already a test target, which can be run via e.g.:
+Bazel targets exposes via a macro already a test target, which can be run from the "root"
+of the example itself (`bazel/rules/rules_score/examples/seooc`) via e.g.:
 ``bazel test //:assumed_system_requirements_test``.
 
 → Full guide: :doc:`../requirements`

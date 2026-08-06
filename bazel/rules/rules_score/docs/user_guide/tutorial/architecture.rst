@@ -84,6 +84,6 @@ in Bazel. Therefore following bazel rules are available:
        tests = [],
    )
 
-Once the architecture is in place, the build parses the PlantUML diagram and validates it against the Bazel model. It verifies element names, structural hierarchy, and consistency between the declared diagram and the implemented architecture.
+Once the architecture is in place, the build of the dependable element parses the PlantUML diagram and validates it against the Bazel model. It verifies element names, structural hierarchy, and consistency between the declared diagram and the implemented architecture.
 
 → Full guide: :doc:`../architectural_design`
