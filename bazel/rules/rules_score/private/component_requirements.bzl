@@ -55,7 +55,9 @@ def component_requirements(
             (``@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model``).
             Override this when using a custom requirements model.
         lobster_config: Optional Lobster extraction config label. Defaults to the
-            S-CORE component requirement config.
+            S-CORE component requirement config. Its conversion rules always
+            include `derived_from_aou` as a tracing target (resolved only at
+            the dependable_element level, which has a "Received AoUs" level).
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:

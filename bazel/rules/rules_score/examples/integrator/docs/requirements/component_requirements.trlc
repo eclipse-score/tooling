@@ -19,13 +19,15 @@ ScoreReq.CompReq COMP_INT_001 {
     description = "The startup module shall call the SEooC initialization routine before entering the main loop"
     safety = ScoreReq.Asil.B
     derived_from = [Integrator.FEAT_INT_001@1]
+    derived_from_aou = ["SampleType.SampleAoU"]
     version = 1
 }
 
 ScoreReq.CompReq COMP_INT_002 {
-    description = "The cyclic task shall invoke the validation interface every 10ms using a hardware timer interrupt"
+    description = "The cyclic task shall invoke the validation interface every 10ms using a hardware timer interrupt, satisfying the underlying library's timing constraint"
     safety = ScoreReq.Asil.B
     derived_from = [Integrator.FEAT_INT_002@1]
+    derived_from_aou = ["OtherLibrary.TimingConstraint"]
     version = 1
 }
 

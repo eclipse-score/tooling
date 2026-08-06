@@ -79,6 +79,8 @@ tuple CompReqSourceId {
 type CompReq "Component-level requirement allocated to a specific software component." extends RequirementSafety {
     derived_from "Versioned references to the FeatReq or AssumedSystemReq items this component requirement is derived from. Omit only for component-internal requirements with no feature-level parent."
                 CompReqSourceId[1 .. *]
+    derived_from_aou "Free-text identifiers of received Assumptions of Use (e.g. \"OtherLibrary.TimingConstraint\") that this component requirement handles. Used at the dependable_element level to trace received AoUs to the component requirement that implements them. Plain strings (no cross-module TRLC reference), matched against the received AoU lobster item names."
+                optional String[0 .. *]
 }
 
 tuple CompReqId {

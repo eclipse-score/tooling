@@ -194,20 +194,23 @@ def _component_test_case_coverage_lock_test_impl(ctx):
         "Component with test_case_coverage_lock should provide ComponentInfo",
     )
 
-    # DefaultInfo.files must contain the lobster report (non-empty).
+    # DefaultInfo.files must contain this component's own architecture/unit-test
+    # lobster files (non-empty). The component no longer builds an aggregated
+    # traceability report of its own — that happens once, at the
+    # dependable_element level.
     output_files = target_under_test[DefaultInfo].files.to_list()
     asserts.true(
         env,
         len(output_files) > 0,
-        "Component with test_case_coverage_lock should declare output files (expected lobster report); got: %s" % output_files,
+        "Component with test_case_coverage_lock should declare output files (expected .lobster files); got: %s" % output_files,
     )
 
-    # At least one output file should be named like the lobster report.
-    lobster_report_present = any([f.basename.endswith(".lobster_report") or f.extension == "html" or f.basename.endswith(".lobster") for f in output_files])
+    # At least one output file should be a .lobster traceability file.
+    lobster_file_present = any([f.basename.endswith(".lobster") for f in output_files])
     asserts.true(
         env,
-        lobster_report_present,
-        "Component with test_case_coverage_lock should declare a lobster report output; got: %s" % [f.basename for f in output_files],
+        lobster_file_present,
+        "Component with test_case_coverage_lock should declare a .lobster output; got: %s" % [f.basename for f in output_files],
     )
 
     return analysistest.end(env)

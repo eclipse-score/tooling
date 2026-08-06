@@ -24,7 +24,7 @@ package "Inputs" {
 
 package "component rule\n(component.bzl)" {
   [subrule_lobster_gtest] as subrule
-  [_component_test\n(test_case_coverage_lock attr)] as rule_test
+  [_component_rule\n(test_case_coverage_lock attr)] as rule_test
   [_component_update\n(.update target)] as rule_update
 }
 

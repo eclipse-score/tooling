@@ -110,6 +110,7 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         requirement("pyyaml"),
+        "@lobster//lobster/common",
     ],
 )
 

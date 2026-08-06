@@ -21,7 +21,9 @@ or risk that is mitigated when this assumption is fulfilled.
 
 Traceability to requirements is established at the Bazel level via the ``deps``
 attribute on the ``assumptions_of_use`` rule — there is no TRLC ``derived_from``
-or ``satisfies`` field on ``AoU``.
+or ``satisfies`` field on ``AoU`` itself. A dependent component requirement can,
+however, declare that it implements a received AoU via ``derived_from_aou``
+(see `AoU Forwarding`_ below).
 
 .. code-block:: text
    :caption: examples/seooc/docs/aous.trlc
@@ -83,15 +85,45 @@ is forwarded rather than handled locally:
           calls to the library do not exceed the 10ms cycle time constraint
           imposed by the underlying other_seooc dependency.
 
-**Handling forwarded AoUs in the dependee**
-Forwarded AoUs appear as a "Forwarded AoUs" tier in the dependee's lobster
-traceability report. The dependee must handle each forwarded AoU by one of:
+**Handling AoUs received in the dependee**
+Every AoU a dependable element receives (own AoUs forwarded automatically from
+a dependency, plus anything that dependency itself chain-forwarded) appears as
+an item in a "Received AoUs" tier in the dependee's lobster traceability
+report. Each received AoU must be covered by exactly one of:
 
-- Linking it to a component requirement that addresses the assumption
-- Linking it to a test that verifies the assumption is met
-- Chain-forwarding it further (with justification) to its own dependees
+- **Handling it locally**: a component requirement's ``derived_from_aou`` field
+  names the AoU it implements (see below). This shows up as "Component
+  Requirements" coverage in the report.
+- **Chain-forwarding it further** (with justification) via ``aou_forwarding``,
+  to be handled by this element's own dependees instead. This shows up as
+  "Forwarded AoUs" coverage in the report.
 
-If a forwarded AoU is not handled, the ``bazel test`` traceability check will fail.
+If a received AoU is neither handled nor forwarded, the ``bazel test``
+traceability check fails (in ``maturity = "release"``; in
+``maturity = "development"`` it is only reported as a warning).
+
+**Handling a received AoU with a component requirement**
+Add the AoU's identifier (``PackageName.RecordName``, matching the name used
+in the upstream ``AoU`` TRLC record, without ``@version``) to the
+``derived_from_aou`` field of the ``CompReq`` that implements it:
+
+.. code-block:: text
+   :caption: examples/integrator/docs/requirements/component_requirements.trlc
+
+    ScoreReq.CompReq COMP_INT_001 {
+        description = "The startup module shall call the SEooC initialization routine before entering the main loop"
+        safety = ScoreReq.Asil.B
+        derived_from = [Integrator.FEAT_INT_001@1]
+        derived_from_aou = ["SampleType.SampleAoU"]
+        version = 1
+    }
+
+``derived_from_aou`` is a plain free-text field (not a TRLC cross-module
+reference), so no ``import`` of the upstream AoU's package is needed. It is
+converted directly to a lobster trace reference and matched, by name, against
+the AoUs this dependable element actually receives -- a typo or an AoU that is
+not actually received will fail the build with an "unknown tracing target"
+error rather than silently doing nothing.
 
 **Example: three-level forwarding chain** (the real working code for this
 example lives in ``examples/some_other_library``, ``examples/seooc``, and
@@ -105,7 +137,8 @@ example lives in ``examples/some_other_library``, ``examples/seooc``, and
                                      → chain-forwards received TimingConstraint via aou_forwarding.yaml
         ↑ (deps)
     integrator_seooc                → receives SampleType.SampleAoU (auto-forwarded)
-                                       and OtherLibrary.TimingConstraint (chain-forwarded), must handle both
+                                       and OtherLibrary.TimingConstraint (chain-forwarded)
+                                     → handles both locally via derived_from_aou (no further dependees)
 
 .. code-block:: starlark
    :caption: examples/seooc/BUILD
