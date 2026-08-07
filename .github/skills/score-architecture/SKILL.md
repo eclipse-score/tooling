@@ -268,7 +268,7 @@ participant "Unit 1" as unit_1 <<unit>>
 participant "Unit 2" as unit_2 <<unit>>
 
 unit_1 -> unit_2 : GetData()
-unit_2 --> unit_1 : return : Data*
+return Data*
 @enduml
 ```
 
