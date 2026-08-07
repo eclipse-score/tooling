@@ -174,8 +174,11 @@ end
 loop Until success
     alt condition met
         break
+            Actor1 -> Actor2 : Abort
+        end
+    else
+        Actor1 -> Actor2 : Continue processing
     end
-    Actor1 -> Actor2 : Continue processing
 end
 
 ' ========================================
@@ -357,7 +360,7 @@ group Extended Patterns: Activation Markers
 end group
 
 group Extended Patterns: Ref Blocks
-    ref over Actor1, Actor2
+    ref over Actor1
         See other diagram for details
         [[https://example.com/reference Reference document]]
     end ref
@@ -369,7 +372,7 @@ end group
 
 group Extended Patterns: Dividers with URLs
     == Setup Phase ==
-    Actor1 -> Actor2 : Initialize
+    Actor1 -> Actor2 ** : Initialize
 
     == Processing https://example.com/docs ==
     Actor2 -> Builder : Process

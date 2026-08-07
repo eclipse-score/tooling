@@ -13,36 +13,31 @@
         "stereotype": null
       }
     ],
-    "root_interactions": [
-      {
-        "event": {
+    "root": {
+      "items": [
+        {
           "Interaction": {
-            "caller": "ExternalEndpoint",
-            "callee": "Service",
-            "method": "incoming"
+            "sender": null,
+            "receiver": "Service",
+            "message": "incoming",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
           }
         },
-        "source_location": {
-          "file": "",
-          "line": 16
-        },
-        "branches_node": [
-          {
-            "event": {
-              "Return": {
-                "caller": "ExternalEndpoint",
-                "callee": "Service",
-                "return_content": "outgoing"
-              }
-            },
+        {
+          "Interaction": {
+            "sender": "Service",
+            "receiver": null,
+            "message": "outgoing",
             "source_location": {
               "file": "",
               "line": 17
-            },
-            "branches_node": []
+            }
           }
-        ]
-      }
-    ]
+        }
+      ]
+    }
   }
 }
