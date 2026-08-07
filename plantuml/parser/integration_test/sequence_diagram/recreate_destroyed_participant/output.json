@@ -1,0 +1,73 @@
+{
+  "recreate_destroyed_participant.puml": {
+    "name": "recreate_destroyed_participant",
+    "participants": [
+      {
+        "display_name": "A",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "B",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "A",
+            "receiver": "B",
+            "message": "first()",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          }
+        },
+        {
+          "Lifecycle": {
+            "participant": "B",
+            "action": "Destroy",
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
+          }
+        },
+        {
+          "Lifecycle": {
+            "participant": "B",
+            "action": "Create",
+            "source_location": {
+              "file": "",
+              "line": 18
+            }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "A",
+            "receiver": "B",
+            "message": "afterCreate()",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        }
+      ]
+    }
+  }
+}

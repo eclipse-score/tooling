@@ -11,12 +11,20 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml sequence_diagram
+@startuml sequence_group_container
 
-participant "Unit 1" as unit_1 <<unit>>
-participant "Unit 2" as unit_2 <<unit>>
+participant Client
+participant Service
 
-unit_1 -> unit_2 : GetData()
-return Ack
+group Visual grouping
+    Client -> Service : request()
+    Service -> Client : response()
+    alt accepted
+        Client -> Service : confirm()
+    else rejected
+        Service -> Client : reject()
+    end
+    Client -> Service : close()
+end
 
 @enduml

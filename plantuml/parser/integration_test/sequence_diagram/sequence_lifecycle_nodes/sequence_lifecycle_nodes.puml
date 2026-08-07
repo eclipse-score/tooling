@@ -11,12 +11,15 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml sequence_diagram
+@startuml sequence_lifecycle_nodes
 
-participant "Unit 1" as unit_1 <<unit>>
-participant "Unit 2" as unit_2 <<unit>>
+participant Client
+participant Service
 
-unit_1 -> unit_2 : GetData()
-return Ack
+Client -> Service ++ : start()
+Service -> Worker ** : create()
+Worker -> Service : done()
+Service -> Client -- : stop()
+Client -> Worker !! : destroy()
 
 @enduml

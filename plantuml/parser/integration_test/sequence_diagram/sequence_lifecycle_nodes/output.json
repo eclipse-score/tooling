@@ -1,0 +1,136 @@
+{
+  "sequence_lifecycle_nodes.puml": {
+    "name": "sequence_lifecycle_nodes",
+    "participants": [
+      {
+        "display_name": "Client",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Service",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Worker",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 20
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "Client",
+            "receiver": "Service",
+            "message": "start()",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        },
+        {
+          "Lifecycle": {
+            "participant": "Service",
+            "action": "Activate",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        },
+        {
+          "Lifecycle": {
+            "participant": "Worker",
+            "action": "Create",
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Service",
+            "receiver": "Worker",
+            "message": "create()",
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Worker",
+            "receiver": "Service",
+            "message": "done()",
+            "source_location": {
+              "file": "",
+              "line": 21
+            }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Service",
+            "receiver": "Client",
+            "message": "stop()",
+            "source_location": {
+              "file": "",
+              "line": 22
+            }
+          }
+        },
+        {
+          "Lifecycle": {
+            "participant": "Service",
+            "action": "Deactivate",
+            "source_location": {
+              "file": "",
+              "line": 22
+            }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Client",
+            "receiver": "Worker",
+            "message": "destroy()",
+            "source_location": {
+              "file": "",
+              "line": 23
+            }
+          }
+        },
+        {
+          "Lifecycle": {
+            "participant": "Worker",
+            "action": "Destroy",
+            "source_location": {
+              "file": "",
+              "line": 23
+            }
+          }
+        }
+      ]
+    }
+  }
+}

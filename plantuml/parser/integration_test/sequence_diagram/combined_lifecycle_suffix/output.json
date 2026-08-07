@@ -1,0 +1,83 @@
+{
+  "combined_lifecycle_suffix.puml": {
+    "name": "combined_lifecycle_suffix",
+    "participants": [
+      {
+        "display_name": "alice",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "bob",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "alice",
+            "receiver": "bob",
+            "message": "hello",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          }
+        },
+        {
+          "Lifecycle": {
+            "participant": "alice",
+            "action": "Deactivate",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          }
+        },
+        {
+          "Lifecycle": {
+            "participant": "bob",
+            "action": "Activate",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "alice",
+            "receiver": "bob",
+            "message": "step1",
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
+          }
+        },
+        {
+          "Lifecycle": {
+            "participant": "alice",
+            "action": "Deactivate",
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
+          }
+        }
+      ]
+    }
+  }
+}
