@@ -1,0 +1,114 @@
+{
+  "sequence_group_container.puml": {
+    "name": "sequence_group_container",
+    "participants": [
+      {
+        "display_name": "Client",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Service",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "Client",
+            "receiver": "Service",
+            "message": "request()",
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Service",
+            "receiver": "Client",
+            "message": "response()",
+            "source_location": {
+              "file": "",
+              "line": 21
+            }
+          }
+        },
+        {
+          "Branch": {
+            "cases": [
+              {
+                "condition": "accepted",
+                "block": {
+                  "items": [
+                    {
+                      "Interaction": {
+                        "sender": "Client",
+                        "receiver": "Service",
+                        "message": "confirm()",
+                        "source_location": {
+                          "file": "",
+                          "line": 23
+                        }
+                      }
+                    }
+                  ]
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 22
+                }
+              },
+              {
+                "condition": "rejected",
+                "block": {
+                  "items": [
+                    {
+                      "Interaction": {
+                        "sender": "Service",
+                        "receiver": "Client",
+                        "message": "reject()",
+                        "source_location": {
+                          "file": "",
+                          "line": 25
+                        }
+                      }
+                    }
+                  ]
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 24
+                }
+              }
+            ]
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Client",
+            "receiver": "Service",
+            "message": "close()",
+            "source_location": {
+              "file": "",
+              "line": 27
+            }
+          }
+        }
+      ]
+    }
+  }
+}

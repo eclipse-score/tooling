@@ -1,0 +1,91 @@
+{
+  "sequence_parallel_node.puml": {
+    "name": "sequence_parallel_node",
+    "participants": [
+      {
+        "display_name": "Service",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Worker",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Audit",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 18
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Parallel": {
+            "branches": [
+              {
+                "label": "primary path",
+                "block": {
+                  "items": [
+                    {
+                      "Interaction": {
+                        "sender": "Service",
+                        "receiver": "Worker",
+                        "message": "dispatch()",
+                        "source_location": {
+                          "file": "",
+                          "line": 21
+                        }
+                      }
+                    }
+                  ]
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 20
+                }
+              },
+              {
+                "label": "audit path",
+                "block": {
+                  "items": [
+                    {
+                      "Interaction": {
+                        "sender": "Service",
+                        "receiver": "Audit",
+                        "message": "record()",
+                        "source_location": {
+                          "file": "",
+                          "line": 23
+                        }
+                      }
+                    }
+                  ]
+                },
+                "source_location": {
+                  "file": "",
+                  "line": 22
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

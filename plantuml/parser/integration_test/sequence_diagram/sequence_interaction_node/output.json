@@ -1,0 +1,42 @@
+{
+  "sequence_interaction_node.puml": {
+    "name": "sequence_interaction_node",
+    "participants": [
+      {
+        "display_name": "Client",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Service",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "Client",
+            "receiver": "Service",
+            "message": "request()",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        }
+      ]
+    }
+  }
+}

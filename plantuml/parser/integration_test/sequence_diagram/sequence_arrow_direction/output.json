@@ -1,0 +1,57 @@
+{
+  "sequence_arrow_direction.puml": {
+    "name": "sequence_arrow_direction",
+    "participants": [
+      {
+        "display_name": "A",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": { "file": "", "line": 16 },
+        "stereotype": null
+      },
+      {
+        "display_name": "B",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": { "file": "", "line": 17 },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "A",
+            "receiver": "B",
+            "message": "solid right",
+            "source_location": { "file": "", "line": 19 }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "B",
+            "receiver": "A",
+            "message": "solid left",
+            "source_location": { "file": "", "line": 20 }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "A",
+            "receiver": "B",
+            "message": "dashed right",
+            "source_location": { "file": "", "line": 21 }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "B",
+            "receiver": "A",
+            "message": "dashed left",
+            "source_location": { "file": "", "line": 22 }
+          }
+        }
+      ]
+    }
+  }
+}

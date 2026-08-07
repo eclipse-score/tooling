@@ -1,0 +1,55 @@
+{
+  "sequence_early_exit_node.puml": {
+    "name": "sequence_early_exit_node",
+    "participants": [
+      {
+        "display_name": "Client",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Service",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "EarlyExit": {
+            "reason": "invalid request",
+            "block": {
+              "items": [
+                {
+                  "Interaction": {
+                    "sender": "Service",
+                    "receiver": "Client",
+                    "message": "reject()",
+                    "source_location": {
+                      "file": "",
+                      "line": 20
+                    }
+                  }
+                }
+              ]
+            },
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        }
+      ]
+    }
+  }
+}
