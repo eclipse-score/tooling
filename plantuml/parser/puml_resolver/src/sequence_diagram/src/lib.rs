@@ -11,7 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-pub mod logic_parser;
+mod error;
+mod lifecycle_validator;
+mod participant_table;
 mod sequence_resolver;
+mod sequence_tree_builder;
+mod statement_resolver;
 
-pub use sequence_resolver::{SequenceResolver, SequenceResolverError};
+pub use error::SequenceResolverError;
+pub use sequence_resolver::SequenceResolver;
