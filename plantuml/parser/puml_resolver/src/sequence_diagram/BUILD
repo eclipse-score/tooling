@@ -15,9 +15,13 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 rust_library(
     name = "puml_resolver_sequence",
     srcs = [
+        "src/error.rs",
         "src/lib.rs",
-        "src/logic_parser.rs",
+        "src/lifecycle_validator.rs",
+        "src/participant_table.rs",
         "src/sequence_resolver.rs",
+        "src/sequence_tree_builder.rs",
+        "src/statement_resolver.rs",
     ],
     crate_name = "sequence_resolver",
     crate_root = "src/lib.rs",
@@ -30,6 +34,7 @@ rust_library(
         "@crates//:log",
         "@crates//:serde",
         "@crates//:serde_json",
+        "@crates//:thiserror",
     ],
 )
 
