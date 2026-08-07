@@ -289,33 +289,7 @@ fn class_model_to_idmap(model: &ClassDiagram, source: &str) -> IdMapFile {
 
 /// Collect the unique participant names from a sequence tree.
 fn collect_participants(tree: &SequenceTree) -> HashSet<String> {
-    use sequence_logic::{Event, SequenceNode};
-
-    fn walk_nodes(nodes: &[SequenceNode], out: &mut HashSet<String>) {
-        for node in nodes {
-            match &node.event {
-                Event::Interaction(i) => {
-                    out.insert(i.caller.clone());
-                    out.insert(i.callee.clone());
-                }
-                Event::Return(r) => {
-                    out.insert(r.caller.clone());
-                    out.insert(r.callee.clone());
-                }
-                Event::Condition(_) => {}
-            }
-            walk_nodes(&node.branches_node, out);
-        }
-    }
-
-    let mut participants = HashSet::new();
-    walk_nodes(&tree.root_interactions, &mut participants);
-
-    for p in &tree.participants {
-        participants.insert(p.alias.clone().unwrap_or_else(|| p.display_name.clone()));
-    }
-
-    participants
+    tree.participant_reference_names().collect()
 }
 
 /// Produce an [`IdMapFile`] from a resolved sequence diagram.
@@ -504,7 +478,37 @@ mod tests {
     use class_diagram::{MemberVariable, Method, RelationType, Relationship, SimpleEntity};
     use component_diagram::{ComponentType, SourceLocation};
     use puml_fta::FtaNode;
-    use sequence_logic::{Event, Interaction, SequenceNode};
+    use sequence_logic::{Block, Interaction, Node, ParticipantType, SequenceParticipant};
+
+    fn sequence_interaction(sender: &str, receiver: &str) -> Node {
+        Node::Interaction(Interaction {
+            sender: Some(sender.to_string().into()),
+            receiver: Some(receiver.to_string().into()),
+            message: Some("call".to_string()),
+            source_location: SourceLocation::new("test.puml", 0),
+        })
+    }
+
+    fn sequence_tree(participants: &[&str], items: Vec<Node>) -> SequenceTree {
+        SequenceTree {
+            name: None,
+            participants: participants
+                .iter()
+                .map(|name| sequence_participant(name))
+                .collect(),
+            root: Block { items },
+        }
+    }
+
+    fn sequence_participant(name: &str) -> SequenceParticipant {
+        SequenceParticipant {
+            display_name: name.to_string(),
+            alias: None,
+            participant_type: ParticipantType::Participant,
+            source_location: SourceLocation::new("test.puml", 0),
+            stereotype: None,
+        }
+    }
 
     fn component(
         id: &str,
@@ -686,20 +690,13 @@ mod tests {
 
     #[test]
     fn sequence_participants_become_sorted_references() {
-        let interaction = |caller: &str, callee: &str| SequenceNode {
-            event: Event::Interaction(Interaction {
-                caller: caller.to_string(),
-                callee: callee.to_string(),
-                method: "call".to_string(),
-            }),
-            source_location: SourceLocation::new("test.puml", 0),
-            branches_node: Vec::new(),
-        };
-        let tree = SequenceTree {
-            name: None,
-            participants: Vec::new(),
-            root_interactions: vec![interaction("Zebra", "Alpha"), interaction("Alpha", "Mango")],
-        };
+        let tree = sequence_tree(
+            &["Zebra", "Alpha", "Mango"],
+            vec![
+                sequence_interaction("Zebra", "Alpha"),
+                sequence_interaction("Alpha", "Mango"),
+            ],
+        );
 
         let idmap = sequence_model_to_idmap(&tree, "pkg/seq.puml");
 
@@ -1162,20 +1159,10 @@ mod tests {
     #[test]
     fn write_idmap_to_file_writes_sequence_dispatch_to_disk() {
         let dir = unique_tmp_dir("write_sequence");
-        let interaction = SequenceNode {
-            event: Event::Interaction(Interaction {
-                caller: "Alpha".to_string(),
-                callee: "Beta".to_string(),
-                method: "call".to_string(),
-            }),
-            source_location: SourceLocation::new("test.puml", 0),
-            branches_node: Vec::new(),
-        };
-        let tree = SequenceTree {
-            name: None,
-            participants: Vec::new(),
-            root_interactions: vec![interaction],
-        };
+        let tree = sequence_tree(
+            &["Alpha", "Beta"],
+            vec![sequence_interaction("Alpha", "Beta")],
+        );
         let input = Path::new("some/dir/seq.puml");
 
         let output = write_idmap_to_file(
@@ -1273,43 +1260,16 @@ mod tests {
     // ── Sequence participant traversal ─────────────────────────────────────
 
     #[test]
-    fn sequence_collect_participants_traverses_returns_and_nested_branches() {
-        use sequence_logic::{Condition, ConditionType, Return};
-
-        // Deeply nested interaction inside a control block (Condition), which
-        // itself sits inside a Return node's branches. `collect_participants`
-        // must recurse through both and pick up Deep/Nested, plus the Return's
-        // own caller/callee (A/B). Condition contributes no participant itself.
-        let deep = SequenceNode {
-            event: Event::Interaction(Interaction {
-                caller: "Deep".to_string(),
-                callee: "Nested".to_string(),
-                method: "call".to_string(),
-            }),
-            source_location: SourceLocation::new("test.puml", 0),
-            branches_node: Vec::new(),
-        };
-        let control_block = SequenceNode {
-            event: Event::Condition(Condition {
-                condition_type: ConditionType::Alt,
-                condition_value: "ok?".to_string(),
-            }),
-            source_location: SourceLocation::new("test.puml", 0),
-            branches_node: vec![deep],
-        };
-        let ret = SequenceNode {
-            event: Event::Return(Return {
-                caller: "B".to_string(),
-                callee: "A".to_string(),
-                return_content: "ok".to_string(),
-            }),
-            source_location: SourceLocation::new("test.puml", 0),
-            branches_node: vec![control_block],
-        };
+    fn sequence_collect_participants_from_sequence_tree() {
         let tree = SequenceTree {
             name: None,
-            participants: Vec::new(),
-            root_interactions: vec![ret],
+            participants: vec![
+                sequence_participant("B"),
+                sequence_participant("A"),
+                sequence_participant("Deep"),
+                sequence_participant("Nested"),
+            ],
+            root: Block::default(),
         };
 
         let idmap = sequence_model_to_idmap(&tree, "pkg/seq.puml");
@@ -1321,30 +1281,16 @@ mod tests {
 
     #[test]
     fn sequence_declared_but_unused_participant_is_still_a_reference() {
-        // `Idle` is declared via a `participant` statement but never appears
-        // as a caller/callee in any message, so the interaction walk alone
-        // would miss it. `collect_participants` must merge in `tree.participants`
-        // to still emit it as a reference.
-        let interaction = SequenceNode {
-            event: Event::Interaction(Interaction {
-                caller: "Alice".to_string(),
-                callee: "Bob".to_string(),
-                method: "call".to_string(),
-            }),
-            source_location: SourceLocation::new("test.puml", 0),
-            branches_node: Vec::new(),
-        };
-        let declared_idle = sequence_logic::SequenceParticipant {
-            display_name: "Idle".to_string(),
-            alias: None,
-            participant_type: sequence_logic::ParticipantType::Participant,
-            source_location: SourceLocation::new("test.puml", 0),
-            stereotype: None,
-        };
         let tree = SequenceTree {
             name: None,
-            participants: vec![declared_idle],
-            root_interactions: vec![interaction],
+            participants: vec![
+                sequence_participant("Alice"),
+                sequence_participant("Bob"),
+                sequence_participant("Idle"),
+            ],
+            root: Block {
+                items: vec![sequence_interaction("Alice", "Bob")],
+            },
         };
 
         let idmap = sequence_model_to_idmap(&tree, "pkg/seq.puml");
