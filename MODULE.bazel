@@ -11,11 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-module(
-    name = "score_tooling",
-    version = "0.0.0",
-    compatibility_level = 1,
-)
+module(name = "score_tooling")
 
 ###############################################################################
 # Core Dependencies
