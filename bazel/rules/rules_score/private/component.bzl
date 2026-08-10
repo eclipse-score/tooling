@@ -181,19 +181,31 @@ def _component_impl(ctx):
 
     # -------------------------------------------------------------------------
     # Lobster Tracing: collect .lobster files from component_requirements targets
-    # and feature_requirements targets (needed to resolve derived_from references)
+    # and feature_requirements targets (needed to resolve derived_from references).
     # -------------------------------------------------------------------------
     req_lobster_files = []
+    req_lobster_transitive_files = []
     feat_req_lobster_files = []
     for req_target in ctx.attr.requirements:
         if ComponentRequirementsInfo in req_target:
             req_lobster_files.append(req_target[ComponentRequirementsInfo].srcs)
+            req_lobster_transitive_files.append(req_target[ComponentRequirementsInfo].srcs)
         if FeatureRequirementsInfo in req_target:
             feat_req_lobster_files.append(req_target[FeatureRequirementsInfo].srcs)
         if AssumedSystemRequirementsInfo in req_target:
             feat_req_lobster_files.append(req_target[AssumedSystemRequirementsInfo].srcs)
 
+    # Bubble up requirement lobster files from nested components so
+    # dependable_element sees the full tree, not just this component's own
+    # requirements (ComponentInfo.requirements itself is intentionally scoped
+    # to only this component's own explicitly-listed requirements).
+    for component in ctx.attr.components:
+        if ComponentInfo in component:
+            if component[ComponentInfo].requirements_transitive:
+                req_lobster_transitive_files.append(component[ComponentInfo].requirements_transitive)
+
     req_lobster_depset = depset(transitive = req_lobster_files)
+    req_lobster_transitive_depset = depset(transitive = req_lobster_transitive_files)
     feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)
 
     # Collect nested components
@@ -314,6 +326,7 @@ def _component_impl(ctx):
         ComponentInfo(
             name = ctx.label.name,
             requirements = req_lobster_depset,
+            requirements_transitive = req_lobster_transitive_depset,
             components = components_depset,
             tests = depset(
                 [gtest_lobster_file],

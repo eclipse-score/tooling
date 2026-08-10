@@ -42,8 +42,8 @@ A *dependable element* is the top-level entity:
      - Functional and safety requirements for this element
    * - Assumptions of Use
      - Conditions the integrating project must satisfy
-   * - Forwarded AoUs
-     - Assumptions of use received from dependencies that must be handled or forwarded further
+   * - Received AoUs
+     - Assumptions of use received from dependencies that must be handled locally or chain-forwarded further
    * - Architectural Design
      - Software Architectural Design in PlantUML
    * - Software Units and Components

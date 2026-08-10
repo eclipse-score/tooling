@@ -49,13 +49,19 @@ def component_requirements(
             in the S-CORE requirements model.
         deps: Optional list of requirement targets (e.g. assumed_system_requirements,
             feature_requirements) whose TRLC records are needed for cross-reference
-            parsing.  These targets must provide TrlcProviderInfo.
+            parsing. Also list any assumptions_of_use target(s) here (this
+            element's own, or one received/forwarded from a dependable_element
+            dependency) to resolve AoU references in `derived_from`
+            (CompReqSourceId). These targets must provide TrlcProviderInfo.
         spec: TRLC specification target(s) providing RSL type definitions.
             Accepts a single label or a list of labels; all are merged into the
             spec passed to TRLC.  Defaults to the S-CORE requirements model
             (``@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model``).
         lobster_config: Optional Lobster extraction config label. Defaults to the
-            S-CORE component requirement config.
+            S-CORE component requirement config. Its conversion rules always
+            include `derived_from` as a tracing target, including any AoU
+            entries within it (resolved only at the dependable_element level,
+            which has a "Received AoUs" level).
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:

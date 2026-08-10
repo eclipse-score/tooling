@@ -274,6 +274,13 @@ testable within that component.
 
 **Generated targets:** ``<name>`` (documentation), ``<name>_test`` (TRLC validation)
 
+A ``CompReq`` record's ``derived_from`` field (``CompReqSourceId``) may also
+reference an AoU that this requirement implements, alongside its usual
+``FeatReq``/``AssumedSystemReq`` references (e.g. ``[SampleType.SampleAoU@1]``).
+This requires importing the AoU's package and listing the
+``assumptions_of_use`` target that defines it directly in this target's
+``deps`` — see :doc:`user_guide/assumptions_of_use`.
+
 .. _rule-assumptions-of-use:
 
 assumptions_of_use

@@ -132,6 +132,39 @@ def _component_provider_test_impl(ctx):
 
 component_provider_test = analysistest.make(_component_provider_test_impl)
 
+def _component_requirements_transitive_test_impl(ctx):
+    """Test that ComponentInfo.requirements_transitive rolls up nested components.
+
+    :test_parent_component nests :test_nested_component, and the two use
+    DIFFERENT component_requirements targets (:comp_req vs. :comp_req_rst,
+    see test/BUILD). Both must be present in the parent's
+    requirements_transitive, or the nested component's own requirements
+    silently stopped being rolled up (and thus stopped being covered by any
+    CI-visible traceability check at the dependable_element level).
+    """
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    comp_info = target_under_test[ComponentInfo]
+    basenames = [f.basename for f in comp_info.requirements_transitive.to_list()]
+
+    asserts.true(
+        env,
+        "comp_req.lobster" in basenames,
+        "Parent component's own requirements (:comp_req) missing from " +
+        "requirements_transitive; got: %s" % basenames,
+    )
+    asserts.true(
+        env,
+        "comp_req_rst.lobster" in basenames,
+        "Nested component's requirements (:comp_req_rst) did not roll up into " +
+        "the parent's requirements_transitive; got: %s" % basenames,
+    )
+
+    return analysistest.end(env)
+
+component_requirements_transitive_test = analysistest.make(_component_requirements_transitive_test_impl)
+
 def _component_sphinx_sources_test_impl(ctx):
     """Test that component rule provides SphinxSourcesInfo."""
     env = analysistest.begin(ctx)
@@ -306,6 +339,7 @@ def unit_component_test_suite(name):
             ":component_sphinx_sources_test",
             ":component_excludes_feature_req_docs_test",
             ":component_test_case_coverage_lock_test",
+            ":component_requirements_transitive_test",
             ":test_case_coverage_lock_check_action_release_test",
             ":test_case_coverage_lock_check_action_development_test",
         ],

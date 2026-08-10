@@ -102,6 +102,7 @@ load(
     ":unit_component_test.bzl",
     "component_excludes_feature_req_docs_test",
     "component_provider_test",
+    "component_requirements_transitive_test",
     "component_sphinx_sources_test",
     "component_test_case_coverage_lock_test",
     "dependable_element_test_case_coverage_lock_check_action_test",
@@ -870,13 +871,22 @@ unit(
 )
 
 # Nested component containing unit2
+# Deliberately uses a DIFFERENT component_requirements target (:comp_req_rst)
+# than the parent's own (:comp_req) below, so the two are genuinely
+# distinguishable content-wise -- this makes ComponentInfo.requirements_transitive
+# rollup observable: if the nested component's own requirements failed to
+# propagate up, only :comp_req's .lobster file would show up at the parent,
+# not :comp_req_rst's. See component_requirements_transitive_test.
+#
 component(
     name = "test_nested_component",
     testonly = True,
     components = [":test_unit2"],
     requirements = [
         ":comp_req",
+        ":comp_req_rst",
         ":feat_req",
+        ":feat_req_rst",
     ],
     tests = [],
 )
@@ -1316,6 +1326,15 @@ component_test_case_coverage_lock_test(
     target_under_test = ":test_component_with_test_case_coverage_lock",
 )
 
+# Verifies ComponentInfo.requirements_transitive rolls up both the parent's
+# own component_requirements AND the nested component's (which use two
+# distinct fixtures, :comp_req and :comp_req_rst -- see test/BUILD comments
+# on test_nested_component/test_parent_component above).
+component_requirements_transitive_test(
+    name = "component_requirements_transitive_test",
+    target_under_test = ":test_parent_component",
+)
+
 # Verifies the ComponentTestCaseCoverageLockCheck action is wired up end-to-end through
 # dependable_element (not just component() in isolation), and that
 # --allow-check-failures is only passed for maturity == "development".
@@ -1521,7 +1540,10 @@ py_test(
     name = "test_aou_forwarding_to_lobster",
     size = "small",
     srcs = ["test_aou_forwarding_to_lobster.py"],
-    deps = ["@score_tooling//bazel/rules/rules_score:aou_forwarding_to_lobster"],
+    deps = [
+        "@lobster//lobster/common",
+        "@score_tooling//bazel/rules/rules_score:aou_forwarding_to_lobster",
+    ],
 )
 
 py_test(
