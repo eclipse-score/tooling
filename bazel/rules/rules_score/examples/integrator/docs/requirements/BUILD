@@ -40,5 +40,7 @@ component_requirements(
     visibility = ["//visibility:public"],
     deps = [
         ":feature_requirements",
+        "@seooc//docs:sample_aous",
+        "@some_other_library//:other_library_aous",
     ],
 )

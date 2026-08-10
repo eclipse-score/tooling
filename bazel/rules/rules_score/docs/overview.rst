@@ -199,6 +199,78 @@ lacks full up/down traceability.
       "Root Causes" -> "Control Measures";
    }
 
+Execution Overview (Current Behavior)
+-------------------------------------
+
+The table below summarizes how checks are currently executed in practice
+(build-time action/analysis-time check vs. test-time executable).
+
+.. list-table::
+   :header-rows: 1
+   :widths: 26 16 58
+
+   * - Check
+     - Trigger
+     - Current execution path
+   * - Requirements validation (TRLC + model)
+     - test
+     - Executed by generated ``<requirements_target>_test`` targets
+       (``trlc_requirements_test``); not run implicitly by building only the
+       enclosing ``dependable_element`` target.
+   * - Architecture consistency
+     - build
+     - Validation actions run in ``architectural_design``, ``unit``, and
+       ``dependable_element`` index assembly; build fails on violations
+       (or warns in ``maturity = "development"``).
+   * - Certified scope
+     - build
+     - Checked during dependable-element index analysis/assembly by traversing
+       transitive implementation dependencies against declared certified scopes.
+   * - Integrity level
+     - build
+     - Checked during dependable-element index analysis: a dependable element
+       must not depend on a lower-integrity dependable element.
+   * - Test case coverage lock
+     - build
+     - Per-component build action runs when the component provides
+       ``test_case_coverage_lock`` metadata; compares current gtest traceability
+       view against committed lock state.
+   * - Traceability report generation
+     - build
+     - LOBSTER config/report/RST artifacts are generated during build whenever
+       traceability inputs are present.
+   * - Traceability enforcement (``lobster-ci-report``)
+     - test
+     - Executed by ``bazel test`` on the dependable-element test target, using
+       the pre-built LOBSTER report.
+   * - Unit test execution used as traceability input
+     - build
+     - Unit test executables are run during build to collect gtest XML that is
+       converted into test traceability artifacts.
+
+Provider/log propagation used by dependable_element
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- ``ArchitecturalDesignInfo.validation_logs``: architectural-design validation
+  logs are forwarded and re-exposed under the dependable-element validation
+  output directory.
+- ``UnitInfo.validation_log``: per-unit validation logs are forwarded and
+  symlinked into dependable-element outputs.
+- ``ComponentTestCaseCoverageInfo``: presence of coverage-lock metadata on a
+  component enables the dependable-element-level coverage-lock build action.
+- ``OutputGroupInfo(debug)``: dependable-element collects validation logs into a
+  debug output group, while still wiring required validation artifacts into
+  normal build outputs.
+
+Notes
+~~~~~
+
+- ``dependable_element(tests = [...])`` is currently a documented attribute,
+  but is not used to execute additional tests by the dependable-element rule
+  implementation.
+- ``component(tests = [...])`` is currently declared, while traceability input
+  generation is driven by nested ``unit`` test artifacts.
+
 
 Quick Reference
 ---------------

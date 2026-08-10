@@ -30,6 +30,7 @@ architectural_design(
 assumptions_of_use(
     name = "other_library_aous",
     srcs = ["aous.trlc"],
+    visibility = ["//visibility:public"],
 )
 
 unit(

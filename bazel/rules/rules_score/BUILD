@@ -109,6 +109,7 @@ py_binary(
     main = "src/aou_forwarding_to_lobster.py",
     visibility = ["//visibility:public"],
     deps = [
+        "@lobster//lobster/common",
         requirement("pyyaml"),
     ],
 )

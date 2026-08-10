@@ -45,6 +45,7 @@ component(
         "//docs/requirements:component_requirements",
         "//docs/requirements:component_requirements_extra",
         "//docs/requirements:component_requirements_sub",
+        "//docs/requirements:feature_requirements",
     ],
     tags = ["manual"],
     test_case_coverage_lock = "test_case_coverage.lock.yaml",
