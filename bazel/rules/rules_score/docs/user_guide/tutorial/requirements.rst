@@ -77,4 +77,7 @@ To validate TRLC syntax and Traceability within the requirements, each of the re
 bazel targets exposes via a marco already a test target, which can be run via e.g.:
 ``bazel test //:assumed_system_requirements_test``.
 
+Why does it specify a relative path here? In the Build part it mentions building from the root, I think this distinction should be mentioned here (and saying to run the command from bazel/rules/rules_score/examples/minimal directory). Building from root or from the minimal directory seems to cause an issue with include paths? If building with full path, the include should be 
+#include "bazel/rules/rules_score/examples/minimal/src/my_unit.h" and if it's relative, it should be #include "src/my_unit.h". It doesn't seem to support building from the root and the tutorials dir.
+
 → Full guide: :doc:`../requirements`
