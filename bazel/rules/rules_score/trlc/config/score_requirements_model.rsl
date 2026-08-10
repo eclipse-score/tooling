@@ -70,8 +70,16 @@ tuple FeatReqId {
     version Integer
 }
 
+type ControlMeasure "A design or operational measure that detects, prevents, or limits a failure mode." extends RequirementSafety {
+    mitigates    "Reference to the FailureMode or safety concern that this requirement mitigates."
+                 optional String
+}
+
+type AoU "Assumption of Use — a safety-relevant condition that a user must fulfil." extends ControlMeasure {
+}
+
 tuple CompReqSourceId {
-    item    [FeatReq, AssumedSystemReq]
+    item    [FeatReq, AssumedSystemReq, AoU]
     separator @
     version Integer
 }
@@ -154,20 +162,12 @@ type FailureMode "A potential failure of a system function, described using one 
                    optional String
 }
 
-type ControlMeasure "A design or operational measure that detects, prevents, or limits a failure mode." extends RequirementSafety {
-    mitigates    "Reference to the FailureMode or safety concern that this requirement mitigates."
-                 optional String
-}
-
 type PreventiveMeasure "A measure that prevents a failure mode from occurring in the first place." {
 }
 
 type Mitigation "A measure that reduces the severity or probability of a failure mode's effect." extends AssumedSystemReq {
     mitigates    "Reference to the FailureMode or safety concern that this requirement mitigates."
                  optional String
-}
-
-type AoU "Assumption of Use — a safety-relevant condition that a user must fulfil." extends ControlMeasure {
 }
 
 tuple Measure {
