@@ -1,0 +1,47 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package AssilCheckValid
+
+import ScoreReq
+
+// Valid: ASIL QM → ASIL QM (same level — check passes).
+ScoreReq.FeatReq FEAT_VALID_001 {
+    description  = "The component shall expose a QM-level status reporting interface."
+    safety       = ScoreReq.Asil.QM
+    derived_from = [AssilCheckValid.ASR_VALID_001@1]
+    version      = 1
+}
+
+// Valid: ASIL B → ASIL B (same level — check passes).
+ScoreReq.FeatReq FEAT_VALID_002 {
+    description  = "The component shall provide a safe communication interface at ASIL B."
+    safety       = ScoreReq.Asil.B
+    derived_from = [AssilCheckValid.ASR_VALID_002@1]
+    version      = 1
+}
+
+// Valid: ASIL B → ASIL D (level raised — check passes).
+ScoreReq.FeatReq FEAT_VALID_003 {
+    description  = "The component shall guarantee message integrity at ASIL D, exceeding the upstream ASIL B requirement."
+    safety       = ScoreReq.Asil.D
+    derived_from = [AssilCheckValid.ASR_VALID_002@1]
+    version      = 1
+}
+
+// Valid: ASIL D → ASIL D (same level — check passes).
+ScoreReq.FeatReq FEAT_VALID_004 {
+    description  = "The component shall provide fault-tolerant operation at ASIL D."
+    safety       = ScoreReq.Asil.D
+    derived_from = [AssilCheckValid.ASR_VALID_003@1]
+    version      = 1
+}

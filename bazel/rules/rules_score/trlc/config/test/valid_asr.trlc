@@ -1,0 +1,41 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package AssilCheckValid
+
+import ScoreReq
+
+// Upstream ASR at QM — used to verify that a QM FeatReq/CompReq is accepted.
+ScoreReq.AssumedSystemReq ASR_VALID_001 {
+    description = "The system shall provide a minimal interface for QM-level functionality."
+    safety      = ScoreReq.Asil.QM
+    version     = 1
+    rationale   = "Baseline QM system requirement."
+}
+
+// Upstream ASR at ASIL B — used to verify that ASIL B and ASIL D derived
+// requirements are accepted, and that ASIL QM derived requirements are rejected.
+ScoreReq.AssumedSystemReq ASR_VALID_002 {
+    description = "The system shall provide a safe communication channel at ASIL B."
+    safety      = ScoreReq.Asil.B
+    version     = 1
+    rationale   = "ASIL B system requirement for safety-critical communication."
+}
+
+// Upstream ASR at ASIL D — used to verify that only ASIL D derived requirements
+// are accepted, and that ASIL QM or ASIL B derived requirements are rejected.
+ScoreReq.AssumedSystemReq ASR_VALID_003 {
+    description = "The system shall guarantee fault-tolerant operation at ASIL D."
+    safety      = ScoreReq.Asil.D
+    version     = 1
+    rationale   = "Highest integrity level requirement covering fault-tolerant behaviour."
+}

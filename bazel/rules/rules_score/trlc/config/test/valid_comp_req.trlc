@@ -1,0 +1,56 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package AssilCheckValidComp
+
+import ScoreReq
+import AssilCheckValid
+
+// Valid: ASIL QM → ASIL QM (same level — check passes).
+ScoreReq.CompReq COMP_VALID_001 {
+    description  = "The component shall implement the QM status reporting interface."
+    safety       = ScoreReq.Asil.QM
+    derived_from = [AssilCheckValid.FEAT_VALID_001@1]
+    version      = 1
+}
+
+// Valid: ASIL B → ASIL B (same level — check passes).
+ScoreReq.CompReq COMP_VALID_002 {
+    description  = "The component shall implement the safe communication interface at ASIL B."
+    safety       = ScoreReq.Asil.B
+    derived_from = [AssilCheckValid.FEAT_VALID_002@1]
+    version      = 1
+}
+
+// Valid: ASIL B → ASIL D (level raised — check passes).
+ScoreReq.CompReq COMP_VALID_003 {
+    description  = "The component shall implement message integrity verification at ASIL D, exceeding the upstream ASIL B feature requirement."
+    safety       = ScoreReq.Asil.D
+    derived_from = [AssilCheckValid.FEAT_VALID_002@1]
+    version      = 1
+}
+
+// Valid: ASIL D → ASIL D (same level — check passes).
+ScoreReq.CompReq COMP_VALID_004 {
+    description  = "The component shall implement fault-tolerant operation at ASIL D."
+    safety       = ScoreReq.Asil.D
+    derived_from = [AssilCheckValid.FEAT_VALID_004@1]
+    version      = 1
+}
+
+// Valid: CompReq derived directly from an ASR (no FeatReq layer) at ASIL B.
+ScoreReq.CompReq COMP_VALID_005 {
+    description  = "The component shall directly implement the ASIL B communication requirement from the system level."
+    safety       = ScoreReq.Asil.B
+    derived_from = [AssilCheckValid.ASR_VALID_002@1]
+    version      = 1
+}
