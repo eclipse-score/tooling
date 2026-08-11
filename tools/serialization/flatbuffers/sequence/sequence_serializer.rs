@@ -14,7 +14,11 @@
 use flatbuffers::FlatBufferBuilder;
 use sequence_fbs::sequence_metamodel as fb;
 use sequence_logic::{
-    ConditionType, Event, ParticipantType, SequenceNode, SequenceParticipant, SequenceTree,
+    Block as LogicBlock, Branch as LogicBranch, BranchCase as LogicBranchCase,
+    EarlyExit as LogicEarlyExit, Interaction as LogicInteraction, LifecycleAction,
+    Loop as LogicLoop, Node as LogicNode, Parallel as LogicParallel,
+    ParallelBranch as LogicParallelBranch, ParticipantLifecycle, ParticipantType, Reference,
+    SequenceParticipant, SequenceTree, SourceLocation,
 };
 
 pub struct SequenceSerializer;
@@ -45,19 +49,14 @@ impl SequenceSerializer {
             .collect();
         let participants_offset = builder.create_vector(&participant_offsets);
 
-        let node_offsets: Vec<_> = diagram
-            .root_interactions
-            .iter()
-            .map(|node| Self::serialize_node(&mut builder, node))
-            .collect();
-        let nodes_offset = builder.create_vector(&node_offsets);
+        let root_offset = Self::serialize_block(&mut builder, &diagram.root);
 
         let root = fb::SequenceDiagram::create(
             &mut builder,
             &fb::SequenceDiagramArgs {
                 name: name_offset,
                 participants: Some(participants_offset),
-                root_interactions: Some(nodes_offset),
+                root: Some(root_offset),
             },
         );
 
@@ -99,103 +98,273 @@ impl SequenceSerializer {
         )
     }
 
-    fn serialize_node<'a>(
+    fn serialize_block<'a>(
         builder: &mut FlatBufferBuilder<'a>,
-        node: &SequenceNode,
-    ) -> flatbuffers::WIPOffset<fb::SequenceNode<'a>> {
-        // Recursively serialize child nodes first (depth-first).
-        let branch_offsets: Vec<_> = node
-            .branches_node
+        block: &LogicBlock,
+    ) -> flatbuffers::WIPOffset<fb::Block<'a>> {
+        let item_offsets: Vec<_> = block
+            .items
             .iter()
-            .map(|child| Self::serialize_node(builder, child))
+            .map(|node| Self::serialize_node_item(builder, node))
             .collect();
-        let branches_offset = builder.create_vector(&branch_offsets);
-        let location_file_offset = builder.create_string(node.source_location.file.as_ref());
-        let source_location = fb::SourceLocation::create(
-            builder,
-            &fb::SourceLocationArgs {
-                file: Some(location_file_offset),
-                line: node.source_location.line,
-            },
-        );
+        let items = builder.create_vector(&item_offsets);
 
-        // Serialize the event union.
-        let (event_type, event_offset) = Self::serialize_event(builder, &node.event);
+        fb::Block::create(builder, &fb::BlockArgs { items: Some(items) })
+    }
 
-        fb::SequenceNode::create(
+    fn serialize_node_item<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        node: &LogicNode,
+    ) -> flatbuffers::WIPOffset<fb::NodeItem<'a>> {
+        let (node_type, node) = match node {
+            LogicNode::Interaction(interaction) => (
+                fb::Node::Interaction,
+                Self::serialize_interaction(builder, interaction).as_union_value(),
+            ),
+            LogicNode::Branch(branch) => (
+                fb::Node::Branch,
+                Self::serialize_branch(builder, branch).as_union_value(),
+            ),
+            LogicNode::Loop(loop_node) => (
+                fb::Node::Loop,
+                Self::serialize_loop(builder, loop_node).as_union_value(),
+            ),
+            LogicNode::Parallel(parallel) => (
+                fb::Node::Parallel,
+                Self::serialize_parallel(builder, parallel).as_union_value(),
+            ),
+            LogicNode::EarlyExit(early_exit) => (
+                fb::Node::EarlyExit,
+                Self::serialize_early_exit(builder, early_exit).as_union_value(),
+            ),
+            LogicNode::Lifecycle(lifecycle) => (
+                fb::Node::ParticipantLifecycle,
+                Self::serialize_lifecycle(builder, lifecycle).as_union_value(),
+            ),
+            LogicNode::Reference(reference) => (
+                fb::Node::Reference,
+                Self::serialize_reference(builder, reference).as_union_value(),
+            ),
+        };
+
+        fb::NodeItem::create(
             builder,
-            &fb::SequenceNodeArgs {
-                event_type,
-                event: Some(event_offset),
-                source_location: Some(source_location),
-                branches_node: Some(branches_offset),
+            &fb::NodeItemArgs {
+                node_type,
+                node: Some(node),
             },
         )
     }
 
-    fn serialize_event(
-        builder: &mut FlatBufferBuilder<'_>,
-        event: &Event,
-    ) -> (
-        fb::Event,
-        flatbuffers::WIPOffset<flatbuffers::UnionWIPOffset>,
-    ) {
-        match event {
-            Event::Interaction(interaction) => {
-                let caller = builder.create_string(&interaction.caller);
-                let callee = builder.create_string(&interaction.callee);
-                let method = builder.create_string(&interaction.method);
-                let offset = fb::Interaction::create(
-                    builder,
-                    &fb::InteractionArgs {
-                        caller: Some(caller),
-                        callee: Some(callee),
-                        method: Some(method),
-                    },
-                );
-                (fb::Event::Interaction, offset.as_union_value())
-            }
-            Event::Return(ret) => {
-                let caller = builder.create_string(&ret.caller);
-                let callee = builder.create_string(&ret.callee);
-                let return_content = builder.create_string(&ret.return_content);
-                let offset = fb::Return::create(
-                    builder,
-                    &fb::ReturnArgs {
-                        caller: Some(caller),
-                        callee: Some(callee),
-                        return_content: Some(return_content),
-                    },
-                );
-                (fb::Event::Return, offset.as_union_value())
-            }
-            Event::Condition(cond) => {
-                let condition_value = builder.create_string(&cond.condition_value);
-                let offset = fb::Condition::create(
-                    builder,
-                    &fb::ConditionArgs {
-                        condition_type: Self::map_condition_type(cond.condition_type.clone()),
-                        condition_value: Some(condition_value),
-                    },
-                );
-                (fb::Event::Condition, offset.as_union_value())
-            }
-        }
+    fn serialize_interaction<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        interaction: &LogicInteraction,
+    ) -> flatbuffers::WIPOffset<fb::Interaction<'a>> {
+        let sender = interaction
+            .sender
+            .as_deref()
+            .map(|sender| builder.create_string(sender));
+        let receiver = interaction
+            .receiver
+            .as_deref()
+            .map(|receiver| builder.create_string(receiver));
+        let message = interaction
+            .message
+            .as_deref()
+            .map(|message| builder.create_string(message));
+        let source_location = serialize_source_location(builder, &interaction.source_location);
+
+        fb::Interaction::create(
+            builder,
+            &fb::InteractionArgs {
+                sender,
+                receiver: receiver,
+                message,
+                source_location: Some(source_location),
+            },
+        )
     }
 
-    fn map_condition_type(ct: ConditionType) -> fb::ConditionType {
-        match ct {
-            ConditionType::Opt => fb::ConditionType::Opt,
-            ConditionType::Alt => fb::ConditionType::Alt,
-            ConditionType::Loop => fb::ConditionType::Loop,
-            ConditionType::Par => fb::ConditionType::Par,
-            ConditionType::Par2 => fb::ConditionType::Par2,
-            ConditionType::Break => fb::ConditionType::Break,
-            ConditionType::Critical => fb::ConditionType::Critical,
-            ConditionType::Else => fb::ConditionType::Else,
-            ConditionType::Also => fb::ConditionType::Also,
-            ConditionType::End => fb::ConditionType::End,
-            ConditionType::Group => fb::ConditionType::Group,
-        }
+    fn serialize_branch<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        branch: &LogicBranch,
+    ) -> flatbuffers::WIPOffset<fb::Branch<'a>> {
+        let case_offsets: Vec<_> = branch
+            .cases
+            .iter()
+            .map(|case| Self::serialize_branch_case(builder, case))
+            .collect();
+        let cases = builder.create_vector(&case_offsets);
+
+        fb::Branch::create(builder, &fb::BranchArgs { cases: Some(cases) })
+    }
+
+    fn serialize_branch_case<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        case: &LogicBranchCase,
+    ) -> flatbuffers::WIPOffset<fb::BranchCase<'a>> {
+        let condition = case
+            .condition
+            .as_deref()
+            .map(|condition| builder.create_string(condition));
+        let block = Self::serialize_block(builder, &case.block);
+        let source_location = serialize_source_location(builder, &case.source_location);
+
+        fb::BranchCase::create(
+            builder,
+            &fb::BranchCaseArgs {
+                condition,
+                block: Some(block),
+                source_location: Some(source_location),
+            },
+        )
+    }
+
+    fn serialize_loop<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        loop_node: &LogicLoop,
+    ) -> flatbuffers::WIPOffset<fb::Loop<'a>> {
+        let condition = loop_node
+            .condition
+            .as_deref()
+            .map(|condition| builder.create_string(condition));
+        let block = Self::serialize_block(builder, &loop_node.block);
+        let source_location = serialize_source_location(builder, &loop_node.source_location);
+
+        fb::Loop::create(
+            builder,
+            &fb::LoopArgs {
+                condition,
+                block: Some(block),
+                source_location: Some(source_location),
+            },
+        )
+    }
+
+    fn serialize_parallel<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        parallel: &LogicParallel,
+    ) -> flatbuffers::WIPOffset<fb::Parallel<'a>> {
+        let branch_offsets: Vec<_> = parallel
+            .branches
+            .iter()
+            .map(|branch| Self::serialize_parallel_branch(builder, branch))
+            .collect();
+        let branches = builder.create_vector(&branch_offsets);
+
+        fb::Parallel::create(
+            builder,
+            &fb::ParallelArgs {
+                branches: Some(branches),
+            },
+        )
+    }
+
+    fn serialize_parallel_branch<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        branch: &LogicParallelBranch,
+    ) -> flatbuffers::WIPOffset<fb::ParallelBranch<'a>> {
+        let label = branch
+            .label
+            .as_deref()
+            .map(|label| builder.create_string(label));
+        let block = Self::serialize_block(builder, &branch.block);
+        let source_location = serialize_source_location(builder, &branch.source_location);
+
+        fb::ParallelBranch::create(
+            builder,
+            &fb::ParallelBranchArgs {
+                label,
+                block: Some(block),
+                source_location: Some(source_location),
+            },
+        )
+    }
+
+    fn serialize_early_exit<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        early_exit: &LogicEarlyExit,
+    ) -> flatbuffers::WIPOffset<fb::EarlyExit<'a>> {
+        let reason = early_exit
+            .reason
+            .as_deref()
+            .map(|reason| builder.create_string(reason));
+        let block = Self::serialize_block(builder, &early_exit.block);
+        let source_location = serialize_source_location(builder, &early_exit.source_location);
+
+        fb::EarlyExit::create(
+            builder,
+            &fb::EarlyExitArgs {
+                reason,
+                block: Some(block),
+                source_location: Some(source_location),
+            },
+        )
+    }
+
+    fn serialize_lifecycle<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        lifecycle: &ParticipantLifecycle,
+    ) -> flatbuffers::WIPOffset<fb::ParticipantLifecycle<'a>> {
+        let participant = builder.create_string(&lifecycle.participant);
+        let source_location = serialize_source_location(builder, &lifecycle.source_location);
+
+        fb::ParticipantLifecycle::create(
+            builder,
+            &fb::ParticipantLifecycleArgs {
+                participant: Some(participant),
+                action: map_lifecycle_action(lifecycle.action),
+                source_location: Some(source_location),
+            },
+        )
+    }
+
+    fn serialize_reference<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        reference: &Reference,
+    ) -> flatbuffers::WIPOffset<fb::Reference<'a>> {
+        let participant_offsets: Vec<_> = reference
+            .participants
+            .iter()
+            .map(|participant| builder.create_string(participant))
+            .collect();
+        let participants = builder.create_vector(&participant_offsets);
+        let text = reference
+            .text
+            .as_deref()
+            .map(|text| builder.create_string(text));
+        let source_location = serialize_source_location(builder, &reference.source_location);
+
+        fb::Reference::create(
+            builder,
+            &fb::ReferenceArgs {
+                participants: Some(participants),
+                text,
+                source_location: Some(source_location),
+            },
+        )
+    }
+}
+
+fn serialize_source_location<'a>(
+    builder: &mut FlatBufferBuilder<'a>,
+    source_location: &SourceLocation,
+) -> flatbuffers::WIPOffset<fb::SourceLocation<'a>> {
+    let file = builder.create_string(source_location.file.as_ref());
+    fb::SourceLocation::create(
+        builder,
+        &fb::SourceLocationArgs {
+            file: Some(file),
+            line: source_location.line,
+        },
+    )
+}
+
+fn map_lifecycle_action(action: LifecycleAction) -> fb::LifecycleAction {
+    match action {
+        LifecycleAction::Create => fb::LifecycleAction::Create,
+        LifecycleAction::Activate => fb::LifecycleAction::Activate,
+        LifecycleAction::Deactivate => fb::LifecycleAction::Deactivate,
+        LifecycleAction::Destroy => fb::LifecycleAction::Destroy,
     }
 }

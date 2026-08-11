@@ -13,16 +13,21 @@
 
 //! Models for sequence-diagram FlatBuffer inputs used by design verification.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
-use sequence_logic::{Event, SequenceNode, SequenceParticipant, SequenceTree};
-use source_location::SourceLocation;
+use sequence_logic::{Block, Interaction, Node, SequenceTree, SourceLocation};
 
-use crate::{ErrorBuilder, ErrorCategory, ValidationResult};
+use crate::ValidationResult;
 
 /// Collection of sequence diagrams loaded from one or more FlatBuffer files.
 pub struct SequenceDiagramInputs {
     pub diagrams: Vec<SequenceTree>,
+}
+
+const EXTERNAL_ENDPOINT_NAME: &str = "ExternalEndpoint";
+
+pub fn is_external_endpoint(participant: &str) -> bool {
+    participant == EXTERNAL_ENDPOINT_NAME
 }
 
 /// One function-call interaction observed in a sequence diagram.
@@ -42,271 +47,147 @@ impl SequenceDiagramInputs {
 
 /// Indexed sequence-diagram data prepared for validators.
 pub struct SequenceDiagramIndex {
-    used_participants: BTreeSet<String>,
+    participants: BTreeMap<String, SourceLocation>,
     observed_calls: Vec<ObservedSequenceCall>,
-    participant_sources: BTreeMap<String, SourceLocation>,
 }
 
 impl SequenceDiagramIndex {
     fn from_diagrams(diagrams: &[SequenceTree], result: &mut ValidationResult) -> Self {
-        let mut used_participants = BTreeSet::new();
         let mut observed_calls = Vec::new();
-        let mut participant_sources = BTreeMap::new();
+        let mut participants = BTreeMap::new();
 
         for diagram in diagrams {
-            collect_participant_sources(&diagram.participants, &mut participant_sources);
-            for node in &diagram.root_interactions {
-                collect_sequence_data(
-                    node,
-                    &mut used_participants,
-                    &mut observed_calls,
-                    &mut participant_sources,
-                    result,
-                );
+            for participant in &diagram.participants {
+                let reference_name = participant
+                    .alias
+                    .as_deref()
+                    .unwrap_or(&participant.display_name)
+                    .to_string();
+
+                // Keep the first declaration location when a participant is
+                // declared in more than one input diagram.
+                participants
+                    .entry(reference_name)
+                    .or_insert_with(|| participant.source_location.clone());
             }
+
+            collect_block_data(&diagram.root, &mut observed_calls, result);
         }
 
         Self {
-            used_participants,
+            participants,
             observed_calls,
-            participant_sources,
         }
     }
 
-    pub fn used_participants(&self) -> &BTreeSet<String> {
-        &self.used_participants
+    pub fn participants(&self) -> &BTreeMap<String, SourceLocation> {
+        &self.participants
     }
 
     pub fn observed_calls(&self) -> &[ObservedSequenceCall] {
         &self.observed_calls
     }
-
-    pub fn participant_source(&self, participant: &str) -> Option<&SourceLocation> {
-        self.participant_sources.get(participant)
-    }
 }
 
-fn collect_participant_sources(
-    participants: &[SequenceParticipant],
-    participant_sources: &mut BTreeMap<String, SourceLocation>,
+fn collect_block_data(
+    block: &Block,
+    observed_calls: &mut Vec<ObservedSequenceCall>,
+    result: &mut ValidationResult,
 ) {
-    for participant in participants {
-        participant_sources
-            .entry(participant_name(participant))
-            .or_insert_with(|| participant.source_location.clone());
+    for node in &block.items {
+        collect_sequence_data(node, observed_calls, result);
     }
 }
 
 fn collect_sequence_data(
-    node: &SequenceNode,
-    used_participants: &mut BTreeSet<String>,
+    node: &Node,
     observed_calls: &mut Vec<ObservedSequenceCall>,
-    participant_sources: &mut BTreeMap<String, SourceLocation>,
     result: &mut ValidationResult,
 ) {
-    match &node.event {
-        Event::Interaction(interaction) => {
-            let (source_file, source_line) = node.source_location.display();
-            validate_required_endpoints(
-                result,
-                RequiredEndpointsCheck {
-                    item_kind: "sequence function",
-                    caller: interaction.caller.as_str(),
-                    callee: interaction.callee.as_str(),
-                    label_value: interaction.method.as_str(),
-                    label_name: "method",
-                    source_file: source_file.as_str(),
-                    source_line,
-                },
-            );
-
-            record_participant_usage_and_source(
-                interaction.caller.as_str(),
-                &node.source_location,
-                used_participants,
-                participant_sources,
-            );
-            record_participant_usage_and_source(
-                interaction.callee.as_str(),
-                &node.source_location,
-                used_participants,
-                participant_sources,
-            );
-
-            observed_calls.push(ObservedSequenceCall {
-                caller: interaction.caller.clone(),
-                callee: interaction.callee.clone(),
-                method: interaction.method.clone(),
-                source_location: node.source_location.clone(),
-            });
+    match node {
+        Node::Interaction(interaction) => {
+            observed_calls.push(observe_interaction(interaction));
         }
-        Event::Return(ret) => {
-            let (source_file, source_line) = node.source_location.display();
-            validate_required_endpoints(
-                result,
-                RequiredEndpointsCheck {
-                    item_kind: "sequence return",
-                    caller: ret.caller.as_str(),
-                    callee: ret.callee.as_str(),
-                    label_value: ret.return_content.as_str(),
-                    label_name: "return content",
-                    source_file: source_file.as_str(),
-                    source_line,
-                },
-            );
-
-            record_participant_usage_and_source(
-                ret.caller.as_str(),
-                &node.source_location,
-                used_participants,
-                participant_sources,
-            );
-            record_participant_usage_and_source(
-                ret.callee.as_str(),
-                &node.source_location,
-                used_participants,
-                participant_sources,
-            );
+        Node::Branch(branch) => {
+            for case in &branch.cases {
+                collect_block_data(&case.block, observed_calls, result);
+            }
         }
-        Event::Condition(_) => {}
-    }
-
-    for child in &node.branches_node {
-        collect_sequence_data(
-            child,
-            used_participants,
-            observed_calls,
-            participant_sources,
-            result,
-        );
+        Node::Loop(loop_node) => {
+            collect_block_data(&loop_node.block, observed_calls, result);
+        }
+        Node::Parallel(parallel) => {
+            for branch in &parallel.branches {
+                collect_block_data(&branch.block, observed_calls, result);
+            }
+        }
+        Node::EarlyExit(early_exit) => {
+            collect_block_data(&early_exit.block, observed_calls, result);
+        }
+        Node::Lifecycle(_) | Node::Reference(_) => {}
     }
 }
 
-fn record_participant_usage_and_source(
-    participant: &str,
-    source_location: &SourceLocation,
-    used_participants: &mut BTreeSet<String>,
-    participant_sources: &mut BTreeMap<String, SourceLocation>,
-) {
-    if participant.is_empty() {
-        return;
-    }
-
-    used_participants.insert(participant.to_string());
-    participant_sources
-        .entry(participant.to_string())
-        .or_insert_with(|| source_location.clone());
-}
-
-fn participant_name(participant: &SequenceParticipant) -> String {
-    participant
-        .alias
-        .clone()
-        .filter(|alias| !alias.is_empty())
-        .unwrap_or_else(|| participant.display_name.clone())
-}
-
-struct RequiredEndpointsCheck<'a> {
-    item_kind: &'a str,
-    caller: &'a str,
-    callee: &'a str,
-    label_value: &'a str,
-    label_name: &'a str,
-    source_file: &'a str,
-    source_line: u32,
-}
-
-fn validate_required_endpoints(result: &mut ValidationResult, check: RequiredEndpointsCheck<'_>) {
-    let RequiredEndpointsCheck {
-        item_kind,
-        caller,
-        callee,
-        label_value,
-        label_name,
-        source_file,
-        source_line,
-    } = check;
-
-    if !caller.is_empty() && !callee.is_empty() {
-        return;
-    }
-
-    let missing_endpoints = match (caller.is_empty(), callee.is_empty()) {
-        (true, true) => "caller and callee",
-        (true, false) => "caller",
-        (false, true) => "callee",
-        (false, false) => unreachable!(),
+fn observe_interaction(interaction: &Interaction) -> ObservedSequenceCall {
+    let observed_call = ObservedSequenceCall {
+        caller: interaction
+            .sender
+            .as_deref()
+            .unwrap_or(EXTERNAL_ENDPOINT_NAME)
+            .to_string(),
+        callee: interaction
+            .receiver
+            .as_deref()
+            .unwrap_or(EXTERNAL_ENDPOINT_NAME)
+            .to_string(),
+        method: interaction.message.clone().unwrap_or_default(),
+        source_location: interaction.source_location.clone(),
     };
 
-    let fix = format!(
-        "add the missing {missing_endpoints} for {item_kind} \"{label_value}\" in the sequence diagram"
-    );
-
-    result.add_failure(
-        ErrorBuilder::new(ErrorCategory::Method)
-            .title(format!(
-                "{item_kind} \"{label_value}\" is missing {missing_endpoints}."
-            ))
-            .field(label_name, format!("\"{label_value}\""))
-            .field("caller unit", format!("\"{caller}\""))
-            .field("callee unit", format!("\"{callee}\""))
-            .field("sequence source file", format!("\"{source_file}\""))
-            .field("sequence source line", source_line.to_string())
-            .fix(fix)
-            .build(),
-    );
+    observed_call
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::validators::fixtures::dummy_source_location;
-    use sequence_logic::{Interaction, Return};
+    use sequence_logic::{Branch, BranchCase, Interaction};
 
-    fn interaction(
-        caller: &str,
-        callee: &str,
-        method: &str,
-        branches_node: Vec<SequenceNode>,
-    ) -> SequenceNode {
-        SequenceNode {
-            event: Event::Interaction(Interaction {
-                caller: caller.to_string(),
-                callee: callee.to_string(),
-                method: method.to_string(),
-            }),
+    fn interaction(caller: Option<&str>, callee: Option<&str>, method: &str) -> Node {
+        Node::Interaction(Interaction {
+            sender: caller.map(|caller| caller.to_string().into()),
+            receiver: callee.map(|callee| callee.to_string().into()),
+            message: Some(method.to_string()),
             source_location: dummy_source_location(),
-            branches_node,
-        }
+        })
     }
 
-    fn ret(caller: &str, callee: &str) -> SequenceNode {
-        SequenceNode {
-            event: Event::Return(Return {
-                caller: caller.to_string(),
-                callee: callee.to_string(),
-                return_content: String::new(),
-            }),
-            source_location: dummy_source_location(),
-            branches_node: Vec::new(),
-        }
+    fn branch(items: Vec<Node>) -> Node {
+        Node::Branch(Branch {
+            cases: vec![BranchCase {
+                condition: Some("case".to_string()),
+                block: Block { items },
+                source_location: dummy_source_location(),
+            }],
+        })
     }
 
     #[test]
-    fn sequence_index_collects_calls_and_used_participants_recursively() {
+    fn sequence_index_collects_nested_calls_recursively() {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
                 name: Some("seq".to_string()),
                 participants: Vec::new(),
-                root_interactions: vec![interaction(
-                    "unit_1",
-                    "unit_2",
-                    "GetData()",
-                    vec![
-                        ret("unit_1", "unit_2"),
-                        interaction("unit_2", "unit_3", "Forward()", Vec::new()),
+                root: Block {
+                    items: vec![
+                        interaction(Some("unit_1"), Some("unit_2"), "GetData()"),
+                        branch(vec![interaction(
+                            Some("unit_2"),
+                            Some("unit_3"),
+                            "Forward()",
+                        )]),
                     ],
-                )],
+                },
             }],
         };
 
@@ -314,14 +195,6 @@ mod tests {
         let index = inputs.to_sequence_diagram_index(&mut result);
 
         assert!(result.is_empty());
-        assert_eq!(
-            index.used_participants(),
-            &BTreeSet::from([
-                "unit_1".to_string(),
-                "unit_2".to_string(),
-                "unit_3".to_string(),
-            ])
-        );
         assert_eq!(index.observed_calls().len(), 2);
         assert_eq!(index.observed_calls()[0].caller, "unit_1");
         assert_eq!(index.observed_calls()[0].callee, "unit_2");
@@ -332,40 +205,42 @@ mod tests {
     }
 
     #[test]
-    fn sequence_index_reports_interaction_with_missing_required_endpoints() {
+    fn sequence_index_maps_missing_caller_to_external_endpoint() {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
                 name: Some("seq".to_string()),
                 participants: Vec::new(),
-                root_interactions: vec![interaction("", "unit_2", "GetData()", Vec::new())],
+                root: Block {
+                    items: vec![interaction(None, Some("unit_2"), "GetData()")],
+                },
             }],
         };
 
         let mut result = ValidationResult::default();
-        let _index = inputs.to_sequence_diagram_index(&mut result);
+        let index = inputs.to_sequence_diagram_index(&mut result);
 
-        assert_eq!(result.failures.len(), 1);
-        assert!(result.failures[0]
-            .contains("[Method] Sequence function \"GetData()\" is missing caller."));
-        assert!(result.failures[0].contains("\"unit_2\""));
+        assert!(result.is_empty());
+        assert_eq!(index.observed_calls()[0].caller, EXTERNAL_ENDPOINT_NAME);
+        assert_eq!(index.observed_calls()[0].callee, "unit_2");
     }
 
     #[test]
-    fn sequence_index_reports_interaction_with_missing_callee() {
+    fn sequence_index_maps_missing_callee_to_external_endpoint() {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
                 name: Some("seq".to_string()),
                 participants: Vec::new(),
-                root_interactions: vec![interaction("unit_1", "", "GetData()", Vec::new())],
+                root: Block {
+                    items: vec![interaction(Some("unit_1"), None, "GetData()")],
+                },
             }],
         };
 
         let mut result = ValidationResult::default();
-        let _index = inputs.to_sequence_diagram_index(&mut result);
+        let index = inputs.to_sequence_diagram_index(&mut result);
 
-        assert_eq!(result.failures.len(), 1);
-        assert!(result.failures[0]
-            .contains("[Method] Sequence function \"GetData()\" is missing callee."));
-        assert!(result.failures[0].contains("\"unit_1\""));
+        assert!(result.is_empty());
+        assert_eq!(index.observed_calls()[0].caller, "unit_1");
+        assert_eq!(index.observed_calls()[0].callee, EXTERNAL_ENDPOINT_NAME);
     }
 }

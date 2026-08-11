@@ -12,18 +12,31 @@
 # *******************************************************************************
 """Tests for aou_forwarding_to_lobster."""
 
-import json
 import tempfile
 import unittest
 
 import yaml
+from lobster.common.items import Requirement, Tracing_Tag
+from lobster.common.location import Void_Reference
 
 from aou_forwarding_to_lobster import (
-    create_lobster_output,
+    build_forwarded_markers,
     filter_forwarded_aous,
     load_lobster_items,
     parse_forwarding_yaml,
 )
+
+
+def _req(tag: str, name: str) -> Requirement:
+    """Build a minimal Requirement item with the given 'req Pkg.Name[@ver]' tag."""
+    namespace, rest = tag.split(" ", 1)
+    return Requirement(
+        tag=Tracing_Tag.from_text(namespace, rest),
+        location=Void_Reference(),
+        framework="TRLC",
+        kind="AoU",
+        name=name,
+    )
 
 
 class TestParseForwardingYaml(unittest.TestCase):
@@ -79,31 +92,24 @@ class TestParseForwardingYaml(unittest.TestCase):
 class TestLoadLobsterItems(unittest.TestCase):
     """Tests for load_lobster_items."""
 
-    def _write_lobster(self, items: list) -> str:
-        data = {
-            "schema": "lobster-req-trace",
-            "version": 3,
-            "generator": "test",
-            "data": items,
-        }
+    def _write_lobster(self, tags: list[str]) -> str:
+        from lobster.common.io import lobster_write
+
+        items = [_req(tag, tag.split(" ", 1)[1].split("@")[0]) for tag in tags]
         f = tempfile.NamedTemporaryFile(mode="w", suffix=".lobster", delete=False)
-        json.dump(data, f)
+        lobster_write(f, Requirement, "test", items)
         f.close()
         return f.name
 
     def test_loads_items(self) -> None:
-        items = [
-            {"tag": "req Pkg.AoU1", "name": "AoU1"},
-            {"tag": "req Pkg.AoU2", "name": "AoU2"},
-        ]
-        path = self._write_lobster(items)
+        path = self._write_lobster(["req Pkg.AoU1", "req Pkg.AoU2"])
         loaded = load_lobster_items([path])
         self.assertEqual(len(loaded), 2)
-        self.assertEqual(loaded[0]["tag"], "req Pkg.AoU1")
+        self.assertEqual(str(loaded[0].tag), "req Pkg.AoU1")
 
     def test_multiple_files(self) -> None:
-        path1 = self._write_lobster([{"tag": "req A.B", "name": "B"}])
-        path2 = self._write_lobster([{"tag": "req C.D", "name": "D"}])
+        path1 = self._write_lobster(["req A.B"])
+        path2 = self._write_lobster(["req C.D"])
         loaded = load_lobster_items([path1, path2])
         self.assertEqual(len(loaded), 2)
 
@@ -117,20 +123,17 @@ class TestFilterForwardedAous(unittest.TestCase):
     """Tests for filter_forwarded_aous."""
 
     def test_filters_correctly(self) -> None:
-        items = [
-            {"tag": "req Pkg.AoU1", "name": "AoU1"},
-            {"tag": "req Pkg.AoU2", "name": "AoU2"},
-        ]
+        items = [_req("req Pkg.AoU1", "AoU1"), _req("req Pkg.AoU2", "AoU2")]
         entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
         filtered = filter_forwarded_aous(entries, items)
         self.assertEqual(len(filtered), 1)
-        self.assertEqual(filtered[0]["tag"], "req Pkg.AoU1")
+        self.assertEqual(str(filtered[0].tag), "req Pkg.AoU1")
 
     def test_multiple_filters(self) -> None:
         items = [
-            {"tag": "req A.B", "name": "B"},
-            {"tag": "req C.D", "name": "D"},
-            {"tag": "req E.F", "name": "F"},
+            _req("req A.B", "B"),
+            _req("req C.D", "D"),
+            _req("req E.F", "F"),
         ]
         entries = [
             {"aou_id": "A.B", "justification": "r1"},
@@ -140,7 +143,7 @@ class TestFilterForwardedAous(unittest.TestCase):
         self.assertEqual(len(filtered), 2)
 
     def test_nonexistent_aou_id_raises(self) -> None:
-        items = [{"tag": "req Pkg.AoU1", "name": "AoU1"}]
+        items = [_req("req Pkg.AoU1", "AoU1")]
         entries = [{"aou_id": "NonExistent.Foo", "justification": "reason"}]
         with self.assertRaises(SystemExit):
             filter_forwarded_aous(entries, items)
@@ -148,36 +151,108 @@ class TestFilterForwardedAous(unittest.TestCase):
     def test_versioned_tag_matches_base_id(self) -> None:
         """lobster-trlc generates versioned tags like 'req Pkg.Name@1'."""
         items = [
-            {"tag": "req Pkg.AoU1@1", "name": "AoU1"},
-            {"tag": "req Pkg.AoU2@3", "name": "AoU2"},
+            _req("req Pkg.AoU1@1", "AoU1"),
+            _req("req Pkg.AoU2@3", "AoU2"),
         ]
         entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
         filtered = filter_forwarded_aous(entries, items)
         self.assertEqual(len(filtered), 1)
-        self.assertEqual(filtered[0]["tag"], "req Pkg.AoU1@1")
+        self.assertEqual(str(filtered[0].tag), "req Pkg.AoU1@1")
 
     def test_versioned_tag_matches_full_id(self) -> None:
         """Full versioned ID should also work."""
-        items = [{"tag": "req Pkg.AoU1@2", "name": "AoU1"}]
+        items = [_req("req Pkg.AoU1@2", "AoU1")]
         entries = [{"aou_id": "Pkg.AoU1@2", "justification": "reason"}]
         filtered = filter_forwarded_aous(entries, items)
         self.assertEqual(len(filtered), 1)
 
+    def test_ambiguous_base_id_requires_version(self) -> None:
+        """Two different versions sharing a base ID must not silently pick one."""
+        items = [
+            _req("req Pkg.AoU1@1", "AoU1"),
+            _req("req Pkg.AoU1@2", "AoU1"),
+        ]
+        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
+        with self.assertRaises(SystemExit):
+            filter_forwarded_aous(entries, items)
 
-class TestCreateLobsterOutput(unittest.TestCase):
-    """Tests for create_lobster_output."""
+    def test_ambiguous_base_id_still_resolves_with_explicit_version(self) -> None:
+        items = [
+            _req("req Pkg.AoU1@1", "AoU1"),
+            _req("req Pkg.AoU1@2", "AoU1"),
+        ]
+        entries = [{"aou_id": "Pkg.AoU1@2", "justification": "reason"}]
+        filtered = filter_forwarded_aous(entries, items)
+        self.assertEqual(len(filtered), 1)
+        self.assertEqual(str(filtered[0].tag), "req Pkg.AoU1@2")
 
-    def test_wraps_items(self) -> None:
-        items = [{"tag": "req Foo.Bar", "name": "Bar"}]
-        output = create_lobster_output(items)
-        self.assertEqual(output["schema"], "lobster-req-trace")
-        self.assertEqual(output["version"], 3)
-        self.assertEqual(output["generator"], "aou_forwarding_to_lobster")
-        self.assertEqual(output["data"], items)
+    def test_duplicate_identical_item_is_not_ambiguous(self) -> None:
+        """The same AoU loaded twice (e.g. via two overlapping input files) is not a conflict."""
+        items = [
+            _req("req Pkg.AoU1@1", "AoU1"),
+            _req("req Pkg.AoU1@1", "AoU1"),
+        ]
+        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
+        filtered = filter_forwarded_aous(entries, items)
+        self.assertEqual(len(filtered), 1)
 
-    def test_empty_items(self) -> None:
-        output = create_lobster_output([])
-        self.assertEqual(output["data"], [])
+
+class TestBuildForwardedMarkers(unittest.TestCase):
+    """Tests for build_forwarded_markers."""
+
+    def test_builds_one_marker_per_entry(self) -> None:
+        items = [_req("req Pkg.AoU1@1", "AoU1"), _req("req Pkg.AoU2@1", "AoU2")]
+        entries = [
+            {"aou_id": "Pkg.AoU1", "justification": "reason 1"},
+            {"aou_id": "Pkg.AoU2", "justification": "reason 2"},
+        ]
+        markers = build_forwarded_markers(entries, items, "aou_forwarding.yaml")
+        self.assertEqual(len(markers), 2)
+
+    def test_marker_has_distinct_tag_and_refs_original(self) -> None:
+        """The marker's tag must not collide with the original item's tag
+        (so it can coexist with the "Received AoUs" level in the same
+        report), but its refs must point at the original tag."""
+        items = [_req("req Pkg.AoU1@1", "AoU1")]
+        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
+        markers = build_forwarded_markers(entries, items, "aou_forwarding.yaml")
+        marker = markers[0]
+        self.assertNotEqual(str(marker.tag), "req Pkg.AoU1@1")
+        self.assertEqual(str(marker.tag), "req Pkg.AoU1__forwarded")
+        self.assertEqual(
+            [str(ref) for ref in marker.unresolved_references],
+            ["req Pkg.AoU1@1"],
+        )
+
+    def test_marker_uses_justification_as_text(self) -> None:
+        items = [_req("req Pkg.AoU1@1", "AoU1")]
+        entries = [{"aou_id": "Pkg.AoU1", "justification": "must be handled downstream"}]
+        markers = build_forwarded_markers(entries, items, "aou_forwarding.yaml")
+        self.assertEqual(markers[0].text, "must be handled downstream")
+
+    def test_marker_kind_and_framework(self) -> None:
+        items = [_req("req Pkg.AoU1@1", "AoU1")]
+        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
+        markers = build_forwarded_markers(entries, items, "aou_forwarding.yaml")
+        self.assertEqual(markers[0].kind, "ForwardedAoU")
+        self.assertEqual(markers[0].framework, "AoUForwarding")
+
+    def test_marker_location_uses_yaml_path(self) -> None:
+        items = [_req("req Pkg.AoU1@1", "AoU1")]
+        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
+        markers = build_forwarded_markers(entries, items, "some/path/aou_forwarding.yaml")
+        self.assertEqual(markers[0].location.filename, "some/path/aou_forwarding.yaml")
+
+    def test_nonexistent_aou_id_raises(self) -> None:
+        items = [_req("req Pkg.AoU1@1", "AoU1")]
+        entries = [{"aou_id": "NonExistent.Foo", "justification": "reason"}]
+        with self.assertRaises(SystemExit):
+            build_forwarded_markers(entries, items, "aou_forwarding.yaml")
+
+    def test_empty_entries_produces_no_markers(self) -> None:
+        items = [_req("req Pkg.AoU1@1", "AoU1")]
+        markers = build_forwarded_markers([], items, "aou_forwarding.yaml")
+        self.assertEqual(markers, [])
 
 
 if __name__ == "__main__":

@@ -177,8 +177,9 @@ def _seooc_sphinx_entry_point_is_root_index_test_impl(ctx):
     Given a dependable_element whose source tree contains both a root index.rst
           and a components/index.rst,
     When the Sphinx HTML build action is constructed,
-    Then the --index_file argument passed to Sphinx must point to the root
-         index.rst and must NOT point to the components/index.rst sub-page.
+    Then the source directory (the first positional sphinx-build argument)
+         must be the module's own top-level directory, not the
+         components/ subdirectory.
     """
     env = analysistest.begin(ctx)
 
@@ -202,30 +203,39 @@ def _seooc_sphinx_entry_point_is_root_index_test_impl(ctx):
         "Expected to find the Sphinx HTML build action (output ending in '_html')",
     )
 
-    # Then: extract the value that follows --index_file in the argument list
+    # Then: sphinx-build's first positional argument is the source dir (see
+    # _add_sphinx_args in sphinx_module.bzl; action.argv exposes the logical,
+    # already-expanded argument list even with use_param_file(use_always=True),
+    # but argv[0] is the action's own executable -- the sphinx-build args
+    # start at argv[1]).
     argv = sphinx_html_action.argv
-    index_path = None
-    for i, arg in enumerate(argv):
-        if arg == "--index_file" and i + 1 < len(argv):
-            index_path = argv[i + 1]
-            break
-
     asserts.true(
         env,
-        index_path != None,
-        "Sphinx HTML action must contain a --index_file argument",
+        len(argv) > 1,
+        "Sphinx HTML action must have at least one argument after the executable (the source dir)",
     )
+    source_dir = argv[1]
+    parent = source_dir.split("/")[-1]
 
+    # sphinx_module relocates srcs under "<doc_target>/<original_relative_path>"
+    # (see _relocate() in sphinx_module.bzl); dependable_element always passes
+    # ":<name>_index" as both `index` and (via `srcs`) the source of index.rst,
+    # while naming the sphinx_module itself "<name>_doc" (see
+    # _DOC_TARGET_SUFFIX in dependable_element.bzl) -- so the relocated
+    # index.rst's immediate parent is "<name>_index", not "<name>_doc".
+    expected_parent = ctx.attr.target_under_test.label.name.removesuffix("_doc") + "_index"
     asserts.true(
         env,
-        index_path.endswith("index.rst"),
-        "The --index_file value must end with index.rst; got: " + str(index_path),
+        parent == expected_parent,
+        "The Sphinx source dir must be the dependable_element's own index dir, " +
+        "not a subdirectory; got: '" + source_dir + "', expected dir name '" +
+        expected_parent + "'",
     )
 
     asserts.false(
         env,
-        "components/" in index_path,
-        "The --index_file value must NOT point to components/index.rst; got: " + str(index_path),
+        "components/" in source_dir,
+        "The Sphinx source dir must NOT point into components/; got: " + str(source_dir),
     )
 
     return analysistest.end(env)

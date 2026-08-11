@@ -18,29 +18,6 @@ table SourceLocation {
     line: uint32;
 }
 
-/// The kind of condition / group block in a sequence diagram.
-enum ConditionType : byte {
-    Opt = 0,
-    Alt = 1,
-    Loop = 2,
-    Par = 3,
-    Par2 = 4,
-    Break = 5,
-    Critical = 6,
-    Else = 7,
-    Also = 8,
-    End = 9,
-    Group = 10
-}
-
-/// The discriminator for the event union.
-enum EventType : byte {
-    NONE = 0,
-    Interaction = 1,
-    Return = 2,
-    Condition = 3
-}
-
 /// The kind of participant declared in a sequence diagram.
 enum ParticipantType : byte {
     Participant = 0,
@@ -53,32 +30,23 @@ enum ParticipantType : byte {
     Collections = 7
 }
 
-/// A method-call interaction between two participants.
+/// A message interaction between two participants.
 table Interaction {
     /// Sending participant
-    caller: string (required);
+    sender: string;
     /// Receiving participant
-    callee: string (required);
+    receiver: string;
     /// Method or message label
-    method: string;
+    message: string;
+    /// Source location for this interaction
+    source_location: SourceLocation (required);
 }
 
-/// A return message between two participants.
-table Return {
-    /// Original caller (receiver of the return)
-    caller: string (required);
-    /// Original callee (sender of the return)
-    callee: string (required);
-    /// Return value / label
-    return_content: string;
-}
-
-/// A condition / group block header.
-table Condition {
-    /// Kind of block (alt, loop, opt, …)
-    condition_type: ConditionType = Alt;
-    /// Guard expression or label text
-    condition_value: string;
+enum LifecycleAction : byte {
+    Create = 0,
+    Activate = 1,
+    Deactivate = 2,
+    Destroy = 3
 }
 
 /// A declared participant in a sequence diagram.
@@ -95,31 +63,77 @@ table SequenceParticipant {
     stereotype: string;
 }
 
-/// Union of possible events carried by a sequence node.
-union Event {
-    Interaction,
-    Return,
-    Condition
+table ParticipantLifecycle {
+    participant: string (required);
+    action: LifecycleAction = Create;
+    source_location: SourceLocation (required);
 }
 
-/// A node in the hierarchical sequence-diagram logic tree.
-table SequenceNode {
-    /// The event at this node
-    event: Event;
-    /// Source location for this node
+table Reference {
+    participants: [string];
+    text: string;
     source_location: SourceLocation (required);
-    /// Child nodes (nested calls, branches, …)
-    branches_node: [SequenceNode];
+}
+
+table BranchCase {
+    condition: string;
+    block: Block (required);
+    source_location: SourceLocation (required);
+}
+
+table Branch {
+    cases: [BranchCase];
+}
+
+table Loop {
+    condition: string;
+    block: Block (required);
+    source_location: SourceLocation (required);
+}
+
+table ParallelBranch {
+    label: string;
+    block: Block (required);
+    source_location: SourceLocation (required);
+}
+
+table Parallel {
+    branches: [ParallelBranch];
+}
+
+table EarlyExit {
+    reason: string;
+    block: Block (required);
+    source_location: SourceLocation (required);
+}
+
+/// Union of possible sequence logic nodes.
+union Node {
+    Interaction,
+    Branch,
+    Loop,
+    Parallel,
+    EarlyExit,
+    ParticipantLifecycle,
+    Reference
+}
+
+table NodeItem {
+    node: Node;
+}
+
+table Block {
+    items: [NodeItem];
 }
 
 /// Root container for a sequence-diagram logic tree.
 table SequenceDiagram {
     /// Diagram name (usually the source file)
     name: string;
-    /// Top-level sequence nodes
-    root_interactions: [SequenceNode];
     /// Declared participants in document order
     participants: [SequenceParticipant];
+    /// Root behavior block
+    root: Block (required);
 }
 
 root_type SequenceDiagram;

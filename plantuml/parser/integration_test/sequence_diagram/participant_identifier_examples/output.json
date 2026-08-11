@@ -33,36 +33,31 @@
         "stereotype": null
       }
     ],
-    "root_interactions": [
-      {
-        "event": {
+    "root": {
+      "items": [
+        {
           "Interaction": {
-            "caller": "Caller",
-            "callee": "Service",
-            "method": "callByAlias()"
+            "sender": "Caller",
+            "receiver": "Service",
+            "message": "callByAlias()",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
           }
         },
-        "source_location": {
-          "file": "",
-          "line": 19
-        },
-        "branches_node": [
-          {
-            "event": {
-              "Interaction": {
-                "caller": "Service",
-                "callee": "Display Service",
-                "method": "callByDisplayName()"
-              }
-            },
+        {
+          "Interaction": {
+            "sender": "Service",
+            "receiver": "Display Service",
+            "message": "callByDisplayName()",
             "source_location": {
               "file": "",
               "line": 22
-            },
-            "branches_node": []
+            }
           }
-        ]
-      }
-    ]
+        }
+      ]
+    }
   }
 }

@@ -345,6 +345,41 @@ impl ErrorView for ClassPumlResolverError {
 impl ErrorView for SequenceResolverError {
     fn project(&self, base_dir: &Path) -> ProjectedError {
         let _ = base_dir;
-        match *self {}
+        match self {
+            SequenceResolverError::DestroyedParticipantUse {
+                participant,
+                source_location,
+            } => ProjectedError::new("DestroyedParticipantUse")
+                .with_field("participant", participant.clone())
+                .with_field("line", source_location.line.to_string()),
+            SequenceResolverError::InvalidMessageDirection {
+                arrow,
+                source_location,
+            } => ProjectedError::new("InvalidMessageDirection")
+                .with_field("arrow", arrow.clone())
+                .with_field("line", source_location.line.to_string()),
+            SequenceResolverError::UnterminatedGroup { source_location } => {
+                ProjectedError::new("UnterminatedGroup")
+                    .with_field("line", source_location.line.to_string())
+            }
+            SequenceResolverError::ElseNotAllowedInGroup {
+                kind,
+                source_location,
+            } => ProjectedError::new("ElseNotAllowedInGroup")
+                .with_field("kind", format!("{kind:?}"))
+                .with_field("line", source_location.line.to_string()),
+            SequenceResolverError::ElseOutsideGroup { source_location } => {
+                ProjectedError::new("ElseOutsideGroup")
+                    .with_field("line", source_location.line.to_string())
+            }
+            SequenceResolverError::MismatchedGroupEnd {
+                expected,
+                found,
+                source_location,
+            } => ProjectedError::new("MismatchedGroupEnd")
+                .with_field("expected", format!("{expected:?}"))
+                .with_field("found", format!("{found:?}"))
+                .with_field("line", source_location.line.to_string()),
+        }
     }
 }

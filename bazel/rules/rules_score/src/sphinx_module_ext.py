@@ -11,7 +11,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 #
-"""Sphinx extension entry point for loading external (cross-module) needs.
+"""Sphinx extension entry point for loading external (cross-module) needs
+and resolving hermetic tool paths.
 
 Registered by listing "sphinx_module_ext" in conf.py's `extensions = [...]`;
 Sphinx then auto-invokes `setup(app)` below, no manual wiring required. This
@@ -25,6 +26,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from bazel_sphinx_needs import load_external_needs
+from sphinx_conf_helpers import init_hermetic_tools
 
 
 def init_external_needs(app: Any, config: Any) -> None:
@@ -55,6 +57,7 @@ def setup(app: Any) -> Dict[str, Any]:
         Extension metadata dictionary
     """
     app.connect("config-inited", init_external_needs)
+    app.connect("config-inited", init_hermetic_tools)
 
     return {
         "version": "1.0",

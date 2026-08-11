@@ -30,11 +30,17 @@ Call ``RecordProperty`` inside the test body next to the respective code blocks:
 
 .. code-block:: cpp
 
-   TEST_F(MyFixture, DoesXWhenY) {
-       ::testing::Test::RecordProperty("lobster-tracing", "MessagePassing.OsIpcFaultHandling");
-       ::testing::Test::RecordProperty("given",  "a connected client");
-       ::testing::Test::RecordProperty("when",   "the OS IPC call fails");
-       ::testing::Test::RecordProperty("then",   "the client receives an error");
+   TEST(Foo, GetNumber) {
+       ::testing::Test::RecordProperty("lobster-tracing",
+                                       "SampleComponent.REQ_COMP_001");
+
+       ::testing::Test::RecordProperty("given",
+                                       "a default-constructed Foo instance");
+       unit_1::Foo unit{};
+
+       ::testing::Test::RecordProperty("when", "GetNumber is called");
+       ::testing::Test::RecordProperty("then", "it returns 42");
+       EXPECT_EQ(unit.GetNumber(), 42u);
    }
 
 .. list-table::
@@ -56,6 +62,11 @@ Call ``RecordProperty`` inside the test body next to the respective code blocks:
    * - ``then``
      - no
      - Expected outcome
+
+A ``dependable_element`` report renders every annotated test on its **Unit
+Test** page at ``<dependable-element>_index/traceability_report/unit_test.html``.
+The entry shows its Given/When/Then text, links to the traced requirements, and
+links back to the test source.
 
 A test without ``lobster-tracing`` has no traceability and is not included in
 coverage tracking.
@@ -86,6 +97,32 @@ Two complementary workflows keep the lock file in sync:
   test results and **compares** it against the committed lock. Any drift (new
   test, removed test, changed GWT text, version bump) fails the build until the
   lock is refreshed and re-committed.
+
+When a ``dependable_element`` report is built, this claim is rendered on its
+**Test Case Coverage** page at
+``<dependable-element>_index/traceability_report/test_case_coverage.html``.
+Each requirement entry shows its coverage status and GWT text, with links to the
+individual traced test cases.
+
+For example, the SEooC example's lock records two tests covering one component
+requirement:
+
+.. code-block:: yaml
+
+   schema_version: 3
+   requirements:
+     - id: SampleComponent.REQ_COMP_001
+       version: '1'
+       description: The numeric value management interface shall provide a read operation that returns a uint8_t value
+       test_cases:
+         - uid: //Foo:GetNumber
+           given: a default-constructed Foo instance
+           when: GetNumber is called
+           then: it returns 42
+         - uid: //Foo:GetNumberViaConstInstance
+           given: a const default-constructed Foo instance
+           when: GetNumber is called through a const reference
+           then: it still returns 42
 
 For the full tool description — lock file format, update workflow, design
 decisions — see :doc:`../tool_reference/test_case_coverage`.

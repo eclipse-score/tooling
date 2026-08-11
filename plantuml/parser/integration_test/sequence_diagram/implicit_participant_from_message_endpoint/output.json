@@ -23,21 +23,20 @@
         "stereotype": null
       }
     ],
-    "root_interactions": [
-      {
-        "event": {
+    "root": {
+      "items": [
+        {
           "Interaction": {
-            "caller": "Client",
-            "callee": "Service",
-            "method": "request()"
+            "sender": "Client",
+            "receiver": "Service",
+            "message": "request()",
+            "source_location": {
+              "file": "",
+              "line": 18
+            }
           }
-        },
-        "source_location": {
-          "file": "",
-          "line": 18
-        },
-        "branches_node": []
-      }
-    ]
+        }
+      ]
+    }
   }
 }

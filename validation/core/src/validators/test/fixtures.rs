@@ -16,10 +16,10 @@ use crate::models::{
     LogicComponent, LogicRelation, SequenceDiagramInputs,
 };
 use class_diagram::{ClassDiagram, EntityType, Method, SimpleEntity, Visibility};
+use component_diagram::SourceLocation;
 use sequence_logic::{
-    Event, Interaction, ParticipantType, SequenceNode, SequenceParticipant, SequenceTree,
+    Block, Interaction, Node, ParticipantType, SequenceParticipant, SequenceTree,
 };
-use source_location::SourceLocation;
 
 // Common fixtures
 
@@ -121,60 +121,57 @@ fn logic_component(
 // Sequence diagram fixtures.
 
 pub(super) fn sequence_diagrams(participants: &[&str]) -> SequenceDiagramInputs {
-    sequence_calls(
-        &participants
-            .iter()
-            .map(|participant| (*participant, *participant, ""))
-            .collect::<Vec<_>>(),
-    )
-}
-
-pub(super) fn sequence_calls(calls: &[(&str, &str, &str)]) -> SequenceDiagramInputs {
     SequenceDiagramInputs {
         diagrams: vec![SequenceTree {
             name: Some("seq".to_string()),
-            participants: sequence_participants(calls),
-            root_interactions: calls
+            participants: participants
                 .iter()
-                .map(|(caller, callee, method)| SequenceNode {
-                    event: Event::Interaction(Interaction {
-                        caller: (*caller).to_string(),
-                        callee: (*callee).to_string(),
-                        method: (*method).to_string(),
-                    }),
-                    source_location: dummy_source_location(),
-                    branches_node: Vec::new(),
-                })
+                .map(|participant| sequence_participant(participant))
                 .collect(),
+            root: Block::default(),
         }],
     }
 }
 
-fn sequence_participants(calls: &[(&str, &str, &str)]) -> Vec<SequenceParticipant> {
-    let mut participants: Vec<SequenceParticipant> = Vec::new();
-
-    for name in calls
+pub(super) fn sequence_calls(calls: &[(&str, &str, &str)]) -> SequenceDiagramInputs {
+    let participants = calls
         .iter()
         .flat_map(|(caller, callee, _)| [*caller, *callee])
-    {
-        if name.is_empty()
-            || participants
-                .iter()
-                .any(|participant| participant.display_name == name)
-        {
-            continue;
-        }
+        .filter(|participant| !participant.is_empty())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .map(sequence_participant)
+        .collect();
 
-        participants.push(SequenceParticipant {
-            display_name: name.to_string(),
-            alias: Some(name.to_string()),
-            participant_type: ParticipantType::Participant,
-            source_location: dummy_source_location(),
-            stereotype: None,
-        });
+    SequenceDiagramInputs {
+        diagrams: vec![SequenceTree {
+            name: Some("seq".to_string()),
+            participants,
+            root: Block {
+                items: calls
+                    .iter()
+                    .map(|(caller, callee, method)| {
+                        Node::Interaction(Interaction {
+                            sender: Some((*caller).to_string().into()),
+                            receiver: Some((*callee).to_string().into()),
+                            message: Some((*method).to_string()),
+                            source_location: dummy_source_location(),
+                        })
+                    })
+                    .collect(),
+            },
+        }],
     }
+}
 
-    participants
+fn sequence_participant(participant: &str) -> SequenceParticipant {
+    SequenceParticipant {
+        display_name: participant.to_string(),
+        alias: None,
+        participant_type: ParticipantType::Participant,
+        source_location: dummy_source_location(),
+        stereotype: None,
+    }
 }
 
 // Class diagram API fixtures.

@@ -30,9 +30,21 @@ the participating units.
 
 All comparisons are case-sensitive.
 
+Only direct function calls (solid arrows, e.g. `unit_1 -> unit_2 : GetData()`)
+are validated. Return/response interactions (dashed arrows, e.g.
+`unit_2 --> unit_1 : Ack`) are not checked against the internal API and do not
+contribute to interface coverage.
+
+Method names are extracted by taking the text before the first `(` and
+trimming whitespace, so a sequence call `GetData(d: Data*)` is compared
+against an internal API method declared as `GetData()` using the same name
+`GetData`. Sequence interactions that reduce to an empty method name after
+this extraction are silently skipped.
+
 Method-name consistency and consumer/provider roles consistency are checked only
 when component context is available. Without component context, the validator
-does not run a weak global method-name existence check.
+only checks Interface Coverage; Method-Name Consistency and Consumer/Provider
+Role Consistency are skipped entirely.
 
 ### Method-Name Consistency
 
@@ -41,8 +53,19 @@ Internal API interface context.
 
 For cross-unit calls, the method must be declared on a shared interface of the
 participating units as defined in the component diagram. For self-calls, the
-method must be declared on one of the available interfaces.
+method must be declared on one of the available interfaces, where "available"
+means any interface from either the component diagram or the internal API
+diagram (not limited to interfaces bound to that unit).
 *(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceInternalApiMethodNameConsistency`)*
+
+This check is deferred (no error is raised by this validator) in two cases,
+because another validator is responsible for reporting the root cause:
+
+- Cross-unit calls between units that share no interface at all — reported by
+  the `component_sequence` validator's Interface-Connection Consistency check.
+- Calls involving a unit whose component-diagram interface reference is not
+  declared in the internal API diagram — reported by the
+  `component_internal_api` validator's Interface Declaration Consistency check.
 
 ```text
 ' component diagram
@@ -51,7 +74,9 @@ component "Unit 2" as unit_2 <<unit>>
 interface "IData" as IData
 unit_1 -( IData
 unit_2 )- IData
+```
 
+```
 ' sequence diagram
 participant "Unit 1" as unit_1
 participant "Unit 2" as unit_2
@@ -81,12 +106,16 @@ component "Unit 2" as unit_2 <<unit>>
 interface "IData" as IData
 unit_1 -( IData
 unit_2 )- IData
+```
 
+```text
 ' sequence diagram
 participant "Unit 1" as unit_1
 participant "Unit 2" as unit_2
 unit_1 -> unit_2 : GetData()
+```
 
+```text
 ' internal_api diagram
 interface "IData" as IData <<interface>> {
   {abstract} GetData(): Data*
@@ -99,13 +128,21 @@ Every function declared in an Internal API interface must be called in at least
 one sequence interaction. Self-calls count as valid usage.
 *(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceInternalApiInterfaceCoverage`)*
 
+Coverage is computed globally: every method declared on every internal API
+interface is checked against the full set of method names observed anywhere in
+the sequence diagrams, regardless of which units are involved in the call or
+how many times it occurs. Repeated calls between the same caller/callee for
+the same method are only counted once.
+
 ```text
 ' internal_api diagram
 interface "IData" as IData <<interface>> {
   {abstract} GetData(): Data*
   {abstract} SetData(d: Data*): void
 }
+```
 
+```text
 ' sequence diagram
 participant "Unit 1" as unit_1
 participant "Unit 2" as unit_2

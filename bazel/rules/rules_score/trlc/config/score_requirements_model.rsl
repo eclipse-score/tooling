@@ -81,14 +81,22 @@ tuple FeatReqId {
     version Integer
 }
 
+type ControlMeasure "A design or operational measure that detects, prevents, or limits a failure mode." extends RequirementSafety {
+    mitigates    "Reference to the FailureMode or safety concern that this requirement mitigates."
+                 optional String
+}
+
+type AoU "Assumption of Use — a safety-relevant condition that a user must fulfil." extends ControlMeasure {
+}
+
 tuple CompReqSourceId {
-    item    [FeatReq, AssumedSystemReq]
+    item    [FeatReq, AssumedSystemReq, AoU]
     separator @
     version Integer
 }
 
 type CompReq "Component-level requirement allocated to a specific software component." extends RequirementSafety {
-    derived_from "Versioned references to the FeatReq or AssumedSystemReq items this component requirement is derived from. Omit only for component-internal requirements with no feature-level parent."
+    derived_from "Versioned references to the FeatReq, AssumedSystemReq, or received AoU items this component requirement is derived from. An AoU reference must come from a target listed directly in this target's deps (the dependable_element's own assumptions_of_use or one received/forwarded from its deps). Omit only for component-internal requirements with no feature-level parent."
                 CompReqSourceId[1 .. *]
 }
 
@@ -165,20 +173,12 @@ type FailureMode "A potential failure of a system function, described using one 
                    optional String
 }
 
-type ControlMeasure "A design or operational measure that detects, prevents, or limits a failure mode." extends RequirementSafety {
-    mitigates    "Reference to the FailureMode or safety concern that this requirement mitigates."
-                 optional String
-}
-
 type PreventiveMeasure "A measure that prevents a failure mode from occurring in the first place." {
 }
 
 type Mitigation "A measure that reduces the severity or probability of a failure mode's effect." extends AssumedSystemReq {
     mitigates    "Reference to the FailureMode or safety concern that this requirement mitigates."
                  optional String
-}
-
-type AoU "Assumption of Use — a safety-relevant condition that a user must fulfil." extends ControlMeasure {
 }
 
 tuple Measure {

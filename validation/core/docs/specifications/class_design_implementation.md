@@ -47,13 +47,20 @@ This item covers entity matching and entity type only. The consistency of data
 contained by a matched entity is covered by the following type alias, variable,
 method, enum literal, relationship, and template parameter items.
 
+If the same class ID is declared more than once across the unit design's input
+class diagrams (e.g. split across multiple `.puml` files), this is reported
+as a failure naming both source locations, independent of entity type
+consistency.
+
 ```text
-' unit design class diagram
+' PlantUML class diagram
 package vehicle {
   class "Transport"
 }
+```
 
-' implementation C++ code
+```cpp
+// implementation C++ code
 namespace vehicle {
   class Transport {}
 }
@@ -66,12 +73,14 @@ template parameters on the corresponding implementation entities and methods.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationTemplateParameterConsistency`)*
 
 ```text
-' unit design class diagram
+' PlantUML class diagram
 class Repository<T> {
   + FindById<Key>(id: Key) : T
 }
+```
 
-' implementation C++ code
+```cpp
+// implementation C++ code
 template <typename T>
 class Repository {
   template <typename Key>
@@ -86,12 +95,14 @@ implementation entity. The alias name and normalized original type must match.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationTypeAliasConsistency`)*
 
 ```text
-' unit design class diagram
+' PlantUML class diagram
 class "Transport" {
   using Payload = std::uint8_t
 }
+```
 
-' implementation C++ code
+```cpp
+// implementation C++ code
 class Transport {
 public:
   using Payload = std::uint8_t;
@@ -106,13 +117,15 @@ static flag must match.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationVariableConsistency`)*
 
 ```text
-' unit design class diagram
+' PlantUML class diagram
 class "Transport" {
   - buffer: std::uint8_t*
   {static} - instance_count: uint32_t
 }
+```
 
-' implementation C++ code
+```cpp
+// implementation C++ code
 class Transport {
 private:
   std::uint8_t* buffer;
@@ -124,10 +137,17 @@ private:
 
 Every method modeled in the unit design entity must exist in the matching
 implementation entity. The method name, visibility, parameters, and method
-modifiers must match. For non-constructor/non-destructor methods, normalized
-return type must also match. Method modifiers include `static`, `virtual`,
-`abstract`, `override`, constructor, destructor, and `noexcept`.
+modifiers must match, and the normalized return type must also match (this
+applies to constructors and destructors too, which typically have no return
+type on either side). Method modifiers include `static`, `virtual`,
+`abstract`, `override`, constructor, destructor, and `noexcept`. Parameters
+match when they have the same count, with matching parameter name, normalized
+type, and pack-expansion (`...`) marker at each position.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationMethodConsistency`)*
+
+C-style variadic parameters (e.g. `void Log(const char* fmt, ...)`) are not
+currently supported by the PlantUML parser and are not validated: a design
+parameter is always treated as non-variadic.
 
 Method lookup first tries the full normalized signature. If no exact signature
 match exists and exactly one implementation method has the same name, that
@@ -136,12 +156,14 @@ implementation overloads exist, the design method is reported as missing because
 the validator cannot safely choose a candidate.
 
 ```text
-' unit design class diagram
+' PlantUML class diagram
 class "Transport" {
   + Dispatch(mode: std::uint8_t, payload: vehicle::Payload): bool
 }
+```
 
-' implementation C++ code
+```cpp
+// implementation C++ code
 bool Transport::Dispatch(std::uint8_t mode, vehicle::Payload payload)
 ```
 
@@ -152,13 +174,15 @@ implementation enum. The full literal data must match.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationEnumLiteralConsistency`)*
 
 ```text
-' unit design class diagram
+' PlantUML class diagram
 enum "Mode" {
   Startup
   Shutdown
 }
+```
 
-' implementation C++ code
+```cpp
+// implementation C++ code
 enum Mode {
   Startup,
   Shutdown,
@@ -172,14 +196,16 @@ implementation entity. Source, target, and relationship type must match.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationRelationshipConsistency`)*
 
 ```text
-' unit design class diagram
+' PlantUML class diagram
 struct Payload {}
 class Vehicle {
   + Load(payload : Payload)
 }
 Vehicle ..> Payload
+```
 
-' implementation C++ code
+```cpp
+// implementation C++ code
 struct Payload {};
 class Vehicle {
 public:
@@ -197,11 +223,20 @@ Before comparing types, the validator applies limited normalization.
 | `std::uint8_t` | `uint8_t` |
 | `uint8_t *` | `uint8_t*` |
 | `Payload &` | `Payload&` |
+| `vehicle.Engine` | `vehicle::Engine` |
+
+The last row accounts for a difference between the class diagram and
+implementation parser UIDs: dots used as namespace separators are converted to
+`::` before comparison. This applies to type names, class/entity IDs, and
+relationship source/target identifiers alike. cv-qualifiers such as `const`
+and `volatile`, and the pointer/reference decorators `*`/`&`, are preserved
+(only the spacing around them is normalized).
 
 ## Failure Cases
 
 | Failure case | Validation rule |
 |---|---|
+| Duplicate class ID across unit design class diagrams | Entity Presence and Type Consistency |
 | Missing implementation entity | Entity Presence and Type Consistency |
 | Entity type mismatch | Entity Presence and Type Consistency |
 | Entity template parameter mismatch | Template Parameter Consistency |

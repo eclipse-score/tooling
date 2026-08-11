@@ -17,8 +17,9 @@ use std::fs;
 
 use sequence_fbs::sequence_metamodel as fb_sequence;
 use sequence_logic::{
-    Condition, ConditionType, Event, Interaction, ParticipantType, Return, SequenceNode,
-    SequenceParticipant, SequenceTree,
+    Block, Branch, BranchCase, EarlyExit, Interaction, LifecycleAction, Loop, Node, Parallel,
+    ParallelBranch, ParticipantLifecycle, ParticipantType, Reference, SequenceParticipant,
+    SequenceTree,
 };
 
 use crate::models::SequenceDiagramInputs;
@@ -62,18 +63,8 @@ impl Reader for SequenceDiagramReader {
             let diagram = flatbuffers::root::<fb_sequence::SequenceDiagram>(&data)
                 .map_err(|e| format!("Failed to parse sequence FlatBuffer {path}: {e}"))?;
 
-            let root_interactions = if let Some(nodes) = diagram.root_interactions() {
-                let mut parsed_nodes = Vec::with_capacity(nodes.len());
-                for (index, node) in nodes.iter().enumerate() {
-                    parsed_nodes.push(
-                        read_node(node, &format!("{path}:root[{index}]"))
-                            .map_err(|e| format!("Failed to parse sequence node: {e}"))?,
-                    );
-                }
-                parsed_nodes
-            } else {
-                Vec::new()
-            };
+            let root = read_block(diagram.root(), &format!("{path}:root"))
+                .map_err(|e| format!("Failed to parse sequence root block: {e}"))?;
 
             let participants = if let Some(values) = diagram.participants() {
                 let mut parsed_participants = Vec::with_capacity(values.len());
@@ -91,7 +82,7 @@ impl Reader for SequenceDiagramReader {
             diagrams.push(SequenceTree {
                 name: diagram.name().map(|s| s.to_string()),
                 participants,
-                root_interactions,
+                root,
             });
         }
 
@@ -99,77 +90,165 @@ impl Reader for SequenceDiagramReader {
     }
 }
 
-fn read_node(node: fb_sequence::SequenceNode<'_>, node_path: &str) -> Result<SequenceNode, String> {
-    let event = match node.event_type() {
-        fb_sequence::Event::Interaction => {
-            let interaction = node.event_as_interaction().ok_or_else(|| {
-                format!(
-                    "{node_path}: event_type is Interaction, but interaction payload is missing"
-                )
-            })?;
-            Event::Interaction(Interaction {
-                caller: interaction.caller().to_string(),
-                callee: interaction.callee().to_string(),
-                method: interaction
-                    .method()
-                    .map(|s| s.to_string())
-                    .unwrap_or_default(),
-            })
+fn read_block(block: fb_sequence::Block<'_>, block_path: &str) -> Result<Block, String> {
+    let mut items = Vec::new();
+    if let Some(values) = block.items() {
+        items.reserve(values.len());
+        for (index, item) in values.iter().enumerate() {
+            items.push(read_node_item(
+                item,
+                &format!("{block_path}.items[{index}]"),
+            )?);
         }
-        fb_sequence::Event::Return => {
-            let ret = node.event_as_return().ok_or_else(|| {
-                format!("{node_path}: event_type is Return, but return payload is missing")
-            })?;
-            Event::Return(Return {
-                caller: ret.caller().to_string(),
-                callee: ret.callee().to_string(),
-                return_content: ret
-                    .return_content()
-                    .map(|s| s.to_string())
-                    .unwrap_or_default(),
-            })
-        }
-        fb_sequence::Event::Condition => {
-            let condition = node.event_as_condition().ok_or_else(|| {
-                format!("{node_path}: event_type is Condition, but condition payload is missing")
-            })?;
-            Event::Condition(Condition {
-                condition_type: map_condition_type(condition.condition_type(), node_path)?,
-                condition_value: condition
-                    .condition_value()
-                    .map(|s| s.to_string())
-                    .unwrap_or_default(),
-            })
-        }
-        fb_sequence::Event::NONE => {
-            return Err(format!("{node_path}: event_type is NONE"));
-        }
-        _ => {
-            return Err(format!(
-                "{node_path}: unsupported event_type {:?}",
-                node.event_type()
-            ));
-        }
-    };
+    }
 
-    let branches_node = if let Some(children) = node.branches_node() {
-        let mut parsed_children = Vec::with_capacity(children.len());
-        for (index, child) in children.iter().enumerate() {
-            parsed_children.push(read_node(child, &format!("{node_path}.branches[{index}]"))?);
-        }
-        parsed_children
-    } else {
-        Vec::new()
-    };
+    Ok(Block { items })
+}
 
-    Ok(SequenceNode {
-        event,
+fn read_node_item(item: fb_sequence::NodeItem<'_>, node_path: &str) -> Result<Node, String> {
+    match item.node_type() {
+        fb_sequence::Node::Interaction => {
+            let interaction = item.node_as_interaction().ok_or_else(|| {
+                format!("{node_path}: node_type is Interaction, but payload is missing")
+            })?;
+            Ok(Node::Interaction(Interaction {
+                sender: interaction.sender().map(|sender| sender.to_string().into()),
+                receiver: interaction
+                    .receiver()
+                    .map(|receiver| receiver.to_string().into()),
+                message: interaction.message().map(|s| s.to_string()),
+                source_location: to_source_location(
+                    interaction.source_location().file(),
+                    interaction.source_location().line(),
+                ),
+            }))
+        }
+        fb_sequence::Node::Branch => {
+            let branch = item.node_as_branch().ok_or_else(|| {
+                format!("{node_path}: node_type is Branch, but payload is missing")
+            })?;
+            Ok(Node::Branch(read_branch(branch, node_path)?))
+        }
+        fb_sequence::Node::Loop => {
+            let loop_node = item
+                .node_as_loop()
+                .ok_or_else(|| format!("{node_path}: node_type is Loop, but payload is missing"))?;
+            Ok(Node::Loop(Loop {
+                condition: loop_node.condition().map(|s| s.to_string()),
+                block: read_block(loop_node.block(), &format!("{node_path}.block"))?,
+                source_location: to_source_location(
+                    loop_node.source_location().file(),
+                    loop_node.source_location().line(),
+                ),
+            }))
+        }
+        fb_sequence::Node::Parallel => {
+            let parallel = item.node_as_parallel().ok_or_else(|| {
+                format!("{node_path}: node_type is Parallel, but payload is missing")
+            })?;
+            Ok(Node::Parallel(read_parallel(parallel, node_path)?))
+        }
+        fb_sequence::Node::EarlyExit => {
+            let early_exit = item.node_as_early_exit().ok_or_else(|| {
+                format!("{node_path}: node_type is EarlyExit, but payload is missing")
+            })?;
+            Ok(Node::EarlyExit(EarlyExit {
+                reason: early_exit.reason().map(|s| s.to_string()),
+                block: read_block(early_exit.block(), &format!("{node_path}.block"))?,
+                source_location: to_source_location(
+                    early_exit.source_location().file(),
+                    early_exit.source_location().line(),
+                ),
+            }))
+        }
+        fb_sequence::Node::ParticipantLifecycle => {
+            let lifecycle = item.node_as_participant_lifecycle().ok_or_else(|| {
+                format!("{node_path}: node_type is ParticipantLifecycle, but payload is missing")
+            })?;
+            Ok(Node::Lifecycle(ParticipantLifecycle {
+                participant: lifecycle.participant().to_string().into(),
+                action: map_lifecycle_action(lifecycle.action())
+                    .map_err(|err| format!("{node_path}: {err}"))?,
+                source_location: to_source_location(
+                    lifecycle.source_location().file(),
+                    lifecycle.source_location().line(),
+                ),
+            }))
+        }
+        fb_sequence::Node::Reference => {
+            let reference = item.node_as_reference().ok_or_else(|| {
+                format!("{node_path}: node_type is Reference, but payload is missing")
+            })?;
+            Ok(Node::Reference(read_reference(reference)))
+        }
+        fb_sequence::Node::NONE => Err(format!("{node_path}: node_type is NONE")),
+        other => Err(format!("{node_path}: unsupported node_type {other:?}")),
+    }
+}
+
+fn read_branch(branch: fb_sequence::Branch<'_>, branch_path: &str) -> Result<Branch, String> {
+    let mut cases = Vec::new();
+    if let Some(values) = branch.cases() {
+        cases.reserve(values.len());
+        for (index, case) in values.iter().enumerate() {
+            cases.push(BranchCase {
+                condition: case.condition().map(|s| s.to_string()),
+                block: read_block(case.block(), &format!("{branch_path}.cases[{index}].block"))?,
+                source_location: to_source_location(
+                    case.source_location().file(),
+                    case.source_location().line(),
+                ),
+            });
+        }
+    }
+
+    Ok(Branch { cases })
+}
+
+fn read_parallel(
+    parallel: fb_sequence::Parallel<'_>,
+    parallel_path: &str,
+) -> Result<Parallel, String> {
+    let mut branches = Vec::new();
+    if let Some(values) = parallel.branches() {
+        branches.reserve(values.len());
+        for (index, branch) in values.iter().enumerate() {
+            branches.push(ParallelBranch {
+                label: branch.label().map(|s| s.to_string()),
+                block: read_block(
+                    branch.block(),
+                    &format!("{parallel_path}.branches[{index}].block"),
+                )?,
+                source_location: to_source_location(
+                    branch.source_location().file(),
+                    branch.source_location().line(),
+                ),
+            });
+        }
+    }
+
+    Ok(Parallel { branches })
+}
+
+fn read_reference(reference: fb_sequence::Reference<'_>) -> Reference {
+    let participants = reference
+        .participants()
+        .map(|values| {
+            values
+                .iter()
+                .map(|value| value.to_string().into())
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Reference {
+        participants,
+        text: reference.text().map(|s| s.to_string()),
         source_location: to_source_location(
-            node.source_location().file(),
-            node.source_location().line(),
+            reference.source_location().file(),
+            reference.source_location().line(),
         ),
-        branches_node,
-    })
+    }
 }
 
 fn read_participant(
@@ -189,25 +268,12 @@ fn read_participant(
     })
 }
 
-fn map_condition_type(
-    value: fb_sequence::ConditionType,
-    node_path: &str,
-) -> Result<ConditionType, String> {
+fn map_lifecycle_action(value: fb_sequence::LifecycleAction) -> Result<LifecycleAction, String> {
     match value {
-        fb_sequence::ConditionType::Opt => Ok(ConditionType::Opt),
-        fb_sequence::ConditionType::Alt => Ok(ConditionType::Alt),
-        fb_sequence::ConditionType::Loop => Ok(ConditionType::Loop),
-        fb_sequence::ConditionType::Par => Ok(ConditionType::Par),
-        fb_sequence::ConditionType::Par2 => Ok(ConditionType::Par2),
-        fb_sequence::ConditionType::Break => Ok(ConditionType::Break),
-        fb_sequence::ConditionType::Critical => Ok(ConditionType::Critical),
-        fb_sequence::ConditionType::Else => Ok(ConditionType::Else),
-        fb_sequence::ConditionType::Also => Ok(ConditionType::Also),
-        fb_sequence::ConditionType::End => Ok(ConditionType::End),
-        fb_sequence::ConditionType::Group => Ok(ConditionType::Group),
-        _ => Err(format!(
-            "{node_path}: unsupported condition_type {:?}",
-            value
-        )),
+        fb_sequence::LifecycleAction::Create => Ok(LifecycleAction::Create),
+        fb_sequence::LifecycleAction::Activate => Ok(LifecycleAction::Activate),
+        fb_sequence::LifecycleAction::Deactivate => Ok(LifecycleAction::Deactivate),
+        fb_sequence::LifecycleAction::Destroy => Ok(LifecycleAction::Destroy),
+        other => Err(format!("unsupported lifecycle action {other:?}")),
     }
 }

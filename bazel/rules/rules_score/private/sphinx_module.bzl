@@ -19,6 +19,18 @@ load("@rules_python//sphinxdocs/private:sphinx_docs_library_info.bzl", "SphinxDo
 load("//bazel/rules/rules_score:providers.bzl", "FilteredExecpathInfo", "SphinxIndexFileInfo", "SphinxModuleInfo", "SphinxNeedsInfo")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
+# Maps the //bazel/rules/rules_score:verbosity build setting (see
+# verbosity.bzl) to the sphinx-build CLI flags that achieve it. Lives here in
+# Starlark rather than in a wrapper script: the Sphinx build binary is
+# rules_python's own sphinx_build.py (see score_sphinx_toolchain), which
+# takes plain sphinx-build argv with no score-specific flags of its own.
+_SPHINX_VERBOSITY_FLAGS = {
+    "warn": ["-q"],
+    "info": [],
+    "debug": ["-vv"],
+    "trace": ["-vvv"],
+}
+
 def _get_index_file(ctx):
     """Extract the index file from the index attribute.
 
@@ -131,9 +143,82 @@ sphinx_rule_attrs = dict(
             doc = "Directory containing fta_metamodel.puml, passed to PlantUML via " +
                   "-Dplantuml.include.path so FTA diagrams can resolve !include fta_metamodel.puml.",
         ),
+        "allow_persistent_workers": attr.bool(
+            default = False,
+            doc = "(experimental) If true, allow Bazel to run this pass's Sphinx build " +
+                  "action as a persistent worker (rules_python's sphinxdocs Worker " +
+                  "protocol), improving incremental-build performance. Does not affect " +
+                  "the HTML merge step, which never invokes Sphinx. Has no effect on the " +
+                  "needs pass, which never opts into worker mode regardless of this " +
+                  "attr's value -- see _score_needs_impl's worker_enabled comment. Known " +
+                  "gap even where honored (HTML pass): rules_python's Worker only " +
+                  "additively copies worker_outdir into the Bazel-declared output dir " +
+                  "(shutil.copytree(..., dirs_exist_ok=True) in sphinxdocs/private/" +
+                  "sphinx_build.py), so a page whose source doc was removed can survive " +
+                  "as stale output across worker-reused builds until a clean build. " +
+                  "Sphinx's own incremental build doesn't purge it from worker_outdir " +
+                  "either (env.clear_doc() only removes the doc from env state, not the " +
+                  "file from disk). Fix belongs upstream; do not flip this on for real " +
+                  "use before it lands and a soak test exists.",
+        ),
     },
     **VERBOSITY_ATTR
 )
+
+def _worker_execution_requirements(worker_enabled):
+    """Execution requirements enabling the Bazel persistent-worker protocol.
+
+    `worker_enabled` is the same boolean `_add_sphinx_args` uses to decide
+    whether to keep `--jobs auto` -- one flag, computed once per call site,
+    drives both. Bazel/RBE may still override these and fall back to
+    one-shot execution even when this returns the worker dict.
+    """
+    if not worker_enabled:
+        return {}
+    return {
+        "supports-workers": "1",
+        "requires-worker-protocol": "json",
+    }
+
+def _add_sphinx_args(args, *, source_dir, output_dir, config_dir, builder, log_level, worker_enabled):
+    """Append the shared sphinx-build positional/flag arguments to `args`.
+
+    Positional order matters: `@rules_python//sphinxdocs/private:sphinx_build.py`'s
+    persistent-worker `Worker._prepare_sphinx` hardcodes `arguments[0]`/`[1]`
+    as srcdir/outdir, so these two MUST be the first two args added -- callers
+    must call this before adding any extra_opts.
+
+    `worker_enabled` must be the exact value passed to
+    `_worker_execution_requirements` for the same action -- see that
+    function's docstring.
+    """
+    args.add(source_dir)
+    args.add(output_dir)
+    args.add("-c", config_dir)
+    args.add("-b", builder)
+    args.add("-T")  # show details in case of errors in extensions
+
+    if not worker_enabled:
+        # --jobs auto forks a subprocess pool per invocation. Inside a
+        # long-lived persistent worker process that would compound across
+        # requests instead of being torn down between them, and the
+        # extension stack's parallel_read_safe claims (sphinx-needs in
+        # particular) haven't been soak-tested under worker reuse. Parallel
+        # read is therefore one-shot-execution only; see also the needs
+        # pass, which never sets worker_enabled True in the first place
+        # (_score_needs_impl).
+        args.add("--jobs", "auto")
+
+    # Doctree dir lives outside output_dir (a sibling), suffixed by builder
+    # so distinct passes sharing an output_dir prefix (e.g. a future pass
+    # added under the same <name>/ directory as "html") never collide --
+    # today's needs/html split already differs by directory, but that's
+    # incidental, not a mechanism this depends on. Living outside output_dir
+    # also means it survives the worker's per-request output_dir
+    # redirection (see Worker._prepare_sphinx) and Bazel's own re-creation
+    # of declared output dirs between one-shot invocations.
+    args.add("--doctree-dir", output_dir + "_" + builder + "_doctrees")
+    args.add_all(_SPHINX_VERBOSITY_FLAGS.get(log_level, []))
 
 def _hermetic_tool_env(ctx):
     """Compute the env vars that give conf.py hermetic access to plantuml/graphviz.
@@ -188,25 +273,43 @@ def _score_needs_impl(ctx):
     # conf.template.py (safe: the HTML phase relocates everything so it never
     # emits toc.not_readable).
     needs_inputs = ctx.files.srcs + [config_file]
-    needs_args = [
-        "--index_file",
-        _get_index_file(ctx).path,
-        "--output_dir",
-        needs_output.dirname,
-        "--config",
-        config_file.path,
-        "--builder",
-        "needs",
-        "--log-level",
-        get_log_level(ctx),
-    ]
+    output_dir = needs_output.dirname
+
+    # The needs pass reads directly from the unrelocated source checkout
+    # (source_dir below is paths.dirname() of the raw index file, not a
+    # relocated/staged path) -- unlike the HTML pass, which reads a tree
+    # generated under bazel-out. Upstream's persistent-worker protocol
+    # (Worker._prepare_sphinx in @rules_python//sphinxdocs/private:
+    # sphinx_build.py) writes a "_bazel_worker_request_info.json" file into
+    # srcdir on every request. With --worker_sandboxing off (Bazel's
+    # default) and execroot source paths symlinked straight into the real
+    # checkout, that write would land in the actual source tree, not a
+    # build-only directory. So the needs pass never opts into worker mode,
+    # regardless of allow_persistent_workers, until srcdir here is a
+    # generated tree too (i.e. once both passes share one relocated source
+    # tree -- see sphinx_source_tree adoption).
+    worker_enabled = False
+
+    args = ctx.actions.args()
+    args.use_param_file("@%s", use_always = True)
+    args.set_param_file_format("multiline")
+    _add_sphinx_args(
+        args,
+        source_dir = paths.dirname(_get_index_file(ctx).path),
+        output_dir = output_dir,
+        config_dir = paths.dirname(config_file.path),
+        builder = "needs",
+        log_level = get_log_level(ctx),
+        worker_enabled = worker_enabled,
+    )
 
     fta_metamodel_files, action_env = _hermetic_tool_env(ctx)
     ctx.actions.run(
         inputs = needs_inputs + fta_metamodel_files,
         outputs = [needs_output],
-        arguments = needs_args,
+        arguments = [args],
         env = action_env,
+        execution_requirements = _worker_execution_requirements(worker_enabled),
         mnemonic = "SphinxNeedsBuild",
         progress_message = "Generating needs.json for: %s" % ctx.label.name,
         executable = sphinx_toolchain.sphinx.files_to_run.executable,
@@ -218,6 +321,19 @@ def _score_needs_impl(ctx):
     )
     transitive_needs = [dep[SphinxNeedsInfo].needs_json_files for dep in ctx.attr.deps if SphinxNeedsInfo in dep]
     needs_json_files = depset([needs_output], transitive = transitive_needs)
+
+    # Self-inclusive union (mirrors SphinxModuleInfo.transitive_modules): each
+    # dep's own needs_modules already contains itself, so unioning deps'
+    # depsets yields the full flat closure without this module needing to add
+    # each dep individually on top. Consumed by _score_html_impl to build
+    # needs_external_needs.json from every module transitively required, not
+    # just direct deps -- otherwise a :need: reference more than one hop away
+    # can never resolve.
+    transitive_needs_modules = [dep[SphinxNeedsInfo].needs_modules for dep in ctx.attr.deps if SphinxNeedsInfo in dep]
+    needs_modules = depset(
+        [struct(name = _needs_output_prefix(ctx.label.name), needs_json_file = needs_output)],
+        transitive = transitive_needs_modules,
+    )
     return [
         DefaultInfo(
             files = needs_json_files,
@@ -225,6 +341,7 @@ def _score_needs_impl(ctx):
         SphinxNeedsInfo(
             needs_json_file = needs_output,  # Direct file only
             needs_json_files = needs_json_files,  # Transitive depset
+            needs_modules = needs_modules,  # Transitive, self-inclusive, keyed by base module name
         ),
     ]
 
@@ -233,40 +350,37 @@ def _score_html_impl(ctx):
     Phase 1: Generate needs.json for this module and collect from all deps
     Phase 2: Generate HTML with external needs and merge all dependency HTML
     """
-    run_args = []  # Copy of the args to forward along to debug runner
-    args = ctx.actions.args()  # Args passed to the action
+    args = ctx.actions.args()  # Args passed to the Sphinx build action
+    args.use_param_file("@%s", use_always = True)
+    args.set_param_file_format("multiline")
 
     # Expand location references in extra_opts and collect as sphinx arguments.
     # targets must include all labels referenced via $(location ...) / $(execpaths ...).
     location_targets = ctx.attr.srcs + ctx.attr.docs_library_deps
     source_prefix = ctx.label.name
 
-    # Process extra_opts targets: these are rule targets (e.g. filter_execpath)
-    # providing FilteredExecpathInfo with resolved Sphinx arguments.
-    filtered_files = []
-    for target in ctx.attr.extra_opts_targets:
-        info = target[FilteredExecpathInfo]
-        args.add(info.arg)
-        run_args.append(info.arg)
-        filtered_files.append(info.matched_file)
-    for opt in ctx.attr.extra_opts:
-        # Standard extra_opts: expand locations and pass through
-        expanded_opt = ctx.expand_location(opt, targets = location_targets)
-        args.add(expanded_opt)
-        run_args.append(expanded_opt)
-
     sphinx_toolchain = ctx.toolchains["//bazel/rules/rules_score:toolchain_type"].sphinxinfo
-    needs_external_needs = {}
-    for dep in ctx.attr.needs:
-        if SphinxNeedsInfo in dep:
-            dep_name = _needs_output_prefix(dep.label.name)
-            needs_external_needs[dep.label.name] = {
-                "base_url": dep_name,  # Relative path to the subdirectory where dep HTML is copied
-                "json_path": dep[SphinxNeedsInfo].needs_json_file.path,  # Use direct file
-                "id_prefix": "",
-                "css_class": "",
-                "version": "1.0",
-            }
+
+    # Built from the full transitive closure (each direct needs-dep's own
+    # SphinxNeedsInfo.needs_modules is already self-inclusive), not just
+    # direct deps -- a :need: reference more than one hop away could
+    # otherwise never resolve. base_url = module.name (no path prefix) is
+    # only truthful because the HTML merge below is flat: every transitive
+    # module lands at that exact depth-1 path in the published site,
+    # regardless of how many dependency hops away it is.
+    transitive_needs_modules = depset(
+        transitive = [dep[SphinxNeedsInfo].needs_modules for dep in ctx.attr.needs if SphinxNeedsInfo in dep],
+    ).to_list()
+    needs_external_needs = {
+        module.name: {
+            "base_url": module.name,  # Relative path to the subdirectory where dep HTML is copied
+            "json_path": module.needs_json_file.path,
+            "id_prefix": "",
+            "css_class": "",
+            "version": "1.0",
+        }
+        for module in transitive_needs_modules
+    }
     needs_external_needs_json = ctx.actions.declare_file(ctx.label.name + "/needs_external_needs.json")
     ctx.actions.write(
         output = needs_external_needs_json,
@@ -311,27 +425,78 @@ def _score_html_impl(ctx):
     # Because plain files and generated files are in different directories,
     # we need to merge the two into a single directory.
     index_source_file = _get_index_file(ctx)
+
+    # An index also listed in renamed_srcs would relocate to two different
+    # destinations under the two relocation formulas below (srcs: strip
+    # ctx.attr.strip_prefix from short_path; renamed_srcs: the dict's own
+    # explicit destination path), so --index_file would end up pointing at
+    # the wrong one -- surfacing as an opaque "index file does not exist"
+    # from the Sphinx build action instead of a clear build-time error.
+    # docs_library_deps can't be checked here: its relocation is
+    # provider-driven, not visible until the srcs loop below has already
+    # run, so that combination remains an unguarded gap.
+    for renamed_src_target in ctx.attr.renamed_srcs.keys():
+        if renamed_src_target.label == ctx.attr.index.label:
+            fail(
+                "sphinx_module '{}': 'index' ({}) must not also appear as a renamed_srcs key -- ".format(
+                    ctx.label.name,
+                    ctx.attr.index.label,
+                ) +
+                "srcs and renamed_srcs relocate a file to two different destinations, so " +
+                "--index_file would point at the wrong one. Remove it from renamed_srcs.",
+            )
+
     relocated_index_file = ""
     for orig_file in ctx.files.srcs:
         dest = _relocate(orig_file)
         if orig_file.path == index_source_file.path:
             relocated_index_file = dest.path
 
+    if not relocated_index_file:
+        fail(
+            "sphinx_module '{}': 'index' ({}) did not resolve to a relocated path -- ".format(
+                ctx.label.name,
+                ctx.attr.index.label,
+            ) +
+            "its file must also appear in 'srcs'. An index reachable only via 'renamed_srcs' " +
+            "or 'docs_library_deps' is not currently supported.",
+        )
+
+    sphinx_html_output = ctx.actions.declare_directory(ctx.label.name + "/_html")
+
+    # The HTML pass reads a relocated tree generated under bazel-out (built
+    # above via _relocate), so a worker-mode write into "srcdir" -- the
+    # request-info file Worker._prepare_sphinx drops there -- lands in a
+    # build-only directory, never the real checkout. Safe to honor the attr
+    # here; see _score_needs_impl's worker_enabled comment for why the needs
+    # pass can't do the same yet.
+    worker_enabled = ctx.attr.allow_persistent_workers
+
+    # Positional/builder args must come first (see _add_sphinx_args' docstring)
+    # -- extra_opts are appended after.
+    _add_sphinx_args(
+        args,
+        source_dir = paths.dirname(relocated_index_file),
+        output_dir = sphinx_html_output.path,
+        config_dir = paths.dirname(config_file.path),
+        builder = "html",
+        log_level = get_log_level(ctx),
+        worker_enabled = worker_enabled,
+    )
+
+    # Process extra_opts targets: these are rule targets (e.g. filter_execpath)
+    # providing FilteredExecpathInfo with resolved Sphinx arguments.
+    filtered_files = []
+    for target in ctx.attr.extra_opts_targets:
+        info = target[FilteredExecpathInfo]
+        args.add(info.arg)
+        filtered_files.append(info.matched_file)
+    for opt in ctx.attr.extra_opts:
+        # Standard extra_opts: expand locations and pass through
+        args.add(ctx.expand_location(opt, targets = location_targets))
+
     # Build HTML with external needs
     html_inputs = sphinx_source_files + ctx.files.needs + filtered_files + [config_file, needs_external_needs_json]
-    sphinx_html_output = ctx.actions.declare_directory(ctx.label.name + "/_html")
-    html_args = [
-        "--index_file",
-        relocated_index_file,
-        "--output_dir",
-        sphinx_html_output.path,
-        "--config",
-        config_file.path,
-        "--builder",
-        "html",
-        "--log-level",
-        get_log_level(ctx),
-    ]
 
     # Use the hermetic graphviz wrapper that executes `/usr/bin/dot` inside the
     # docs_runtime sysroot via exec_in_sysroot.
@@ -340,8 +505,9 @@ def _score_html_impl(ctx):
     ctx.actions.run(
         inputs = html_inputs + fta_metamodel_files,
         outputs = [sphinx_html_output],
-        arguments = html_args + [args],
+        arguments = [args],
         env = action_env,
+        execution_requirements = _worker_execution_requirements(worker_enabled),
         mnemonic = "SphinxHtmlBuild",
         progress_message = "Building HTML: %s" % ctx.label.name,
         executable = sphinx_toolchain.sphinx.files_to_run.executable,
@@ -469,9 +635,10 @@ def sphinx_module(
         deps = [],
         docs_library_deps = [],
         renamed_srcs = {},
-        strip_prefix = "",
+        strip_prefix = None,
         extra_opts = [],
         extra_opts_targets = [],
+        allow_persistent_workers = False,
         testonly = False,
         **kwargs):
     """Build a Sphinx module with transitive HTML dependencies.
@@ -487,20 +654,28 @@ def sphinx_module(
         docs_library_deps: {type}`list[label]` of {obj}`sphinx_docs_library` targets.
         renamed_srcs: {type}`dict[label, str]` Doc source files that are renamed
                     on their way into the Sphinx source tree.
-        strip_prefix: {type}`str` A prefix to remove from the file paths of the
+        strip_prefix: {type}`str | None` A prefix to remove from the file paths of the
                     source files. e.g., given `//sphinxdocs/docs:foo.md`, stripping `docs/` makes
                     Sphinx see `foo.md` in its generated source directory. If not
-                    specified, then {any}`native.package_name` is used.
+                specified (None, the default), {any}`native.package_name` + "/" is
+                used. Pass "" explicitly to strip nothing -- unlike a plain string
+                default, None lets that explicit "" survive, since "" and "not
+                specified" are different intents.
         extra_opts: {type}`list[str]` Additional string options to pass onto Sphinx building.
                     On each provided option, a location expansion is performed.
                     See {any}`ctx.expand_location`.
         extra_opts_targets: {type}`list[label]` Label targets that resolve to extra Sphinx
                     arguments at analysis time. Each target must provide FilteredExecpathInfo
                     (e.g. filter_execpath targets).
+        allow_persistent_workers: {type}`bool` (experimental) If true, allow Bazel to run the
+                    HTML build action as a persistent worker for faster incremental builds.
+                    Has no effect on the needs.json build, which never runs as a worker (its
+                    source directory is the real checkout, not a generated tree -- see
+                    _score_needs_impl), or on the HTML merge step, which never invokes Sphinx.
         visibility: Bazel visibility
     """
     package = native.package_name()
-    resolved_strip_prefix = strip_prefix if strip_prefix else (package + "/" if package else "")
+    resolved_strip_prefix = strip_prefix if strip_prefix != None else (package + "/" if package else "")
 
     # conf.py generation is a private implementation detail consumed only by
     # the sibling _score_needs/_score_html targets below (same package) --
@@ -532,6 +707,7 @@ def sphinx_module(
         index = index,
         deps = [d + "_needs" for d in deps],
         conf = name + "_needs_conf",
+        allow_persistent_workers = allow_persistent_workers,
         testonly = testonly,
         **kwargs
     )
@@ -547,6 +723,7 @@ def sphinx_module(
         conf = name + "_conf",
         extra_opts = extra_opts,
         extra_opts_targets = extra_opts_targets,
+        allow_persistent_workers = allow_persistent_workers,
         testonly = testonly,
         **kwargs
     )

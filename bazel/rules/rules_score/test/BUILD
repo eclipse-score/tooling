@@ -13,6 +13,8 @@
 
 load("@pip_tooling_test//:requirements.bzl", "requirement")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_python//python:defs.bzl", "py_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(
     "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
@@ -30,7 +32,7 @@ load(
 )
 load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphinx_toolchain")
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
-load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test")
+load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test", "trlc_specification")
 load(
     ":html_generation_test.bzl",
     "auto_config_generation_test",
@@ -48,9 +50,11 @@ load(
     "lobster_config_test_suite",
 )
 load(
-    ":requirements_image_test.bzl",
-    "image_srcs_sphinx_sources_test",
-    "requirements_image_test_suite",
+    ":requirements_multi_spec_test.bzl",
+    "asr_multi_spec_provider_test",
+    "comp_req_multi_spec_provider_test",
+    "feat_req_multi_spec_provider_test",
+    "requirements_multi_spec_test_suite",
 )
 load(
     ":requirements_rst_test.bzl",
@@ -80,6 +84,8 @@ load(
     "transitive_modules_dedup_test",
     "two_phase_html_second_test",
     "two_phase_needs_first_test",
+    "worker_gating_html_test",
+    "worker_gating_needs_test",
 )
 load(
     ":seooc_test.bzl",
@@ -96,6 +102,7 @@ load(
     ":unit_component_test.bzl",
     "component_excludes_feature_req_docs_test",
     "component_provider_test",
+    "component_requirements_transitive_test",
     "component_sphinx_sources_test",
     "component_test_case_coverage_lock_test",
     "dependable_element_test_case_coverage_lock_check_action_test",
@@ -115,7 +122,6 @@ exports_files(["template/conf.template.py"])
 score_sphinx_toolchain(
     name = "score_toolchain",
     conf_template = "//:template/conf.template.py",
-    package_collisions = "warning",
     deps = [
         "@score_docs_as_code//src:plantuml_for_python",
         "@score_docs_as_code//src/extensions/score_sphinx_bundle",
@@ -185,6 +191,35 @@ sphinx_module(
         ":module_b_lib",
         ":module_c_lib",
     ],
+)
+
+# Regression fixture for two-hop needs resolution: module_e_lib depends only
+# on module_b_lib, with no direct edge to module_c_lib or module_d_lib, yet
+# its index.rst references a need defined in module_d_lib (reachable only via
+# module_b_lib -> module_d_lib). needs_external_needs.json must be built from
+# the full transitive closure of needs modules (SphinxNeedsInfo.needs_modules)
+# for this to resolve -- building it from direct deps only (the pre-fix
+# behavior) can never see past one hop.
+sphinx_module(
+    name = "module_e_lib",
+    srcs = glob(["fixtures/module_e/*.rst"]),
+    index = "fixtures/module_e/index.rst",
+    deps = [":module_b_lib"],
+)
+
+# Fixture with allow_persistent_workers = True, used only to assert on the
+# resulting Sphinx-build action argv: the HTML pass must drop "--jobs auto"
+# (see worker_enabled in sphinx_module.bzl's _add_sphinx_args), while the
+# needs pass -- which never opts into worker mode regardless of this attr,
+# since its source dir is the real checkout, not a generated tree -- must
+# keep it. No target ever sets this True outside this test fixture; workers
+# stay off by default across the whole repo.
+sphinx_module(
+    name = "module_worker_enabled_lib",
+    testonly = True,
+    srcs = glob(["fixtures/module_c/*.rst"]),
+    allow_persistent_workers = True,
+    index = "fixtures/module_c/index.rst",
 )
 
 # Test 3: SEooC (Safety Element out of Context) Module
@@ -592,25 +627,70 @@ dependable_element(
 
 # Minimal dependable element used as a dependency target to test
 # the deps attribute of dependable_element (i.e. SEooC depending on another SEooC).
+# Composed of a single component/unit pair so it satisfies the
+# non-empty-composition validation (see check_non_empty_composition).
+unit(
+    name = "dep_unit",
+    testonly = True,
+    scope = ["//:mock_lib1"],
+    tests = [],
+    unit_design = [":test_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "dep_component",
+    testonly = True,
+    components = [":dep_unit"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
 dependable_element(
     name = "dep_seooc_lib",
     architectural_design = [":arch_design_dep"],
     assumptions_of_use = [":aous"],
-    components = [],
+    components = [":dep_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
+    maturity = "development",
     requirements = [":feat_req"],
     tests = [],
     deps = [],
 )
 
+unit(
+    name = "seooc_test_unit",
+    testonly = True,
+    scope = ["//:mock_lib1"],
+    tests = [],
+    unit_design = [":test_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "seooc_test_component",
+    testonly = True,
+    components = [":seooc_test_unit"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
+# maturity = "development": same rationale as dep_seooc_lib above.
 dependable_element(
     name = "seooc_test_lib",
     architectural_design = [":arch_design"],
     assumptions_of_use = [":aous"],
-    components = [],
+    components = [":seooc_test_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
+    maturity = "development",
     requirements = [":feat_req"],
     tests = [],
     deps = [":dep_seooc_lib"],  # dependency to other seoocs/score_components
@@ -791,13 +871,22 @@ unit(
 )
 
 # Nested component containing unit2
+# Deliberately uses a DIFFERENT component_requirements target (:comp_req_rst)
+# than the parent's own (:comp_req) below, so the two are genuinely
+# distinguishable content-wise -- this makes ComponentInfo.requirements_transitive
+# rollup observable: if the nested component's own requirements failed to
+# propagate up, only :comp_req's .lobster file would show up at the parent,
+# not :comp_req_rst's. See component_requirements_transitive_test.
+#
 component(
     name = "test_nested_component",
     testonly = True,
     components = [":test_unit2"],
     requirements = [
         ":comp_req",
+        ":comp_req_rst",
         ":feat_req",
+        ":feat_req_rst",
     ],
     tests = [],
 )
@@ -884,13 +973,17 @@ explicit_config_test(
 # HTML Content Validation Tests
 # ============================================================================
 
-# Test that generated HTML does not contain "Unknown need" statements
-# TODO: fix hardcoded path in check_unknown_needs.sh — pass the HTML output dir
-# via args = ["$(rootpath :module_a_lib)"] and update the script to use "$1/index.html".
+# Test that generated HTML does not contain "Unknown need" statements.
+# Covers both direct-dep needs resolution (module_a_lib) and the two-hop case
+# (module_e_lib) -- see check_unknown_needs.sh's TODO for the hardcoded-path
+# cleanup this could still use.
 sh_test(
     name = "no_unknown_needs_test",
     srcs = ["check_unknown_needs.sh"],
-    data = [":module_a_lib"],
+    data = [
+        ":module_a_lib",
+        ":module_e_lib",
+    ],
     tags = ["manual"],
 )
 
@@ -1104,6 +1197,16 @@ score_toolchain_override_test(
     target_under_test = ":module_c_lib",
 )
 
+worker_gating_html_test(
+    name = "worker_gating_html_test",
+    target_under_test = ":module_worker_enabled_lib",
+)
+
+worker_gating_needs_test(
+    name = "worker_gating_needs_test",
+    target_under_test = ":module_worker_enabled_lib_needs",
+)
+
 deps_html_merging_test(
     name = "deps_html_merging_test",
     target_under_test = ":module_a_lib",
@@ -1223,6 +1326,15 @@ component_test_case_coverage_lock_test(
     target_under_test = ":test_component_with_test_case_coverage_lock",
 )
 
+# Verifies ComponentInfo.requirements_transitive rolls up both the parent's
+# own component_requirements AND the nested component's (which use two
+# distinct fixtures, :comp_req and :comp_req_rst -- see test/BUILD comments
+# on test_nested_component/test_parent_component above).
+component_requirements_transitive_test(
+    name = "component_requirements_transitive_test",
+    target_under_test = ":test_parent_component",
+)
+
 # Verifies the ComponentTestCaseCoverageLockCheck action is wired up end-to-end through
 # dependable_element (not just component() in isolation), and that
 # --allow-check-failures is only passed for maturity == "development".
@@ -1326,6 +1438,63 @@ aous_rst_sphinx_test(
 requirements_rst_test_suite(name = "requirements_rst_tests")
 
 # ============================================================================
+# Multi-spec Requirements Tests
+# ============================================================================
+
+trlc_specification(
+    name = "extra_spec_fixture",
+    srcs = ["fixtures/multi_spec/extra_model.rsl"],
+)
+
+assumed_system_requirements(
+    name = "asr_multi_spec",
+    srcs = ["fixtures/multi_spec/assumed_system_requirements.trlc"],
+    spec = [":extra_spec_fixture"],
+)
+
+feature_requirements(
+    name = "feat_req_multi_spec",
+    srcs = ["fixtures/multi_spec/feature_requirements.trlc"],
+    spec = [":extra_spec_fixture"],
+    deps = [":asr_multi_spec"],
+)
+
+component_requirements(
+    name = "comp_req_multi_spec",
+    srcs = ["fixtures/multi_spec/component_requirements.trlc"],
+    spec = [":extra_spec_fixture"],
+    deps = [
+        ":asr_multi_spec",
+        ":feat_req_multi_spec",
+    ],
+)
+
+asr_multi_spec_provider_test(
+    name = "asr_multi_spec_provider_test",
+    target_under_test = ":asr_multi_spec",
+)
+
+feat_req_multi_spec_provider_test(
+    name = "feat_req_multi_spec_provider_test",
+    target_under_test = ":feat_req_multi_spec",
+)
+
+comp_req_multi_spec_provider_test(
+    name = "comp_req_multi_spec_provider_test",
+    target_under_test = ":comp_req_multi_spec",
+)
+
+# Integration target: TRLC file using types from both specs; trlc --verify
+# runs on build, confirming both RSL files are reachable at parse time.
+assumed_system_requirements(
+    name = "asr_multi_spec_inttest",
+    srcs = ["fixtures/multi_spec/multi_spec.trlc"],
+    spec = [":extra_spec_fixture"],
+)
+
+requirements_multi_spec_test_suite(name = "requirements_multi_spec_tests")
+
+# ============================================================================
 # lobster_config.bzl unit tests (format_lobster_sources / format_lobster_block)
 # ============================================================================
 lobster_config_test_suite(name = "lobster_config")
@@ -1371,7 +1540,10 @@ py_test(
     name = "test_aou_forwarding_to_lobster",
     size = "small",
     srcs = ["test_aou_forwarding_to_lobster.py"],
-    deps = ["@score_tooling//bazel/rules/rules_score:aou_forwarding_to_lobster"],
+    deps = [
+        "@lobster//lobster/common",
+        "@score_tooling//bazel/rules/rules_score:aou_forwarding_to_lobster",
+    ],
 )
 
 py_test(
@@ -1420,6 +1592,7 @@ test_suite(
     name = "all_tests",
     tests = [
         ":lobster_config_tests",
+        ":requirements_multi_spec_tests",
         ":requirements_rst_tests",
         ":seooc_tests",
         ":sphinx_module_tests",
@@ -1433,5 +1606,6 @@ test_suite(
         ":transitive_modules_dedup_test",
         ":unit_component_tests",
         "//fixtures/image_srcs:requirements_image_tests",
+        "//fixtures/spec_extras:requirements_spec_extras_tests",
     ],
 )

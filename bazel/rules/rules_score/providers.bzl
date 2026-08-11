@@ -99,7 +99,7 @@ FeatureRequirementsInfo = provider(
 ComponentRequirementsInfo = provider(
     doc = "Provider for component requirements artifacts.",
     fields = {
-        "srcs": "Depset of .lobster traceability files generated from TRLC requirement sources.",
+        "srcs": "Depset of .lobster traceability files generated from TRLC requirement sources. Includes `derived_from` as a tracing target, including any AoU references within it.",
         "name": "Name of the requirements target.",
     },
 )
@@ -146,7 +146,8 @@ ComponentInfo = provider(
     doc = "Provider for component artifacts.",
     fields = {
         "name": "Name of the component target.",
-        "requirements": "Depset of component requirement traceability files (.lobster) collected from ComponentRequirementsInfo targets only (CompReq kind). Does not include feature or assumed-system requirement files.",
+        "requirements": "Depset of component requirement traceability files (.lobster) collected from this component's own ComponentRequirementsInfo targets only (CompReq kind); not rolled up from nested components. Does not include feature or assumed-system requirement files. Consumed only by dependable_element's test-case-coverage-lock check. Includes `derived_from` tracing targets, including any AoU references within it (resolved only at the dependable_element level).",
+        "requirements_transitive": "Depset of component requirement traceability files (.lobster), rolled up transitively from this component and all nested components. Consumed by dependable_element to build the aggregated 'Component Requirements' traceability report tier.",
         "components": "Depset of nested component and/or unit Targets that comprise this component.",
         "tests": "Depset of test traceability files (.lobster) generated from unit test results, collected transitively from all nested components and units.",
         "architecture": "Depset of architecture traceability files (.lobster) generated from unit architectural designs, collected transitively from all nested components and units.",
@@ -281,6 +282,14 @@ SphinxNeedsInfo = provider(
     fields = {
         "needs_json_file": "Direct needs.json file for this module",
         "needs_json_files": "Depset of needs.json files including transitive dependencies",
+        "needs_modules": "Depset of struct(name, needs_json_file), one entry per " +
+                         "module transitively required by this one, including this " +
+                         "module itself. Self-inclusive union, same shape/rationale " +
+                         "as SphinxModuleInfo.transitive_modules -- used to build " +
+                         "needs_external_needs.json from the full transitive closure " +
+                         "(direct deps only would miss a need defined more than one " +
+                         "hop away), with base_url = <module_name> truthful for every " +
+                         "entry only because the HTML merge is flat.",
     },
 )
 FilteredExecpathInfo = provider(

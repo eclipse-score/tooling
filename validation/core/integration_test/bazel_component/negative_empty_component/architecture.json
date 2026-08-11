@@ -1,0 +1,14 @@
+{
+    "components": {
+        "safety_software_seooc_example": {
+            "units": [],
+            "components": [
+                "@//bazel/rules/rules_score/examples/seooc:component_example"
+            ]
+        },
+        "@//bazel/rules/rules_score/examples/seooc:component_example": {
+            "units": [],
+            "components": []
+        }
+    }
+}

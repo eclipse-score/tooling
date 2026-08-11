@@ -61,6 +61,12 @@ Each step builds on the previous one, and each has an automatic check:
 5. **Build** — run ``bazel build //:my_element`` to execute all checks at once and
    assemble the documentation. → :doc:`build`
 
+.. note::
+
+   The Examples are setup as a standalone Bazel module, this means you have to run it from
+   within the example folder, e.g. ``cd bazel/rules/rules_score/examples/minimal`` and then run
+   ``bazel build //:my_element``.
+
 .. toctree::
    :maxdepth: 1
 

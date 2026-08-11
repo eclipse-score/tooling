@@ -1,0 +1,84 @@
+{
+    "types": {
+        "KeyValueStore": {
+            "id": "KeyValueStore",
+            "name": "KeyValueStore",
+            "enclosing_namespace_id": null,
+            "entity_type": "Class",
+            "enum_literals": [],
+            "methods": [
+                {
+                    "name": "get",
+                    "return_type": "std::string",
+                    "parameters": [
+                        {
+                            "is_variadic": false,
+                            "name": "key",
+                            "param_type": "const std::string &"
+                        }
+                    ],
+                    "modifiers": [],
+                    "template_parameters": null,
+                    "visibility": "public",
+                    "source_location": {
+                        "file": "",
+                        "line": 19
+                    }
+                },
+                {
+                    "name": "set",
+                    "return_type": "void",
+                    "parameters": [
+                        {
+                            "is_variadic": false,
+                            "name": "key",
+                            "param_type": "const std::string &"
+                        },
+                        {
+                            "is_variadic": false,
+                            "name": "value",
+                            "param_type": "const std::string &"
+                        }
+                    ],
+                    "modifiers": [],
+                    "template_parameters": null,
+                    "visibility": "public",
+                    "source_location": {
+                        "file": "",
+                        "line": 20
+                    }
+                }
+            ],
+            "relationships": [],
+            "template_parameters": null,
+            "type_aliases": [],
+            "variables": [
+                {
+                    "name": "name_",
+                    "data_type": "std::string",
+                    "is_static": false,
+                    "visibility": "public",
+                    "source_location": {
+                        "file": "",
+                        "line": 22
+                    }
+                },
+                {
+                    "name": "store_",
+                    "data_type": "std::unordered_map<std::string, std::string>",
+                    "is_static": false,
+                    "visibility": "public",
+                    "source_location": {
+                        "file": "",
+                        "line": 23
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "",
+                "line": 17
+            }
+        }
+    },
+    "functions": []
+}

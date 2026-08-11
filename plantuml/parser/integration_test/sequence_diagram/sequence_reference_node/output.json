@@ -1,0 +1,44 @@
+{
+  "sequence_reference_node.puml": {
+    "name": "sequence_reference_node",
+    "participants": [
+      {
+        "display_name": "Service",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Worker",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Reference": {
+            "participants": [
+              "Service",
+              "Worker"
+            ],
+            "text": "shared behavior",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        }
+      ]
+    }
+  }
+}

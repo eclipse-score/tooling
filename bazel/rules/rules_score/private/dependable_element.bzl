@@ -753,6 +753,15 @@ def _symlink_validation_log(ctx, validation_log):
 # Index Generation Rule Implementation
 # ============================================================================
 
+def _cond_names(*conditioned_names):
+    """Flatten (condition, level_name) pairs into a name list, dropping false conditions.
+
+    Reduces the `(["X"] if cond else []) + (["Y"] if cond2 else [])`
+    repetition used to build `trace_to`/`requires` level-name lists below to
+    a flat, readable argument list.
+    """
+    return [name for condition, name in conditioned_names if condition]
+
 def _dependable_element_index_impl(ctx):
     """Generate index.rst file with references to all dependable element artifacts.
 
@@ -1059,15 +1068,14 @@ def _dependable_element_index_impl(ctx):
 
     feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)
 
-    # Collect component requirement and test .lobster files from ComponentInfo
     comp_req_lobster_files = []
     comp_test_lobster_files = []
     comp_arch_lobster_files = []
     for comp_target in ctx.attr.components:
         if ComponentInfo in comp_target:
             comp_info = comp_target[ComponentInfo]
-            if comp_info.requirements:
-                comp_req_lobster_files.append(comp_info.requirements)
+            if comp_info.requirements_transitive:
+                comp_req_lobster_files.append(comp_info.requirements_transitive)
             if comp_info.tests:
                 comp_test_lobster_files.append(comp_info.tests)
             if comp_info.architecture:
@@ -1160,6 +1168,7 @@ def _dependable_element_index_impl(ctx):
 
     # Build the DE-level lobster report if feature and component traces exist
     feat_req_list = feat_req_lobster_depset.to_list()
+
     comp_req_list = comp_req_lobster_depset.to_list()
     comp_test_list = comp_test_lobster_depset.to_list()
     comp_arch_list = comp_arch_lobster_depset.to_list()
@@ -1172,18 +1181,13 @@ def _dependable_element_index_impl(ctx):
     # AoU Forwarding: collect own AoUs and received AoUs from deps
     # =========================================================================
 
-    # Collect own AoU lobster files from assumptions_of_use targets
+    # Collect own AoU lobster files from assumptions_of_use targets.
     own_aou_lobster_files = []
     for aou_target in ctx.attr.assumptions_of_use:
         if AssumptionsOfUseInfo in aou_target:
             own_aou_lobster_files.append(aou_target[AssumptionsOfUseInfo].aou_lobster)
 
     own_aou_lobster_depset = depset(transitive = own_aou_lobster_files)
-
-    own_assumptions_of_use_info = AssumptionsOfUseInfo(
-        aou_lobster = own_aou_lobster_depset,
-        name = ctx.label.name,
-    )
 
     # Collect forwarded AoU lobster files from deps (received AoUs)
     received_aou_lobster_files = []
@@ -1196,27 +1200,34 @@ def _dependable_element_index_impl(ctx):
     received_aou_lobster_depset = depset(transitive = received_aou_lobster_files)
     received_aou_list = received_aou_lobster_depset.to_list()
 
-    # Chain-forwarding: if aou_forwarding YAML is provided, filter received AoUs
+    # Chain-forwarding: if aou_forwarding YAML is provided, filter received AoUs.
     chain_forwarded_lobster_depset = depset()
+    forwarded_aou_markers_list = []
     if ctx.file.aou_forwarding and received_aou_list:
         chain_forwarded_lobster_file = ctx.actions.declare_file(
             ctx.label.name + "/chain_forwarded_aous.lobster",
         )
+        forwarded_aou_markers_file = ctx.actions.declare_file(
+            ctx.label.name + "/forwarded_aou_markers.lobster",
+        )
         fwd_args = ctx.actions.args()
         fwd_args.add("--yaml", ctx.file.aou_forwarding)
         fwd_args.add("--output", chain_forwarded_lobster_file)
+        fwd_args.add("--markers-output", forwarded_aou_markers_file)
         fwd_args.add("--input-lobster")
         fwd_args.add_all(received_aou_list)
         ctx.actions.run(
             inputs = [ctx.file.aou_forwarding] + received_aou_list,
-            outputs = [chain_forwarded_lobster_file],
+            outputs = [chain_forwarded_lobster_file, forwarded_aou_markers_file],
             executable = ctx.executable._aou_forwarding_tool,
             arguments = [fwd_args],
             progress_message = "Filtering chain-forwarded AoUs for %s" % ctx.label.name,
             mnemonic = "AoUForwarding",
         )
         chain_forwarded_lobster_depset = depset([chain_forwarded_lobster_file])
+        forwarded_aou_markers_list = [forwarded_aou_markers_file]
         output_files.append(chain_forwarded_lobster_file)
+        output_files.append(forwarded_aou_markers_file)
 
     lobster_report_file = None
     lobster_html_report = None
@@ -1272,6 +1283,7 @@ def _dependable_element_index_impl(ctx):
 
         has_feat_req = bool(feat_req_list)
         has_comp_req = bool(comp_req_list)
+        has_received_aou = bool(received_aou_list)
         has_public_api = bool(interface_req_list) or strict
         has_fm = bool(fm_list) or strict
         has_cm = bool(cm_list) or strict
@@ -1283,32 +1295,65 @@ def _dependable_element_index_impl(ctx):
             output = lobster_config,
             substitutions = {
                 "{FEAT_REQ_BLOCK}": format_lobster_block("requirements", "Feature Requirements", feat_req_list),
-                "{FORWARDED_AOU_BLOCK}": format_lobster_block("requirements", "Forwarded AoUs", received_aou_list),
+                # Target level: every item here must be covered, either by a
+                # Component Requirement (`derived_from`) or by being
+                # further chain-forwarded (Forwarded AoUs, below). Without the
+                # `requires` override, LOBSTER would instead require BOTH
+                # sources to independently cover every item (its default
+                # AND-across-sources behaviour for multiple `trace to:`
+                # declarations), which no single AoU could ever satisfy.
+                "{RECEIVED_AOU_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Received AoUs",
+                    received_aou_list,
+                    requires = [_cond_names(
+                        (has_comp_req, "Component Requirements"),
+                        (forwarded_aou_markers_list or strict, "Forwarded AoUs"),
+                    )],
+                ),
+                # Checking level: markers for received AoUs this element chain-
+                # forwards onward instead of handling locally. Force-emitted
+                # empty in release mode (when there are received AoUs) so the
+                # "trace to: Received AoUs" edge stays active even without an
+                # aou_forwarding.yaml -- otherwise an element that receives
+                # AoUs but neither forwards nor handles any of them would have
+                # no checking level at all, and the missing coverage would
+                # silently pass instead of failing the build.
+                "{FORWARDED_AOU_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Forwarded AoUs",
+                    forwarded_aou_markers_list,
+                    trace_to = _cond_names((has_received_aou, "Received AoUs")),
+                    emit_empty = strict and has_received_aou,
+                ),
                 "{COMP_REQ_BLOCK}": format_lobster_block(
                     "requirements",
                     "Component Requirements",
                     comp_req_list,
-                    trace_to = ["Feature Requirements"] if has_feat_req else [],
+                    trace_to = _cond_names(
+                        (has_feat_req, "Feature Requirements"),
+                        (has_received_aou, "Received AoUs"),
+                    ),
                 ),
                 "{UNIT_TEST_BLOCK}": format_lobster_block(
                     "activity",
                     "Unit Test",
                     comp_test_list,
-                    trace_to = ["Component Requirements"] if has_comp_req else [],
+                    trace_to = _cond_names((has_comp_req, "Component Requirements")),
                     emit_empty = strict,
                 ),
                 "{COVERAGE_BLOCK}": format_lobster_block(
                     "activity",
                     "Test Case Coverage",
                     coverage_lobster_files,
-                    trace_to = ["Component Requirements"] if has_comp_req else [],
+                    trace_to = _cond_names((has_comp_req, "Component Requirements")),
                     emit_empty = strict,
                 ),
                 "{ARCH_BLOCK}": format_lobster_block(
                     "implementation",
                     "Architecture",
                     comp_arch_list,
-                    trace_to = ["Component Requirements"] if has_comp_req else [],
+                    trace_to = _cond_names((has_comp_req, "Component Requirements")),
                     emit_empty = strict,
                 ),
                 "{PUBLIC_API_BLOCK}": format_lobster_block(
@@ -1321,7 +1366,7 @@ def _dependable_element_index_impl(ctx):
                     "requirements",
                     "Failure Modes",
                     fm_list,
-                    trace_to = ["Public API"] if has_public_api else [],
+                    trace_to = _cond_names((has_public_api, "Public API")),
                     emit_empty = strict,
                 ),
                 "{CM_BLOCK}": format_lobster_block(
@@ -1334,13 +1379,13 @@ def _dependable_element_index_impl(ctx):
                     "activity",
                     "Root Causes",
                     rc_list,
-                    trace_to = (["Failure Modes"] if has_fm else []) + (["Control Measures"] if has_cm else []),
+                    trace_to = _cond_names((has_fm, "Failure Modes"), (has_cm, "Control Measures")),
                     emit_empty = strict,
                 ),
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list + coverage_lobster_files
+        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_files = [lobster_config, lobster_report_file]
 
@@ -1436,7 +1481,6 @@ def _dependable_element_index_impl(ctx):
             own_aou_lobster = own_aou_lobster_depset,
             chain_forwarded_lobster = chain_forwarded_lobster_depset,
         ),
-        own_assumptions_of_use_info,
         OutputGroupInfo(debug = depset(validation_output_files + unit_validation_output_files)),
     ]
 
@@ -1547,7 +1591,15 @@ def _dependable_element_index_attrs():
 
 _dependable_element_index = rule(
     implementation = _dependable_element_index_impl,
-    doc = "Generates index.rst file with references to dependable element artifacts",
+    doc = """Generates index.rst file with references to dependable element artifacts.
+
+    Despite the name, this is not merely an internal implementation detail:
+    it is the actual cross-element provider surface. A dependable_element's
+    `deps` on another dependable_element resolve to that element's
+    `<dep>_index` target (see `processed_deps` below), because ForwardedAoUInfo,
+    CertifiedScope and DependableElementLobsterInfo are only returned here, not
+    by the public `<name>` target.
+    """,
     attrs = _dependable_element_index_attrs(),
     subrules = [subrule_lobster_report, subrule_lobster_html_report],
 )
@@ -1749,7 +1801,11 @@ def dependable_element(
             unreachable.
 
     Generated Targets:
-        <name>_index: Internal rule that generates index.rst and copies artifacts
+        <name>_index: Generates index.rst and copies artifacts. Also the actual
+            cross-element provider API — ForwardedAoUInfo, CertifiedScope and
+            DependableElementLobsterInfo are only exposed here, so a sibling
+            dependable_element's `deps` are resolved against `<dep>_index`
+            (see `processed_deps`), not against `<dep>` itself.
         <name>: Main dependable element target (sphinx_module) with HTML documentation
         <name>_needs: Sphinx-needs JSON target (created by sphinx_module for cross-referencing)
 

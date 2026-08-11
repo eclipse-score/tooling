@@ -16,11 +16,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use sequence_logic::SourceLocation;
+
 use super::shared::{
     build_observed_call_contexts, build_unit_bindings, format_name_list, intersect_interfaces,
     SequenceCallContext, UnitBindings,
 };
-use crate::models::{ComponentDiagramArchitecture, SequenceDiagramIndex};
+use crate::models::{is_external_endpoint, ComponentDiagramArchitecture, SequenceDiagramIndex};
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
 
@@ -34,13 +36,10 @@ pub fn validate_component_sequence(
 
 type ConnectedUnitPairs = BTreeMap<(String, String), BTreeSet<String>>;
 
-const EXTERNAL_ENDPOINT_NAME: &str = "ExternalEndpoint";
-
 struct ComponentSequenceValidator<'a> {
-    observed_participants: &'a BTreeSet<String>,
+    participants: &'a BTreeMap<String, SourceLocation>,
     observed_call_contexts: Vec<SequenceCallContext<'a>>,
     connected_unit_pairs: ConnectedUnitPairs,
-    sequence_diagram: &'a SequenceDiagramIndex,
     unit_bindings: UnitBindings,
     result: ValidationResult,
 }
@@ -89,10 +88,9 @@ impl<'a> ComponentSequenceValidator<'a> {
             build_observed_call_contexts(sequence_diagram.observed_calls(), &unit_bindings);
 
         Self {
-            observed_participants: sequence_diagram.used_participants(),
+            participants: sequence_diagram.participants(),
             observed_call_contexts,
             connected_unit_pairs: build_connected_unit_pairs(&unit_bindings),
-            sequence_diagram,
             unit_bindings,
             result: ValidationResult::default(),
         }
@@ -101,7 +99,7 @@ impl<'a> ComponentSequenceValidator<'a> {
     fn run(mut self) -> ValidationResult {
         append_debug_log(
             &mut self.result.diagnostics,
-            self.observed_participants,
+            self.participants.keys(),
             &self.observed_call_contexts,
             &self.unit_bindings,
             &self.connected_unit_pairs,
@@ -120,7 +118,7 @@ impl<'a> ComponentSequenceValidator<'a> {
         for alias in self
             .unit_bindings
             .keys()
-            .filter(|alias| !self.observed_participants.contains(*alias))
+            .filter(|alias| !self.participants.contains_key(*alias))
         {
             let (source_file, source_line) = self
                 .unit_bindings
@@ -144,14 +142,10 @@ impl<'a> ComponentSequenceValidator<'a> {
             );
         }
 
-        for participant in self.observed_participants.iter().filter(|participant| {
+        for participant in self.participants.keys().filter(|participant| {
             !is_external_endpoint(participant) && !self.unit_bindings.contains_key(*participant)
         }) {
-            let (source_file, source_line) = self
-                .sequence_diagram
-                .participant_source(participant)
-                .map(|source_location| source_location.display())
-                .unwrap_or_default();
+            let (source_file, source_line) = self.participants[participant].display();
 
             self.result.add_failure(
                 ErrorBuilder::new(ErrorCategory::Naming)
@@ -276,17 +270,13 @@ impl<'a> ComponentSequenceValidator<'a> {
     }
 }
 
-fn is_external_endpoint(participant: &str) -> bool {
-    participant == EXTERNAL_ENDPOINT_NAME
-}
-
 fn call_involves_external_endpoint(call_context: &SequenceCallContext<'_>) -> bool {
     is_external_endpoint(call_context.caller_unit) || is_external_endpoint(call_context.callee_unit)
 }
 
-fn append_debug_log(
+fn append_debug_log<'a>(
     diagnostics: &mut Diagnostics,
-    observed_participants: &BTreeSet<String>,
+    observed_participants: impl Iterator<Item = &'a String>,
     observed_call_contexts: &[SequenceCallContext<'_>],
     unit_bindings: &UnitBindings,
     connected_unit_pairs: &BTreeMap<(String, String), BTreeSet<String>>,

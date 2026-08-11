@@ -13,7 +13,7 @@
 
 @startuml lost_found_endpoint_resolution
 
-[ -> Service : incoming
-Service --> ] : outgoing
+[-> Service : incoming
+Service -->] : outgoing
 
 @enduml

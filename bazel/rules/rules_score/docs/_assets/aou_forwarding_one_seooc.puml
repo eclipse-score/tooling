@@ -1,0 +1,56 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml aou_forwarding_one_seooc
+
+' One SEooC receiving AoUs from its own deps, handling one locally, chain-
+' forwarding another, and still contributing its own AoU untouched.
+
+skinparam linetype ortho
+skinparam ArrowFontSize 10
+skinparam ArrowColor #555555
+skinparam defaultTextAlignment center
+
+skinparam rectangle {
+    BackgroundColor<<dep>> #E3F2FD
+    BorderColor<<dep>> #1565C0
+    BackgroundColor<<seooc>> #FFF8E1
+    BorderColor<<seooc>> #F9A825
+    BackgroundColor<<received>> #ECEFF1
+    BorderColor<<received>> #455A64
+    BackgroundColor<<handled>> #E8F5E9
+    BorderColor<<handled>> #2E7D32
+    BackgroundColor<<forwarded>> #FCE4EC
+    BorderColor<<forwarded>> #AD1457
+}
+
+rectangle "dependency_a\ndefines AoU_1" <<dep>> as dep_a
+rectangle "dependency_b\ndefines AoU_2" <<dep>> as dep_b
+
+rectangle "one_seooc" <<seooc>> as seooc {
+    rectangle "received AoUs\n(each dep's own_aou_trlc +\nall_received_trlc, merged)" <<received>> as received
+    rectangle "AoU_1 -- handled locally\n(CompReq.derived_from)" <<handled>> as handled
+    rectangle "AoU_2 -- chain-forwarded\n(aou_forwarding.yaml)" <<forwarded>> as forwarded
+    rectangle "own AoU_3\n(auto-forwarded)" <<forwarded>> as own
+
+    received --> handled
+    received --> forwarded
+}
+
+rectangle "dependee" <<dep>> as dependee
+
+dep_a --> seooc     : deps (defines AoU_1)
+dep_b --> seooc     : deps (defines AoU_2)
+seooc --> dependee  : deps\n(forwards AoU_2 + AoU_3)
+
+@enduml

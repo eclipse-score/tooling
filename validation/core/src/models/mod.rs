@@ -32,5 +32,5 @@ pub use component_diagram_models::{
     EndpointRole, LogicComponent, LogicComponentExt, LogicRelation,
 };
 pub use sequence_diagram_models::{
-    ObservedSequenceCall, SequenceDiagramIndex, SequenceDiagramInputs,
+    is_external_endpoint, ObservedSequenceCall, SequenceDiagramIndex, SequenceDiagramInputs,
 };

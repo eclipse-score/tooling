@@ -369,7 +369,14 @@ def test_real_tool_source_file_is_compliant():
 
     results = cr_checker.process_files([TOOL_MODULE_PATH], templates, fix=False)
 
-    assert results == {"missing": 0, "misplaced": 0, "wrong_format": 0, "duplicate": 0, "fixed": 0}
+    assert results == {
+        "missing": 0,
+        "misplaced": 0,
+        "wrong_format": 0,
+        "duplicate": 0,
+        "license_mismatch": 0,
+        "fixed": 0,
+    }
 
 
 def test_real_build_file_is_compliant():
@@ -380,7 +387,14 @@ def test_real_build_file_is_compliant():
 
     results = cr_checker.process_files([build_file], templates, fix=False)
 
-    assert results == {"missing": 0, "misplaced": 0, "wrong_format": 0, "duplicate": 0, "fixed": 0}
+    assert results == {
+        "missing": 0,
+        "misplaced": 0,
+        "wrong_format": 0,
+        "duplicate": 0,
+        "license_mismatch": 0,
+        "fixed": 0,
+    }
 
 
 def test_real_exclusion_file_skips_real_templates_ini():
@@ -399,7 +413,14 @@ def test_real_exclusion_file_skips_real_templates_ini():
         exclusion=exclusion,
     )
 
-    assert results == {"missing": 0, "misplaced": 0, "wrong_format": 0, "duplicate": 0, "fixed": 0}
+    assert results == {
+        "missing": 0,
+        "misplaced": 0,
+        "wrong_format": 0,
+        "duplicate": 0,
+        "license_mismatch": 0,
+        "fixed": 0,
+    }
 
 
 def test_real_config_author_is_used_when_fixing(tmp_path):

@@ -13,6 +13,10 @@
 
 @startuml dep_seooc_lib
 
-package "Dependency SEooC Library" as dep_seooc_lib <<SEooC>>
+package "Dependency SEooC Library" as dep_seooc_lib <<SEooC>> {
+    component "Dep Component" as dep_component <<component>> {
+        component "Dep Unit" as dep_unit <<unit>>
+    }
+}
 
 @enduml

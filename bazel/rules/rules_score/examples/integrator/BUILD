@@ -13,7 +13,8 @@
 #
 # Example: System integrator SEooC that depends on safety_software_seooc_example.
 #
-# This illustrates the full AoU forwarding chain:
+# This illustrates the full AoU forwarding chain, and the two ways a
+# dependable element can cover an AoU it receives:
 #
 #   other_seooc               defines AoU: OtherLibrary.TimingConstraint
 #       ↑ (deps)
@@ -22,9 +23,9 @@
 #       - chain-forwards OtherLibrary.TimingConstraint via aou_forwarding.yaml
 #       ↑ (deps)
 #   integrator_seooc (this target)
-#       - receives SampleType.SampleAoU           (auto-forwarded from seooc)
-#       - receives OtherLibrary.TimingConstraint   (chain-forwarded through seooc)
-#       - must handle both in its lobster traceability report
+#       - receives SampleType.SampleAoU          (auto-forwarded from seooc)
+#       - receives OtherLibrary.TimingConstraint  (chain-forwarded through seooc)
+#       - HANDLES both locally: COMP_INT_001 and COMP_INT_002
 #
 
 load(

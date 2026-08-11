@@ -14,6 +14,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@pip_rules_score//:requirements.bzl", "requirement")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+load("@rules_python//sphinxdocs:sphinx.bzl", "sphinx_build_binary")
 load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load(
     "//bazel/rules/rules_score:rules_score.bzl",
@@ -32,7 +33,6 @@ config_setting(
 
 exports_files([
     "src/bazel_sphinx_needs.py",
-    "src/sphinx_wrapper.py",
     "templates/conf.template.py",
     "templates/dependable_element_index.template.rst",
     "templates/section_page.template.rst",
@@ -109,6 +109,7 @@ py_binary(
     main = "src/aou_forwarding_to_lobster.py",
     visibility = ["//visibility:public"],
     deps = [
+        "@lobster//lobster/common",
         requirement("pyyaml"),
     ],
 )
@@ -135,6 +136,7 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         ":bazel_sphinx_needs",
+        ":sphinx_conf_helpers",
         requirement("sphinx"),
     ],
 )
@@ -213,6 +215,8 @@ sphinx_module(
             "docs/**/*.rst",
             "docs/**/*.puml",
             "docs/**/*.md",
+            "docs/**/*.svg",
+            "docs/**/*.png",
         ],
         allow_empty = True,
     ) + [
@@ -264,10 +268,11 @@ py_library(
     ],
 )
 
-py_binary(
+# Built from rules_python's own sphinx_build.py (persistent-worker/param-file
+# support included) rather than a score_tooling wrapper -- see
+# sphinx_toolchain.bzl's score_sphinx_toolchain docstring.
+sphinx_build_binary(
     name = "raw_build",
-    srcs = ["src/sphinx_wrapper.py"],
-    main = "src/sphinx_wrapper.py",
     visibility = ["//visibility:public"],
     deps = [":sphinx_base_deps"],
 )
