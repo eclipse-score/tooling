@@ -18,8 +18,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::shared::{
-    build_observed_call_contexts, build_unit_bindings, extract_method_name, format_name_list,
-    format_sequence_call, intersect_interfaces, SequenceCallContext, UnitBindings, UnitInterfaces,
+    best_string_suggestion, build_observed_call_contexts, build_unit_bindings, extract_method_name,
+    format_name_list, format_sequence_call, intersect_interfaces, SequenceCallContext,
+    UnitBindings, UnitInterfaces,
 };
 use crate::models::{
     ComponentDiagramArchitecture, InternalApiIndex, InternalApiInterface, LogicComponentExt,
@@ -156,10 +157,19 @@ impl<'a> SequenceInternalApiValidator<'a> {
         );
 
         if matching_interfaces.is_empty() {
+            let candidate_method_names = collect_method_candidates_for_interfaces(
+                &self.internal_api_interfaces_by_id,
+                &component_context.all_interfaces,
+            );
+            let suggested_method = best_string_suggestion(
+                method_name,
+                candidate_method_names.iter().map(String::as_str),
+            );
             return Some(format_sequence_method_consistency_error(
                 call_context,
                 method_name,
                 "sequence function name was not found in available interface methods",
+                suggested_method.as_deref(),
             ));
         }
 
@@ -200,10 +210,23 @@ impl<'a> SequenceInternalApiValidator<'a> {
             intersect_interfaces(&caller_matching_interfaces, &callee_matching_interfaces);
 
         if shared_method_interfaces.is_empty() {
+            let shared_interface_ids = collect_shared_internal_api_interface_ids(
+                &self.internal_api_interfaces_by_id,
+                call_context,
+            );
+            let candidate_method_names = collect_method_candidates_for_interfaces(
+                &self.internal_api_interfaces_by_id,
+                &shared_interface_ids,
+            );
+            let suggested_method = best_string_suggestion(
+                method_name,
+                candidate_method_names.iter().map(String::as_str),
+            );
             return Some(format_sequence_method_consistency_error(
                 call_context,
                 method_name,
                 "sequence function name was not found in the related interface methods",
+                suggested_method.as_deref(),
             ));
         }
 
@@ -401,6 +424,30 @@ fn matching_interfaces_with_method(
         .collect()
 }
 
+fn collect_method_candidates_for_interfaces(
+    internal_api_interfaces_by_id: &BTreeMap<String, &InternalApiInterface>,
+    interface_ids: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    interface_ids
+        .iter()
+        .filter_map(|interface_id| internal_api_interfaces_by_id.get(interface_id.as_str()))
+        .flat_map(|interface| interface.method_names.iter().cloned())
+        .collect()
+}
+
+fn collect_shared_internal_api_interface_ids(
+    internal_api_interfaces_by_id: &BTreeMap<String, &InternalApiInterface>,
+    call_context: &SequenceCallContext<'_>,
+) -> BTreeSet<String> {
+    intersect_interfaces(
+        &call_context.caller_interfaces,
+        &call_context.callee_interfaces,
+    )
+    .into_iter()
+    .filter(|interface_id| internal_api_interfaces_by_id.contains_key(interface_id.as_str()))
+    .collect()
+}
+
 fn role_interfaces(bindings: &UnitInterfaces) -> BTreeSet<String> {
     bindings
         .required_interfaces
@@ -478,6 +525,7 @@ fn format_sequence_method_consistency_error(
     call_context: &SequenceCallContext<'_>,
     method_name: &str,
     description: &str,
+    suggested_method: Option<&str>,
 ) -> String {
     let sequence_call = format_sequence_call(
         call_context.caller_unit,
@@ -486,14 +534,20 @@ fn format_sequence_method_consistency_error(
     );
     let (source_file, source_line) = call_context.source_location.display();
 
-    ErrorBuilder::new(ErrorCategory::Method)
+    let mut error = ErrorBuilder::new(ErrorCategory::Method)
         .title(format!(
             "sequence function \"{method_name}\" from sequence call {sequence_call} in the sequence diagram not found in the internal API diagram"
         ))
         .field("sequence call", sequence_call.clone())
         .field("sequence source file", format!("\"{source_file}\""))
         .field("sequence source line", source_line.to_string())
-        .field("detail", description)
+        .field("detail", description);
+
+    if let Some(suggested_method) = suggested_method {
+        error = error.suggest(Some("method"), suggested_method);
+    }
+
+    error
         .fix(format!(
             "add method \"{method_name}\" in a matching internal API interface in the internal API diagram, or remove sequence function \"{method_name}\" in sequence call {sequence_call} in the sequence diagram"
         ))

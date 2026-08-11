@@ -17,4 +17,5 @@ error_contains: |
     Parent                : component_example
     Component source file : "validation/core/integration_test/bazel_component/negative_extra_unit/component_diagram.puml"
     Component source line : 20
+    Suggestion            : did you mean unit "unit_1"?
     Fix                   : Add the corresponding Bazel unit definition for "unit_3", or remove it from the PlantUML component diagram.

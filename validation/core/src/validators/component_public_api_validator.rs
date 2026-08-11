@@ -16,7 +16,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::shared::format_name_list;
+use super::shared::{best_string_suggestion, format_name_list};
 use crate::models::{ComponentDiagramArchitecture, LogicComponentExt, PublicApiIndex};
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
@@ -193,6 +193,17 @@ fn format_missing_public_api_error(
                     format!("static source line for \"{interface_id}\""),
                     source_line.to_string(),
                 );
+        }
+
+        if case_mismatch_public_apis.contains(interface_id) {
+            continue;
+        }
+
+        if let Some(suggested_interface) = best_string_suggestion(
+            interface_id,
+            design_public_api_ids.iter().map(String::as_str),
+        ) {
+            error = error.suggest(Some("interface"), &suggested_interface);
         }
     }
 

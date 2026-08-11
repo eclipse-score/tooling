@@ -57,6 +57,11 @@ fn negative_interface_missing_from_internal_api_suite_case() {
 }
 
 #[test]
+fn negative_interface_missing_from_internal_api_with_suggestion_suite_case() {
+    assert_case("negative_interface_missing_from_internal_api_with_suggestion");
+}
+
+#[test]
 fn negative_duplicate_unit_alias_casefolded_suite_case() {
     assert_case("negative_duplicate_unit_alias_casefolded");
 }

@@ -1,0 +1,20 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains: |-
+  [Interface] Component interface(s) "package_a.InternalInterface" from the component diagram not found in the internal API diagram.
+    Missing interfaces                                      : "package_a.InternalInterface"
+    Component source file for "package_a.InternalInterface" : "validation/core/integration_test/component_internal_api/negative_interface_missing_from_internal_api_with_suggestion/component_diagram.puml"
+    Component source line for "package_a.InternalInterface" : 22
+    Suggestion                                              : did you mean interface "package_a.internal_interface"?
+    Fix                                                     : Add interface declaration(s) "package_a.InternalInterface" in the internal API diagram, or remove those interface declarations from the component diagram.

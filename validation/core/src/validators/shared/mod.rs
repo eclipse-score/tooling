@@ -21,5 +21,6 @@ pub(in crate::validators) use diagram_analysis::{
     UnitInterfaces,
 };
 pub(in crate::validators) use helpers::{
-    extract_method_name, format_name_list, format_sequence_call, intersect_interfaces,
+    best_string_suggestion, extract_method_name, format_name_list, format_sequence_call,
+    intersect_interfaces,
 };

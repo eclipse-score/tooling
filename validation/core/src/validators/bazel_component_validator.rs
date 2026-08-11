@@ -19,6 +19,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use super::shared::best_string_suggestion;
 use crate::models::{BazelArchitecture, ComponentDiagramArchitecture, LogicComponent};
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
@@ -93,12 +94,20 @@ impl BazelComponentValidator {
             if !diagram_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = Self::parent_display(parent, default_parent);
+                let suggested_alias = best_string_suggestion(
+                    name,
+                    diagram_set
+                        .keys()
+                        .filter(|(_, candidate_parent)| candidate_parent == parent)
+                        .map(|(candidate_name, _)| candidate_name.as_str()),
+                );
                 self.result.add_failure(Self::format_missing(
                     display_type,
                     stereotype,
                     name,
                     &parent_str,
                     label,
+                    suggested_alias.as_deref(),
                 ));
             }
         }
@@ -108,11 +117,19 @@ impl BazelComponentValidator {
             if !bazel_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = Self::parent_display(parent, default_parent);
+                let suggested_alias = best_string_suggestion(
+                    name,
+                    bazel_set
+                        .keys()
+                        .filter(|(_, candidate_parent)| candidate_parent == parent)
+                        .map(|(candidate_name, _)| candidate_name.as_str()),
+                );
                 self.result.add_failure(Self::format_extra(
                     display_type,
                     name,
                     &parent_str,
                     entity,
+                    suggested_alias.as_deref(),
                 ));
             }
         }
@@ -176,15 +193,24 @@ impl BazelComponentValidator {
         name: &str,
         parent_str: &str,
         label: &str,
+        suggested_alias: Option<&str>,
     ) -> String {
-        ErrorBuilder::new(ErrorCategory::Naming)
+        let error = ErrorBuilder::new(ErrorCategory::Naming)
             .title(format!(
                 "{display_type} \"{name}\" from Bazel not found in the PlantUML component diagram"
             ))
             .field("alias", format!("\"{name}\""))
             .field("parent", parent_str)
             .field("stereotype", format!("<<{stereotype}>>"))
-            .field("bazel label", label)
+            .field("bazel label", label);
+
+        let error = if let Some(suggested_alias) = suggested_alias {
+            error.suggest(Some(display_type), suggested_alias)
+        } else {
+            error
+        };
+
+        error
             .fix(format!(
                 "add {display_type} \"{name}\" with stereotype <<{stereotype}>> in the PlantUML component diagram, or remove it from Bazel"
             ))
@@ -196,17 +222,26 @@ impl BazelComponentValidator {
         name: &str,
         parent_str: &str,
         entity: &LogicComponent,
+        suggested_alias: Option<&str>,
     ) -> String {
         let (source_file, source_line) = entity.source_location.display();
 
-        ErrorBuilder::new(ErrorCategory::Naming)
+        let error = ErrorBuilder::new(ErrorCategory::Naming)
             .title(format!(
                 "{entity_type} \"{name}\" from the PlantUML component diagram not found in Bazel"
             ))
             .field("alias", format!("\"{name}\""))
             .field("parent", parent_str)
             .field("component source file", format!("\"{source_file}\""))
-            .field("component source line", source_line.to_string())
+            .field("component source line", source_line.to_string());
+
+        let error = if let Some(suggested_alias) = suggested_alias {
+            error.suggest(Some(entity_type), suggested_alias)
+        } else {
+            error
+        };
+
+        error
             .fix(format!(
                 "add the corresponding Bazel {entity_type} definition for \"{name}\", or remove it from the PlantUML component diagram"
             ))

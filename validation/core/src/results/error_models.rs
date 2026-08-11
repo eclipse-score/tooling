@@ -96,6 +96,17 @@ impl ErrorBuilder {
         self
     }
 
+    pub fn suggest(self, suggestion_subject: Option<&str>, suggested_name: &str) -> Self {
+        let suggestion_text = match suggestion_subject {
+            Some(suggestion_subject) => {
+                format!("did you mean {suggestion_subject} \"{suggested_name}\"?")
+            }
+            None => format!("did you mean \"{suggested_name}\"?"),
+        };
+
+        self.field("suggestion", suggestion_text)
+    }
+
     pub fn build(self) -> String {
         let label_width = self
             .fields

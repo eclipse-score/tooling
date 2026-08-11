@@ -15,6 +15,10 @@
 
 use std::collections::BTreeSet;
 
+use strsim::jaro_winkler;
+
+pub(in crate::validators) const DEFAULT_SUGGESTION_THRESHOLD: f64 = 0.75;
+
 pub(in crate::validators) fn format_name_list(names: &BTreeSet<String>) -> String {
     if names.is_empty() {
         return "<none>".to_string();
@@ -47,4 +51,26 @@ pub(in crate::validators) fn intersect_interfaces(
         .intersection(right_interfaces)
         .cloned()
         .collect()
+}
+
+pub(in crate::validators) fn best_string_suggestion<'a>(
+    name: &str,
+    candidates: impl IntoIterator<Item = &'a str>,
+) -> Option<String> {
+    let mut best_candidate: Option<&str> = None;
+    let mut best_score = 0.0;
+
+    for candidate in candidates {
+        let score = jaro_winkler(name, candidate);
+        if score > best_score {
+            best_score = score;
+            best_candidate = Some(candidate);
+        }
+    }
+
+    if best_score < DEFAULT_SUGGESTION_THRESHOLD {
+        return None;
+    }
+
+    best_candidate.map(str::to_string)
 }
