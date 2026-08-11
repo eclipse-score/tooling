@@ -196,6 +196,25 @@ def _explicit_config_test_impl(ctx):
 explicit_config_test = analysistest.make(_explicit_config_test_impl)
 
 # ============================================================================
+# Serve Target Tests
+# ============================================================================
+
+def _serve_target_test_impl(ctx):
+    """Test that sphinx_module generates a runnable <name>.serve py_binary."""
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    asserts.true(
+        env,
+        target_under_test[DefaultInfo].files_to_run.executable != None,
+        "<name>.serve should be an executable py_binary",
+    )
+
+    return analysistest.end(env)
+
+serve_target_test = analysistest.make(_serve_target_test_impl)
+
+# ============================================================================
 # Test Suite
 # ============================================================================
 
@@ -228,5 +247,8 @@ def sphinx_module_test_suite(name):
             # Config generation
             ":auto_config_generation_test",
             ":explicit_config_test",
+
+            # Local preview binary
+            ":serve_target_test",
         ],
     )

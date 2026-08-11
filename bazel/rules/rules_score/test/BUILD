@@ -43,6 +43,7 @@ load(
     "needs_generation_test",
     "needs_transitive_test",
     "providers_test",
+    "serve_target_test",
     "sphinx_module_test_suite",
 )
 load(
@@ -95,6 +96,7 @@ load(
     "seooc_index_generation_test",
     "seooc_multi_index_files_exist_test",
     "seooc_needs_provider_test",
+    "seooc_serve_alias_test",
     "seooc_sphinx_entry_point_is_root_index_test",
     "seooc_sphinx_module_generated_test",
 )
@@ -969,6 +971,11 @@ explicit_config_test(
     target_under_test = ":module_a_lib",
 )
 
+serve_target_test(
+    name = "serve_target_test",
+    target_under_test = ":module_a_lib.serve",
+)
+
 # ============================================================================
 # HTML Content Validation Tests
 # ============================================================================
@@ -1144,6 +1151,12 @@ seooc_sphinx_module_generated_test(
     target_under_test = ":seooc_test_lib",
 )
 
+# Test that the <name>.serve alias resolves to a runnable preview binary
+seooc_serve_alias_test(
+    name = "seooc_tests_serve_alias",
+    target_under_test = ":seooc_test_lib.serve",
+)
+
 # Test that needs provider exists for cross-referencing
 seooc_needs_provider_test(
     name = "seooc_tests_needs_provider",
@@ -1273,6 +1286,7 @@ test_suite(
         ":seooc_tests_index_generation",
         ":seooc_tests_multi_index_files_exist",
         ":seooc_tests_needs_provider",
+        ":seooc_tests_serve_alias",
         ":seooc_tests_sphinx_entry_point_is_root_index",
         ":seooc_tests_sphinx_module_generated",
     ],
