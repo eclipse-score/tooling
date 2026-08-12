@@ -63,7 +63,7 @@ def _requirements_impl(ctx):
 
     # -------------------------------------------------------------------------
     # Render TRLC → RST for Sphinx documentation.
-    # --source-files: own .trlc files — rendered AND registered for parsing.
+    # --source-files: own .trlc/.trlc.md files — rendered AND registered for parsing.
     # --dep-files:    spec .rsl + transitive .trlc deps — parsed but not rendered.
     # -------------------------------------------------------------------------
     rendered_file = ctx.actions.declare_file("{}.rst".format(ctx.attr.name))
@@ -144,13 +144,13 @@ _score_requirements_rule = rule(
     implementation = _requirements_impl,
     doc = """Shared internal rule for all S-CORE requirement kinds.
 
-    Accepts raw .trlc source files and emits TrlcProviderInfo so that
-    downstream requirement targets can list this target in their deps
+    Accepts raw .trlc or .trlc.md source files and emits TrlcProviderInfo
+    so that downstream requirement targets can list this target in their deps
     directly, without needing an intermediate trlc_requirements wrapper.
     """,
     attrs = {
         "srcs": attr.label_list(
-            allow_files = [".trlc"],
+            allow_files = [".trlc", ".trlc.md"],
             mandatory = True,
             doc = "TRLC source files containing requirement records.",
         ),
@@ -202,7 +202,7 @@ def score_requirements_rule(
     Each entry in srcs is classified as follows:
       - ".rst" files are converted to .trlc via rst_to_trlc and treated as
         own sources.
-      - ".trlc" files are passed through unchanged as own sources.
+      - ".trlc" / ".trlc.md" files are passed through unchanged as own sources.
       - Any other label is assumed to already provide TrlcProviderInfo (e.g.
         an existing trlc_requirements/assumed_system_requirements/... target)
         and is routed to ``deps`` instead, since only raw TRLC files may be
@@ -236,7 +236,7 @@ def score_requirements_rule(
             )
             trlc_srcs.append(":" + gen_name)
             resolved_srcs.append(":" + gen_name)
-        elif type(src) == type("") and src.endswith(".trlc"):
+        elif (type(src) == type("")) and (src.endswith(".trlc") or src.endswith(".trlc.md")):
             trlc_srcs.append(src)
             resolved_srcs.append(src)
         else:
