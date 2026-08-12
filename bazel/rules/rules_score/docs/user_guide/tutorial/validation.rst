@@ -73,4 +73,4 @@ Run the tests with:
 
    bazel test //:my_unit_test
 
-→ Full guide: :doc:`../validation.rst`
+→ Full guide: :doc:`../validation`

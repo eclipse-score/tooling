@@ -232,18 +232,18 @@ Rather than duplicating a hand-written, untested example here, this exact
 scenario is built and regression-tested as part of `rules_score`'s own test
 suite:
 
-- [`overview.puml`](../../../bazel/rules/rules_score/test/fixtures/clickable_example/overview.puml)
+- [`overview.puml`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/fixtures/clickable_example/overview.puml)
   references `Proxy` (a top-level leaf, per the *Role detection algorithm*
   above).
-- [`proxy_detail.puml`](../../../bazel/rules/rules_score/test/fixtures/clickable_example/proxy_detail.puml)
+- [`proxy_detail.puml`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/fixtures/clickable_example/proxy_detail.puml)
   defines `Proxy` as a `package` with a nested child, making it a *define*.
 
 Both files are wired into a real `architectural_design()` +
 `dependable_element()` target
-(`clickable_example_lib` in [`bazel/rules/rules_score/test/BUILD`](../../../bazel/rules/rules_score/test/BUILD)),
+(`clickable_example_lib` in [`bazel/rules/rules_score/test/BUILD`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/BUILD)),
 so every change to the parser, `puml_idmap`, or this extension is checked
 against genuinely Bazel-built `.idmap.json` artifacts — not just prose. The
-[`clickable_example_link_rendered_test`](../../../bazel/rules/rules_score/test/check_clickable_example_link.sh)
+[`clickable_example_link_rendered_test`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/check_clickable_example_link.sh)
 `sh_test` asserts that:
 
 - `overview.idmap.json` references `Proxy`
@@ -267,7 +267,7 @@ detection algorithm* above:
   `package_a.InternalInterface`, since ids are rooted at the enclosing
   `package_a` package rather than the `@startuml` name. See
   `interface_example_lib` and `interface_example_link_rendered_test` in
-  [`bazel/rules/rules_score/test/BUILD`](../../../bazel/rules/rules_score/test/BUILD).
+  [`bazel/rules/rules_score/test/BUILD`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/BUILD).
 - **Pure class-diagram linking** — `class_overview.puml` references
   `AuditTrail` as a bare, member-less class, and `class_detail.puml` defines
   it (it has a method, making it the elaboration site). See
@@ -285,7 +285,7 @@ matching definition in another — and are wired up the same way:
   FMEA/safety-analysis traceability) defines it. Both share the FQN
   `package_pub.PublicInterface`. See `public_api_example_lib` and
   `public_api_example_link_rendered_test` in
-  [`bazel/rules/rules_score/test/BUILD`](../../../bazel/rules/rules_score/test/BUILD).
+  [`bazel/rules/rules_score/test/BUILD`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/BUILD).
 - **Static architecture unit links to its class diagram** —
   `unit_overview.puml` (a component diagram) shows `unit_one` as a leaf unit
   (no children, so a reference), and `unit_class_detail.puml` (a class

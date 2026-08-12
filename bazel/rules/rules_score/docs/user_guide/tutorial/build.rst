@@ -33,8 +33,24 @@ Run the build from within the ``examples/minimal/`` standalone module:
    cd bazel/rules/rules_score/examples/minimal
    bazel build //:my_element
 
+``bazel build //:my_element`` compiles the Sphinx documentation for the
+``dependable_element`` together with its LOBSTER traceability report — the
+report is rendered as part of the same documentation build.
+
 Expected output files:
 
 .. code-block:: text
 
-   bazel-bin/my_element_doc/html/          ← Sphinx HTML documentation
+   bazel-bin/my_element_doc/html/                                ← Sphinx HTML documentation
+
+Running Validations
+--------------------
+
+All validations — TRLC requirement checks, unit/component/dependable-element
+tests, and the traceability completeness gate — are exposed as Bazel tests and
+run with a single command:
+
+.. code-block:: bash
+
+   cd bazel/rules/rules_score/examples/minimal
+   bazel test //...

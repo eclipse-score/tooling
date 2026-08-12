@@ -26,8 +26,7 @@ from the standalone module at
 By the end you will have a fully validated SEooC with requirements, a static
 architecture diagram, a unit design, and a passing build.
 
-Workflow
---------
+**Workflow:**
 
 The tutorial follows the S-CORE development flow top-down: specify *what* the
 element must do, design *how* it is structured, implement and verify it, and let
@@ -35,18 +34,20 @@ the build check that every artefact stays consistent.
 
 ::
 
-    Step 1              Step 2                 Step 3            Step 4          Step 5
-    Requirements   →    SW Architectural   →   Unit Design  →   Validation  →   Build
-                        Design
-    ───────────         ───────────────        ───────────      ──────────      ─────────
-    AssumedSystemReq    static diagram         class/sequence   unit &          bazel build
-    FeatReq             (components + units)    diagram per      component       (runs every
-    CompReq             →  Bazel targets        unit  →  code    tests +         consistency
-    (.trlc records)     modelled after it       it validates    lobster-        check)
-                                                against          tracing
+    Step 0     Step 1              Step 2                 Step 3            Step 4          Step 5
+    Setup  →   Requirements   →    SW Architectural   →   Unit Design  →   Validation  →   Build
+                                   Design
+    ───────    ───────────         ───────────────        ───────────      ──────────      ─────────
+    dependable AssumedSystemReq    static diagram         class/sequence   unit &          bazel build
+    _element   FeatReq             (components + units)    diagram per      component       (runs every
+    target     CompReq             →  Bazel targets        unit  →  code    tests +         consistency
+               (.trlc records)     modelled after it       it validates    lobster-        check)
+                                                           against          tracing
 
 Each step builds on the previous one, and each has an automatic check:
 
+0. **Setup** — declare the empty ``dependable_element`` target that later steps
+   fill in. → :doc:`setup`
 1. **Requirements** — write ``AssumedSystemReq`` / ``FeatReq`` / ``CompReq`` TRLC
    records and wire their Bazel targets. Traceability is type-checked by
    ``trlc --verify``. → :doc:`requirements`
@@ -68,8 +69,10 @@ Each step builds on the previous one, and each has an automatic check:
    ``bazel build //:my_element``.
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
+   :maxdepth: 2
 
+   setup
    requirements
    architecture
    unit_design

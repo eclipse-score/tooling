@@ -16,7 +16,7 @@ Rules SCORE for Bazel
 =====================
 
 .. include:: overview.rst
-   :start-line: 14
+   :start-line: 16
 
 .. toctree::
    :maxdepth: 2
