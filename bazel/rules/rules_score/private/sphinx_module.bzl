@@ -10,14 +10,20 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+# Copyright 2023 The Bazel Authors. All rights reserved.
+# https://github.com/bazel-contrib/rules_python/blob/release/1.8/sphinxdocs/private/sphinx.bzl
+
 # ======================================================================================
 # Helpers
 # ======================================================================================
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@rules_python//python:py_binary.bzl", "py_binary")
 load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load("@rules_python//sphinxdocs/private:sphinx_docs_library_info.bzl", "SphinxDocsLibraryInfo")
 load("//bazel/rules/rules_score:providers.bzl", "FilteredExecpathInfo", "SphinxIndexFileInfo", "SphinxModuleInfo", "SphinxNeedsInfo")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
+
+_SPHINX_SERVE_MAIN_SRC = Label("@rules_python//sphinxdocs/private:sphinx_server.py")
 
 # Maps the //bazel/rules/rules_score:verbosity build setting (see
 # verbosity.bzl) to the sphinx-build CLI flags that achieve it. Lives here in
@@ -628,6 +634,20 @@ _score_html = rule(
 # ======================================================================================
 # Rule wrappers
 # ======================================================================================
+def _copy_propagating_kwargs(from_kwargs):
+    """Return the subset of macro kwargs that must stay consistent across
+    sibling targets with a dependency relationship.
+
+    Deliberately excludes `visibility`: callers of this helper want their
+    generated sub-target to NOT inherit the macro's own (often public)
+    visibility.
+    """
+    into_kwargs = {}
+    for attr in ("testonly", "tags", "compatible_with", "restricted_to", "target_compatible_with"):
+        if attr in from_kwargs:
+            into_kwargs[attr] = from_kwargs[attr]
+    return into_kwargs
+
 def sphinx_module(
         name,
         srcs,
@@ -646,6 +666,14 @@ def sphinx_module(
     transitive dependency collection. Each dependency's HTML is copied into a
     <dep_name>/ subdirectory of the merged site for intersphinx/sphinx-needs
     cross-referencing.
+
+    Generates targets:
+    * `<name>`: The merged HTML site (this module's own HTML plus every
+      transitive dependency's HTML, each under a `<dep_name>/` subdirectory).
+    * `<name>.serve`: A binary that locally serves `<name>`'s HTML output,
+      for previewing docs during development (`bazel run //:<name>.serve`).
+    * `<name>_needs`: This module's `needs.json` build (see SphinxNeedsInfo).
+
     Args:
         name: Name of the target
         srcs: List of source files (.rst, .md) with index file first
@@ -679,9 +707,9 @@ def sphinx_module(
 
     # conf.py generation is a private implementation detail consumed only by
     # the sibling _score_needs/_score_html targets below (same package) --
-    # must not inherit the macro's own (often public) visibility via kwargs.
-    conf_kwargs = dict(kwargs)
-    conf_kwargs.pop("visibility", None)
+    # _copy_propagating_kwargs both drops visibility and narrows to the
+    # attrs that must actually stay consistent across the two.
+    conf_kwargs = _copy_propagating_kwargs(kwargs)
 
     _score_conf(
         name = name + "_needs_conf",
@@ -726,4 +754,16 @@ def sphinx_module(
         allow_persistent_workers = allow_persistent_workers,
         testonly = testonly,
         **kwargs
+    )
+
+    serve_kwargs = _copy_propagating_kwargs(kwargs)
+    serve_kwargs["tags"] = list(serve_kwargs.get("tags") or []) + ["manual"]
+    py_binary(
+        name = name + ".serve",
+        srcs = [_SPHINX_SERVE_MAIN_SRC],
+        main = _SPHINX_SERVE_MAIN_SRC,
+        data = [name],
+        args = ["$(execpath {})".format(name)],
+        testonly = testonly,
+        **serve_kwargs
     )

@@ -98,6 +98,23 @@ seooc_sphinx_module_generated_test = analysistest.make(
     impl = _seooc_sphinx_module_generated_test_impl,
 )
 
+def _seooc_serve_alias_test_impl(ctx):
+    """Test that dependable_element aliases <name>_doc.serve to <name>.serve."""
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    asserts.true(
+        env,
+        target_under_test[DefaultInfo].files_to_run.executable != None,
+        "Expected dependable_element's <name>.serve alias to resolve to a runnable py_binary",
+    )
+
+    return analysistest.end(env)
+
+seooc_serve_alias_test = analysistest.make(
+    impl = _seooc_serve_alias_test_impl,
+)
+
 def _seooc_needs_provider_test_impl(ctx):
     """Test that dependable_element generates needs provider for cross-referencing."""
     env = analysistest.begin(ctx)

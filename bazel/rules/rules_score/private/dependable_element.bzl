@@ -1807,6 +1807,9 @@ def dependable_element(
             dependable_element's `deps` are resolved against `<dep>_index`
             (see `processed_deps`), not against `<dep>` itself.
         <name>: Main dependable element target (sphinx_module) with HTML documentation
+        <name>.serve: Alias to <name>_doc.serve, a binary that locally serves
+            <name>'s HTML output for previewing docs during development
+            (`bazel run //:<name>.serve`).
         <name>_needs: Sphinx-needs JSON target (created by sphinx_module for cross-referencing)
 
     """
@@ -1874,4 +1877,15 @@ def dependable_element(
         tags = kwargs.get("tags"),
         testonly = testonly,
         visibility = ["//visibility:public"],
+    )
+
+    # Step 5: Alias the internal "<name>_doc.serve" preview binary to
+    # "<name>.serve" so callers can preview docs without knowing about the
+    # internal _doc split (mirrors the sphinx_module_dep facade in Step 3).
+    native.alias(
+        name = name + ".serve",
+        actual = ":" + name + "_doc.serve",
+        tags = ["manual"],
+        testonly = testonly,
+        visibility = kwargs.get("visibility"),
     )
