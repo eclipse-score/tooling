@@ -22,8 +22,7 @@ use class_diagram::{ClassDiagram, SimpleEntity};
 use class_serializer::ClassSerializer;
 
 use utils::{render_entity_tree, write_debug_json, write_entity_tree, write_fbs_output};
-use visit_tu::visitor;
-use visit_tu::{FunctionDef, VisitContext, Visitor};
+use visit_tu::{is_external_dependency_path, FunctionDef, VisitContext, Visitor};
 
 #[derive(ClapParser, Debug)]
 #[command(name = "cpp_parser")]
@@ -120,7 +119,7 @@ fn parse_file(
     debug!("Parsing TU: {:?}", file);
 
     if let Some(path_str) = file.to_str() {
-        if visitor::is_external_dependency_path(path_str) {
+        if is_external_dependency_path(path_str) {
             debug!("Skipping external dependency file: {:?}", file);
             return;
         }

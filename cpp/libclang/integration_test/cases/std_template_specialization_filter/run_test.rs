@@ -11,20 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-mod class_parser_helper;
-mod class_visitor;
-pub mod context;
-mod enum_visitor;
-mod function_visitor;
-mod source_filter;
-pub mod visitor;
+use test_framework::run_parser_case;
 
-pub use class_parser_helper::ResolvedType;
-pub use class_visitor::ClassVisitor;
-pub use context::VisitContext;
-pub use enum_visitor::EnumVisitor;
-pub use function_visitor::FunctionVisitor;
-pub use sequence_logic::{BodyItem, FunctionDef};
-pub use source_filter::is_external_dependency_path;
-pub use visitor::AstVisitor;
-pub use visitor::Visitor;
+#[test]
+fn test_std_template_specialization_filter() {
+    run_parser_case();
+}

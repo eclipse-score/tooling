@@ -13,6 +13,7 @@
 
 #![cfg_attr(test, allow(dead_code))]
 
+use crate::source_filter;
 use clang::{Entity, EntityKind, Type, TypeKind};
 use serde::{Deserialize, Serialize};
 
@@ -306,24 +307,9 @@ fn is_declared_in_external_or_system_header(ty: &Type) -> bool {
         .and_then(|decl| decl.get_location())
         .map(|location| {
             let (path, _, _) = location.get_presumed_location();
-            is_external_or_system_path(&path)
+            source_filter::is_external_or_system_path(&path)
         })
         .unwrap_or(false)
-}
-
-fn is_external_or_system_path(path: &str) -> bool {
-    is_system_header_path(path)
-        || path.contains("/external/")
-        || path.contains("external/")
-        || path.contains("_virtual_includes/")
-        || (path.contains("bazel-out/") && path.contains("/external/"))
-}
-
-fn is_system_header_path(path: &str) -> bool {
-    path.starts_with("/usr/include")
-        || path.starts_with("/usr/local/include")
-        || path.starts_with("/opt/")
-        || path.contains("/gcc/")
 }
 
 fn contains_template_type(resolved: &ResolvedType) -> bool {
