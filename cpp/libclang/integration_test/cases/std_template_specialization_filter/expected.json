@@ -1,0 +1,32 @@
+{
+  "functions": [],
+  "types": {
+    "demo::Key": {
+      "enclosing_namespace_id": "demo",
+      "entity_type": "Struct",
+      "enum_literals": [],
+      "id": "demo::Key",
+      "methods": [],
+      "name": "Key",
+      "relationships": [],
+      "source_location": {
+        "file": "./cpp/libclang/integration_test/cases/std_template_specialization_filter/specialization.h",
+        "line": 23
+      },
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "data_type": "std::uint32_t",
+          "is_static": false,
+          "name": "value",
+          "source_location": {
+            "file": "./cpp/libclang/integration_test/cases/std_template_specialization_filter/specialization.h",
+            "line": 25
+          },
+          "visibility": "public"
+        }
+      ]
+    }
+  }
+}

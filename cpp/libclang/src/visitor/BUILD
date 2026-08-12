@@ -21,6 +21,7 @@ rust_library(
         "src/enum_visitor.rs",
         "src/function_visitor.rs",
         "src/lib.rs",
+        "src/source_filter.rs",
         "src/visitor.rs",
     ],
     visibility = ["//cpp/libclang:__subpackages__"],
@@ -38,6 +39,7 @@ rust_test(
     srcs = [
         "src/class_parser_helper.rs",
         "src/class_parser_helper_test.rs",
+        "src/source_filter.rs",
     ],
     deps = [
         "@crates//:clang",

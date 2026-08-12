@@ -1,0 +1,61 @@
+{
+  "functions": [],
+  "types": {
+    "TextCache": {
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "id": "TextCache",
+      "methods": [
+        {
+          "modifiers": [],
+          "name": "Find",
+          "parameters": [
+            {
+              "is_variadic": false,
+              "name": "key",
+              "param_type": "const std::string &"
+            }
+          ],
+          "return_type": "std::string_view",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/std_internal_namespace_rendering/transport.cpp",
+            "line": 20
+          },
+          "template_parameters": null,
+          "visibility": "public"
+        }
+      ],
+      "name": "TextCache",
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/std_internal_namespace_rendering/transport.cpp",
+        "line": 17
+      },
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "data_type": "std::string",
+          "is_static": false,
+          "name": "name_",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/std_internal_namespace_rendering/transport.cpp",
+            "line": 23
+          },
+          "visibility": "private"
+        },
+        {
+          "data_type": "std::unordered_map<std::string, std::string_view>",
+          "is_static": false,
+          "name": "cache_",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/std_internal_namespace_rendering/transport.cpp",
+            "line": 24
+          },
+          "visibility": "private"
+        }
+      ]
+    }
+  }
+}

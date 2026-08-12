@@ -13,6 +13,8 @@
 
 #[path = "class_parser_helper.rs"]
 mod class_parser_helper;
+#[path = "source_filter.rs"]
+mod source_filter;
 
 use class_parser_helper::{collapse_std_internal_namespaces, ResolvedType};
 
