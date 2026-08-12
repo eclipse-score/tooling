@@ -16,7 +16,7 @@ load(
     "assumptions_of_use",
     "glossary",
 )
-load("@trlc//:trlc.bzl", "trlc_requirements_test")
+load("@score_tooling//bazel/rules/rules_score/trlc/config/test:trlc_check_test.bzl", "trlc_check_test")
 
 assumptions_of_use(
     name = "sample_aous",
@@ -26,7 +26,7 @@ assumptions_of_use(
     visibility = ["//visibility:public"],
 )
 
-trlc_requirements_test(
+trlc_check_test(
     name = "aous_test",
     reqs = [
         ":sample_aous",

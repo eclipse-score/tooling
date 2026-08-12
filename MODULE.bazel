@@ -290,11 +290,11 @@ use_repo(pip, "pip_cr_checker")
 # rules_multitool merges all hub() calls sharing the same hub_name across the
 # module graph. score_tooling doesn't declare its own lockfile for that
 # default hub to avoid overriding those (pinned, multi-platform) entries with
-# a narrower one, and doesn't `use_repo` it either: third_party/format and
+# a narrower one. The default "multitool" repo is imported via use_repo() to
+# satisfy the module extension validation; third_party/format and
 # third_party/lint consume those tools indirectly via
 # @aspect_rules_lint//lint:ruff_bin, //lint:ty_bin, //format:ruff,
-# //format:yamlfmt -- none of which require score_tooling itself to see the
-# "multitool" repo name.
+# //format:yamlfmt.
 multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
 
 # Actionlint Hub -- actionlint has no equivalent in aspect_rules_lint's bundled
@@ -303,7 +303,7 @@ multitool.hub(
     hub_name = "actionlint_hub",
     lockfile = "tools/actionlint.lock.json",
 )
-use_repo(multitool, "actionlint_hub")
+use_repo(multitool, "actionlint_hub", "multitool")
 
 register_toolchains("@actionlint_hub//toolchains:all")
 

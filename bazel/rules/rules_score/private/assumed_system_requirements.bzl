@@ -19,7 +19,7 @@ the assumptions a Safety Element out of Context (SEooC) makes about the system
 it will be integrated into. Feature requirements are derived from them.
 """
 
-load("@trlc//:trlc.bzl", "trlc_requirements_test")
+load("//bazel/rules/rules_score/trlc/config/test:trlc_check_test.bzl", "trlc_check_test")
 load("//bazel/rules/rules_score/private:requirements.bzl", "score_requirements_rule")
 
 # ============================================================================
@@ -89,7 +89,7 @@ def assumed_system_requirements(
         image_srcs = image_srcs,
         **kwargs
     )
-    trlc_requirements_test(
+    trlc_check_test(
         name = name + "_test",
         reqs = [":" + name],
         **kwargs

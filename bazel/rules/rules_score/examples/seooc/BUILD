@@ -31,7 +31,6 @@ component(
     name = "component_example",
     components = [
         "//unit_1:unit_1",
-        "//unit_2:unit_2",
         ":sub_component_example",
     ],
     # component_requirements_sub is also listed here (in addition to
@@ -55,6 +54,9 @@ component(
 # not just units (see docs/user_guide/architectural_design.rst).
 component(
     name = "sub_component_example",
+    components = [
+        "//unit_2:unit_2",
+    ],
     requirements = [
         "//docs/requirements:component_requirements_sub",
         "//docs/requirements:feature_requirements",

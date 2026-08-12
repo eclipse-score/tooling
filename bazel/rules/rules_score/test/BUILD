@@ -31,6 +31,7 @@ load(
 load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphinx_toolchain")
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test")
+load("@score_tooling//bazel/rules/rules_score/trlc/config/test:trlc_check_test.bzl", "trlc_check_test")
 load(
     ":html_generation_test.bzl",
     "auto_config_generation_test",
@@ -1355,7 +1356,7 @@ trlc_requirements(
     spec = ["@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model"],
 )
 
-trlc_requirements_test(
+trlc_check_test(
     name = "safety_measures_types_test",
     reqs = [":safety_measures_fixtures"],
 )
