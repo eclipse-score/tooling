@@ -11,6 +11,10 @@
   SPDX-License-Identifier: Apache-2.0
 ----------------------------------------------------------------------------- -->
 
+---
+orphan: true
+---
+
 # Class Design Sequence Specification
 
 ## Purpose
