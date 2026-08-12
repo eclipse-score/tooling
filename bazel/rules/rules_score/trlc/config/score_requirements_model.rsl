@@ -59,9 +59,20 @@ tuple AssumedSystemReqId {
     version Integer
 }
 
+// FeatReqSourceId uses the abstract RequirementSafety item type (instead of the
+// concrete AssumedSystemReq) so that TRLC can resolve the inherited `safety`
+// field in checks FeatReq.  At runtime every item is still an AssumedSystemReq
+// instance; the broader declared type is only needed to satisfy TRLC 3.0.0's
+// field-access resolution rules.
+tuple FeatReqSourceId {
+    item    RequirementSafety
+    separator @
+    version Integer
+}
+
 type FeatReq "High-level feature requirement derived from one or more AssumedSystemReq items." extends RequirementSafety {
     derived_from "One or more versioned references to the AssumedSystemReq items this feature requirement is derived from."
-                 AssumedSystemReqId[1 .. *]
+                 FeatReqSourceId[1 .. *]
 }
 
 tuple FeatReqId {
@@ -182,3 +193,33 @@ tuple Measure {
 
 // abstract type StdReq extends Requirement {
 // }
+
+///////////////////////////////
+// Safety Checks
+///////////////////////////////
+
+// Note: use trlc_check_test (no --verify) for these checks; TRLC 3.0.0's VCG crashes on forall over union/abstract tuple item fields.
+// ASIL ordering: QM < B < D.  If Asil gains new levels, revisit every branch below.
+
+// FeatReq: ASIL must not decrease from the upstream AssumedSystemReq.
+// FeatReqSourceId.item is RequirementSafety (abstract) so TRLC resolves the
+// inherited `safety` field correctly in this check block.
+checks FeatReq {
+    (forall upstream in derived_from =>
+        not ((upstream.item.safety == Asil.B and safety == Asil.QM) or
+             (upstream.item.safety == Asil.D and safety != Asil.D))),
+      error "ASIL level of derived requirement must be at least the same as the upstream requirement",
+      safety
+}
+
+// CompReq: ASIL must not decrease from any upstream FeatReq or AssumedSystemReq.
+// CompReqSourceId.item is a union [FeatReq, AssumedSystemReq]; TRLC resolves
+// the `safety` field via the common ancestor RequirementSafety.
+checks CompReq {
+    derived_from == null or
+    (forall upstream in derived_from =>
+        not ((upstream.item.safety == Asil.B and safety == Asil.QM) or
+             (upstream.item.safety == Asil.D and safety != Asil.D))),
+      error "ASIL level of derived requirement must be at least the same as the upstream requirement",
+      safety
+}
