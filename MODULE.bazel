@@ -35,7 +35,7 @@ bazel_dep(name = "score_rust_policies", version = "0.0.2")
 bazel_dep(name = "bazel_skylib", version = "1.7.1")
 bazel_dep(name = "flatbuffers", version = "25.9.23")
 bazel_dep(name = "download_utils", version = "1.2.2")
-bazel_dep(name = "trlc", version = "3.0.0")
+bazel_dep(name = "trlc", version = "3.0.1")
 bazel_dep(name = "lobster", version = "1.0.6")
 bazel_dep(name = "rules_distroless", version = "0.8.0")
 
