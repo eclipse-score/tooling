@@ -12,8 +12,8 @@
 # *******************************************************************************
 
 # Hermetic doc-tool runtime rootfs. The @docs_runtime repo (rules_distroless
-# apt.install(dependency_set = "docs_runtime", ...)) is defined in
-# //MODULE.bazel, which lists the pinned packages directly.
+# apt.install(name = "docs_runtime", ...)) is defined in //MODULE.bazel;
+# pinned packages are listed in manifest.yaml in this package.
 
 load("//bazel/rules/exec_in_sysroot:exec_in_sysroot.bzl", "exec_in_sysroot", "prepare_sysroot")
 
