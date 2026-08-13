@@ -101,6 +101,9 @@ impl ResolvedType {
     ///
     /// Traversal policy:
     /// - Template prefers first resolvable argument, then falls back to template base.
+    ///   This intentionally keeps relationship targets at the template-family
+    ///   level for now, even when the model also contains partial-specialization
+    ///   entities with more specific ids.
     /// - Function prefers return type, then parameter types.
     /// - Wrapper/qualifier/array nodes delegate to their inner element.
     pub fn relationship_target_entity_id(&self) -> Option<&str> {
@@ -136,7 +139,8 @@ impl ResolvedType {
     /// Returns a direct referenced entity id for base-type style lookups.
     ///
     /// Unlike `relationship_target_entity_id`, this intentionally keeps template-base
-    /// semantics for inheritance resolution.
+    /// semantics for inheritance resolution and does not attempt to target a
+    /// particular partial specialization entity.
     pub fn referenced_entity_id(&self) -> Option<&str> {
         match self.referenced_entity_root() {
             ResolvedType::UserDefined(id) => Some(id),

@@ -73,7 +73,7 @@ impl<'a> Visitor<'a> {
             EntityKind::ClassDecl | EntityKind::StructDecl => {
                 ClassVisitor::visit(self.ctx, entity);
             }
-            EntityKind::ClassTemplate => {
+            EntityKind::ClassTemplate | EntityKind::ClassTemplatePartialSpecialization => {
                 self.ctx.is_templated = true;
                 ClassVisitor::visit(self.ctx, entity);
                 // ClassTemplate parsing already processes all members,
