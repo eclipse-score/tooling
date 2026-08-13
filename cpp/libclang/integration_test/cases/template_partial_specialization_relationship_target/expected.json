@@ -1,0 +1,121 @@
+{
+  "functions": [],
+  "types": {
+    "demo::Endpoint<void (ArgTypes...)>": {
+      "enclosing_namespace_id": "demo",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "id": "demo::Endpoint<void (ArgTypes...)>",
+      "methods": [
+        {
+          "modifiers": [],
+          "name": "Notify",
+          "parameters": [
+            {
+              "is_pack_expansion": true,
+              "is_variadic": false,
+              "name": "args",
+              "param_type": "const ArgTypes &"
+            }
+          ],
+          "return_type": "void",
+          "template_parameters": null,
+          "visibility": "public",
+          "source_location": {
+            "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_relationship_target/endpoint_without_return.h",
+            "line": 26
+          }
+        }
+      ],
+      "name": "Endpoint",
+      "relationships": [],
+      "source_location": {
+        "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_relationship_target/endpoint_without_return.h",
+        "line": 23
+      },
+      "template_parameters": [
+        {
+          "Type": {
+            "is_pack": true,
+            "name": "ArgTypes"
+          }
+        }
+      ],
+      "type_aliases": [],
+      "variables": [
+        {
+          "data_type": "int",
+          "is_static": false,
+          "name": "notification_count_",
+          "source_location": {
+            "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_relationship_target/endpoint_without_return.h",
+            "line": 29
+          },
+          "visibility": "private"
+        }
+      ]
+    },
+    "demo::Endpoint": {
+      "enclosing_namespace_id": "demo",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "id": "demo::Endpoint",
+      "methods": [],
+      "name": "Endpoint",
+      "relationships": [],
+      "source_location": {
+        "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_relationship_target/endpoint.h",
+        "line": 23
+      },
+      "template_parameters": [
+        {
+          "Type": {
+            "is_pack": false,
+            "name": "Signature"
+          }
+        }
+      ],
+      "type_aliases": [],
+      "variables": []
+    },
+    "demo::Holder": {
+      "enclosing_namespace_id": "demo",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "id": "demo::Holder",
+      "methods": [],
+      "name": "Holder",
+      "relationships": [
+        {
+          "source": "demo::Holder",
+          "target": "demo::Endpoint",
+          "relation_type": "Composition",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_relationship_target/holder.h",
+            "line": 31
+          }
+        }
+      ],
+      "source_location": {
+        "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_relationship_target/holder.h",
+        "line": 24
+      },
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "data_type": "demo::Endpoint<void(int)>",
+          "is_static": false,
+          "name": "endpoint_",
+          "source_location": {
+            "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_relationship_target/holder.h",
+            "line": 31
+          },
+          "visibility": "private"
+        }
+      ]
+    }
+  }
+}

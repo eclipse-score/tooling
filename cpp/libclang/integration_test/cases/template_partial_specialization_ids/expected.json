@@ -1,0 +1,142 @@
+{
+  "functions": [],
+  "types": {
+    "demo::Endpoint<ReturnType (ArgTypes...)>": {
+      "enclosing_namespace_id": "demo",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "id": "demo::Endpoint<ReturnType (ArgTypes...)>",
+      "methods": [
+        {
+          "modifiers": [],
+          "name": "Request",
+          "parameters": [
+            {
+              "is_pack_expansion": true,
+              "is_variadic": false,
+              "name": "args",
+              "param_type": "const ArgTypes &"
+            }
+          ],
+          "return_type": "ReturnType",
+          "template_parameters": null,
+          "visibility": "public",
+          "source_location": {
+            "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_ids/specialization_with_return.h",
+            "line": 28
+          }
+        }
+      ],
+      "name": "Endpoint",
+      "relationships": [],
+      "source_location": {
+        "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_ids/specialization_with_return.h",
+        "line": 25
+      },
+      "template_parameters": [
+        {
+          "Type": {
+            "is_pack": false,
+            "name": "ReturnType"
+          }
+        },
+        {
+          "Type": {
+            "is_pack": true,
+            "name": "ArgTypes"
+          }
+        }
+      ],
+      "type_aliases": [],
+      "variables": [
+        {
+          "data_type": "int",
+          "is_static": false,
+          "name": "parameter_count_",
+          "source_location": {
+            "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_ids/specialization_with_return.h",
+            "line": 31
+          },
+          "visibility": "private"
+        }
+      ]
+    },
+    "demo::Endpoint<void (ArgTypes...)>": {
+      "enclosing_namespace_id": "demo",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "id": "demo::Endpoint<void (ArgTypes...)>",
+      "methods": [
+        {
+          "modifiers": [],
+          "name": "Notify",
+          "parameters": [
+            {
+              "is_pack_expansion": true,
+              "is_variadic": false,
+              "name": "args",
+              "param_type": "const ArgTypes &"
+            }
+          ],
+          "return_type": "void",
+          "template_parameters": null,
+          "visibility": "public",
+          "source_location": {
+            "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_ids/specialization_without_return.h",
+            "line": 28
+          }
+        }
+      ],
+      "name": "Endpoint",
+      "relationships": [],
+      "source_location": {
+        "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_ids/specialization_without_return.h",
+        "line": 25
+      },
+      "template_parameters": [
+        {
+          "Type": {
+            "is_pack": true,
+            "name": "ArgTypes"
+          }
+        }
+      ],
+      "type_aliases": [],
+      "variables": [
+        {
+          "data_type": "int",
+          "is_static": false,
+          "name": "notification_count_",
+          "source_location": {
+            "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_ids/specialization_without_return.h",
+            "line": 31
+          },
+          "visibility": "private"
+        }
+      ]
+    },
+    "demo::Endpoint": {
+      "enclosing_namespace_id": "demo",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "id": "demo::Endpoint",
+      "methods": [],
+      "name": "Endpoint",
+      "relationships": [],
+      "source_location": {
+        "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_ids/specialization.h",
+        "line": 23
+      },
+      "template_parameters": [
+        {
+          "Type": {
+            "is_pack": false,
+            "name": "Signature"
+          }
+        }
+      ],
+      "type_aliases": [],
+      "variables": []
+    }
+  }
+}

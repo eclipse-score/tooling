@@ -65,10 +65,7 @@ impl ClassVisitor {
             return None;
         };
 
-        let id = match namespace {
-            Some(ns) if !ns.is_empty() => format!("{ns}::{name}"),
-            _ => name.clone(),
-        };
+        let id = class_entity_id(entity, namespace, &name);
 
         let mut builder = ParsedClassInfo {
             id: id.clone(),
@@ -142,6 +139,21 @@ impl ClassVisitor {
             }
             _ => {}
         }
+    }
+}
+
+fn class_entity_id(entity: &Entity, namespace: Option<&str>, name: &str) -> String {
+    let base_name = if entity.get_kind() == EntityKind::ClassTemplatePartialSpecialization {
+        entity
+            .get_display_name()
+            .unwrap_or_else(|| name.to_string())
+    } else {
+        name.to_string()
+    };
+
+    match namespace {
+        Some(ns) if !ns.is_empty() => format!("{ns}::{base_name}"),
+        _ => base_name,
     }
 }
 
