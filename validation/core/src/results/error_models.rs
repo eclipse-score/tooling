@@ -96,6 +96,25 @@ impl ErrorBuilder {
         self
     }
 
+    pub fn suggest(
+        self,
+        original_name: &str,
+        suggestion_subject: Option<&str>,
+        suggested_name: &str,
+    ) -> Self {
+        let suggestion_text = match suggestion_subject {
+            Some(suggestion_subject) => {
+                format!("Did you mean {suggestion_subject} \"{suggested_name}\"?")
+            }
+            None => format!("Did you mean \"{suggested_name}\"?"),
+        };
+
+        self.field(
+            format!("suggestion for \"{original_name}\""),
+            suggestion_text,
+        )
+    }
+
     pub fn build(self) -> String {
         let label_width = self
             .fields
@@ -121,5 +140,34 @@ impl ErrorBuilder {
         }
 
         message
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ErrorBuilder, ErrorCategory};
+
+    #[test]
+    fn suggest_formats_message_with_subject() {
+        let message = ErrorBuilder::new(ErrorCategory::Naming)
+            .suggest("Srvce", Some("class"), "Service")
+            .build();
+
+        assert_eq!(
+            message,
+            "[Naming] \n  Suggestion for \"Srvce\" : Did you mean class \"Service\"?"
+        );
+    }
+
+    #[test]
+    fn suggest_formats_message_without_subject() {
+        let message = ErrorBuilder::new(ErrorCategory::Naming)
+            .suggest("Srvce", None, "Service")
+            .build();
+
+        assert_eq!(
+            message,
+            "[Naming] \n  Suggestion for \"Srvce\" : Did you mean \"Service\"?"
+        );
     }
 }

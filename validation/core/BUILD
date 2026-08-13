@@ -87,6 +87,7 @@ rust_library(
         "@crates//:log",
         "@crates//:serde",
         "@crates//:serde_json",
+        "@crates//:strsim",
     ],
 )
 
