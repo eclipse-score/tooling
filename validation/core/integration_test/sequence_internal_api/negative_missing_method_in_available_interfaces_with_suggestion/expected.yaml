@@ -1,0 +1,29 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains:
+  - |
+    [Method] Sequence function "GetData" from sequence call "unit_1" -> "unit_2" : "GetData" in the sequence diagram not found in the internal API diagram.
+      Sequence call            : "unit_1" -> "unit_2" : "GetData"
+      Sequence source file     : "validation/core/integration_test/sequence_internal_api/negative_missing_method_in_available_interfaces_with_suggestion/sequence_diagram.puml"
+      Sequence source line     : 19
+      Detail                   : sequence function name was not found in available interface methods
+      Suggestion for "GetData" : Did you mean method "GetDate"?
+      Fix                      : Add method "GetData" in a matching internal API interface in the internal API diagram, or remove sequence function "GetData" in sequence call "unit_1" -> "unit_2" : "GetData" in the sequence diagram.
+  - |-
+    [Coverage] Methods "GetDate" declared on internal API interface "package_a.InternalInterface" in the internal API diagram are not exercised in the sequence diagram.
+      Interface id             : "package_a.InternalInterface"
+      Internal API source file : "validation/core/integration_test/sequence_internal_api/negative_missing_method_in_available_interfaces_with_suggestion/internal_api_diagram.puml"
+      Internal API source line : 17
+      Missing functions        : "GetDate"
+      Fix                      : Add sequence interactions for functions "GetDate" in the sequence diagram, or remove function declarations "GetDate" in internal API interface "package_a.InternalInterface".

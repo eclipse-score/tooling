@@ -19,6 +19,7 @@ filegroup(
         "//validation/core/integration_test/sequence_internal_api/negative_interface_function_not_exercised:case_data",
         "//validation/core/integration_test/sequence_internal_api/negative_invalid_consumer_provider_direction:case_data",
         "//validation/core/integration_test/sequence_internal_api/negative_method_available_but_not_on_related_interface:case_data",
+        "//validation/core/integration_test/sequence_internal_api/negative_missing_method_in_available_interfaces_with_suggestion:case_data",
         "//validation/core/integration_test/sequence_internal_api/negative_missing_method_in_related_interface:case_data",
         "//validation/core/integration_test/sequence_internal_api/positive_internal_api_method_match:case_data",
         "//validation/core/integration_test/sequence_internal_api/positive_self_call_method_match:case_data",

@@ -14,10 +14,11 @@ should_pass: false
 error_contains:
   - |
     [Naming] Alias "unit_3" from the component diagram not found in the sequence diagram.
-      Alias                 : "unit_3"
-      Component source file : "validation/core/integration_test/component_sequence/negative_missing_participant/component_diagram.puml"
-      Component source line : 20
-      Fix                   : Add sequence participant "unit_3" in the sequence diagram, or remove it from the component diagram.
+      Alias                   : "unit_3"
+      Component source file   : "validation/core/integration_test/component_sequence/negative_missing_participant/component_diagram.puml"
+      Component source line   : 20
+      Suggestion for "unit_3" : Did you mean "unit_1"?
+      Fix                     : Add sequence participant "unit_3" in the sequence diagram, or remove it from the component diagram.
   - |
     [Interface] Sequence-connected units "unit_1" and "unit_2" have no corresponding shared interface connection in the component diagram.
       Unit pair               : "unit_1" <-> "unit_2"

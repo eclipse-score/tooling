@@ -19,8 +19,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use sequence_logic::SourceLocation;
 
 use super::shared::{
-    build_observed_call_contexts, build_unit_bindings, format_name_list, intersect_interfaces,
-    SequenceCallContext, UnitBindings,
+    best_string_suggestion, build_observed_call_contexts, build_unit_bindings, format_name_list,
+    intersect_interfaces, SequenceCallContext, UnitBindings,
 };
 use crate::models::{is_external_endpoint, ComponentDiagramArchitecture, SequenceDiagramIndex};
 use crate::results::{ErrorBuilder, ErrorCategory};
@@ -127,19 +127,32 @@ impl<'a> ComponentSequenceValidator<'a> {
                 .map(|source_location| source_location.display())
                 .unwrap_or_default();
 
-            self.result.add_failure(
-                ErrorBuilder::new(ErrorCategory::Naming)
-                    .title(format!(
-                        "alias \"{alias}\" from the component diagram not found in the sequence diagram"
-                    ))
-                    .field("alias", format!("\"{alias}\""))
-                    .field("component source file", format!("\"{source_file}\""))
-                    .field("component source line", source_line.to_string())
-                    .fix(format!(
-                        "add sequence participant \"{alias}\" in the sequence diagram, or remove it from the component diagram"
-                    ))
-                    .build(),
-            );
+            let error = ErrorBuilder::new(ErrorCategory::Naming)
+                .title(format!(
+                    "alias \"{alias}\" from the component diagram not found in the sequence diagram"
+                ))
+                .field("alias", format!("\"{alias}\""))
+                .field("component source file", format!("\"{source_file}\""))
+                .field("component source line", source_line.to_string())
+                .fix(format!(
+                    "add sequence participant \"{alias}\" in the sequence diagram, or remove it from the component diagram"
+                ));
+
+            let error = if let Some(suggested_name) = best_string_suggestion(
+                alias,
+                self.participants
+                    .keys()
+                    .filter(|participant| !is_external_endpoint(participant))
+                    .map(String::as_str),
+            )
+            .as_deref()
+            {
+                error.suggest(alias, None, suggested_name)
+            } else {
+                error
+            };
+
+            self.result.add_failure(error.build());
         }
 
         for participant in self.participants.keys().filter(|participant| {
@@ -147,19 +160,27 @@ impl<'a> ComponentSequenceValidator<'a> {
         }) {
             let (source_file, source_line) = self.participants[participant].display();
 
-            self.result.add_failure(
-                ErrorBuilder::new(ErrorCategory::Naming)
-                    .title(format!(
-                        "participant \"{participant}\" from the sequence diagram not found in the component diagram"
-                    ))
-                    .field("participant", format!("\"{participant}\""))
-                    .field("sequence source file", format!("\"{source_file}\""))
-                    .field("sequence source line", source_line.to_string())
-                    .fix(format!(
-                        "add component unit alias \"{participant}\" in the component diagram, or remove it from the sequence diagram"
-                    ))
-                    .build(),
-            );
+            let error = ErrorBuilder::new(ErrorCategory::Naming)
+                .title(format!(
+                    "participant \"{participant}\" from the sequence diagram not found in the component diagram"
+                ))
+                .field("participant", format!("\"{participant}\""))
+                .field("sequence source file", format!("\"{source_file}\""))
+                .field("sequence source line", source_line.to_string())
+                .fix(format!(
+                    "add component unit alias \"{participant}\" in the component diagram, or remove it from the sequence diagram"
+                ));
+
+            let error = if let Some(suggested_name) =
+                best_string_suggestion(participant, self.unit_bindings.keys().map(String::as_str))
+                    .as_deref()
+            {
+                error.suggest(participant, None, suggested_name)
+            } else {
+                error
+            };
+
+            self.result.add_failure(error.build());
         }
     }
 
