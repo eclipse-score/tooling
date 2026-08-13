@@ -73,6 +73,11 @@ fn negative_missing_method_in_related_interface_suite_case() {
 }
 
 #[test]
+fn negative_missing_method_in_available_interfaces_with_suggestion_suite_case() {
+    assert_case("negative_missing_method_in_available_interfaces_with_suggestion");
+}
+
+#[test]
 fn negative_method_available_but_not_on_related_interface_suite_case() {
     assert_case("negative_method_available_but_not_on_related_interface");
 }
