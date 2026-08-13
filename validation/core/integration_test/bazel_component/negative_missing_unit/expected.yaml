@@ -13,8 +13,9 @@
 should_pass: false
 error_contains: |
   [Naming] Unit "unit_2" from Bazel not found in the PlantUML component diagram.
-    Alias       : "unit_2"
-    Parent      : component_example
-    Stereotype  : <<unit>>
-    Bazel label : @//bazel/rules/rules_score/examples/seooc/unit_2:unit_2
-    Fix         : Add unit "unit_2" with stereotype <<unit>> in the PlantUML component diagram, or remove it from Bazel.
+    Alias                   : "unit_2"
+    Parent                  : component_example
+    Stereotype              : <<unit>>
+    Bazel label             : @//bazel/rules/rules_score/examples/seooc/unit_2:unit_2
+    Suggestion for "unit_2" : Did you mean unit "unit_1"?
+    Fix                     : Add unit "unit_2" with stereotype <<unit>> in the PlantUML component diagram, or remove it from Bazel.
