@@ -93,6 +93,41 @@ fn negative_class_member_missing() {
 }
 
 #[test]
+fn negative_class_missing_with_suggestion() {
+    assert_case("negative_class_missing_with_suggestion");
+}
+
+#[test]
+fn negative_class_missing_without_suggestion() {
+    assert_case("negative_class_missing_without_suggestion");
+}
+
+#[test]
+fn negative_type_alias_missing_with_suggestion() {
+    assert_case("negative_type_alias_missing_with_suggestion");
+}
+
+#[test]
+fn negative_variable_missing_with_suggestion() {
+    assert_case("negative_variable_missing_with_suggestion");
+}
+
+#[test]
+fn negative_method_missing_with_suggestion() {
+    assert_case("negative_method_missing_with_suggestion");
+}
+
+#[test]
+fn negative_enum_literal_missing_with_suggestion() {
+    assert_case("negative_enum_literal_missing_with_suggestion");
+}
+
+#[test]
+fn negative_relationship_missing_with_suggestion() {
+    assert_case("negative_relationship_missing_with_suggestion");
+}
+
+#[test]
 fn negative_duplicate_class_entity_input() {
     assert_case("negative_duplicate_class_entity_input");
 }

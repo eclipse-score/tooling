@@ -14,6 +14,7 @@
 //! Class implementation validation: compare unit design class diagrams with
 //! C++ implementation produced by the C++ parser.
 
+use super::shared::best_string_suggestion;
 use crate::models::ClassEntityIndex;
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::ValidationResult;
@@ -67,8 +68,16 @@ impl ClassDesignImplementationValidator {
                 .find_by_id(&design_entity.id)
                 .or_else(|| implementation_classes.find_by_id(&normalized_design_id))
             else {
-                self.result
-                    .add_failure(Self::format_missing_class(design_entity));
+                let suggested_class = best_string_suggestion(
+                    &design_entity.id,
+                    implementation_classes
+                        .entities()
+                        .map(|entity| entity.id.as_str()),
+                );
+                self.result.add_failure(Self::format_missing_class(
+                    design_entity,
+                    suggested_class.as_deref(),
+                ));
                 continue;
             };
 
@@ -148,6 +157,11 @@ impl ClassDesignImplementationValidator {
                     design_entity,
                     "type_alias",
                     &design_alias.alias,
+                    best_string_suggestion(
+                        &design_alias.alias,
+                        implementation_aliases.keys().copied(),
+                    )
+                    .as_deref(),
                 )),
             }
         }
@@ -173,6 +187,11 @@ impl ClassDesignImplementationValidator {
                     design_entity,
                     "variable",
                     &design_variable.name,
+                    best_string_suggestion(
+                        &design_variable.name,
+                        implementation_variables.keys().copied(),
+                    )
+                    .as_deref(),
                 )),
             }
         }
@@ -257,6 +276,11 @@ impl ClassDesignImplementationValidator {
                             design_entity,
                             "method",
                             &key,
+                            best_string_suggestion(
+                                &key,
+                                implementation_methods.keys().map(String::as_str),
+                            )
+                            .as_deref(),
                         )),
                     }
                 }
@@ -412,6 +436,11 @@ impl ClassDesignImplementationValidator {
                     design_entity,
                     "enum_literal",
                     &design_literal.name,
+                    best_string_suggestion(
+                        &design_literal.name,
+                        implementation_literals.keys().copied(),
+                    )
+                    .as_deref(),
                 )),
             }
         }
@@ -440,17 +469,29 @@ impl ClassDesignImplementationValidator {
                         &relationship_display_name(implementation_relationship),
                     ))
                 }
-                None => self.result.add_failure(Self::format_missing_member(
-                    design_entity,
-                    "relationship",
-                    &display_name,
-                )),
+                None => {
+                    let implementation_relationship_names = implementation_entity
+                        .relationships
+                        .iter()
+                        .map(relationship_display_name)
+                        .collect::<Vec<_>>();
+                    self.result.add_failure(Self::format_missing_member(
+                        design_entity,
+                        "relationship",
+                        &display_name,
+                        best_string_suggestion(
+                            &display_name,
+                            implementation_relationship_names.iter().map(String::as_str),
+                        )
+                        .as_deref(),
+                    ))
+                }
             }
         }
     }
 
-    fn format_missing_class(entity: &SimpleEntity) -> String {
-        ErrorBuilder::new(ErrorCategory::Class)
+    fn format_missing_class(entity: &SimpleEntity, suggested_class: Option<&str>) -> String {
+        let error = ErrorBuilder::new(ErrorCategory::Class)
             .title(format!(
                 "class \"{}\" from the unit design not found in the C++ class implementation",
                 entity.id
@@ -461,16 +502,24 @@ impl ClassDesignImplementationValidator {
             .fix(format!(
                 "add implementation class \"{}\" in the C++ class implementation, or remove it from the unit design",
                 entity.id
-            ))
-            .build()
+            ));
+
+        let error = if let Some(suggested_class) = suggested_class {
+            error.suggest(&entity.id, Some("class"), suggested_class)
+        } else {
+            error
+        };
+
+        error.build()
     }
 
     fn format_missing_member(
         design_entity: &SimpleEntity,
         member_type: &str,
         member_name: &str,
+        suggested_member: Option<&str>,
     ) -> String {
-        ErrorBuilder::new(ErrorCategory::Member)
+        let error = ErrorBuilder::new(ErrorCategory::Member)
             .title(format!(
                 "{member_type} \"{member_name}\" from entity \"{}\" in the unit design not found in the C++ class implementation",
                 design_entity.id
@@ -485,8 +534,15 @@ impl ClassDesignImplementationValidator {
             .fix(format!(
                 "add {member_type} \"{member_name}\" to entity \"{}\" in the C++ class implementation, or remove it from the unit design",
                 design_entity.id
-            ))
-            .build()
+            ));
+
+        let error = if let Some(suggested_member) = suggested_member {
+            error.suggest(member_name, Some(member_type), suggested_member)
+        } else {
+            error
+        };
+
+        error.build()
     }
 
     fn format_mismatch(

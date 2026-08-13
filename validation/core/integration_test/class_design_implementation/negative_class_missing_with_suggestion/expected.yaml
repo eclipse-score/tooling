@@ -11,11 +11,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 should_pass: false
-error_contains: |
-  [Naming] Unit "unit_3" from the PlantUML component diagram not found in Bazel.
-    Alias                   : "unit_3"
-    Parent                  : component_example
-    Component source file   : "validation/core/integration_test/bazel_component/negative_extra_unit/component_diagram.puml"
-    Component source line   : 20
-    Suggestion for "unit_3" : Did you mean unit "unit_1"?
-    Fix                     : Add the corresponding Bazel unit definition for "unit_3", or remove it from the PlantUML component diagram.
+error_contains: |-
+  [Class] Class "ControlPanel" from the unit design not found in the C++ class implementation.
+    Class                         : "ControlPanel"
+    Design source file            : "validation/core/integration_test/class_design_implementation/negative_class_missing_with_suggestion/class_diagram.puml"
+    Design source line            : 16
+    Suggestion for "ControlPanel" : Did you mean class "ControlPanl"?
+    Fix                           : Add implementation class "ControlPanel" in the C++ class implementation, or remove it from the unit design.
