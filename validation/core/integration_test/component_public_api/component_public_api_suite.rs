@@ -60,6 +60,16 @@ fn negative_public_api_missing_suite_case() {
 }
 
 #[test]
+fn negative_public_api_missing_with_suggestion_suite_case() {
+    assert_case("negative_public_api_missing_with_suggestion");
+}
+
+#[test]
+fn negative_public_api_missing_with_suggestions_suite_case() {
+    assert_case("negative_public_api_missing_with_suggestions");
+}
+
+#[test]
 fn negative_public_api_wrong_type_suite_case() {
     assert_case("negative_public_api_wrong_type");
 }

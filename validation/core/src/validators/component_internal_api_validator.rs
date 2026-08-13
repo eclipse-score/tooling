@@ -16,7 +16,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::shared::format_name_list;
+use super::shared::{best_string_suggestion, format_name_list};
 use crate::models::{ComponentDiagramArchitecture, InternalApiIndex, LogicComponentExt};
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
@@ -77,6 +77,7 @@ impl ComponentInternalApiValidator {
                 .add_failure(format_missing_internal_api_interface_error(
                     &missing_interfaces,
                     &self.component_interface_sources,
+                    &self.internal_api_interface_ids,
                 ));
         }
     }
@@ -119,6 +120,7 @@ fn collect_internal_api_interface_ids(internal_api_diagram: &InternalApiIndex) -
 fn format_missing_internal_api_interface_error(
     missing_internal_api_interfaces: &BTreeSet<String>,
     component_interface_sources: &BTreeMap<String, SourceLocation>,
+    internal_api_interface_ids: &BTreeSet<String>,
 ) -> String {
     let missing_interfaces = format_name_list(missing_internal_api_interfaces);
 
@@ -140,6 +142,13 @@ fn format_missing_internal_api_interface_error(
                     format!("component source line for \"{interface_id}\""),
                     source_line.to_string(),
                 );
+        }
+
+        if let Some(suggested_interface) = best_string_suggestion(
+            interface_id,
+            internal_api_interface_ids.iter().map(String::as_str),
+        ) {
+            error = error.suggest(interface_id, Some("interface"), &suggested_interface);
         }
     }
 

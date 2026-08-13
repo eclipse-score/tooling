@@ -1,0 +1,23 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains: |-
+  [Interface] Public API interface(s) "SampleLibraryAPI1", "SampleLibraryAPI2" from the static diagram not found in the public API diagram.
+    Missing public APIs                        : "SampleLibraryAPI1", "SampleLibraryAPI2"
+    Static source file for "SampleLibraryAPI1" : "validation/core/integration_test/component_public_api/negative_public_api_missing_with_suggestions/static_design.puml"
+    Static source line for "SampleLibraryAPI1" : 20
+    Suggestion for "SampleLibraryAPI1"         : Did you mean interface "SampleLibraryAP1"?
+    Static source file for "SampleLibraryAPI2" : "validation/core/integration_test/component_public_api/negative_public_api_missing_with_suggestions/static_design.puml"
+    Static source line for "SampleLibraryAPI2" : 21
+    Suggestion for "SampleLibraryAPI2"         : Did you mean interface "SampleLibraryAP2"?
+    Fix                                        : Add public API declaration(s) "SampleLibraryAPI1", "SampleLibraryAPI2" in the public API diagram, or remove those interface declarations from the static diagram.
