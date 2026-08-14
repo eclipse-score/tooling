@@ -38,6 +38,66 @@ pub struct ObservedSequenceCall {
     pub source_location: SourceLocation,
 }
 
+/// Validation-only participant metadata keyed by the participant reference name
+/// used in sequence interactions.
+pub struct SequenceParticipantInfo {
+    pub display_name: String,
+    pub source_location: SourceLocation,
+}
+
+impl SequenceParticipantInfo {
+    // TODO: Remove this normalization once class diagram identifiers also use
+    // `::` namespaces directly instead of `.`.
+    pub fn normalize_qualified_name(reference: &str) -> String {
+        reference.replace("::", ".")
+    }
+}
+
+fn strip_supported_html_style_tags(text: &str) -> String {
+    let mut normalized = String::new();
+    let mut index = 0;
+
+    while index < text.len() {
+        let remaining = &text[index..];
+
+        if let Some(tag_len) = supported_html_style_tag_length(remaining) {
+            index += tag_len;
+            continue;
+        }
+
+        let ch = remaining.chars().next().expect("remaining is non-empty");
+        normalized.push(ch);
+        index += ch.len_utf8();
+    }
+
+    normalized
+}
+
+fn supported_html_style_tag_length(text: &str) -> Option<usize> {
+    if !text.starts_with('<') {
+        return None;
+    }
+
+    let end = text.find('>')?;
+    let tag = text[1..end].trim().to_ascii_lowercase();
+
+    let known_tags = [
+        "b", "/b", "i", "/i", "u", "/u", "s", "/s", "w", "/w", "img", "/img", "font", "/font",
+    ];
+    let styled_tags = ["color", "back", "size"];
+
+    let is_known_tag = known_tags.contains(&tag.as_str());
+    let is_styled_tag = styled_tags.iter().any(|styled_tag| {
+        tag == format!("/{styled_tag}") || tag.starts_with(&format!("{styled_tag}:"))
+    });
+
+    if is_known_tag || is_styled_tag {
+        Some(end + 1)
+    } else {
+        None
+    }
+}
+
 impl SequenceDiagramInputs {
     /// Build a [`SequenceDiagramIndex`] from sequence diagram inputs.
     pub fn to_sequence_diagram_index(&self, result: &mut ValidationResult) -> SequenceDiagramIndex {
@@ -47,7 +107,7 @@ impl SequenceDiagramInputs {
 
 /// Indexed sequence-diagram data prepared for validators.
 pub struct SequenceDiagramIndex {
-    participants: BTreeMap<String, SourceLocation>,
+    participants: BTreeMap<String, SequenceParticipantInfo>,
     observed_calls: Vec<ObservedSequenceCall>,
 }
 
@@ -68,7 +128,10 @@ impl SequenceDiagramIndex {
                 // declared in more than one input diagram.
                 participants
                     .entry(reference_name)
-                    .or_insert_with(|| participant.source_location.clone());
+                    .or_insert_with(|| SequenceParticipantInfo {
+                        display_name: strip_supported_html_style_tags(&participant.display_name),
+                        source_location: participant.source_location.clone(),
+                    });
             }
 
             collect_block_data(&diagram.root, &mut observed_calls, result);
@@ -80,8 +143,16 @@ impl SequenceDiagramIndex {
         }
     }
 
-    pub fn participants(&self) -> &BTreeMap<String, SourceLocation> {
+    pub fn participants(&self) -> &BTreeMap<String, SequenceParticipantInfo> {
         &self.participants
+    }
+
+    pub fn declared_participants(&self) -> impl Iterator<Item = &str> {
+        self.participants.keys().map(String::as_str)
+    }
+
+    pub fn participant_info(&self, participant: &str) -> Option<&SequenceParticipantInfo> {
+        self.participants.get(participant)
     }
 
     pub fn observed_calls(&self) -> &[ObservedSequenceCall] {

@@ -213,7 +213,7 @@ fn simple_entity(name: &str, entity_type: EntityType, namespace: Option<&str>) -
     }
 }
 
-fn method(name: &str) -> Method {
+pub(super) fn method(name: &str) -> Method {
     Method {
         name: name.to_string(),
         return_type: None,

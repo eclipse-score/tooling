@@ -33,4 +33,5 @@ pub use component_diagram_models::{
 };
 pub use sequence_diagram_models::{
     is_external_endpoint, ObservedSequenceCall, SequenceDiagramIndex, SequenceDiagramInputs,
+    SequenceParticipantInfo,
 };

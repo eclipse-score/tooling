@@ -16,13 +16,14 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use sequence_logic::SourceLocation;
-
 use super::shared::{
     best_string_suggestion, build_observed_call_contexts, build_unit_bindings, format_name_list,
     intersect_interfaces, SequenceCallContext, UnitBindings,
 };
-use crate::models::{is_external_endpoint, ComponentDiagramArchitecture, SequenceDiagramIndex};
+use crate::models::{
+    is_external_endpoint, ComponentDiagramArchitecture, SequenceDiagramIndex,
+    SequenceParticipantInfo,
+};
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
 
@@ -37,7 +38,7 @@ pub fn validate_component_sequence(
 type ConnectedUnitPairs = BTreeMap<(String, String), BTreeSet<String>>;
 
 struct ComponentSequenceValidator<'a> {
-    participants: &'a BTreeMap<String, SourceLocation>,
+    participants: &'a BTreeMap<String, SequenceParticipantInfo>,
     observed_call_contexts: Vec<SequenceCallContext<'a>>,
     connected_unit_pairs: ConnectedUnitPairs,
     unit_bindings: UnitBindings,
@@ -158,7 +159,8 @@ impl<'a> ComponentSequenceValidator<'a> {
         for participant in self.participants.keys().filter(|participant| {
             !is_external_endpoint(participant) && !self.unit_bindings.contains_key(*participant)
         }) {
-            let (source_file, source_line) = self.participants[participant].display();
+            let (source_file, source_line) =
+                self.participants[participant].source_location.display();
 
             let error = ErrorBuilder::new(ErrorCategory::Naming)
                 .title(format!(
