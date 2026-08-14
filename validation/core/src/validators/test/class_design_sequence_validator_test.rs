@@ -136,7 +136,7 @@ fn reports_sequence_call_method_missing_from_callee_class() {
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains(
-        "[Method] Sequence function \"FindById\" from sequence call \"Controller\" -> \"Repository\" : \"FindById\" not found on target class \"Repository\" in the class diagram."
+        "[Method] Sequence function \"FindById\" from sequence call \"Controller\" -> \"Repository\" : \"FindById\" not found on target class \"Repository\" or its accessible inherited types in the class diagram."
     ));
     assert!(validation_result.failures[0].contains("\"Repository\""));
 }

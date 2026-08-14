@@ -16,8 +16,11 @@
 use std::collections::BTreeSet;
 
 use super::shared::{extract_method_name, format_sequence_call};
-use crate::models::{ClassEntityIndex, SequenceDiagramIndex, SequenceParticipantInfo};
+use crate::models::{
+    ClassEntityIndex, ObservedSequenceCall, SequenceDiagramIndex, SequenceParticipantInfo,
+};
 use crate::{Diagnostics, ErrorBuilder, ErrorCategory, ValidationResult};
+use class_diagram::{RelationType, Visibility};
 
 /// Run class-design-vs-sequence validation.
 pub fn validate_class_design_sequence(
@@ -31,6 +34,13 @@ struct ClassDesignSequenceValidator<'a> {
     design_classes: &'a ClassEntityIndex,
     sequence_diagram: &'a SequenceDiagramIndex,
     result: ValidationResult,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MethodLookupResult {
+    FoundAccessible,
+    FoundPrivateInherited,
+    NotFound,
 }
 
 impl<'a> ClassDesignSequenceValidator<'a> {
@@ -100,41 +110,83 @@ impl<'a> ClassDesignSequenceValidator<'a> {
 
     fn check_message_operation_consistency(&mut self) {
         for observed_call in self.sequence_diagram.observed_calls() {
-            let ParticipantResolution::Matched(callee_class) =
-                self.resolve_participant_class(&observed_call.callee)
-            else {
-                continue;
-            };
+            self.validate_observed_call(observed_call);
+        }
+    }
 
-            let method_name = extract_method_name(&observed_call.method);
-            if method_name.is_empty() {
-                continue;
+    fn validate_observed_call(&mut self, observed_call: &ObservedSequenceCall) {
+        let ParticipantResolution::Matched(callee_class) =
+            self.resolve_participant_class(&observed_call.callee)
+        else {
+            return;
+        };
+
+        let method_name = extract_method_name(&observed_call.method);
+        if method_name.is_empty() {
+            return;
+        }
+
+        let method_lookup = self.class_or_ancestors_define_method(
+            callee_class,
+            method_name,
+            false,
+            &mut BTreeSet::new(),
+        );
+        if method_lookup == MethodLookupResult::FoundAccessible {
+            return;
+        }
+
+        self.result.add_failure(self.method_lookup_failure(
+            observed_call,
+            callee_class,
+            method_name,
+            method_lookup,
+        ));
+    }
+
+    fn method_lookup_failure(
+        &self,
+        observed_call: &ObservedSequenceCall,
+        callee_class: &'a class_diagram::SimpleEntity,
+        method_name: &str,
+        method_lookup: MethodLookupResult,
+    ) -> String {
+        let sequence_call =
+            format_sequence_call(&observed_call.caller, &observed_call.callee, method_name);
+        let (source_file, source_line) = observed_call.source_location.display();
+
+        match method_lookup {
+            MethodLookupResult::FoundAccessible => {
+                unreachable!("accessible methods should return early")
             }
-
-            if callee_class.methods.iter().any(|method| method.name == method_name) {
-                continue;
-            }
-
-            let sequence_call =
-                format_sequence_call(&observed_call.caller, &observed_call.callee, method_name);
-            let (source_file, source_line) = observed_call.source_location.display();
-
-            self.result.add_failure(
-                ErrorBuilder::new(ErrorCategory::Method)
-                    .title(format!(
-                        "sequence function \"{method_name}\" from sequence call {sequence_call} not found on target class \"{}\" in the class diagram",
-                        callee_class.id,
-                    ))
-                    .field("sequence call", sequence_call)
-                    .field("target class", format!("\"{}\"", callee_class.id))
-                    .field("sequence source file", format!("\"{source_file}\""))
-                    .field("sequence source line", source_line.to_string())
-                    .fix(format!(
-                        "add method \"{method_name}\" to class \"{}\" in the class diagram, or change or remove that sequence call",
-                        callee_class.id,
-                    ))
-                    .build(),
-            );
+            MethodLookupResult::FoundPrivateInherited => ErrorBuilder::new(ErrorCategory::Method)
+                .title(format!(
+                    "sequence function \"{method_name}\" from sequence call {sequence_call} exists only as a private inherited method on target class \"{}\" in the class diagram",
+                    callee_class.id,
+                ))
+                .field("sequence call", sequence_call)
+                .field("target class", format!("\"{}\"", callee_class.id))
+                .field("sequence source file", format!("\"{source_file}\""))
+                .field("sequence source line", source_line.to_string())
+                .fix(format!(
+                    "consider changing method \"{method_name}\" to public or protected on an inherited type of class \"{}\", add an accessible wrapper on that class, or change or remove that sequence call",
+                    callee_class.id,
+                ))
+                .build(),
+            MethodLookupResult::NotFound => ErrorBuilder::new(ErrorCategory::Method)
+                .title(format!(
+                    "sequence function \"{method_name}\" from sequence call {sequence_call} not found on target class \"{}\" or its accessible inherited types in the class diagram",
+                    callee_class.id,
+                ))
+                .field("sequence call", sequence_call)
+                .field("target class", format!("\"{}\"", callee_class.id))
+                .field("sequence source file", format!("\"{source_file}\""))
+                .field("sequence source line", source_line.to_string())
+                .fix(format!(
+                    "add method \"{method_name}\" to class \"{}\" or one of its accessible inherited types in the class diagram, or change or remove that sequence call",
+                    callee_class.id,
+                ))
+                .build(),
         }
     }
 
@@ -187,6 +239,88 @@ impl<'a> ClassDesignSequenceValidator<'a> {
             entities => ParticipantResolution::Ambiguous(
                 entities.iter().map(|entity| entity.id.clone()).collect(),
             ),
+        }
+    }
+
+    fn class_or_ancestors_define_method(
+        &self,
+        entity: &'a class_diagram::SimpleEntity,
+        method_name: &str,
+        inherited: bool,
+        visited_ids: &mut BTreeSet<String>,
+    ) -> MethodLookupResult {
+        let local_result = Self::method_lookup_on_entity(entity, method_name, inherited);
+        if local_result != MethodLookupResult::NotFound {
+            return local_result;
+        }
+
+        if !visited_ids.insert(entity.id.clone()) {
+            return MethodLookupResult::NotFound;
+        }
+
+        self.related_parent_or_interface_defines_method(entity, method_name, visited_ids)
+    }
+
+    fn method_lookup_on_entity(
+        entity: &'a class_diagram::SimpleEntity,
+        method_name: &str,
+        inherited: bool,
+    ) -> MethodLookupResult {
+        let mut found_private_inherited = false;
+
+        for method in &entity.methods {
+            if method.name != method_name {
+                continue;
+            }
+
+            if inherited && matches!(method.visibility, Visibility::Private) {
+                found_private_inherited = true;
+                continue;
+            }
+
+            return MethodLookupResult::FoundAccessible;
+        }
+
+        if found_private_inherited {
+            MethodLookupResult::FoundPrivateInherited
+        } else {
+            MethodLookupResult::NotFound
+        }
+    }
+
+    fn related_parent_or_interface_defines_method(
+        &self,
+        entity: &'a class_diagram::SimpleEntity,
+        method_name: &str,
+        visited_ids: &mut BTreeSet<String>,
+    ) -> MethodLookupResult {
+        let mut found_private_inherited = false;
+
+        for relationship in &entity.relationships {
+            if relationship.source != entity.id
+                || !matches!(
+                    relationship.relation_type,
+                    RelationType::Inheritance | RelationType::Implementation
+                )
+            {
+                continue;
+            }
+
+            let Some(parent) = self.design_classes.find_by_id(&relationship.target) else {
+                continue;
+            };
+
+            match self.class_or_ancestors_define_method(parent, method_name, true, visited_ids) {
+                MethodLookupResult::FoundAccessible => return MethodLookupResult::FoundAccessible,
+                MethodLookupResult::FoundPrivateInherited => found_private_inherited = true,
+                MethodLookupResult::NotFound => {}
+            }
+        }
+
+        if found_private_inherited {
+            MethodLookupResult::FoundPrivateInherited
+        } else {
+            MethodLookupResult::NotFound
         }
     }
 }

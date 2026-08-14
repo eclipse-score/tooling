@@ -74,6 +74,21 @@ resolve either on the target class itself or on inherited operations available
 through its base classes or interfaces. The sequence may only invoke behavior
 that the class design actually declares or inherits.
 
+Operation lookup shall follow these rules:
+
+1. Check the target class itself for a method with the requested name.
+2. If not found locally, traverse outgoing `Inheritance` and `Implementation`
+  relations recursively.
+3. Track visited class ids while traversing to avoid infinite recursion caused
+  by cycles in the resolved relationship graph.
+4. Treat inherited `private` methods as not accessible to the target class.
+5. Treat inherited non-`private` methods as valid matches.
+
+As a result, a sequence call is valid when the target class declares the method
+itself or inherits an accessible method from a base class or implemented
+interface. A method that exists only as a private inherited member shall not be
+accepted as a valid target operation.
+
 ```text
 ' class diagram
 class Repository {
@@ -104,8 +119,9 @@ Controller -> Controller : Validate()
 |---|---|
 | Sequence participant has no matching design class | Participant-Class Consistency |
 | Sequence participant matches multiple design classes ambiguously | Participant-Class Consistency |
-| Sequence message targets a class that does not declare the called operation | Message-Operation Consistency |
-| Sequence self-call targets a class that does not declare the called operation | Message-Operation Consistency |
+| Sequence message targets a class that does not declare or accessibly inherit the called operation | Message-Operation Consistency |
+| Sequence self-call targets a class that does not declare or accessibly inherit the called operation | Message-Operation Consistency |
+| Sequence message targets a method that exists only as a private inherited operation | Message-Operation Consistency |
 
 ## Debug Output
 
