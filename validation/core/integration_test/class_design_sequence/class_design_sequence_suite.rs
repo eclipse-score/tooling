@@ -1,7 +1,4 @@
-// *******************************************************************************[test]
-fn positive_participant_short_name_unique_match_suite_case() {
-    assert_case("positive_participant_short_name_unique_match");
-}
+// *******************************************************************************
 // Copyright (c) 2026 Contributors to the Eclipse Foundation
 //
 // See the NOTICE file(s) distributed with this work for additional
@@ -55,6 +52,16 @@ fn assert_case(case_dir: &str) {
 }
 
 #[test]
+fn positive_participant_abstract_base_method_match_suite_case() {
+    assert_case("positive_participant_abstract_base_method_match");
+}
+
+#[test]
+fn positive_participant_multilevel_inherited_method_match_suite_case() {
+    assert_case("positive_participant_multilevel_inherited_method_match");
+}
+
+#[test]
 fn positive_participant_alias_display_name_class_name_match_suite_case() {
     assert_case("positive_participant_alias_display_name_class_name_match");
 }
@@ -75,11 +82,6 @@ fn positive_participant_short_name_namespace_match_suite_case() {
 }
 
 #[test]
-fn positive_participant_short_name_unique_match_suite_case() {
-    assert_case("positive_participant_short_name_unique_match");
-}
-
-#[test]
 fn negative_participant_missing_suite_case() {
     assert_case("negative_participant_missing");
 }
@@ -92,4 +94,9 @@ fn negative_participant_ambiguous_short_name_suite_case() {
 #[test]
 fn negative_participant_method_missing_suite_case() {
     assert_case("negative_participant_method_missing");
+}
+
+#[test]
+fn negative_participant_private_inherited_method_suite_case() {
+    assert_case("negative_participant_private_inherited_method");
 }
