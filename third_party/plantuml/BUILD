@@ -12,12 +12,28 @@
 # *******************************************************************************
 
 load("@rules_java//java:defs.bzl", "java_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("//bazel/rules/exec_in_sysroot:exec_in_sysroot.bzl", "extract_sysroot")
+
+extract_sysroot(
+    name = "plantuml_sysroot",
+    sysroot = "//third_party/docs_runtime:dot_sysroot",
+)
 
 java_binary(
-    name = "plantuml",
+    name = "plantuml_java",
     main_class = "net.sourceforge.plantuml.Run",
-    visibility = ["//visibility:public"],
     runtime_deps = [
         "@blueprint_maven_dependencies//:net_sourceforge_plantuml_plantuml",
     ],
+)
+
+sh_binary(
+    name = "plantuml",
+    srcs = ["plantuml.sh"],
+    data = [
+        ":plantuml_java",
+        ":plantuml_sysroot",
+    ],
+    visibility = ["//visibility:public"],
 )

@@ -238,6 +238,8 @@ def _hermetic_tool_env(ctx):
     graphviz_rloc = gv_short[3:] if gv_short.startswith("../") else ctx.workspace_name + "/" + gv_short
     pl_short = ctx.executable._plantuml.short_path
     plantuml_rloc = pl_short[3:] if pl_short.startswith("../") else ctx.workspace_name + "/" + pl_short
+    plantuml_runfiles_root = ctx.executable._plantuml.path + ".runfiles/" + plantuml_rloc.rsplit("/", 1)[0]
+    plantuml_sysroot = plantuml_runfiles_root + "/plantuml_sysroot_sysroot"
     fta_metamodel_files = ctx.files._fta_metamodel
     fta_metamodel_dir = fta_metamodel_files[0].dirname if fta_metamodel_files else ""
     return fta_metamodel_files, {
@@ -246,6 +248,10 @@ def _hermetic_tool_env(ctx):
         "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
         "GRAPHVIZ_DOT_RLOC": graphviz_rloc,
         "FTA_METAMODEL_DIR": fta_metamodel_dir,
+        "FONTCONFIG_SYSROOT": "",
+        "FONTCONFIG_FILE": plantuml_sysroot + "/etc/fonts/fonts.conf",
+        "FONTCONFIG_PATH": plantuml_sysroot + "/etc/fonts",
+        "JAVA_TOOL_OPTIONS": "-Djava.awt.headless=true -Dsun.java2d.fontpath=" + plantuml_sysroot + "/usr/share/fonts/truetype/dejavu",
     }
 
 def _needs_output_prefix(name):
@@ -310,8 +316,9 @@ def _score_needs_impl(ctx):
     )
 
     fta_metamodel_files, action_env = _hermetic_tool_env(ctx)
+    plantuml_runfiles = ctx.attr._plantuml[DefaultInfo].default_runfiles.files.to_list()
     ctx.actions.run(
-        inputs = needs_inputs + fta_metamodel_files,
+        inputs = needs_inputs + fta_metamodel_files + plantuml_runfiles,
         outputs = [needs_output],
         arguments = [args],
         env = action_env,
@@ -507,9 +514,10 @@ def _score_html_impl(ctx):
     # Use the hermetic graphviz wrapper that executes `/usr/bin/dot` inside the
     # docs_runtime sysroot via exec_in_sysroot.
     fta_metamodel_files, action_env = _hermetic_tool_env(ctx)
+    plantuml_runfiles = ctx.attr._plantuml[DefaultInfo].default_runfiles.files.to_list()
 
     ctx.actions.run(
-        inputs = html_inputs + fta_metamodel_files,
+        inputs = html_inputs + fta_metamodel_files + plantuml_runfiles,
         outputs = [sphinx_html_output],
         arguments = [args],
         env = action_env,
