@@ -11,38 +11,17 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
+use clang::{Entity, EntityKind};
+
+use crate::clang_adapter::scope::namespace_id;
+use crate::clang_adapter::source_filter;
 use crate::class_visitor::ClassVisitor;
 use crate::context::VisitContext;
 use crate::enum_visitor::EnumVisitor;
 use crate::function_visitor::FunctionVisitor;
-use crate::source_filter;
-use clang::{Entity, EntityKind};
 
 pub trait AstVisitor {
     fn visit(ctx: &mut VisitContext, entity: Entity);
-
-    fn get_namespace_id(entity: &Entity) -> Option<String> {
-        namespace_id(entity)
-    }
-}
-
-fn namespace_id(entity: &Entity) -> Option<String> {
-    let mut stack: Vec<String> = vec![];
-    let mut current = entity.get_semantic_parent();
-    while let Some(parent) = current {
-        if parent.get_kind() == EntityKind::Namespace {
-            if let Some(name) = parent.get_name() {
-                stack.push(name);
-            }
-        }
-        current = parent.get_semantic_parent();
-    }
-
-    if stack.is_empty() {
-        None
-    } else {
-        Some(stack.into_iter().rev().collect::<Vec<String>>().join("::"))
-    }
 }
 
 pub struct Visitor<'a> {
@@ -60,7 +39,6 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_recursive(&mut self, entity: Entity) {
-        self.ctx.is_templated = false;
         if is_ignored_entity(entity) {
             return;
         }
@@ -70,7 +48,6 @@ impl<'a> Visitor<'a> {
                 ClassVisitor::visit(self.ctx, entity);
             }
             EntityKind::ClassTemplate | EntityKind::ClassTemplatePartialSpecialization => {
-                self.ctx.is_templated = true;
                 ClassVisitor::visit(self.ctx, entity);
                 // ClassTemplate parsing already processes all members,
                 // so skip generic child recursion to avoid double-processing.

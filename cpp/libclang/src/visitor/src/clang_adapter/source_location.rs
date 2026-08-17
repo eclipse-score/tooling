@@ -11,22 +11,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-mod clang_adapter;
-mod class_relationship_resolver;
-mod class_visitor;
-pub mod context;
-mod enum_visitor;
-mod function_visitor;
-mod types;
-pub mod visitor;
+//! Conversion helpers between libclang locations and the shared metamodel.
 
-pub use cpp_semantics::ResolvedType;
-pub use sequence_logic::{BodyItem, FunctionDef};
+use clang::Entity;
+use class_diagram::SourceLocation;
 
-pub use clang_adapter::source_filter::is_external_dependency_path;
-pub use class_visitor::ClassVisitor;
-pub use context::VisitContext;
-pub use enum_visitor::EnumVisitor;
-pub use function_visitor::FunctionVisitor;
-pub use visitor::AstVisitor;
-pub use visitor::Visitor;
+pub(crate) fn parse_source_location(entity: &Entity) -> SourceLocation {
+    let Some(location) = entity.get_location() else {
+        return SourceLocation::default();
+    };
+
+    let file_location = location.get_file_location();
+    let source_file = file_location
+        .file
+        .map(|file| file.get_path().to_string_lossy().to_string());
+    SourceLocation::new(source_file.unwrap_or_default(), file_location.line)
+}

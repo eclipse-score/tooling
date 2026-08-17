@@ -11,13 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use class_diagram::{SimpleEntity, SourceLocation};
+use cpp_semantics::ResolvedType;
 use sequence_logic::FunctionDef;
-
-use crate::class_parser_helper::ResolvedType;
+use serde::{Deserialize, Serialize};
 
 pub type TypeMap = HashMap<String, SimpleEntity>;
 
@@ -26,7 +25,6 @@ pub struct VisitContext {
     pub types: TypeMap,
     pub parsed_class_info: Vec<ParsedClassInfo>,
     pub functions: Vec<FunctionDef>,
-    pub is_templated: bool,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]

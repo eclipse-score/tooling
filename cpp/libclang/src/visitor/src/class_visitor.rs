@@ -12,31 +12,36 @@
 // *******************************************************************************
 
 use clang::{Entity, EntityKind};
-use std::collections::HashSet;
 
 use class_diagram::{
-    EntityType, FunctionArgument, MemberVariable, Method, MethodModifier, RelationType,
-    Relationship, SimpleEntity, SourceLocation, TemplateParameter, TypeAlias, Visibility,
+    EntityType, FunctionArgument, MemberVariable, Method, MethodModifier, SimpleEntity,
+    TemplateParameter, TypeAlias, Visibility,
 };
+use cpp_semantics::ResolvedType;
 
-use crate::class_parser_helper::{render_type_for_display, resolve_type, ResolvedType};
+use crate::clang_adapter::scope::namespace_id;
+use crate::clang_adapter::source_location::parse_source_location;
 use crate::context::{
     ParsedBaseClass, ParsedClassInfo, ParsedMethodType, ParsedVariableType, VisitContext,
 };
+use crate::types::renderer::render_type_for_display;
+use crate::types::resolver::resolve_type;
 use crate::visitor::AstVisitor;
 
 pub struct ClassVisitor;
 impl AstVisitor for ClassVisitor {
     fn visit(ctx: &mut VisitContext, entity: Entity) {
-        let template_params = if ctx.is_templated {
-            parse_template_parameters(&entity)
-        } else {
-            None
+        let template_params = match entity.get_kind() {
+            EntityKind::ClassTemplate | EntityKind::ClassTemplatePartialSpecialization => {
+                parse_template_parameters(&entity)
+            }
+            _ => None,
         };
 
-        let namespace = Self::get_namespace_id(&entity);
+        let namespace = namespace_id(&entity);
 
-        if let Some((builder, mut class_entity)) = Self::visit_class(&entity, namespace.as_deref())
+        if let Some((builder, mut class_entity)) =
+            Self::visit_class(&entity, namespace.as_deref())
         {
             class_entity.template_parameters = template_params;
             ctx.parsed_class_info.push(builder);
@@ -46,14 +51,10 @@ impl AstVisitor for ClassVisitor {
 }
 
 impl ClassVisitor {
+    /// Compatibility entry point for callers that previously invoked the class visitor's
+    /// relationship phase directly.
     pub fn resolve_relationships(ctx: &mut VisitContext) {
-        let builders = std::mem::take(&mut ctx.parsed_class_info);
-        let known_type_ids: HashSet<String> = ctx.types.keys().cloned().collect();
-
-        for builder in builders {
-            build_relationships_for_class(ctx, &builder);
-            infer_relationships_from_builder(ctx, &builder, &known_type_ids);
-        }
+        crate::class_relationship_resolver::resolve_relationships(ctx);
     }
 
     fn visit_class(
@@ -155,18 +156,6 @@ fn class_entity_id(entity: &Entity, namespace: Option<&str>, name: &str) -> Stri
         Some(ns) if !ns.is_empty() => format!("{ns}::{base_name}"),
         _ => base_name,
     }
-}
-
-pub(crate) fn parse_source_location(entity: &Entity) -> SourceLocation {
-    let Some(location) = entity.get_location() else {
-        return SourceLocation::default();
-    };
-
-    let file_location = location.get_file_location();
-    let source_file = file_location
-        .file
-        .map(|f| f.get_path().to_string_lossy().to_string());
-    SourceLocation::new(source_file.unwrap_or_default(), file_location.line)
 }
 
 fn collect_variable_type(entity: &Entity) -> Option<ParsedVariableType> {
@@ -436,217 +425,4 @@ fn infer_entity_type_from_members(kind: EntityKind, class: &SimpleEntity) -> Ent
     } else {
         EntityType::Class
     }
-}
-
-// Relationship part
-fn build_relationships_for_class(ctx: &mut VisitContext, builder: &ParsedClassInfo) {
-    for base in &builder.base_classes {
-        let Some(resolved_base) = base.resolved_type.referenced_entity_id() else {
-            if matches!(base.resolved_type, ResolvedType::Dependent(_)) {
-                // Expected, permanent limitation of AST-only analysis (e.g. a
-                // `decltype`/SFINAE base class that cannot be resolved without
-                // template instantiation) — never abort, not even in debug/test
-                // builds.
-                log::debug!(
-                    "unable to resolve base type '{}' for '{}'; \
-                     skipping inheritance relationship (dependent/decltype expression)",
-                    base.resolved_type.render_for_display(),
-                    builder.id
-                );
-            } else {
-                // Unexpected: a base class resolving to `Unknown`/`Builtin` likely
-                // indicates a gap in the resolver rather than a known limitation.
-                // When in doubt, warn and continue rather than abort — a single
-                // unanticipated input must never crash the parser.
-                log::warn!(
-                    "unable to resolve base type '{}' for '{}'; \
-                     skipping inheritance relationship (unexpected unresolved type)",
-                    base.resolved_type.render_for_display(),
-                    builder.id
-                );
-            }
-            continue;
-        };
-
-        let Some(target_class) = ctx.types.get(resolved_base) else {
-            // Base type is not in the type map — it is likely an external dependency
-            // that was filtered out during the visit phase. This is expected and
-            // common, so skip the relationship without ever aborting.
-            log::debug!(
-                "base type '{}' not found in type map for '{}'; \
-                 skipping inheritance relationship (external dependency)",
-                resolved_base,
-                builder.id
-            );
-            continue;
-        };
-
-        let relation_type = if target_class.entity_type == EntityType::Interface {
-            RelationType::Implementation
-        } else {
-            RelationType::Inheritance
-        };
-
-        let Some(class) = ctx.types.get_mut(&builder.id) else {
-            // Internal invariant: `builder.id` is derived from `ctx.types` during
-            // the visit phase, so it should always still be present here. If it
-            // isn't, that's a bug in the visitor pipeline rather than an expected
-            // input condition. When in doubt, warn and skip rather than abort —
-            // a single unanticipated input must never crash the parser.
-            log::warn!(
-                "source class '{}' unexpectedly missing from type map; \
-                 skipping inheritance relationship to '{}'",
-                builder.id,
-                resolved_base
-            );
-            continue;
-        };
-
-        add_relationship(
-            class,
-            resolved_base.to_string(),
-            relation_type,
-            &base.source_location,
-        );
-    }
-}
-
-fn add_relationship(
-    class: &mut SimpleEntity,
-    target: String,
-    relation_type: RelationType,
-    source_location: &SourceLocation,
-) {
-    if target == class.id {
-        return;
-    }
-
-    let relationship = Relationship {
-        source: class.id.clone(),
-        target,
-        relation_type,
-        source_multiplicity: None,
-        target_multiplicity: None,
-        source_location: source_location.clone(),
-    };
-
-    let duplicate = class.relationships.iter().any(|existing| {
-        existing.source == relationship.source
-            && existing.target == relationship.target
-            && existing.relation_type == relationship.relation_type
-            && existing.source_multiplicity == relationship.source_multiplicity
-            && existing.target_multiplicity == relationship.target_multiplicity
-    });
-
-    if !duplicate {
-        class.relationships.push(relationship);
-    }
-}
-
-fn infer_relationships_from_builder(
-    ctx: &mut VisitContext,
-    builder: &ParsedClassInfo,
-    known_class_ids: &HashSet<String>,
-) {
-    let Some(class) = ctx.types.get_mut(&builder.id) else {
-        return;
-    };
-
-    infer_variable_relationships(class, &builder.variable_types, known_class_ids);
-    infer_method_relationships(class, &builder.method_types, known_class_ids);
-}
-
-fn infer_variable_relationships(
-    class: &mut SimpleEntity,
-    variable_types: &[ParsedVariableType],
-    known_class_ids: &HashSet<String>,
-) {
-    for variable in variable_types {
-        add_relationship_from_resolved_type(
-            class,
-            &variable.resolved_type,
-            known_class_ids,
-            RelationType::Aggregation,
-            RelationType::Composition,
-            &variable.source_location,
-        );
-    }
-}
-
-fn infer_method_relationships(
-    class: &mut SimpleEntity,
-    method_types: &[ParsedMethodType],
-    known_class_ids: &HashSet<String>,
-) {
-    for method in method_types {
-        add_relationship_from_resolved_type(
-            class,
-            &method.return_type,
-            known_class_ids,
-            RelationType::Dependency,
-            RelationType::Association,
-            &method.source_location,
-        );
-
-        for parameter_type in &method.parameter_types {
-            add_relationship_from_resolved_type(
-                class,
-                parameter_type,
-                known_class_ids,
-                RelationType::Dependency,
-                RelationType::Association,
-                &method.source_location,
-            );
-        }
-    }
-}
-
-fn add_relationship_from_resolved_type(
-    class: &mut SimpleEntity,
-    resolved_type: &ResolvedType,
-    known_class_ids: &HashSet<String>,
-    non_owning_relation: RelationType,
-    owning_relation: RelationType,
-    source_location: &SourceLocation,
-) {
-    let Some(raw_target) = resolved_type.relationship_target_entity_id() else {
-        return;
-    };
-
-    let Some(target) = resolve_in_model_target(class, raw_target, known_class_ids) else {
-        return;
-    };
-
-    let relation_type = if resolved_type.is_non_owning() {
-        non_owning_relation
-    } else {
-        owning_relation
-    };
-
-    add_relationship(class, target, relation_type, source_location);
-}
-
-fn resolve_in_model_target(
-    source_class: &SimpleEntity,
-    raw_target: &str,
-    known_class_ids: &HashSet<String>,
-) -> Option<String> {
-    if known_class_ids.contains(raw_target) {
-        return Some(raw_target.to_string());
-    }
-
-    if !raw_target.contains("::") {
-        if let Some(ns) = source_class.enclosing_namespace_id.as_deref() {
-            let mut current_ns: Option<&str> = Some(ns);
-            while let Some(n) = current_ns {
-                let candidate = format!("{n}::{raw_target}");
-                if known_class_ids.contains(&candidate) {
-                    return Some(candidate);
-                }
-                current_ns = n.rsplit_once("::").map(|(parent, _)| parent);
-            }
-        }
-    }
-
-    None
 }
