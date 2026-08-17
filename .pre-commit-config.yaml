@@ -22,7 +22,7 @@ repos:
       - id: check-executables-have-shebangs
       - id: check-added-large-files
         args: [--maxkb=100, --enforce-all] # increase or add git lfs if too strict
-        exclude: org.eclipse.dash.licenses-1.1.0.jar|blanket_index.html
+        exclude: org.eclipse.dash.licenses-1.1.0.jar
   - repo: local
     hooks:
       - id: copyright

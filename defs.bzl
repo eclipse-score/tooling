@@ -16,9 +16,6 @@
 # --- cli_helper ---
 load("//cli_helper:cli_helper.bzl", _cli_helper = "cli_helper")
 
-# --- coverage ---
-load("//coverage:coverage.bzl", _rust_coverage_report = "rust_coverage_report")
-
 # --- cr_checker ---
 load("//cr_checker:cr_checker.bzl", _copyright_checker = "copyright_checker")
 
@@ -48,6 +45,5 @@ dash_license_checker = _dash_license_checker
 cli_helper = _cli_helper
 copyright_checker = _copyright_checker
 setup_starpls = _setup_starpls
-rust_coverage_report = _rust_coverage_report
 trlc_requirements_ai_test = _trlc_requirements_ai_test
 architecture_ai_test = _architecture_ai_test

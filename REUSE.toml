@@ -37,7 +37,6 @@ SPDX-License-Identifier = "Apache-2.0"
 [[annotations]]
 path = ["cr_checker/resources/config.json",
         "**/.bazelversion",
-        "coverage/tests/fixtures/symbol_report.json",
         "python_basics/.bazelversion",
         "python_basics/integration_tests/venv-with-extra-requirements/requirements.in",
         "python_basics/requirements.in",
