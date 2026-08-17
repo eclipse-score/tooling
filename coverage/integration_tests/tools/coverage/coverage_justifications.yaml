@@ -1,0 +1,25 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+# Coverage justifications for the integration test workspace.
+#
+# Justified lines count as covered in the EFFECTIVE coverage metric. The line
+# is marked in-code with a `COV_JUSTIFIED <id>` comment (src/coverable.cpp);
+# this file provides the id, category and reason.
+version: 1
+justifications:
+  - id: itest-positive-branch
+    category: other
+    platforms: [linux]
+    reason: |
+      Intentionally uncovered branch: the integration test asserts that a
+      justified line raises effective coverage above raw coverage.
