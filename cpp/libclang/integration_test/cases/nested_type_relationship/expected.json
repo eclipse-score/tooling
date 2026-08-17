@@ -1,0 +1,76 @@
+{
+  "types": {
+    "demo::Consumer": {
+      "id": "demo::Consumer",
+      "name": "Consumer",
+      "enclosing_namespace_id": "demo",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [
+        {
+          "source": "demo::Consumer",
+          "target": "demo::Outer::Inner",
+          "relation_type": "Composition",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
+        }
+      ],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "inner_",
+          "data_type": "demo::Outer::Inner",
+          "is_static": false,
+          "visibility": "private",
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
+        }
+      ],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/nested_type_relationship/transport.cpp",
+        "line": 21
+      }
+    },
+    "demo::Outer": {
+      "id": "demo::Outer",
+      "name": "Outer",
+      "enclosing_namespace_id": "demo",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/nested_type_relationship/transport.cpp",
+        "line": 16
+      }
+    },
+    "demo::Outer::Inner": {
+      "id": "demo::Outer::Inner",
+      "name": "Inner",
+      "enclosing_namespace_id": "demo",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/nested_type_relationship/transport.cpp",
+        "line": 18
+      }
+    }
+  },
+  "functions": []
+}

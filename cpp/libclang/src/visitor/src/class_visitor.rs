@@ -19,7 +19,7 @@ use class_diagram::{
 };
 use cpp_semantics::ResolvedType;
 
-use crate::clang_adapter::scope::namespace_id;
+use crate::clang_adapter::scope::{namespace_id, semantic_parent_id};
 use crate::clang_adapter::source_location::parse_source_location;
 use crate::context::{
     ParsedBaseClass, ParsedClassInfo, ParsedMethodType, ParsedVariableType, VisitContext,
@@ -39,9 +39,10 @@ impl AstVisitor for ClassVisitor {
         };
 
         let namespace = namespace_id(&entity);
+        let semantic_parent = semantic_parent_id(&entity);
 
         if let Some((builder, mut class_entity)) =
-            Self::visit_class(&entity, namespace.as_deref())
+            Self::visit_class(&entity, semantic_parent.as_deref(), namespace.as_deref())
         {
             class_entity.template_parameters = template_params;
             ctx.parsed_class_info.push(builder);
@@ -59,6 +60,7 @@ impl ClassVisitor {
 
     fn visit_class(
         entity: &Entity,
+        semantic_parent: Option<&str>,
         namespace: Option<&str>,
     ) -> Option<(ParsedClassInfo, SimpleEntity)> {
         let Some(name) = entity.get_name() else {
@@ -66,7 +68,7 @@ impl ClassVisitor {
             return None;
         };
 
-        let id = class_entity_id(entity, namespace, &name);
+        let id = class_entity_id(entity, semantic_parent, &name);
 
         let mut builder = ParsedClassInfo {
             id: id.clone(),
