@@ -15,17 +15,24 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 rust_library(
     name = "visit_tu",
     srcs = [
-        "src/class_parser_helper.rs",
+        "src/clang_adapter/mod.rs",
+        "src/clang_adapter/scope.rs",
+        "src/clang_adapter/source_filter.rs",
+        "src/clang_adapter/source_location.rs",
+        "src/class_relationship_resolver.rs",
         "src/class_visitor.rs",
         "src/context.rs",
         "src/enum_visitor.rs",
         "src/function_visitor.rs",
         "src/lib.rs",
-        "src/source_filter.rs",
+        "src/types/mod.rs",
+        "src/types/renderer.rs",
+        "src/types/resolver.rs",
         "src/visitor.rs",
     ],
     visibility = ["//cpp/libclang:__subpackages__"],
     deps = [
+        "//cpp/libclang/src/semantics:cpp_semantics",
         "//tools/metamodel/class:class_diagram",
         "//tools/metamodel/sequence:sequence_diagram",
         "@crates//:clang",
@@ -35,24 +42,15 @@ rust_library(
 )
 
 rust_test(
-    name = "class_parser_helper_test",
-    srcs = [
-        "src/class_parser_helper.rs",
-        "src/class_parser_helper_test.rs",
-        "src/source_filter.rs",
-    ],
+    name = "visitor_unit_tests",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
     deps = [
+        "//cpp/libclang/src/semantics:cpp_semantics",
+        "//tools/metamodel/class:class_diagram",
+        "//tools/metamodel/sequence:sequence_diagram",
         "@crates//:clang",
         "@crates//:log",
         "@crates//:serde",
-    ],
-)
-
-rust_test(
-    name = "class_visitor_source_location_test",
-    srcs = ["src/class_visitor_test.rs"],
-    deps = [
-        ":visit_tu",
-        "//tools/metamodel/class:class_diagram",
     ],
 )

@@ -11,11 +11,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use crate::class_visitor::parse_source_location;
-use crate::context::VisitContext;
-use crate::visitor::AstVisitor;
 use clang::Entity;
 use class_diagram::{EntityType, EnumLiteral, SimpleEntity};
+
+use crate::clang_adapter::scope::namespace_id;
+use crate::clang_adapter::source_location::parse_source_location;
+use crate::context::VisitContext;
+use crate::visitor::AstVisitor;
 
 pub struct EnumVisitor;
 
@@ -33,7 +35,7 @@ impl EnumVisitor {
             log::debug!("skipping enum: anonymous enum has no name");
             return None;
         };
-        let namespace_id = Self::get_namespace_id(&entity);
+        let namespace_id = namespace_id(&entity);
         let full_qualified_id = if let Some(namespace_id) = &namespace_id {
             format!("{}::{}", namespace_id, name)
         } else {

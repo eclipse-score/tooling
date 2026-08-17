@@ -11,22 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-mod clang_adapter;
-mod class_relationship_resolver;
-mod class_visitor;
-pub mod context;
-mod enum_visitor;
-mod function_visitor;
-mod types;
-pub mod visitor;
+mod resolved_type;
 
-pub use cpp_semantics::ResolvedType;
-pub use sequence_logic::{BodyItem, FunctionDef};
-
-pub use clang_adapter::source_filter::is_external_dependency_path;
-pub use class_visitor::ClassVisitor;
-pub use context::VisitContext;
-pub use enum_visitor::EnumVisitor;
-pub use function_visitor::FunctionVisitor;
-pub use visitor::AstVisitor;
-pub use visitor::Visitor;
+pub use resolved_type::{EntityId, ResolvedType};

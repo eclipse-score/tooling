@@ -11,6 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
+use clang::Type;
+
 const SYSTEM_HEADER_PREFIXES: &[&str] = &["/usr/include", "/usr/local/include", "/opt/"];
 const SYSTEM_HEADER_SUBSTRINGS: &[&str] = &["/gcc/"];
 const EXTERNAL_DEP_PATH_SUBSTRINGS: &[&str] = &["/external/", "external/", "_virtual_includes/"];
@@ -37,6 +39,17 @@ pub fn is_external_dependency_path(path: &str) -> bool {
 /// Returns whether a path belongs to a header that is outside the parsed model.
 pub(crate) fn is_external_or_system_path(path: &str) -> bool {
     is_system_header_path(path) || is_external_dependency_path(path)
+}
+
+/// Returns whether a type's declaration belongs to an external or system header.
+pub(crate) fn is_declared_in_external_or_system_header(ty: &Type) -> bool {
+    ty.get_declaration()
+        .and_then(|declaration| declaration.get_location())
+        .map(|location| {
+            let (path, ..) = location.get_presumed_location();
+            is_external_or_system_path(&path)
+        })
+        .unwrap_or(false)
 }
 
 /// Returns whether an entity namespace should be excluded from the parsed model
@@ -88,7 +101,6 @@ mod tests {
     #[test]
     fn keeps_workspace_sources_in_the_model() {
         let path = "cpp/application/include/application/car.h";
-
         assert!(!is_system_header_path(path));
         assert!(!is_external_dependency_path(path));
         assert!(!is_external_or_system_path(path));
