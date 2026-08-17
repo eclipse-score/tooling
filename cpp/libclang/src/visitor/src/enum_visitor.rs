@@ -14,7 +14,7 @@
 use clang::Entity;
 use class_diagram::{EntityType, EnumLiteral, SimpleEntity};
 
-use crate::clang_adapter::scope::namespace_id;
+use crate::clang_adapter::scope::{namespace_id, semantic_parent_id};
 use crate::clang_adapter::source_location::parse_source_location;
 use crate::context::VisitContext;
 use crate::visitor::AstVisitor;
@@ -36,8 +36,9 @@ impl EnumVisitor {
             return None;
         };
         let namespace_id = namespace_id(&entity);
-        let full_qualified_id = if let Some(namespace_id) = &namespace_id {
-            format!("{}::{}", namespace_id, name)
+        let semantic_parent = semantic_parent_id(&entity);
+        let full_qualified_id = if let Some(semantic_parent) = &semantic_parent {
+            format!("{}::{}", semantic_parent, name)
         } else {
             name.clone()
         };

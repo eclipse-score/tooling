@@ -42,3 +42,33 @@ pub(crate) fn namespace_id(entity: &Entity) -> Option<String> {
     (!path.is_empty()).then(|| path.join("::"))
 }
 
+/// Returns named semantic parents that can own a nested C++ declaration.
+///
+/// This intentionally excludes aliases, template parameters, and enums: they
+/// appear in libclang's semantic-parent chain but cannot own named nested types.
+pub(crate) fn semantic_parent_id(entity: &Entity) -> Option<String> {
+    let mut parents = Vec::new();
+    let mut current = entity.get_semantic_parent();
+
+    while let Some(parent) = current {
+        let name = match parent.get_kind() {
+            EntityKind::Namespace
+            | EntityKind::ClassDecl
+            | EntityKind::StructDecl
+            | EntityKind::UnionDecl
+            | EntityKind::ClassTemplate => parent.get_name(),
+            EntityKind::ClassTemplatePartialSpecialization => {
+                parent.get_display_name().or_else(|| parent.get_name())
+            }
+            _ => None,
+        };
+
+        if let Some(name) = name {
+            parents.push(name);
+        }
+        current = parent.get_semantic_parent();
+    }
+
+    parents.reverse();
+    (!parents.is_empty()).then(|| parents.join("::"))
+}
