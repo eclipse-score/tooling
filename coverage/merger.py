@@ -60,11 +60,16 @@ def main() -> None:
     profdata_dir.mkdir(exist_ok=True)
     profdata_file = profdata_dir / "target.profdata"
 
-    run_command([
-        llvm_profdata, "merge",
-        "--sparse",
-        "--output", str(profdata_file),
-    ] + [str(f) for f in profraw_files])
+    run_command(
+        [
+            llvm_profdata,
+            "merge",
+            "--sparse",
+            "--output",
+            str(profdata_file),
+        ]
+        + [str(f) for f in profraw_files]
+    )
 
     # Create meta.json with object files for the reporter.
     meta_dir = args.coverage_dir / "meta"
