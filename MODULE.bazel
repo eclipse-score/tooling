@@ -18,8 +18,10 @@ module(name = "score_tooling")
 ###############################################################################
 bazel_dep(name = "aspect_rules_py", version = "1.4.0")  # py_binary/py_library loads in cli_helper.bzl:13, cr_checker.bzl:16, defs.bzl:16, etc.
 
-bazel_dep(name = "aspect_rules_lint", version = "2.5.0", dev_dependency = True)
-
+# NOT a dev_dependency: third_party/format/macros.bzl (use_format_targets,
+# public consumer API) load()s @aspect_rules_lint//format:defs.bzl, which
+# must resolve from score_tooling's own repo mapping in CONSUMER builds too.
+bazel_dep(name = "aspect_rules_lint", version = "2.5.0")
 bazel_dep(name = "rules_multitool", version = "1.9.0")
 bazel_dep(name = "rules_java", version = "8.15.1")  # required for dash
 
