@@ -38,18 +38,28 @@ See the individual README files for detailed usage instructions and configuratio
 | **python_basics** | Python development utilities and testing | [README](python_basics/README.md) |
 | **starpls** | Starlark language server support | [README](starpls/README.md) |
 | **tools** | Formatters & Linters | [README](tools/README.md) |
-| **coverage** | Rust + Python coverage reports | [README](coverage/README.md) |
+| **coverage** | Unified LLVM source-based coverage (C++ + Rust) | [README](coverage/README.md) |
 
 ## Coverage
 
-Generate a combined Rust + Python HTML coverage report for `plantuml`, `validation`,
-and `manual_analysis`:
+The `coverage/` module provides the reusable LLVM source-based coverage pipeline
+used across S-CORE repositories: one report covering C++ and Rust (line + branch),
+exact 0% entries for untested in-scope files, a justification system
+(`COV_JUSTIFIED` markers + YAML), and effective-coverage gating. See the
+[adoption guide](coverage/README.md) and the
+[mechanism deep-dive](coverage/COVERAGE_GUIDE.md).
+
+> **Breaking change:** the former Ferrocene `symbol-report`/`blanket` workflow
+> (`rust_coverage_report`, `//coverage:ferrocene_report`) was removed. The LLVM
+> pipeline replaces it with unified C++ + Rust reports; see the
+> [adoption guide](coverage/README.md) for migration.
+
+Generate a combined Rust + Python HTML coverage report for this repository's own
+tools (`plantuml`, `validation`, `manual_analysis`):
 
 ```bash
 bazel run //coverage:combined_report
 ```
-
-See [coverage/README.md](coverage/README.md) for full details and options.
 
 ## Usage Examples
 
@@ -58,6 +68,28 @@ Load tools in your `BUILD` files:
 ```starlark
 load("@score_tooling//:defs.bzl", "score_py_pytest")
 load("@score_tooling//:defs.bzl", "cli_tool")
+load("@score_tooling//coverage:defs.bzl", "score_coverage_reporter", "score_coverage_scope")
+```
+
+Declare the coverage scope and reporter for your repository (see the
+[coverage adoption guide](coverage/README.md) for the full setup, including the
+required `.bazelrc` configuration and toolchains):
+
+```starlark
+score_coverage_scope(
+    name = "coverage_scope",
+    testonly = True,
+    deps = ["//src/mylib"],
+)
+
+score_coverage_reporter(
+    name = "reporter_wrapper",
+    testonly = True,
+    coverage_scope = ":coverage_scope",
+    llvm_cov = "@llvm_toolchain//:llvm-cov",
+    llvm_profdata = "@llvm_toolchain//:llvm-profdata",
+    llvm_cxxfilt = "@llvm_toolchain_llvm//:bin/llvm-cxxfilt",
+)
 ```
 
 ## Upgrading from separate MODULES
@@ -78,6 +110,8 @@ The available import targets are:
 - dash_license_checker
 - cli_helper
 - setup_starpls
+- score_coverage_scope
+- score_coverage_reporter
 
 Formatting, linting, and cr_checker are no longer re-exported from `defs.bzl`; use
 `@score_tooling//third_party/format:macros.bzl`, `@score_tooling//third_party/lint:macros.bzl`,
