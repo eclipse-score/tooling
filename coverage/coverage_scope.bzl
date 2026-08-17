@@ -12,51 +12,51 @@
 # *******************************************************************************
 
 """
-Coverage scope rule for deriving file-level allowlists from dependable_element structure.
+Coverage scope rule for deriving file-level allowlists from implementation targets.
 
-This rule uses an aspect to traverse the build graph starting from
-dependable_element _index targets, through component and unit targets, into
-their implementation cc_library targets (and their transitive deps). At each
-cc_library, it collects the actual source files (srcs + hdrs).
+This rule uses an aspect to traverse the build graph starting from the listed
+implementation targets (cc_library, rust_library, rust_binary) through their
+transitive deps. At each node it collects the actual source files.
+
+- cc_library (and rust_library, which also provides CcInfo in rules_rust
+  0.68.x): source files come from the srcs/hdrs attributes; static archives
+  (including the rlib exposed as a .a symlink) are collected for baseline
+  (zero-coverage) reporting.
+- rust_binary (no CcInfo): source files come from CrateInfo.srcs; the
+  coverage-built executable itself serves as the baseline object.
 
 The resulting allowlist contains one source file path per line (relative to the
 workspace root). The coverage reporter uses this to restrict reports to exactly
-the files that are part of a dependable_element's implementation.
-
-Rust support: rust_library targets provide CcInfo (their rlib is exposed as a
-.a symlink) and their .rs files come from the srcs attribute, so the CcInfo
-branch covers them. rust_binary targets provide no CcInfo; a dedicated
-CrateInfo branch collects their sources and the coverage-built executable.
+the files that are part of the covered implementation.
 """
 
 load("@rules_rust//rust:rust_common.bzl", "CrateInfo")
-
-visibility(["//..."])
 
 # =============================================================================
 # Provider to carry collected source file paths through the aspect
 # =============================================================================
 
 _CoverageScopeInfo = provider(
-    doc = "Carries source file paths, cc_library labels, and object files collected by the coverage scope aspect.",
+    doc = "Carries source file paths and object files collected by the coverage scope aspect.",
     fields = {
         "source_files": "Depset of source file path strings (workspace-relative).",
-        "object_files": "Depset of compiled .o File objects for baseline coverage.",
+        "object_files": "Depset of compiled archive/executable File objects for baseline coverage.",
     },
 )
 
 # =============================================================================
-# Aspect: traverses component hierarchy and cc_library deps to collect files
+# Aspect: traverses library/binary deps to collect files
 # =============================================================================
 
 def _coverage_scope_aspect_impl(target, ctx):
-    """Collects source file paths, cc_library labels, and archive files from the build graph."""
+    """Collects source file paths and archive files from the build graph."""
     direct_files = []
     direct_archives = []
     transitive = []
     transitive_archives = []
 
-    # At cc_library targets: collect srcs, hdrs, label, and static archive
+    # At cc_library / rust_library targets (rust_library provides CcInfo with
+    # its rlib exposed as a .a symlink): collect srcs, hdrs, and static archive
     if CcInfo in target:
         for attr_name in ["srcs", "hdrs"]:
             if hasattr(ctx.rule.attr, attr_name):
@@ -100,7 +100,7 @@ def _coverage_scope_aspect_impl(target, ctx):
 _coverage_scope_aspect = aspect(
     implementation = _coverage_scope_aspect_impl,
     attr_aspects = ["components", "implementation", "deps", "implementation_deps", "exported_deps"],
-    doc = "Traverses component/unit/cc_library hierarchy to collect implementation source files.",
+    doc = "Traverses cc_library/rust_library/rust_binary hierarchy to collect implementation source files.",
 )
 
 # =============================================================================
@@ -181,22 +181,22 @@ coverage_wrapper = rule(
 
 coverage_scope = rule(
     implementation = _coverage_scope_impl,
-    doc = """Generates a file-level coverage allowlist from dependable_element targets.
+    doc = """Generates a file-level coverage allowlist from implementation targets.
 
-    Uses an aspect to traverse the component hierarchy of dependable_element
-    targets into their implementation cc_library targets (and transitive deps),
-    collecting all source files (srcs + hdrs). Outputs a text file with one
+    Uses an aspect to traverse the listed targets (cc_library, rust_library,
+    rust_binary) and their transitive deps, collecting all source files
+    (srcs + hdrs / CrateInfo.srcs). Outputs a text file with one
     workspace-relative file path per line.
 
     This allowlist is consumed by the coverage reporter to restrict coverage
-    reporting to exactly the source files that are part of a dependable_element.
+    reporting to exactly the source files that are part of the implementation.
     """,
     attrs = {
         "deps": attr.label_list(
             mandatory = True,
             aspects = [_coverage_scope_aspect],
             cfg = coverage_transition,
-            doc = "dependable_element _index targets whose implementation deps define the coverage scope.",
+            doc = "Implementation targets whose transitive deps define the coverage scope.",
         ),
     },
 )

@@ -211,6 +211,24 @@ pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 # Lobster Bazel
 use_repo(pip, "pip_tooling")
 
+# Coverage pipeline Python deps (pyyaml for justify.py), kept in its own hub
+# so the reusable coverage component stays independent of the other tools.
+[
+    pip.parse(
+        envsubst = ["PIP_INDEX_URL"],
+        extra_pip_args = ["--index-url=${PIP_INDEX_URL:-https://pypi.org/simple/}"],
+        hub_name = "pip_coverage",
+        python_version = "3.{}".format(version),
+        requirements_lock = "//coverage:requirements_3_{}.txt".format(version),
+    )
+    for version in [
+        "11",
+        "12",
+    ]
+]
+
+use_repo(pip, "pip_coverage")
+
 [
     pip.parse(
         envsubst = ["PIP_INDEX_URL"],

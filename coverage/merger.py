@@ -54,6 +54,13 @@ def main() -> None:
         sys.exit(0)
 
     llvm_profdata = find_llvm_profdata()
+    if not llvm_profdata:
+        print(
+            "ERROR: llvm-profdata not found (neither LLVM_PROFDATA nor "
+            "RUST_LLVM_PROFDATA resolved to an existing binary).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     # Merge profraw → profdata.
     profdata_dir = args.coverage_dir / "profdata"
@@ -97,7 +104,7 @@ def main() -> None:
 
 
 def find_llvm_profdata() -> str:
-    """Locate the llvm-profdata binary, terminating with an error when absent.
+    """Locate the llvm-profdata binary.
 
     C++ tests: Bazel exports LLVM_PROFDATA from the cc toolchain.
     Rust tests: rules_rust exports RUST_LLVM_PROFDATA (an execroot-relative
@@ -116,15 +123,7 @@ def find_llvm_profdata() -> str:
             if candidate.exists():
                 return str(candidate)
 
-    print(
-        "ERROR: llvm-profdata not found. Checked LLVM_PROFDATA "
-        f"({direct or 'unset'}) and RUST_LLVM_PROFDATA ({rust or 'unset'}). "
-        "For C++ tests the cc toolchain must export LLVM_PROFDATA; for Rust "
-        "tests the rust_toolchain must declare llvm_profdata "
-        "(score_toolchains_rust >= 0.9.2 with coverage-tools >= 1.3.0).",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+    return ""
 
 
 def cleanup_dangling_symlinks(directory: Path) -> None:
@@ -150,7 +149,17 @@ def cleanup_dangling_symlinks(directory: Path) -> None:
 def get_object_files_from_manifest(source_file_manifest: Path) -> Set[str]:
     """Parse the coverage manifest to find instrumented object files."""
     runfiles_dir = Path(os.environ.get("RUNFILES_DIR", "")) / os.environ.get("TEST_WORKSPACE", "_main")
-    exec_root = Path(os.environ.get("ROOT"))
+    root = os.environ.get("ROOT")
+    if not root:
+        # Bazel's coverage collection exports ROOT (the exec root) to the
+        # LCOV merger action; without it manifest paths cannot be resolved.
+        print(
+            "ERROR: ROOT environment variable is not set; the merger must be "
+            "invoked by Bazel's coverage collection (--coverage_output_generator).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    exec_root = Path(root)
 
     object_files = set()
     with open(source_file_manifest, encoding="utf-8") as f:

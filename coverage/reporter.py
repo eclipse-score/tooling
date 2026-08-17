@@ -42,27 +42,39 @@ def main() -> None:
     # Read the list of per-test report files.
     reports = read_reports_file(args.reports_file)
     if not reports:
-        print("ERROR: No coverage reports found.", file=sys.stderr)
-        sys.exit(-1)
+        print("INFO: No coverage reports listed; writing empty output.", file=sys.stderr)
+        write_empty_output(args.output_file)
+        return
 
     # Extract profdata and object files from each per-test zip.
     valid_profdata_files, valid_object_files = extract_reports(reports)
 
     if not valid_profdata_files or not valid_object_files:
-        print("INFO: No valid profdata or object files found.", file=sys.stderr)
-        sys.exit(-1)
+        print("INFO: No valid profdata or object files found; writing empty output.", file=sys.stderr)
+        write_empty_output(args.output_file)
+        return
 
     sorted_objects = sorted(valid_object_files)
 
-    # Get llvm tools via runfiles.
-    llvm_bin_path = Path(r.Rlocation("llvm_toolchain/llvm-cov"))
+    # Resolve the llvm tools. The reporter_wrapper passes explicit rlocation
+    # paths for the consumer-supplied toolchain labels; the bare
+    # "llvm_toolchain/..." forms remain as a fallback for in-repo setups.
+    llvm_bin_path = resolve_tool(r, args.llvm_cov, "llvm_toolchain/llvm-cov")
+    llvm_profdata_path = resolve_tool(r, args.llvm_profdata, "llvm_toolchain/llvm-profdata")
+    if not llvm_bin_path or not llvm_profdata_path:
+        print(
+            "ERROR: llvm-cov/llvm-profdata not found in runfiles. Pass --llvm_cov "
+            "and --llvm_profdata (the score_coverage_reporter macro does this).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     # Merge all per-test profdata files.
     merged_profdata = Path.cwd() / "merged_coverage.profdata"
     merge_inputs = sorted(set(valid_profdata_files))
     run_command(
         [
-            r.Rlocation("llvm_toolchain/llvm-profdata"),
+            str(llvm_profdata_path),
             "merge",
             "--output",
             str(merged_profdata),
@@ -127,6 +139,7 @@ def main() -> None:
         else:
             print("ERROR: Coverage allowlist is empty, falling back to filter_regexes.txt.", file=sys.stderr)
             sys.exit(-1)
+    cxxfilt = find_cxxfilt(llvm_bin_path, r, args.llvm_cxxfilt)
     common_args = {
         "llvm_bin_path": llvm_bin_path,
         "objects": sorted_objects,
@@ -148,6 +161,7 @@ def main() -> None:
                 **html_args,
                 output_format="html",
                 html_report_dir=html_report_dir,
+                cxxfilt=cxxfilt,
             )
         except SystemExit:
             # Some baseline archives caused llvm-cov show to fail; retry with test binaries only.
@@ -159,13 +173,19 @@ def main() -> None:
                 **common_args,
                 output_format="html",
                 html_report_dir=html_report_dir,
+                cxxfilt=cxxfilt,
             )
     else:
         run_llvm_cov_show(
             **common_args,
             output_format="html",
             html_report_dir=html_report_dir,
+            cxxfilt=cxxfilt,
         )
+
+    # Rewrite absolute workspace paths in the HTML pages so unpacked report
+    # archives remain browsable outside the machine that produced them.
+    _make_html_paths_relative(html_report_dir, workspace_root)
 
     # Generate LCOV report from test binaries.
     lcov_report_dir = Path.cwd() / "lcov_report"
@@ -190,6 +210,10 @@ def main() -> None:
                 lcov_content += filtered_baseline
                 print(f"INFO: Merged baseline LCOV for {len(baseline_only_files)} files.", file=sys.stderr)
 
+    # Strip the absolute workspace root from SF: records so the LCOV file is
+    # portable (IDE gutters, SonarQube, reports produced inside containers).
+    lcov_content = _make_lcov_paths_relative(lcov_content, workspace_root)
+
     with open(lcov_report_dir / "lcov.dat", "w", encoding="utf-8") as f:
         f.write(lcov_content)
 
@@ -210,6 +234,50 @@ def main() -> None:
     )
 
     print(f"INFO: Coverage reporter completed. Output: {args.output_file}", file=sys.stderr)
+
+
+def _make_lcov_paths_relative(lcov_content: str, workspace_root: str) -> str:
+    """Rewrite absolute SF: paths under workspace_root to workspace-relative ones.
+
+    Paths outside the workspace (external deps that survived filtering) are
+    left unchanged.
+    """
+    prefix = workspace_root if workspace_root.endswith("/") else workspace_root + "/"
+    sf_prefix = "SF:" + prefix
+    lines = []
+    for line in lcov_content.splitlines(keepends=True):
+        if line.startswith(sf_prefix):
+            lines.append("SF:" + line[len(sf_prefix) :])
+        else:
+            lines.append(line)
+    return "".join(lines)
+
+
+_SOURCE_TITLE_RE = re.compile(r"(<div class='source-name-title'><pre>)([^<]*)(</pre></div>)")
+
+
+def _make_html_paths_relative(html_dir: Path, workspace_root: str) -> None:
+    """Rewrite absolute workspace paths in llvm-cov HTML page titles.
+
+    Only the source-name-title header text is touched — hrefs and the on-disk
+    page layout embed the same path components without a leading slash, and a
+    blanket text replacement would corrupt them.
+    """
+    if not html_dir.exists():
+        return
+    prefix = workspace_root if workspace_root.endswith("/") else workspace_root + "/"
+
+    def _repl(match: "re.Match") -> str:
+        title = match.group(2)
+        if title.startswith(prefix):
+            title = title[len(prefix) :]
+        return match.group(1) + title + match.group(3)
+
+    for page in html_dir.rglob("*.html"):
+        text = page.read_text(encoding="utf-8", errors="replace")
+        new_text = _SOURCE_TITLE_RE.sub(_repl, text)
+        if new_text != text:
+            page.write_text(new_text, encoding="utf-8")
 
 
 def _filter_lcov(lcov_content: str, target_files: set) -> str:
@@ -301,6 +369,7 @@ def run_llvm_cov_show(
     workspace_root: str,
     output_format: str,
     html_report_dir: Path = None,
+    cxxfilt: str = "",
 ) -> subprocess.CompletedProcess:
     """Run llvm-cov show."""
     cmd = [
@@ -313,7 +382,6 @@ def run_llvm_cov_show(
         "--show-region-summary=0",
     ]
 
-    cxxfilt = find_cxxfilt(llvm_bin_path)
     if cxxfilt:
         cmd.append(f"--Xdemangler={cxxfilt}")
 
@@ -363,7 +431,8 @@ def run_llvm_cov_export(
     for obj in objects[1:]:
         cmd.extend(["--object", obj])
 
-    return run_command(cmd)
+    # Keep stderr separate: llvm-cov warnings must not end up in the LCOV data.
+    return run_command(cmd, separate_stderr=True)
 
 
 def run_llvm_cov_report(
@@ -515,30 +584,54 @@ def expand_rlib_archives(objects: List[str], workdir: Path) -> List[str]:
     return result
 
 
-def find_cxxfilt(llvm_bin_path: Path) -> str:
+def resolve_tool(
+    runfiles: Optional[Runfiles],
+    flag_value: Optional[str],
+    fallback_rlocation: str,
+) -> Optional[Path]:
+    """Resolve an llvm tool path.
+
+    Preference order: the explicit rlocation path passed by the
+    reporter_wrapper (consumer-supplied toolchain label), then the legacy
+    "llvm_toolchain/..." runfiles location, then the raw value as a plain path.
+    """
+    for candidate in (flag_value, fallback_rlocation):
+        if not candidate:
+            continue
+        if runfiles:
+            location = runfiles.Rlocation(candidate)
+            if location and Path(location).exists():
+                return Path(location)
+        if Path(candidate).exists():
+            return Path(candidate)
+    return None
+
+
+def find_cxxfilt(
+    llvm_bin_path: Path,
+    runfiles: Optional[Runfiles] = None,
+    explicit: Optional[str] = None,
+) -> str:
     """Locate llvm-cxxfilt for demangling (C++ Itanium and Rust v0/legacy symbols).
 
-    Tries the directory of llvm-cov first, then the @llvm_toolchain_llvm
-    distribution via runfiles (toolchains_llvm declares no alias for
-    llvm-cxxfilt, so it is wired as a direct data dependency).
-    Terminates with an error when unavailable: the binary is a declared data
-    dependency of the reporter, so its absence indicates a broken setup.
+    Tries the explicit rlocation path from the reporter_wrapper first, then the
+    directory of llvm-cov, then the @llvm_toolchain_llvm distribution via
+    runfiles (toolchains_llvm declares no alias for llvm-cxxfilt).
+    Returns an empty string when unavailable (demangling is cosmetic).
     """
+    if explicit:
+        resolved = resolve_tool(runfiles, explicit, "")
+        if resolved:
+            return str(resolved)
     sibling = llvm_bin_path.parent / "llvm-cxxfilt"
     if sibling.exists():
         return str(sibling)
-    r = Runfiles.Create()
+    r = runfiles or Runfiles.Create()
     if r:
         location = r.Rlocation("llvm_toolchain_llvm/bin/llvm-cxxfilt")
         if location and Path(location).exists():
             return location
-    print(
-        "ERROR: llvm-cxxfilt not found (checked next to llvm-cov and in the "
-        "@llvm_toolchain_llvm runfiles). It is a declared data dependency of "
-        "the reporter; check //quality/coverage/llvm_cov:reporter.",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+    return ""
 
 
 def load_coverage_allowlist(runfiles: Runfiles, rlocation_path: str) -> List[str]:
@@ -576,13 +669,11 @@ def load_baseline_objects(
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        # Dynamically gets the canonical repository name
-        repo_root = runfiles.CurrentRepository()
-        if not repo_root:
-            repo_root = "_main"  # Safe Bzlmod root fallback
-
-        # Cleanly stitch the path together
-        path = runfiles.Rlocation(os.path.join(repo_root, line))
+        # The manifest lists short_paths of files built by the CONSUMER
+        # repository, which is always the root module ("_main") in a coverage
+        # run. Do NOT use runfiles.CurrentRepository() here: this script lives
+        # in score_tooling, so that would resolve against the wrong repo.
+        path = runfiles.Rlocation(os.path.join("_main", line))
         if os.path.exists(path):
             resolved.append(path)
         else:
@@ -591,22 +682,42 @@ def load_baseline_objects(
     return sorted(resolved)
 
 
-def run_command(cmd: List[str]) -> subprocess.CompletedProcess:
-    """Run a command and exit on failure."""
+def run_command(cmd: List[str], separate_stderr: bool = False) -> subprocess.CompletedProcess:
+    """Run a command and exit on failure.
+
+    With separate_stderr the child's stderr is captured separately and
+    forwarded to our stderr — required when stdout is machine-consumed data
+    (LCOV) that llvm-cov warnings must not corrupt.
+    """
     try:
-        return subprocess.run(
+        result = subprocess.run(
             cmd,
             check=True,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stderr=subprocess.PIPE if separate_stderr else subprocess.STDOUT,
             text=True,
         )
+        if separate_stderr and result.stderr:
+            print(result.stderr, file=sys.stderr)
+        return result
     except subprocess.CalledProcessError as e:
         print(f"ERROR: Command failed with code {e.returncode}:", file=sys.stderr)
         print(f"  {' '.join(cmd[:10])}{'...' if len(cmd) > 10 else ''}", file=sys.stderr)
         if e.stdout:
             print(e.stdout, file=sys.stderr)
+        if e.stderr:
+            print(e.stderr, file=sys.stderr)
         sys.exit(1)
+
+
+def write_empty_output(output_file: Path) -> None:
+    """Write an empty (but valid) zip so Bazel's coverage action still succeeds.
+
+    Matches Bazel's own behaviour for runs that produce no coverage data
+    (e.g. a coverage invocation whose tests were all filtered out).
+    """
+    with zipfile.ZipFile(output_file, "w", zipfile.ZIP_DEFLATED):
+        pass
 
 
 def create_zip(root: Path, directories: List[Path], output_file: Path) -> None:
@@ -641,6 +752,21 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--workspace_root", type=str, required=True, help="Real workspace root path for source path mapping"
+    )
+    parser.add_argument(
+        "--llvm_cov", type=str, default=None, help="Rlocation path to llvm-cov (supplied by score_coverage_reporter)"
+    )
+    parser.add_argument(
+        "--llvm_profdata",
+        type=str,
+        default=None,
+        help="Rlocation path to llvm-profdata (supplied by score_coverage_reporter)",
+    )
+    parser.add_argument(
+        "--llvm_cxxfilt",
+        type=str,
+        default=None,
+        help="Rlocation path to llvm-cxxfilt (supplied by score_coverage_reporter)",
     )
     return parser.parse_args()
 
