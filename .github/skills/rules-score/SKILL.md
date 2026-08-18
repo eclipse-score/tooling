@@ -1,3 +1,9 @@
+---
+name: rules-score
+description: "Central entry point for building a Safety Element out of Context (SEooC) with the rules_score Bazel rules. USE FOR: creating or assembling a dependable_element end to end, understanding the full requirements → architecture → units → tests → safety-analysis workflow, wiring all rules_score targets together, and deciding which specialized skill to use for each work product. Delegates to score-requirements, score-architecture, score-testing, and score-safety-analysis. Use when scaffolding a new SEooC, adding a component/unit across all layers, or coordinating multi-layer changes."
+argument-hint: "the SEooC / dependable element to build or extend"
+---
+
 <!-- ----------------------------------------------------------------------------
   Copyright (c) 2026 Contributors to the Eclipse Foundation
 
@@ -10,12 +16,6 @@
 
   SPDX-License-Identifier: Apache-2.0
 ----------------------------------------------------------------------------- -->
-
----
-name: rules-score
-description: "Central entry point for building a Safety Element out of Context (SEooC) with the rules_score Bazel rules. USE FOR: creating or assembling a dependable_element end to end, understanding the full requirements → architecture → units → tests → safety-analysis workflow, wiring all rules_score targets together, and deciding which specialized skill to use for each work product. Delegates to score-requirements, score-architecture, score-testing, and score-safety-analysis. Use when scaffolding a new SEooC, adding a component/unit across all layers, or coordinating multi-layer changes."
-argument-hint: "the SEooC / dependable element to build or extend"
----
 
 # rules_score — SEooC Orchestration Skill
 
