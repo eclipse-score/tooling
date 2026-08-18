@@ -108,6 +108,49 @@ def _parse_puml_diagrams(ctx, files):
             idmap_outputs.append(idmap)
     return fbs_outputs, lobster_outputs, idmap_outputs
 
+def _colocate_puml_with_wrapper(ctx, puml_files, output_dir):
+    """Symlink .puml/.plantuml sources next to their generated RST wrapper.
+
+    make_puml_rst_wrappers() declares each wrapper at
+    "{output_dir}/{stem}.rst" (output_dir is this target's ctx.label.name)
+    and embeds the diagram via a same-directory sibling reference
+    (``.. uml:: {basename}``). The .puml source itself, however, usually
+    lives directly in this target's package -- one directory above
+    `output_dir` -- not nested under it. When dependable_element.bzl later
+    stages every SphinxSourcesInfo file for the HTML build, it flattens paths
+    based on the *shortest common directory* across all of a label's files
+    (see its `_find_common_directory`); mixing a file that sits directly in
+    the package with one nested one level deeper collapses the common
+    directory to the package itself, so the wrapper ends up staged one
+    level deeper than the raw .puml file and the `.. uml::` sibling
+    reference breaks (PlantUML file "x.puml" cannot be read). Symlinking a
+    same-named copy of every diagram alongside its wrapper keeps them
+    siblings under `output_dir` regardless of the diagram's original
+    on-disk location, so downstream flattening logic stages them together.
+
+    Args:
+        ctx: Rule context.
+        puml_files: Iterable of File objects; non-.puml/.plantuml files are
+            passed through unchanged.
+        output_dir: String prefix matching the one passed to
+            make_puml_rst_wrappers() (typically ctx.label.name).
+
+    Returns:
+        List of File objects with .puml/.plantuml entries replaced by
+        same-directory symlinked copies.
+    """
+    colocated = []
+    for f in puml_files:
+        if f.extension not in ("puml", "plantuml"):
+            colocated.append(f)
+            continue
+        copy = ctx.actions.declare_file(
+            "{}/{}".format(output_dir, f.basename),
+        )
+        ctx.actions.symlink(output = copy, target_file = f)
+        colocated.append(copy)
+    return colocated
+
 def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs_files, internal_api_fbs_files):
     """Run the architectural-design validation profile.
 
@@ -168,9 +211,18 @@ def _architectural_design_impl(ctx):
     internal_api_fbs = depset(internal_api_fbs_list)
     public_api_lobster = depset(public_api_lobster_list)
 
-    # Source files for SphinxSourcesInfo (sphinx documentation pipeline)
+    # Source files for SphinxSourcesInfo (sphinx documentation pipeline).
+    # .puml/.plantuml sources are colocated (symlinked) next to their
+    # generated RST wrapper -- see _colocate_puml_with_wrapper for why this
+    # is required for the `.. uml::` sibling reference to resolve once
+    # dependable_element.bzl stages these files for the HTML build.
     all_source_files = depset(
-        transitive = [depset(ctx.files.static), depset(ctx.files.dynamic), depset(ctx.files.public_api), depset(ctx.files.internal_api)],
+        transitive = [
+            depset(_colocate_puml_with_wrapper(ctx, ctx.files.static, ctx.label.name)),
+            depset(_colocate_puml_with_wrapper(ctx, ctx.files.dynamic, ctx.label.name)),
+            depset(_colocate_puml_with_wrapper(ctx, ctx.files.public_api, ctx.label.name)),
+            depset(_colocate_puml_with_wrapper(ctx, ctx.files.internal_api, ctx.label.name)),
+        ],
     )
 
     # All idmap sidecars (across static/dynamic/public_api/internal_api) are
