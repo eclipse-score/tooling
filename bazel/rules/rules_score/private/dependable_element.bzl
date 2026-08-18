@@ -26,7 +26,7 @@ load(
     "subrule_lobster_html_report",
     "subrule_lobster_report",
 )
-load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
+load("@sphinxdocs//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load(
     "//bazel/rules/rules_score:providers.bzl",
     "ArchitecturalDesignInfo",

@@ -14,7 +14,7 @@
 the score_sphinx_toolchain() convenience macro for consumers."""
 
 load("@rules_python//python:py_binary.bzl", "py_binary")
-load("@rules_python//sphinxdocs:sphinx.bzl", "sphinx_build_binary")
+load("@sphinxdocs//sphinxdocs:sphinx.bzl", "sphinx_build_binary")
 
 SphinxInfo = provider(
     doc = "Provider for Sphinx Toolchain",

@@ -14,8 +14,8 @@
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@pip_rules_score//:requirements.bzl", "requirement")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
-load("@rules_python//sphinxdocs:sphinx.bzl", "sphinx_build_binary")
-load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
+load("@sphinxdocs//sphinxdocs:sphinx.bzl", "sphinx_build_binary")
+load("@sphinxdocs//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load(
     "//bazel/rules/rules_score:rules_score.bzl",
     "sphinx_module",
