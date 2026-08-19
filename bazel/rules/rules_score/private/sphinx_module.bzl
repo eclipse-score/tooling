@@ -149,6 +149,14 @@ sphinx_rule_attrs = dict(
             doc = "Directory containing fta_metamodel.puml, passed to PlantUML via " +
                   "-Dplantuml.include.path so FTA diagrams can resolve !include fta_metamodel.puml.",
         ),
+        "_plantuml_fontconfig": attr.label(
+            default = Label("//third_party/plantuml:fontconfig_fallback"),
+            allow_files = True,
+            doc = "Directory containing fontconfig.properties.tpl and the bundled " +
+                  "LiberationSans-Regular.ttf fallback font, passed to PlantUML via " +
+                  "-Dsun.awt.fontconfig so it gets usable text metrics even when the " +
+                  "execution environment has no native fontconfig library/fonts.",
+        ),
         "allow_persistent_workers": attr.bool(
             default = False,
             doc = "(experimental) If true, allow Bazel to run this pass's Sphinx build " +
@@ -233,6 +241,11 @@ def _hermetic_tool_env(ctx):
     start, while cwd is still the execroot) and an analysis-time-stable
     rlocation key (no exec-config hash) for diagnostic logging. See
     docs/tooling_architecture.rst §"Hermetic tool path resolution".
+
+    The returned files list (first return value) must be added to the calling
+    action's `inputs` -- it covers both the FTA metamodel include and the
+    PlantUML fontconfig fallback (font + template), neither of which is
+    otherwise reachable from the `tools` attr's executables alone.
     """
     gv_short = ctx.executable._graphviz.short_path
     graphviz_rloc = gv_short[3:] if gv_short.startswith("../") else ctx.workspace_name + "/" + gv_short
@@ -240,12 +253,16 @@ def _hermetic_tool_env(ctx):
     plantuml_rloc = pl_short[3:] if pl_short.startswith("../") else ctx.workspace_name + "/" + pl_short
     fta_metamodel_files = ctx.files._fta_metamodel
     fta_metamodel_dir = fta_metamodel_files[0].dirname if fta_metamodel_files else ""
-    return fta_metamodel_files, {
+    fontconfig_files = ctx.files._plantuml_fontconfig
+    fontconfig_dir = fontconfig_files[0].dirname if fontconfig_files else ""
+    hermetic_files = fta_metamodel_files + fontconfig_files
+    return hermetic_files, {
         "PLANTUML_BIN": ctx.executable._plantuml.path,
         "PLANTUML_BIN_RLOC": plantuml_rloc,
         "GRAPHVIZ_DOT": ctx.executable._graphviz.path,
         "GRAPHVIZ_DOT_RLOC": graphviz_rloc,
         "FTA_METAMODEL_DIR": fta_metamodel_dir,
+        "PLANTUML_FONTCONFIG_DIR": fontconfig_dir,
     }
 
 def _needs_output_prefix(name):
@@ -309,9 +326,9 @@ def _score_needs_impl(ctx):
         worker_enabled = worker_enabled,
     )
 
-    fta_metamodel_files, action_env = _hermetic_tool_env(ctx)
+    hermetic_tool_files, action_env = _hermetic_tool_env(ctx)
     ctx.actions.run(
-        inputs = needs_inputs + fta_metamodel_files,
+        inputs = needs_inputs + hermetic_tool_files,
         outputs = [needs_output],
         arguments = [args],
         env = action_env,
@@ -506,10 +523,10 @@ def _score_html_impl(ctx):
 
     # Use the hermetic graphviz wrapper that executes `/usr/bin/dot` inside the
     # docs_runtime sysroot via exec_in_sysroot.
-    fta_metamodel_files, action_env = _hermetic_tool_env(ctx)
+    hermetic_tool_files, action_env = _hermetic_tool_env(ctx)
 
     ctx.actions.run(
-        inputs = html_inputs + fta_metamodel_files,
+        inputs = html_inputs + hermetic_tool_files,
         outputs = [sphinx_html_output],
         arguments = [args],
         env = action_env,

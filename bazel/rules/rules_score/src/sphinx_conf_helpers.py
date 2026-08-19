@@ -20,12 +20,12 @@ import it and only set what it actually wants to customize (extensions,
 theme, etc.):
 
 - Hermetic PlantUML / Graphviz / FTA-metamodel resolution. The env vars this
-  reads (PLANTUML_BIN, GRAPHVIZ_DOT, FTA_METAMODEL_DIR) are set
-  unconditionally by `_hermetic_tool_env()` in sphinx_module.bzl for every
-  SphinxNeedsBuild/SphinxHtmlBuild action, regardless of which toolchain or
-  conf_template is in effect - so this works for any consumer without extra
-  Bazel wiring. See docs/tooling_architecture.rst
-  §"Hermetic tool path resolution".
+  reads (PLANTUML_BIN, GRAPHVIZ_DOT, FTA_METAMODEL_DIR,
+  PLANTUML_FONTCONFIG_DIR) are set unconditionally by `_hermetic_tool_env()`
+  in sphinx_module.bzl for every SphinxNeedsBuild/SphinxHtmlBuild action,
+  regardless of which toolchain or conf_template is in effect - so this
+  works for any consumer without extra Bazel wiring. See
+  docs/tooling_architecture.rst §"Hermetic tool path resolution".
 - sphinx-needs external-needs loading, re-exported from bazel_sphinx_needs
   rather than re-derived (see that module's docstring for the JSON format).
 - The sphinx-needs type/option/link schema loaded from the upstream S-CORE
@@ -36,6 +36,7 @@ theme, etc.):
 
 import logging
 import os
+import tempfile
 from typing import Any, Dict, List, Optional
 
 from bazel_sphinx_needs import (
@@ -154,14 +155,80 @@ def resolve_fta_metamodel_dir() -> str:
     return resolved
 
 
+def resolve_plantuml_fontconfig() -> Optional[str]:
+    """Resolve a ready-to-use sun.awt.FontConfiguration properties file from
+    PLANTUML_FONTCONFIG_DIR, or None (with a warning) if it can't be built.
+
+    OpenJDK on Linux normally builds its logical-font (Serif, SansSerif, ...)
+    mapping by querying the native libfontconfig library and the host's
+    installed fonts. In a minimal container/toolchain with neither, that
+    query fails, and -- because there's also no fontconfig.properties bundled
+    with the JDK to fall back to -- PlantUML crashes the first time it asks
+    for any font metric with "Fontconfig head is null, check your fonts or
+    fonts configuration" (surfaced early by Run.forceOpenJdkResourceLoad).
+    -Djava.awt.headless=true does not avoid this; the failing font-manager
+    init happens regardless of headless mode.
+
+    PLANTUML_FONTCONFIG_DIR (set by sphinx_module.bzl's _hermetic_tool_env())
+    points at a directory containing `fontconfig.properties.tpl` (a
+    sun.awt.FontConfiguration properties template with a `{font_path}`
+    placeholder) and the bundled `LiberationSans-Regular.ttf` fallback font -- see
+    //third_party/plantuml:fontconfig_fallback. This substitutes the font's
+    resolved absolute path into the template and writes the result to a
+    fresh temp file, since the template and font, while always siblings on
+    disk, can't reference each other by a fixed relative path: the JVM
+    resolves a properties file's `filename.*` values against its own current
+    working directory, not the properties file's location, and that
+    directory varies with the Bazel sandbox/runfiles layout of whichever
+    action executes PlantUML.
+
+    Returns:
+        Absolute path to the generated properties file, or None if
+        PLANTUML_FONTCONFIG_DIR is unset or fontconfig.properties.tpl is
+        missing from it (a warning is logged either way).
+    """
+    raw = os.environ.get("PLANTUML_FONTCONFIG_DIR", "")
+    if not raw:
+        logger.warning(
+            "PLANTUML_FONTCONFIG_DIR is not set; PlantUML may crash with "
+            "\"Fontconfig head is null\" in environments without a native "
+            "fontconfig library and fonts installed."
+        )
+        return None
+
+    fontconfig_dir = os.path.abspath(raw)
+    template_path = os.path.join(fontconfig_dir, "fontconfig.properties.tpl")
+    font_path = os.path.join(fontconfig_dir, "LiberationSans-Regular.ttf")
+    try:
+        with open(template_path, "r", encoding="utf-8") as f:
+            template = f.read()
+    except OSError as e:
+        logger.warning("Failed to read PlantUML fontconfig template %s: %s", template_path, e)
+        return None
+
+    resolved = template.replace("{font_path}", font_path)
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".properties",
+        prefix="plantuml-fontconfig-",
+        delete=False,
+        encoding="utf-8",
+    ) as out:
+        out.write(resolved)
+        properties_path = out.name
+
+    logger.debug("plantuml fontconfig fallback resolved: %s (font: %s)", properties_path, font_path)
+    return properties_path
+
+
 def resolve_plantuml_command(required: bool = True, graphviz_dot_path: Optional[str] = None) -> Optional[str]:
     """Build the full `plantuml` conf.py setting.
 
-    Combines PLANTUML_BIN with the FTA metamodel include path and the
-    hermetic Graphviz dot, exactly matching the default template's
-    configuration. Pair this with `plantuml_output_format = "svg_obj"` in
-    conf.py (a fixed literal, not tool-path dependent, so it isn't derived
-    here).
+    Combines PLANTUML_BIN with the FTA metamodel include path, the hermetic
+    Graphviz dot, and the hermetic fontconfig fallback, exactly matching the
+    default template's configuration. Pair this with
+    `plantuml_output_format = "svg_obj"` in conf.py (a fixed literal, not
+    tool-path dependent, so it isn't derived here).
 
     Args:
         required: See `resolve_graphviz_dot`. Also governs whether a missing
@@ -195,10 +262,13 @@ def resolve_plantuml_command(required: bool = True, graphviz_dot_path: Optional[
     fta_dir = resolve_fta_metamodel_dir()
     include_flag = " --jvm_flag=-Dplantuml.include.path=%s" % fta_dir if fta_dir else ""
 
+    fontconfig_properties = resolve_plantuml_fontconfig()
+    fontconfig_flag = " --jvm_flag=-Dsun.awt.fontconfig=%s" % fontconfig_properties if fontconfig_properties else ""
+
     dot_path = graphviz_dot_path if graphviz_dot_path is not None else resolve_graphviz_dot(required=required)
     layout_flag = " -graphvizdot %s" % dot_path if dot_path else ""
 
-    return "%s%s%s" % (plantuml_path, include_flag, layout_flag)
+    return "%s%s%s%s" % (plantuml_path, include_flag, fontconfig_flag, layout_flag)
 
 
 def init_hermetic_tools(app: Any, config: Any) -> None:
