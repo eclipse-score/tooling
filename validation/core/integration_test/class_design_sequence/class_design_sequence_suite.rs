@@ -82,6 +82,26 @@ fn positive_participant_short_name_namespace_match_suite_case() {
 }
 
 #[test]
+fn positive_participant_special_display_leading_colon_short_name_match_suite_case() {
+    assert_case("positive_participant_special_display_leading_colon_short_name_match");
+}
+
+#[test]
+fn positive_participant_special_display_qualified_type_match_suite_case() {
+    assert_case("positive_participant_special_display_qualified_type_match");
+}
+
+#[test]
+fn positive_participant_special_display_short_type_match_suite_case() {
+    assert_case("positive_participant_special_display_short_type_match");
+}
+
+#[test]
+fn positive_participant_special_display_encoded_newline_match_suite_case() {
+    assert_case("positive_participant_special_display_encoded_newline_match");
+}
+
+#[test]
 fn negative_participant_missing_suite_case() {
     assert_case("negative_participant_missing");
 }
@@ -97,6 +117,26 @@ fn negative_participant_method_missing_suite_case() {
 }
 
 #[test]
+fn negative_participant_method_missing_with_suggestion_suite_case() {
+    assert_case("negative_participant_method_missing_with_suggestion");
+}
+
+#[test]
 fn negative_participant_private_inherited_method_suite_case() {
     assert_case("negative_participant_private_inherited_method");
+}
+
+#[test]
+fn negative_participant_missing_with_suggestion_suite_case() {
+    assert_case("negative_participant_missing_with_suggestion");
+}
+
+#[test]
+fn negative_participant_special_display_multiple_colons_suite_case() {
+    assert_case("negative_participant_special_display_multiple_colons");
+}
+
+#[test]
+fn negative_participant_special_display_empty_suffix_suite_case() {
+    assert_case("negative_participant_special_display_empty_suffix");
 }

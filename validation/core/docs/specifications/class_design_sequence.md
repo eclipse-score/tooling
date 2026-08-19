@@ -50,6 +50,35 @@ to exactly one class in the design class model.
 This check validates that the sequence does not reference unknown or ambiguous
 classes.
 
+Participant resolution shall follow this order:
+
+1. Match the participant reference itself against a class id.
+2. If the participant has a different display name, match that display name
+  against a class id.
+3. If the display name still does not resolve, match the display name against a
+  unique class short name.
+4. If the display name uses one supported special form, derive additional class
+  candidates from that form.
+5. If none of the above resolves uniquely, fall back to matching the
+  participant reference against a unique class short name.
+
+The supported special display forms are:
+
+- `:Name`, which contributes `Name` as a short-name candidate.
+- `prefix:qualified::Type`, which contributes `qualified::Type` as an id
+  candidate and both `qualified::Type` and `Type` as short-name candidates.
+
+Only the first non-empty display line participates in class matching. If the
+display name contains additional non-empty lines or escaped line fragments
+after the primary line, they shall be ignored for matching and may be reported
+through debug or warning output.
+
+The following participant display forms are invalid and shall be rejected as
+participant-class failures:
+
+- a primary display line containing more than one standalone `:` separator
+- a primary display line containing `:` without a non-empty right-hand side
+
 ```text
 ' class diagram
 class Controller
@@ -119,6 +148,7 @@ Controller -> Controller : Validate()
 |---|---|
 | Sequence participant has no matching design class | Participant-Class Consistency |
 | Sequence participant matches multiple design classes ambiguously | Participant-Class Consistency |
+| Sequence participant uses a disallowed special display form | Participant-Class Consistency |
 | Sequence message targets a class that does not declare or accessibly inherit the called operation | Message-Operation Consistency |
 | Sequence self-call targets a class that does not declare or accessibly inherit the called operation | Message-Operation Consistency |
 | Sequence message targets a method that exists only as a private inherited operation | Message-Operation Consistency |

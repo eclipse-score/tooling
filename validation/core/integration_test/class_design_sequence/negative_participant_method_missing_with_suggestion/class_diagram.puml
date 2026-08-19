@@ -11,11 +11,16 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml sequence_diagram
+@startuml class_diagram
 
-participant Controller
-participant "unit_1::StateStore" as StateStore
+abstract class RepositoryBase {
+    + FindById() : void
+}
 
-Controller -> StateStore : LoadState()
+class Repository {
+    + Store() : void
+}
+
+RepositoryBase <|-- Repository
 
 @enduml

@@ -13,9 +13,6 @@
 
 @startuml sequence_diagram
 
-participant Controller
-participant "unit_1::StateStore" as StateStore
-
-Controller -> StateStore : LoadState()
+participant "singletonInstance:Runtime"
 
 @enduml

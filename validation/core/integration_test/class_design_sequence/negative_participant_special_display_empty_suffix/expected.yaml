@@ -1,0 +1,21 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains: |-
+  [Class] Sequence participant "singletonInstance:" uses an invalid kind of display name.
+    Participant          : "singletonInstance:"
+    Display name         : "singletonInstance:"
+    Invalid form         : "singletonInstance:" uses ':' without a non-empty right-hand side
+    Sequence source file : "validation/core/integration_test/class_design_sequence/negative_participant_special_display_empty_suffix/sequence_diagram.puml"
+    Sequence source line : 16
+    Fix                  : Use one supported form such as :Name, prefix:qualified::Type, or provide an unambiguous alias.

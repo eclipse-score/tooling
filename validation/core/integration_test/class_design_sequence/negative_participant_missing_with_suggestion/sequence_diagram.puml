@@ -13,9 +13,8 @@
 
 @startuml sequence_diagram
 
-participant Controller
-participant "unit_1::StateStore" as StateStore
+participant Repositry
 
-Controller -> StateStore : LoadState()
+Repositry -> Repositry : Execute()
 
 @enduml
