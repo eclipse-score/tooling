@@ -407,6 +407,26 @@ environment variables:
    PLANTUML_BIN_RLOC = ctx.executable._plantuml.short_path (rlocation key)
    GRAPHVIZ_DOT      = ctx.executable._graphviz.path      (execroot-relative)
    GRAPHVIZ_DOT_RLOC = ctx.executable._graphviz.short_path (rlocation key)
+   FTA_METAMODEL_DIR = ctx.files._fta_metamodel[0].dirname (execroot-relative)
+   PLANTUML_FONTCONFIG_DIR = ctx.files._plantuml_fontconfig[0].dirname (execroot-relative)
+
+``FTA_METAMODEL_DIR`` and ``PLANTUML_FONTCONFIG_DIR`` only need the
+execroot-relative directory (no ``*_RLOC`` variant); they aren't executables
+so there's no runfiles-manifest entry to key a lookup on, and Python resolves
+their contents by simple ``os.path.join`` once the directory itself has been
+made absolute (see below).
+
+``PLANTUML_FONTCONFIG_DIR`` points at
+``//third_party/plantuml:fontconfig_fallback``: a ``fontconfig.properties.tpl``
+template plus a bundled ``LiberationSans-Regular.ttf`` font.
+``sphinx_conf_helpers.resolve_plantuml_fontconfig()`` substitutes the font's
+absolute path into the template, writes the result to a temp file, and
+``resolve_plantuml_command()`` passes it to PlantUML via
+``--jvm_flag=-Dsun.awt.fontconfig=<path>``. This makes
+``sun.awt.X11FontManager`` use the bundled font directly instead of querying
+the native libfontconfig library / host-installed fonts, which otherwise
+makes PlantUML crash with ``Fontconfig head is null, check your fonts or
+fonts configuration`` in minimal containers/toolchains that have neither.
 
 The rlocation keys (``*_RLOC``) are computed once at analysis time:
 
