@@ -15,7 +15,7 @@ use super::super::fixtures::*;
 use super::*;
 use crate::models::{ClassDiagramInputs, ClassEntityIndex, SequenceDiagramInputs};
 use crate::ValidationResult;
-use class_diagram::ClassDiagram;
+use class_diagram::{ClassDiagram, RelationType, Relationship};
 
 fn validate(
     design_classes: ClassDiagramInputs,
@@ -71,6 +71,18 @@ fn reports_sequence_participant_missing_from_design_classes() {
         "[Class] Sequence participant \"Repository\" has no matching class in the class diagram."
     ));
     assert!(validation_result.failures[0].contains("\"Repository\""));
+}
+
+#[test]
+fn reports_sequence_participant_missing_with_fuzzy_class_suggestion() {
+    let design_classes = class_diagrams(vec![class_entity("Repository", None)]);
+    let sequence_diagrams = sequence_diagrams(&["Repositry"]);
+
+    let validation_result = validate(design_classes, sequence_diagrams);
+
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0]
+        .contains("Suggestion for \"Repositry\" : Did you mean class \"Repository\"?"));
 }
 
 #[test]
@@ -142,6 +154,32 @@ fn reports_sequence_call_method_missing_from_callee_class() {
 }
 
 #[test]
+fn reports_sequence_call_method_missing_with_inherited_fuzzy_suggestion() {
+    let mut repository_base = class_entity("RepositoryBase", None);
+    repository_base.methods = vec![method("FindById")];
+
+    let mut repository = class_entity("Repository", None);
+    repository.relationships = vec![relationship(
+        "Repository",
+        "RepositoryBase",
+        RelationType::Inheritance,
+    )];
+
+    let design_classes = class_diagrams(vec![
+        class_entity("Controller", None),
+        repository,
+        repository_base,
+    ]);
+    let sequence_diagrams = sequence_calls(&[("Controller", "Repository", "FindByIds()")]);
+
+    let validation_result = validate(design_classes, sequence_diagrams);
+
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0]
+        .contains("Suggestion for \"FindByIds\" : Did you mean method \"FindById\"?"));
+}
+
+#[test]
 fn passes_when_sequence_self_call_targets_existing_method() {
     let mut controller = class_entity("Controller", None);
     controller.methods = vec![method("Validate")];
@@ -152,4 +190,38 @@ fn passes_when_sequence_self_call_targets_existing_method() {
     let validation_result = validate(design_classes, sequence_diagrams);
 
     assert!(validation_result.failures.is_empty());
+}
+
+#[test]
+fn extracts_ignored_special_display_suffix() {
+    let mut sequence_diagrams = sequence_diagrams(&["help"]);
+    sequence_diagrams.diagrams[0].participants[0].display_name =
+        ":Process/nara::com user".to_string();
+    sequence_diagrams.diagrams[0].participants[0].alias = Some("help".to_string());
+
+    let mut setup_result = ValidationResult::default();
+    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
+    assert!(
+        setup_result.is_empty(),
+        "test fixture setup failed: {:?}",
+        setup_result.failures
+    );
+
+    let participant_info = sequence_index.participant_info("help").unwrap();
+
+    assert_eq!(
+        ignored_special_display_suffix(participant_info),
+        Some("ara::com user".to_string())
+    );
+}
+
+fn relationship(source: &str, target: &str, relation_type: RelationType) -> Relationship {
+    Relationship {
+        source: source.to_string(),
+        target: target.to_string(),
+        relation_type,
+        source_multiplicity: None,
+        target_multiplicity: None,
+        source_location: dummy_source_location(),
+    }
 }

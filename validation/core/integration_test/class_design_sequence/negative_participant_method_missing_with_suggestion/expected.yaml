@@ -1,0 +1,21 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains: |
+  [Method] Sequence function "FindByIds" from sequence call "Repository" -> "Repository" : "FindByIds" not found on target class "Repository" or its accessible inherited types in the class diagram.
+    Sequence call              : "Repository" -> "Repository" : "FindByIds"
+    Target class               : "Repository"
+    Sequence source file       : "validation/core/integration_test/class_design_sequence/negative_participant_method_missing_with_suggestion/sequence_diagram.puml"
+    Sequence source line       : 18
+    Suggestion for "FindByIds" : Did you mean method "FindById"?
+    Fix                        : Add method "FindByIds" to class "Repository" or one of its accessible inherited types in the class diagram, or change or remove that sequence call.

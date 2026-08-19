@@ -13,9 +13,8 @@
 
 @startuml sequence_diagram
 
-participant Controller
-participant "unit_1::StateStore" as StateStore
+participant Repository
 
-Controller -> StateStore : LoadState()
+Repository -> Repository : FindByIds()
 
 @enduml
