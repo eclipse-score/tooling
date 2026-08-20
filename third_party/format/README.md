@@ -59,11 +59,7 @@ opt-in so that projects without C++ code do not depend on the LLVM toolchain.
 Declares this module and includes required dependencies:
 
 ```python
-module(name = "score_format_checker", version = "0.1.1")
-
-bazel_dep(name = "aspect_rules_lint", version = "1.0.3")
-bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")
-bazel_dep(name = "score_rust_policies", version = "0.0.2")
+module(name = "score_tooling", version = "2.0.2")
 ```
 
 ---
@@ -72,25 +68,11 @@ bazel_dep(name = "score_rust_policies", version = "0.0.2")
 
 ### 1️⃣ Declare the dependency in your project’s `MODULE.bazel`:
 
-```python
-bazel_dep(name = "score_format_checker", version = "0.1.1")
-
-# If using local source:
-local_path_override(
-    module_name = "score_format_checker",
-    path = "../tooling/format",
-)
-
-# Explicit dependencies required by the macro
-bazel_dep(name = "aspect_rules_lint", version = "1.0.3")
-bazel_dep(name = "buildifier_prebuilt", version = "7.3.1")
-bazel_dep(name = "score_rust_policies", version = "0.0.2")
-```
 
 ### 2️⃣ In your project’s `BUILD.bazel`:
 
 ```python
-load("@score_format_checker//:macros.bzl", "use_format_targets")
+load("@score_tooling//third_party/format:macros.bzl", "use_format_targets")
 
 use_format_targets()
 ```
@@ -139,6 +121,7 @@ bazel run @score_tooling//third_party/format:rustfmt_with_policies
 ## C++ support
 
 C++ formatting is opt-in. Enable it by adding `cpp` to the `languages` list:
+For this to work you have to have the llvm toolchain in your repository
 
 ```python
 use_format_targets(languages = ["python", "rust", "starlark", "yaml", "cpp"])
