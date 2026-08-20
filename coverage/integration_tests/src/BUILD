@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # *******************************************************************************
 # Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
@@ -11,20 +10,28 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-set -euo pipefail
 
-script="${TEST_SRCDIR}/${TEST_WORKSPACE}/coverage/ferrocene_report.sh"
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
-output="$(bash "${script}" --help)"
+package(default_visibility = ["//visibility:public"])
 
-if ! echo "${output}" | grep -q "Generate Ferrocene Rust coverage reports"; then
-  echo "help output did not contain expected header" >&2
-  exit 1
-fi
+cc_library(
+    name = "coverable",
+    srcs = ["coverable.cpp"],
+    hdrs = ["coverable.h"],
+)
 
-if ! echo "${output}" | grep -q -- "--min-line-coverage"; then
-  echo "help output missing --min-line-coverage" >&2
-  exit 1
-fi
+# No test links against this library — it must show up at exact 0% in the
+# report via the --empty-profile baseline.
+cc_library(
+    name = "uncovered",
+    srcs = ["uncovered.cpp"],
+    hdrs = ["uncovered.h"],
+)
 
-echo "ok"
+cc_test(
+    name = "coverable_test",
+    srcs = ["coverable_test.cpp"],
+    deps = [":coverable"],
+)

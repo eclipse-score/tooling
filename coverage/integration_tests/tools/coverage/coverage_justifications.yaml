@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # *******************************************************************************
 # Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
@@ -12,21 +10,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-
-set -euo pipefail
-
-report_runfile=@@RUNFILE@@
-if [[ -n "${RUNFILES_DIR:-}" ]]; then
-  ferrocene_report="${RUNFILES_DIR}/${report_runfile}"
-elif [[ -n "${RUNFILES_MANIFEST_FILE:-}" ]]; then
-  ferrocene_report="$(grep -m1 "^${report_runfile} " "${RUNFILES_MANIFEST_FILE}" | cut -d' ' -f2-)"
-else
-  ferrocene_report="${report_runfile}"
-fi
-
-if [[ ! -x "${ferrocene_report}" ]]; then
-  echo "ferrocene_report not found at ${ferrocene_report}" >&2
-  exit 1
-fi
-
-@@EXEC_LINE@@
+# Coverage justifications for the integration test workspace.
+#
+# Justified lines count as covered in the EFFECTIVE coverage metric. The line
+# is marked in-code with a `COV_JUSTIFIED <id>` comment (src/coverable.cpp);
+# this file provides the id, category and reason.
+version: 1
+justifications:
+  - id: itest-positive-branch
+    category: other
+    platforms: [linux]
+    reason: |
+      Intentionally uncovered branch: the integration test asserts that a
+      justified line raises effective coverage above raw coverage.
