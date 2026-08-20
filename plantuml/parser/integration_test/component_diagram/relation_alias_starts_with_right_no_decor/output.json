@@ -1,0 +1,54 @@
+{
+  "relation_alias_starts_with_right_no_decor.puml": {
+    "Pkg": {
+      "id": "Pkg",
+      "name": "Pkg",
+      "alias": "Pkg",
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
+    },
+    "Pkg.A": {
+      "id": "Pkg.A",
+      "name": "A",
+      "alias": "A",
+      "parent_id": "Pkg",
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": [
+        {
+          "target": "Pkg.right_svc",
+          "annotation": "uses",
+          "relation_type": "Association",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
+        }
+      ],
+      "source_location": {
+        "file": "",
+        "line": 17
+      }
+    },
+    "Pkg.right_svc": {
+      "id": "Pkg.right_svc",
+      "name": "Labeled",
+      "alias": "right_svc",
+      "parent_id": "Pkg",
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 18
+      }
+    }
+  }
+}

@@ -285,8 +285,6 @@ arrow_mid_decor = @{ "(0)" | "(0" | "0)" | "()" | "(" | ")" | "0" }
 
 // ---------- Direction ----------
 arrow_direction = @{
-      "up" | "u"
-    | "right" | "ri" | "r"
-    | "down" | "do" | "d"
-    | "left" | "le" | "l"
+    ("up" | "u" | "right" | "ri" | "r" | "down" | "do" | "d" | "left" | "le" | "l")
+    ~ !(ASCII_ALPHANUMERIC | "_")
 }
