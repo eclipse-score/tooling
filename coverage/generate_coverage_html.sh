@@ -18,15 +18,21 @@
 # Usage (from the CONSUMER workspace):
 #   bazel coverage --config=llvm_cov //... --build_tests_only
 #   bazel run @score_tooling//coverage:generate_coverage_html -- \
-#       --yaml <path/to/coverage_justifications.yaml> \
-#       [--archive <archive-name>] [--platform <platform>] \
-#       [--testlogs-subdir <subdir>] [output-dir]
+#       [--yaml <path/to/coverage_justifications.yaml>] \
+#       [--archive <archive-name>] [--archive-dir <dir>] \
+#       [--platform <platform>] [--testlogs-subdir <subdir>] [output-dir]
 #
 # Arguments:
 #   --yaml <path>              Justification YAML, relative to the workspace
-#                              root (required).
-#   --archive <archive-name>   Also create a zip archive named <archive-name>.zip
+#                              root. When omitted, justification processing and
+#                              the effective-coverage metric are skipped and the
+#                              threshold gate applies to the RAW line coverage.
+#   --archive <archive-name>   Create a zip archive named <archive-name>.zip
 #                              containing the HTML report, raw LCOV data and JUnit XMLs.
+#   --archive-dir <dir>        Assemble the same content as --archive into <dir>
+#                              WITHOUT zipping — preferred for CI artifact
+#                              uploads (actions/upload-artifact zips its input
+#                              itself; a pre-zipped file would be zipped twice).
 #   --platform <platform>      Target platform for justification filtering
 #                              (default: linux). Also affects the default output
 #                              directory (coverage_<platform>).
@@ -37,13 +43,15 @@
 #                              (default: coverage_<platform>)
 #
 # Environment:
-#   COVERAGE_THRESHOLD        Minimum effective line coverage percentage
-#                             (default: 100). The script exits non-zero when
-#                             effective coverage is below this threshold.
+#   COVERAGE_THRESHOLD        Minimum line coverage percentage (default: 100).
+#                             The script exits non-zero when the gated metric
+#                             (effective coverage with --yaml, raw coverage
+#                             without) is below this threshold.
 
 set -euo pipefail
 
 ARCHIVE_NAME=""
+ARCHIVE_DIR=""
 PLATFORM="linux"
 OUTPUT_DIR=""
 JUSTIFICATION_YAML_REL=""
@@ -57,6 +65,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --archive)
       ARCHIVE_NAME="${2:?--archive requires a name argument}"
+      shift 2
+      ;;
+    --archive-dir)
+      ARCHIVE_DIR="${2:?--archive-dir requires a directory argument}"
       shift 2
       ;;
     --platform)
@@ -74,10 +86,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "${JUSTIFICATION_YAML_REL}" ]]; then
-  echo "ERROR: --yaml <path/to/coverage_justifications.yaml> is required." >&2
-  exit 1
-fi
+# --yaml is optional: without it, justification processing and the effective
+# coverage metric are skipped and the threshold gate applies to the RAW line
+# coverage from llvm-cov's summary instead.
 
 # Set default output directory based on platform if not explicitly provided.
 if [[ -z "${OUTPUT_DIR}" ]]; then
@@ -126,80 +137,120 @@ fi
 echo "Coverage report written to: ${OUTPUT_DIR}"
 
 # ---------------------------------------------------------------------------
-# Run coverage justification processing.
+# Run coverage justification processing (only when --yaml was given) and
+# enforce the coverage threshold.
 # ---------------------------------------------------------------------------
-JUSTIFICATION_YAML="${BUILD_WORKSPACE_DIRECTORY}/${JUSTIFICATION_YAML_REL}"
+THRESHOLD="${COVERAGE_THRESHOLD:-100}"
+JUSTIFICATION_DIR=""
 
-if [[ ! -f "${JUSTIFICATION_YAML}" ]]; then
-  echo "ERROR: ${JUSTIFICATION_YAML} not found." >&2
-  exit 1
+if [[ -n "${JUSTIFICATION_YAML_REL}" ]]; then
+  JUSTIFICATION_YAML="${BUILD_WORKSPACE_DIRECTORY}/${JUSTIFICATION_YAML_REL}"
+
+  if [[ ! -f "${JUSTIFICATION_YAML}" ]]; then
+    echo "ERROR: ${JUSTIFICATION_YAML} not found." >&2
+    exit 1
+  fi
+
+  echo ""
+  echo "Running coverage justification processing..."
+
+  JUSTIFICATION_DIR="${TMPDIR_EXTRACT}/justification_report"
+  mkdir -p "${JUSTIFICATION_DIR}"
+
+  # Run justify.py / effective_coverage.py via nested bazel invocations from the
+  # consumer workspace. This deliberately avoids runfiles resolution across
+  # module boundaries (canonical repo names vary between Bazel versions).
+  bazel run @score_tooling//coverage:justify -- \
+      --yaml "${JUSTIFICATION_YAML}" \
+      --source-root "${BUILD_WORKSPACE_DIRECTORY}" \
+      --platform "${PLATFORM}" \
+      --output "${JUSTIFICATION_DIR}/manifest.json"
+
+  bazel run @score_tooling//coverage:effective_coverage -- \
+      --html-dir "${OUTPUT_DIR}" \
+      --manifest "${JUSTIFICATION_DIR}/manifest.json" \
+      --output "${JUSTIFICATION_DIR}/report.json"
+
+  # Display effective coverage summary and enforce the threshold.
+  if [[ ! -f "${JUSTIFICATION_DIR}/summary.txt" ]]; then
+    echo "ERROR: Effective coverage summary was not produced." >&2
+    exit 1
+  fi
+
+  echo ""
+  cat "${JUSTIFICATION_DIR}/summary.txt"
+
+  # Extract effective coverage percentage for threshold check.
+  GATE_PCT=$(grep -oP 'Effective line coverage:\s+\K[0-9.]+' \
+    "${JUSTIFICATION_DIR}/summary.txt" 2>/dev/null || echo "0")
+  GATE_KIND="Effective"
+else
+  # No justification YAML: gate on the raw line coverage computed from the
+  # LCOV data. Deliberately NOT llvm-cov's text summary TOTAL — that summary
+  # omits baseline-only files (in-scope files no test links against), which
+  # would let untested files escape the gate. The LCOV includes them.
+  echo ""
+  echo "INFO: no --yaml given; justification processing skipped, gating on raw line coverage."
+  if [[ ! -f "${TMPDIR_EXTRACT}/lcov_report/lcov.dat" ]]; then
+    echo "ERROR: lcov_report/lcov.dat not found in ${COVERAGE_REPORT}" >&2
+    exit 1
+  fi
+  GATE_PCT=$(awk -F: '/^LF:/ {lf += $2} /^LH:/ {lh += $2}
+    END { if (lf > 0) printf "%.2f", lh * 100 / lf; }' \
+    "${TMPDIR_EXTRACT}/lcov_report/lcov.dat")
+  if [[ -z "${GATE_PCT}" ]]; then
+    echo "ERROR: could not compute raw line coverage from lcov_report/lcov.dat" >&2
+    exit 1
+  fi
+  echo "Raw line coverage: ${GATE_PCT}%"
+  GATE_KIND="Raw"
 fi
-
-echo ""
-echo "Running coverage justification processing..."
-
-JUSTIFICATION_DIR="${TMPDIR_EXTRACT}/justification_report"
-mkdir -p "${JUSTIFICATION_DIR}"
-
-# Run justify.py / effective_coverage.py via nested bazel invocations from the
-# consumer workspace. This deliberately avoids runfiles resolution across
-# module boundaries (canonical repo names vary between Bazel versions).
-bazel run @score_tooling//coverage:justify -- \
-    --yaml "${JUSTIFICATION_YAML}" \
-    --source-root "${BUILD_WORKSPACE_DIRECTORY}" \
-    --platform "${PLATFORM}" \
-    --output "${JUSTIFICATION_DIR}/manifest.json"
-
-bazel run @score_tooling//coverage:effective_coverage -- \
-    --html-dir "${OUTPUT_DIR}" \
-    --manifest "${JUSTIFICATION_DIR}/manifest.json" \
-    --output "${JUSTIFICATION_DIR}/report.json"
-
-# Display effective coverage summary and enforce the threshold.
-if [[ ! -f "${JUSTIFICATION_DIR}/summary.txt" ]]; then
-  echo "ERROR: Effective coverage summary was not produced." >&2
-  exit 1
-fi
-
-echo ""
-cat "${JUSTIFICATION_DIR}/summary.txt"
-
-# Extract effective coverage percentage for threshold check.
-EFFECTIVE_PCT=$(grep -oP 'Effective line coverage:\s+\K[0-9.]+' \
-  "${JUSTIFICATION_DIR}/summary.txt" 2>/dev/null || echo "0")
 
 # Threshold check (default: 100%). Fails the run when below.
-THRESHOLD="${COVERAGE_THRESHOLD:-100}"
-if ! awk "BEGIN {exit (${EFFECTIVE_PCT} >= ${THRESHOLD}) ? 0 : 1}"; then
-  echo "ERROR: Effective coverage ${EFFECTIVE_PCT}% is below threshold ${THRESHOLD}%" >&2
+if ! awk "BEGIN {exit (${GATE_PCT} >= ${THRESHOLD}) ? 0 : 1}"; then
+  echo "ERROR: ${GATE_KIND} coverage ${GATE_PCT}% is below threshold ${THRESHOLD}%" >&2
   RC=1
 else
   RC=0
 fi
 
 # ---------------------------------------------------------------------------
-# Optional: create a zip archive with the HTML report, raw LCOV data and
-# JUnit XML test results.
+# Optional: assemble the HTML report, raw LCOV data, justification report and
+# JUnit XML test results into an artifacts tree.
+#   --archive <name>     zip the tree into <name>.zip (and remove the tree)
+#   --archive-dir <dir>  keep the tree at <dir> — preferred for CI artifact
+#                        uploads, since actions/upload-artifact zips its input
+#                        anyway (a pre-zipped file would be zipped twice)
 # ---------------------------------------------------------------------------
-if [[ -n "${ARCHIVE_NAME}" ]]; then
-  mkdir -p artifacts
+assemble_artifacts() {
+  local dest="$1"
+  mkdir -p "${dest}"
 
   # Copy JUnit XML test results preserving directory structure.
-  find "bazel-testlogs/${TESTLOGS_SUBDIR}" -name 'test.xml' -exec cp --parents {} artifacts/ \;
+  find "bazel-testlogs/${TESTLOGS_SUBDIR}" -name 'test.xml' -exec cp --parents {} "${dest}/" \;
 
   # Copy the HTML coverage report
-  cp -r "${OUTPUT_DIR}" artifacts/
+  cp -r "${OUTPUT_DIR}" "${dest}/"
 
   # Include the LCOV .dat file from the reporter zip.
   if [[ -f "${TMPDIR_EXTRACT}/lcov_report/lcov.dat" ]]; then
-    cp "${TMPDIR_EXTRACT}/lcov_report/lcov.dat" artifacts/coverage_report.dat
+    cp "${TMPDIR_EXTRACT}/lcov_report/lcov.dat" "${dest}/coverage_report.dat"
   fi
 
   # Include the justification report (manifest + effective coverage json).
-  if [[ -d "${JUSTIFICATION_DIR}" ]]; then
-    cp -r "${JUSTIFICATION_DIR}" artifacts/
+  if [[ -n "${JUSTIFICATION_DIR}" && -d "${JUSTIFICATION_DIR}" ]]; then
+    cp -r "${JUSTIFICATION_DIR}" "${dest}/"
   fi
+}
 
+if [[ -n "${ARCHIVE_DIR}" ]]; then
+  rm -rf "${ARCHIVE_DIR}"
+  assemble_artifacts "${ARCHIVE_DIR}"
+  echo "Coverage artifacts written to: ${ARCHIVE_DIR}/"
+fi
+
+if [[ -n "${ARCHIVE_NAME}" ]]; then
+  assemble_artifacts artifacts
   zip -r "${ARCHIVE_NAME}.zip" artifacts/
   rm -rf artifacts/
   echo "Coverage archive written to: ${ARCHIVE_NAME}.zip"

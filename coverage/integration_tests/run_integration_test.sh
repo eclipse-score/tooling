@@ -40,6 +40,31 @@ COVERAGE_THRESHOLD=10 bazel run @score_tooling//coverage:generate_coverage_html 
     --yaml "${YAML}"
 echo "OK: gate passed as expected"
 
+echo "=== Without --yaml: HTML still produced, gate applies to RAW coverage ==="
+if COVERAGE_THRESHOLD=100 bazel run @score_tooling//coverage:generate_coverage_html; then
+  echo "ERROR: raw-coverage gate passed at threshold 100" >&2
+  exit 1
+fi
+COVERAGE_THRESHOLD=10 bazel run @score_tooling//coverage:generate_coverage_html
+if [[ ! -f coverage_linux/index.html ]]; then
+  echo "ERROR: HTML report missing after no-yaml run" >&2
+  exit 1
+fi
+echo "OK: no-yaml mode works (HTML produced, raw gate enforced)"
+
+echo "=== --archive-dir must produce an unzipped artifacts tree ==="
+COVERAGE_THRESHOLD=10 bazel run @score_tooling//coverage:generate_coverage_html -- \
+    --yaml "${YAML}" --archive-dir artifacts_dir
+for f in artifacts_dir/coverage_linux/index.html artifacts_dir/coverage_report.dat \
+         artifacts_dir/justification_report/summary.txt; do
+  if [[ ! -f "$f" ]]; then
+    echo "ERROR: ${f} missing from --archive-dir output" >&2
+    exit 1
+  fi
+done
+rm -rf artifacts_dir
+echo "OK: --archive-dir works"
+
 echo "=== Untested files must appear at exact 0% in the LCOV ==="
 unzip -p coverage_artifacts.zip artifacts/coverage_report.dat > lcov.dat
 

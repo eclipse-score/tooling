@@ -137,7 +137,11 @@ Everything in scope but untested shows up at 0%; everything outside the scope
 
 Copy the `coverage:llvm_cov` block from
 [integration_tests/.bazelrc](integration_tests/.bazelrc) into your
-repository's bazelrc (directly or via `import`). The two labels to adapt:
+repository's bazelrc (directly or via `import`). If your `.bazelrc` ends with
+a `try-import %workspace%/user.bazelrc` (or similar local-override file),
+place the coverage import BEFORE it — bazelrc conflicts resolve last-wins,
+and the local override file must stay last to keep working. The two labels
+to adapt:
 
 ```
 coverage:llvm_cov --coverage_output_generator=@score_tooling//coverage:merger
@@ -189,11 +193,19 @@ bazel coverage --config=llvm_cov //... --build_tests_only
 bazel run @score_tooling//coverage:generate_coverage_html -- \
     --yaml tools/coverage/coverage_justifications.yaml
 
-# CI variant: archive HTML + LCOV + JUnit XMLs, gate at 95%:
+# CI variant: assemble HTML + LCOV + JUnit XMLs for artifact upload, gate at 95%:
 COVERAGE_THRESHOLD=95 bazel run @score_tooling//coverage:generate_coverage_html -- \
     --yaml tools/coverage/coverage_justifications.yaml \
-    --archive coverage_artifacts
+    --archive-dir coverage_artifacts
+# then: actions/upload-artifact with path: coverage_artifacts
+# (upload-artifact zips its input itself — use --archive <name> only when you
+# want a local <name>.zip; uploading that zip would nest it in a second zip)
 ```
+
+`--yaml` is optional: without it, justification processing is skipped and the
+`COVERAGE_THRESHOLD` gate applies to the **raw** line coverage. Start without
+a YAML; add one (`version: 1` + `justifications: []`) when you introduce your
+first `COV_JUSTIFIED` marker.
 
 `--build_tests_only` matters: without it, coverage builds (not runs) every
 target matched by the pattern, including e.g. `manual`-tagged or
@@ -203,7 +215,7 @@ platform-incompatible test binaries.
 
 | Need | Knob |
 |---|---|
-| Different gate | `COVERAGE_THRESHOLD=<pct>` env var (default 100; exit 1 below) |
+| Different gate | `COVERAGE_THRESHOLD=<pct>` env var (default 100; exit 1 below; gates effective coverage with `--yaml`, raw coverage without) |
 | Output directory | positional `output-dir` argument (default `coverage_<platform>`) |
 | Platform-specific justifications | `--platform linux\|qnx` (default linux) |
 | JUnit XMLs subtree in the archive | `--testlogs-subdir <dir>` (default: whole `bazel-testlogs`) |
