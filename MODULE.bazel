@@ -17,12 +17,9 @@ module(name = "score_tooling")
 # Core Dependencies
 ###############################################################################
 bazel_dep(name = "aspect_rules_py", version = "1.4.0")  # py_binary/py_library loads in cli_helper.bzl:13, cr_checker.bzl:16, defs.bzl:16, etc.
-
 bazel_dep(name = "aspect_rules_lint", version = "2.5.0")
-
 bazel_dep(name = "rules_multitool", version = "1.9.0")
 bazel_dep(name = "rules_java", version = "8.15.1")  # required for dash
-
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2")
 
 ## Rules Score
