@@ -151,7 +151,7 @@ def _colocate_puml_with_wrapper(ctx, puml_files, output_dir):
         colocated.append(copy)
     return colocated
 
-def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs_files, internal_api_fbs_files):
+def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs_files, internal_api_fbs_files, static_view_fbs_files):
     """Run the architectural-design validation profile.
 
     Args:
@@ -160,6 +160,7 @@ def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs
         sequence_fbs_files: Sequence-diagram FlatBuffer files generated from this target's dynamic inputs.
         public_api_fbs_files: List of public-API FlatBuffer files generated from this target's public_api inputs.
         internal_api_fbs_files: List of internal-API FlatBuffer files generated from this target's internal_api inputs.
+        static_view_fbs_files: Component-diagram FlatBuffer files generated from this target's static_view inputs.
     Returns:
         Struct with file and name fields describing the validation log entry.
     """
@@ -173,8 +174,9 @@ def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs
             "sequence_diagrams": [f.path for f in sequence_fbs_files],
             "public_api_diagrams": [f.path for f in public_api_fbs_files],
             "internal_api_diagrams": [f.path for f in internal_api_fbs_files],
+            "static_view": [f.path for f in static_view_fbs_files],
         },
-        inputs = component_fbs_files + sequence_fbs_files + public_api_fbs_files + internal_api_fbs_files,
+        inputs = component_fbs_files + sequence_fbs_files + public_api_fbs_files + internal_api_fbs_files + static_view_fbs_files,
         mnemonic = "ArchitecturalDesignValidate",
         maturity = ctx.attr.maturity,
         log_level = get_log_level(ctx),
@@ -204,12 +206,14 @@ def _architectural_design_impl(ctx):
     dynamic_fbs_list, dynamic_lobster_list, dynamic_idmap_list = _parse_puml_diagrams(ctx, ctx.files.dynamic)
     public_api_fbs_list, public_api_lobster_list, public_api_idmap_list = _parse_puml_diagrams(ctx, ctx.files.public_api)
     internal_api_fbs_list, _internal_api_lobster_list, internal_api_idmap_list = _parse_puml_diagrams(ctx, ctx.files.internal_api)
+    static_view_fbs_list, _static_view_lobster_list, static_view_idmap_list = _parse_puml_diagrams(ctx, ctx.files.static_view)
 
     static_fbs = depset(static_fbs_list)
     dynamic_fbs = depset(dynamic_fbs_list)
     public_api_fbs = depset(public_api_fbs_list)
     internal_api_fbs = depset(internal_api_fbs_list)
     public_api_lobster = depset(public_api_lobster_list)
+    static_view_fbs = depset(static_view_fbs_list)
 
     # Source files for SphinxSourcesInfo (sphinx documentation pipeline).
     # .puml/.plantuml sources are colocated (symlinked) next to their
@@ -222,16 +226,17 @@ def _architectural_design_impl(ctx):
             depset(_colocate_puml_with_wrapper(ctx, ctx.files.dynamic, ctx.label.name)),
             depset(_colocate_puml_with_wrapper(ctx, ctx.files.public_api, ctx.label.name)),
             depset(_colocate_puml_with_wrapper(ctx, ctx.files.internal_api, ctx.label.name)),
+            depset(_colocate_puml_with_wrapper(ctx, ctx.files.static_view, ctx.label.name)),
         ],
     )
 
-    # All idmap sidecars (across static/dynamic/public_api/internal_api) are
+    # All idmap sidecars (across static/dynamic/public_api/internal_api/static_view) are
     # staged into the sphinx sources so the `clickable_plantuml` extension can
     # discover them (it scans `srcdir` recursively for `*.idmap.json`) and
     # resolve cross-diagram links — including component diagrams linking to
     # the class diagrams that elaborate their public/internal API interfaces.
     all_idmap_files = depset(
-        static_idmap_list + dynamic_idmap_list + public_api_idmap_list + internal_api_idmap_list,
+        static_idmap_list + dynamic_idmap_list + public_api_idmap_list + internal_api_idmap_list + static_view_idmap_list,
     )
 
     sphinx_files = depset(
@@ -242,7 +247,7 @@ def _architectural_design_impl(ctx):
     # toctree entry in the dependable_element index.
     rst_wrappers = make_puml_rst_wrappers(
         ctx,
-        ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api,
+        ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api + ctx.files.static_view,
         ctx.label.name,
         ctx.file._puml_rst_template,
     )
@@ -253,6 +258,7 @@ def _architectural_design_impl(ctx):
         dynamic_fbs_list,
         public_api_fbs_list,
         internal_api_fbs_list,
+        static_view_fbs_list,
     )
 
     sphinx_srcs = depset(rst_wrappers, transitive = [sphinx_files])
@@ -264,6 +270,7 @@ def _architectural_design_impl(ctx):
             dynamic = dynamic_fbs,
             public_api = public_api_fbs,
             internal_api = internal_api_fbs,
+            static_view = static_view_fbs,
             name = ctx.label.name,
             public_api_lobster_files = public_api_lobster,
             validation_logs = [validation_log],
@@ -307,6 +314,16 @@ def _architectural_design_attrs():
                   "Classified separately so their FlatBuffers outputs are exposed via " +
                   "ArchitecturalDesignInfo.internal_api for downstream validation.",
         ),
+        "static_view": attr.label_list(
+            allow_files = [".puml", ".plantuml"],
+            mandatory = False,
+            doc = "Component diagrams that present a partial view of the static architecture. " +
+                  "Parsed identically to `static`, but never used to define the units/components " +
+                  "validated against the Bazel component graph. Instead, every component/unit " +
+                  "defined here must also be defined, under the same parent, in `static`; " +
+                  "the build fails if a `static_view` diagram introduces a component/unit that is " +
+                  "not present in the `static` diagrams.",
+        ),
         "maturity": attr.string(
             default = "release",
             values = ["release", "development"],
@@ -345,6 +362,7 @@ def architectural_design(
         dynamic = [],
         public_api = [],
         internal_api = [],
+        static_view = [],
         maturity = "release",
         **kwargs):
     """Define architectural design following S-CORE process guidelines.
@@ -375,6 +393,15 @@ def architectural_design(
             static/dynamic diagrams but classified separately so their
             FlatBuffers outputs are exposed via ArchitecturalDesignInfo.
             internal_api for downstream validation.
+        static_view: Optional list of .puml component diagrams that present a
+            partial view of the static architecture. These are parsed
+            identically to `static`, but are not used to define the
+            units/components validated against the Bazel component graph.
+            Instead, every component/unit defined in a `static_view` diagram
+            must also be defined, under the same parent, in `static`: it may
+            only contain a subset of the units/components of the matching
+            `static` diagram. The build fails if a `static_view` diagram
+            introduces a component/unit that is not present in `static`.
         maturity: Maturity level of the architectural design. Use
             "development" to write validation findings without failing the
             Bazel action.
@@ -407,6 +434,7 @@ def architectural_design(
         dynamic = dynamic,
         public_api = public_api,
         internal_api = internal_api,
+        static_view = static_view,
         maturity = maturity,
         **kwargs
     )

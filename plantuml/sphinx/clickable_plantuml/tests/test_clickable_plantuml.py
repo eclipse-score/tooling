@@ -90,8 +90,8 @@ def test_load_idmap_builds_source_and_definition_indices(tmp_path: Path) -> None
 
     assert set(idmap_by_source) == {"pkg/a/proxy.puml", "pkg/b/overview.puml"}
     # Both the alias and the FQN point at the definer.
-    assert definition_index["Proxy"] == ["pkg/a/proxy.puml"]
-    assert definition_index["pkg.Proxy"] == ["pkg/a/proxy.puml"]
+    assert definition_index["Proxy"] == [("pkg/a/proxy.puml", False)]
+    assert definition_index["pkg.Proxy"] == [("pkg/a/proxy.puml", False)]
 
 
 def test_same_basename_in_different_dirs_are_distinct_keys(tmp_path: Path) -> None:
@@ -110,6 +110,59 @@ def test_duplicate_canonical_key_raises_build_error(tmp_path: Path) -> None:
 
     with pytest.raises(ExtensionError, match="duplicate idmap source key"):
         _load_idmap_files(tmp_path)
+
+
+def test_excluded_from_definitions_source_is_never_a_definer(tmp_path: Path) -> None:
+    # A static_view-style diagram elaborates "Proxy" too (e.g. it shows the
+    # same nested structure as static), but is marked excluded_from_definitions.
+    _write_idmap(
+        tmp_path / "sv",
+        "static_view.idmap.json",
+        "pkg/sv/static_view.puml",
+        defines=[{"alias": "Proxy", "id": "pkg.Proxy"}],
+        excluded_from_definitions=True,
+    )
+    _write_idmap(
+        tmp_path / "static",
+        "proxy.idmap.json",
+        "pkg/static/proxy.puml",
+        defines=[{"alias": "Proxy", "id": "pkg.Proxy"}],
+    )
+
+    idmap_by_source, definition_index = _load_idmap_files(tmp_path)
+
+    # Both idmaps are still discovered (their own references still resolve)...
+    assert set(idmap_by_source) == {"pkg/sv/static_view.puml", "pkg/static/proxy.puml"}
+    # ...but only the non-excluded diagram is a candidate definer, so a
+    # reference to "Proxy" is unambiguous rather than tied between the two.
+    assert definition_index["Proxy"] == [("pkg/static/proxy.puml", False)]
+    assert definition_index["pkg.Proxy"] == [("pkg/static/proxy.puml", False)]
+
+
+def test_load_idmap_records_synthesized_flag_per_definer(tmp_path: Path) -> None:
+    # A class diagram's namespace-container define (synthesized) and a
+    # component diagram's real elaboration site both land in the index, each
+    # tagged with its own `synthesized` bit.
+    _write_idmap(
+        tmp_path / "internal_api",
+        "for_a.idmap.json",
+        "pkg/internal_api/for_a.puml",
+        defines=[{"alias": "lola_binding", "id": "mw_com.lola_binding", "synthesized": True}],
+    )
+    _write_idmap(
+        tmp_path / "static",
+        "lola_binding.idmap.json",
+        "pkg/static/lola_binding.puml",
+        defines=[{"alias": "lola_binding", "id": "lola_binding"}],
+    )
+
+    _, definition_index = _load_idmap_files(tmp_path)
+
+    assert set(definition_index["lola_binding"]) == {
+        ("pkg/internal_api/for_a.puml", True),
+        ("pkg/static/lola_binding.puml", False),
+    }
+    assert set(definition_index["mw_com.lola_binding"]) == {("pkg/internal_api/for_a.puml", True)}
 
 
 # ---------------------------------------------------------------------------
@@ -367,7 +420,7 @@ def test_doctree_resolved_injects_link_directives(
             }
         },
     )
-    setattr(env, _ENV_DEF_INDEX, {"pkg.Proxy": ["pkg/proxy.puml"]})
+    setattr(env, _ENV_DEF_INDEX, {"pkg.Proxy": [("pkg/proxy.puml", False)]})
     setattr(env, _ENV_SOURCE_KEYS, frozenset({"pkg/overview.puml", "pkg/proxy.puml"}))
     setattr(env, _ENV_WORKSPACE_OFFSET, "/workspace")
     setattr(env, _ENV_PUML_DOCNAMES, {"pkg/proxy.puml": ("design/proxy", "proxy-section")})
@@ -399,8 +452,8 @@ def test_doctree_resolved_injects_link_directives(
 
 def test_resolve_definer_prefers_fqn_over_alias() -> None:
     definition_index = {
-        "Proxy": ["pkg/alias_hit.puml"],
-        "pkg.Proxy": ["pkg/fqn_hit.puml"],
+        "Proxy": [("pkg/alias_hit.puml", False)],
+        "pkg.Proxy": [("pkg/fqn_hit.puml", False)],
     }
 
     target = _resolve_definer("Proxy", "pkg.Proxy", "pkg/src.puml", definition_index)
@@ -410,7 +463,7 @@ def test_resolve_definer_prefers_fqn_over_alias() -> None:
 
 def test_resolve_definer_falls_back_to_alias_when_fqn_missing() -> None:
     definition_index = {
-        "Proxy": ["pkg/alias_hit.puml"],
+        "Proxy": [("pkg/alias_hit.puml", False)],
     }
 
     target = _resolve_definer("Proxy", "pkg.Proxy", "pkg/src.puml", definition_index)
@@ -423,8 +476,8 @@ def test_resolve_definer_falls_back_to_alias_when_fqn_hit_is_only_self() -> None
     # re-declares its own FQN); a distinct alias-based definer must still be
     # found rather than giving up after the FQN lookup is filtered to empty.
     definition_index = {
-        "pkg.Proxy": ["pkg/src.puml"],
-        "Proxy": ["pkg/alias_hit.puml"],
+        "pkg.Proxy": [("pkg/src.puml", False)],
+        "Proxy": [("pkg/alias_hit.puml", False)],
     }
 
     target = _resolve_definer("Proxy", "pkg.Proxy", "pkg/src.puml", definition_index)
@@ -434,7 +487,7 @@ def test_resolve_definer_falls_back_to_alias_when_fqn_hit_is_only_self() -> None
 
 def test_resolve_definer_skips_self_link() -> None:
     definition_index = {
-        "Proxy": ["pkg/src.puml"],
+        "Proxy": [("pkg/src.puml", False)],
     }
 
     target = _resolve_definer("Proxy", "Proxy", "pkg/src.puml", definition_index)
@@ -446,7 +499,7 @@ def test_resolve_definer_tie_returns_none_and_warns(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     definition_index = {
-        "Proxy": ["a/one.puml", "b/two.puml"],
+        "Proxy": [("a/one.puml", False), ("b/two.puml", False)],
     }
 
     caplog.set_level(logging.WARNING)
@@ -454,6 +507,39 @@ def test_resolve_definer_tie_returns_none_and_warns(
 
     assert target is None
     assert "ambiguous definition" in caplog.text
+
+
+def test_resolve_definer_prefers_non_synthesized_over_synthesized() -> None:
+    # Several class diagrams nest an interface under the same shared
+    # namespace purely for FQN containment (synthesized definers); the
+    # diagram that actually elaborates that namespace (e.g. its `static`
+    # component diagram) must win outright rather than tying with them.
+    definition_index = {
+        "lola_binding": [
+            ("pkg/static/lola_binding.puml", False),
+            ("pkg/internal_api/for_a.puml", True),
+            ("pkg/internal_api/for_b.puml", True),
+        ],
+    }
+
+    target = _resolve_definer("lola_binding", "lola_binding", "pkg/src.puml", definition_index)
+
+    assert target == "pkg/static/lola_binding.puml"
+
+
+def test_resolve_definer_ties_among_synthesized_when_no_real_definer() -> None:
+    # With no non-synthesized definer at all, synthesized candidates are the
+    # only option; multiple synthesized definers still tie (safe over wrong).
+    definition_index = {
+        "lola_proxy": [
+            ("pkg/internal_api/for_a.puml", True),
+            ("pkg/internal_api/for_b.puml", True),
+        ],
+    }
+
+    target = _resolve_definer("lola_proxy", "lola_proxy", "pkg/src.puml", definition_index)
+
+    assert target is None
 
 
 def test_common_prefix_length_requires_canonical_keys() -> None:

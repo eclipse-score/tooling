@@ -204,6 +204,7 @@ ArchitecturalDesignInfo = provider(
         "dynamic": "Depset of FlatBuffers binaries for dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
         "public_api": "Depset of FlatBuffers binaries for public API diagrams (class diagrams, etc.)",
         "internal_api": "Depset of FlatBuffers binaries for internal API diagrams (class diagrams, etc.)",
+        "static_view": "Depset of FlatBuffers binaries for static_view component diagrams (partial views of the static architecture, validated for consistency against static).",
         "name": "Name of the architectural design target",
         "public_api_lobster_files": "Depset of .lobster traceability files generated from public_api diagrams.",
         "validation_logs": "List of validation log entries produced by this architectural design target. Each entry has file and name fields.",

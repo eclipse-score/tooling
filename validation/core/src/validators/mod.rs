@@ -20,6 +20,7 @@ mod component_public_api_validator;
 mod component_sequence_validator;
 mod sequence_internal_api_validator;
 mod shared;
+mod static_view_consistency_validator;
 
 #[cfg(test)]
 #[path = "test/fixtures.rs"]
@@ -31,3 +32,4 @@ pub use component_internal_api_validator::validate_component_internal_api;
 pub use component_public_api_validator::validate_component_public_api;
 pub use component_sequence_validator::validate_component_sequence;
 pub use sequence_internal_api_validator::validate_sequence_internal_api;
+pub use static_view_consistency_validator::validate_static_view_consistency;
