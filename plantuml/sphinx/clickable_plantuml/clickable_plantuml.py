@@ -25,16 +25,34 @@ records two roles for the elements in one ``.puml`` diagram:
   ``[Proxy]`` box in an overview is a reference that should link to the
   diagram that defines it.
 
+An idmap may also carry ``excluded_from_definitions: true`` (set by
+``puml_cli --exclude-from-definitions``, e.g. for an
+``architectural_design()`` ``static_view`` diagram — a partial/subset view
+of the ``static`` architecture). Such a diagram's ``defines`` are never
+added to the definition index, so references elsewhere always resolve to
+the true elaboration site (in ``static``), never to a `static_view` copy;
+the diagram's own ``references`` still resolve normally.
+
+A ``defines`` entry may also be marked ``synthesized`` (set by the PlantUML
+parser for a class diagram's namespace/package container, added purely so
+an entity's FQN reflects containment — see ``puml_idmap``). Several
+unrelated class diagrams routinely nest their entities under the same
+shared namespace; a non-synthesized definer (the diagram that actually
+elaborates that namespace, e.g. its `static` component diagram) always
+outranks any number of synthesized ones, so those incidental namespace
+wrappers never tie with, or shadow, the real elaboration site.
+
 The matching algorithm:
 
-1. Build a *definition index*: ``{alias|id → [source_paths]}``.
+1. Build a *definition index*: ``{alias|id → [(source_path, synthesized)]}``.
 2. For each reference ``(alias, id)`` in a diagram, look up the index (FQN
    ``id`` first, then ``alias``) to find candidate definer diagrams.
-3. If exactly one definer: emit the link.
-4. If multiple definers: pick the one sharing the longest common workspace-
-   relative path prefix with the source diagram (proximity tiebreak).
-   On a tie: log a warning and emit no link (safe over wrong).
-5. Never link a diagram to itself.
+3. Prefer non-synthesized candidates over synthesized ones (see above).
+4. If exactly one definer remains: emit the link.
+5. If multiple definers remain: pick the one sharing the longest common
+   workspace-relative path prefix with the source diagram (proximity
+   tiebreak). On a tie: log a warning and emit no link (safe over wrong).
+6. Never link a diagram to itself.
 """
 
 from __future__ import annotations
@@ -154,32 +172,56 @@ def _resolve_definer(
     alias: str,
     fqn: str,
     source_key: str,
-    definition_index: dict[str, list[str]],
+    definition_index: dict[str, list[tuple[str, bool]]],
 ) -> str | None:
     """Return the definer source key for one reference, or ``None``.
 
-    Resolution rules:
+    Resolution rules, in order:
 
-    * FQN (``id``) lookup takes precedence over the ``alias`` lookup — but
-      only when it yields a definer *other than* the diagram itself; if the
-      only FQN match is a self-link, the ``alias`` lookup is still tried
-      rather than giving up (a diagram may re-declare its own top-level FQN
-      while a distinct diagram elaborates it under a shared alias).
-    * A diagram never links to itself (self-links are dropped from both
-      lookups).
-    * A single remaining candidate wins outright; multiple candidates go
-      through the proximity tiebreak, and a genuine tie logs a warning and
-      returns ``None`` (safe over wrong).
+    * A diagram never links to itself (self-links are dropped from every
+      lookup below).
+    * Non-synthesized candidates (a diagram that actually elaborates the
+      element) always outrank synthesized ones (a class diagram's namespace
+      container, added only so an entity's FQN reflects containment).
+      Several unrelated class diagrams routinely nest their entities under
+      the same shared namespace purely for containment; without this
+      preference every one of them would tie as a co-definer of that
+      namespace and the real elaboration site (e.g. its `static` component
+      diagram) would never win — even though its own FQN key has no
+      synthesized competitors, a *different* lookup key (see next point)
+      might.
+    * FQN (``id``) lookup takes precedence over the ``alias`` lookup at each
+      preference tier — but only within that tier: if the FQN lookup has no
+      non-synthesized hit, the alias lookup's non-synthesized hit (if any)
+      is preferred over settling for tied/synthesized FQN hits, since a
+      real elaboration site always wins regardless of which lookup found it.
+    * Within the first non-empty tier, a single candidate wins outright;
+      multiple candidates go through the proximity tiebreak, and a genuine
+      tie logs a warning and returns ``None`` (safe over wrong).
     """
     _assert_canonical_source_key(source_key)
 
-    def _candidates_for(key: str) -> list[str]:
+    def _candidates_for(key: str) -> list[tuple[str, bool]]:
         raw = definition_index.get(key, [])
-        for candidate in raw:
+        for candidate, _synthesized in raw:
             _assert_canonical_source_key(candidate)
-        return [c for c in raw if c != source_key]
+        return [(c, s) for c, s in raw if c != source_key]
 
-    candidates = _candidates_for(fqn) or _candidates_for(alias)
+    fqn_entries = _candidates_for(fqn)
+    alias_entries = _candidates_for(alias)
+
+    def _non_synthesized(entries: list[tuple[str, bool]]) -> list[str]:
+        return [c for c, synthesized in entries if not synthesized]
+
+    def _all_sources(entries: list[tuple[str, bool]]) -> list[str]:
+        return [c for c, _synthesized in entries]
+
+    candidates = (
+        _non_synthesized(fqn_entries)
+        or _non_synthesized(alias_entries)
+        or _all_sources(fqn_entries)
+        or _all_sources(alias_entries)
+    )
     if not candidates:
         return None
     if len(candidates) == 1:
@@ -248,7 +290,7 @@ def _escape_plantuml_url(url: str) -> str:
 
 def _load_idmap_files(
     source_dir: Path,
-) -> tuple[dict[str, Any], dict[str, list[str]]]:
+) -> tuple[dict[str, Any], dict[str, list[tuple[str, bool]]]]:
     """Scan *source_dir* for ``*.idmap.json`` and build the lookup indices.
 
     The canonical key is the workspace-relative POSIX path stored in each
@@ -258,13 +300,13 @@ def _load_idmap_files(
 
     Returns:
         idmap_by_source:   ``{canonical_source_key → raw idmap dict}``
-        definition_index:  ``{alias_or_fqn_id → [canonical_source_keys]}``
+        definition_index:  ``{alias_or_fqn_id → [(canonical_source_key, synthesized)]}``
 
     Raises:
         ExtensionError: when two idmaps normalise to the same canonical key.
     """
     idmap_by_source: dict[str, Any] = {}
-    definition_index: dict[str, list[str]] = {}
+    definition_index: dict[str, list[tuple[str, bool]]] = {}
 
     for json_path in sorted(source_dir.rglob("*.idmap.json")):
         try:
@@ -294,10 +336,11 @@ def _load_idmap_files(
         for entry in data.get("defines", []):
             alias = entry.get("alias", "")
             fqn = entry.get("id", "")
-            if alias and source_key not in definition_index.setdefault(alias, []):
-                definition_index[alias].append(source_key)
-            if fqn and fqn != alias and source_key not in definition_index.setdefault(fqn, []):
-                definition_index[fqn].append(source_key)
+            synthesized = entry.get("synthesized", False)
+            for key in filter(None, dict.fromkeys((alias, fqn))):
+                bucket = definition_index.setdefault(key, [])
+                if source_key not in (c for c, _synthesized in bucket):
+                    bucket.append((source_key, synthesized))
 
     logger.info(
         "clickable_plantuml: loaded %d idmap file(s), %d unique definition keys",
@@ -583,7 +626,7 @@ def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> N
       ``app.builder.get_relative_uri(docname, target_docname)``.
     """
     idmap_by_source: dict[str, Any] = getattr(app.env, _ENV_IDMAP_BY_SOURCE, {})
-    definition_index: dict[str, list[str]] = getattr(app.env, _ENV_DEF_INDEX, {})
+    definition_index: dict[str, list[tuple[str, bool]]] = getattr(app.env, _ENV_DEF_INDEX, {})
     if app.builder.format != "html" or not idmap_by_source:
         return
 

@@ -19,7 +19,7 @@ mod component_diagram_models;
 mod sequence_diagram_models;
 mod shared;
 
-use shared::EntityKey;
+pub use shared::EntityKey;
 
 #[cfg(test)]
 pub use bazel_models::BazelInputEntry;

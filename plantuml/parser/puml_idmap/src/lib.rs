@@ -40,12 +40,21 @@ use std::path::{Path, PathBuf};
 // ---------------------------------------------------------------------------
 
 /// A single element entry in the idmap.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct IdMapEntry {
     /// PlantUML alias used in `url of <alias> is [[url]]` injection.
     pub alias: String,
     /// Fully-qualified identifier (FQN) for matching across diagrams.
     pub id: String,
+    /// `true` when this define was synthesized for a namespace/package
+    /// container rather than elaborated as an entity of its own (see
+    /// `class_model_to_idmap`'s namespace synthesis). `clickable_plantuml`
+    /// only trusts a synthesized define when no non-synthesized diagram
+    /// elaborates the same element, so a namespace merely used for FQN
+    /// containment in several class diagrams never outranks or ties with
+    /// its real elaboration site (e.g. a `static` component diagram).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub synthesized: bool,
 }
 
 /// Root structure of an `.idmap.json` file.
@@ -114,6 +123,7 @@ fn comp_model_to_idmap(
         let entry = IdMapEntry {
             alias,
             id: comp.id.clone(),
+            ..Default::default()
         };
         if is_define {
             defines.push(entry);
@@ -192,6 +202,7 @@ fn class_model_to_idmap(model: &ClassDiagram, source: &str) -> IdMapFile {
             defines.push(IdMapEntry {
                 alias: entity.name.clone(),
                 id: entity.id.clone(),
+                ..Default::default()
             });
             if let Some(ns) = entity.enclosing_namespace_id.as_deref() {
                 namespaces_with_defined_child.insert(ns);
@@ -203,6 +214,7 @@ fn class_model_to_idmap(model: &ClassDiagram, source: &str) -> IdMapFile {
             references.push(IdMapEntry {
                 alias: entity.name.clone(),
                 id: entity.id.clone(),
+                ..Default::default()
             });
         }
     }
@@ -223,6 +235,15 @@ fn class_model_to_idmap(model: &ClassDiagram, source: &str) -> IdMapFile {
     // a tied co-definer and turn every real link to this namespace ambiguous.
     // The alias is the namespace's own (last) path segment, matching how a
     // leaf component/participant's bare alias is derived.
+    //
+    // Marked `synthesized: true` so `clickable_plantuml` can tell this
+    // incidental, per-file namespace define apart from a diagram whose actual
+    // purpose is to elaborate that element (e.g. its `static` component
+    // diagram). Several unrelated class diagrams routinely nest their
+    // entities under the same shared namespace purely to reflect FQN
+    // containment; without this flag every one of them would tie as a
+    // co-definer of that namespace and the real elaboration site would never
+    // win, silently breaking the link.
     for &ns in &namespaces_with_defined_child {
         if define_ids.contains(ns) || reference_ids.contains(ns) {
             // An actual entity already owns this id; don't shadow it with a
@@ -234,6 +255,7 @@ fn class_model_to_idmap(model: &ClassDiagram, source: &str) -> IdMapFile {
         defines.push(IdMapEntry {
             alias,
             id: ns.to_string(),
+            synthesized: true,
         });
     }
 
@@ -273,6 +295,7 @@ fn class_model_to_idmap(model: &ClassDiagram, source: &str) -> IdMapFile {
             references.push(IdMapEntry {
                 alias,
                 id: endpoint.clone(),
+                ..Default::default()
             });
         }
     }
@@ -304,6 +327,7 @@ fn sequence_model_to_idmap(model: &SequenceTree, source: &str) -> IdMapFile {
         .map(|name| IdMapEntry {
             alias: name.clone(),
             id: name,
+            ..Default::default()
         })
         .collect();
     references.sort_by(|a, b| a.id.cmp(&b.id));
@@ -358,6 +382,7 @@ fn fta_model_to_idmap(model: &FtaModel, source: &str) -> IdMapFile {
                 defines.push(IdMapEntry {
                     alias: node.alias.clone(),
                     id: node.alias.clone(),
+                    ..Default::default()
                 });
             }
             NodeKind::Gate if node.gate_kind == Some(GateKind::TransferIn) => {
@@ -372,6 +397,7 @@ fn fta_model_to_idmap(model: &FtaModel, source: &str) -> IdMapFile {
                 references.push(IdMapEntry {
                     alias: node.alias.clone(),
                     id: node.alias.clone(),
+                    ..Default::default()
                 });
             }
             _ => {} // BasicEvent, IntermediateEvent, $AndGate/$OrGate — internal, no link.
