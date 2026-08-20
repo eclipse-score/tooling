@@ -1,0 +1,54 @@
+{
+  "relation_interface_required_to_component_alias_starts_with_l.puml": {
+    "Pkg": {
+      "id": "Pkg",
+      "name": "Pkg",
+      "alias": "Pkg",
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
+    },
+    "Pkg.latst_": {
+      "id": "Pkg.latst_",
+      "name": "Labeled",
+      "alias": "latst_",
+      "parent_id": "Pkg",
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 17
+      }
+    },
+    "Pkg.A": {
+      "id": "Pkg.A",
+      "name": "A",
+      "alias": "A",
+      "parent_id": "Pkg",
+      "comp_type": "Component",
+      "stereotype": "component",
+      "relations": [
+        {
+          "target": "Pkg.latst_",
+          "annotation": "requires",
+          "relation_type": "InterfaceBinding",
+          "source_role": "Required",
+          "source_location": {
+            "file": "",
+            "line": 20
+          }
+        }
+      ],
+      "source_location": {
+        "file": "",
+        "line": 18
+      }
+    }
+  }
+}

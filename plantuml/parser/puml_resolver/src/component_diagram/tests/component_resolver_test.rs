@@ -205,6 +205,46 @@ fn test_relation_interface_required_to_component() {
 }
 
 #[test]
+fn test_relation_interface_required_to_component_alias_starts_with_l() {
+    run_component_resolver_case("relation_interface_required_to_component_alias_starts_with_l");
+}
+
+#[test]
+fn test_relation_alias_starts_with_l_no_decor() {
+    run_component_resolver_case("relation_alias_starts_with_l_no_decor");
+}
+
+#[test]
+fn test_relation_alias_starts_with_u_no_decor() {
+    run_component_resolver_case("relation_alias_starts_with_u_no_decor");
+}
+
+#[test]
+fn test_relation_alias_starts_with_r_no_decor() {
+    run_component_resolver_case("relation_alias_starts_with_r_no_decor");
+}
+
+#[test]
+fn test_relation_alias_starts_with_d_no_decor() {
+    run_component_resolver_case("relation_alias_starts_with_d_no_decor");
+}
+
+#[test]
+fn test_relation_alias_starts_with_ri_no_decor() {
+    run_component_resolver_case("relation_alias_starts_with_ri_no_decor");
+}
+
+#[test]
+fn test_relation_alias_starts_with_right_no_decor() {
+    run_component_resolver_case("relation_alias_starts_with_right_no_decor");
+}
+
+#[test]
+fn test_relation_source_alias_starts_with_l_no_decor() {
+    run_component_resolver_case("relation_source_alias_starts_with_l_no_decor");
+}
+
+#[test]
 fn test_relation_interface_provided_to_component() {
     run_component_resolver_case("relation_interface_provided_to_component");
 }
