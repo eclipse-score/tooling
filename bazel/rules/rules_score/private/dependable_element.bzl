@@ -958,12 +958,6 @@ def _dependable_element_index_impl(ctx):
     output_files.append(arch_json)
     output_files.extend(validation_output_files)
 
-    unit_validation_output_files = []
-    for unit_target in all_units.values():
-        unit_validation_output_files.append(
-            _symlink_validation_log(ctx, unit_target[UnitInfo].validation_log),
-        )
-
     # =========================================================================
     # Safety Certification Validation: certified scope and integrity level checks
     # =========================================================================
@@ -1481,7 +1475,7 @@ def _dependable_element_index_impl(ctx):
             own_aou_lobster = own_aou_lobster_depset,
             chain_forwarded_lobster = chain_forwarded_lobster_depset,
         ),
-        OutputGroupInfo(debug = depset(validation_output_files + unit_validation_output_files)),
+        OutputGroupInfo(debug = depset(validation_output_files)),
     ]
 
 def _dependable_element_index_attrs():
@@ -1662,22 +1656,12 @@ def _dependable_element_impl(ctx):
     if lobster_info.lobster_html_report:
         lobster_default_files.append(lobster_info.lobster_html_report)
 
-    # Force this element's own units' design-vs-implementation validation to
-    # run whenever "<name>" itself is built/tested — kept out of the index's
-    # sphinx_module srcs (see _dependable_element_index_impl) so that
-    # downstream modules merely consuming "<name>_doc" via `deps` for HTML
-    # merging don't also re-trigger it under their own build configuration.
-    unit_validation_files = index_dep[OutputGroupInfo].debug.to_list()
-
     return [
         # DefaultInfo: lobster report file(s) + Sphinx HTML docs so that
         # ``bazel build <name>`` produces exactly the final user-facing outputs.
         DefaultInfo(
             executable = test_executable,
-            files = depset(
-                lobster_default_files + unit_validation_files,
-                transitive = [sphinx_dep[DefaultInfo].files],
-            ),
+            files = depset(lobster_default_files, transitive = [sphinx_dep[DefaultInfo].files]),
             runfiles = runfiles,
         ),
         # Sphinx docs providers: forwarded from sphinx_module so callers can use
