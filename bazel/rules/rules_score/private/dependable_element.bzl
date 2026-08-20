@@ -1417,6 +1417,8 @@ def _dependable_element_index_impl(ctx):
             inputs = [lobster_report_file],
             outputs = [lobster_rst_dir],
             arguments = [rst_args],
+            env = {"GRAPHVIZ_DOT": ctx.executable._graphviz.path},
+            tools = [ctx.attr._graphviz.files_to_run],
             progress_message = "lobster-rst-report (pages) {}".format(ctx.label.name),
         )
 
@@ -1571,6 +1573,12 @@ def _dependable_element_index_attrs():
             executable = True,
             cfg = "exec",
             doc = "Lobster RST report tool for generating the multi-page Sphinx traceability report.",
+        ),
+        "_graphviz": attr.label(
+            default = Label("//third_party/docs_runtime:dot"),
+            executable = True,
+            cfg = "exec",
+            doc = "Hermetic Graphviz dot passed as GRAPHVIZ_DOT to lobster_rst_report so the tracing-policy diagram is rendered without a host-installed dot.",
         ),
         "_aou_forwarding_tool": attr.label(
             default = Label("//bazel/rules/rules_score:aou_forwarding_to_lobster"),

@@ -143,6 +143,45 @@ prepare_sysroot = rule(
     """,
 )
 
+def _extract_sysroot_impl(ctx):
+    if len(ctx.files.sysroot) != 1:
+        fail("sysroot '{}' must provide exactly one archive file".format(ctx.attr.sysroot.label))
+
+    sysroot_archive = ctx.files.sysroot[0]
+    bsdtar = ctx.toolchains[_TAR_TOOLCHAIN_TYPE]
+    sysroot = ctx.actions.declare_directory(ctx.label.name + "_sysroot")
+
+    ctx.actions.run_shell(
+        inputs = [sysroot_archive],
+        outputs = [sysroot],
+        tools = [bsdtar.default.files],
+        command = "set -eu\n" + _extract_and_clean(
+            bsdtar.tarinfo.binary.path,
+            sysroot_archive.path,
+            sysroot.path,
+        ),
+        mnemonic = "ExtractSysroot",
+        progress_message = "Extracting sysroot %s" % ctx.label.name,
+    )
+
+    return [DefaultInfo(
+        files = depset([sysroot]),
+        runfiles = ctx.runfiles(files = [sysroot]),
+    )]
+
+extract_sysroot = rule(
+    implementation = _extract_sysroot_impl,
+    attrs = {
+        "sysroot": attr.label(
+            mandatory = True,
+            allow_single_file = True,
+            doc = "Sysroot archive to extract into a runfiles directory.",
+        ),
+    },
+    toolchains = [_TAR_TOOLCHAIN_TYPE],
+    doc = "Extracts a sysroot archive as a runfiles TreeArtifact.",
+)
+
 def _exec_in_sysroot_impl(ctx):
     if len(ctx.files.sysroot) != 1:
         fail("sysroot '{}' must provide exactly one archive file".format(ctx.attr.sysroot.label))

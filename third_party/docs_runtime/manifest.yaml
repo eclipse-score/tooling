@@ -23,4 +23,7 @@ archs:
 packages:
   - base-files
   - fakechroot
+  - fontconfig
+  - fontconfig-config
+  - fonts-dejavu
   - graphviz
