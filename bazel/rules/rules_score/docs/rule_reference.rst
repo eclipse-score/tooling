@@ -390,15 +390,16 @@ Example glossary source (``.rst``):
 architectural_design
 ~~~~~~~~~~~~~~~~~~~~
 
-Bundles static, dynamic, public-API, and internal-API architecture views into a
-single target. Provides ``ArchitecturalDesignInfo`` consumed by ``dependable_element``
-and ``fmea``.
+Bundles static, dynamic, static-view, public-API, and internal-API architecture
+views into a single target. Provides ``ArchitecturalDesignInfo`` consumed by
+``dependable_element`` and ``fmea``.
 
 .. code-block:: python
 
    architectural_design(
        name         = "arch",
        static       = ["docs/static_design.puml"],
+       static_view  = ["docs/subsystem_view.puml"],
        dynamic      = ["docs/sequence.puml"],
        public_api   = ["docs/public_api.puml"],
        internal_api = ["docs/internal_api.puml"],
@@ -420,6 +421,10 @@ and ``fmea``.
      - label list
      - no
      - Static-view files (``.puml``, ``.rst``, ``.md``, ``.svg``, ``.png``) (default ``[]``)
+   * - ``static_view``
+     - label list
+     - no
+     - Component diagrams (``.puml``, ``.plantuml``) that present a partial view of the static architecture. These can be used to create smaller diagrams which highlight a subset of all components / units to improve readability / understandability. Components and units defined in a static view must also be defined under the same parent in ``static`` (default ``[]``)
    * - ``dynamic``
      - label list
      - no
