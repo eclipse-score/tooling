@@ -286,6 +286,17 @@ matching definition in another — and are wired up the same way:
   `package_pub.PublicInterface`. See `public_api_example_lib` and
   `public_api_example_link_rendered_test` in
   [`bazel/rules/rules_score/test/BUILD`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/BUILD).
+- **Interface in a `static_view` diagram links to the public API** — a
+  `static_view` diagram (a component diagram passed via
+  architectural_design's `static_view` attribute — a partial/subset view of
+  the static architecture, parsed identically to `static`) is scanned for
+  `*.idmap.json` sidecars exactly like every other architectural view, so an
+  interface bound in it is clickable the same way as one in `static`:
+  `static_view_overview.puml` shows a unit bound to `SvInterface` via a `-(`
+  port, and `static_view_detail.puml` (passed via `public_api`) defines it.
+  Both share the FQN `package_sv.SvInterface`. See `static_view_example_lib`
+  and `static_view_example_link_rendered_test` in
+  [`bazel/rules/rules_score/test/BUILD`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/BUILD).
 - **Static architecture unit links to its class diagram** —
   `unit_overview.puml` (a component diagram) shows `unit_one` as a leaf unit
   (no children, so a reference), and `unit_class_detail.puml` (a class
