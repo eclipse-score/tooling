@@ -23,7 +23,7 @@ to produce FlatBuffers binary representations of the parsed diagrams.
 """
 
 load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:puml_utils.bzl", "make_puml_rst_wrappers")
+load("//bazel/rules/rules_score/private:puml_utils.bzl", "make_puml_rst_navigation")
 load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
@@ -111,9 +111,8 @@ def _parse_puml_diagrams(ctx, files):
 def _colocate_puml_with_wrapper(ctx, puml_files, output_dir):
     """Symlink .puml/.plantuml sources next to their generated RST wrapper.
 
-    make_puml_rst_wrappers() declares each wrapper at
-    "{output_dir}/{stem}.rst" (output_dir is this target's ctx.label.name)
-    and embeds the diagram via a same-directory sibling reference
+    make_puml_rst_navigation() declares each wrapper below the source diagram's
+    relative directory and embeds the diagram via a same-directory sibling reference
     (``.. uml:: {basename}``). The .puml source itself, however, usually
     lives directly in this target's package -- one directory above
     `output_dir` -- not nested under it. When dependable_element.bzl later
@@ -132,8 +131,8 @@ def _colocate_puml_with_wrapper(ctx, puml_files, output_dir):
         ctx: Rule context.
         puml_files: Iterable of File objects; non-.puml/.plantuml files are
             passed through unchanged.
-        output_dir: String prefix matching the one passed to
-            make_puml_rst_wrappers() (typically ctx.label.name).
+            output_dir: String prefix matching the one passed to
+                make_puml_rst_navigation() (typically ctx.label.name).
 
     Returns:
         List of File objects with .puml/.plantuml entries replaced by
@@ -144,8 +143,12 @@ def _colocate_puml_with_wrapper(ctx, puml_files, output_dir):
         if f.extension not in ("puml", "plantuml"):
             colocated.append(f)
             continue
+        relative_path = f.short_path
+        package_prefix = ctx.label.package + "/" if ctx.label.package else ""
+        if relative_path.startswith(package_prefix):
+            relative_path = relative_path[len(package_prefix):]
         copy = ctx.actions.declare_file(
-            "{}/{}".format(output_dir, f.basename),
+            "{}/{}".format(output_dir, relative_path),
         )
         ctx.actions.symlink(output = copy, target_file = f)
         colocated.append(copy)
@@ -243,9 +246,10 @@ def _architectural_design_impl(ctx):
         transitive = [all_idmap_files, all_source_files],
     )
 
-    # Generate a thin RST wrapper for every .puml diagram so it appears as a
-    # toctree entry in the dependable_element index.
-    rst_wrappers = make_puml_rst_wrappers(
+    # Generate path-preserving wrappers and directory index pages. The root
+    # index is the only direct entry in the dependable_element index; nested
+    # indexes and wrappers are reached through its toctrees.
+    navigation = make_puml_rst_navigation(
         ctx,
         ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api + ctx.files.static_view,
         ctx.label.name,
@@ -261,7 +265,9 @@ def _architectural_design_impl(ctx):
         static_view_fbs_list,
     )
 
-    sphinx_srcs = depset(rst_wrappers, transitive = [sphinx_files])
+    sphinx_srcs = depset([navigation.root_index])
+    sphinx_aux_srcs = depset(navigation.wrappers + navigation.indexes)
+    sphinx_deps = depset(transitive = [sphinx_files, sphinx_srcs, sphinx_aux_srcs])
 
     return [
         DefaultInfo(files = depset([validation_log.file], transitive = [all_source_files])),
@@ -278,8 +284,8 @@ def _architectural_design_impl(ctx):
         # Source diagram files + *.idmap.json sidecars for the sphinx documentation build
         SphinxSourcesInfo(
             srcs = sphinx_srcs,
-            deps = sphinx_srcs,
-            aux_srcs = depset(),
+            deps = sphinx_deps,
+            aux_srcs = sphinx_aux_srcs,
         ),
     ]
 
