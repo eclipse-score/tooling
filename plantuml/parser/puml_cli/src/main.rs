@@ -118,6 +118,17 @@ struct Args {
     #[arg(long)]
     idmap_output_dir: Option<String>,
 
+    /// Mark every generated idmap's `defines` as unusable by
+    /// `clickable_plantuml` for resolving other diagrams' references (see
+    /// `IdMapFile::excluded_from_definitions`). Set this when parsing
+    /// diagrams that are only a partial/subset view of the true
+    /// architecture — e.g. `architectural_design()`'s `static_view`
+    /// attribute — so such diagrams are never treated as the elaboration
+    /// site of the components/units they show. This diagram's own
+    /// `references` still resolve normally.
+    #[arg(long, default_value_t = false)]
+    exclude_from_definitions: bool,
+
     /// Only meaningful for a single resolved diagram: requires exactly one
     /// input file (a single `--file`, no `--folders`) and cannot be combined
     /// with `--fta-output-dir` (which always processes a batch of files).
@@ -229,7 +240,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     debug!("Parsing started");
     for (path, content) in &preprocessed_files {
-        let parsed_content = parse_puml_file(path, content, log_level, args.diagram_type)
+        let source_path = args
+            .source_name
+            .as_ref()
+            .map(|name| Rc::new(PathBuf::from(name)))
+            .unwrap_or_else(|| Rc::clone(path));
+        let parsed_content = parse_puml_file(&source_path, content, log_level, args.diagram_type)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
         if emit_debug_json {
             if let Some(ref dir) = fbs_output_dir {
@@ -296,10 +312,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                                 Some(&source_file),
                                 diagram_name.as_deref(),
                                 idir,
+                                args.exclude_from_definitions,
                             )?;
                         }
                         None => {
-                            write_empty_idmap_to_file(path, Some(&source_file), idir)?;
+                            write_empty_idmap_to_file(
+                                path,
+                                Some(&source_file),
+                                idir,
+                                args.exclude_from_definitions,
+                            )?;
                         }
                     }
                 }
@@ -402,6 +424,7 @@ fn run_fta(
                 Some(&source_file),
                 None,
                 &idir,
+                args.exclude_from_definitions,
             )?;
         }
 
@@ -989,7 +1012,7 @@ mod idmap_wiring_tests {
         // Mirror the CLI dispatch for the Activity arm.
         let dir = unique_dir("activity");
         let source_file = source_path_for_output(&path);
-        let output = write_empty_idmap_to_file(&path, Some(&source_file), &dir)
+        let output = write_empty_idmap_to_file(&path, Some(&source_file), &dir, false)
             .expect("empty idmap must be written");
 
         assert_eq!(
@@ -1044,7 +1067,7 @@ mod idmap_wiring_tests {
 
         let dir = unique_dir("component");
         let source_file = source_path_for_output(&path);
-        let output = write_idmap_to_file(idmap_model, &path, Some(&source_file), None, &dir)
+        let output = write_idmap_to_file(idmap_model, &path, Some(&source_file), None, &dir, false)
             .expect("component idmap must be written");
 
         assert_eq!(
@@ -1075,7 +1098,7 @@ mod idmap_wiring_tests {
 
         let dir = unique_dir("class");
         let source_file = source_path_for_output(&path);
-        let output = write_idmap_to_file(idmap_model, &path, Some(&source_file), None, &dir)
+        let output = write_idmap_to_file(idmap_model, &path, Some(&source_file), None, &dir, false)
             .expect("class idmap must be written");
 
         assert_eq!(
@@ -1107,7 +1130,7 @@ mod idmap_wiring_tests {
 
         let dir = unique_dir("sequence");
         let source_file = source_path_for_output(&path);
-        let output = write_idmap_to_file(idmap_model, &path, Some(&source_file), None, &dir)
+        let output = write_idmap_to_file(idmap_model, &path, Some(&source_file), None, &dir, false)
             .expect("sequence idmap must be written");
 
         assert_eq!(
@@ -1186,6 +1209,7 @@ mod idmap_wiring_tests {
             Some(&source_path_for_output(&component_path)),
             None,
             &dir,
+            false,
         )
         .expect("component idmap must be written");
         let class_output = write_idmap_to_file(
@@ -1194,6 +1218,7 @@ mod idmap_wiring_tests {
             Some(&source_path_for_output(&class_path)),
             None,
             &dir,
+            false,
         )
         .expect("class idmap must be written");
 

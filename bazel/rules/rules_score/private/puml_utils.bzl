@@ -26,11 +26,15 @@ def _directory_title(directory):
         return "Architectural Design"
     return directory.split("/")[-1].replace("_", " ").title()
 
-def make_puml_rst_navigation(ctx, puml_files, output_dir, template, strip_prefix = "", filename_prefix = ""):
+def make_puml_rst_navigation(ctx, puml_files, output_dir, template, strip_prefix = "", filename_prefix = "", stems = None):
     """Generate PlantUML wrapper pages and indexes matching source directories.
 
     The wrapper embeds the diagram via ``.. uml::`` so it appears as a
     proper toctree entry while keeping the source ``.puml`` file separate.
+
+    When disambiguated stems are provided (for collision handling), the stems
+    are used in place of plain basenames while preserving the source directory
+    structure for navigation and sidebar visibility.
 
     Args:
         ctx:             Rule context.
@@ -44,6 +48,13 @@ def make_puml_rst_navigation(ctx, puml_files, output_dir, template, strip_prefix
                          the human-readable title (e.g. ``"fta_"``).
         filename_prefix: Optional prefix prepended to the output RST filename
                          stem (e.g. ``"detail_"``).
+        stems:           Optional dict from File.path to a precomputed unique
+                         stem (see architectural_design.bzl's
+                         _disambiguated_stems), used instead of the plain
+                         basename stem for both the output filename and the
+                         embedded ``.. uml::`` reference -- needed when the
+                         diagram was colocated under a disambiguated name to
+                         avoid colliding with a same-named diagram elsewhere.
 
     Returns:
         Struct containing ``wrappers``, ``indexes``, and ``root_index``.
@@ -58,21 +69,29 @@ def make_puml_rst_navigation(ctx, puml_files, output_dir, template, strip_prefix
         relative_directory = paths.dirname(relative_path)
         if relative_directory == ".":
             relative_directory = ""
-        stem = paths.basename(relative_path)[:-(len(f.extension) + 1)]
-        if strip_prefix and stem.startswith(strip_prefix):
-            stem = stem[len(strip_prefix):]
-        title = stem.replace("_", " ").title()
+
+        # Use disambiguated stem for generated filenames, but keep the title
+        # based on the source basename so the sidebar does not show a path.
+        source_stem = paths.basename(relative_path)[:-(len(f.extension) + 1)]
+        stem = stems[f.path] if stems else source_stem
+        title = source_stem
+        if strip_prefix and title.startswith(strip_prefix):
+            title = title[len(strip_prefix):]
+        title = title.replace("_", " ").title()
         wrapper_relative_path = paths.join(relative_directory, filename_prefix + stem + ".rst")
         wrapper = ctx.actions.declare_file(
             "{}/{}".format(output_dir, wrapper_relative_path),
         )
+
+        # For the embedded diagram filename, use disambiguated stem if available
+        basename = "{}.{}".format(stems[f.path], f.extension) if stems else f.basename
         ctx.actions.expand_template(
             template = template,
             output = wrapper,
             substitutions = {
                 "{title}": title,
                 "{underline}": "=" * len(title),
-                "{basename}": f.basename,
+                "{basename}": basename,
             },
         )
         wrappers.append(wrapper)

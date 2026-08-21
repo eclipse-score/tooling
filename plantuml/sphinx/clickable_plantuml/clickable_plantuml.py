@@ -333,6 +333,16 @@ def _load_idmap_files(
             )
         idmap_by_source[source_key] = data
 
+        # Diagrams marked `excluded_from_definitions` (e.g. an
+        # architectural_design() `static_view` diagram — a partial/subset
+        # view of the `static` architecture) never elaborate anything for
+        # linking purposes: their `defines` must not enter the global index,
+        # so a reference elsewhere can only ever resolve to the diagram that
+        # actually defines the element (in `static`). The diagram's own
+        # `references` are unaffected and still resolve normally below.
+        if data.get("excluded_from_definitions", False):
+            continue
+
         for entry in data.get("defines", []):
             alias = entry.get("alias", "")
             fqn = entry.get("id", "")

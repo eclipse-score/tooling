@@ -31,13 +31,50 @@ load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_l
 # Private Rule Implementation
 # ============================================================================
 
-def _run_puml_parser(ctx, puml_file):
+def _disambiguated_stems(files):
+    """Compute a unique output stem (no directory, no extension) for every
+    .puml/.plantuml file in `files`.
+
+    All diagrams of one architectural_design target share a flat output
+    directory (keyed by ctx.label.name), so two files with the same
+    basename but different source directories (e.g. two `for_impl_apis.puml`
+    files under different subpackages) would otherwise collide on the same
+    generated output path. When a basename is unique, the plain stem is kept
+    unchanged (preserving existing filenames/titles); only colliding
+    basenames are disambiguated, using the file's package-relative directory.
+
+    Args:
+        files: Iterable of File objects (non-.puml/.plantuml entries ignored).
+    Returns:
+        Dict from File.path to a unique stem string.
+    """
+    puml_files = [f for f in files if f.extension in ("puml", "plantuml")]
+    basename_counts = {}
+    for f in puml_files:
+        basename_counts[f.basename] = basename_counts.get(f.basename, 0) + 1
+
+    stems = {}
+    for f in puml_files:
+        stem = f.basename.rsplit(".", 1)[0]
+        if basename_counts[f.basename] > 1:
+            dir_part = f.short_path.rsplit("/", 1)[0] if "/" in f.short_path else ""
+            stem = "{}__{}".format(dir_part.replace("/", "_"), stem)
+        stems[f.path] = stem
+    return stems
+
+def _run_puml_parser(ctx, puml_file, file_stem, exclude_from_definitions = False):
     """Run the PlantUML parser on a single .puml file to produce a FlatBuffers binary,
     a lobster traceability file, and an idmap sidecar.
 
     The diagram type is auto-detected by the parser and encoded in the
     FlatBuffers schema (each diagram type uses its own root_type).
     Lobster output is produced in-process for component diagrams.
+
+    When the input file basename is not unique across all diagrams being
+    parsed by this target (see _disambiguated_stems), a symlink with a
+    disambiguated name is created and passed to puml_cli. This ensures
+    puml_cli produces outputs with unique names even when two source
+    diagrams share the same basename but live in different directories.
 
     ``--source-name`` is passed as ``puml_file.short_path`` so the ``source``
     field embedded in the fbs/lobster/idmap outputs is a stable,
@@ -51,10 +88,15 @@ def _run_puml_parser(ctx, puml_file):
     Args:
         ctx: Rule context
         puml_file: The .puml File object to parse
+        file_stem: Unique output stem for this file (see _disambiguated_stems).
+        exclude_from_definitions: When True, passes ``--exclude-from-definitions``
+            so this diagram's ``defines`` are never used by `clickable_plantuml`
+            to resolve another diagram's reference (used for `static_view`
+            diagrams, which are only a partial/subset view of `static`).
     Returns:
         Tuple of (fbs_output, lobster_output, idmap_output) declared output Files.
     """
-    file_stem = puml_file.basename.rsplit(".", 1)[0]
+    ext = puml_file.extension
     fbs_output = ctx.actions.declare_file(
         "{}/{}.fbs.bin".format(ctx.label.name, file_stem),
     )
@@ -65,35 +107,50 @@ def _run_puml_parser(ctx, puml_file):
         "{}/{}.idmap.json".format(ctx.label.name, file_stem),
     )
 
+    # Create a symlink to the input file with the disambiguated name so that
+    # puml_cli's output filenames (which are based on input basename) match
+    # the declared output files.
+    input_symlink = ctx.actions.declare_file(
+        "_puml_inputs/{}.{}".format(file_stem, ext),
+    )
+    ctx.actions.symlink(output = input_symlink, target_file = puml_file)
+
+    arguments = [
+        "--file",
+        input_symlink.path,
+        "--fbs-output-dir",
+        fbs_output.dirname,
+        "--lobster-output-dir",
+        lobster_output.dirname,
+        "--idmap-output-dir",
+        idmap_output.dirname,
+        "--source-name",
+        puml_file.short_path,
+        "--log-level",
+        get_log_level(ctx),
+    ]
+    if exclude_from_definitions:
+        arguments.append("--exclude-from-definitions")
+
     ctx.actions.run(
-        inputs = [puml_file],
+        inputs = [input_symlink],
         outputs = [fbs_output, lobster_output, idmap_output],
         executable = ctx.executable._puml_parser,
-        arguments = [
-            "--file",
-            puml_file.path,
-            "--fbs-output-dir",
-            fbs_output.dirname,
-            "--lobster-output-dir",
-            lobster_output.dirname,
-            "--idmap-output-dir",
-            idmap_output.dirname,
-            "--source-name",
-            puml_file.short_path,
-            "--log-level",
-            get_log_level(ctx),
-        ],
+        arguments = arguments,
         progress_message = "Parsing PlantUML diagram: %s" % puml_file.short_path,
     )
 
     return fbs_output, lobster_output, idmap_output
 
-def _parse_puml_diagrams(ctx, files):
+def _parse_puml_diagrams(ctx, files, stems, exclude_from_definitions = False):
     """Run the PlantUML parser on all .puml/.plantuml files in a list.
 
     Args:
         ctx: Rule context
         files: List of File objects
+        stems: Dict from File.path to unique output stem (see _disambiguated_stems).
+        exclude_from_definitions: Forwarded to `_run_puml_parser` for every file
+            (see there); set for `static_view` diagrams.
     Returns:
         Tuple of (fbs_outputs, lobster_outputs, idmap_outputs) lists of generated Files.
     """
@@ -102,13 +159,13 @@ def _parse_puml_diagrams(ctx, files):
     idmap_outputs = []
     for f in files:
         if f.extension in ("puml", "plantuml"):
-            fbs, lobster, idmap = _run_puml_parser(ctx, f)
+            fbs, lobster, idmap = _run_puml_parser(ctx, f, stems[f.path], exclude_from_definitions)
             fbs_outputs.append(fbs)
             lobster_outputs.append(lobster)
             idmap_outputs.append(idmap)
     return fbs_outputs, lobster_outputs, idmap_outputs
 
-def _colocate_puml_with_wrapper(ctx, puml_files, output_dir):
+def _colocate_puml_with_wrapper(ctx, puml_files, output_dir, stems):
     """Symlink .puml/.plantuml sources next to their generated RST wrapper.
 
     make_puml_rst_navigation() declares each wrapper below the source diagram's
@@ -131,8 +188,12 @@ def _colocate_puml_with_wrapper(ctx, puml_files, output_dir):
         ctx: Rule context.
         puml_files: Iterable of File objects; non-.puml/.plantuml files are
             passed through unchanged.
-            output_dir: String prefix matching the one passed to
+        output_dir: String prefix matching the one passed to
                 make_puml_rst_navigation() (typically ctx.label.name).
+        stems: Dict from File.path to unique output stem (see
+            _disambiguated_stems), used instead of the plain basename so
+            files sharing a basename don't collide once flattened into
+            `output_dir`.
 
     Returns:
         List of File objects with .puml/.plantuml entries replaced by
@@ -147,9 +208,17 @@ def _colocate_puml_with_wrapper(ctx, puml_files, output_dir):
         package_prefix = ctx.label.package + "/" if ctx.label.package else ""
         if relative_path.startswith(package_prefix):
             relative_path = relative_path[len(package_prefix):]
-        copy = ctx.actions.declare_file(
-            "{}/{}".format(output_dir, relative_path),
-        )
+
+        # Preserve directory structure for sidebar visibility, but use
+        # disambiguated stem to avoid collisions when multiple files share
+        # the same basename.
+        relative_dir = relative_path.rsplit("/", 1)[0] if "/" in relative_path else ""
+        if relative_dir:
+            output_path = "{}/{}/{}.{}".format(output_dir, relative_dir, stems[f.path], f.extension)
+        else:
+            output_path = "{}/{}.{}".format(output_dir, stems[f.path], f.extension)
+
+        copy = ctx.actions.declare_file(output_path)
         ctx.actions.symlink(output = copy, target_file = f)
         colocated.append(copy)
     return colocated
@@ -203,13 +272,20 @@ def _architectural_design_impl(ctx):
         List of providers including DefaultInfo, ArchitecturalDesignInfo, SphinxSourcesInfo
     """
 
+    # All diagrams of this target share a flat output directory, so compute
+    # unique stems once across every view before parsing/colocating any of
+    # them (see _disambiguated_stems). Non-.puml/.plantuml files are ignored
+    # by _disambiguated_stems and pass through unaffected.
+    all_view_files = ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api + ctx.files.static_view
+    stems = _disambiguated_stems(all_view_files)
+
     # Parse each architectural view separately so each provider field carries
     # the flatbuffers for its own category.
-    static_fbs_list, static_lobster_list, static_idmap_list = _parse_puml_diagrams(ctx, ctx.files.static)
-    dynamic_fbs_list, dynamic_lobster_list, dynamic_idmap_list = _parse_puml_diagrams(ctx, ctx.files.dynamic)
-    public_api_fbs_list, public_api_lobster_list, public_api_idmap_list = _parse_puml_diagrams(ctx, ctx.files.public_api)
-    internal_api_fbs_list, _internal_api_lobster_list, internal_api_idmap_list = _parse_puml_diagrams(ctx, ctx.files.internal_api)
-    static_view_fbs_list, _static_view_lobster_list, static_view_idmap_list = _parse_puml_diagrams(ctx, ctx.files.static_view)
+    static_fbs_list, static_lobster_list, static_idmap_list = _parse_puml_diagrams(ctx, ctx.files.static, stems)
+    dynamic_fbs_list, dynamic_lobster_list, dynamic_idmap_list = _parse_puml_diagrams(ctx, ctx.files.dynamic, stems)
+    public_api_fbs_list, public_api_lobster_list, public_api_idmap_list = _parse_puml_diagrams(ctx, ctx.files.public_api, stems)
+    internal_api_fbs_list, _internal_api_lobster_list, internal_api_idmap_list = _parse_puml_diagrams(ctx, ctx.files.internal_api, stems)
+    static_view_fbs_list, _static_view_lobster_list, static_view_idmap_list = _parse_puml_diagrams(ctx, ctx.files.static_view, stems, exclude_from_definitions = True)
 
     static_fbs = depset(static_fbs_list)
     dynamic_fbs = depset(dynamic_fbs_list)
@@ -225,11 +301,11 @@ def _architectural_design_impl(ctx):
     # dependable_element.bzl stages these files for the HTML build.
     all_source_files = depset(
         transitive = [
-            depset(_colocate_puml_with_wrapper(ctx, ctx.files.static, ctx.label.name)),
-            depset(_colocate_puml_with_wrapper(ctx, ctx.files.dynamic, ctx.label.name)),
-            depset(_colocate_puml_with_wrapper(ctx, ctx.files.public_api, ctx.label.name)),
-            depset(_colocate_puml_with_wrapper(ctx, ctx.files.internal_api, ctx.label.name)),
-            depset(_colocate_puml_with_wrapper(ctx, ctx.files.static_view, ctx.label.name)),
+            depset(_colocate_puml_with_wrapper(ctx, ctx.files.static, ctx.label.name, stems)),
+            depset(_colocate_puml_with_wrapper(ctx, ctx.files.dynamic, ctx.label.name, stems)),
+            depset(_colocate_puml_with_wrapper(ctx, ctx.files.public_api, ctx.label.name, stems)),
+            depset(_colocate_puml_with_wrapper(ctx, ctx.files.internal_api, ctx.label.name, stems)),
+            depset(_colocate_puml_with_wrapper(ctx, ctx.files.static_view, ctx.label.name, stems)),
         ],
     )
 
@@ -251,9 +327,10 @@ def _architectural_design_impl(ctx):
     # indexes and wrappers are reached through its toctrees.
     navigation = make_puml_rst_navigation(
         ctx,
-        ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api + ctx.files.static_view,
+        all_view_files,
         ctx.label.name,
         ctx.file._puml_rst_template,
+        stems = stems,
     )
 
     validation_log = _run_validation(
