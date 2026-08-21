@@ -16,7 +16,7 @@ set -euo pipefail
 index_file=""
 for rel_path in "$@"; do
     candidate="${TEST_SRCDIR}/${TEST_WORKSPACE}/${rel_path}"
-    if [[ -f "${candidate}" && "${candidate}" == */index.rst ]]; then
+    if [[ -f "${candidate}" && "${candidate}" == */seooc_test_lib_index/index.rst ]]; then
         index_file="${candidate}"
         break
     fi
