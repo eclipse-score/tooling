@@ -226,6 +226,13 @@ They are not intended to be authored manually.
 }
 ```
 
+An optional `excluded_from_definitions` boolean (set via `puml_cli
+--exclude-from-definitions`, and by `architectural_design()` automatically
+for every `static_view` diagram) marks a diagram's `defines` as unusable for
+resolving other diagrams' references — the diagram is only a partial/subset
+view of the true architecture, never its elaboration site. When absent, it
+defaults to `false`. The diagram's own `references` are unaffected.
+
 ## End-to-End Clickable Diagram Example
 
 Rather than duplicating a hand-written, untested example here, this exact
@@ -289,8 +296,10 @@ matching definition in another — and are wired up the same way:
 - **Interface in a `static_view` diagram links to the public API** — a
   `static_view` diagram (a component diagram passed via
   architectural_design's `static_view` attribute — a partial/subset view of
-  the static architecture, parsed identically to `static`) is scanned for
-  `*.idmap.json` sidecars exactly like every other architectural view, so an
+  the static architecture, parsed identically to `static` except that its
+  idmap is marked `excluded_from_definitions` so it is never treated as an
+  elaboration site) is scanned for `*.idmap.json` sidecars exactly like every
+  other architectural view, so an
   interface bound in it is clickable the same way as one in `static`:
   `static_view_overview.puml` shows a unit bound to `SvInterface` via a `-(`
   port, and `static_view_detail.puml` (passed via `public_api`) defines it.

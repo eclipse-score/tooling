@@ -58,7 +58,7 @@ pub struct IdMapEntry {
 }
 
 /// Root structure of an `.idmap.json` file.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct IdMapFile {
     /// Workspace-relative source path, e.g. `score/mw/com/proxy_detail.puml`.
     pub source: String,
@@ -66,6 +66,14 @@ pub struct IdMapFile {
     pub defines: Vec<IdMapEntry>,
     /// Elements referenced (leaf/relation endpoint) in this diagram.
     pub references: Vec<IdMapEntry>,
+    /// When `true`, this diagram's `defines` must never be used by
+    /// `clickable_plantuml` to resolve a reference from another diagram —
+    /// e.g. an `architectural_design()` `static_view` diagram, which is only
+    /// a partial/subset presentation of the `static` architecture and never
+    /// the true elaboration site of the components/units it shows. Its own
+    /// `references` still resolve normally against other diagrams' defines.
+    #[serde(default)]
+    pub excluded_from_definitions: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -149,6 +157,7 @@ fn comp_model_to_idmap(
         source: source.to_string(),
         defines,
         references,
+        ..Default::default()
     }
 }
 
@@ -307,6 +316,7 @@ fn class_model_to_idmap(model: &ClassDiagram, source: &str) -> IdMapFile {
         source: source.to_string(),
         defines,
         references,
+        ..Default::default()
     }
 }
 
@@ -336,6 +346,7 @@ fn sequence_model_to_idmap(model: &SequenceTree, source: &str) -> IdMapFile {
         source: source.to_string(),
         defines: Vec::new(),
         references,
+        ..Default::default()
     }
 }
 
@@ -345,6 +356,7 @@ fn empty_idmap(source: &str) -> IdMapFile {
         source: source.to_string(),
         defines: Vec::new(),
         references: Vec::new(),
+        ..Default::default()
     }
 }
 
@@ -411,6 +423,7 @@ fn fta_model_to_idmap(model: &FtaModel, source: &str) -> IdMapFile {
         source: source.to_string(),
         defines,
         references,
+        ..Default::default()
     }
 }
 
@@ -427,23 +440,31 @@ fn fta_model_to_idmap(model: &FtaModel, source: &str) -> IdMapFile {
 /// provided (preferred: a stable workspace-relative path such as
 /// `score/mw/com/proxy_detail.puml`), otherwise falls back to
 /// `input_path.to_string_lossy()`.
+///
+/// *excluded_from_definitions* marks the resulting idmap's `defines` as
+/// unusable by `clickable_plantuml` for resolving other diagrams' references
+/// (see [`IdMapFile::excluded_from_definitions`]) — set this for diagrams
+/// that are only a partial/subset view of the true architecture, such as an
+/// `architectural_design()` `static_view` diagram.
 pub fn write_idmap_to_file(
     model: IdMapModel<'_>,
     input_path: &Path,
     source_name: Option<&str>,
     diagram_name: Option<&str>,
     output_dir: &Path,
+    excluded_from_definitions: bool,
 ) -> io::Result<PathBuf> {
     let source = source_name
         .map(|s| s.to_string())
         .unwrap_or_else(|| input_path.to_string_lossy().into_owned());
 
-    let idmap = match model {
+    let mut idmap = match model {
         IdMapModel::Component(m) => comp_model_to_idmap(m, &source, diagram_name),
         IdMapModel::Class(m) => class_model_to_idmap(m, &source),
         IdMapModel::Sequence(m) => sequence_model_to_idmap(m, &source),
         IdMapModel::Fta(m) => fta_model_to_idmap(m, &source),
     };
+    idmap.excluded_from_definitions = excluded_from_definitions;
 
     write_idmap_json(input_path, output_dir, &idmap)
 }
@@ -454,11 +475,13 @@ pub fn write_empty_idmap_to_file(
     input_path: &Path,
     source_name: Option<&str>,
     output_dir: &Path,
+    excluded_from_definitions: bool,
 ) -> io::Result<PathBuf> {
     let source = source_name
         .map(|s| s.to_string())
         .unwrap_or_else(|| input_path.to_string_lossy().into_owned());
-    let idmap = empty_idmap(&source);
+    let mut idmap = empty_idmap(&source);
+    idmap.excluded_from_definitions = excluded_from_definitions;
 
     write_idmap_json(input_path, output_dir, &idmap)
 }
@@ -1113,6 +1136,7 @@ mod tests {
             Some("pkg/proxy.puml"),
             None,
             &dir,
+            false,
         )
         .expect("component idmap must be written");
 
@@ -1164,6 +1188,7 @@ mod tests {
             Some("pkg/classes.puml"),
             None,
             &dir,
+            false,
         )
         .expect("class idmap must be written");
 
@@ -1197,6 +1222,7 @@ mod tests {
             Some("pkg/seq.puml"),
             None,
             &dir,
+            false,
         )
         .expect("sequence idmap must be written");
 
@@ -1250,7 +1276,7 @@ mod tests {
         let dir = unique_tmp_dir("empty_writer");
         let input = Path::new("some/dir/activity.puml");
 
-        let output = write_empty_idmap_to_file(input, Some("score/activity.puml"), &dir)
+        let output = write_empty_idmap_to_file(input, Some("score/activity.puml"), &dir, false)
             .expect("empty idmap must be written");
 
         assert_eq!(
@@ -1273,12 +1299,35 @@ mod tests {
         let dir = unique_tmp_dir("empty_writer_fallback");
         let input = Path::new("rel/dir/diagram.puml");
 
-        let output =
-            write_empty_idmap_to_file(input, None, &dir).expect("empty idmap must be written");
+        let output = write_empty_idmap_to_file(input, None, &dir, false)
+            .expect("empty idmap must be written");
 
         let content = fs::read_to_string(&output).unwrap();
         let parsed: IdMapFile = serde_json::from_str(&content).unwrap();
         assert_eq!(parsed.source, "rel/dir/diagram.puml");
+
+        cleanup_tmp_dir(&dir);
+    }
+
+    #[test]
+    fn excluded_from_definitions_flag_is_written_to_disk() {
+        let dir = unique_tmp_dir("excluded_from_definitions");
+        let model = component_map(vec![component("Proxy", Some("Proxy"), None, None)]);
+        let input = Path::new("some/dir/proxy_view.puml");
+
+        let output = write_idmap_to_file(
+            IdMapModel::Component(&model),
+            input,
+            Some("pkg/proxy_view.puml"),
+            None,
+            &dir,
+            true,
+        )
+        .expect("component idmap must be written");
+
+        let parsed: IdMapFile =
+            serde_json::from_str(&fs::read_to_string(&output).unwrap()).unwrap();
+        assert!(parsed.excluded_from_definitions);
 
         cleanup_tmp_dir(&dir);
     }

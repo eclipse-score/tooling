@@ -53,6 +53,7 @@ def _write_idmap(
     source: str,
     defines: list[dict[str, str]] | None = None,
     references: list[dict[str, str]] | None = None,
+    excluded_from_definitions: bool = False,
 ) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     (directory / name).write_text(
@@ -61,6 +62,7 @@ def _write_idmap(
                 "source": source,
                 "defines": defines or [],
                 "references": references or [],
+                "excluded_from_definitions": excluded_from_definitions,
             }
         ),
         encoding="utf-8",
