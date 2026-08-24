@@ -57,6 +57,10 @@ if [[ ! -f coverage_linux/index.html ]]; then
 fi
 echo "OK: no-yaml mode works (HTML produced, raw gate enforced)"
 
+# The following sections all run, in order. Each one deletes summary.md
+# before its own generate_coverage_html invocation so a stale file from the
+# previous section cannot produce a false pass — in particular, the
+# failing-gate section must prove the file was RE-created by THAT run.
 echo "=== --summary-md must produce a markdown job summary ==="
 rm -f summary.md
 COVERAGE_THRESHOLD=10 bazel run @score_tooling//coverage:generate_coverage_html -- \

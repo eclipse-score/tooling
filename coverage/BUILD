@@ -82,6 +82,9 @@ py_library(
     deps = ["@rules_python//python/runfiles"],
 )
 
+# Import-only test helper like merger_lib/reporter_lib above: imports=[".."]
+# makes `from coverage.coverage_summary import ...` resolvable from the unit
+# tests. Only the *_lib targets carry it; the binaries are unaffected.
 py_library(
     name = "coverage_summary_lib",
     srcs = ["coverage_summary.py"],

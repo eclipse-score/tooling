@@ -65,7 +65,12 @@ def fmt_pct(pct: Optional[float]) -> str:
 
 
 def progress_bar(pct: Optional[float], width: int = BAR_WIDTH) -> str:
-    """Inline-code text progress bar, e.g. `███████░░░`."""
+    """Render a COVERAGE percentage as an inline-code bar, e.g. `███████░░░`.
+
+    Purely a visual aid next to the numeric cell so table rows can be
+    compared at a glance on the run page — it shows how much of the code is
+    covered, nothing else.
+    """
     if pct is None:
         return "—"
     filled = int(round(pct / 100.0 * width))
