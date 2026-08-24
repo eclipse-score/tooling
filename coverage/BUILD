@@ -56,6 +56,13 @@ py_binary(
     srcs = ["effective_coverage.py"],
 )
 
+# Markdown job summary (GITHUB_STEP_SUMMARY / --summary-md), invoked by
+# generate_coverage_html.sh. Stdlib only.
+py_binary(
+    name = "coverage_summary",
+    srcs = ["coverage_summary.py"],
+)
+
 sh_binary(
     name = "generate_coverage_html",
     srcs = ["generate_coverage_html.sh"],
@@ -73,6 +80,15 @@ py_library(
     srcs = ["reporter.py"],
     imports = [".."],
     deps = ["@rules_python//python/runfiles"],
+)
+
+# Import-only test helper like merger_lib/reporter_lib above: imports=[".."]
+# makes `from coverage.coverage_summary import ...` resolvable from the unit
+# tests. Only the *_lib targets carry it; the binaries are unaffected.
+py_library(
+    name = "coverage_summary_lib",
+    srcs = ["coverage_summary.py"],
+    imports = [".."],
 )
 
 # These compile time options are required to cover abnormal termination cases

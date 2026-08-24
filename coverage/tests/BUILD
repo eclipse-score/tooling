@@ -24,3 +24,9 @@ py_test(
     srcs = ["reporter_test.py"],
     deps = ["//coverage:reporter_lib"],
 )
+
+py_test(
+    name = "coverage_summary_test",
+    srcs = ["coverage_summary_test.py"],
+    deps = ["//coverage:coverage_summary_lib"],
+)

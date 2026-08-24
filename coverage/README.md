@@ -43,6 +43,7 @@ is copied from it.
 | `@score_tooling//coverage:generate_coverage_html` | Orchestration: unpacks the report, runs justifications, enforces the threshold, optionally archives. |
 | `@score_tooling//coverage:justify` | Parses the justification YAML + in-code markers into a manifest. |
 | `@score_tooling//coverage:effective_coverage` | Post-processes the HTML: restyles justified lines, computes effective coverage, detects stale justifications. |
+| `@score_tooling//coverage:coverage_summary` | Renders the markdown job summary from the LCOV data (invoked by `generate_coverage_html` for `--summary-md` / `GITHUB_STEP_SUMMARY`). |
 | `@score_tooling//coverage:enable_llvm_coverage_for_death_tests` | `cc_feature` adding `-mllvm -runtime-counter-relocation` (continuous-mode profiling for death tests). |
 
 ## Prerequisites
@@ -207,6 +208,16 @@ COVERAGE_THRESHOLD=95 bazel run @score_tooling//coverage:generate_coverage_html 
 a YAML; add one (`version: 1` + `justifications: []`) when you introduce your
 first `COV_JUSTIFIED` marker.
 
+**GitHub job summary:** inside GitHub Actions no extra flags are needed — when
+`GITHUB_STEP_SUMMARY` is set (and `--summary-md` is not given), a markdown
+summary is appended to the workflow run page automatically: overall
+line/branch/file tables with progress bars, raw-vs-effective when a
+justification YAML is in play, a per-directory rollup (worst first), and
+collapsible lists of the least-covered and exact-0% files. Outside Actions,
+pass `--summary-md <path>` to write the same summary to a file. The summary is
+emitted before the threshold gate decides the exit code, so a failing gate
+still leaves it on the run page. No consumer-side LCOV parsing needed.
+
 `--build_tests_only` matters: without it, coverage builds (not runs) every
 target matched by the pattern, including e.g. `manual`-tagged or
 platform-incompatible test binaries.
@@ -219,6 +230,7 @@ platform-incompatible test binaries.
 | Output directory | positional `output-dir` argument (default `coverage_<platform>`) |
 | Platform-specific justifications | `--platform linux\|qnx` (default linux) |
 | JUnit XMLs subtree in the archive | `--testlogs-subdir <dir>` (default: whole `bazel-testlogs`) |
+| Markdown job summary | `--summary-md <path>`; auto-append to `GITHUB_STEP_SUMMARY` when the flag is absent and the variable is set |
 | Different LLVM version | your own `llvm.toolchain(...)`; pass its labels in step 3 |
 | Rust branch coverage | `-Zcoverage-options=branch` (needs a nightly-based/rolling Ferrocene; drop the flag on stable) |
 

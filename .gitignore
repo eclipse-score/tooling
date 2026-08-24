@@ -20,3 +20,5 @@ coverage-html/
 coverage/integration_tests/coverage_artifacts.zip
 coverage/integration_tests/lcov.dat
 coverage/integration_tests/coverage_linux/
+coverage/integration_tests/summary.md
+coverage/integration_tests/step_summary.md
