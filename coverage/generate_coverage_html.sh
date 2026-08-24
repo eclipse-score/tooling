@@ -39,6 +39,15 @@
 #   --testlogs-subdir <subdir> Subdirectory of bazel-testlogs to collect JUnit
 #                              XMLs from when archiving (default: entire
 #                              bazel-testlogs tree).
+#   --summary-md <path>        Write a markdown coverage summary (tables,
+#                              per-directory rollup, 0%-file list) to <path>.
+#                              When ABSENT and the GITHUB_STEP_SUMMARY
+#                              environment variable is set (GitHub Actions),
+#                              the summary is appended there automatically;
+#                              when neither is present, no summary is emitted.
+#                              The summary is written before the threshold
+#                              gate decides the exit code, so a failing gate
+#                              still leaves it on the workflow run page.
 #   output-dir                 Directory to write the HTML report to
 #                              (default: coverage_<platform>)
 #
@@ -56,6 +65,7 @@ PLATFORM="linux"
 OUTPUT_DIR=""
 JUSTIFICATION_YAML_REL=""
 TESTLOGS_SUBDIR=""
+SUMMARY_MD=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -77,6 +87,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --testlogs-subdir)
       TESTLOGS_SUBDIR="${2:?--testlogs-subdir requires a path argument}"
+      shift 2
+      ;;
+    --summary-md)
+      SUMMARY_MD="${2:?--summary-md requires a path argument}"
       shift 2
       ;;
     *)
@@ -204,6 +218,31 @@ else
   fi
   echo "Raw line coverage: ${GATE_PCT}%"
   GATE_KIND="Raw"
+fi
+
+# ---------------------------------------------------------------------------
+# Optional markdown summary (--summary-md, or GITHUB_STEP_SUMMARY when the
+# flag is absent). Emitted BEFORE the threshold gate so a failing gate still
+# leaves the summary on the workflow run page.
+# ---------------------------------------------------------------------------
+if [[ -n "${SUMMARY_MD}" || -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+  SUMMARY_ARGS=(--lcov "${TMPDIR_EXTRACT}/lcov_report/lcov.dat")
+  if [[ -n "${JUSTIFICATION_DIR}" && -f "${JUSTIFICATION_DIR}/report.json" ]]; then
+    SUMMARY_ARGS+=(--justification-report "${JUSTIFICATION_DIR}/report.json")
+  fi
+  if [[ -n "${SUMMARY_MD}" ]]; then
+    case "${SUMMARY_MD}" in
+      /*) : ;;
+      *) SUMMARY_MD="${BUILD_WORKSPACE_DIRECTORY}/${SUMMARY_MD}" ;;
+    esac
+    bazel run @score_tooling//coverage:coverage_summary -- \
+        "${SUMMARY_ARGS[@]}" --output "${SUMMARY_MD}"
+    echo "Coverage summary written to: ${SUMMARY_MD}"
+  else
+    bazel run @score_tooling//coverage:coverage_summary -- \
+        "${SUMMARY_ARGS[@]}" --output "${GITHUB_STEP_SUMMARY}" --append
+    echo "Coverage summary appended to GITHUB_STEP_SUMMARY"
+  fi
 fi
 
 # Threshold check (default: 100%). Fails the run when below.

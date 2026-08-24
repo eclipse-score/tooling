@@ -181,6 +181,14 @@ bazel run @score_tooling//coverage:generate_coverage_html -- \
   (exit 1)** when below. The model: every uncovered line must eventually be
   either tested or justified; the threshold is ratcheted up as gaps close.
 
+- Optionally a **markdown job summary** is emitted (`--summary-md <path>`, or
+  appended to `GITHUB_STEP_SUMMARY` automatically inside GitHub Actions when
+  the flag is absent): overall/per-directory tables computed from the LCOV
+  data (which includes the exact-0% baseline records), raw-vs-effective
+  numbers when justifications ran, and collapsible least-covered/0% file
+  lists. It is written before the gate decides the exit code, so a failing
+  gate still leaves the summary on the run page.
+
 ### 2.3 Day-to-day commands
 
 ```bash
