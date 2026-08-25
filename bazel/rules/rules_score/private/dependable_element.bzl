@@ -812,7 +812,7 @@ def _dependable_element_index_impl(ctx):
     # carry AssumedSystemRequirementsInfo.
     assumed_system_req_refs = []
     for req_target in ctx.attr.requirements:
-        if AssumedSystemRequirementsInfo in req_target:
+        if AssumedSystemRequirementsInfo in req_target and not req_target[AssumedSystemRequirementsInfo].is_transitive:
             label_files, label_refs = _process_artifact_files(ctx, "assumed_system_requirements", req_target)
             output_files.extend(label_files)
             assumed_system_req_refs.extend(label_refs)

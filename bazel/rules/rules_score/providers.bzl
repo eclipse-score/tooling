@@ -109,6 +109,7 @@ AssumedSystemRequirementsInfo = provider(
     fields = {
         "srcs": "Depset of .lobster traceability files generated from TRLC requirement sources.",
         "name": "Name of the requirements target.",
+        "is_transitive": "Whether this provider is propagated through a feature requirements target for traceability lookup rather than owned by that target.",
     },
 )
 
