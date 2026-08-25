@@ -174,7 +174,10 @@ crate.annotation(
     crate = "clang",
     crate_features = ["runtime"],
 )
-crate.from_specs()
+crate.from_specs(
+    cargo_lockfile = "//:Cargo.lock",
+    lockfile = "//:Cargo.Bazel.lock",
+)
 use_repo(crate, "crates")
 
 ###############################################################################
