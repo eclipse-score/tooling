@@ -83,6 +83,7 @@ _IMPORTS = ["ScoreReq"]
 _RE_MARKUP = re.compile(r"\*\*?(.*?)\*\*?")
 _RE_DIRECTIVE = re.compile(r"^\.\.\s+([\w]+)::\s*(.*)")
 _RE_FIELD = re.compile(r"^\s+:([\w]+):\s*(.*)")  # noqa: E501
+_RE_REF = re.compile(r"^(?P<id>[\w]+)(?:\[version==(?P<version>\d+)\])?$")
 
 _TRLC_HEADER = """\
 /********************************************************************************
@@ -140,6 +141,23 @@ def _collect_refs(fields: dict[str, str]) -> list[str]:
     return [r.strip() for k in _REF_FIELDS if k in fields for r in fields[k].split(",") if r.strip()]
 
 
+def _split_ref(ref: str) -> tuple[str, str]:
+    """Split a raw reference token into (id, version).
+
+    Accepts either a bare id (e.g. "foo") or an id with an explicit
+    ``[version==N]`` qualifier (e.g. "foo[version==2]"), as written in
+    ``:derived_from:``/``:satisfies:`` RST fields. The version defaults to
+    ``_DEFAULT_VERSION`` ("1") when no qualifier is present. Falls back to
+    treating the whole token as the id (version 1) if it doesn't match the
+    expected pattern, so malformed input degrades gracefully instead of
+    crashing the conversion.
+    """
+    m = _RE_REF.match(ref)
+    if not m:
+        return ref, _DEFAULT_VERSION
+    return m.group("id"), m.group("version") or _DEFAULT_VERSION
+
+
 def parse_directives(content: str) -> list[dict[str, Any]]:
     """Parse supported requirement directives from RST content."""
     results: list[dict[str, Any]] = []
@@ -187,7 +205,9 @@ def render_trlc(directives: list[dict[str, Any]], package: str, ref_package: str
 
         refs = _collect_refs(fields)
         if refs:
-            ref_list = ", ".join(f"{ref_package}.{r}@1" for r in refs)
+            ref_list = ", ".join(
+                "{}.{}@{}".format(ref_package, *_split_ref(r)) for r in refs
+            )
             lines_out.append(f"    derived_from = [{ref_list}]")
 
         if trlc_type in _ASSUMED_SYSTEM_REQ_TYPES:
