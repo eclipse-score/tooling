@@ -196,6 +196,7 @@ def score_requirements_rule(
         deps = [],
         spec = [],
         ref_package = "",
+        package = "",
         **kwargs):
     """Macro wrapper around _score_requirements_rule with RST support.
 
@@ -215,6 +216,13 @@ def score_requirements_rule(
         ref_package: TRLC package prefix used for derived_from cross-references
             when converting RST sources (e.g. "AssumedSystemRequirements" for
             feature requirements that derive from ASR).
+        package: Optional TRLC package name override for the .trlc file(s)
+            generated from .rst srcs. Only applies to the RST conversion path;
+            .trlc sources are passed through unchanged and keep whatever
+            package name their own source declares. Defaults to a name derived
+            from the .rst file's stem (see rst_to_trlc.py), which can collide
+            when multiple requirement targets are converted from same-named
+            files (e.g. multiple "index.rst").
 
     Returns:
         List of resolved labels corresponding to srcs (after any .rst-to-.trlc
@@ -233,6 +241,7 @@ def score_requirements_rule(
                 name = gen_name,
                 srcs = [src],
                 ref_package = ref_package,
+                package = package,
             )
             trlc_srcs.append(":" + gen_name)
             resolved_srcs.append(":" + gen_name)

@@ -33,6 +33,7 @@ def assumed_system_requirements(
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:assumed_system_requirement"),
         ref_package = "",
+        package = "",
         image_srcs = [],
         **kwargs):
     """Define Assumed System Requirements following S-CORE process guidelines.
@@ -58,6 +59,11 @@ def assumed_system_requirements(
             Override this when using a custom requirements model.
         lobster_config: Optional Lobster extraction config label. Defaults to the
             S-CORE assumed system requirement config.
+        package: Optional TRLC package name override, only used when srcs
+            contains .rst files (ignored for raw .trlc srcs). Defaults to a
+            name derived from the .rst file's stem; set this explicitly to
+            avoid collisions when multiple requirement targets are converted
+            from same-named .rst files (e.g. multiple "index.rst").
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -87,6 +93,7 @@ def assumed_system_requirements(
         lobster_config = lobster_config,
         spec = spec,
         ref_package = ref_package,
+        package = package,
         image_srcs = image_srcs,
         **kwargs
     )

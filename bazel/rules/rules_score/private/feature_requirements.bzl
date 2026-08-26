@@ -33,6 +33,7 @@ def feature_requirements(
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:feature_requirement"),
         ref_package = "",
+        package = "",
         image_srcs = [],
         **kwargs):
     """Define feature requirements following S-CORE process guidelines.
@@ -57,6 +58,11 @@ def feature_requirements(
             (``@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model``).
         lobster_config: Optional Lobster extraction config label. Defaults to the
             S-CORE feature requirement config.
+        package: Optional TRLC package name override, only used when srcs
+            contains .rst files (ignored for raw .trlc srcs). Defaults to a
+            name derived from the .rst file's stem; set this explicitly to
+            avoid collisions when multiple requirement targets are converted
+            from same-named .rst files (e.g. multiple "index.rst").
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -86,6 +92,7 @@ def feature_requirements(
         lobster_config = lobster_config,
         spec = spec,
         ref_package = ref_package,
+        package = package,
         image_srcs = image_srcs,
         **kwargs
     )

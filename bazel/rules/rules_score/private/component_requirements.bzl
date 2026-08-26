@@ -32,6 +32,7 @@ def component_requirements(
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:component_requirement"),
         ref_package = "",
+        package = "",
         image_srcs = [],
         **kwargs):
     """Define component requirements following S-CORE process guidelines.
@@ -62,6 +63,11 @@ def component_requirements(
             include `derived_from` as a tracing target, including any AoU
             entries within it (resolved only at the dependable_element level,
             which has a "Received AoUs" level).
+        package: Optional TRLC package name override, only used when srcs
+            contains .rst files (ignored for raw .trlc srcs). Defaults to a
+            name derived from the .rst file's stem; set this explicitly to
+            avoid collisions when multiple requirement targets are converted
+            from same-named .rst files (e.g. multiple "index.rst").
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -86,6 +92,7 @@ def component_requirements(
         lobster_config = lobster_config,
         spec = spec,
         ref_package = ref_package,
+        package = package,
         image_srcs = image_srcs,
         **kwargs
     )
