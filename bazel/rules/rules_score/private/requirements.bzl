@@ -26,6 +26,20 @@ load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
 _DEFAULT_SPEC = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")
 
+# Restricts which RST directive names are converted per req_kind, so a
+# shared .rst file (e.g. one that also carries aou_req directives consumed
+# separately by assumptions_of_use()) doesn't leak unrelated directive types
+# into a given requirements target. "assumed_system" additionally accepts
+# stkh_req: Stakeholder Requirements have no TRLC representation of their
+# own and are the intended real-world source for AssumedSystemReq records
+# (see rst_to_trlc.py's DIRECTIVE_TO_TRLC mapping).
+_REQ_KIND_TO_DIRECTIVES = {
+    "assumed_system": ["assumed_system_req", "stkh_req"],
+    "feature": ["feat_req"],
+    "component": ["comp_req"],
+    "aou": ["aou_req"],
+}
+
 # ============================================================================
 # Private Rule Implementation
 # ============================================================================
@@ -231,6 +245,7 @@ def score_requirements_rule(
     """
     extra_spec = spec if type(spec) == type([]) else [spec]
     merged_spec = [_DEFAULT_SPEC] + [s for s in extra_spec if s != _DEFAULT_SPEC]
+    only_types = _REQ_KIND_TO_DIRECTIVES.get(req_kind, [])
     trlc_srcs = []
     extra_deps = []
     resolved_srcs = []
@@ -242,6 +257,7 @@ def score_requirements_rule(
                 srcs = [src],
                 ref_package = ref_package,
                 package = package,
+                only_types = only_types,
             )
             trlc_srcs.append(":" + gen_name)
             resolved_srcs.append(":" + gen_name)
