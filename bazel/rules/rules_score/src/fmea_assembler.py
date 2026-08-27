@@ -34,6 +34,70 @@ from trlc_rst import TRLCRST, TRLCParseError
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# LOCAL, UNCOMMITTED WORKAROUND -- DO NOT SUBMIT
+#
+# trlc (Bazel module, pinned at v3.0.0 in MODULE.bazel) ships a TRLCRST class
+# that only implements parse_trlc_files()/convert_symbols_to_tree()/
+# render_to_file(). The functions below reimplement the
+# objects_by_fqn()/field_value_for()/render_table_to_string() API that the
+# rest of this file expects, driven directly by the already-parsed TRLC
+# Symbol_Table (renderer._symbols), so the fmea() pipeline can be exercised
+# end-to-end locally. Remove once the real trlc_rst gains this API (or once
+# this module is rewritten against the shipped one).
+# ---------------------------------------------------------------------------
+
+
+def _objects_by_fqn(self):
+    return {
+        obj.fully_qualified_name(): obj for obj in self._symbols.iter_record_objects()
+    }
+
+
+def _field_value_for(self, fqn, field_name):
+    obj = self.objects_by_fqn().get(fqn)
+    if obj is None:
+        return None
+    field = obj.field.get(field_name)
+    value = field.to_python_object() if field is not None else None
+    if isinstance(value, str) and hasattr(field, "has_references") and field.has_references:
+        return self._resolve_markup_references(value, field.references)
+    if isinstance(value, list):
+        return ", ".join(str(v) for v in value)
+    return value
+
+
+def _render_table_to_string(self, columns, fqns, name_header="Name", link_fn=None):
+    obj_map = self.objects_by_fqn()
+    headers = [name_header] + list(columns.values())
+
+    def _cell(value):
+        if isinstance(value, list):
+            return ", ".join(str(v) for v in value)
+        return "" if value is None else str(value)
+
+    def _row_lines(cells):
+        lines = [f"   * - {cells[0]}"]
+        lines += [f"     - {cell}" for cell in cells[1:]]
+        return lines
+
+    lines = [".. list-table::", "   :header-rows: 1", ""]
+    lines += _row_lines(headers)
+    for fqn in fqns:
+        obj = obj_map.get(fqn)
+        if obj is None:
+            continue
+        fields = obj.to_python_dict()
+        name_cell = link_fn(fqn, obj.name) if link_fn else obj.name
+        row = [name_cell] + [_cell(fields.get(name)) for name in columns]
+        lines += _row_lines(row)
+    return "\n".join(lines) + "\n"
+
+
+TRLCRST.objects_by_fqn = _objects_by_fqn
+TRLCRST.field_value_for = _field_value_for
+TRLCRST.render_table_to_string = _render_table_to_string
+
 _LEVEL_MAP = {
     "error": logging.ERROR,
     "warn": logging.WARNING,
@@ -45,7 +109,7 @@ _LEVEL_MAP = {
 _CM_TABLE_COLUMNS = {"safety": "ASIL", "description": "Description"}
 # Overview summary table columns (one row per failure mode).
 _FM_TABLE_COLUMNS = {
-    "guideword": "Guideword",
+    "guidewords": "Guideword",
     "safety": "ASIL",
     "interface": "Interface",
 }
@@ -150,9 +214,12 @@ def _attr_grid(obj: object) -> _Directive | None:
     interface/failure-effect as titled cards; a gutter separates the rows."""
     fields = obj.to_python_dict()
     items = []
-    guideword = fields.get("guideword")
-    if guideword:
-        items.append(_grid_item(_badge(_GUIDEWORD_BADGE, guideword), {"class": "sd-text-center"}))
+    guidewords = fields.get("guidewords")
+    if guidewords:
+        guideword_text = (
+            ", ".join(str(g) for g in guidewords) if isinstance(guidewords, list) else str(guidewords)
+        )
+        items.append(_grid_item(_badge(_GUIDEWORD_BADGE, guideword_text), {"class": "sd-text-center"}))
     safety = fields.get("safety")
     if safety:
         role = _ASIL_BADGE.get(safety, _DEFAULT_BADGE)
