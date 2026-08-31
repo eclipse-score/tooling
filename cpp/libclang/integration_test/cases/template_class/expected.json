@@ -21,6 +21,7 @@
         }
       ],
       "relationships": [],
+      "stereotypes": [],
       "template_parameters": [
         {
           "Template": {
@@ -146,6 +147,7 @@
         }
       ],
       "relationships": [],
+      "stereotypes": [],
       "template_parameters": [
         {
           "Type": {

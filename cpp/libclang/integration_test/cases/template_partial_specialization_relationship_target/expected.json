@@ -33,6 +33,7 @@
         "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_relationship_target/endpoint_without_return.h",
         "line": 23
       },
+      "stereotypes": [],
       "template_parameters": [
         {
           "Type": {
@@ -67,6 +68,7 @@
         "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_relationship_target/endpoint.h",
         "line": 23
       },
+      "stereotypes": [],
       "template_parameters": [
         {
           "Type": {
@@ -102,6 +104,7 @@
         "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_relationship_target/holder.h",
         "line": 24
       },
+      "stereotypes": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [

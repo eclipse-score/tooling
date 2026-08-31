@@ -33,6 +33,7 @@
         "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_ids/specialization_with_return.h",
         "line": 25
       },
+      "stereotypes": [],
       "template_parameters": [
         {
           "Type": {
@@ -93,6 +94,7 @@
         "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_ids/specialization_without_return.h",
         "line": 25
       },
+      "stereotypes": [],
       "template_parameters": [
         {
           "Type": {
@@ -127,6 +129,7 @@
         "file": "./cpp/libclang/integration_test/cases/template_partial_specialization_ids/specialization.h",
         "line": 23
       },
+      "stereotypes": [],
       "template_parameters": [
         {
           "Type": {

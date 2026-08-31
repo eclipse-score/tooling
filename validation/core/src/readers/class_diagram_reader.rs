@@ -241,6 +241,10 @@ fn read_entity(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<SimpleE
         id: entity.id().to_string(),
         name: entity.name().to_string(),
         enclosing_namespace_id: entity.enclosing_namespace_id().map(|s| s.to_string()),
+        stereotypes: entity
+            .stereotypes()
+            .map(|values| values.iter().map(|value| value.to_string()).collect())
+            .unwrap_or_default(),
         entity_type: map_entity_type(
             entity.entity_type(),
             &format!("{path}:entity:{}", entity.id()),

@@ -145,6 +145,7 @@
         "file": "cpp/libclang/integration_test/cases/method_return_type/transport.cpp",
         "line": 25
       },
+      "stereotypes": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": []
@@ -157,6 +158,7 @@
       "enum_literals": [],
       "methods": [],
       "relationships": [],
+      "stereotypes": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [

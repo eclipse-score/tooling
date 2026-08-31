@@ -119,6 +119,16 @@ struct ClassParseSession<'a> {
 }
 
 impl ClassParseSession<'_> {
+    fn extract_stereotypes(pair: pest::iterators::Pair<Rule>) -> Vec<String> {
+        pair.into_inner()
+            .filter(|inner| inner.as_rule() == Rule::STEREOTYPE_NAME)
+            .flat_map(|inner| inner.as_str().split(','))
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+            .collect()
+    }
+
     fn parse_visibility(pair: Option<pest::iterators::Pair<Rule>>) -> Visibility {
         let mut vis = Visibility::Public;
         if let Some(v) = pair {
@@ -480,6 +490,10 @@ impl ClassParseSession<'_> {
             Rule::named => {
                 Self::parse_named(pair, def.name_mut());
             }
+            Rule::stereotype => {
+                def.stereotypes_mut()
+                    .extend(Self::extract_stereotypes(pair));
+            }
             Rule::class_body => {
                 for inner in pair.into_inner() {
                     if let Rule::class_member = inner.as_rule() {
@@ -777,6 +791,11 @@ impl ClassParseSession<'_> {
                 Rule::named => {
                     // enum_def.name = inner.as_str().trim().to_string();
                     Self::parse_named(inner, &mut enum_def.name);
+                }
+                Rule::stereotype => {
+                    enum_def
+                        .stereotypes
+                        .extend(Self::extract_stereotypes(inner));
                 }
                 Rule::enum_body => {
                     enum_def.items = self.parse_enum_body(inner);

@@ -11,6 +11,7 @@
             },
             "namespace": "",
             "package": "",
+            "stereotypes": ["Model"],
             "source_location": {
               "file": "",
               "line": 15
@@ -58,6 +59,7 @@
             },
             "namespace": "",
             "package": "",
+            "stereotypes": ["Singleton", "Immutable"],
             "source_location": {
               "file": "",
               "line": 20
@@ -89,6 +91,7 @@
             },
             "namespace": "",
             "package": "",
+            "stereotypes": ["abstract"],
             "source_location": {
               "file": "",
               "line": 24
@@ -126,7 +129,7 @@
             "file": "",
             "line": 28
           },
-          "stereotypes": [],
+          "stereotypes": ["enum"],
           "items": [
             {
               "name": "MALE",

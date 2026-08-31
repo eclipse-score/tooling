@@ -201,6 +201,7 @@ fn simple_entity(name: &str, entity_type: EntityType, namespace: Option<&str>) -
         id: entity_id(name, namespace),
         name: name.to_string(),
         enclosing_namespace_id: namespace.map(str::to_string),
+        stereotypes: Vec::new(),
         entity_type,
         type_aliases: Vec::new(),
         variables: Vec::new(),

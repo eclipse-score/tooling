@@ -56,6 +56,12 @@ impl ClassSerializer {
             .enclosing_namespace_id
             .as_ref()
             .map(|namespace| builder.create_string(namespace));
+        let stereotype_offsets: Vec<_> = entity
+            .stereotypes
+            .iter()
+            .map(|stereotype| builder.create_string(stereotype))
+            .collect();
+        let stereotypes_offset = builder.create_vector(&stereotype_offsets);
 
         let type_alias_offsets: Vec<_> = entity
             .type_aliases
@@ -109,6 +115,7 @@ impl ClassSerializer {
                 id: Some(id_offset),
                 name: Some(name_offset),
                 enclosing_namespace_id: enclosing_namespace_id_offset,
+                stereotypes: Some(stereotypes_offset),
                 entity_type: Self::map_entity_type(entity.entity_type),
                 type_aliases: Some(type_aliases_offset),
                 variables: Some(variables_offset),

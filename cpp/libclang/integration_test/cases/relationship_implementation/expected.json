@@ -36,6 +36,7 @@
           }
         }
       ],
+      "stereotypes": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],
@@ -83,6 +84,7 @@
         }
       ],
       "relationships": [],
+      "stereotypes": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],

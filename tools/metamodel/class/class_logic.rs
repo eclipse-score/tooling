@@ -41,6 +41,9 @@ pub struct SimpleEntity {
     /// FQN of parent namespace/package
     /// enclosing namespace name
     pub enclosing_namespace_id: Option<String>,
+    /// PlantUML stereotypes declared on the entity.
+    #[serde(default)]
+    pub stereotypes: Vec<String>,
     /// Type of entity (class, struct, interface, enum, etc.)
     pub entity_type: EntityType,
 
@@ -265,6 +268,7 @@ mod tests {
             id: "Core::User".to_string(),
             name: "User".to_string(),
             enclosing_namespace_id: Some("Core".to_string()),
+            stereotypes: Vec::new(),
             entity_type: EntityType::Class,
             variables: vec![MemberVariable {
                 name: "name".to_string(),

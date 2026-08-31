@@ -809,6 +809,7 @@
         "id": "sample.newline.<<template>>\\nTest<T>",
         "name": "TestTemplate",
         "enclosing_namespace_id": "sample.newline",
+        "stereotypes": ["service"],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [
