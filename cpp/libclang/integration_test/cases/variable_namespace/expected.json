@@ -31,6 +31,7 @@
           }
         }
       ],
+      "stereotypes": [],
       "template_parameters": null,
       "type_aliases": [
         {
@@ -117,6 +118,7 @@
       "enum_literals": [],
       "methods": [],
       "relationships": [],
+      "stereotypes": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [],

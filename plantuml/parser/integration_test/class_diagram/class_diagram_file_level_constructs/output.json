@@ -73,6 +73,7 @@
         "id": "sample.file_level.<<template>>\\nTest<T>",
         "name": "TestTemplate",
         "enclosing_namespace_id": "sample.file_level",
+        "stereotypes": ["service"],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [

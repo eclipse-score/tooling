@@ -13,6 +13,7 @@
         "file": "./cpp/libclang/integration_test/cases/std_template_specialization_filter/specialization.h",
         "line": 23
       },
+      "stereotypes": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [

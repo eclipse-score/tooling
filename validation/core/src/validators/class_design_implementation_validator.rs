@@ -1080,6 +1080,7 @@ mod tests {
             id: id.to_string(),
             name: id.rsplit('.').next().unwrap_or(id).to_string(),
             enclosing_namespace_id: enclosing_namespace_id.map(str::to_string),
+            stereotypes: Vec::new(),
             entity_type: EntityType::Class,
             type_aliases: Vec::new(),
             variables: Vec::new(),

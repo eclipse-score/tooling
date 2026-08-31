@@ -50,6 +50,7 @@
                 }
             ],
             "relationships": [],
+            "stereotypes": [],
             "template_parameters": null,
             "type_aliases": [],
             "variables": [

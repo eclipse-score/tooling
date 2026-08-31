@@ -123,6 +123,7 @@ table SimpleEntity {
     enum_literals: [EnumLiteral];
     relationships: [Relationship];
     source_location: SourceLocation (required);
+    stereotypes: [string];
 }
 
 table ClassDiagram {

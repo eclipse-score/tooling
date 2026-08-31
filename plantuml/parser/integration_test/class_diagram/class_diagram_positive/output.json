@@ -6,6 +6,7 @@
         "id": "core.Point",
         "name": "Point",
         "enclosing_namespace_id": "core",
+        "stereotypes": ["value_object"],
         "entity_type": "Struct",
         "type_aliases": [],
         "methods": [],
@@ -43,6 +44,7 @@
         "id": "core.Size",
         "name": "Size",
         "enclosing_namespace_id": "core",
+        "stereotypes": ["value_object"],
         "entity_type": "Struct",
         "type_aliases": [],
         "methods": [],
@@ -80,6 +82,7 @@
         "id": "core.Color",
         "name": "Color",
         "enclosing_namespace_id": "core",
+        "stereotypes": ["primitive_enum"],
         "entity_type": "Enum",
         "type_aliases": [],
         "methods": [],
@@ -133,6 +136,7 @@
         "id": "core.Shape",
         "name": "Shape",
         "enclosing_namespace_id": "core",
+        "stereotypes": ["abstract_entity"],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [
@@ -197,6 +201,7 @@
         "id": "core.Drawable",
         "name": "Drawable",
         "enclosing_namespace_id": "core",
+        "stereotypes": ["spi"],
         "entity_type": "Interface",
         "type_aliases": [],
         "methods": [
@@ -226,6 +231,7 @@
         "id": "core.Canvas",
         "name": "Canvas",
         "enclosing_namespace_id": "core",
+        "stereotypes": ["aggregate_root"],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [
@@ -296,6 +302,7 @@
         "id": "core.geometry.Circle",
         "name": "Circle",
         "enclosing_namespace_id": "core.geometry",
+        "stereotypes": ["entity"],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [
@@ -369,6 +376,7 @@
         "id": "core.geometry.Rectangle",
         "name": "Rectangle",
         "enclosing_namespace_id": "core.geometry",
+        "stereotypes": ["entity"],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [
@@ -570,6 +578,7 @@
         "id": "api.RestApi",
         "name": "RestApi",
         "enclosing_namespace_id": "api",
+        "stereotypes": ["adapter"],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [

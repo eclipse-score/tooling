@@ -14,6 +14,7 @@ use crate::class_ast::{Attribute, Method, Name, TypeAlias};
 
 pub trait TypeDef {
     fn name_mut(&mut self) -> &mut Name;
+    fn stereotypes_mut(&mut self) -> &mut Vec<String>;
     fn attributes_mut(&mut self) -> &mut Vec<Attribute>;
     fn type_aliases_mut(&mut self) -> &mut Vec<TypeAlias>;
     fn methods_mut(&mut self) -> &mut Vec<Method>;

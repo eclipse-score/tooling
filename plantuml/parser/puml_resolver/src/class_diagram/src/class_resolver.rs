@@ -408,36 +408,46 @@ impl ClassResolver {
     }
 
     fn process_class(&mut self, def: &Element, parent: Option<String>, entity_type: EntityType) {
-        let (name, attributes, type_aliases, methods, template_parameters, source_location) =
-            match def {
-                Element::ClassDef(c) => (
-                    &c.name,
-                    &c.attributes,
-                    &c.type_aliases,
-                    &c.methods,
-                    &c.template_parameters,
-                    &c.source_location,
-                ),
-                Element::StructDef(s) => (
-                    &s.name,
-                    &s.attributes,
-                    &s.type_aliases,
-                    &s.methods,
-                    &s.template_parameters,
-                    &s.source_location,
-                ),
-                Element::InterfaceDef(i) => (
-                    &i.name,
-                    &i.attributes,
-                    &i.type_aliases,
-                    &i.methods,
-                    &i.template_parameters,
-                    &i.source_location,
-                ),
-                Element::EnumDef(_) => {
-                    unreachable!("EnumDef should not be passed to process_class")
-                }
-            };
+        let (
+            name,
+            stereotypes,
+            attributes,
+            type_aliases,
+            methods,
+            template_parameters,
+            source_location,
+        ) = match def {
+            Element::ClassDef(c) => (
+                &c.name,
+                &c.stereotypes,
+                &c.attributes,
+                &c.type_aliases,
+                &c.methods,
+                &c.template_parameters,
+                &c.source_location,
+            ),
+            Element::StructDef(s) => (
+                &s.name,
+                &s.stereotypes,
+                &s.attributes,
+                &s.type_aliases,
+                &s.methods,
+                &s.template_parameters,
+                &s.source_location,
+            ),
+            Element::InterfaceDef(i) => (
+                &i.name,
+                &i.stereotypes,
+                &i.attributes,
+                &i.type_aliases,
+                &i.methods,
+                &i.template_parameters,
+                &i.source_location,
+            ),
+            Element::EnumDef(_) => {
+                unreachable!("EnumDef should not be passed to process_class")
+            }
+        };
 
         let id = self.build_fqn(&name.internal, &parent);
 
@@ -448,6 +458,7 @@ impl ClassResolver {
             id: id.clone(),
             name: Self::entity_name(name),
             enclosing_namespace_id: parent.clone(),
+            stereotypes: stereotypes.clone(),
             entity_type,
             type_aliases: type_aliases.iter().map(Self::convert_type_alias).collect(),
             variables: attributes.iter().map(Self::convert_variable).collect(),
@@ -657,6 +668,7 @@ impl ClassResolver {
             id: id.clone(),
             name: Self::entity_name(&def.name),
             enclosing_namespace_id: parent.clone(),
+            stereotypes: def.stereotypes.clone(),
             entity_type: EntityType::Enum,
             type_aliases: vec![],
             variables: vec![],
@@ -856,6 +868,7 @@ mod tests {
             name: make_name(name),
             namespace: "".to_string(),
             package: "".to_string(),
+            stereotypes: Vec::new(),
             source_location: SourceLocation::new("test.puml", 1),
             is_abstract: false,
             template_parameters: None,
@@ -873,7 +886,7 @@ mod tests {
             namespace: "".to_string(),
             package: "".to_string(),
             source_location: SourceLocation::new("test.puml", 1),
-            stereotypes: vec![],
+            stereotypes: Vec::new(),
             items: items
                 .into_iter()
                 .map(|n| EnumItem {
@@ -1185,7 +1198,7 @@ mod tests {
                 namespace: "".to_string(),
                 package: "".to_string(),
                 source_location: SourceLocation::new("test.puml", 1),
-                stereotypes: vec![],
+                stereotypes: Vec::new(),
                 items: vec![],
             }),
             ClassUmlTopLevel::Namespace(Namespace {

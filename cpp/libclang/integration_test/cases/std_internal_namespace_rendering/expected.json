@@ -32,6 +32,7 @@
         "file": "cpp/libclang/integration_test/cases/std_internal_namespace_rendering/transport.cpp",
         "line": 17
       },
+      "stereotypes": [],
       "template_parameters": null,
       "type_aliases": [],
       "variables": [

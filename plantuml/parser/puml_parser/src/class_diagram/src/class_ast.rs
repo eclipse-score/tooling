@@ -151,6 +151,8 @@ pub struct ClassDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
+    #[serde(default)]
+    pub stereotypes: Vec<String>,
     pub is_abstract: bool,
     pub template_parameters: Option<Vec<String>>,
     pub extends: Vec<String>,
@@ -163,6 +165,10 @@ pub struct ClassDef {
 impl TypeDef for ClassDef {
     fn name_mut(&mut self) -> &mut Name {
         &mut self.name
+    }
+
+    fn stereotypes_mut(&mut self) -> &mut Vec<String> {
+        &mut self.stereotypes
     }
 
     fn attributes_mut(&mut self) -> &mut Vec<Attribute> {
@@ -183,6 +189,8 @@ pub struct StructDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
+    #[serde(default)]
+    pub stereotypes: Vec<String>,
     pub template_parameters: Option<Vec<String>>,
     pub attributes: Vec<Attribute>,
     pub type_aliases: Vec<TypeAlias>,
@@ -192,6 +200,10 @@ pub struct StructDef {
 impl TypeDef for StructDef {
     fn name_mut(&mut self) -> &mut Name {
         &mut self.name
+    }
+
+    fn stereotypes_mut(&mut self) -> &mut Vec<String> {
+        &mut self.stereotypes
     }
 
     fn attributes_mut(&mut self) -> &mut Vec<Attribute> {
@@ -212,6 +224,8 @@ pub struct InterfaceDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
+    #[serde(default)]
+    pub stereotypes: Vec<String>,
     pub template_parameters: Option<Vec<String>>,
     pub extends: Vec<String>,
     pub attributes: Vec<Attribute>,
@@ -222,6 +236,10 @@ pub struct InterfaceDef {
 impl TypeDef for InterfaceDef {
     fn name_mut(&mut self) -> &mut Name {
         &mut self.name
+    }
+
+    fn stereotypes_mut(&mut self) -> &mut Vec<String> {
+        &mut self.stereotypes
     }
 
     fn attributes_mut(&mut self) -> &mut Vec<Attribute> {
@@ -242,6 +260,7 @@ pub struct EnumDef {
     pub name: Name,
     pub namespace: String,
     pub package: String,
+    #[serde(default)]
     pub stereotypes: Vec<String>,
     pub items: Vec<EnumItem>,
     pub source_location: SourceLocation,
