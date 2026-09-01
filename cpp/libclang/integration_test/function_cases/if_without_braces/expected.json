@@ -1,0 +1,67 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "without_braces",
+        "scope": {
+          "Namespace": [
+            "flow"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": [
+        {
+          "cases": [
+            {
+              "guard": {
+                "type": "opaque",
+                "text": "enabled",
+                "source_location": {
+                  "file": "cpp/libclang/integration_test/function_cases/if_without_braces/flow.cpp",
+                    "line": 19
+                }
+              },
+              "body": [
+                {
+                  "target": "handle_unbraced",
+                  "source_location": {
+                    "file": "cpp/libclang/integration_test/function_cases/if_without_braces/flow.cpp",
+                      "line": 20
+                  },
+                  "type": "call"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/if_without_braces/flow.cpp",
+                "line": 19
+              }
+            },
+            {
+              "guard": null,
+              "body": [
+                {
+                  "target": "handle_failure",
+                  "source_location": {
+                    "file": "cpp/libclang/integration_test/function_cases/if_without_braces/flow.cpp",
+                    "line": 22
+                  },
+                  "type": "call"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/if_without_braces/flow.cpp",
+                "line": 22
+              }
+            }
+          ],
+          "type": "branch"
+        }
+      ]
+    }
+  ],
+  "types": {}
+}

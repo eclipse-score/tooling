@@ -1,0 +1,47 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "global_value",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "run",
+        "scope": {
+          "Namespace": [
+            "app"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "enabled",
+        "scope": {
+          "Namespace": [
+            "app",
+            "internal"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "bool"
+      },
+      "body": []
+    }
+  ],
+  "types": {}
+}
