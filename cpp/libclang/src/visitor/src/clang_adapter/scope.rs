@@ -14,6 +14,9 @@
 //! Shared semantic-scope extraction helpers for libclang entities.
 
 use clang::{Entity, EntityKind};
+use cpp_semantics::Scope;
+
+// ── Namespace scopes ───────────────────────────────────────────────────────
 
 /// Returns the enclosing namespace names from outermost to innermost.
 pub(crate) fn namespace_path(entity: &Entity) -> Vec<String> {
@@ -42,6 +45,48 @@ pub(crate) fn namespace_id(entity: &Entity) -> Option<String> {
     (!path.is_empty()).then(|| path.join("::"))
 }
 
+// ── Type scopes ────────────────────────────────────────────────────────────
+
+/// Returns the enclosing type names from outermost to innermost.
+pub(crate) fn type_scope_path(entity: &Entity) -> Option<Vec<String>> {
+    let mut types = Vec::new();
+    let mut current = Some(*entity);
+
+    while let Some(parent) = current {
+        if is_type_scope(parent.get_kind()) {
+            types.push(type_scope_name(&parent)?);
+        }
+        current = parent.get_semantic_parent();
+    }
+
+    types.reverse();
+    (!types.is_empty()).then_some(types)
+}
+
+/// Returns whether an entity kind can own C++ member callables.
+pub(crate) fn is_type_scope(kind: EntityKind) -> bool {
+    matches!(
+        kind,
+        EntityKind::ClassDecl
+            | EntityKind::StructDecl
+            | EntityKind::UnionDecl
+            | EntityKind::ClassTemplate
+            | EntityKind::ClassTemplatePartialSpecialization
+    )
+}
+
+fn type_scope_name(entity: &Entity) -> Option<String> {
+    match entity.get_kind() {
+        EntityKind::ClassTemplatePartialSpecialization => {
+            entity.get_display_name().or_else(|| entity.get_name())
+        }
+        kind if is_type_scope(kind) => entity.get_name(),
+        _ => None,
+    }
+}
+
+// ── Named declaration parents ──────────────────────────────────────────────
+
 /// Returns named semantic parents that can own a nested C++ declaration.
 ///
 /// This intentionally excludes aliases, template parameters, and enums: they
@@ -52,14 +97,8 @@ pub(crate) fn semantic_parent_id(entity: &Entity) -> Option<String> {
 
     while let Some(parent) = current {
         let name = match parent.get_kind() {
-            EntityKind::Namespace
-            | EntityKind::ClassDecl
-            | EntityKind::StructDecl
-            | EntityKind::UnionDecl
-            | EntityKind::ClassTemplate => parent.get_name(),
-            EntityKind::ClassTemplatePartialSpecialization => {
-                parent.get_display_name().or_else(|| parent.get_name())
-            }
+            EntityKind::Namespace => parent.get_name(),
+            kind if is_type_scope(kind) => type_scope_name(&parent),
             _ => None,
         };
 
@@ -71,4 +110,23 @@ pub(crate) fn semantic_parent_id(entity: &Entity) -> Option<String> {
 
     parents.reverse();
     (!parents.is_empty()).then(|| parents.join("::"))
+}
+
+// ── Callable scopes ────────────────────────────────────────────────────────
+
+pub(crate) fn callable_scope(entity: &Entity) -> Option<Scope> {
+    match entity.get_semantic_parent() {
+        Some(parent) if is_type_scope(parent.get_kind()) => Some(Scope::Type {
+            namespace: namespace_path(&parent),
+            type_path: type_scope_path(&parent)?,
+        }),
+        _ => {
+            let namespace = namespace_path(entity);
+            Some(if namespace.is_empty() {
+                Scope::Global
+            } else {
+                Scope::Namespace(namespace)
+            })
+        }
+    }
 }

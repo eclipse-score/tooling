@@ -11,75 +11,96 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-//! Visits C++ method entities via libclang and populates [`VisitContext::functions`].
-//!
-//! Each method body is represented as an ordered [`Vec<BodyItem>`] so that
+//! Extracts C++ callable definitions via libclang into [`VisitContext::functions`].
 //! calls, branches and loops appear in execution order relative to one another.
 
-use crate::{context::VisitContext, AstVisitor};
 use clang::{Entity, EntityKind};
-use sequence_logic::{BodyItem, FunctionDef};
+use cpp_semantics::{
+    BodyItem, BranchCase, FunctionDef, FunctionId, FunctionKind, GuardExpression, LoopKind,
+};
+
+use crate::clang_adapter::scope::callable_scope;
+use crate::clang_adapter::source_location::{is_in_main_file, parse_source_location};
+use crate::types::resolver::resolve_type;
+use crate::visitor::SourceFileCache;
+use crate::{context::VisitContext, AstVisitor};
 
 pub struct FunctionVisitor;
 
+/// Semantic roles assigned to the direct children of a supported libclang `IfStmt`.
+struct IfParts<'tu> {
+    condition: Entity<'tu>,
+    then_body: Entity<'tu>,
+    else_body: Option<Entity<'tu>>,
+}
+
 impl AstVisitor for FunctionVisitor {
     fn visit(ctx: &mut VisitContext, entity: Entity) {
-        if let Some(func_def) = Self::extract_function_def(entity) {
-            ctx.functions.push(func_def);
-        }
+        let mut source_files = SourceFileCache::default();
+        Self::visit_with_source_files(ctx, &mut source_files, entity);
     }
 }
 
 impl FunctionVisitor {
+    /// Extracts a callable using source-text resources owned by the traversal.
+    pub(crate) fn visit_with_source_files(
+        ctx: &mut VisitContext,
+        source_files: &mut SourceFileCache,
+        entity: Entity,
+    ) {
+        if let Some(func_def) = Self::extract_function_def(source_files, entity) {
+            ctx.functions.push(func_def);
+        }
+    }
+
     // ── Top-level extraction ──────────────────────────────────────────────────
 
-    fn extract_function_def(entity: Entity) -> Option<FunctionDef> {
-        let Some(body_node) = Self::get_method_body(entity) else {
+    fn extract_function_def(
+        source_files: &mut SourceFileCache,
+        entity: Entity,
+    ) -> Option<FunctionDef> {
+        if !is_in_main_file(&entity) {
             log::debug!(
-                "skipping method '{}': no compound statement body (declaration-only?)",
-                entity.get_name().unwrap_or_default()
-            );
-            return None;
-        };
-
-        if !entity
-            .get_location()
-            .map(|loc| loc.is_in_main_file())
-            .unwrap_or(false)
-        {
-            log::debug!(
-                "skipping method '{}': not located in the main file",
+                "skipping callable '{}': not located in the main file",
                 entity.get_name().unwrap_or_default()
             );
             return None;
         }
 
-        let Some(method_name) = entity.get_name() else {
-            log::debug!("skipping method: entity has no name");
-            return None;
-        };
-        let class_name = entity
-            .get_semantic_parent()
-            .and_then(|p| p.get_name())
-            .unwrap_or_default();
-
-        if class_name.is_empty() {
+        let Some(id) = Self::extract_function_id(&entity) else {
             log::debug!(
-                "skipping method '{}': owning class/struct has no name",
-                method_name
+                "skipping callable '{}': no supported function identity",
+                entity.get_name().unwrap_or_default()
             );
             return None;
-        }
+        };
 
-        let body = Self::process_scope(body_node, &class_name);
-        let return_type = entity
-            .get_result_type()
-            .map(|t| t.get_display_name())
-            .unwrap_or_else(|| "?".to_string());
+        let Some(kind) = Self::extract_function_kind(&entity) else {
+            log::debug!(
+                "skipping callable '{}': unsupported callable kind {:?}",
+                id.qualified_name(),
+                entity.get_kind()
+            );
+            return None;
+        };
+
+        let Some(body) = Self::process_function_body(source_files, entity, &id) else {
+            log::debug!(
+                "skipping callable '{}': no compound statement body (declaration-only?)",
+                id.qualified_name()
+            );
+            return None;
+        };
+
+        let return_type = if matches!(kind, FunctionKind::Constructor | FunctionKind::Destructor) {
+            None
+        } else {
+            entity.get_result_type().map(|t| resolve_type(&t))
+        };
 
         Some(FunctionDef {
-            class: class_name,
-            name: method_name,
+            id,
+            kind,
             return_type,
             body,
         })
@@ -87,10 +108,11 @@ impl FunctionVisitor {
 
     // ── AST navigation helpers ────────────────────────────────────────────────
 
-    fn get_method_body(entity: Entity) -> Option<Entity> {
-        Self::get_children(entity)
-            .into_iter()
-            .find(|c| c.get_kind() == EntityKind::CompoundStmt)
+    fn extract_function_id(entity: &Entity) -> Option<FunctionId> {
+        Some(FunctionId {
+            scope: callable_scope(entity)?,
+            name: entity.get_name()?,
+        })
     }
 
     fn get_children(entity: Entity) -> Vec<Entity> {
@@ -102,26 +124,45 @@ impl FunctionVisitor {
         v
     }
 
-    /// Walk down through wrapper nodes to find the first non-empty name.
-    /// Used to extract condition variable names from an IfStmt condition child.
-    fn extract_first_name(entity: Entity) -> String {
-        if let Some(name) = entity.get_name() {
-            if !name.is_empty() {
-                return name;
-            }
-        }
-        for child in Self::get_children(entity) {
-            let name = Self::extract_first_name(child);
-            if !name.is_empty() {
-                return name;
-            }
-        }
-        String::new()
+    /// Returns an expression's original source-range text when available.
+    ///
+    /// Libclang locations expose byte offsets into the source file, so this
+    /// preserves the author's whitespace and operator spelling.
+    fn extract_expression_text(source_files: &mut SourceFileCache, entity: Entity) -> String {
+        entity
+            .get_range()
+            .and_then(|range| {
+                let start = range.get_start().get_file_location();
+                let end = range.get_end().get_file_location();
+                let file = start.file?;
+                let source = source_files.get(&file.get_path())?;
+                let start_offset = start.offset as usize;
+                let end_offset = end.offset as usize;
+
+                source
+                    .get(start_offset..end_offset)
+                    .map(|bytes| String::from_utf8_lossy(bytes).into_owned())
+            })
+            .unwrap_or_default()
     }
 
-    /// If `call_expr` is a call to a method owned by a class OTHER than `owner`,
-    /// return `(callee_class, method_name)` (or `"constructor"` for constructors).
-    fn cross_class_call_name(call_expr: Entity, owner: &str) -> Option<(String, String)> {
+    fn extract_function_kind(entity: &Entity) -> Option<FunctionKind> {
+        match entity.get_kind() {
+            EntityKind::FunctionDecl => Some(FunctionKind::Free),
+            EntityKind::Method => Some(if entity.is_static_method() {
+                FunctionKind::StaticMethod
+            } else {
+                FunctionKind::Method
+            }),
+            EntityKind::Constructor => Some(FunctionKind::Constructor),
+            EntityKind::Destructor => Some(FunctionKind::Destructor),
+            EntityKind::ConversionFunction => Some(FunctionKind::Conversion),
+            _ => None,
+        }
+    }
+
+    /// Resolves a call expression to its semantic callable target.
+    fn extract_call_target(call_expr: Entity) -> Option<FunctionId> {
         // Direct reference works for simple `obj.method()` calls.
         // For virtual/pointer calls (`ptr->method()`), the reference lives on the
         // MemberRefExpr child — fall back to that when the direct lookup returns None.
@@ -131,152 +172,345 @@ impl FunctionVisitor {
                 .find(|c| c.get_kind() == EntityKind::MemberRefExpr)
                 .and_then(|c| c.get_reference())
         })?;
-        let parent = resolved.get_semantic_parent()?;
 
-        let is_class_like = matches!(
-            parent.get_kind(),
-            EntityKind::ClassDecl
-                | EntityKind::StructDecl
-                | EntityKind::ClassTemplate
-                | EntityKind::ClassTemplatePartialSpecialization // | EntityKind::ClassTemplateSpecialization
-        );
-        if !is_class_like {
-            return None;
-        }
+        Self::extract_function_kind(&resolved)?;
+        Self::extract_function_id(&resolved)
+    }
 
-        let parent_name = parent.get_name().unwrap_or_default();
-        if parent_name.is_empty() || parent_name == owner {
-            return None;
-        }
-
-        if matches!(
-            resolved.get_kind(),
-            EntityKind::Constructor | EntityKind::Destructor
-        ) {
-            return Some((parent_name, "constructor".to_string()));
-        }
-
-        resolved.get_name().map(|n| (parent_name, n))
+    fn is_cross_owner_call(caller: &FunctionId, callee: &FunctionId) -> bool {
+        callee.scope != caller.scope
     }
 
     // ── Scope/branch processors ───────────────────────────────────────────────
 
-    /// Walk the subtree of `entity` collecting cross-class calls as [`BodyItem::Call`]
-    /// entries, skipping if/loop boundaries. Post-order on `CallExpr`: argument
-    /// calls appear before the outer call (execution order).
-    fn collect_calls_no_if(entity: Entity, owner: &str, out: &mut Vec<BodyItem>) {
-        for child in Self::get_children(entity) {
-            match child.get_kind() {
-                EntityKind::IfStmt
-                | EntityKind::ForStmt
-                | EntityKind::WhileStmt
-                | EntityKind::DoStmt => {}
-                EntityKind::CallExpr => {
-                    Self::collect_calls_no_if(child, owner, out);
-                    if let Some((callee, name)) = Self::cross_class_call_name(child, owner) {
-                        out.push(BodyItem::Call { callee, name });
-                    }
-                }
-                _ => Self::collect_calls_no_if(child, owner, out),
+    /// Locates a callable's compound body and processes its statements.
+    fn process_function_body(
+        source_files: &mut SourceFileCache,
+        function: Entity,
+        caller: &FunctionId,
+    ) -> Option<Vec<BodyItem>> {
+        let body = Self::get_children(function)
+            .into_iter()
+            .find(|child| child.get_kind() == EntityKind::CompoundStmt)?;
+
+        Some(Self::process_compound(source_files, body, caller))
+    }
+
+    /// Processes the direct statements of a `CompoundStmt` in source order.
+    fn process_compound(
+        source_files: &mut SourceFileCache,
+        compound: Entity,
+        caller: &FunctionId,
+    ) -> Vec<BodyItem> {
+        Self::get_children(compound)
+            .into_iter()
+            .flat_map(|statement| Self::process_statement(source_files, statement, caller))
+            .collect()
+    }
+
+    /// Processes one statement, preserving nested control-flow structure.
+    fn process_statement(
+        source_files: &mut SourceFileCache,
+        entity: Entity,
+        caller: &FunctionId,
+    ) -> Vec<BodyItem> {
+        match entity.get_kind() {
+            EntityKind::CompoundStmt => Self::process_compound(source_files, entity, caller),
+            EntityKind::IfStmt => Self::process_if(source_files, entity, caller),
+            EntityKind::ForStmt | EntityKind::WhileStmt | EntityKind::DoStmt => {
+                Self::process_loop(source_files, entity, caller)
             }
+            _ => Self::collect_nested_calls(entity, caller),
         }
     }
 
-    /// Process a `CompoundStmt` (or any scope entity) and return an ordered list of
-    /// [`BodyItem`]s that reflects the source execution order: calls, branches and
-    /// loops appear interleaved exactly as they do in the code.
-    fn process_scope(entity: Entity, owner: &str) -> Vec<BodyItem> {
-        let mut body: Vec<BodyItem> = Vec::new();
-
-        entity.visit_children(|child, _| {
-            match child.get_kind() {
-                EntityKind::IfStmt => {
-                    Self::process_if(child, owner, &mut body);
-                    clang::EntityVisitResult::Continue
-                }
-                EntityKind::ForStmt | EntityKind::WhileStmt | EntityKind::DoStmt => {
-                    body.push(Self::process_loop(child, owner));
-                    clang::EntityVisitResult::Continue
-                }
-                EntityKind::CallExpr => {
-                    // Post-order: emit argument calls before the outer call.
-                    Self::collect_calls_no_if(child, owner, &mut body);
-                    if let Some((callee, name)) = Self::cross_class_call_name(child, owner) {
-                        body.push(BodyItem::Call { callee, name });
-                    }
-                    clang::EntityVisitResult::Continue
-                }
-                _ => {
-                    Self::collect_calls_no_if(child, owner, &mut body);
-                    clang::EntityVisitResult::Continue
-                }
-            }
-        });
-
-        body
+    /// Turns an IfStmt into one [`BodyItem::Branch`] with ordered cases.
+    ///
+    /// `else if` chains are flattened into cases, while an `else` that contains
+    /// a nested `if` remains a final else case containing a nested Branch.
+    fn process_if(
+        source_files: &mut SourceFileCache,
+        if_entity: Entity,
+        caller: &FunctionId,
+    ) -> Vec<BodyItem> {
+        match Self::collect_branch_cases(source_files, if_entity, caller) {
+            Some(cases) => vec![BodyItem::Branch { cases }],
+            None => Self::process_if_fallback(source_files, if_entity, caller),
+        }
     }
 
-    /// Turn an IfStmt into one or more [`BodyItem::Branch`] entries (one per arm).
-    fn process_if(if_entity: Entity, owner: &str, out: &mut Vec<BodyItem>) {
-        let parts = Self::get_children(if_entity);
-        // IfStmt children: [condition_expr, then_body, (else_body)?]
-        let cond_text = parts
-            .first()
-            .map(|&c| Self::extract_first_name(c))
-            .unwrap_or_default();
+    /// Collects the ordered cases of an if/else-if/else chain.
+    fn collect_branch_cases(
+        source_files: &mut SourceFileCache,
+        if_entity: Entity,
+        caller: &FunctionId,
+    ) -> Option<Vec<BranchCase>> {
+        let parts = Self::split_if_parts(if_entity)?;
+        let mut cases = vec![BranchCase {
+            guard: Some(Self::extract_guard_expression(
+                source_files,
+                parts.condition,
+                caller,
+            )),
+            body: Self::process_statement(source_files, parts.then_body, caller),
+            source_location: parse_source_location(&if_entity),
+        }];
 
-        // Collect any cross-class calls embedded inside the condition expression
-        // (e.g. `if (!plugin->WaitUntilLoaded(...))` — the call is in the condition,
-        // not the body, so it must be captured here before the Branch is created).
-        if let Some(&cond_ent) = parts.first() {
-            Self::collect_calls_no_if(cond_ent, owner, out);
-        }
-
-        if let Some(&then_ent) = parts.get(1) {
-            out.push(BodyItem::Branch {
-                condition: cond_text,
-                body: Self::process_body(then_ent, owner),
-            });
-        }
-
-        if let Some(&else_ent) = parts.get(2) {
-            if else_ent.get_kind() == EntityKind::IfStmt {
-                Self::process_if(else_ent, owner, out);
+        if let Some(else_body) = parts.else_body {
+            if else_body.get_kind() == EntityKind::IfStmt {
+                cases.extend(Self::collect_branch_cases(source_files, else_body, caller)?);
             } else {
-                out.push(BodyItem::Branch {
-                    condition: "else".to_string(),
-                    body: Self::process_body(else_ent, owner),
+                cases.push(BranchCase {
+                    guard: None,
+                    body: Self::process_statement(source_files, else_body, caller),
+                    source_location: parse_source_location(&else_body),
                 });
             }
         }
+
+        Some(cases)
     }
 
-    /// Process a branch body, dispatching on kind.
-    fn process_body(entity: Entity, owner: &str) -> Vec<BodyItem> {
-        match entity.get_kind() {
-            EntityKind::CompoundStmt => Self::process_scope(entity, owner),
-            EntityKind::IfStmt => {
-                let mut body = Vec::new();
-                Self::process_if(entity, owner, &mut body);
-                body
-            }
+    /// Maps the supported direct-child layout of an `IfStmt` to semantic roles.
+    ///
+    /// The current layout is `[condition, then_body, else_body?]`. More complex
+    /// forms, such as C++17 `if` statements with an initializer, use the
+    /// conservative no-data-loss fallback until their child layout is modeled.
+    fn split_if_parts(if_entity: Entity<'_>) -> Option<IfParts<'_>> {
+        let children = Self::get_children(if_entity);
+
+        match children.as_slice() {
+            [condition, then_body] => Some(IfParts {
+                condition: *condition,
+                then_body: *then_body,
+                else_body: None,
+            }),
+            [condition, then_body, else_body] => Some(IfParts {
+                condition: *condition,
+                then_body: *then_body,
+                else_body: Some(*else_body),
+            }),
             _ => {
-                let mut body = Vec::new();
-                Self::collect_calls_no_if(entity, owner, &mut body);
-                body
+                log::warn!(
+                    "using fallback for IfStmt with unsupported direct-child layout: {} children",
+                    children.len()
+                );
+                None
             }
         }
     }
 
-    /// Turn a loop statement into a [`BodyItem::Loop`].
-    fn process_loop(loop_entity: Entity, owner: &str) -> BodyItem {
-        let kind = match loop_entity.get_kind() {
-            EntityKind::ForStmt => "for",
-            EntityKind::WhileStmt => "while",
-            EntityKind::DoStmt => "do_while",
-            _ => "unknown",
+    /// Preserves reachable nested calls when an `IfStmt` layout is unsupported.
+    ///
+    /// The fallback deliberately does not invent a condition or branch shape;
+    /// it traverses all direct children so an unsupported cursor never causes
+    /// its entire subtree to disappear from the extracted model.
+    fn process_if_fallback(
+        source_files: &mut SourceFileCache,
+        if_entity: Entity,
+        caller: &FunctionId,
+    ) -> Vec<BodyItem> {
+        log::warn!(
+            "falling back to unstructured processing for IfStmt at {:?}",
+            parse_source_location(&if_entity)
+        );
+
+        Self::get_children(if_entity)
+            .into_iter()
+            .flat_map(|child| Self::process_statement(source_files, child, caller))
+            .collect()
+    }
+
+    /// Extracts a condition as a tree that preserves `&&`, `||`, and `!`
+    /// short-circuit semantics. Other expressions remain source-backed leaves.
+    fn extract_guard_expression(
+        source_files: &mut SourceFileCache,
+        entity: Entity,
+        caller: &FunctionId,
+    ) -> GuardExpression {
+        match entity.get_kind() {
+            EntityKind::CallExpr => {
+                if let Some(target) = Self::extract_call_target(entity)
+                    .filter(|target| Self::is_cross_owner_call(caller, target))
+                {
+                    return GuardExpression::Call {
+                        target: target.qualified_name(),
+                        text: Self::extract_expression_text(source_files, entity),
+                        source_location: parse_source_location(&entity),
+                    };
+                }
+            }
+            EntityKind::UnaryOperator if Self::has_leading_operator(entity, "!") => {
+                if let Some(expression) = Self::get_children(entity).into_iter().next() {
+                    return GuardExpression::Not {
+                        expression: Box::new(Self::extract_guard_expression(
+                            source_files,
+                            expression,
+                            caller,
+                        )),
+                    };
+                }
+            }
+            EntityKind::BinaryOperator => {
+                let children = Self::get_children(entity);
+                if let [left, right] = children.as_slice() {
+                    if let Some(operator) = Self::logical_operator(entity, *left, *right) {
+                        return Self::combine_guard_expressions(
+                            operator,
+                            Self::extract_guard_expression(source_files, *left, caller),
+                            Self::extract_guard_expression(source_files, *right, caller),
+                        );
+                    }
+                }
+            }
+            EntityKind::ParenExpr | EntityKind::UnexposedExpr => {
+                let children = Self::get_children(entity);
+                if let [expression] = children.as_slice() {
+                    return Self::extract_guard_expression(source_files, *expression, caller);
+                }
+            }
+            _ => {}
         }
-        .to_string();
+
+        GuardExpression::Opaque {
+            text: Self::extract_expression_text(source_files, entity),
+            source_location: parse_source_location(&entity),
+        }
+    }
+
+    fn combine_guard_expressions(
+        operator: &str,
+        left: GuardExpression,
+        right: GuardExpression,
+    ) -> GuardExpression {
+        match operator {
+            "&&" => GuardExpression::And {
+                expressions: Self::flatten_guard_expressions(left, right, |expression| {
+                    matches!(expression, GuardExpression::And { .. })
+                }),
+            },
+            "||" => GuardExpression::Or {
+                expressions: Self::flatten_guard_expressions(left, right, |expression| {
+                    matches!(expression, GuardExpression::Or { .. })
+                }),
+            },
+            _ => unreachable!("only logical operators are combined"),
+        }
+    }
+
+    fn flatten_guard_expressions<F>(
+        left: GuardExpression,
+        right: GuardExpression,
+        is_same_operator: F,
+    ) -> Vec<GuardExpression>
+    where
+        F: Fn(&GuardExpression) -> bool,
+    {
+        let mut expressions = Vec::new();
+        for expression in [left, right] {
+            if is_same_operator(&expression) {
+                match expression {
+                    GuardExpression::And {
+                        expressions: nested,
+                    }
+                    | GuardExpression::Or {
+                        expressions: nested,
+                    } => expressions.extend(nested),
+                    _ => unreachable!("matching guard expression must be logical"),
+                }
+            } else {
+                expressions.push(expression);
+            }
+        }
+        expressions
+    }
+
+    /// Returns the logical operator located between a binary cursor's direct
+    /// left and right operands. This avoids interpreting an operator nested in
+    /// either operand, including template arguments and `operator&&` calls, as
+    /// the current cursor's operator.
+    fn logical_operator(entity: Entity, left: Entity, right: Entity) -> Option<&'static str> {
+        let left_end = left.get_range()?.get_end().get_file_location();
+        let right_start = right.get_range()?.get_start().get_file_location();
+        let file = left_end.file?;
+
+        if right_start.file != Some(file) || left_end.offset > right_start.offset {
+            return None;
+        }
+
+        entity
+            .get_range()?
+            .tokenize()
+            .into_iter()
+            .find_map(|token| {
+                let location = token.get_location().get_file_location();
+                (location.file == Some(file)
+                    && (left_end.offset..right_start.offset).contains(&location.offset))
+                .then(|| match token.get_spelling().as_str() {
+                    "&&" | "and" => Some("&&"),
+                    "||" | "or" => Some("||"),
+                    _ => None,
+                })
+                .flatten()
+            })
+    }
+
+    fn has_leading_operator(entity: Entity, operator: &str) -> bool {
+        entity
+            .get_range()
+            .and_then(|range| range.tokenize().into_iter().next())
+            .is_some_and(|token| {
+                token.get_spelling() == operator
+                    || (operator == "!" && token.get_spelling() == "not")
+            })
+    }
+
+    /// Collects cross-owner calls in `entity`, without crossing control-flow
+    /// boundaries. Calls are emitted post-order, so nested calls precede their
+    /// enclosing call. This is structural nesting order, not a claim about the
+    /// evaluation order of sibling C++ call arguments.
+    fn collect_nested_calls(entity: Entity, caller: &FunctionId) -> Vec<BodyItem> {
+        match entity.get_kind() {
+            EntityKind::IfStmt
+            | EntityKind::ForStmt
+            | EntityKind::WhileStmt
+            | EntityKind::DoStmt => Vec::new(),
+            EntityKind::CallExpr => {
+                let mut calls: Vec<_> = Self::get_children(entity)
+                    .into_iter()
+                    .flat_map(|child| Self::collect_nested_calls(child, caller))
+                    .collect();
+
+                if let Some(target) = Self::extract_call_target(entity) {
+                    if Self::is_cross_owner_call(caller, &target) {
+                        calls.push(BodyItem::Call {
+                            target: target.qualified_name(),
+                            source_location: parse_source_location(&entity),
+                        });
+                    }
+                }
+
+                calls
+            }
+            _ => Self::get_children(entity)
+                .into_iter()
+                .flat_map(|child| Self::collect_nested_calls(child, caller))
+                .collect(),
+        }
+    }
+
+    /// Turns a loop statement into its single [`BodyItem::Loop`] representation.
+    fn process_loop(
+        source_files: &mut SourceFileCache,
+        loop_entity: Entity,
+        caller: &FunctionId,
+    ) -> Vec<BodyItem> {
+        let kind = match loop_entity.get_kind() {
+            EntityKind::ForStmt => LoopKind::For,
+            EntityKind::WhileStmt => LoopKind::While,
+            EntityKind::DoStmt => LoopKind::DoWhile,
+            _ => unreachable!("only loop statements are processed as loops"),
+        };
 
         let parts = Self::get_children(loop_entity);
         let body_idx = match loop_entity.get_kind() {
@@ -286,9 +520,13 @@ impl FunctionVisitor {
 
         let body = parts
             .get(body_idx)
-            .map(|&b| Self::process_body(b, owner))
+            .map(|&b| Self::process_statement(source_files, b, caller))
             .unwrap_or_default();
 
-        BodyItem::Loop { kind, body }
+        vec![BodyItem::Loop {
+            kind,
+            body,
+            source_location: parse_source_location(&loop_entity),
+        }]
     }
 }

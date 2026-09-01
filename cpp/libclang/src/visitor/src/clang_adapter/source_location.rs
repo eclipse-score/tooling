@@ -27,3 +27,11 @@ pub(crate) fn parse_source_location(entity: &Entity) -> SourceLocation {
         .map(|file| file.get_path().to_string_lossy().to_string());
     SourceLocation::new(source_file.unwrap_or_default(), file_location.line)
 }
+
+// Returns whether an entity is located in the primary input file of the
+// current libclang translation unit, rather than in an included file.
+pub(crate) fn is_in_main_file(entity: &Entity) -> bool {
+    entity
+        .get_location()
+        .is_some_and(|location| location.is_in_main_file())
+}

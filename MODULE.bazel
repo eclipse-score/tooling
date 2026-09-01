@@ -125,6 +125,7 @@ crate.spec(
     version = "1.0",
 )
 crate.spec(
+    features = ["preserve_order"],
     package = "serde_json",
     version = "1.0",
 )

@@ -15,32 +15,6 @@ use serde::{Deserialize, Serialize};
 pub use source_location::SourceLocation;
 use std::sync::Arc;
 
-/// A single item inside a function/branch/loop body, emitted in execution order.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum BodyItem {
-    /// A cross-class method call.
-    Call { callee: String, name: String },
-    /// One arm of an if / else-if / else.  The `condition` field is the guard
-    /// expression text, or `"else"` for an unconditional else arm.
-    Branch {
-        condition: String,
-        body: Vec<BodyItem>,
-    },
-    /// A for / while / do-while loop.
-    Loop { kind: String, body: Vec<BodyItem> },
-}
-
-/// Represents a class method definition extracted from C++ source.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FunctionDef {
-    pub class: String,
-    pub name: String,
-    pub return_type: String,
-    /// Method body items in execution order (calls, branches, loops).
-    pub body: Vec<BodyItem>,
-}
-
 /// For a PlantUML sequence diagram, this is the resolved participant identifier
 /// (typically the alias if present, otherwise the display name).
 ///

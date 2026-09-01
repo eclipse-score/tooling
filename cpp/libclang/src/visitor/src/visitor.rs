@@ -11,7 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+
 use clang::{Entity, EntityKind};
+use log::warn;
 
 use crate::clang_adapter::scope::namespace_id;
 use crate::clang_adapter::source_filter;
@@ -24,13 +28,36 @@ pub trait AstVisitor {
     fn visit(ctx: &mut VisitContext, entity: Entity);
 }
 
+/// Per-traversal cache for source-file contents.
+///
+/// The cache belongs to `Visitor` because it is temporary traversal state,
+/// rather than part of the extracted semantic model.
+#[derive(Default)]
+pub(crate) struct SourceFileCache {
+    files: HashMap<PathBuf, Option<Vec<u8>>>,
+}
+
+impl SourceFileCache {
+    /// Returns source bytes, loading each path at most once during traversal.
+    pub(crate) fn get(&mut self, path: &Path) -> Option<&[u8]> {
+        self.files
+            .entry(path.to_path_buf())
+            .or_insert_with(|| std::fs::read(path).ok())
+            .as_deref()
+    }
+}
+
 pub struct Visitor<'a> {
     ctx: &'a mut VisitContext,
+    source_files: SourceFileCache,
 }
 
 impl<'a> Visitor<'a> {
     pub fn new(ctx: &'a mut VisitContext) -> Self {
-        Self { ctx }
+        Self {
+            ctx,
+            source_files: SourceFileCache::default(),
+        }
     }
 
     pub fn visit(&mut self, entity: Entity) {
@@ -49,12 +76,20 @@ impl<'a> Visitor<'a> {
             }
             EntityKind::ClassTemplate | EntityKind::ClassTemplatePartialSpecialization => {
                 ClassVisitor::visit(self.ctx, entity);
-                // ClassTemplate parsing already processes all members,
-                // so skip generic child recursion to avoid double-processing.
-                return;
             }
-            EntityKind::Method => FunctionVisitor::visit(self.ctx, entity),
             EntityKind::EnumDecl => EnumVisitor::visit(self.ctx, entity),
+            EntityKind::FunctionDecl | EntityKind::Method => {
+                FunctionVisitor::visit_with_source_files(self.ctx, &mut self.source_files, entity);
+            }
+            EntityKind::FunctionTemplate => {
+                // TBD: Handle function templates if needed
+            }
+            EntityKind::Constructor | EntityKind::Destructor | EntityKind::ConversionFunction => {
+                warn!(
+                    "Ignoring constructor, destructor, or conversion function: {:?}",
+                    entity
+                );
+            }
             _ => {}
         }
 
