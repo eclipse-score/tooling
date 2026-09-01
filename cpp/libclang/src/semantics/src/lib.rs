@@ -11,6 +11,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
+mod callable;
+mod control_flow;
 mod resolved_type;
 
+pub use callable::{FunctionDef, FunctionId, FunctionKind, Scope};
+pub use control_flow::{BodyItem, BranchCase, GuardExpression, LoopKind};
 pub use resolved_type::{EntityId, ResolvedType};

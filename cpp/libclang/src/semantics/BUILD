@@ -16,11 +16,16 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 rust_library(
     name = "cpp_semantics",
     srcs = [
+        "src/callable.rs",
+        "src/control_flow.rs",
         "src/lib.rs",
         "src/resolved_type.rs",
     ],
     visibility = ["//cpp/libclang:__subpackages__"],
-    deps = ["@crates//:serde"],
+    deps = [
+        "//tools/metamodel/common:source_location",
+        "@crates//:serde",
+    ],
 )
 
 rust_test(

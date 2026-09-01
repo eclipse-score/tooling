@@ -14,8 +14,7 @@
 use std::collections::HashMap;
 
 use class_diagram::{SimpleEntity, SourceLocation};
-use cpp_semantics::ResolvedType;
-use sequence_logic::FunctionDef;
+use cpp_semantics::{FunctionDef, ResolvedType};
 use serde::{Deserialize, Serialize};
 
 pub type TypeMap = HashMap<String, SimpleEntity>;

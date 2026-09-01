@@ -20,13 +20,11 @@ mod function_visitor;
 mod types;
 pub mod visitor;
 
-pub use cpp_semantics::ResolvedType;
-pub use sequence_logic::{BodyItem, FunctionDef};
+pub use cpp_semantics::{BodyItem, FunctionDef, ResolvedType};
 
 pub use clang_adapter::source_filter::is_external_dependency_path;
 pub use class_visitor::ClassVisitor;
 pub use context::VisitContext;
 pub use enum_visitor::EnumVisitor;
 pub use function_visitor::FunctionVisitor;
-pub use visitor::AstVisitor;
-pub use visitor::Visitor;
+pub use visitor::{AstVisitor, Visitor};
