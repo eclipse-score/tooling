@@ -1,0 +1,310 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "guard_associativity",
+        "scope": {
+          "Namespace": [
+            "flow"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": [
+        {
+          "cases": [
+            {
+              "guard": {
+                "type": "and",
+                "expressions": [
+                  {
+                    "type": "call",
+                    "target": "first",
+                    "text": "first()",
+                    "source_location": {
+                      "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                      "line": 39
+                    }
+                  },
+                  {
+                    "type": "call",
+                    "target": "second",
+                    "text": "second()",
+                    "source_location": {
+                      "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                      "line": 39
+                    }
+                  },
+                  {
+                    "type": "call",
+                    "target": "third",
+                    "text": "third()",
+                    "source_location": {
+                      "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                      "line": 39
+                    }
+                  }
+                ]
+              },
+              "body": [
+                {
+                  "target": "handle_and",
+                  "source_location": {
+                    "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                    "line": 40
+                  },
+                  "type": "call"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                "line": 39
+              }
+            }
+          ],
+          "type": "branch"
+        },
+        {
+          "cases": [
+            {
+              "guard": {
+                "type": "and",
+                "expressions": [
+                  {
+                    "type": "or",
+                    "expressions": [
+                      {
+                        "type": "call",
+                        "target": "first",
+                        "text": "first()",
+                        "source_location": {
+                          "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                          "line": 44
+                        }
+                      },
+                      {
+                        "type": "call",
+                        "target": "second",
+                        "text": "second()",
+                        "source_location": {
+                          "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                          "line": 44
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "call",
+                    "target": "third",
+                    "text": "third()",
+                    "source_location": {
+                      "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                      "line": 44
+                    }
+                  }
+                ]
+              },
+              "body": [
+                {
+                  "target": "handle_or",
+                  "source_location": {
+                    "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                    "line": 45
+                  },
+                  "type": "call"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                "line": 44
+              }
+            }
+          ],
+          "type": "branch"
+        },
+        {
+          "cases": [
+            {
+              "guard": {
+                "type": "or",
+                "expressions": [
+                  {
+                    "type": "and",
+                    "expressions": [
+                      {
+                        "type": "call",
+                        "target": "first",
+                        "text": "first()",
+                        "source_location": {
+                          "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                          "line": 49
+                        }
+                      },
+                      {
+                        "type": "call",
+                        "target": "second",
+                        "text": "second()",
+                        "source_location": {
+                          "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                          "line": 49
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "call",
+                    "target": "third",
+                    "text": "third()",
+                    "source_location": {
+                      "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                      "line": 49
+                    }
+                  }
+                ]
+              },
+              "body": [
+                {
+                  "target": "handle_mixed",
+                  "source_location": {
+                    "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                    "line": 50
+                  },
+                  "type": "call"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                "line": 49
+              }
+            }
+          ],
+          "type": "branch"
+        },
+        {
+          "cases": [
+            {
+              "guard": {
+                "type": "and",
+                "expressions": [
+                  {
+                    "type": "call",
+                    "target": "first",
+                    "text": "first()",
+                    "source_location": {
+                      "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                      "line": 54
+                    }
+                  },
+                  {
+                    "type": "call",
+                    "target": "second",
+                    "text": "second()",
+                    "source_location": {
+                      "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                      "line": 54
+                    }
+                  }
+                ]
+              },
+              "body": [
+                {
+                  "target": "handle_alternative",
+                  "source_location": {
+                    "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                    "line": 55
+                  },
+                  "type": "call"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                "line": 54
+              }
+            }
+          ],
+          "type": "branch"
+        },
+        {
+          "cases": [
+            {
+              "guard": {
+                "type": "opaque",
+                "text": "check_template<template_first && template_second>() == third()",
+                "source_location": {
+                  "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                  "line": 59
+                }
+              },
+              "body": [
+                {
+                  "target": "handle_template_operand",
+                  "source_location": {
+                    "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                    "line": 60
+                  },
+                  "type": "call"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                "line": 59
+              }
+            }
+          ],
+          "type": "branch"
+        },
+        {
+          "cases": [
+            {
+              "guard": {
+                "type": "opaque",
+                "text": "left == operator&&(first_flag(), second_flag())",
+                "source_location": {
+                  "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                  "line": 64
+                }
+              },
+              "body": [
+                {
+                  "target": "handle_operator_function",
+                  "source_location": {
+                    "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                    "line": 65
+                  },
+                  "type": "call"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+                "line": 64
+              }
+            }
+          ],
+          "type": "branch"
+        }
+      ]
+    }
+  ],
+  "types": {
+    "Flag": {
+      "id": "Flag",
+      "name": "Flag",
+      "enclosing_namespace_id": null,
+      "stereotypes": [],
+      "entity_type": "Struct",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/guard_associativity/flow.cpp",
+        "line": 30
+      }
+    }
+  }
+}

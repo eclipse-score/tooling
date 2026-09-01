@@ -1,0 +1,82 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "complex_condition",
+        "scope": {
+          "Namespace": [
+            "flow"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": [
+        {
+          "cases": [
+            {
+              "guard": {
+                "type": "and",
+                "expressions": [
+                  {
+                    "type": "call",
+                    "target": "is_ready",
+                    "text": "is_ready()",
+                    "source_location": {
+                      "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
+                        "line": 21
+                    }
+                  },
+                  {
+                    "type": "or",
+                    "expressions": [
+                      {
+                        "type": "call",
+                        "target": "is_allowed",
+                        "text": "is_allowed()",
+                        "source_location": {
+                          "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
+                              "line": 21
+                        }
+                      },
+                      {
+                        "type": "not",
+                        "expression": {
+                          "type": "call",
+                          "target": "has_permission",
+                          "text": "has_permission()",
+                          "source_location": {
+                            "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
+                                "line": 21
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "body": [
+                {
+                  "target": "handle_complex",
+                  "source_location": {
+                    "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
+                    "line": 22
+                  },
+                  "type": "call"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
+                "line": 21
+              }
+            }
+          ],
+          "type": "branch"
+        }
+      ]
+    }
+  ],
+  "types": {}
+}

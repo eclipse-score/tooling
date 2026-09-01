@@ -1,0 +1,88 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "nested_if",
+        "scope": {
+          "Namespace": [
+            "flow"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": [
+        {
+          "cases": [
+            {
+              "guard": {
+                "type": "opaque",
+                "text": "outer",
+                "source_location": {
+                  "file": "cpp/libclang/integration_test/function_cases/nested_if/flow.cpp",
+                    "line": 19
+                }
+              },
+              "body": [
+                {
+                  "cases": [
+                    {
+                      "guard": {
+                        "type": "opaque",
+                        "text": "inner",
+                        "source_location": {
+                          "file": "cpp/libclang/integration_test/function_cases/nested_if/flow.cpp",
+                          "line": 20
+                        }
+                      },
+                      "body": [
+                        {
+                          "target": "handle_nested",
+                          "source_location": {
+                            "file": "cpp/libclang/integration_test/function_cases/nested_if/flow.cpp",
+                            "line": 21
+                          },
+                          "type": "call"
+                        }
+                      ],
+                      "source_location": {
+                        "file": "cpp/libclang/integration_test/function_cases/nested_if/flow.cpp",
+                        "line": 20
+                      }
+                    }
+                  ],
+                  "type": "branch"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/nested_if/flow.cpp",
+                "line": 19
+              }
+            },
+            {
+              "guard": null,
+              "body": [
+                {
+                  "target": "handle_outer_else",
+                  "source_location": {
+                    "file": "cpp/libclang/integration_test/function_cases/nested_if/flow.cpp",
+                      "line": 24
+                  },
+                  "type": "call"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/nested_if/flow.cpp",
+                "line": 23
+              }
+            }
+          ],
+          "type": "branch"
+        }
+      ]
+    }
+  ],
+  "types": {}
+}

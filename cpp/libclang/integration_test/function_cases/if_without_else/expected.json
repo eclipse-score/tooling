@@ -1,0 +1,50 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "without_else",
+        "scope": {
+          "Namespace": [
+            "flow"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": [
+        {
+          "cases": [
+            {
+              "guard": {
+                "type": "opaque",
+                "text": "enabled",
+                "source_location": {
+                  "file": "cpp/libclang/integration_test/function_cases/if_without_else/flow.cpp",
+                    "line": 18
+                }
+              },
+              "body": [
+                {
+                  "target": "handle_no_else",
+                  "source_location": {
+                    "file": "cpp/libclang/integration_test/function_cases/if_without_else/flow.cpp",
+                      "line": 19
+                  },
+                  "type": "call"
+                }
+              ],
+              "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/if_without_else/flow.cpp",
+                "line": 18
+              }
+            }
+          ],
+          "type": "branch"
+        }
+      ]
+    }
+  ],
+  "types": {}
+}
