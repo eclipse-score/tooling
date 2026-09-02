@@ -145,6 +145,46 @@ match when they have the same count, with matching parameter name, normalized
 type, and pack-expansion (`...`) marker at each position.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationMethodConsistency`)*
 
+`static`, `abstract`, `virtual`, and `override` may each be written either as a
+brace qualifier (e.g. `{virtual}`) or as a stereotype (e.g. `<<virtual>>`); both
+forms are equivalent. `override` may additionally be written as a bare trailing
+keyword after the method signature, mirroring C++ syntax, e.g. `+ Run() override`.
+`noexcept` is only written as a bare trailing keyword, e.g. `+ Run() noexcept`.
+An `abstract` or `override` method is implicitly `virtual` (matching C++
+semantics), so the effective modifier set includes `virtual` even if it was not
+written explicitly. The visibility classifier (`+`/`-`/`#`/`~`) is always
+written first, before any brace/stereotype modifier, e.g. `+ {virtual} Run()`.
+
+```text
+' PlantUML class diagram
+class "Base" {
+  + {virtual} Run(): void
+  + {virtual} Stop(): void
+}
+class "Transport" {
+  + <<override>> Run(): void
+  + Stop() override : void
+  + Tick() noexcept : void
+}
+Base <|-- Transport
+```
+
+```cpp
+// implementation C++ code
+class Base {
+public:
+  virtual void Run();
+  virtual void Stop();
+};
+
+class Transport : public Base {
+public:
+  void Run() override;
+  void Stop() override;
+  void Tick() noexcept;
+};
+```
+
 C-style variadic parameters (e.g. `void Log(const char* fmt, ...)`) are not
 currently supported by the PlantUML parser and are not validated: a design
 parameter is always treated as non-variadic.

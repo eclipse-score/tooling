@@ -1,0 +1,291 @@
+{
+    "types": {
+        "ExplicitNoexceptDestructorBase": {
+            "id": "ExplicitNoexceptDestructorBase",
+            "name": "ExplicitNoexceptDestructorBase",
+            "enclosing_namespace_id": null,
+            "stereotypes": [],
+            "entity_type": "Interface",
+            "type_aliases": [],
+            "variables": [],
+            "methods": [
+                {
+                    "name": "~ExplicitNoexceptDestructorBase",
+                    "return_type": null,
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Noexcept",
+                        "Destructor"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 44
+                    }
+                },
+                {
+                    "name": "run",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Abstract"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 45
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "enum_literals": [],
+            "relationships": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                "line": 42
+            }
+        },
+        "ExplicitNoexceptDestructorDerived": {
+            "id": "ExplicitNoexceptDestructorDerived",
+            "name": "ExplicitNoexceptDestructorDerived",
+            "enclosing_namespace_id": null,
+            "stereotypes": [],
+            "entity_type": "Class",
+            "type_aliases": [],
+            "variables": [],
+            "methods": [
+                {
+                    "name": "run",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Override"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 56
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "enum_literals": [],
+            "relationships": [
+                {
+                    "source": "ExplicitNoexceptDestructorDerived",
+                    "target": "ExplicitNoexceptDestructorBase",
+                    "relation_type": "Implementation",
+                    "source_multiplicity": null,
+                    "target_multiplicity": null,
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 54
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                "line": 53
+            }
+        },
+        "ImplicitDestructorBase": {
+            "id": "ImplicitDestructorBase",
+            "name": "ImplicitDestructorBase",
+            "enclosing_namespace_id": null,
+            "stereotypes": [],
+            "entity_type": "Interface",
+            "type_aliases": [],
+            "variables": [],
+            "methods": [
+                {
+                    "name": "~ImplicitDestructorBase",
+                    "return_type": null,
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Destructor"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 38
+                    }
+                },
+                {
+                    "name": "run",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Abstract"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 39
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "enum_literals": [],
+            "relationships": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                "line": 36
+            }
+        },
+        "ImplicitDestructorDerived": {
+            "id": "ImplicitDestructorDerived",
+            "name": "ImplicitDestructorDerived",
+            "enclosing_namespace_id": null,
+            "stereotypes": [],
+            "entity_type": "Class",
+            "type_aliases": [],
+            "variables": [],
+            "methods": [
+                {
+                    "name": "run",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Override"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 50
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "enum_literals": [],
+            "relationships": [
+                {
+                    "source": "ImplicitDestructorDerived",
+                    "target": "ImplicitDestructorBase",
+                    "relation_type": "Implementation",
+                    "source_multiplicity": null,
+                    "target_multiplicity": null,
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 48
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                "line": 48
+            }
+        },
+        "NoexceptSample": {
+            "id": "NoexceptSample",
+            "name": "NoexceptSample",
+            "enclosing_namespace_id": null,
+            "stereotypes": [],
+            "entity_type": "Class",
+            "type_aliases": [],
+            "variables": [],
+            "methods": [
+                {
+                    "name": "plainMethod",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 26
+                    }
+                },
+                {
+                    "name": "explicitNoexceptMethod",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Noexcept"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 27
+                    }
+                },
+                {
+                    "name": "conditionalNoexceptFalse",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 28
+                    }
+                },
+                {
+                    "name": "conditionalNoexceptTrue",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 29
+                    }
+                },
+                {
+                    "name": "methodWithNoexceptLambdaInBody",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                        "line": 30
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "enum_literals": [],
+            "relationships": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/method_modifier_noexcept/noexcept_sample.cpp",
+                "line": 24
+            }
+        }
+    },
+    "functions": [
+        {
+            "id": {
+                "scope": {
+                    "Type": {
+                        "namespace": [],
+                        "type_path": [
+                            "NoexceptSample"
+                        ]
+                    }
+                },
+                "name": "methodWithNoexceptLambdaInBody"
+            },
+            "kind": "Method",
+            "return_type": {
+                "Builtin": "void"
+            },
+            "body": []
+        }
+    ]
+}
