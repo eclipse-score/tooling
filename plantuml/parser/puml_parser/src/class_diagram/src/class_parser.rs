@@ -438,6 +438,8 @@ impl ClassParseSession<'_> {
             match p.as_rule() {
                 Rule::static_modifier
                 | Rule::abstract_modifier
+                | Rule::virtual_modifier
+                | Rule::override_modifier
                 | Rule::const_method_qualifier
                 | Rule::noexcept_method_qualifier => method.modifiers.push(p.as_str().to_string()),
                 Rule::pure_virtual_suffix => ensure_abstract_modifier(&mut method),

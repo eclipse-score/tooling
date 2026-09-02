@@ -83,6 +83,11 @@ fn positive_variable_features() {
 }
 
 #[test]
+fn positive_method_inheritance_features() {
+    assert_case("positive_method_inheritance_features");
+}
+
+#[test]
 fn negative_class_missing() {
     assert_case("negative_class_missing");
 }
@@ -165,6 +170,21 @@ fn negative_method_mismatch() {
 #[test]
 fn negative_method_modifier_mismatch() {
     assert_case("negative_method_modifier_mismatch");
+}
+
+#[test]
+fn negative_method_modifier_override_mismatch() {
+    assert_case("negative_method_modifier_override_mismatch");
+}
+
+#[test]
+fn negative_method_modifier_virtual_mismatch() {
+    assert_case("negative_method_modifier_virtual_mismatch");
+}
+
+#[test]
+fn negative_method_modifier_abstract_mismatch() {
+    assert_case("negative_method_modifier_abstract_mismatch");
 }
 
 #[test]
