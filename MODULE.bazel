@@ -163,17 +163,26 @@ crate.spec(
 )
 
 # Annotations for libclang
+# Note: crate.annotation's crate_features are passed to rustc verbatim, they
+# do NOT get expanded through the crate's own Cargo.toml `[features]` cascade
+# (e.g. clang-sys's "clang_18_0 = [\"clang_17_0\"]") the way a real `cargo
+# build` would -- so every version gate actually used must be listed
+# explicitly, even if a higher one is also present.
 crate.annotation(
     crate = "clang-sys",
     crate_features = [
         "runtime",
         "clang_18_0",
+        "clang_5_0",  # clang_getCursorExceptionSpecificationType et al.
     ],
     deps = ["@crates//:libloading"],
 )
 crate.annotation(
     crate = "clang",
-    crate_features = ["runtime"],
+    crate_features = [
+        "runtime",
+        "clang_5_0",  # Entity::get_exception_specification()
+    ],
 )
 crate.from_specs()
 use_repo(crate, "crates")

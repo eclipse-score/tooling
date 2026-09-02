@@ -186,13 +186,16 @@ method = {
     ~ ";"?
 }
 friend_specifier = { "friend" }
-method_modifier = _{ static_modifier | abstract_modifier }
-static_modifier = { "{" ~ static_keyword ~ "}" | static_keyword }
+method_modifier = _{ static_modifier | abstract_modifier | virtual_modifier | override_modifier }
+static_modifier = { "{" ~ static_keyword ~ "}" | ("<<" ~ static_keyword ~ ">>") | static_keyword }
 static_keyword = { "static" }
-abstract_modifier = { "{" ~ "abstract" ~ "}" }
-method_qualifier = _{ const_method_qualifier | noexcept_method_qualifier }
+abstract_modifier = { "{" ~ "abstract" ~ "}" | ("<<" ~ "abstract" ~ ">>") }
+virtual_modifier = { "{" ~ "virtual" ~ "}" | ("<<" ~ "virtual" ~ ">>") }
+override_modifier = { "{" ~ "override" ~ "}" | ("<<" ~ "override" ~ ">>") }
+method_qualifier = _{ const_method_qualifier | noexcept_method_qualifier | trailing_override_qualifier }
 const_method_qualifier = { ("<<" ~ "const" ~ ">>") | "const" }
 noexcept_method_qualifier = { "noexcept" }
+trailing_override_qualifier = { "override" }
 pure_virtual_suffix = { "=" ~ "0" }
 
 method_name = {

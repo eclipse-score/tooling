@@ -510,6 +510,11 @@ impl ClassResolver {
         let is_constructor = m.name == owner_name;
         let is_destructor = m.name == format!("~{}", owner_name);
 
+        let is_abstract = has_modifier(&m.modifiers, "abstract");
+        let is_override = has_modifier(&m.modifiers, "override");
+        // A method that is abstract or overriding a base method is implicitly virtual in C++.
+        let is_virtual = has_modifier(&m.modifiers, "virtual") || is_abstract || is_override;
+
         Method {
             name: m.name.clone(),
             return_type: m.r#type.clone(),
@@ -521,12 +526,13 @@ impl ClassResolver {
             ),
             modifiers: MethodModifier::from_conditions([
                 (has_modifier(&m.modifiers, "static"), MethodModifier::Static),
-                (false, MethodModifier::Virtual),
+                (is_virtual, MethodModifier::Virtual),
+                (is_abstract, MethodModifier::Abstract),
+                (is_override, MethodModifier::Override),
                 (
-                    has_modifier(&m.modifiers, "abstract"),
-                    MethodModifier::Abstract,
+                    has_modifier(&m.modifiers, "noexcept"),
+                    MethodModifier::Noexcept,
                 ),
-                (false, MethodModifier::Override),
                 (is_constructor, MethodModifier::Constructor),
                 (is_destructor, MethodModifier::Destructor),
             ]),
