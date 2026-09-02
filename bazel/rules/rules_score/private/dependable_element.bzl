@@ -361,6 +361,204 @@ def _process_artifact_files(ctx, artifact_name, label):
 
     return (output_files, index_refs)
 
+def _process_architectural_design_files(ctx, label):
+    """Process all files from an architectural_design label, returning output_files and classified refs.
+
+    Returns:
+        Tuple of (output_files, static_refs, dynamic_refs, public_api_refs, internal_api_refs, unclassified_refs)
+    """
+    output_files = []
+    static_refs = []
+    dynamic_refs = []
+    public_api_refs = []
+    internal_api_refs = []
+    unclassified_refs = []
+
+    all_files = _get_sphinx_files(label)
+    doc_files = _filter_doc_files(all_files)
+
+    aux_files = []
+    if label[SphinxSourcesInfo].aux_srcs:
+        aux_files = label[SphinxSourcesInfo].aux_srcs.to_list()
+
+    if not doc_files and not aux_files:
+        return (output_files, static_refs, dynamic_refs, public_api_refs, internal_api_refs, unclassified_refs)
+
+    srcs_paths = {f.path: True for f in label[SphinxSourcesInfo].srcs.to_list()}
+    common_dir = _find_common_directory(doc_files + aux_files)
+
+    static_paths = {}
+    dynamic_paths = {}
+    public_api_paths = {}
+    internal_api_paths = {}
+
+    if ArchitecturalDesignInfo in label:
+        info = label[ArchitecturalDesignInfo]
+        if hasattr(info, "static_doc_files") and info.static_doc_files:
+            static_paths = {f.path: True for f in info.static_doc_files.to_list()}
+        if hasattr(info, "dynamic_doc_files") and info.dynamic_doc_files:
+            dynamic_paths = {f.path: True for f in info.dynamic_doc_files.to_list()}
+        if hasattr(info, "public_api_doc_files") and info.public_api_doc_files:
+            public_api_paths = {f.path: True for f in info.public_api_doc_files.to_list()}
+        if hasattr(info, "internal_api_doc_files") and info.internal_api_doc_files:
+            internal_api_paths = {f.path: True for f in info.internal_api_doc_files.to_list()}
+
+    for artifact_file in doc_files:
+        relative_path = _compute_relative_path(artifact_file, common_dir)
+
+        if _is_document_file(artifact_file) and artifact_file.path not in srcs_paths:
+            continue
+
+        output_file = _create_artifact_symlink(
+            ctx,
+            "architectural_design",
+            artifact_file,
+            relative_path,
+        )
+        output_files.append(output_file)
+
+        if _is_document_file(artifact_file):
+            doc_path = "architectural_design/" + relative_path
+            doc_ref = doc_path.removesuffix(".rst").removesuffix(".md")
+            if artifact_file.path in static_paths:
+                static_refs.append(doc_ref)
+            elif artifact_file.path in dynamic_paths:
+                dynamic_refs.append(doc_ref)
+            elif artifact_file.path in public_api_paths:
+                public_api_refs.append(doc_ref)
+            elif artifact_file.path in internal_api_paths:
+                internal_api_refs.append(doc_ref)
+            else:
+                unclassified_refs.append(doc_ref)
+
+    for artifact_file in aux_files:
+        relative_path = _compute_relative_path(artifact_file, common_dir)
+        output_file = _create_artifact_symlink(
+            ctx,
+            "architectural_design",
+            artifact_file,
+            relative_path,
+        )
+        output_files.append(output_file)
+
+    return (output_files, static_refs, dynamic_refs, public_api_refs, internal_api_refs, unclassified_refs)
+
+def _generate_software_arch_page(
+        ctx,
+        feature_req_refs,
+        static_refs,
+        dynamic_refs,
+        public_api_refs,
+        internal_api_refs,
+        unclassified_refs,
+        dependability_refs,
+        output_files):
+    """Generate software_arch.rst page with section subheadings when categorized entries exist."""
+    has_categories = bool(
+        feature_req_refs or static_refs or dynamic_refs or
+        public_api_refs or internal_api_refs,
+    )
+
+    if not has_categories and not unclassified_refs and not dependability_refs:
+        return None
+
+    title = "Software Architectural Level"
+    underline = "-" * len(title)
+    lines = [title, underline, ""]
+
+    if has_categories:
+        if feature_req_refs:
+            lines.extend([
+                ".. toctree::",
+                "   :maxdepth: 1",
+                "",
+                "   " + "\n   ".join(feature_req_refs),
+                "",
+            ])
+        if static_refs:
+            lines.extend([
+                "Static Design",
+                "~~~~~~~~~~~~~",
+                "",
+                ".. toctree::",
+                "   :maxdepth: 1",
+                "",
+                "   " + "\n   ".join(static_refs),
+                "",
+            ])
+        if dynamic_refs:
+            lines.extend([
+                "Dynamic Design",
+                "~~~~~~~~~~~~~~",
+                "",
+                ".. toctree::",
+                "   :maxdepth: 1",
+                "",
+                "   " + "\n   ".join(dynamic_refs),
+                "",
+            ])
+        if public_api_refs:
+            lines.extend([
+                "Public API",
+                "~~~~~~~~~~",
+                "",
+                ".. toctree::",
+                "   :maxdepth: 1",
+                "",
+                "   " + "\n   ".join(public_api_refs),
+                "",
+            ])
+        if internal_api_refs:
+            lines.extend([
+                "Internal API",
+                "~~~~~~~~~~~~",
+                "",
+                ".. toctree::",
+                "   :maxdepth: 1",
+                "",
+                "   " + "\n   ".join(internal_api_refs),
+                "",
+            ])
+        if unclassified_refs:
+            lines.extend([
+                "Other Architectural Design",
+                "~~~~~~~~~~~~~~~~~~~~~~~~~~",
+                "",
+                ".. toctree::",
+                "   :maxdepth: 1",
+                "",
+                "   " + "\n   ".join(unclassified_refs),
+                "",
+            ])
+        if dependability_refs:
+            lines.extend([
+                "Dependability Analysis",
+                "~~~~~~~~~~~~~~~~~~~~~~",
+                "",
+                ".. toctree::",
+                "   :maxdepth: 1",
+                "",
+                "   " + "\n   ".join(dependability_refs),
+                "",
+            ])
+    else:
+        all_entries = unclassified_refs + dependability_refs
+        lines.extend([
+            ".. toctree::",
+            "   :maxdepth: 1",
+            "",
+            "   " + "\n   ".join(all_entries),
+            "",
+        ])
+
+    page = ctx.actions.declare_file(ctx.label.name + "/software_arch.rst")
+    ctx.actions.write(
+        output = page,
+        content = "\n".join(lines),
+    )
+    output_files.append(page)
+    return "software_arch"
+
 def _process_artifact_type(ctx, artifact_name):
     """Process all labels for a given artifact type.
 
@@ -787,7 +985,6 @@ def _dependable_element_index_impl(ctx):
     # toctree references for the index template.
     artifact_types = [
         "assumptions_of_use",
-        "architectural_design",
         "dependability_analysis",
         "checklists",
         "glossary",
@@ -798,6 +995,22 @@ def _dependable_element_index_impl(ctx):
         files, refs = _process_artifact_type(ctx, artifact_name)
         output_files.extend(files)
         artifacts_by_type[artifact_name] = refs
+
+    arch_static_refs = []
+    arch_dynamic_refs = []
+    arch_public_api_refs = []
+    arch_internal_api_refs = []
+    arch_unclassified_refs = []
+
+    if ctx.attr.architectural_design:
+        for ad_target in ctx.attr.architectural_design:
+            ad_files, s_refs, d_refs, p_refs, i_refs, u_refs = _process_architectural_design_files(ctx, ad_target)
+            output_files.extend(ad_files)
+            arch_static_refs.extend(s_refs)
+            arch_dynamic_refs.extend(d_refs)
+            arch_public_api_refs.extend(p_refs)
+            arch_internal_api_refs.extend(i_refs)
+            arch_unclassified_refs.extend(u_refs)
 
     # Collect feature_requirements refs from requirements targets that
     # carry FeatureRequirementsInfo.
@@ -900,10 +1113,16 @@ def _dependable_element_index_impl(ctx):
         "Assumed System",
         assumed_system_req_refs + artifacts_by_type["assumptions_of_use"],
     )
-    software_arch_ref = _section_page(
-        "software_arch",
-        "Software Architectural Level",
-        feature_req_refs + artifacts_by_type["architectural_design"] + artifacts_by_type["dependability_analysis"],
+    software_arch_ref = _generate_software_arch_page(
+        ctx,
+        feature_req_refs = feature_req_refs,
+        static_refs = arch_static_refs,
+        dynamic_refs = arch_dynamic_refs,
+        public_api_refs = arch_public_api_refs,
+        internal_api_refs = arch_internal_api_refs,
+        unclassified_refs = arch_unclassified_refs,
+        dependability_refs = artifacts_by_type["dependability_analysis"],
+        output_files = output_files,
     )
     components_ref = _section_page(
         "components",

@@ -140,13 +140,20 @@ def _colocate_puml_with_wrapper(ctx, puml_files, output_dir):
         same-directory symlinked copies.
     """
     colocated = []
+    pkg_prefix = ctx.label.package + "/" if ctx.label.package else ""
     for f in puml_files:
         if f.extension not in ("puml", "plantuml"):
             colocated.append(f)
             continue
-        copy = ctx.actions.declare_file(
-            "{}/{}".format(output_dir, f.basename),
-        )
+
+        rel_dir = ""
+        if pkg_prefix and f.short_path.startswith(pkg_prefix):
+            rel_path = f.short_path[len(pkg_prefix):]
+            if "/" in rel_path:
+                rel_dir = rel_path.rsplit("/", 1)[0]
+
+        out_path = "{}/{}/{}".format(output_dir, rel_dir, f.basename) if rel_dir else "{}/{}".format(output_dir, f.basename)
+        copy = ctx.actions.declare_file(out_path)
         ctx.actions.symlink(output = copy, target_file = f)
         colocated.append(copy)
     return colocated
@@ -240,12 +247,41 @@ def _architectural_design_impl(ctx):
 
     # Generate a thin RST wrapper for every .puml diagram so it appears as a
     # toctree entry in the dependable_element index.
-    rst_wrappers = make_puml_rst_wrappers(
+    static_wrappers = make_puml_rst_wrappers(
         ctx,
-        ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api,
+        ctx.files.static,
         ctx.label.name,
         ctx.file._puml_rst_template,
     )
+    dynamic_wrappers = make_puml_rst_wrappers(
+        ctx,
+        ctx.files.dynamic,
+        ctx.label.name,
+        ctx.file._puml_rst_template,
+    )
+    public_api_wrappers = make_puml_rst_wrappers(
+        ctx,
+        ctx.files.public_api,
+        ctx.label.name,
+        ctx.file._puml_rst_template,
+    )
+    internal_api_wrappers = make_puml_rst_wrappers(
+        ctx,
+        ctx.files.internal_api,
+        ctx.label.name,
+        ctx.file._puml_rst_template,
+    )
+
+    rst_wrappers = static_wrappers + dynamic_wrappers + public_api_wrappers + internal_api_wrappers
+
+    def _get_doc_files(files, wrappers):
+        docs = [f for f in files if f.extension in ("rst", "md")]
+        return depset(docs + wrappers)
+
+    static_doc_files = _get_doc_files(ctx.files.static, static_wrappers)
+    dynamic_doc_files = _get_doc_files(ctx.files.dynamic, dynamic_wrappers)
+    public_api_doc_files = _get_doc_files(ctx.files.public_api, public_api_wrappers)
+    internal_api_doc_files = _get_doc_files(ctx.files.internal_api, internal_api_wrappers)
 
     validation_log = _run_validation(
         ctx,
@@ -264,6 +300,10 @@ def _architectural_design_impl(ctx):
             dynamic = dynamic_fbs,
             public_api = public_api_fbs,
             internal_api = internal_api_fbs,
+            static_doc_files = static_doc_files,
+            dynamic_doc_files = dynamic_doc_files,
+            public_api_doc_files = public_api_doc_files,
+            internal_api_doc_files = internal_api_doc_files,
             name = ctx.label.name,
             public_api_lobster_files = public_api_lobster,
             validation_logs = [validation_log],

@@ -36,6 +36,7 @@ def make_puml_rst_wrappers(ctx, puml_files, output_dir, template, strip_prefix =
         List of declared ``.rst`` output Files, one per input diagram.
     """
     wrappers = []
+    pkg_prefix = ctx.label.package + "/" if ctx.label.package else ""
     for f in puml_files:
         if f.extension not in ("puml", "plantuml"):
             continue
@@ -43,9 +44,15 @@ def make_puml_rst_wrappers(ctx, puml_files, output_dir, template, strip_prefix =
         if strip_prefix and stem.startswith(strip_prefix):
             stem = stem[len(strip_prefix):]
         title = stem.replace("_", " ").title()
-        wrapper = ctx.actions.declare_file(
-            "{}/{}{}.rst".format(output_dir, filename_prefix, stem),
-        )
+
+        rel_dir = ""
+        if pkg_prefix and f.short_path.startswith(pkg_prefix):
+            rel_path = f.short_path[len(pkg_prefix):]
+            if "/" in rel_path:
+                rel_dir = rel_path.rsplit("/", 1)[0]
+
+        out_file_path = "{}/{}/{}{}.rst".format(output_dir, rel_dir, filename_prefix, stem) if rel_dir else "{}/{}{}.rst".format(output_dir, filename_prefix, stem)
+        wrapper = ctx.actions.declare_file(out_file_path)
         ctx.actions.expand_template(
             template = template,
             output = wrapper,
