@@ -183,10 +183,12 @@ method = {
     ~ pure_virtual_suffix?
     ~ ";"?
 }
-method_modifier = _{ static_modifier | abstract_modifier }
+method_modifier = _{ static_modifier | abstract_modifier | virtual_modifier | override_modifier }
 static_modifier = { "{" ~ static_keyword ~ "}" | static_keyword }
 static_keyword = { "static" }
 abstract_modifier = { "{" ~ "abstract" ~ "}" }
+virtual_modifier = { "{" ~ "virtual" ~ "}" }
+override_modifier = { "{" ~ "override" ~ "}" }
 method_qualifier = _{ const_method_qualifier | noexcept_method_qualifier }
 const_method_qualifier = { ("<<" ~ "const" ~ ">>") | "const" }
 noexcept_method_qualifier = { "noexcept" }

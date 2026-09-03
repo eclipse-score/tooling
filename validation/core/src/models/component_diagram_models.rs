@@ -70,7 +70,21 @@ impl ComponentDiagramInputs {
         &self,
         result: &mut ValidationResult,
     ) -> ComponentDiagramArchitecture {
-        ComponentDiagramArchitecture::from_entities(&self.entities, result)
+        ComponentDiagramArchitecture::from_entities(&self.entities, result, true)
+    }
+
+    /// Build a [`ComponentDiagramArchitecture`] index from these diagram
+    /// inputs without reporting duplicate-entity errors.
+    ///
+    /// Used for `static_view` diagrams: multiple `static_view` files may
+    /// legitimately reference the same entity (e.g. overlapping partial
+    /// views), so duplicates across those files are not errors. Consistency
+    /// with the `static` diagram is checked separately.
+    pub fn to_static_view_architecture(
+        &self,
+        result: &mut ValidationResult,
+    ) -> ComponentDiagramArchitecture {
+        ComponentDiagramArchitecture::from_entities(&self.entities, result, false)
     }
 }
 
@@ -96,14 +110,22 @@ impl ComponentDiagramArchitecture {
     /// `<<SEooC>>` go into `seooc_set`;
     /// `<<component>>` go into `comp_set`;
     /// `<<unit>>` go into `unit_set`.
-    /// Duplicates (same [`EntityKey`]) are reported via `result`.
-    fn from_entities(entities: &[LogicComponent], result: &mut ValidationResult) -> Self {
+    /// Duplicates (same [`EntityKey`]) are reported via `result`, unless
+    /// `report_duplicates` is `false`.
+    fn from_entities(
+        entities: &[LogicComponent],
+        result: &mut ValidationResult,
+        report_duplicates: bool,
+    ) -> Self {
         // Index by raw id for parent resolution; PlantUML nesting uses id,
         // not alias.
         let mut id_index: BTreeMap<String, &LogicComponent> = BTreeMap::new();
         for entity in entities {
             let key = entity.id.to_lowercase();
             if let Some(prev) = id_index.insert(key.clone(), entity) {
+                if !report_duplicates {
+                    continue;
+                }
                 let kind = entity_kind_name(entity);
                 let alias = entity.match_key();
                 let parent =
@@ -144,9 +166,9 @@ impl ComponentDiagramArchitecture {
         let filtered_component_count = components.len();
         let filtered_unit_count = units.len();
 
-        let seooc_set = Self::build_set(&seoocs, &id_index, result);
-        let comp_set = Self::build_set(&components, &id_index, result);
-        let unit_set = Self::build_set(&units, &id_index, result);
+        let seooc_set = Self::build_set(&seoocs, &id_index, result, report_duplicates);
+        let comp_set = Self::build_set(&components, &id_index, result, report_duplicates);
+        let unit_set = Self::build_set(&units, &id_index, result, report_duplicates);
 
         Self {
             seooc_set,
@@ -163,6 +185,7 @@ impl ComponentDiagramArchitecture {
         items: &[&LogicComponent],
         id_index: &BTreeMap<String, &LogicComponent>,
         result: &mut ValidationResult,
+        report_duplicates: bool,
     ) -> BTreeMap<EntityKey, LogicComponent> {
         let mut set = BTreeMap::new();
         for entity in items {
@@ -195,7 +218,7 @@ impl ComponentDiagramArchitecture {
             };
             let key = (alias, parent_alias);
             if let Some(prev) = set.insert(key.clone(), (*entity).clone()) {
-                if prev.id.eq_ignore_ascii_case(&entity.id) {
+                if !report_duplicates || prev.id.eq_ignore_ascii_case(&entity.id) {
                     continue;
                 }
                 let kind = entity_kind_name(entity);

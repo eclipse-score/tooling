@@ -198,6 +198,14 @@ def _find_common_directory(files):
     # of whether the file is a source or a generated artifact.
     dirs = [paths.dirname(f.short_path) for f in files]
 
+    generated_dirs = [
+        paths.dirname(f.short_path)
+        for f in files
+        if not f.is_source
+    ]
+    if generated_dirs:
+        dirs = generated_dirs
+
     if not dirs:
         return ""
 
@@ -267,7 +275,7 @@ def _is_document_file(file):
     """
     return file.extension in ["rst", "md"]
 
-def _create_artifact_symlink(ctx, artifact_name, artifact_file, relative_path):
+def _create_artifact_symlink(ctx, artifact_name, artifact_file, relative_path, path_prefix = ""):
     """Create symlink for artifact file in output directory.
 
     Args:
@@ -275,12 +283,13 @@ def _create_artifact_symlink(ctx, artifact_name, artifact_file, relative_path):
         artifact_name: Name of artifact type (e.g., "architectural_design")
         artifact_file: Source file
         relative_path: Relative path within artifact directory
+        path_prefix: Optional subdirectory used to disambiguate multiple providers
 
     Returns:
         Declared output file
     """
     output_file = ctx.actions.declare_file(
-        ctx.label.name + "/" + artifact_name + "/" + relative_path,
+        ctx.label.name + "/" + artifact_name + "/" + path_prefix + relative_path,
     )
 
     ctx.actions.symlink(
@@ -290,13 +299,14 @@ def _create_artifact_symlink(ctx, artifact_name, artifact_file, relative_path):
 
     return output_file
 
-def _process_artifact_files(ctx, artifact_name, label):
+def _process_artifact_files(ctx, artifact_name, label, path_prefix = ""):
     """Process all files from a single label for a given artifact type.
 
     Args:
         ctx: Rule context
         artifact_name: Name of artifact type
         label: Label to process
+        path_prefix: Optional subdirectory used to disambiguate multiple providers
 
     Returns:
         Tuple of (output_files, index_references)
@@ -339,23 +349,27 @@ def _process_artifact_files(ctx, artifact_name, label):
             artifact_name,
             artifact_file,
             relative_path,
+            path_prefix,
         )
         output_files.append(output_file)
 
         # Add to toctree index only for files directly owned by this rule.
         if _is_document_file(artifact_file):
-            doc_path = artifact_name + "/" + relative_path
+            doc_path = artifact_name + "/" + path_prefix + relative_path
             doc_ref = doc_path.removesuffix(".rst").removesuffix(".md")
             index_refs.append(doc_ref)
 
     # Process aux_srcs: symlink without adding to outer toctree index.
     for artifact_file in aux_files:
+        if artifact_file.path in srcs_paths:
+            continue
         relative_path = _compute_relative_path(artifact_file, common_dir)
         output_file = _create_artifact_symlink(
             ctx,
             artifact_name,
             artifact_file,
             relative_path,
+            path_prefix,
         )
         output_files.append(output_file)
 
@@ -379,11 +393,13 @@ def _process_artifact_type(ctx, artifact_name):
         return (output_files, index_refs)
 
     # Process each label
-    for label in attr_list:
+    use_label_subdirectories = len(attr_list) > 1
+    for index, label in enumerate(attr_list):
         label_outputs, label_refs = _process_artifact_files(
             ctx,
             artifact_name,
             label,
+            path_prefix = "source_{}/".format(index) if use_label_subdirectories else "",
         )
         output_files.extend(label_outputs)
         index_refs.extend(label_refs)

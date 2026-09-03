@@ -521,12 +521,18 @@ impl ClassResolver {
             ),
             modifiers: MethodModifier::from_conditions([
                 (has_modifier(&m.modifiers, "static"), MethodModifier::Static),
-                (false, MethodModifier::Virtual),
+                (
+                    has_modifier(&m.modifiers, "virtual"),
+                    MethodModifier::Virtual,
+                ),
                 (
                     has_modifier(&m.modifiers, "abstract"),
                     MethodModifier::Abstract,
                 ),
-                (false, MethodModifier::Override),
+                (
+                    has_modifier(&m.modifiers, "override"),
+                    MethodModifier::Override,
+                ),
                 (is_constructor, MethodModifier::Constructor),
                 (is_destructor, MethodModifier::Destructor),
             ]),
