@@ -45,7 +45,7 @@ _LEVEL_MAP = {
 _CM_TABLE_COLUMNS = {"safety": "ASIL", "description": "Description"}
 # Overview summary table columns (one row per failure mode).
 _FM_TABLE_COLUMNS = {
-    "guideword": "Guideword",
+    "guidewords": "Guideword",
     "safety": "ASIL",
     "interface": "Interface",
 }
@@ -150,9 +150,12 @@ def _attr_grid(obj: object) -> _Directive | None:
     interface/failure-effect as titled cards; a gutter separates the rows."""
     fields = obj.to_python_dict()
     items = []
-    guideword = fields.get("guideword")
-    if guideword:
-        items.append(_grid_item(_badge(_GUIDEWORD_BADGE, guideword), {"class": "sd-text-center"}))
+    guidewords = fields.get("guidewords")
+    if guidewords:
+        guideword_text = (
+            ", ".join(str(g) for g in guidewords) if isinstance(guidewords, list) else str(guidewords)
+        )
+        items.append(_grid_item(_badge(_GUIDEWORD_BADGE, guideword_text), {"class": "sd-text-center"}))
     safety = fields.get("safety")
     if safety:
         role = _ASIL_BADGE.get(safety, _DEFAULT_BADGE)

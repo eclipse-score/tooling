@@ -396,6 +396,22 @@ class TestRenderTrlc(unittest.TestCase):
         out = render_trlc(items, "FeatPkg", "AsrPkg")
         self.assertIn("import AsrPkg", out)
 
+    def test_feat_req_derived_from_honors_explicit_version(self):
+        items = self._single(
+            "feat_req", {"derived_from": "asr_req__test__001[version==2]"}
+        )
+        out = render_trlc(items, "FeatPkg", "AsrPkg")
+        self.assertIn("AsrPkg.asr_req__test__001@2", out)
+
+    def test_feat_req_derived_from_mixed_explicit_and_default_version(self):
+        items = self._single(
+            "feat_req",
+            {"derived_from": "asr_req__a[version==2], asr_req__b"},
+        )
+        out = render_trlc(items, "FeatPkg", "AsrPkg")
+        self.assertIn("AsrPkg.asr_req__a@2", out)
+        self.assertIn("AsrPkg.asr_req__b@1", out)
+
     # --- CompReq ---
 
     def test_comp_req_produces_comp_req_type(self):
