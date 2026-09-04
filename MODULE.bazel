@@ -475,3 +475,8 @@ llvm.sysroot(
     targets = ["linux-x86_64"],
 )
 use_repo(llvm, "llvm_toolchain", "llvm_toolchain_llvm")
+
+bazel_dep(
+    name = "score_devcontainer",
+    version = "1.9.0",
+)
