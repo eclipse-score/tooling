@@ -18,6 +18,6 @@ on:
     types: [checks_requested]
 jobs:
   copyright-check:
-    uses: eclipse-score/cicd-workflows/.github/workflows/copyright.yml@93aac16ada7d247bbb6ae926509ddea74cf5213a # v0.0.2
+    uses: eclipse-score/cicd-workflows/.github/workflows/copyright.yml@8d80e8df150cae21d53cbc8031d0f970648f7a67 # v0.0.3
     with:
       bazel-target: "run //:copyright.check"
