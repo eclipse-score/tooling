@@ -1,0 +1,50 @@
+{
+  "varargs_method.puml": {
+    "name": "varargs_method",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "Writer",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
+            "is_abstract": false,
+            "type_aliases": [],
+            "attributes": [],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "AllocAndWrite",
+                "params": [
+                  {
+                    "name": null,
+                    "param_type": null,
+                    "is_c_variadic": true
+                  }
+                ],
+                "type": "void",
+                "template_parameters": null,
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                }
+              }
+            ],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

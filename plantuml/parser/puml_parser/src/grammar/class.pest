@@ -28,7 +28,7 @@ type_name = { type_expr }
 
 type_expr = { brace_enclosed_type | const_prefix* ~ prefix_array_prefix* ~ qualified_type ~ generic_type_args? ~ function_type_suffix? ~ type_suffix* }
 
-qualified_type = @{ ("::")? ~ identifier ~ (("::" | ".") ~ identifier)* }
+qualified_type = @{ ("::")? ~ identifier ~ (("::" | (!".." ~ ".")) ~ identifier)* }
 
 generic_type_args = { "<" ~ !"<" ~ type_arg ~ ("," ~ type_arg)* ~ ">" }
 
@@ -169,6 +169,8 @@ class_body_separator = { "--" ~ EOL+ }
 method = {
     method_modifier*
     ~ class_visibility?
+    ~ friend_specifier?
+    ~ method_modifier*
     ~ method_name
     ~ generic_param_list?
     ~ "("
@@ -183,6 +185,7 @@ method = {
     ~ pure_virtual_suffix?
     ~ ";"?
 }
+friend_specifier = { "friend" }
 method_modifier = _{ static_modifier | abstract_modifier }
 static_modifier = { "{" ~ static_keyword ~ "}" | static_keyword }
 static_keyword = { "static" }
@@ -192,12 +195,16 @@ const_method_qualifier = { ("<<" ~ "const" ~ ">>") | "const" }
 noexcept_method_qualifier = { "noexcept" }
 pure_virtual_suffix = { "=" ~ "0" }
 
-method_name = { operator_overload_name | destructor_name | identifier }
+method_name = {
+    operator_overload_name
+    | destructor_name
+    | class_qualified_name
+}
 destructor_name = @{ "~" ~ identifier }
 operator_overload_name = @{
         "operator"
         ~ (
-                "->*"
+            "->*"
             | "->"
             | "()"
             | "[]"
@@ -241,8 +248,10 @@ return_type = { ":" ~ static_modifier* ~ type_name }
 attribute = { static_modifier* ~ class_visibility? ~ (using_attribute | named_attribute | unnamed_attribute) }
 attribute_end = _{ ";"? ~ &(WHITESPACE* ~ (EOL | "}")) }
 using_attribute = { "using" ~ identifier ~ "=" ~ type_name ~ attribute_end }
-named_attribute = { identifier ~ (":" ~ type_name)? ~ attribute_end }
+named_attribute = { identifier ~ (":" ~ attribute_type_specifier* ~ type_name)? ~ attribute_end }
 unnamed_attribute = { type_name ~ attribute_end }
+attribute_type_specifier = _{ static_modifier | constexpr_modifier }
+constexpr_modifier = { "constexpr" }
 
 param = {
     param_named
@@ -255,23 +264,25 @@ param_named = {
     ~ ":"
     ~ type_name
     ~ param_default_value?
-    ~ varargs?
 }
 
 param_cpp_named = {
     type_name
     ~ identifier
     ~ param_default_value?
-    ~ varargs?
 }
 
 param_unnamed = {
     type_name
     ~ param_default_value?
-    ~ varargs?
 }
+typed_param_pack = { param ~ varargs }
+c_variadic_param = { varargs }
 param_default_value = { "=" ~ (!("," | ")" | EOL) ~ ANY)* }
-param_list  = { param ~ (EOL* ~ "," ~ EOL* ~ param)* }
+param_list = {
+    (typed_param_pack | c_variadic_param | param)
+    ~ (EOL* ~ "," ~ EOL* ~ (typed_param_pack | c_variadic_param | param))*
+}
 
 generic_param_list = { template_param_list }
 varargs = { "..." }

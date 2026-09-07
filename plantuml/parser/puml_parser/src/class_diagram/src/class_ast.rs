@@ -92,7 +92,12 @@ pub struct Relationship {
 pub struct Param {
     pub name: Option<String>,
     pub param_type: Option<String>,
-    pub varargs: bool,
+    /// C-style variadic parameter represented by a standalone `...`.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_c_variadic: bool,
+    /// Typed template parameter pack represented by a type followed by `...`.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_pack_expansion: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -130,8 +135,15 @@ pub struct Method {
     pub params: Vec<Param>,
     pub r#type: Option<String>,
     pub modifiers: Vec<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_friend: bool,
     pub source_location: SourceLocation,
 }
+
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
 impl Default for Method {
     fn default() -> Self {
         Method {
@@ -141,6 +153,7 @@ impl Default for Method {
             params: Vec::new(),
             r#type: None,
             modifiers: Vec::new(),
+            is_friend: false,
             source_location: SourceLocation::default(),
         }
     }

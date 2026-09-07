@@ -596,7 +596,7 @@ impl ClassResolver {
         template_parameters: &mut Vec<TemplateParameter>,
         params: &[ParserParam],
     ) {
-        for param in params.iter().filter(|param| param.varargs) {
+        for param in params.iter().filter(|param| param.is_pack_expansion) {
             let Some(pack_name) = param
                 .param_type
                 .as_deref()
@@ -628,10 +628,8 @@ impl ClassResolver {
         FunctionArgument {
             name: param.name.clone().unwrap_or_default(),
             param_type: param.param_type.clone(),
-            // Note: For class diagrams, we don't support C-style variadic parameters (e.g., `foo(...)`),
-            // so we only consider the `varargs` flag for template pack expansions.
-            is_variadic: false,
-            is_pack_expansion: param.varargs,
+            is_variadic: param.is_c_variadic,
+            is_pack_expansion: param.is_pack_expansion,
         }
     }
 

@@ -1,0 +1,43 @@
+{
+  "c_variadic_method.puml": {
+    "name": "c_variadic_method",
+    "entities": [
+      {
+        "id": "Writer",
+        "name": "Writer",
+        "enclosing_namespace_id": null,
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "AllocAndWrite",
+            "return_type": "void",
+            "visibility": "public",
+            "parameters": [
+              {
+                "name": "",
+                "param_type": null,
+                "is_variadic": true,
+                "is_pack_expansion": false
+              }
+            ],
+            "template_parameters": null,
+            "modifiers": [],
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "variables": [],
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/c_variadic_method/c_variadic_method.puml",
+          "line": 15
+        }
+      }
+    ]
+  }
+}
