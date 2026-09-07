@@ -1,12 +1,12 @@
 {
-  "param.puml": {
-    "name": "param",
+  "friend_method.puml": {
+    "name": "friend_method",
     "elements": [
       {
         "Types": {
           "ClassDef": {
             "name": {
-              "internal": "Calculator",
+              "internal": "Dispatcher",
               "display": null
             },
             "namespace": "",
@@ -21,20 +21,21 @@
             "methods": [
               {
                 "visibility": "Public",
-                "name": "Add",
+                "name": "operator==",
                 "params": [
                   {
-                    "name": "a",
-                    "param_type": "int"
+                    "name": "l_value",
+                    "param_type": "const SlotHandle&"
                   },
                   {
-                    "name": "b",
-                    "param_type": "int"
+                    "name": "r_value",
+                    "param_type": "const SlotHandle&"
                   }
                 ],
-                "type": "int",
+                "type": "bool",
                 "template_parameters": null,
                 "modifiers": [],
+                "is_friend": true,
                 "source_location": {
                   "file": "",
                   "line": 16

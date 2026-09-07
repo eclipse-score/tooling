@@ -81,6 +81,11 @@ fn test_class_merge() {
 }
 
 #[test]
+fn test_constexpr_attribute() {
+    run_class_diagram_parser_case("constexpr_attribute");
+}
+
+#[test]
 fn test_color() {
     run_class_diagram_parser_case("color");
 }
@@ -88,6 +93,21 @@ fn test_color() {
 #[test]
 fn test_cpp_style() {
     run_class_diagram_parser_case("cpp_style");
+}
+
+#[test]
+fn test_friend_method() {
+    run_class_diagram_parser_case("friend_method");
+}
+
+#[test]
+fn test_method_modifier_placement() {
+    run_class_diagram_parser_case("method_modifier_placement");
+}
+
+#[test]
+fn test_qualified_method_name() {
+    run_class_diagram_parser_case("qualified_method_name");
 }
 
 #[test]

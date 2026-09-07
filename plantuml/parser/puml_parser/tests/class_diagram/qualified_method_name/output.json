@@ -1,12 +1,12 @@
 {
-  "param.puml": {
-    "name": "param",
+  "qualified_method_name.puml": {
+    "name": "qualified_method_name",
     "elements": [
       {
         "Types": {
           "ClassDef": {
             "name": {
-              "internal": "Calculator",
+              "internal": "Logger",
               "display": null
             },
             "namespace": "",
@@ -17,22 +17,24 @@
             },
             "is_abstract": false,
             "type_aliases": [],
-            "attributes": [],
+            "attributes": [
+              {
+                "visibility": "Public",
+                "name": "LogError",
+                "type": "::score::mw::LogStream",
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 17
+                }
+              }
+            ],
             "methods": [
               {
                 "visibility": "Public",
-                "name": "Add",
-                "params": [
-                  {
-                    "name": "a",
-                    "param_type": "int"
-                  },
-                  {
-                    "name": "b",
-                    "param_type": "int"
-                  }
-                ],
-                "type": "int",
+                "name": "score::mw::LogFatal",
+                "params": [],
+                "type": "LogStream",
                 "template_parameters": null,
                 "modifiers": [],
                 "source_location": {

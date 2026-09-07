@@ -28,8 +28,7 @@
                 "params": [
                   {
                     "name": "id",
-                    "param_type": "int",
-                    "varargs": false
+                    "param_type": "int"
                   }
                 ],
                 "type": null,

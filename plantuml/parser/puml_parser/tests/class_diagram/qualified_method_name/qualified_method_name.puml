@@ -10,22 +10,11 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-@startuml class_diagram_modifiers
+@startuml qualified_method_name
 
-package modifier_case {
-    abstract class BaseJob {
-        func() = 0
-    }
-
-    class ServiceImpl {
-        {abstract} + Run() : ResultBlank
-        + {static} Finalize()
-    }
-
-    class AllowModeChangeService {
-        using AllowOpModeChangeOutput = std::uint8_t;
-        + Func(const AllowOpModeChangeOutput input_1, std::shared_ptr<std::uint32_t> json_parser = nullptr) noexcept : static std::Result<Uptr>
-    }
+class Logger {
+    + score::mw::LogFatal(): LogStream
+    + LogError: ::score::mw::LogStream
 }
 
 @enduml

@@ -49,7 +49,7 @@
                   {
                     "name": null,
                     "param_type": "Event",
-                    "varargs": true
+                    "is_pack_expansion": true
                   }
                 ],
                 "type": null,
