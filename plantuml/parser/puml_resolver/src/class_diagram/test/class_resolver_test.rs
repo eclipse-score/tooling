@@ -113,6 +113,11 @@ fn test_method_template_pack() {
 }
 
 #[test]
+fn test_c_variadic_method() {
+    run_class_resolver_case("c_variadic_method");
+}
+
+#[test]
 fn test_class_template_pack() {
     run_class_resolver_case("class_template_pack");
 }

@@ -111,6 +111,11 @@ fn test_qualified_method_name() {
 }
 
 #[test]
+fn test_varargs_method() {
+    run_class_diagram_parser_case("varargs_method");
+}
+
+#[test]
 fn test_ctrl_instruct() {
     run_class_diagram_parser_case("ctrl_instruct");
 }

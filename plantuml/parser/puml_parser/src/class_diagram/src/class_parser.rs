@@ -218,6 +218,9 @@ impl ClassParseSession<'_> {
                         match inner.as_rule() {
                             Rule::identifier => name = Some(inner.as_str().to_string()),
                             Rule::type_name => typ = Some(inner.as_str().trim().to_string()),
+                            Rule::static_modifier | Rule::constexpr_modifier => {
+                                attr.modifiers.push(inner.as_str().to_string())
+                            }
                             _ => {}
                         }
                     }
@@ -341,10 +344,16 @@ impl ClassParseSession<'_> {
 
         let mut name: Option<String> = None;
         let mut ty: Option<String> = None;
-        let mut varargs = false;
+        let is_pack_expansion = pair.as_rule() == Rule::typed_param_pack;
 
         // param -> param_named | param_cpp_named | param_unnamed
+        // typed_param_pack -> param ~ varargs
         let inner = pair.into_inner().next().unwrap();
+        let inner = if inner.as_rule() == Rule::param {
+            inner.into_inner().next().unwrap()
+        } else {
+            inner
+        };
 
         match inner.as_rule() {
             Rule::param_named => {
@@ -355,9 +364,6 @@ impl ClassParseSession<'_> {
                         }
                         Rule::type_name => {
                             ty = Some(p.as_str().trim().to_string());
-                        }
-                        Rule::varargs => {
-                            varargs = true;
                         }
                         _ => {}
                     }
@@ -373,9 +379,6 @@ impl ClassParseSession<'_> {
                         Rule::identifier => {
                             name = Some(p.as_str().to_string());
                         }
-                        Rule::varargs => {
-                            varargs = true;
-                        }
                         _ => {}
                     }
                 }
@@ -383,20 +386,14 @@ impl ClassParseSession<'_> {
 
             Rule::param_unnamed => {
                 for p in inner.into_inner() {
-                    match p.as_rule() {
-                        Rule::type_name => {
-                            let raw = p.as_str().trim().to_string();
+                    if p.as_rule() == Rule::type_name {
+                        let raw = p.as_str().trim().to_string();
 
-                            if is_likely_type_only_param(&raw) {
-                                ty = Some(raw);
-                            } else {
-                                name = Some(raw);
-                            }
+                        if is_likely_type_only_param(&raw) {
+                            ty = Some(raw);
+                        } else {
+                            name = Some(raw);
                         }
-                        Rule::varargs => {
-                            varargs = true;
-                        }
-                        _ => {}
                     }
                 }
             }
@@ -407,7 +404,8 @@ impl ClassParseSession<'_> {
         Param {
             name,
             param_type: ty,
-            varargs,
+            is_c_variadic: false,
+            is_pack_expansion,
         }
     }
 
@@ -440,14 +438,23 @@ impl ClassParseSession<'_> {
                 | Rule::abstract_modifier
                 | Rule::const_method_qualifier
                 | Rule::noexcept_method_qualifier => method.modifiers.push(p.as_str().to_string()),
+                Rule::friend_specifier => method.is_friend = true,
                 Rule::pure_virtual_suffix => ensure_abstract_modifier(&mut method),
                 Rule::class_visibility => vis = Some(p),
                 Rule::method_name | Rule::identifier => name = Some(p.as_str().to_string()),
                 Rule::param_list => {
                     for param_pair in p.into_inner() {
-                        if param_pair.as_rule() == Rule::param {
-                            let param = Self::parse_param(param_pair);
-                            method.params.push(param);
+                        match param_pair.as_rule() {
+                            Rule::param | Rule::typed_param_pack => {
+                                method.params.push(Self::parse_param(param_pair));
+                            }
+                            Rule::c_variadic_param => method.params.push(Param {
+                                name: None,
+                                param_type: None,
+                                is_c_variadic: true,
+                                is_pack_expansion: false,
+                            }),
+                            _ => {}
                         }
                     }
                 }
@@ -1174,9 +1181,9 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_param_unnamed_varargs() {
+    fn test_parse_typed_param_pack() {
         let input = "int...";
-        let pair = PlantUmlCommonParser::parse(Rule::param, input)
+        let pair = PlantUmlCommonParser::parse(Rule::typed_param_pack, input)
             .unwrap()
             .next()
             .unwrap();
@@ -1185,7 +1192,7 @@ mod tests {
 
         assert_eq!(param.name, None);
         assert_eq!(param.param_type.as_deref(), Some("int"));
-        assert!(param.varargs);
+        assert!(param.is_pack_expansion);
     }
 
     #[test]
@@ -1200,7 +1207,7 @@ mod tests {
 
         assert_eq!(param.name.as_deref(), Some("callable"));
         assert_eq!(param.param_type, None);
-        assert!(!param.varargs);
+        assert!(!param.is_pack_expansion);
     }
 
     #[test]
@@ -1215,7 +1222,7 @@ mod tests {
 
         assert_eq!(param.name, None);
         assert_eq!(param.param_type.as_deref(), Some("InfrastructureContext"));
-        assert!(!param.varargs);
+        assert!(!param.is_pack_expansion);
     }
 
     #[test]
