@@ -19,7 +19,7 @@ struct Engine
     template <typename Payload>
     bool build();
 
-    // bool run(int mode, int payload, ...);
+    bool run(int mode, int payload, ...);
 
     int select(int mode);
     int select(int mode, int force);
