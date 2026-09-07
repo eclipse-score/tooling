@@ -10,21 +10,9 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-@startuml ctrl_instruct
-
-skinparam classFontSize 14
-skinparam shadowing false
-
-left to right direction
-top to bottom direction
-
-!theme plain
-
-title Test Diagram
-
-class A
-class B
-
-A --> B
-
+@startuml multiline_note
+note top of ClientReceiver
+     Instantiates side channel to receive messages from
+     /mw_com/message_passing/logging.<app>.<uid>
+end note
 @enduml

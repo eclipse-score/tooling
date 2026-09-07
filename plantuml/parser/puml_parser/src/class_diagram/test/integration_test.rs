@@ -106,6 +106,11 @@ fn test_method_modifier_placement() {
 }
 
 #[test]
+fn test_multiline_note() {
+    run_class_diagram_parser_case("multiline_note");
+}
+
+#[test]
 fn test_qualified_method_name() {
     run_class_diagram_parser_case("qualified_method_name");
 }

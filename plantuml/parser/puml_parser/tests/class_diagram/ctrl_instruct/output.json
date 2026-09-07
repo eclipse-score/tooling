@@ -13,7 +13,7 @@
             "package": "",
             "source_location": {
               "file": "",
-              "line": 23
+              "line": 25
             },
             "is_abstract": false,
             "type_aliases": [],
@@ -36,7 +36,7 @@
             "package": "",
             "source_location": {
               "file": "",
-              "line": 24
+              "line": 26
             },
             "is_abstract": false,
             "type_aliases": [],
@@ -66,7 +66,7 @@
         "label": null,
         "source_location": {
           "file": "",
-          "line": 26
+          "line": 28
         }
       }
     ]
