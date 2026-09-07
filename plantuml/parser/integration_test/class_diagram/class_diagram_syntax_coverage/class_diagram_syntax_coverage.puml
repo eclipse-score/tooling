@@ -79,7 +79,7 @@ package sample::newline #Lavender
     class ServiceImpl implements ServiceContract {
         ' Priority group 3: member-level syntax
         {abstract} + Run() : ResultBlank
-        {static} + Finalize()
+        + {static} Finalize()
         + Submit(callable) : auto <<const>>
         + Build()
         --

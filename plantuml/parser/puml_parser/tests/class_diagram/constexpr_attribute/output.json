@@ -1,12 +1,12 @@
 {
-  "param.puml": {
-    "name": "param",
+  "constexpr_attribute.puml": {
+    "name": "constexpr_attribute",
     "elements": [
       {
         "Types": {
           "ClassDef": {
             "name": {
-              "internal": "Calculator",
+              "internal": "RecorderRegistry",
               "display": null
             },
             "namespace": "",
@@ -17,30 +17,22 @@
             },
             "is_abstract": false,
             "type_aliases": [],
-            "attributes": [],
-            "methods": [
+            "attributes": [
               {
                 "visibility": "Public",
-                "name": "Add",
-                "params": [
-                  {
-                    "name": "a",
-                    "param_type": "int"
-                  },
-                  {
-                    "name": "b",
-                    "param_type": "int"
-                  }
+                "name": "kMaxRecorders",
+                "type": "std::size_t",
+                "modifiers": [
+                  "static",
+                  "constexpr"
                 ],
-                "type": "int",
-                "template_parameters": null,
-                "modifiers": [],
                 "source_location": {
                   "file": "",
                   "line": 16
                 }
               }
             ],
+            "methods": [],
             "template_parameters": null,
             "extends": [],
             "implements": []

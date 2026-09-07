@@ -1,0 +1,79 @@
+{
+  "method_modifier_placement.puml": {
+    "name": "method_modifier_placement",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "Worker",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
+            "is_abstract": false,
+            "type_aliases": [],
+            "attributes": [],
+            "methods": [
+              {
+                "visibility": "Private",
+                "name": "Instance",
+                "params": [
+                  {
+                    "name": null,
+                    "param_type": "Recorder*"
+                  }
+                ],
+                "type": "Runtime&",
+                "template_parameters": null,
+                "modifiers": [
+                  "{static}"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                }
+              },
+              {
+                "visibility": "Protected",
+                "name": "Notify",
+                "params": [],
+                "type": null,
+                "template_parameters": null,
+                "modifiers": [
+                  "{abstract}"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 17
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "Reset",
+                "params": [],
+                "type": "void",
+                "template_parameters": null,
+                "modifiers": [
+                  "{static}"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 18
+                }
+              }
+            ],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

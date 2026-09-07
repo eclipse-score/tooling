@@ -76,13 +76,12 @@
                     "params": [
                       {
                         "name": "a",
-                        "param_type": "int",
-                        "varargs": false
+                        "param_type": "int"
                       },
                       {
                         "name": "b",
                         "param_type": "String",
-                        "varargs": true
+                        "is_pack_expansion": true
                       }
                     ],
                     "type": "bool",
