@@ -264,8 +264,7 @@ fn parse_method(entity: &Entity, parsed_method_type: &ParsedMethodType) -> Optio
 
     let args = method_arguments(entity);
 
-    let arg_count = args.len();
-    for (idx, arg) in args.into_iter().enumerate() {
+    for arg in args {
         let raw_param_type = arg
             .get_type()
             .map(|ty| ty.get_display_name())
@@ -276,8 +275,17 @@ fn parse_method(entity: &Entity, parsed_method_type: &ParsedMethodType) -> Optio
         parameters.push(FunctionArgument {
             name: arg.get_name().unwrap_or_default(),
             param_type: Some(param_type),
-            is_variadic: method_is_variadic && idx + 1 == arg_count,
+            is_variadic: false,
             is_pack_expansion,
+        });
+    }
+
+    if method_is_variadic {
+        parameters.push(FunctionArgument {
+            name: String::new(),
+            param_type: None,
+            is_variadic: true,
+            is_pack_expansion: false,
         });
     }
 

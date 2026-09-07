@@ -12,13 +12,13 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  Implementation class data differs from unit design entity:
-  Entity ID             : Engine
-  Field                 : method "stop" parameter list
-  Design value          : (mode: int, force: int)
-  Design source file    : class_diagram.puml
-  Design source line    : 6
-  Implement value       : (mode: int, force: int, ...)
-  Implement source file : validation/core/integration_test/class_design_implementation/negative_method_parameter_variadic_mismatch/transport.cpp
-  Implement source line : 6
-  Required Action       : Align the implementation with the unit design or update the unit design
+  [Implementation] Field method "stop" parameter count on entity "Engine" differs between the unit design and the C++ class implementation.
+    Entity                     : "Engine"
+    Field                      : method "stop" parameter count
+    Design value               : 2 parameters (mode: int, force: int)
+    Design source file         : "validation/core/integration_test/class_design_implementation/negative_method_parameter_variadic_mismatch/class_diagram.puml"
+    Design source line         : 16
+    Implementation value       : 3 parameters (mode: int, force: int, ...)
+    Implementation source file : "validation/core/integration_test/class_design_implementation/negative_method_parameter_variadic_mismatch/transport.cpp"
+    Implementation source line : 14
+    Fix                        : Make method "stop" parameter count in entity "Engine" consistent between the unit design and the C++ class implementation.

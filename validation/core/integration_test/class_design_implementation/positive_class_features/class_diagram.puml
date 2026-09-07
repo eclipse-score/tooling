@@ -35,7 +35,7 @@ package vehicle {
         + configure(mode : int, force : int) : void
         + current_speed() : vehicle::Engine::Speed
         - calibrate() : void
-        {static} + Reset() : void
+        + {static} Reset() : void
     }
 
     Manufacturer *-- Engine

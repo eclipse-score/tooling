@@ -401,7 +401,9 @@ impl ClassDesignImplementationValidator {
                 ));
             }
 
-            if design_parameter.is_pack_expansion != implementation_parameter.is_pack_expansion {
+            if design_parameter.is_variadic != implementation_parameter.is_variadic
+                || design_parameter.is_pack_expansion != implementation_parameter.is_pack_expansion
+            {
                 self.result.add_failure(Self::format_mismatch(
                     design_entity,
                     implementation_entity,
@@ -726,9 +728,9 @@ fn parameters_match(
                 design_parameter.name == implementation_parameter.name
                     && normalized_optional_type(&design_parameter.param_type)
                         == normalized_optional_type(&implementation_parameter.param_type)
-                    // Note: Puml parser not support C-style variadic parameters, design_parameter.is_variadic is always false now.
-                    // && design_parameter.is_variadic == implementation_parameter.is_variadic
-                    && design_parameter.is_pack_expansion == implementation_parameter.is_pack_expansion
+                    && design_parameter.is_variadic == implementation_parameter.is_variadic
+                    && design_parameter.is_pack_expansion
+                        == implementation_parameter.is_pack_expansion
             },
         )
 }
@@ -738,7 +740,7 @@ fn method_key(method: &Method) -> String {
         .parameters
         .iter()
         .map(|parameter| {
-            let variadic = if parameter.is_pack_expansion {
+            let variadic = if parameter.is_variadic || parameter.is_pack_expansion {
                 "..."
             } else {
                 ""
@@ -799,6 +801,10 @@ fn format_parameter_list(parameters: &[class_diagram::FunctionArgument]) -> Stri
     parameters
         .iter()
         .map(|parameter| {
+            if parameter.is_variadic {
+                return "...".to_string();
+            }
+
             let mut rendered = format_parameter(parameter);
             if parameter.is_pack_expansion {
                 rendered.push_str("...");
