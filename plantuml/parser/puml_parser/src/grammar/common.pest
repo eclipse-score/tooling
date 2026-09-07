@@ -107,6 +107,7 @@ style_block_end = { "</style>" ~ EOL? }
 ignored_stmt = _{
       direction_stmt
     | skinparam_stmt
+    | theme_stmt
     | title_stmt
     | note_single_line
     | scale_stmt
@@ -114,6 +115,7 @@ ignored_stmt = _{
 }
 
 skinparam_stmt = @{ ^"skinparam" ~ LINE_REST }
+theme_stmt = @{ ^"!theme" ~ (INLINE_WS+ ~ (!EOL ~ ANY)*)? }
 title_stmt     = @{ ^"title" ~ LINE_REST }
 direction_stmt = @{
     ("left" | "right" | "top" | "bottom")
@@ -149,8 +151,8 @@ stereotype = { STEREOTYPE_LEFT ~ STEREOTYPE_NAME ~ STEREOTYPE_RIGHT }
 // Note
 ////////////////////////////////////////////////////////////////////////////////
 note_declaration = {
-    note_single_line
-  | note_multiline
+    note_multiline
+  | note_single_line
 }
 
 // Single-line note: "note" with any content on same line
