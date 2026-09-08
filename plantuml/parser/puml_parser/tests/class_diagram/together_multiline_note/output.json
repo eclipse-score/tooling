@@ -1,0 +1,54 @@
+{
+  "together_multiline_note.puml": {
+    "name": "together_multiline_note",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "A",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 16
+            },
+            "is_abstract": false,
+            "type_aliases": [],
+            "attributes": [],
+            "methods": [],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
+          }
+        }
+      },
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "B",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 17
+            },
+            "is_abstract": false,
+            "type_aliases": [],
+            "attributes": [],
+            "methods": [],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

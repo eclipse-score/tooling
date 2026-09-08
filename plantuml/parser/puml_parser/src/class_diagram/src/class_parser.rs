@@ -111,10 +111,26 @@ impl IgnoredObjectRegistry {
     }
 }
 
+#[derive(Debug, Default)]
+struct IgnoredNoteRegistry {
+    aliases: HashSet<String>,
+}
+
+impl IgnoredNoteRegistry {
+    fn register(&mut self, alias: Name) {
+        self.aliases.insert(alias.internal);
+    }
+
+    fn filters_relationship(&self, relationship: &Relationship) -> bool {
+        self.aliases.contains(&relationship.left) || self.aliases.contains(&relationship.right)
+    }
+}
+
 struct ClassParseSession<'a> {
     normalized_content: &'a NormalizedContent,
     source_file: Rc<str>,
     ignored_objects: IgnoredObjectRegistry,
+    ignored_notes: IgnoredNoteRegistry,
     relationships: Vec<Relationship>,
 }
 
@@ -548,6 +564,21 @@ impl ClassParseSession<'_> {
         name
     }
 
+    fn parse_note_alias(pair: pest::iterators::Pair<Rule>) -> Option<Name> {
+        fn find_alias(pair: pest::iterators::Pair<Rule>) -> Option<String> {
+            if pair.as_rule() == Rule::note_alias {
+                return Some(pair.as_str().to_string());
+            }
+
+            pair.into_inner().find_map(find_alias)
+        }
+
+        find_alias(pair).map(|internal| Name {
+            internal,
+            ..Name::default()
+        })
+    }
+
     fn filter_relationships(
         relationships: Vec<Relationship>,
         ignored_objects: &IgnoredObjectRegistry,
@@ -869,6 +900,12 @@ impl ClassParseSession<'_> {
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<Vec<ClassUmlTopLevel>, ClassError> {
         match pair.as_rule() {
+            Rule::note_declaration => {
+                if let Some(alias) = Self::parse_note_alias(pair) {
+                    self.ignored_notes.register(alias);
+                }
+                Ok(vec![])
+            }
             Rule::type_def => {
                 let type_def = self.parse_type_def(pair)?;
                 Ok(vec![ClassUmlTopLevel::Types(type_def)])
@@ -900,7 +937,7 @@ impl ClassParseSession<'_> {
     }
 
     fn parse_namespace(
-        &self,
+        &mut self,
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<(Namespace, IgnoredObjectRegistry), ClassError> {
         let mut namespace = Namespace::default();
@@ -914,6 +951,11 @@ impl ClassParseSession<'_> {
                 Rule::top_level => {
                     for top_level_inner in Self::flatten_top_level(inner) {
                         match top_level_inner.as_rule() {
+                            Rule::note_declaration => {
+                                if let Some(alias) = Self::parse_note_alias(top_level_inner) {
+                                    self.ignored_notes.register(alias);
+                                }
+                            }
                             Rule::type_def => {
                                 let mut type_def = self.parse_type_def(top_level_inner)?;
                                 type_def.set_namespace(namespace.name.internal.clone());
@@ -948,7 +990,7 @@ impl ClassParseSession<'_> {
     }
 
     fn parse_package(
-        &self,
+        &mut self,
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<(Package, IgnoredObjectRegistry), ClassError> {
         let mut package = Package::default();
@@ -964,6 +1006,11 @@ impl ClassParseSession<'_> {
                 Rule::top_level => {
                     for t in Self::flatten_top_level(inner) {
                         match t.as_rule() {
+                            Rule::note_declaration => {
+                                if let Some(alias) = Self::parse_note_alias(t) {
+                                    self.ignored_notes.register(alias);
+                                }
+                            }
                             Rule::type_def => {
                                 let mut r#type = self.parse_type_def(t)?;
                                 r#type.set_package(package.name.internal.clone());
@@ -1000,7 +1047,10 @@ impl ClassParseSession<'_> {
             relationships,
             &ignored_objects,
             &Some(package.name.internal.clone()),
-        );
+        )
+        .into_iter()
+        .filter(|relationship| !self.ignored_notes.filters_relationship(relationship))
+        .collect();
 
         Ok((package, ignored_objects))
     }
@@ -1099,6 +1149,7 @@ impl DiagramParser for PumlClassParser {
             normalized_content: &normalized_content,
             source_file,
             ignored_objects: IgnoredObjectRegistry::default(),
+            ignored_notes: IgnoredNoteRegistry::default(),
             relationships: Vec::new(),
         };
 
@@ -1143,7 +1194,10 @@ impl DiagramParser for PumlClassParser {
                     std::mem::take(&mut session.relationships),
                     &session.ignored_objects,
                     &None,
-                );
+                )
+                .into_iter()
+                .filter(|relationship| !session.ignored_notes.filters_relationship(relationship))
+                .collect();
             }
             Err(e) => {
                 return Err(ClassError::Base(remap_syntax_error_to_original_source(
@@ -1161,6 +1215,16 @@ impl DiagramParser for PumlClassParser {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn make_test_session(normalized_content: &NormalizedContent) -> ClassParseSession<'_> {
+        ClassParseSession {
+            normalized_content,
+            source_file: Rc::from("test.puml"),
+            ignored_objects: IgnoredObjectRegistry::default(),
+            ignored_notes: IgnoredNoteRegistry::default(),
+            relationships: Vec::new(),
+        }
+    }
 
     #[test]
     fn test_parse_visibility_none() {
@@ -1332,6 +1396,36 @@ mod tests {
         assert_eq!(rel.left_multiplicity, None);
         assert_eq!(rel.right_multiplicity, None);
         assert_eq!(rel.source_location.line, 1);
+    }
+
+    #[test]
+    fn test_single_line_note_alias_registers_ignored_note() {
+        let input = "note \"Synchronised access only\" as SyncNote";
+        let normalized = normalize_multiline_member_signatures(input);
+        let pair = PlantUmlCommonParser::parse(Rule::note_declaration, input)
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let mut session = make_test_session(&normalized);
+        session.parse_top_level_element(pair).unwrap();
+
+        assert!(session.ignored_notes.aliases.contains("SyncNote"));
+    }
+
+    #[test]
+    fn test_multiline_note_alias_registers_ignored_note() {
+        let input = "note as SyncNote\n  Synchronised access only\nend note\n";
+        let normalized = normalize_multiline_member_signatures(input);
+        let pair = PlantUmlCommonParser::parse(Rule::note_declaration, input)
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let mut session = make_test_session(&normalized);
+        session.parse_top_level_element(pair).unwrap();
+
+        assert!(session.ignored_notes.aliases.contains("SyncNote"));
     }
 
     #[test]

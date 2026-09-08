@@ -98,7 +98,7 @@ COMMENT = _{
 ////////////////////////////////////////////////////////////////////////////////
 ignored_block = _{
     style_block
-  | note_multiline
+    | note_multiline
 }
 
 style_block = { "<style>" ~ EOL ~ (!style_block_end ~ ANY)* ~ style_block_end }
@@ -157,24 +157,70 @@ note_declaration = {
 
 // Single-line note: "note" with any content on same line
 // Just consume the entire line as-is, don't parse its content
-note_single_line = @{
-    ^"note" ~
-    INLINE_WS+ ~  // must have at least one space
-    (!("\n" | "\r") ~ ANY)*  // rest of line
+note_single_line = {
+    note_single_line_alias
+  | note_single_line_plain
 }
+
+note_single_line_alias = {
+  note_single_line_alias_head ~ note_alias
+}
+
+note_single_line_alias_head = @{
+    ^"note" ~
+    INLINE_WS+ ~
+    STRING ~
+    INLINE_WS+ ~
+    ^"as" ~
+  INLINE_WS+
+}
+
+note_single_line_plain = @{
+    ^"note" ~
+    INLINE_WS+ ~ // must have at least one space
+    (!NEWLINE ~ ANY)* // rest of line
+}
+
+note_alias = { ALIAS_ID }
+
+note_end = {
+    ^"endnote"
+  | (^"end" ~ INLINE_WS+ ~ ^"note")
+}
+
 // Multiline note: "note" followed by newline, then content, then "end note"
 // Just consume everything between note and end note, don't parse content
-note_multiline = @{
-    ^"note" ~
-    (!NEWLINE ~ ANY)* ~  // rest of header line
-    NEWLINE ~
-    (
-        !(WHITESPACE* ~ (^"endnote" | (^"end" ~ WHITESPACE ~ ^"note"))) ~
-        (!NEWLINE ~ ANY)* ~
-        NEWLINE
-    )* ~
-    WHITESPACE* ~ (^"endnote" | (^"end" ~ WHITESPACE ~ ^"note")) ~
-    EOL?
+note_multiline = {
+  note_multiline_alias
+  | note_multiline_plain
+}
+
+note_multiline_alias = {
+  note_multiline_alias_head ~ note_alias ~ note_multiline_tail
+}
+
+note_multiline_alias_head = @{
+  ^"note" ~
+  INLINE_WS+ ~
+  "as" ~
+  INLINE_WS+
+}
+
+note_multiline_plain = @{
+  ^"note" ~
+  !(INLINE_WS+ ~ "as" ~ INLINE_WS+) ~
+  note_multiline_tail
+}
+
+note_multiline_tail = ${
+  (!NEWLINE ~ ANY)* ~  // rest of header line
+  NEWLINE ~
+  (
+    !(INLINE_WS* ~ note_end ~ (INLINE_WS* ~ EOL)) ~
+    (!NEWLINE ~ ANY)* ~
+    NEWLINE
+  )* ~
+  INLINE_WS* ~ note_end ~ EOL?
 }
 
 ////////////////////////////////////////////////////////////////////////////////
