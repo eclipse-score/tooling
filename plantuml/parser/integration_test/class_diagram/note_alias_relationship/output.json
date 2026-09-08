@@ -1,0 +1,23 @@
+{
+	"note_alias_relationship.puml": {
+		"name": "note_alias_relationship",
+		"entities": [
+			{
+				"id": "IMessageBuilder",
+				"name": "IMessageBuilder",
+				"enclosing_namespace_id": null,
+				"entity_type": "Class",
+				"type_aliases": [],
+				"methods": [],
+				"template_parameters": null,
+				"enum_literals": [],
+				"variables": [],
+				"relationships": [],
+				"source_location": {
+					"file": "",
+					"line": 15
+				}
+			}
+		]
+	}
+}

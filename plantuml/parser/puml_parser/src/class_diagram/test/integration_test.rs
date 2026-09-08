@@ -111,6 +111,21 @@ fn test_multiline_note() {
 }
 
 #[test]
+fn test_namespace_multiline_note() {
+    run_class_diagram_parser_case("namespace_multiline_note");
+}
+
+#[test]
+fn test_package_multiline_note() {
+    run_class_diagram_parser_case("package_multiline_note");
+}
+
+#[test]
+fn test_together_multiline_note() {
+    run_class_diagram_parser_case("together_multiline_note");
+}
+
+#[test]
 fn test_qualified_method_name() {
     run_class_diagram_parser_case("qualified_method_name");
 }

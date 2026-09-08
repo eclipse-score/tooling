@@ -88,6 +88,11 @@ fn test_modifiers() {
 }
 
 #[test]
+fn test_note_alias_relationship() {
+    run_class_resolver_case("note_alias_relationship");
+}
+
+#[test]
 fn test_object_syntax() {
     run_class_resolver_case("class_diagram_object_syntax");
 }

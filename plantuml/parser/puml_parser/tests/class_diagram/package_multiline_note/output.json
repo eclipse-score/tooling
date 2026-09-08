@@ -1,0 +1,41 @@
+{
+  "package_multiline_note.puml": {
+    "name": "package_multiline_note",
+    "elements": [
+      {
+        "Package": {
+          "name": {
+            "internal": "Core",
+            "display": null
+          },
+          "types": [
+            {
+              "ClassDef": {
+                "name": {
+                  "internal": "A",
+                  "display": null
+                },
+                "namespace": "",
+                "package": "Core",
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                },
+                "is_abstract": false,
+                "type_aliases": [],
+                "attributes": [],
+                "methods": [],
+                "template_parameters": null,
+                "extends": [],
+                "implements": []
+              }
+            }
+          ],
+          "relationships": [],
+          "packages": []
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

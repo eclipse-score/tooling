@@ -115,3 +115,8 @@ fn test_return_commands() {
 fn test_ignored_blocks() {
     run_sequence_diagram_parser_case("ignored_blocks");
 }
+
+#[test]
+fn test_note_unsupported() {
+    run_sequence_diagram_parser_case("note_unsupported");
+}
