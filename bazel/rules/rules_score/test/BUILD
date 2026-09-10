@@ -28,6 +28,7 @@ load(
     "failure_modes",
     "fault_trees",
     "feature_requirements",
+    "rst_to_trlc",
     "safety_analysis",
     "sphinx_module",
     "unit",
@@ -101,6 +102,15 @@ load(
     "feat_req_rst_provider_test",
     "feat_req_rst_sphinx_test",
     "requirements_rst_test_suite",
+)
+load(
+    ":rst_to_trlc_rule_test.bzl",
+    "provider_srcs_routed_to_deps_test",
+    "rst_to_trlc_cross_package_test",
+    "rst_to_trlc_no_collision_test",
+    "rst_to_trlc_package_forwarded_test",
+    "rst_to_trlc_ref_package_forwarded_test",
+    "rst_to_trlc_test_suite",
 )
 load(
     ":safety_analysis_measures_test.bzl",
@@ -2278,24 +2288,39 @@ unit_component_test_suite(name = "unit_component_tests")
 # ============================================================================
 
 # Fixture: assumed_system_requirements from RST
-assumed_system_requirements(
-    name = "asr_rst",
+rst_to_trlc(
+    name = "asr_rst_trlc",
     srcs = ["fixtures/rst_requirements/assumed_system_requirements.rst"],
 )
 
+assumed_system_requirements(
+    name = "asr_rst",
+    srcs = [":asr_rst_trlc"],
+)
+
 # Fixture: feature_requirements from RST (depends on asr_rst for derived_from resolution)
-feature_requirements(
-    name = "feat_req_rst",
+rst_to_trlc(
+    name = "feat_req_rst_trlc",
     srcs = ["fixtures/rst_requirements/feature_requirements.rst"],
     ref_package = "AssumedSystemRequirements",
+)
+
+feature_requirements(
+    name = "feat_req_rst",
+    srcs = [":feat_req_rst_trlc"],
     deps = [":asr_rst"],
 )
 
 # Fixture: component_requirements from RST
-component_requirements(
-    name = "comp_req_rst",
+rst_to_trlc(
+    name = "comp_req_rst_trlc",
     srcs = ["fixtures/rst_requirements/component_requirements.rst"],
     ref_package = "FeatureRequirements",
+)
+
+component_requirements(
+    name = "comp_req_rst",
+    srcs = [":comp_req_rst_trlc"],
     deps = [
         ":asr_rst",
         ":feat_req_rst",
@@ -2303,9 +2328,14 @@ component_requirements(
 )
 
 # Fixture: assumptions_of_use from RST
+rst_to_trlc(
+    name = "aous_rst_trlc",
+    srcs = ["fixtures/rst_requirements/assumptions_of_use.rst"],
+)
+
 assumptions_of_use(
     name = "aous_rst",
-    srcs = ["fixtures/rst_requirements/assumptions_of_use.rst"],
+    srcs = [":aous_rst_trlc"],
     deps = [":aou_root_cause_fault_trees"],
 )
 
@@ -2355,6 +2385,68 @@ aous_rst_sphinx_test(
 )
 
 requirements_rst_test_suite(name = "requirements_rst_tests")
+
+# ============================================================================
+# rst_to_trlc rule tests
+# ============================================================================
+
+# Fixture: package must be forwarded to the converter.
+rst_to_trlc(
+    name = "asr_custom_package_trlc",
+    srcs = ["fixtures/rst_requirements/assumed_system_requirements.rst"],
+    package = "CustomAsrPackage",
+)
+
+rst_to_trlc_package_forwarded_test(
+    name = "rst_to_trlc_package_forwarded_test",
+    target_under_test = ":asr_custom_package_trlc",
+)
+
+rst_to_trlc_ref_package_forwarded_test(
+    name = "rst_to_trlc_ref_package_forwarded_test",
+    target_under_test = ":feat_req_rst_trlc",
+)
+
+# Fixture: same-basename .rst srcs in one target must not collide.
+rst_to_trlc(
+    name = "rst_collision_fixture",
+    srcs = [
+        "fixtures/rst_collision/a/req.rst",
+        "fixtures/rst_collision/b/req.rst",
+    ],
+)
+
+rst_to_trlc_no_collision_test(
+    name = "rst_to_trlc_no_collision_test",
+    target_under_test = ":rst_collision_fixture",
+)
+
+# Fixture: .rst source owned by another Bazel package.
+rst_to_trlc(
+    name = "rst_cross_package_fixture",
+    srcs = ["//fixtures/rst_cross_package:req.rst"],
+)
+
+rst_to_trlc_cross_package_test(
+    name = "rst_to_trlc_cross_package_test",
+    target_under_test = ":rst_cross_package_fixture",
+)
+
+# Fixture: a requirement target in srcs is routed to deps, converted files stay own sources.
+feature_requirements(
+    name = "feat_req_mixed_srcs",
+    srcs = [
+        ":asr_rst",
+        ":feat_req_rst_trlc",
+    ],
+)
+
+provider_srcs_routed_to_deps_test(
+    name = "provider_srcs_routed_to_deps_test",
+    target_under_test = ":feat_req_mixed_srcs",
+)
+
+rst_to_trlc_test_suite(name = "rst_to_trlc_rule_tests")
 
 # ============================================================================
 # Multi-spec Requirements Tests
@@ -2547,6 +2639,7 @@ test_suite(
         ":measure_spec_is_merged_test",
         ":requirements_multi_spec_tests",
         ":requirements_rst_tests",
+        ":rst_to_trlc_rule_tests",
         ":seooc_tests",
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",

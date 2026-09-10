@@ -62,6 +62,10 @@ load(
     _glossary = "glossary",
 )
 load(
+    "//bazel/rules/rules_score/private:rst_to_trlc.bzl",
+    _rst_to_trlc = "rst_to_trlc",
+)
+load(
     "//bazel/rules/rules_score/private:safety_analysis.bzl",
     _fault_trees = "fault_trees",
     _safety_analysis = "safety_analysis",
@@ -89,6 +93,7 @@ feature_requirements = _feature_requirements
 fault_trees = _fault_trees
 glossary = _glossary
 filter_execpath = _filter_execpath
+rst_to_trlc = _rst_to_trlc
 safety_analysis = _safety_analysis
 sphinx_module = _sphinx_module
 unit = _unit

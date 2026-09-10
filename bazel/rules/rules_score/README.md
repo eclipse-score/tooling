@@ -68,16 +68,39 @@ Also generates a `_test` target that validates metamodel compliance.
 ```starlark
 assumptions_of_use(
     name = "my_aou",
-    srcs = ["assumptions.rst"],
+    srcs = ["assumptions.trlc"],
 )
 ```
 
-**`bazel build`** — renders the AoU TRLC/RST sources and exposes their
+**`bazel build`** — renders the AoU TRLC sources and exposes their
 LOBSTER traceability file via `AssumptionsOfUseInfo.aou_lobster`. Every `AoU`
 references the fault-tree root cause(s) it addresses (`root_causes`, mandatory);
 list the `fault_trees` target in `deps` so `<fta_package>.<RootCause>` resolves.
 Tracing to feature/assumed-system requirements is established at the
 `dependable_element` level (via its own `requirements` attribute), not here.
+
+---
+
+## `rst_to_trlc`
+
+```starlark
+rst_to_trlc(
+    name = "my_feat_reqs_trlc",
+    srcs = ["feature_requirements.rst"],
+    ref_package = "AssumedSystemRequirements",
+)
+
+feature_requirements(
+    name = "my_feat_reqs",
+    srcs = [":my_feat_reqs_trlc"],
+    deps = [":my_asr"],
+)
+```
+
+**`bazel build`** — converts sphinx-needs `assumed_system_req`, `feat_req`,
+`comp_req` and `aou_req` directives to one `.trlc` file per `.rst` source. List
+the target in `srcs` of a requirement rule. `ref_package` names the TRLC package
+that `:satisfies:` / `:derived_from:` resolve in.
 
 ---
 

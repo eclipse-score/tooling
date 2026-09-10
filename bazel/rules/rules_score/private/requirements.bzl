@@ -22,7 +22,6 @@ public-facing macros.
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo", "subrule_trlc_image_stage")
 load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FailureModesInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
 _DEFAULT_SPEC = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")
 
@@ -53,11 +52,23 @@ def _requirements_impl(ctx):
     """
 
     # -------------------------------------------------------------------------
+    # Split srcs: targets providing TrlcProviderInfo are dependencies, anything
+    # else contributes its files as own TRLC sources.
+    # -------------------------------------------------------------------------
+    own_srcs = []
+    deps = list(ctx.attr.deps)
+    for src in ctx.attr.srcs:
+        if TrlcProviderInfo in src:
+            deps.append(src)
+        else:
+            own_srcs.extend(src.files.to_list())
+
+    # -------------------------------------------------------------------------
     # Assemble TrlcProviderInfo
     # -------------------------------------------------------------------------
     transitive_spec = []
     transitive_reqs = []
-    for dep in ctx.attr.deps:
+    for dep in deps:
         if ctx.attr.req_kind == "aou" and AssumptionsOfUseInfo in dep:
             fail("{}: deps must not hold the assumptions_of_use target {}; its AoUs would be extracted as own AoUs".format(ctx.label, dep.label))
         trlc_info = dep[TrlcProviderInfo]
@@ -72,7 +83,7 @@ def _requirements_impl(ctx):
     # All files needed for TRLC parsing: own sources + spec RSL + transitive deps.
     # This matches DefaultInfo.files of an equivalent trlc_requirements target so
     # that trlc_requirements_test(reqs=[":this_target"]) works out of the box.
-    all_trlc_files = depset(ctx.files.srcs, transitive = [spec_depset, deps_depset])
+    all_trlc_files = depset(own_srcs, transitive = [spec_depset, deps_depset])
 
     # -------------------------------------------------------------------------
     # Render TRLC → RST for Sphinx documentation.
@@ -85,7 +96,7 @@ def _requirements_impl(ctx):
     render_args = ctx.actions.args()
     render_args.add("--output", rendered_file.path)
     render_args.add("--title", _REQ_KIND_TITLES[ctx.attr.req_kind])
-    render_args.add_all("--source-files", ctx.files.srcs)
+    render_args.add_all("--source-files", own_srcs)
     render_args.add_all("--dep-files", dep_files_depset)
 
     ctx.actions.run(
@@ -136,7 +147,7 @@ def _requirements_impl(ctx):
     sphinx_srcs = depset([rendered_file] + image_outputs)
 
     transitive_sphinx = [sphinx_srcs]
-    for dep in ctx.attr.deps:
+    for dep in deps:
         if SphinxSourcesInfo in dep:
             transitive_sphinx.append(dep[SphinxSourcesInfo].deps)
 
@@ -144,7 +155,7 @@ def _requirements_impl(ctx):
         DefaultInfo(files = all_trlc_files),
         TrlcProviderInfo(
             spec = spec_depset,
-            reqs = depset(ctx.files.srcs),
+            reqs = depset(own_srcs),
             deps = deps_depset,
         ),
         req_provider,
@@ -163,15 +174,16 @@ _score_requirements_rule = rule(
     implementation = _requirements_impl,
     doc = """Shared internal rule for all S-CORE requirement kinds.
 
-    Accepts raw .trlc or .trlc.md source files and emits TrlcProviderInfo
-    so that downstream requirement targets can list this target in their deps
-    directly, without needing an intermediate trlc_requirements wrapper.
+    Accepts raw .trlc or .trlc.md source files (or targets generating them) and
+    emits TrlcProviderInfo so that downstream requirement targets can list this
+    target in their deps directly, without needing an intermediate
+    trlc_requirements wrapper.
     """,
     attrs = {
         "srcs": attr.label_list(
             allow_files = [".trlc", ".trlc.md"],
             mandatory = True,
-            doc = "TRLC source files containing requirement records.",
+            doc = "TRLC source files containing requirement records, or targets generating them. Targets providing TrlcProviderInfo are treated as deps.",
         ),
         "deps": attr.label_list(
             providers = [TrlcProviderInfo],
@@ -214,62 +226,25 @@ def score_requirements_rule(
         lobster_config,
         deps = [],
         spec = [],
-        ref_package = "",
         **kwargs):
-    """Macro wrapper around _score_requirements_rule with RST support.
-
-    Each entry in srcs is classified as follows:
-      - ".rst" files are converted to .trlc via rst_to_trlc and treated as
-        own sources.
-      - ".trlc" / ".trlc.md" files are passed through unchanged as own sources.
-      - Any other label is assumed to already provide TrlcProviderInfo (e.g.
-        an existing trlc_requirements/assumed_system_requirements/... target)
-        and is routed to ``deps`` instead, since only raw TRLC files may be
-        listed in the underlying rule's ``srcs``.
+    """Macro wrapper around _score_requirements_rule that merges the spec.
 
     Args:
+        srcs: Raw TRLC files, targets producing TRLC files (e.g. rst_to_trlc),
+            and/or targets providing TrlcProviderInfo (treated as deps).
         spec: Additional TRLC specification target(s) (single label or list)
             to merge in on top of the S-CORE requirements model, which is
             always included automatically -- do not re-list it here.
-        ref_package: TRLC package prefix used for derived_from cross-references
-            when converting RST sources (e.g. "AssumedSystemRequirements" for
-            feature requirements that derive from ASR).
-
-    Returns:
-        List of resolved labels corresponding to srcs (after any .rst-to-.trlc
-        conversion), in the same order. Useful for callers that need to run
-        trlc_requirements_test against the same source set.
     """
     extra_spec = spec if type(spec) == type([]) else [spec]
     merged_spec = [_DEFAULT_SPEC] + [s for s in extra_spec if s != _DEFAULT_SPEC]
-    trlc_srcs = []
-    extra_deps = []
-    resolved_srcs = []
-    for i, src in enumerate(srcs):
-        if type(src) == type("") and src.endswith(".rst"):
-            gen_name = "_{}_rst_gen_{}".format(name, i)
-            rst_to_trlc(
-                name = gen_name,
-                srcs = [src],
-                ref_package = ref_package,
-            )
-            trlc_srcs.append(":" + gen_name)
-            resolved_srcs.append(":" + gen_name)
-        elif (type(src) == type("")) and (src.endswith(".trlc") or src.endswith(".trlc.md")):
-            trlc_srcs.append(src)
-            resolved_srcs.append(src)
-        else:
-            extra_deps.append(src)
-            resolved_srcs.append(src)
 
     _score_requirements_rule(
         name = name,
-        srcs = trlc_srcs,
-        deps = deps + extra_deps,
+        srcs = srcs,
+        deps = deps,
         req_kind = req_kind,
         lobster_config = lobster_config,
         spec = merged_spec,
         **kwargs
     )
-
-    return resolved_srcs
