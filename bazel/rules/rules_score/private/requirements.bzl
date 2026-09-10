@@ -218,9 +218,7 @@ def score_requirements_rule(
             feature requirements that derive from ASR).
         package: TRLC package name to use for any generated .trlc file(s) when
             converting RST sources. Defaults to the input file's stem (e.g.
-            "index.rst" -> "Index") if left empty, which is rarely a
-            meaningful package name -- callers converting RST sources should
-            normally set this explicitly.
+            "index.rst" -> "Index") if left empty.
 
     Returns:
         List of resolved labels corresponding to srcs (after any .rst-to-.trlc
