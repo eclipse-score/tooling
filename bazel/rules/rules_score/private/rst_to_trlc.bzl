@@ -63,9 +63,7 @@ def _rst_to_trlc_impl(ctx):
     """Convert each .rst source file to a .trlc file via the Python converter."""
     outs = []
     for src in ctx.files.srcs:
-        # Declared in this rule's own package rather than next to `src` (via
-        # `sibling`), since `src` may come from a different repository (e.g.
-        # a cross-repo RST label), where declare_file(sibling=...) is invalid.
+        # `src` may come from a different repository (E.g.: a cross-repo RST label)
         out = ctx.actions.declare_file(src.basename[:-4] + ".trlc")
         outs.append(out)
 
