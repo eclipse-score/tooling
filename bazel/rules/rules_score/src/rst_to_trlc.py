@@ -32,6 +32,13 @@ _LEVEL_MAP = {
 DIRECTIVE_TO_TRLC: dict[str, str] = {
     # Assumed System Requirements (root of the S-CORE traceability chain)
     "assumed_system_req": "ScoreReq.AssumedSystemReq",
+    # Stakeholder Requirements (stkh_req) have no TRLC representation of their
+    # own. When used as srcs for assumed_system_requirements(), they are the
+    # TRLC-level stand-in for the wider operational/system context, so they
+    # are converted 1:1 into AssumedSystemReq records (same TRLC type as
+    # above, just sourced from the existing stkh_req directive instead of a
+    # duplicated one).
+    "stkh_req": "ScoreReq.AssumedSystemReq",
     # Feature Requirements
     "feat_req": "ScoreReq.FeatReq",
     # Component Requirements
@@ -83,6 +90,7 @@ _IMPORTS = ["ScoreReq"]
 _RE_MARKUP = re.compile(r"\*\*?(.*?)\*\*?")
 _RE_DIRECTIVE = re.compile(r"^\.\.\s+([\w]+)::\s*(.*)")
 _RE_FIELD = re.compile(r"^\s+:([\w]+):\s*(.*)")  # noqa: E501
+_RE_REF = re.compile(r"^(?P<id>[\w]+)(?:\[version==(?P<version>\d+)\])?$")
 
 _TRLC_HEADER = """\
 /********************************************************************************
@@ -140,14 +148,43 @@ def _collect_refs(fields: dict[str, str]) -> list[str]:
     return [r.strip() for k in _REF_FIELDS if k in fields for r in fields[k].split(",") if r.strip()]
 
 
-def parse_directives(content: str) -> list[dict[str, Any]]:
-    """Parse supported requirement directives from RST content."""
+def _split_ref(ref: str) -> tuple[str, str]:
+    """Split a raw reference token into (id, version).
+
+    Accepts either a bare id (e.g. "foo") or an id with an explicit
+    ``[version==N]`` qualifier (e.g. "foo[version==2]"), as written in
+    ``:derived_from:``/``:satisfies:`` RST fields. The version defaults to
+    ``_DEFAULT_VERSION`` ("1") when no qualifier is present. Falls back to
+    treating the whole token as the id (version 1) if it doesn't match the
+    expected pattern, so malformed input degrades gracefully instead of
+    crashing the conversion.
+    """
+    m = _RE_REF.match(ref)
+    if not m:
+        return ref, _DEFAULT_VERSION
+    return m.group("id"), m.group("version") or _DEFAULT_VERSION
+
+
+def parse_directives(
+    content: str, only_types: set[str] | None = None
+) -> list[dict[str, Any]]:
+    """Parse supported requirement directives from RST content.
+
+    Args:
+        content: Raw RST source text.
+        only_types: If given, restrict parsing to these directive names
+            (e.g. {"aou_req"}), even if other supported directive types are
+            also present in the file (e.g. a shared file also containing
+            comp_req directives, converted separately by another rule).
+            Defaults to all directives known to DIRECTIVE_TO_TRLC.
+    """
+    allowed = only_types if only_types is not None else set(DIRECTIVE_TO_TRLC)
     results: list[dict[str, Any]] = []
     lines = content.splitlines()
     i = 0
     while i < len(lines):
         m = _RE_DIRECTIVE.match(lines[i])
-        if not m or m.group(1) not in DIRECTIVE_TO_TRLC:
+        if not m or m.group(1) not in allowed:
             i += 1
             continue
 
@@ -187,7 +224,9 @@ def render_trlc(directives: list[dict[str, Any]], package: str, ref_package: str
 
         refs = _collect_refs(fields)
         if refs:
-            ref_list = ", ".join(f"{ref_package}.{r}@1" for r in refs)
+            ref_list = ", ".join(
+                "{}.{}@{}".format(ref_package, *_split_ref(r)) for r in refs
+            )
             lines_out.append(f"    derived_from = [{ref_list}]")
 
         if trlc_type in _ASSUMED_SYSTEM_REQ_TYPES:
@@ -206,10 +245,11 @@ def convert(
     *,
     package: str | None = None,
     ref_package: str | None = None,
+    only_types: set[str] | None = None,
 ) -> int:
     """Convert one RST file to TRLC. Returns number of records written."""
     pkg = package or "".join(w.capitalize() for w in re.split(r"[_\-\s]+", input_path.stem))
-    directives = parse_directives(input_path.read_text(encoding="utf-8"))
+    directives = parse_directives(input_path.read_text(encoding="utf-8"), only_types=only_types)
     if not directives:
         logging.warning("no supported requirement directives found in %s", input_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -227,6 +267,12 @@ if __name__ == "__main__":
     p.add_argument("--package", default=None)
     p.add_argument("--ref-package", default=None)
     p.add_argument(
+        "--only-types",
+        default=None,
+        help="Comma-separated list of directive names to convert, e.g. "
+        "'aou_req'. Defaults to all supported directive types.",
+    )
+    p.add_argument(
         "--log-level",
         choices=["error", "warn", "info", "debug"],
         default="warn",
@@ -238,5 +284,8 @@ if __name__ == "__main__":
     if not args.input_file.exists():
         sys.exit(f"ERROR: file not found: {args.input_file}")
     output_file = args.output_dir / (args.input_file.stem + ".trlc")
-    record_count = convert(args.input_file, output_file, package=args.package, ref_package=args.ref_package)
+    only_types = {t.strip() for t in args.only_types.split(",") if t.strip()} if args.only_types else None
+    record_count = convert(
+        args.input_file, output_file, package=args.package, ref_package=args.ref_package, only_types=only_types
+    )
     logging.info("%s -> %s  (%d record(s))", args.input_file, output_file, record_count)

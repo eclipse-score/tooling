@@ -16,7 +16,7 @@
 load("@trlc//:trlc.bzl", "trlc_requirements")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
-def rst_srcs_to_trlc(name, srcs, deps = [], ref_package = ""):
+def rst_srcs_to_trlc(name, srcs, deps = [], ref_package = "", only_types = []):
     """Convert any .rst entries in srcs to trlc_requirements targets.
 
     For each .rst entry a pair of intermediate targets is generated:
@@ -34,6 +34,12 @@ def rst_srcs_to_trlc(name, srcs, deps = [], ref_package = ""):
             generated .trlc files (e.g. parent requirement packages).
         ref_package: TRLC package prefix for derived_from cross-references
             written into the generated .trlc content.
+        only_types: Optional list of RST directive names (e.g. ["aou_req"])
+            to restrict conversion to. Useful when the same .rst file is
+            shared as srcs by more than one rule (e.g. it contains both
+            comp_req and aou_req directives, consumed separately by
+            component_requirements() and assumptions_of_use()). Defaults to
+            all directive types supported by rst_to_trlc.py.
 
     Returns:
         List of srcs where .rst entries are replaced by generated trlc labels.
@@ -47,6 +53,7 @@ def rst_srcs_to_trlc(name, srcs, deps = [], ref_package = ""):
                 name = gen_name,
                 srcs = [src],
                 ref_package = ref_package,
+                only_types = only_types,
             )
             trlc_requirements(
                 name = trlc_name,
@@ -63,7 +70,17 @@ def _rst_to_trlc_impl(ctx):
     """Convert each .rst source file to a .trlc file via the Python converter."""
     outs = []
     for src in ctx.files.srcs:
-        out = ctx.actions.declare_file(src.basename[:-4] + ".trlc", sibling = src)
+        # Declared under this rule's own name (not sibling = src): a single
+        # .rst file can be the srcs of more than one rst_to_trlc rule (e.g.
+        # the same file supplying both comp_req and aou_req directives to
+        # component_requirements() and assumptions_of_use() respectively).
+        # Since sibling = src ties the output to the *source's* directory,
+        # two such rules would declare the exact same output path and
+        # conflict. Namespacing by rule name also sidesteps the constraint
+        # that a sibling-declared file must live in the same Bazel package
+        # as the rule (the source file's package and the rule's package can
+        # now differ).
+        out = ctx.actions.declare_file("{}/{}.trlc".format(ctx.label.name, src.basename[:-4]))
         outs.append(out)
 
         args = ctx.actions.args()
@@ -76,6 +93,9 @@ def _rst_to_trlc_impl(ctx):
         if ctx.attr.package:
             args.add("--package")
             args.add(ctx.attr.package)
+        if ctx.attr.only_types:
+            args.add("--only-types")
+            args.add(",".join(ctx.attr.only_types))
         args.add("--log-level")
         args.add(get_log_level(ctx))
 
@@ -113,6 +133,10 @@ rst_to_trlc = rule(
             "package": attr.string(
                 default = "",
                 doc = "Optional TRLC package name override; defaults to the input file stem.",
+            ),
+            "only_types": attr.string_list(
+                default = [],
+                doc = "Optional allowlist of RST directive names to convert; defaults to all supported types.",
             ),
         },
         **VERBOSITY_ATTR

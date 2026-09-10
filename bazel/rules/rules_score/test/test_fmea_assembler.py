@@ -67,14 +67,14 @@ def _objs():
             "FM_A",
             "FailureMode",
             {
-                "guideword": "LossOfFunction",
+                "guidewords": ["LossOfFunction"],
                 "safety": "B",
                 "interface": "Lib.Api",
                 "failureeffect": "world ends",
                 "description": "fm a description",
             },
         ),
-        "Lib.FM_Orphan": _Obj("FM_Orphan", "FailureMode", {"safety": "QM", "guideword": "TooLate"}),
+        "Lib.FM_Orphan": _Obj("FM_Orphan", "FailureMode", {"safety": "QM", "guidewords": ["TooLate"]}),
         "Lib.CM_1": _Obj("CM_1", "ControlMeasure", {"safety": "B", "description": "cm one"}),
         "Lib.CM_Orphan": _Obj("CM_Orphan", "ControlMeasure", {"safety": "D"}),
     }
@@ -200,7 +200,7 @@ _RSL = """\
 package TestFmea
 
 type FailureMode {
-    guideword optional String
+    guidewords String [0 .. *]
     safety optional String
     interface optional String
     failureeffect optional String
@@ -217,7 +217,7 @@ _FM_TRLC = """\
 package TestFmea
 
 FailureMode FmA {
-    guideword = "TooLate"
+    guidewords = ["TooLate"]
     safety = "ASIL_D"
     interface = "Lib.Api"
     failureeffect = "downstream timeout"
