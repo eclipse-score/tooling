@@ -20,6 +20,7 @@ on:
     branches: [main]
     paths:
       - 'bazel/rules/rules_score/docs/**'
+      - 'bazel/rules/rules_score/examples/**'
       - 'coverage/**'
       - '.github/workflows/deploy_docs.yml'
   workflow_dispatch:
@@ -39,6 +40,10 @@ jobs:
         uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0 # full history needed for tag-based version detection
+      - name: Free Disk Space (Ubuntu)
+        uses: eclipse-score/more-disk-space@v1
+        with:
+          level: 4
       - name: Setup Bazel with cache
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
@@ -65,6 +70,8 @@ jobs:
           fi
       - name: Build Sphinx documentation
         run: bazel build //bazel/rules/rules_score:rules_score_doc
+      - name: Build example dependable element documentation
+        run: bazel/rules/rules_score/examples/build_example_docs.sh example-docs
       - name: Generate combined coverage report
         id: coverage
         run: |
@@ -87,6 +94,13 @@ jobs:
           mkdir -p docs_output
           cp -r "${HTML_DIR}/." docs_output/
           chmod -R u+w docs_output/
+
+          # Embed the standalone example sites at docs_output/examples/<example>/
+          # (linked from docs/examples.rst)
+          if [[ -d example-docs ]]; then
+            mkdir -p docs_output/examples
+            cp -r example-docs/. docs_output/examples/
+          fi
 
           # Embed the combined coverage report at docs_output/coverage/
           if [[ -d coverage-html ]]; then
