@@ -28,6 +28,16 @@ Rules SCORE for Bazel
    rule_reference
 
 .. toctree::
+   :maxdepth: 1
+   :caption: Examples
+   :hidden:
+
+   Minimal <https://eclipse-score.github.io/tooling/latest/examples/minimal/index.html>
+   Other Library <https://eclipse-score.github.io/tooling/latest/examples/some_other_library/index.html>
+   SEooC <https://eclipse-score.github.io/tooling/latest/examples/seooc/index.html>
+   Integrator <https://eclipse-score.github.io/tooling/latest/examples/integrator/index.html>
+
+.. toctree::
    :maxdepth: 2
    :caption: Validation
    :hidden:
