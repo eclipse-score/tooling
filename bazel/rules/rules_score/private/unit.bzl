@@ -146,7 +146,6 @@ def _unit_impl(ctx):
             implementation = depset(ctx.attr.implementation),
             tests = tests_depset,
             dependent_labels = depset(transitive = collected_dependent_labels),
-            validation_log = validation_log,
         ),
         SphinxSourcesInfo(
             srcs = all_files,
