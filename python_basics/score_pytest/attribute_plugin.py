@@ -23,6 +23,19 @@ TestFunction = Callable[..., Any]
 Decorator = Callable[[TestFunction], TestFunction]
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers", "test_properties(dict): Add custom properties to test XML output"
+    )
+    config.addinivalue_line("markers", "metadata")
+    config.addinivalue_line(
+        "filterwarnings", "ignore::pytest.PytestExperimentalApiWarning"
+    )
+    config.addinivalue_line("norecursedirs", ".*")
+    config.addinivalue_line("norecursedirs", "bazel-*")
+    config.addinivalue_line("norecursedirs", "_build*")
+
+
 def add_test_properties(
     *,
     partially_verifies: list[str] | None = None,
