@@ -26,6 +26,16 @@ load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
 _DEFAULT_SPEC = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")
 
+# Distinct RST heading per requirement kind; trlc_rst's own default ("Requirements")
+# is identical for every kind, which makes sibling docs (e.g. Assumed System
+# Requirements and Assumptions of Use) indistinguishable in the Sphinx sidebar.
+_REQ_KIND_TITLES = {
+    "feature": "Feature Requirements",
+    "component": "Component Requirements",
+    "assumed_system": "Assumed System Requirements",
+    "aou": "Assumptions of Use",
+}
+
 # ============================================================================
 # Private Rule Implementation
 # ============================================================================
@@ -71,6 +81,7 @@ def _requirements_impl(ctx):
 
     render_args = ctx.actions.args()
     render_args.add("--output", rendered_file.path)
+    render_args.add("--title", _REQ_KIND_TITLES[ctx.attr.req_kind])
     render_args.add_all("--source-files", ctx.files.srcs)
     render_args.add_all("--dep-files", dep_files_depset)
 
