@@ -78,11 +78,8 @@ impl<'a> Visitor<'a> {
                 ClassVisitor::visit(self.ctx, entity);
             }
             EntityKind::EnumDecl => EnumVisitor::visit(self.ctx, entity),
-            EntityKind::FunctionDecl | EntityKind::Method => {
+            EntityKind::FunctionDecl | EntityKind::FunctionTemplate | EntityKind::Method => {
                 FunctionVisitor::visit_with_source_files(self.ctx, &mut self.source_files, entity);
-            }
-            EntityKind::FunctionTemplate => {
-                // TBD: Handle function templates if needed
             }
             EntityKind::Constructor | EntityKind::Destructor | EntityKind::ConversionFunction => {
                 warn!(

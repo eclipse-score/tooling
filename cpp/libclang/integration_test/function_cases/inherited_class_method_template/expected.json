@@ -1,0 +1,129 @@
+{
+  "types": {
+    "Base": {
+      "id": "Base",
+      "name": "Base",
+      "enclosing_namespace_id": null,
+      "stereotypes": [],
+      "entity_type": "Class",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [
+        {
+          "name": "update",
+          "return_type": "void",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "value",
+              "param_type": "T &&",
+              "is_variadic": false
+            }
+          ],
+          "template_parameters": [
+            {
+              "Type": {
+                "name": "T",
+                "is_pack": false
+              }
+            }
+          ],
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/inherited_class_method_template/base.h",
+            "line": 8
+          }
+        }
+      ],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/inherited_class_method_template/base.h",
+        "line": 5
+      }
+    },
+    "Derived": {
+      "id": "Derived",
+      "name": "Derived",
+      "enclosing_namespace_id": null,
+      "stereotypes": [],
+      "entity_type": "Class",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [
+        {
+          "name": "run",
+          "return_type": "void",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/inherited_class_method_template/functions.cpp",
+            "line": 20
+          }
+        }
+      ],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [
+        {
+          "source": "Derived",
+          "target": "Base",
+          "relation_type": "Inheritance",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/inherited_class_method_template/functions.cpp",
+            "line": 18
+          }
+        }
+      ],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/inherited_class_method_template/functions.cpp",
+        "line": 18
+      }
+    }
+  },
+  "functions": [
+    {
+      "id": {
+        "scope": "Global",
+        "name": "notify"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "scope": {
+          "Type": {
+            "namespace": [],
+            "type_path": [
+              "Derived"
+            ]
+          }
+        },
+        "name": "run"
+      },
+      "kind": "Method",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "Base::update",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/inherited_class_method_template/functions.cpp",
+            "line": 21
+          }
+        }
+      ]
+    }
+  ]
+}

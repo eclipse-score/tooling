@@ -121,6 +121,7 @@ The top-level visitor currently dispatches these cursor kinds to
 | libclang cursor kind | Function kind |
 | --- | --- |
 | `FunctionDecl` | `Free` |
+| `FunctionTemplate` | `Free` at global or namespace scope; `Method` or `StaticMethod` at type scope |
 | `Method` | `Method` or `StaticMethod` |
 
 C++ member operator overloads such as `operator+` and `operator[]` are normally
@@ -133,6 +134,9 @@ those cursor kinds. Therefore they do not currently produce `FunctionDef`
 entries. A conversion operator such as `operator bool()` is a
 `ConversionFunction` and is distinct from a normal operator overload.
 
-Function templates are not currently part of function extraction. Class visitor
-handling of method templates is independent from extraction of function bodies
-and call relationships.
+Namespace-level function templates are extracted as `FunctionDef` entries with
+`Free` kind. Member function templates are classified as `Method` or
+`StaticMethod` according to their type scope and static modifier. Their compound
+bodies and call relationships are processed in the same way as non-template
+functions. Class visitor handling of method templates remains independent from
+extraction of function bodies and call relationships.

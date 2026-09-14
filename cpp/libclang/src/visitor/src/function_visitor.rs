@@ -149,6 +149,16 @@ impl FunctionVisitor {
     fn extract_function_kind(entity: &Entity) -> Option<FunctionKind> {
         match entity.get_kind() {
             EntityKind::FunctionDecl => Some(FunctionKind::Free),
+            EntityKind::FunctionTemplate => match callable_scope(entity)? {
+                cpp_semantics::Scope::Type { .. } => Some(if entity.is_static_method() {
+                    FunctionKind::StaticMethod
+                } else {
+                    FunctionKind::Method
+                }),
+                cpp_semantics::Scope::Global | cpp_semantics::Scope::Namespace(_) => {
+                    Some(FunctionKind::Free)
+                }
+            },
             EntityKind::Method => Some(if entity.is_static_method() {
                 FunctionKind::StaticMethod
             } else {

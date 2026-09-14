@@ -1,0 +1,36 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "consume",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "run",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "amp::make_optional",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/free_function_template/functions.cpp",
+            "line": 19
+          }
+        }
+      ]
+    }
+  ],
+  "types": {}
+}
