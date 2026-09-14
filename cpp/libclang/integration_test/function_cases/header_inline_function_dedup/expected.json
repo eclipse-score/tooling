@@ -1,0 +1,38 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "shared",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "first",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "second",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": []
+    }
+  ],
+  "types": {}
+}

@@ -11,13 +11,16 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-#include "base.h"
+#pragma once
 
-void notify() {}
+namespace util {
+inline void ping() {}
 
-class Derived : public Base {
+class Widget {
 public:
-    void run() {
-        update(42);
+    inline int compute() {
+        ping();
+        return 1;
     }
 };
+}  // namespace util

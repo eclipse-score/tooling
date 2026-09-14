@@ -14,6 +14,6 @@
 use test_framework::run_parser_case;
 
 #[test]
-fn test_static_class_method_template() {
+fn test_template_declaration_without_definition() {
     run_parser_case();
 }

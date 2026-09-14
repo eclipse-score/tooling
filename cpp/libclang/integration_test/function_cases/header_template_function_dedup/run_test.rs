@@ -14,6 +14,6 @@
 use test_framework::run_parser_case;
 
 #[test]
-fn test_static_class_method_template() {
+fn test_header_template_function_dedup() {
     run_parser_case();
 }

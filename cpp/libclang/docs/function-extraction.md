@@ -22,10 +22,43 @@ per-source-file analysis flow, see [libclang C++ source analysis](ast-traversal.
 
 A callable becomes a `FunctionDef` only when all of the following hold:
 
-1. it is located in the current translation unit's main file;
+1. it is in an eligible project source or header file;
 2. a `FunctionId` can be derived;
 3. its cursor kind maps to a supported `FunctionKind`;
 4. it owns a direct `CompoundStmt` body.
+
+System and external dependency paths are excluded before function extraction.
+When a project header definition is visible in multiple translation units, the
+parser retains one `FunctionDef`, keyed by its source path and byte offset.
+
+Header definitions are parsed in the context of each translation unit. The
+parser does not merge or preserve different preprocessor configurations for
+the same header definition. For example:
+
+```cpp
+// feature.h
+inline int behavior() {
+#ifdef FEATURE_ENABLED
+  return enabled();
+#else
+  return disabled();
+#endif
+}
+
+// a.cpp
+#define FEATURE_ENABLED
+#include "feature.h"
+
+// b.cpp
+#include "feature.h"
+```
+
+The `behavior` definition is analyzed once per source location after header
+definitions from the translation units have been aggregated. Consequently,
+the model cannot represent both preprocessor variants, or guarantee which
+configuration's body and call relationships are retained. Supporting this
+requires configuration-aware extraction rather than source-location-only
+deduplication.
 
 A declaration-only function therefore does not produce a `FunctionDef`. This
 is important because an empty function body and the absence of any function
@@ -39,9 +72,9 @@ cursor spelling.
 
 A function cursor's direct children include parameter declarations and, for a
 normal definition, a `CompoundStmt`. The visitor locates that `CompoundStmt`
-and passes it to `process_scope`.
+and passes it to the compound-statement processor.
 
-`process_scope` processes direct statements in source order:
+The compound statement processor processes direct statements in source order:
 
 - `IfStmt` is represented as one `BodyItem::Branch` with ordered cases. A case
   has an optional `GuardExpression`, a body, and a source location; a final
@@ -56,11 +89,33 @@ and passes it to `process_scope`.
   with a typed `LoopKind`;
 - `CallExpr` is represented as `BodyItem::Call` when its target has a different
   owner;
+- Structured modeling for `switch` and `try/catch` is TBD. Until dedicated
+  body-item representations are added, calls nested in these constructs are
+  traversed conservatively, but their original control-flow shape is not
+  preserved;
 - other non-control-flow statements are searched recursively for calls.
 
 Calls nested within another call are emitted before their enclosing call. This
-is structural nesting order only: the visitor does not claim an evaluation
+is structural nesting order only. The visitor does not claim an evaluation
 order between sibling C++ call arguments.
+
+### Current limitations
+
+The callable model currently represents calls only when the callee has a
+different scope from the caller. Calls between functions in the same scope are
+therefore not emitted as `BodyItem::Call` entries. This is intentional for the
+current cross-owner relationship model, but it means the extracted body is not
+a complete call graph.
+
+Loop extraction currently represents the loop body and does not separately
+model calls in a loop initializer, condition, increment expression, or range
+expression.
+
+For `IfStmt`, the structured representation requires libclang to expose the
+expected direct-child layout. An initializer form such as C++17's `if`
+statement with an initializer can use the fallback path: reachable calls are
+retained, but the initializer and condition are not represented as a reliable
+branch shape.
 
 ## Callable scope and identity
 
@@ -112,6 +167,23 @@ The current `FunctionId` does not include parameter types. Consequently,
 overloads in the same scope currently share an identity for call-resolution
 purposes. Do not use `FunctionId` as a single-value de-duplication key until a
 signature is added to the model.
+
+For example:
+
+```cpp
+void process(int);
+void process(double);
+
+void run() {
+  process(1);
+}
+```
+
+Both overloads currently have the same conceptual identity: global scope plus
+the name `process`. As a result, a call such as `process(1)` cannot be reliably
+associated with the `int` overload by `FunctionId` alone. Parameter types, and
+possibly additional overload-resolution information, must be part of the
+callable identity or call-resolution model to support this case.
 
 ## Supported cursor kinds
 

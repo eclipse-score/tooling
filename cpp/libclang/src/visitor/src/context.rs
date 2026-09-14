@@ -12,6 +12,7 @@
 // *******************************************************************************
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use class_diagram::{SimpleEntity, SourceLocation};
 use cpp_semantics::{FunctionDef, ResolvedType};
@@ -19,11 +20,27 @@ use serde::{Deserialize, Serialize};
 
 pub type TypeMap = HashMap<String, SimpleEntity>;
 
+/// Identifies a function definition within one parser execution.
+///
+/// This source-position key deduplicates project header definitions visible
+/// through multiple translation units. It is not stable across source revisions.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct FunctionDefinitionKey {
+    pub source_file: PathBuf,
+    pub source_offset: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedFunction {
+    pub key: FunctionDefinitionKey,
+    pub definition: FunctionDef,
+}
+
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct VisitContext {
     pub types: TypeMap,
     pub parsed_class_info: Vec<ParsedClassInfo>,
-    pub functions: Vec<FunctionDef>,
+    pub functions: Vec<ExtractedFunction>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]

@@ -1,0 +1,60 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "identity",
+        "scope": {
+          "Namespace": [
+            "utility"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Dependent": "T"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "first",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "utility::identity",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/header_template_function_dedup/first.cpp",
+              "line": 17
+          }
+        }
+      ]
+    },
+    {
+      "id": {
+        "name": "second",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "utility::identity",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/header_template_function_dedup/second.cpp",
+              "line": 17
+          }
+        }
+      ]
+    }
+  ],
+  "types": {}
+}

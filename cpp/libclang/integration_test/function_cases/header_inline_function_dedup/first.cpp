@@ -11,13 +11,8 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-#include "base.h"
+#include "inline_function.h"
 
-void notify() {}
-
-class Derived : public Base {
-public:
-    void run() {
-        update(42);
-    }
-};
+int first() {
+    return shared();
+}

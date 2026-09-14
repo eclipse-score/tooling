@@ -1,0 +1,25 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "run",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "utility::declared_only",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/template_declaration_without_definition/functions.cpp",
+            "line": 17
+          }
+        }
+      ]
+    }
+  ],
+  "types": {}
+}

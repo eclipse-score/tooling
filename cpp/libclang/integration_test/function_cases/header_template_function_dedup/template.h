@@ -11,13 +11,11 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-#include "base.h"
+#pragma once
 
-void notify() {}
-
-class Derived : public Base {
-public:
-    void run() {
-        update(42);
-    }
-};
+namespace utility {
+template <typename T>
+T identity(T value) {
+    return value;
+}
+}  // namespace utility

@@ -14,13 +14,14 @@
 load("//cpp/libclang/integration_test:test_rules.bzl", "cpp_parser_integration_test")
 
 cc_library(
-    name = "static_class_method_template",
+    name = "explicit_specialization",
     srcs = ["functions.cpp"],
+    hdrs = ["specialization.h"],
     visibility = ["//cpp/libclang:__subpackages__"],
 )
 
 cpp_parser_integration_test(
-    name = "test_static_class_method_template",
+    name = "test_explicit_specialization",
     expected_output = ["expected.json"],
-    target = ":static_class_method_template",
+    target = ":explicit_specialization",
 )

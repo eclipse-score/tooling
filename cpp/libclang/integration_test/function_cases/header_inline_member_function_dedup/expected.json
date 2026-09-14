@@ -1,0 +1,136 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "ping",
+        "scope": {
+          "Namespace": [
+            "util"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "compute",
+        "scope": {
+          "Type": {
+            "namespace": [
+              "util"
+            ],
+            "type_path": [
+              "Widget"
+            ]
+          }
+        }
+      },
+      "kind": "Method",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "util::ping",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/header_inline_member_function_dedup/inline_member.h",
+            "line": 22
+          }
+        }
+      ]
+    },
+    {
+      "id": {
+        "name": "first",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "util::Widget::Widget",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/header_inline_member_function_dedup/first.cpp",
+            "line": 17
+          }
+        },
+        {
+          "type": "call",
+          "target": "util::Widget::compute",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/header_inline_member_function_dedup/first.cpp",
+            "line": 18
+          }
+        }
+      ]
+    },
+    {
+      "id": {
+        "name": "second",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "util::Widget::Widget",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/header_inline_member_function_dedup/second.cpp",
+            "line": 17
+          }
+        },
+        {
+          "type": "call",
+          "target": "util::Widget::compute",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/header_inline_member_function_dedup/second.cpp",
+            "line": 18
+          }
+        }
+      ]
+    }
+  ],
+  "types": {
+    "util::Widget": {
+      "id": "util::Widget",
+      "name": "Widget",
+      "enclosing_namespace_id": "util",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "compute",
+          "return_type": "int",
+          "parameters": [],
+          "modifiers": [],
+          "template_parameters": null,
+          "visibility": "public",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/header_inline_member_function_dedup/inline_member.h",
+            "line": 21
+          }
+        }
+      ],
+      "relationships": [],
+      "stereotypes": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/header_inline_member_function_dedup/inline_member.h",
+        "line": 19
+      }
+    }
+  }
+}

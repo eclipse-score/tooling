@@ -2,6 +2,30 @@
   "functions": [
     {
       "id": {
+        "name": "make_optional",
+        "scope": {
+          "Namespace": [
+            "amp"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "consume",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/free_function_template/optional.h",
+            "line": 19
+          }
+        }
+      ]
+    },
+    {
+      "id": {
         "name": "consume",
         "scope": "Global"
       },

@@ -11,13 +11,19 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-#include "base.h"
+#pragma once
 
-void notify() {}
+namespace utility {
 
-class Derived : public Base {
-public:
-    void run() {
-        update(42);
-    }
-};
+// Declaration-only primary template:
+// The test targets the explicit specialization below.
+template <typename T>
+T specialized(T value);
+
+// Explicit specialization should still be extracted as a concrete function definition.
+template <>
+int specialized(int value) {
+    return value;
+}
+
+}  // namespace utility
