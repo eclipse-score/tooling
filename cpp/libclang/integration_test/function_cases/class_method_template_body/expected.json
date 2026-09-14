@@ -1,0 +1,96 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "notify",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "reset",
+        "scope": {
+          "Type": {
+            "namespace": [
+              "amp"
+            ],
+            "type_path": [
+              "Holder"
+            ]
+          }
+        }
+      },
+      "kind": "Method",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "notify",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/class_method_template_body/functions.cpp",
+            "line": 22
+          }
+        }
+      ]
+    }
+  ],
+  "types": {
+    "amp::Holder": {
+      "id": "amp::Holder",
+      "name": "Holder",
+      "enclosing_namespace_id": "amp",
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "reset",
+          "return_type": "void",
+          "parameters": [
+            {
+              "name": "value",
+              "param_type": "U &&",
+              "is_variadic": false
+            }
+          ],
+          "modifiers": [],
+          "template_parameters": [
+            {
+              "Type": {
+                "name": "U",
+                "is_pack": false
+              }
+            }
+          ],
+          "visibility": "public",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/class_method_template_body/functions.cpp",
+            "line": 21
+          }
+        }
+      ],
+      "relationships": [],
+      "stereotypes": [],
+      "template_parameters": [
+        {
+          "Type": {
+            "name": "T",
+            "is_pack": false
+          }
+        }
+      ],
+      "type_aliases": [],
+      "variables": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/class_method_template_body/functions.cpp",
+        "line": 18
+      }
+    }
+  }
+}

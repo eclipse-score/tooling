@@ -1,0 +1,69 @@
+{
+  "functions": [
+    {
+      "id": {
+        "scope": {
+          "Type": {
+            "namespace": [],
+            "type_path": [
+              "Converter"
+            ]
+          }
+        },
+        "name": "convert"
+      },
+      "kind": "StaticMethod",
+      "return_type": {
+        "Dependent": "T"
+      },
+      "body": []
+    }
+  ],
+  "types": {
+    "Converter": {
+      "id": "Converter",
+      "name": "Converter",
+      "enclosing_namespace_id": null,
+      "stereotypes": [],
+      "entity_type": "Class",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [
+        {
+          "name": "convert",
+          "return_type": "T",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "value",
+              "param_type": "T",
+              "is_variadic": false
+            }
+          ],
+          "template_parameters": [
+            {
+              "Type": {
+                "name": "T",
+                "is_pack": false
+              }
+            }
+          ],
+          "modifiers": [
+            "Static"
+          ],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/static_class_method_template/functions.cpp",
+            "line": 17
+          }
+        }
+      ],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/static_class_method_template/functions.cpp",
+        "line": 14
+      }
+    }
+  }
+}
