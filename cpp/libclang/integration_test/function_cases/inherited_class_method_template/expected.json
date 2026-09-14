@@ -31,7 +31,7 @@
           "modifiers": [],
           "source_location": {
             "file": "cpp/libclang/integration_test/function_cases/inherited_class_method_template/base.h",
-            "line": 8
+            "line": 21
           }
         }
       ],
@@ -40,7 +40,7 @@
       "relationships": [],
       "source_location": {
         "file": "cpp/libclang/integration_test/function_cases/inherited_class_method_template/base.h",
-        "line": 5
+        "line": 18
       }
     },
     "Derived": {
@@ -87,6 +87,33 @@
     }
   },
   "functions": [
+    {
+      "id": {
+        "scope": {
+          "Type": {
+            "namespace": [],
+            "type_path": [
+              "Base"
+            ]
+          }
+        },
+        "name": "update"
+      },
+      "kind": "Method",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "notify",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/inherited_class_method_template/base.h",
+            "line": 22
+          }
+        }
+      ]
+    },
     {
       "id": {
         "scope": "Global",

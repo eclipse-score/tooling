@@ -12,18 +12,22 @@
 // *******************************************************************************
 
 //! Extracts C++ callable definitions via libclang into [`VisitContext::functions`].
-//! calls, branches and loops appear in execution order relative to one another.
+//! Preserves structured calls, branches, and loops for supported AST shapes,
+//! and falls back to conservative traversal for unsupported control-flow forms.
 
 use clang::{Entity, EntityKind};
 use cpp_semantics::{
     BodyItem, BranchCase, FunctionDef, FunctionId, FunctionKind, GuardExpression, LoopKind,
 };
+use std::collections::HashSet;
 
 use crate::clang_adapter::scope::callable_scope;
-use crate::clang_adapter::source_location::{is_in_main_file, parse_source_location};
+use crate::clang_adapter::source_filter;
+use crate::clang_adapter::source_location::parse_source_location;
+use crate::context::{ExtractedFunction, FunctionDefinitionKey};
 use crate::types::resolver::resolve_type;
-use crate::visitor::SourceFileCache;
-use crate::{context::VisitContext, AstVisitor};
+use crate::visitor::{normalize_source_identity_path, SourceFileCache};
+use crate::VisitContext;
 
 pub struct FunctionVisitor;
 
@@ -34,22 +38,18 @@ struct IfParts<'tu> {
     else_body: Option<Entity<'tu>>,
 }
 
-impl AstVisitor for FunctionVisitor {
-    fn visit(ctx: &mut VisitContext, entity: Entity) {
-        let mut source_files = SourceFileCache::default();
-        Self::visit_with_source_files(ctx, &mut source_files, entity);
-    }
-}
-
 impl FunctionVisitor {
-    /// Extracts a callable using source-text resources owned by the traversal.
-    pub(crate) fn visit_with_source_files(
+    /// Extracts a callable using traversal-scoped state and source-text resources.
+    pub(crate) fn visit_with_state(
         ctx: &mut VisitContext,
         source_files: &mut SourceFileCache,
+        seen_function_definitions: &mut HashSet<FunctionDefinitionKey>,
         entity: Entity,
     ) {
-        if let Some(func_def) = Self::extract_function_def(source_files, entity) {
-            ctx.functions.push(func_def);
+        if let Some(function) =
+            Self::extract_function_def(source_files, seen_function_definitions, entity)
+        {
+            ctx.functions.push(function);
         }
     }
 
@@ -57,12 +57,16 @@ impl FunctionVisitor {
 
     fn extract_function_def(
         source_files: &mut SourceFileCache,
+        seen_function_definitions: &mut HashSet<FunctionDefinitionKey>,
         entity: Entity,
-    ) -> Option<FunctionDef> {
-        if !is_in_main_file(&entity) {
+    ) -> Option<ExtractedFunction> {
+        let key = Self::extract_definition_key(&entity)?;
+
+        if seen_function_definitions.contains(&key) {
             log::debug!(
-                "skipping callable '{}': not located in the main file",
-                entity.get_name().unwrap_or_default()
+                "skipping callable '{}': definition already extracted at {:?}",
+                entity.get_name().unwrap_or_default(),
+                key
             );
             return None;
         }
@@ -98,12 +102,18 @@ impl FunctionVisitor {
             entity.get_result_type().map(|t| resolve_type(&t))
         };
 
-        Some(FunctionDef {
-            id,
-            kind,
-            return_type,
-            body,
-        })
+        let extracted_function = ExtractedFunction {
+            key,
+            definition: FunctionDef {
+                id,
+                kind,
+                return_type,
+                body,
+            },
+        };
+        seen_function_definitions.insert(extracted_function.key.clone());
+
+        Some(extracted_function)
     }
 
     // ── AST navigation helpers ────────────────────────────────────────────────
@@ -112,6 +122,14 @@ impl FunctionVisitor {
         Some(FunctionId {
             scope: callable_scope(entity)?,
             name: entity.get_name()?,
+        })
+    }
+
+    fn extract_definition_key(entity: &Entity) -> Option<FunctionDefinitionKey> {
+        let location = entity.get_location()?.get_file_location();
+        Some(FunctionDefinitionKey {
+            source_file: normalize_source_identity_path(&location.file?.get_path()),
+            source_offset: location.offset,
         })
     }
 
@@ -183,6 +201,10 @@ impl FunctionVisitor {
                 .and_then(|c| c.get_reference())
         })?;
 
+        if source_filter::is_excluded_entity(&resolved) {
+            return None;
+        }
+
         Self::extract_function_kind(&resolved)?;
         Self::extract_function_id(&resolved)
     }
@@ -234,7 +256,8 @@ impl FunctionVisitor {
         }
     }
 
-    /// Turns an IfStmt into one [`BodyItem::Branch`] with ordered cases.
+    /// Extracts an `IfStmt` as an ordered branch when its child layout is
+    /// supported, or falls back to unstructured child traversal otherwise.
     ///
     /// `else if` chains are flattened into cases, while an `else` that contains
     /// a nested `if` remains a final else case containing a nested Branch.
@@ -331,8 +354,8 @@ impl FunctionVisitor {
             .collect()
     }
 
-    /// Extracts a condition as a tree that preserves `&&`, `||`, and `!`
-    /// short-circuit semantics. Other expressions remain source-backed leaves.
+    /// Extracts a condition as a tree that models `&&`, `||`, and `!`
+    /// structure explicitly. Other expressions remain source-backed leaves.
     fn extract_guard_expression(
         source_files: &mut SourceFileCache,
         entity: Entity,

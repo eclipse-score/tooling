@@ -1,0 +1,16 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "local_function",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": []
+    }
+  ],
+  "types": {}
+}

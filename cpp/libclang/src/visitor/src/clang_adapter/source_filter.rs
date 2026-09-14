@@ -11,7 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use clang::Type;
+use clang::{Entity, Type};
+
+use crate::clang_adapter::scope::namespace_id;
 
 const SYSTEM_HEADER_PREFIXES: &[&str] = &["/usr/include", "/usr/local/include", "/opt/"];
 const SYSTEM_HEADER_SUBSTRINGS: &[&str] = &["/gcc/"];
@@ -39,6 +41,16 @@ pub fn is_external_dependency_path(path: &str) -> bool {
 /// Returns whether a path belongs to a header that is outside the parsed model.
 pub(crate) fn is_external_or_system_path(path: &str) -> bool {
     is_system_header_path(path) || is_external_dependency_path(path)
+}
+
+/// Returns whether an entity is outside the source model's analysis boundary.
+pub(crate) fn is_excluded_entity(entity: &Entity) -> bool {
+    let Some(location) = entity.get_location() else {
+        return false;
+    };
+
+    let (file, ..) = location.get_presumed_location();
+    is_external_or_system_path(&file) || is_excluded_namespace(namespace_id(entity).as_deref())
 }
 
 /// Returns whether a type's declaration belongs to an external or system header.

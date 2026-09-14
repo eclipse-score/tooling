@@ -1,0 +1,20 @@
+{
+  "functions": [
+    {
+      "id": {
+        "name": "specialized",
+        "scope": {
+          "Namespace": [
+            "utility"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": []
+    }
+  ],
+  "types": {}
+}

@@ -11,37 +11,45 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use clang::{Entity, EntityKind};
 use log::warn;
 
-use crate::clang_adapter::scope::namespace_id;
 use crate::clang_adapter::source_filter;
 use crate::class_visitor::ClassVisitor;
-use crate::context::VisitContext;
+use crate::context::{FunctionDefinitionKey, VisitContext};
 use crate::enum_visitor::EnumVisitor;
 use crate::function_visitor::FunctionVisitor;
 
+/// Visitor interface for AST handlers that only depend on the shared output
+/// context and the current entity.
+///
+/// Visitors that require per-traversal state should use an explicit entry point
+/// instead of implementing this trait.
 pub trait AstVisitor {
     fn visit(ctx: &mut VisitContext, entity: Entity);
 }
 
-/// Per-traversal cache for source-file contents.
+/// Per-parser-execution cache for source-file contents.
 ///
-/// The cache belongs to `Visitor` because it is temporary traversal state,
-/// rather than part of the extracted semantic model.
+/// The driver owns this temporary traversal state and shares it between
+/// visitors for all translation units in one parser execution.
 #[derive(Default)]
-pub(crate) struct SourceFileCache {
+pub struct SourceFileCache {
     files: HashMap<PathBuf, Option<Vec<u8>>>,
+}
+
+pub(crate) fn normalize_source_identity_path(path: &Path) -> PathBuf {
+    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
 impl SourceFileCache {
     /// Returns source bytes, loading each path at most once during traversal.
     pub(crate) fn get(&mut self, path: &Path) -> Option<&[u8]> {
         self.files
-            .entry(path.to_path_buf())
+            .entry(normalize_source_identity_path(path))
             .or_insert_with(|| std::fs::read(path).ok())
             .as_deref()
     }
@@ -49,14 +57,20 @@ impl SourceFileCache {
 
 pub struct Visitor<'a> {
     ctx: &'a mut VisitContext,
-    source_files: SourceFileCache,
+    source_files: &'a mut SourceFileCache,
+    seen_function_definitions: &'a mut HashSet<FunctionDefinitionKey>,
 }
 
 impl<'a> Visitor<'a> {
-    pub fn new(ctx: &'a mut VisitContext) -> Self {
+    pub fn new(
+        ctx: &'a mut VisitContext,
+        source_files: &'a mut SourceFileCache,
+        seen_function_definitions: &'a mut HashSet<FunctionDefinitionKey>,
+    ) -> Self {
         Self {
             ctx,
-            source_files: SourceFileCache::default(),
+            source_files,
+            seen_function_definitions,
         }
     }
 
@@ -66,7 +80,7 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_recursive(&mut self, entity: Entity) {
-        if is_ignored_entity(entity) {
+        if source_filter::is_excluded_entity(&entity) {
             return;
         }
 
@@ -79,7 +93,12 @@ impl<'a> Visitor<'a> {
             }
             EntityKind::EnumDecl => EnumVisitor::visit(self.ctx, entity),
             EntityKind::FunctionDecl | EntityKind::FunctionTemplate | EntityKind::Method => {
-                FunctionVisitor::visit_with_source_files(self.ctx, &mut self.source_files, entity);
+                FunctionVisitor::visit_with_state(
+                    self.ctx,
+                    self.source_files,
+                    self.seen_function_definitions,
+                    entity,
+                );
             }
             EntityKind::Constructor | EntityKind::Destructor | EntityKind::ConversionFunction => {
                 warn!(
@@ -93,15 +112,5 @@ impl<'a> Visitor<'a> {
         for child in entity.get_children() {
             self.visit_recursive(child);
         }
-    }
-}
-
-fn is_ignored_entity(entity: Entity) -> bool {
-    if let Some(location) = entity.get_location() {
-        let (file, _line, _column) = location.get_presumed_location();
-        source_filter::is_external_or_system_path(&file)
-            || source_filter::is_excluded_namespace(namespace_id(&entity).as_deref())
-    } else {
-        false
     }
 }

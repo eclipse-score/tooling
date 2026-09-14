@@ -23,17 +23,18 @@ Detailed extraction contracts are documented separately:
 - [Function extraction and control flow](function-extraction.md)
 - [Class and enum extraction](type-extraction.md)
 
-## Translation units and the main file
+## Translation units and project headers
 
 In libclang terminology, the *main file* is the input file of one parse
 operation; it is not necessarily the C++ program's `main.cpp`. For example,
 when parsing `src/service.cpp`, declarations and definitions in that file are
 in the main file, while entities brought in through `#include` are not.
 
-Function extraction keeps only callable definitions from the main file. This
-avoids extracting an inline function from a shared header once for every
-translation unit that includes it. A header-only function is extracted when
-that header is itself an input file.
+Function extraction includes definitions from eligible project headers as well
+as the main file. This ensures header-only and template implementations retain
+their bodies and call relationships when included by a source file. When the
+same definition is visible from multiple translation units, aggregation uses
+its source file and byte offset to retain it once.
 
 ## Analysis flow
 
@@ -57,6 +58,6 @@ or entities in excluded namespaces such as `std`. Namespace cursors are
 traversal containers; visitors derive namespace and type ownership from each
 entity's semantic-parent chain rather than retaining mutable namespace state.
 
-This filtering is distinct from the main-file rule: source filtering controls
-whether an entity belongs in the parsed model at all, while the main-file rule
-prevents duplicated callable definitions from project headers.
+This filtering controls whether an entity belongs in the parsed model at all;
+definition-location deduplication prevents repeated callable definitions from
+project headers.

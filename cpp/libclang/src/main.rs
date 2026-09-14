@@ -14,7 +14,7 @@
 use clap::Parser as ClapParser;
 use env_logger::Builder;
 use log::{debug, error, LevelFilter};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -22,7 +22,10 @@ use class_diagram::{ClassDiagram, SimpleEntity};
 use class_serializer::ClassSerializer;
 
 use utils::{render_entity_tree, write_debug_json, write_entity_tree, write_fbs_output};
-use visit_tu::{is_external_dependency_path, FunctionDef, VisitContext, Visitor};
+use visit_tu::{
+    is_external_dependency_path, FunctionDef, FunctionDefinitionKey, SourceFileCache, VisitContext,
+    Visitor,
+};
 
 #[derive(ClapParser, Debug)]
 #[command(name = "cpp_parser")]
@@ -53,6 +56,12 @@ struct ParseOutputs {
     functions: Vec<FunctionDef>,
 }
 
+#[derive(Default)]
+struct ParseState {
+    source_files: SourceFileCache,
+    seen_function_definitions: HashSet<FunctionDefinitionKey>,
+}
+
 impl ParseOutputs {
     fn extend_from_ctx(&mut self, ctx: VisitContext) {
         debug!(
@@ -66,7 +75,11 @@ impl ParseOutputs {
             self.types.insert(type_name, entity);
         }
 
-        self.functions.extend(ctx.functions);
+        self.functions.extend(
+            ctx.functions
+                .into_iter()
+                .map(|function| function.definition),
+        );
     }
 }
 
@@ -114,6 +127,7 @@ fn parse_file(
     compilation_flags: &[String],
     index: &clang::Index,
     trace_output_dir: Option<&Path>,
+    state: &mut ParseState,
     outputs: &mut ParseOutputs,
 ) {
     debug!("Parsing TU: {:?}", file);
@@ -148,7 +162,11 @@ fn parse_file(
             }
 
             let mut ctx = VisitContext::default();
-            let mut visitor = Visitor::new(&mut ctx);
+            let mut visitor = Visitor::new(
+                &mut ctx,
+                &mut state.source_files,
+                &mut state.seen_function_definitions,
+            );
             visitor.visit(entity);
             outputs.extend_from_ctx(ctx);
         }
@@ -188,6 +206,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let command_line_args = Args::parse();
     let mut outputs = ParseOutputs::default();
+    let mut state = ParseState::default();
 
     ensure_output_parent_exists(&command_line_args.class_fbs_output)?;
     if let Some(debug_json_output) = &command_line_args.debug_json_output {
@@ -209,6 +228,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             compilation_flags,
             &index,
             trace_output_dir,
+            &mut state,
             &mut outputs,
         );
     }
