@@ -147,13 +147,19 @@ def _dependability_analysis_impl(ctx):
 
     runfiles_files = []
     if lobster_report_file:
-        ctx.actions.write(
-            output = test_executable,
-            content = "set -o pipefail; {} {}".format(
-                ctx.executable._lobster_ci_report.short_path,
-                lobster_report_file.short_path,
-            ),
-        )
+        if ctx.attr.maturity == "development":
+            # Development mode: report traceability issues without failing the
+            # build, matching the maturity pattern used by dependable_element.
+            command = "{ci} {report} || echo 'WARNING: lobster traceability check failed (maturity=development)'".format(
+                ci = ctx.executable._lobster_ci_report.short_path,
+                report = lobster_report_file.short_path,
+            )
+        else:
+            command = "set -o pipefail; {ci} {report}".format(
+                ci = ctx.executable._lobster_ci_report.short_path,
+                report = lobster_report_file.short_path,
+            )
+        ctx.actions.write(output = test_executable, content = command)
         runfiles_files = [ctx.executable._lobster_ci_report, lobster_report_file]
     else:
         ctx.actions.write(output = test_executable, content = "exit 0")
@@ -220,6 +226,11 @@ _dependability_analysis_test = rule(
             mandatory = False,
             doc = "Reference to architectural_design target for interface tracing.",
         ),
+        "maturity": attr.string(
+            default = "release",
+            values = ["release", "development"],
+            doc = "Maturity level of the dependability analysis. 'release' (default) fails `bazel test` when traceability links are missing; 'development' emits a warning and continues.",
+        ),
         "_lobster_ci_report": attr.label(
             default = "@lobster//:lobster-ci-report",
             executable = True,
@@ -246,6 +257,7 @@ def dependability_analysis(
         security_analysis = [],
         dfa = [],
         arch_design = None,
+        maturity = "release",
         **kwargs):
     """Define dependability analysis following S-CORE process guidelines.
 
@@ -265,6 +277,8 @@ def dependability_analysis(
             (placeholder).
         arch_design: Optional label to an ``architectural_design`` target
             (placeholder).
+        maturity: 'release' (default) fails ``bazel test`` when traceability
+            links are missing; 'development' emits a warning and continues.
         visibility: Bazel visibility.
         tags: Additional Bazel tags.
 
@@ -282,5 +296,6 @@ def dependability_analysis(
         security_analysis = security_analysis,
         dfa = dfa,
         arch_design = arch_design,
+        maturity = maturity,
         **kwargs
     )
