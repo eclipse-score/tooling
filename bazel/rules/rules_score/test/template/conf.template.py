@@ -91,6 +91,14 @@ numfig = True
 # HTML theme
 html_theme = "sphinx_rtd_theme"
 
+# Mirrors the shipped default template: architectural_design views nest diagram
+# pages arbitrarily deep by directory, so the sidebar must stay expanded and
+# unpruned for those pages to be reachable.
+html_theme_options = {
+    "collapse_navigation": False,
+    "navigation_depth": -1,
+}
+
 # Load external needs and log configuration
 needs_external_needs = bazel_sphinx_needs.load_external_needs()
 bazel_sphinx_needs.log_config_info(project)

@@ -229,7 +229,25 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     debug!("Parsing started");
     for (path, content) in &preprocessed_files {
-        let parsed_content = parse_puml_file(path, content, log_level, args.diagram_type)
+        // `source_file` is the stable, workspace-relative path callers want
+        // embedded in outputs (see `--source-name`'s docs); `path` is the
+        // actual file handed to us (e.g. a disambiguating `_puml_inputs/`
+        // symlink) and must keep driving output *filenames*, which are
+        // derived from its basename via `_disambiguated_stems` and may not
+        // match `source_file`'s basename. Parsers only ever read `path` to
+        // stamp per-element `SourceLocation`s (never to access the
+        // filesystem — `content` is already loaded), so substituting a
+        // synthetic path built from `source_file` here is sufficient to
+        // make every `SourceLocation.file` in the resolved model — and thus
+        // in the FlatBuffers output — carry the corrected value too,
+        // matching what already reaches the lobster/idmap outputs below.
+        let source_file = args
+            .source_name
+            .clone()
+            .unwrap_or_else(|| source_path_for_output(path));
+        let source_path: Rc<PathBuf> = Rc::new(PathBuf::from(&source_file));
+
+        let parsed_content = parse_puml_file(&source_path, content, log_level, args.diagram_type)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
         if emit_debug_json {
             if let Some(ref dir) = fbs_output_dir {
@@ -256,10 +274,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
 
-                let source_file = args
-                    .source_name
-                    .clone()
-                    .unwrap_or_else(|| source_path_for_output(path));
                 let fbs_buffer = serialize_resolved_diagram(&logic_result);
                 if let Some(ref dir) = fbs_output_dir {
                     write_fbs_to_file(&fbs_buffer, path, dir)?;
@@ -1089,8 +1103,39 @@ mod idmap_wiring_tests {
         cleanup_dir(&dir);
     }
 
-    /// Sequence diagrams route through `idmap_model_for` to the
-    /// `IdMapModel::Sequence` dispatch arm and `write_idmap_to_file`.
+    /// `SourceLocation.file` (and thus the FlatBuffers output) must carry the
+    /// corrected `source_file` -- never the raw staging `path` handed to
+    /// `parse_puml_file` -- when `--source-name` (or its computed fallback)
+    /// differs from `path`'s own basename/directory, e.g. the
+    /// `_puml_inputs/<stem>.puml` disambiguating symlink Bazel stages this
+    /// CLI's input from. This mirrors the exact `source_file`/`source_path`
+    /// computation from the main parsing loop above rather than spawning the
+    /// compiled binary.
+    #[test]
+    fn source_location_uses_corrected_source_not_staging_path() {
+        let staging_path = Path::new("_puml_inputs/dir_part__foo.puml");
+        let source_name = Some("real/pkg/foo.puml".to_string());
+        let content = "@startuml\nclass Foo {\n}\n@enduml";
+
+        let source_file = source_name.unwrap_or_else(|| source_path_for_output(staging_path));
+        let source_path: Rc<PathBuf> = Rc::new(PathBuf::from(&source_file));
+
+        let parsed = parse_puml_file(&source_path, content, LogLevel::Info, DiagramType::Class)
+            .expect("class parse must succeed");
+        let resolved = resolve_parsed_diagram(parsed).expect("class diagram must resolve");
+        let fbs_bytes = serialize_resolved_diagram(&resolved);
+        let fbs_text = String::from_utf8_lossy(&fbs_bytes);
+
+        assert!(
+            fbs_text.contains("real/pkg/foo.puml"),
+            "expected the corrected source_file to be embedded in the FBS output"
+        );
+        assert!(
+            !fbs_text.contains("_puml_inputs"),
+            "the disambiguating staging path must never leak into the FBS output, got: {fbs_text}"
+        );
+    }
+
     #[test]
     fn sequence_diagram_routes_to_idmap_model_dispatch() {
         let content =

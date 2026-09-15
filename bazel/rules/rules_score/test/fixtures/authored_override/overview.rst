@@ -12,27 +12,8 @@
    # SPDX-License-Identifier: Apache-2.0
    # *******************************************************************************
 
-Architectural Design
-====================
+Overview
+========
 
-This is the architectural design of the Safety Software SEooC Example:
-
-The :term:`Architectural Design` describes how each :term:`Component`
-contributes to fulfilling :term:`Feature Requirements` under the selected
-:term:`Integrity Level`.
-
-Static Architecture
--------------------
-
-.. uml:: static_design.puml
-   :align: center
-   :alt: Static Component Architectural Design
-   :width: 100%
-
-Public API
-----------
-
-.. uml:: public_api.puml
-   :align: center
-   :alt: Public API of the SEooC Example
-   :width: 100%
+Hand-authored prose for the overview diagram; this suppresses the
+generated wrapper page for ``overview.puml`` in this directory.

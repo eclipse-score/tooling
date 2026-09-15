@@ -51,6 +51,14 @@ load(
     "lobster_config_test_suite",
 )
 load(
+    ":puml_layout_crash_repro_test.bzl",
+    "puml_layout_crash_repro_test",
+)
+load(
+    ":puml_layout_test.bzl",
+    "puml_layout_test_suite",
+)
+load(
     ":requirements_multi_spec_test.bzl",
     "asr_multi_spec_provider_test",
     "comp_req_multi_spec_provider_test",
@@ -273,6 +281,62 @@ architectural_design(
 architectural_design(
     name = "arch_design_nested",
     static = ["fixtures/test_dependable_element_nested.puml"],
+)
+
+# Regression fixtures: a generated navigation page and an authored page
+# claiming the same output path must be reconciled by plan_view_layout()
+# rather than colliding in declare_file(); see
+# puml_layout_crash_repro_test.bzl.
+architectural_design(
+    name = "arch_design_authored_index_compose_repro",
+    static = [
+        "fixtures/authored/index.rst",
+        "fixtures/authored/overview.puml",
+    ],
+)
+
+architectural_design(
+    name = "arch_design_authored_rst_override_repro",
+    static = [
+        "fixtures/authored_override/overview.puml",
+        "fixtures/authored_override/overview.rst",
+    ],
+)
+
+puml_layout_crash_repro_test(
+    name = "puml_layout_authored_index_compose_builds",
+    target_under_test = ":arch_design_authored_index_compose_repro",
+)
+
+puml_layout_crash_repro_test(
+    name = "puml_layout_authored_rst_override_builds",
+    target_under_test = ":arch_design_authored_rst_override_repro",
+)
+
+# Wraps both crash-repro architectural_design targets above in a real
+# dependable_element so the *staged, dependable-element-relative* RST content
+# can be asserted on (not just "it builds without crashing") -- see
+# :authored_layout_compose_test / :authored_layout_override_test below.
+#
+# The two targets deliberately use separate fixture directories: a .puml shared
+# by two architectural_design targets of one dependable_element yields two
+# idmaps with the same --source-name, which clickable_plantuml rejects.
+dependable_element(
+    name = "authored_layout_example_lib",
+    architectural_design = [
+        ":arch_design_authored_index_compose_repro",
+        ":arch_design_authored_rst_override_repro",
+    ],
+    assumptions_of_use = [":aous"],
+    components = [],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    # Purely illustrative fixture (not a real SEooC), same reasoning as
+    # clickable_example_lib above.
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
 )
 
 # - Safety Analysis (DFA):    wp__sw_component_dfa
@@ -1005,6 +1069,35 @@ sh_test(
     tags = ["manual"],
 )
 
+# Regression test at the level of the actual staged RST that Sphinx will read:
+# an authored index.rst *composes* with the generated toctree (its title/prose
+# is included, the diagram wrapper is still listed) -- see plan_view_layout()'s
+# docstring in puml_utils.bzl. Real HTML rendering isn't exercised here since
+# the `plantuml` renderer binary isn't runnable in this sandbox (see
+# check_clickable_example_link.sh above for the same caveat).
+sh_test(
+    name = "authored_layout_compose_test",
+    srcs = ["check_authored_layout_content.sh"],
+    args = [
+        "compose",
+        "$(rootpaths :authored_layout_example_lib_index)",
+    ],
+    data = [":authored_layout_example_lib_index"],
+)
+
+# Regression test: an authored overview.rst *overrides* (suppresses) the
+# generated ".. uml::" wrapper page for the same-named overview.puml, so the
+# staged page is the hand-authored prose verbatim, not the placeholder.
+sh_test(
+    name = "authored_layout_override_test",
+    srcs = ["check_authored_layout_content.sh"],
+    args = [
+        "override",
+        "$(rootpaths :authored_layout_example_lib_index)",
+    ],
+    data = [":authored_layout_example_lib_index"],
+)
+
 # ============================================================================
 # SEooC-Specific Tests
 # ============================================================================
@@ -1019,7 +1112,10 @@ seooc_artifacts_copied_test(
 sh_test(
     name = "seooc_tests_dep_links_use_doc_dir",
     srcs = ["check_seooc_dep_links.sh"],
-    args = ["$(rootpaths :seooc_test_lib_index)"],
+    args = [
+        "seooc_test_lib_index/index.rst",
+        "$(rootpaths :seooc_test_lib_index)",
+    ],
     data = [":seooc_test_lib_index"],
 )
 
@@ -1512,6 +1608,11 @@ requirements_multi_spec_test_suite(name = "requirements_multi_spec_tests")
 # lobster_config.bzl unit tests (format_lobster_sources / format_lobster_block)
 # ============================================================================
 lobster_config_test_suite(name = "lobster_config")
+
+# ============================================================================
+# puml_utils.bzl unit tests (plan_view_layout)
+# ============================================================================
+puml_layout_test_suite(name = "puml_layout")
 
 # ============================================================================
 # Image srcs Tests (defined in sub-package to avoid workspace-root edge case)

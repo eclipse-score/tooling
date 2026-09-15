@@ -258,6 +258,26 @@ Design Rationale
 
 Reference implementation: `examples/seooc <https://github.com/eclipse-score/score-tooling/tree/main/bazel/rules/rules_score/examples/seooc>`_ in the score-tooling repository.
 
+Staged Layout of ``architectural_design`` Output
+--------------------------------------------------
+
+A ``dependable_element`` stages each of its ``architectural_design`` dependencies
+under that dependency's **target name**:
+
+.. code-block:: text
+
+   architectural_design/<architectural_design target name>/<view>/...
+
+This shape does not depend on how many ``architectural_design`` labels are
+attached, so published HTML URLs stay stable as the element grows. The same
+``<target name>/`` prefix is applied to every other artifact-type attribute
+(``assumptions_of_use``, ``dependability_analysis``, ``checklists``,
+``glossary``, and the requirements attributes).
+
+If two ``architectural_design`` labels from different packages share a target
+name, or if two files within one label resolve to the same relative path, the
+build fails with an error.
+
 ---
 
 .. _sphinx-hermetic-tool-setup:

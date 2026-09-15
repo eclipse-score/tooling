@@ -136,6 +136,14 @@ plantuml_output_format = "svg_obj"
 # HTML theme
 html_theme = "sphinx_rtd_theme"
 
+# architectural_design views nest diagram pages arbitrarily deep by directory;
+# the theme's defaults (collapse_navigation=True, navigation_depth=4) hide
+# deeper levels behind an extra click and truncate very deep trees.
+html_theme_options = {
+    "collapse_navigation": False,
+    "navigation_depth": -1,
+}
+
 # Note: version_flyout.css and version_flyout.js are injected by the
 # deploy workflow via _shared/ paths so they load once across all versions.
 
