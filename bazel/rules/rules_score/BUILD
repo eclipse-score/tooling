@@ -114,6 +114,59 @@ py_binary(
     ],
 )
 
+# AoU chain-forwarding filter for raw TRLC source records (companion to
+# aou_forwarding_to_lobster, operating on .trlc sources instead of .lobster
+# JSON) -- used by dependable_element to expose forwarded AoUs' TRLC records
+# via TrlcProviderInfo.
+py_binary(
+    name = "filter_forwarded_trlc",
+    srcs = [
+        "src/aou_forwarding_to_lobster.py",
+        "src/filter_forwarded_trlc.py",
+        "src/trlc_record_utils.py",
+    ],
+    imports = ["src"],
+    main = "src/filter_forwarded_trlc.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@lobster//lobster/common",
+        requirement("pyyaml"),
+    ],
+)
+
+# Retypes a dependable_element's own AoU TRLC records for first-hop external
+# exposure (companion to filter_forwarded_trlc.py, which does the same
+# retyping for AoUs received from a dependency and chain-forwarded further)
+# -- used by dependable_element so a raw ScoreReq.AoU record never leaves the
+# TRLC compilation of the assumptions_of_use target that authored it.
+py_binary(
+    name = "expose_own_aou_trlc",
+    srcs = [
+        "src/expose_own_aou_trlc.py",
+        "src/trlc_record_utils.py",
+    ],
+    imports = ["src"],
+    main = "src/expose_own_aou_trlc.py",
+    visibility = ["//visibility:public"],
+)
+
+# Deduplicates AoU/ReceivedAoU TRLC records that reach the same consumer via
+# more than one path (e.g. a requirements target depending both directly on
+# an AoU's original owner and on an intermediate dependable_element that
+# chain-forwards that same AoU) -- same package + record name is retained
+# deliberately (see filter_forwarded_trlc.py), so without this step such a
+# diamond dependency shape would trip TRLC's own duplicate-definition check.
+py_binary(
+    name = "dedupe_aou_trlc",
+    srcs = [
+        "src/dedupe_aou_trlc.py",
+        "src/trlc_record_utils.py",
+    ],
+    imports = ["src"],
+    main = "src/dedupe_aou_trlc.py",
+    visibility = ["//visibility:public"],
+)
+
 # HTML merge tool
 py_library(
     name = "sphinx_html_merge_lib",

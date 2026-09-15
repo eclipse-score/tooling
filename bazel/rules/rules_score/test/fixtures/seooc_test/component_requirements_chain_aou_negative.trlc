@@ -1,0 +1,11 @@
+package TestComponentChainAoUNegative
+
+import ScoreReq
+import AssumptionsOfUse
+
+ScoreReq.CompReq REQ_COMP_CHAIN_AOU_NEG_001 {
+    description = "Negative check: references an AoU that was received but NOT selected for chain-forwarding."
+    safety = ScoreReq.Asil.B
+    derived_from = [AssumptionsOfUse.aou_req__seooc_test__supply_voltage@1]
+    version = 1
+}
