@@ -1,9 +1,3 @@
----
-name: score-architecture
-description: "Software architectural design for S-CORE SEooCs using the rules_score Bazel rules. USE FOR: writing PlantUML static/dynamic/public_api/internal_api diagrams, structuring dependable_element → component → unit hierarchies, wiring architectural_design / unit / unit_design / component / dependable_element targets, PlantUML stereotype and interface/port conventions, the declared-vs-implemented architecture consistency check, integrity levels, certified scope, and requirement allocation to architectural elements. Use when working on architecture, .puml files, component/unit structure, or the rules_score architecture rules."
-argument-hint: "component/unit or diagram to model"
----
-
 <!-- ----------------------------------------------------------------------------
   Copyright (c) 2026 Contributors to the Eclipse Foundation
 
@@ -16,6 +10,12 @@ argument-hint: "component/unit or diagram to model"
 
   SPDX-License-Identifier: Apache-2.0
 ----------------------------------------------------------------------------- -->
+
+---
+name: score-architecture
+description: "Software architectural design for S-CORE SEooCs using the rules_score Bazel rules. USE FOR: writing PlantUML static/dynamic/public_api/internal_api diagrams, structuring dependable_element → component → unit hierarchies, wiring architectural_design / unit / unit_design / component / dependable_element targets, PlantUML stereotype and interface/port conventions, the declared-vs-implemented architecture consistency check, integrity levels, certified scope, and requirement allocation to architectural elements. Use when working on architecture, .puml files, component/unit structure, or the rules_score architecture rules."
+argument-hint: "component/unit or diagram to model"
+---
 
 # S-CORE Architecture Skill
 
@@ -343,6 +343,26 @@ architectural_design(
 diagram with prose, add both the RST/Markdown wrapper *and* the referenced `.puml` to the same
 list (as `static_design.puml` + `arch_design.rst` above); the wrapper embeds the diagram with
 `.. uml:: file.puml`.
+
+Each view builds a navigation tree mirroring the on-disk directory layout of its diagrams:
+every `.puml` gets an auto-generated wrapper page, and every directory gets a generated
+`index.rst` listing its diagrams and sub-directories. Authored pages slot into that tree
+**by name**:
+
+- **`<stem>.rst`/`<stem>.md` next to `<stem>.puml` overrides** that diagram's generated
+  wrapper page — this is exactly the wrapper pattern above. The `.puml` is still staged
+  beside it so `.. uml:: <stem>.puml` resolves.
+- **`index.rst`/`index.md` in a directory composes** with that directory's generated
+  navigation: the authored body renders first, the generated toctree follows. It never
+  replaces it, because a missing toctree entry means an orphaned page. **Give the authored
+  body a section title** — it becomes the page title, and without one Sphinx warns that a
+  toctree entry has no title.
+
+Build-time errors (each naming the offending files): a diagram named `index.puml`/
+`index.plantuml` (that stem is reserved for the navigation page); two files in one view
+resolving to the same staged path; a stem having both `.rst` and `.md`, or both `.puml` and
+`.plantuml`. For a page you want fully outside this scheme, leave the `.puml` out of the view
+attribute and reference it via your own `.. uml::` elsewhere in the docs tree.
 
 ### `unit_design`
 

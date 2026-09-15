@@ -26,10 +26,11 @@ architectural_design(
     ],
     public_api = [
         "public_api.puml",
+        "public_api.rst",
     ],
     static = [
         "static_design.puml",
-        "arch_design.rst",
+        "index.md",
     ],
     visibility = ["//visibility:public"],
 )

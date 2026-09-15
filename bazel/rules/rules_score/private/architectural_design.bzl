@@ -22,22 +22,71 @@ The rule automatically invokes the PlantUML parser on .puml/.plantuml files
 to produce FlatBuffers binary representations of the parsed diagrams.
 """
 
+load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:puml_utils.bzl", "make_puml_rst_wrappers")
+load("//bazel/rules/rules_score/private:puml_utils.bzl", "emit_view_navigation", "plan_view_layout", "relative_source_path")
 load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
+
+# Views recognized by architectural_design, mapped to their display name used
+# as the title of that view's top-level navigation index page.
+_VIEWS = {
+    "static": "Static Design",
+    "dynamic": "Dynamic Design",
+    "public_api": "Public API",
+    "internal_api": "Internal API",
+}
 
 # ============================================================================
 # Private Rule Implementation
 # ============================================================================
 
-def _run_puml_parser(ctx, puml_file):
+def _disambiguated_stems(ctx, files):
+    """Compute a unique output stem (no directory, no extension) for every
+    .puml/.plantuml file in `files`.
+
+    All diagrams of one architectural_design target share a flat output
+    directory (keyed by ctx.label.name) for their fbs/lobster/idmap
+    artifacts, so two files with the same basename but different source
+    directories (e.g. two `for_impl_apis.puml` files under different
+    subpackages) would otherwise collide on the same generated output path.
+    When a basename is unique, the plain stem is kept unchanged (preserving
+    existing filenames/titles); only colliding basenames are disambiguated,
+    using the file's package-relative directory.
+
+    Args:
+        ctx: Rule context.
+        files: Iterable of File objects (non-.puml/.plantuml entries ignored).
+    Returns:
+        Dict from File.path to a unique stem string.
+    """
+    puml_files = [f for f in files if f.extension in ("puml", "plantuml")]
+    basename_counts = {}
+    for f in puml_files:
+        basename_counts[f.basename] = basename_counts.get(f.basename, 0) + 1
+
+    stems = {}
+    for f in puml_files:
+        stem = f.basename.rsplit(".", 1)[0]
+        if basename_counts[f.basename] > 1:
+            dir_part = paths.dirname(relative_source_path(f, ctx.label.package, ctx.label.workspace_name))
+            stem = "{}__{}".format(dir_part.replace("/", "_"), stem) if dir_part else stem
+        stems[f.path] = stem
+    return stems
+
+def _run_puml_parser(ctx, puml_file, file_stem):
     """Run the PlantUML parser on a single .puml file to produce a FlatBuffers binary,
     a lobster traceability file, and an idmap sidecar.
 
     The diagram type is auto-detected by the parser and encoded in the
     FlatBuffers schema (each diagram type uses its own root_type).
     Lobster output is produced in-process for component diagrams.
+
+    When the input file basename is not unique across all diagrams being
+    parsed by this target (see _disambiguated_stems), a symlink with a
+    disambiguated name is created and passed to puml_cli. This ensures
+    puml_cli produces outputs with unique names even when two source
+    diagrams share the same basename but live in different directories.
 
     ``--source-name`` is passed as ``puml_file.short_path`` so the ``source``
     field embedded in the fbs/lobster/idmap outputs is a stable,
@@ -51,10 +100,10 @@ def _run_puml_parser(ctx, puml_file):
     Args:
         ctx: Rule context
         puml_file: The .puml File object to parse
+        file_stem: Unique output stem for this file (see _disambiguated_stems).
     Returns:
         Tuple of (fbs_output, lobster_output, idmap_output) declared output Files.
     """
-    file_stem = puml_file.basename.rsplit(".", 1)[0]
     fbs_output = ctx.actions.declare_file(
         "{}/{}.fbs.bin".format(ctx.label.name, file_stem),
     )
@@ -65,13 +114,23 @@ def _run_puml_parser(ctx, puml_file):
         "{}/{}.idmap.json".format(ctx.label.name, file_stem),
     )
 
+    # A symlink under this target's own _puml_inputs/ dir, named after the
+    # disambiguated stem, so puml_cli's output filenames (derived from input
+    # basename) match the declared output files, and two architectural_design
+    # targets in the same package sharing a diagram basename never collide
+    # on the same _puml_inputs/ path.
+    input_symlink = ctx.actions.declare_file(
+        "{}/_puml_inputs/{}.{}".format(ctx.label.name, file_stem, puml_file.extension),
+    )
+    ctx.actions.symlink(output = input_symlink, target_file = puml_file)
+
     ctx.actions.run(
-        inputs = [puml_file],
+        inputs = [input_symlink],
         outputs = [fbs_output, lobster_output, idmap_output],
         executable = ctx.executable._puml_parser,
         arguments = [
             "--file",
-            puml_file.path,
+            input_symlink.path,
             "--fbs-output-dir",
             fbs_output.dirname,
             "--lobster-output-dir",
@@ -88,12 +147,13 @@ def _run_puml_parser(ctx, puml_file):
 
     return fbs_output, lobster_output, idmap_output
 
-def _parse_puml_diagrams(ctx, files):
+def _parse_puml_diagrams(ctx, files, stems):
     """Run the PlantUML parser on all .puml/.plantuml files in a list.
 
     Args:
         ctx: Rule context
         files: List of File objects
+        stems: Dict from File.path to unique output stem (see _disambiguated_stems).
     Returns:
         Tuple of (fbs_outputs, lobster_outputs, idmap_outputs) lists of generated Files.
     """
@@ -102,59 +162,39 @@ def _parse_puml_diagrams(ctx, files):
     idmap_outputs = []
     for f in files:
         if f.extension in ("puml", "plantuml"):
-            fbs, lobster, idmap = _run_puml_parser(ctx, f)
+            fbs, lobster, idmap = _run_puml_parser(ctx, f, stems[f.path])
             fbs_outputs.append(fbs)
             lobster_outputs.append(lobster)
             idmap_outputs.append(idmap)
     return fbs_outputs, lobster_outputs, idmap_outputs
 
-def _colocate_puml_with_wrapper(ctx, puml_files, output_dir):
-    """Symlink .puml/.plantuml sources next to their generated RST wrapper.
+def _colocate_view_files(ctx, staged_files, view_output_dir):
+    """Symlink each (source File, staged relative path) pair from a view's
+    layout plan into `view_output_dir`.
 
-    make_puml_rst_wrappers() declares each wrapper at
-    "{output_dir}/{stem}.rst" (output_dir is this target's ctx.label.name)
-    and embeds the diagram via a same-directory sibling reference
-    (``.. uml:: {basename}``). The .puml source itself, however, usually
-    lives directly in this target's package -- one directory above
-    `output_dir` -- not nested under it. When dependable_element.bzl later
-    stages every SphinxSourcesInfo file for the HTML build, it flattens paths
-    based on the *shortest common directory* across all of a label's files
-    (see its `_find_common_directory`); mixing a file that sits directly in
-    the package with one nested one level deeper collapses the common
-    directory to the package itself, so the wrapper ends up staged one
-    level deeper than the raw .puml file and the `.. uml::` sibling
-    reference breaks (PlantUML file "x.puml" cannot be read). Symlinking a
-    same-named copy of every diagram alongside its wrapper keeps them
-    siblings under `output_dir` regardless of the diagram's original
-    on-disk location, so downstream flattening logic stages them together.
+    emit_view_navigation() declares wrappers and per-directory indexes under
+    this same `view_output_dir`, at the paths plan_view_layout() computed.
+    Any other file participating in that view's navigation -- a diagram's
+    own .puml source, a hand-written .rst/.md page, or an asset such as
+    .svg -- must be staged as a sibling under its identical relative path,
+    or the generated `.. uml::`/toctree/`.. include::` references (resolved
+    as same-directory siblings) will not resolve once dependable_element.bzl
+    stages SphinxSourcesInfo files for the HTML build.
 
     Args:
         ctx: Rule context.
-        puml_files: Iterable of File objects; non-.puml/.plantuml files are
-            passed through unchanged.
-        output_dir: String prefix matching the one passed to
-            make_puml_rst_wrappers() (typically ctx.label.name).
+        staged_files: List of (File, relative_path) tuples -- plan.staged
+            from plan_view_layout().
+        view_output_dir: String prefix for declared output files, e.g.
+            "{ctx.label.name}/{view_name}".
 
     Returns:
-        List of File objects with .puml/.plantuml entries replaced by
-        same-directory symlinked copies.
+        List of symlinked File objects, one per (File, relative_path) pair.
     """
     colocated = []
-    pkg_prefix = ctx.label.package + "/" if ctx.label.package else ""
-    for f in puml_files:
-        if f.extension not in ("puml", "plantuml"):
-            colocated.append(f)
-            continue
-
-        rel_dir = ""
-        if pkg_prefix and f.short_path.startswith(pkg_prefix):
-            rel_path = f.short_path[len(pkg_prefix):]
-            if "/" in rel_path:
-                rel_dir = rel_path.rsplit("/", 1)[0]
-
-        out_path = "{}/{}/{}".format(output_dir, rel_dir, f.basename) if rel_dir else "{}/{}".format(output_dir, f.basename)
-        copy = ctx.actions.declare_file(out_path)
-        ctx.actions.symlink(output = copy, target_file = f)
+    for source_file, relative_path in staged_files:
+        copy = ctx.actions.declare_file("{}/{}".format(view_output_dir, relative_path))
+        ctx.actions.symlink(output = copy, target_file = source_file)
         colocated.append(copy)
     return colocated
 
@@ -205,32 +245,83 @@ def _architectural_design_impl(ctx):
         List of providers including DefaultInfo, ArchitecturalDesignInfo, SphinxSourcesInfo
     """
 
-    # Parse each architectural view separately so each provider field carries
-    # the flatbuffers for its own category.
-    static_fbs_list, static_lobster_list, static_idmap_list = _parse_puml_diagrams(ctx, ctx.files.static)
-    dynamic_fbs_list, dynamic_lobster_list, dynamic_idmap_list = _parse_puml_diagrams(ctx, ctx.files.dynamic)
-    public_api_fbs_list, public_api_lobster_list, public_api_idmap_list = _parse_puml_diagrams(ctx, ctx.files.public_api)
-    internal_api_fbs_list, _internal_api_lobster_list, internal_api_idmap_list = _parse_puml_diagrams(ctx, ctx.files.internal_api)
-
-    static_fbs = depset(static_fbs_list)
-    dynamic_fbs = depset(dynamic_fbs_list)
-    public_api_fbs = depset(public_api_fbs_list)
-    internal_api_fbs = depset(internal_api_fbs_list)
-    public_api_lobster = depset(public_api_lobster_list)
-
-    # Source files for SphinxSourcesInfo (sphinx documentation pipeline).
-    # .puml/.plantuml sources are colocated (symlinked) next to their
-    # generated RST wrapper -- see _colocate_puml_with_wrapper for why this
-    # is required for the `.. uml::` sibling reference to resolve once
-    # dependable_element.bzl stages these files for the HTML build.
-    all_source_files = depset(
-        transitive = [
-            depset(_colocate_puml_with_wrapper(ctx, ctx.files.static, ctx.label.name)),
-            depset(_colocate_puml_with_wrapper(ctx, ctx.files.dynamic, ctx.label.name)),
-            depset(_colocate_puml_with_wrapper(ctx, ctx.files.public_api, ctx.label.name)),
-            depset(_colocate_puml_with_wrapper(ctx, ctx.files.internal_api, ctx.label.name)),
-        ],
+    # All diagrams of this target share one flat fbs/lobster/idmap namespace
+    # (keyed by ctx.label.name), so stems must be disambiguated across all
+    # four views together, not per-view.
+    stems = _disambiguated_stems(
+        ctx,
+        ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api,
     )
+
+    view_fbs = {}
+    view_fbs_files = {}
+    view_lobster = {}
+    view_idmap = {}
+    view_indexes = {}
+    view_source_files = []
+    view_sphinx_srcs = []
+    view_root_indexes = []
+    view_aux_docs = []
+
+    for view_name, root_title in _VIEWS.items():
+        view_files = getattr(ctx.files, view_name)
+
+        fbs_list, lobster_list, idmap_list = _parse_puml_diagrams(ctx, view_files, stems)
+        view_fbs[view_name] = depset(fbs_list)
+        view_fbs_files[view_name] = fbs_list
+        view_lobster[view_name] = lobster_list
+        view_idmap[view_name] = idmap_list
+
+        # Reconcile generated wrappers/indexes against any hand-authored
+        # rst/md pages before staging anything -- see plan_view_layout for
+        # the compose/override rules.
+        plan = plan_view_layout(view_files, ctx.label.package, ctx.label.workspace_name)
+        if plan.errors:
+            fail("architectural_design {} view '{}': {}".format(ctx.label, view_name, "; ".join(plan.errors)))
+
+        # Colocate every source file of this view (diagrams, hand-written
+        # rst/md pages, assets) under its own "{name}/{view}/" tree, mirroring
+        # on-disk directory structure -- see _colocate_view_files for why
+        # this is required for `.. uml::`/toctree sibling references to
+        # resolve once dependable_element.bzl stages these files.
+        view_output_dir = "{}/{}".format(ctx.label.name, view_name)
+        colocated_files = _colocate_view_files(ctx, plan.staged, view_output_dir)
+        view_source_files.append(depset(colocated_files))
+
+        navigation = emit_view_navigation(
+            ctx,
+            plan,
+            view_output_dir,
+            ctx.file._puml_rst_template,
+            root_title,
+            colocated_files,
+        )
+        view_indexes[view_name] = navigation if navigation.root_index else None
+        if navigation.root_index:
+            view_sphinx_srcs.append(depset(navigation.wrappers + navigation.indexes + [navigation.root_index]))
+            view_root_indexes.append(navigation.root_index)
+
+            # Wrapper pages and non-root indexes must be staged (so the root
+            # index's nested toctrees resolve) but are not themselves
+            # top-level toctree entries -- only the view's root index is.
+            view_aux_docs.extend(navigation.wrappers + navigation.indexes)
+
+        # Hand-written .rst/.md pages colocated as-is (not generated
+        # wrappers) are likewise reached only via the directory navigation's
+        # nested toctrees, never as direct top-level entries -- except the
+        # one that emit_view_navigation surfaced as the root index itself
+        # (a single-file view with no generated navigation), which must
+        # stay out of aux_docs or it would be staged as both a top-level
+        # entry and an aux doc.
+        view_aux_docs.extend([f for f in colocated_files if f.extension in ("rst", "md") and f != navigation.root_index])
+
+    static_fbs = view_fbs["static"]
+    dynamic_fbs = view_fbs["dynamic"]
+    public_api_fbs = view_fbs["public_api"]
+    internal_api_fbs = view_fbs["internal_api"]
+    public_api_lobster = depset(view_lobster["public_api"])
+
+    all_source_files = depset(transitive = view_source_files)
 
     # All idmap sidecars (across static/dynamic/public_api/internal_api) are
     # staged into the sphinx sources so the `clickable_plantuml` extension can
@@ -238,60 +329,30 @@ def _architectural_design_impl(ctx):
     # resolve cross-diagram links — including component diagrams linking to
     # the class diagrams that elaborate their public/internal API interfaces.
     all_idmap_files = depset(
-        static_idmap_list + dynamic_idmap_list + public_api_idmap_list + internal_api_idmap_list,
+        view_idmap["static"] + view_idmap["dynamic"] + view_idmap["public_api"] + view_idmap["internal_api"],
     )
 
     sphinx_files = depset(
         transitive = [all_idmap_files, all_source_files],
     )
 
-    # Generate a thin RST wrapper for every .puml diagram so it appears as a
-    # toctree entry in the dependable_element index.
-    static_wrappers = make_puml_rst_wrappers(
-        ctx,
-        ctx.files.static,
-        ctx.label.name,
-        ctx.file._puml_rst_template,
-    )
-    dynamic_wrappers = make_puml_rst_wrappers(
-        ctx,
-        ctx.files.dynamic,
-        ctx.label.name,
-        ctx.file._puml_rst_template,
-    )
-    public_api_wrappers = make_puml_rst_wrappers(
-        ctx,
-        ctx.files.public_api,
-        ctx.label.name,
-        ctx.file._puml_rst_template,
-    )
-    internal_api_wrappers = make_puml_rst_wrappers(
-        ctx,
-        ctx.files.internal_api,
-        ctx.label.name,
-        ctx.file._puml_rst_template,
-    )
-
-    rst_wrappers = static_wrappers + dynamic_wrappers + public_api_wrappers + internal_api_wrappers
-
-    def _get_doc_files(files, wrappers):
-        docs = [f for f in files if f.extension in ("rst", "md")]
-        return depset(docs + wrappers)
-
-    static_doc_files = _get_doc_files(ctx.files.static, static_wrappers)
-    dynamic_doc_files = _get_doc_files(ctx.files.dynamic, dynamic_wrappers)
-    public_api_doc_files = _get_doc_files(ctx.files.public_api, public_api_wrappers)
-    internal_api_doc_files = _get_doc_files(ctx.files.internal_api, internal_api_wrappers)
-
     validation_log = _run_validation(
         ctx,
-        static_fbs_list,
-        dynamic_fbs_list,
-        public_api_fbs_list,
-        internal_api_fbs_list,
+        view_fbs_files["static"],
+        view_fbs_files["dynamic"],
+        view_fbs_files["public_api"],
+        view_fbs_files["internal_api"],
     )
 
-    sphinx_srcs = depset(rst_wrappers, transitive = [sphinx_files])
+    # `deps` carries everything needed in the Sphinx tree for this rule
+    # (colocated sources, idmap sidecars, wrappers, and indexes at every
+    # level). `srcs` is only each view's top-level root index -- the single
+    # toctree entry dependable_element.bzl surfaces per view -- and
+    # `aux_srcs` are the wrapper/sub-index/hand-written pages that must be
+    # staged but reached only via that root index's own nested toctrees.
+    sphinx_deps = depset(transitive = [sphinx_files] + view_sphinx_srcs)
+    sphinx_own_srcs = depset(view_root_indexes)
+    sphinx_aux_srcs = depset(view_aux_docs)
 
     return [
         DefaultInfo(files = depset([validation_log.file], transitive = [all_source_files])),
@@ -300,19 +361,18 @@ def _architectural_design_impl(ctx):
             dynamic = dynamic_fbs,
             public_api = public_api_fbs,
             internal_api = internal_api_fbs,
-            static_doc_files = static_doc_files,
-            dynamic_doc_files = dynamic_doc_files,
-            public_api_doc_files = public_api_doc_files,
-            internal_api_doc_files = internal_api_doc_files,
+            view_indexes = view_indexes,
             name = ctx.label.name,
             public_api_lobster_files = public_api_lobster,
             validation_logs = [validation_log],
         ),
-        # Source diagram files + *.idmap.json sidecars for the sphinx documentation build
+        # Each view's root index is the only top-level toctree entry;
+        # everything else (wrappers, sub-indexes, idmap sidecars, colocated
+        # sources) is staged via aux_srcs/deps for the sphinx documentation build.
         SphinxSourcesInfo(
-            srcs = sphinx_srcs,
-            deps = sphinx_srcs,
-            aux_srcs = depset(),
+            srcs = sphinx_own_srcs,
+            deps = sphinx_deps,
+            aux_srcs = sphinx_aux_srcs,
         ),
     ]
 
@@ -333,7 +393,7 @@ def _architectural_design_attrs():
             doc = "Dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
         ),
         "public_api": attr.label_list(
-            allow_files = [".puml", ".plantuml"],
+            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
             mandatory = False,
             doc = "Public API diagrams (parsed identically to static/dynamic). " +
                   "Classified separately so their lobster items are exposed via " +
@@ -341,7 +401,7 @@ def _architectural_design_attrs():
                   "traceability at the dependable element level.",
         ),
         "internal_api": attr.label_list(
-            allow_files = [".puml", ".plantuml"],
+            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
             mandatory = False,
             doc = "Internal API diagrams (class diagrams). " +
                   "Classified separately so their FlatBuffers outputs are exposed via " +
@@ -393,6 +453,16 @@ def architectural_design(
     component, including both static and dynamic views. Static views show
     the structural organization (classes, components, modules), while dynamic
     views show the behavioral aspects (sequences, activities, states).
+
+    Each view's diagrams are auto-wrapped and organized into a directory-
+    matching navigation tree (one generated index.rst per source directory).
+    A hand-authored index.rst/index.md placed alongside diagrams composes
+    with (its text is included above) that directory's generated toctree,
+    rather than being replaced by it. A hand-authored <stem>.rst/<stem>.md
+    next to a same-named <stem>.puml suppresses that diagram's generated
+    wrapper page, so real authored prose is always used over the generated
+    placeholder. For full control over a diagram's page, omit the .puml from
+    the view attribute below and reference it with your own `.. uml::`.
 
     Args:
         name: The name of the architectural design target. Used as the base
