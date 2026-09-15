@@ -208,6 +208,7 @@ ArchitecturalDesignInfo = provider(
         "dynamic_doc_files": "Depset of Sphinx doc File objects for dynamic architecture views.",
         "public_api_doc_files": "Depset of Sphinx doc File objects for public API views.",
         "internal_api_doc_files": "Depset of Sphinx doc File objects for internal API views.",
+        "static_view": "Depset of FlatBuffers binaries for static_view component diagrams (partial views of the static architecture, validated for consistency against static).",
         "name": "Name of the architectural design target",
         "public_api_lobster_files": "Depset of .lobster traceability files generated from public_api diagrams.",
         "validation_logs": "List of validation log entries produced by this architectural design target. Each entry has file and name fields.",

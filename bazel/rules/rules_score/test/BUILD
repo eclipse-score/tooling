@@ -447,6 +447,55 @@ dependable_element(
     deps = [],
 )
 
+# Live example of clickable_plantuml's "interface in a static_view diagram"
+# linking chain: an interface bound to a unit in a *static_view* diagram
+# (static_view_overview.puml, a partial/subset component-diagram view -
+# parsed exactly like `static`, see architectural_design's `static_view`
+# attribute) references `SvInterface`, and static_view_detail.puml (passed
+# via `public_api`) defines it. Both share the FQN `package_sv.SvInterface`.
+# `static` is intentionally omitted: the static-vs-static_view consistency
+# validator only runs when both are present (see
+# `registered_validators` in validation/core/src/profiles/architectural_design.rs),
+# so this fixture stays focused on the clickable_plantuml linking behaviour.
+# Regression-checked by :static_view_example_link_rendered_test below.
+architectural_design(
+    name = "arch_design_static_view_example",
+    public_api = ["fixtures/clickable_example/static_view_detail.puml"],
+    static_view = ["fixtures/clickable_example/static_view_overview.puml"],
+)
+
+# public_api items must be referenced by a FailureMode in the SEooC's own
+# safety analysis - same requirement as public_api_example_fmea above.
+fmea(
+    name = "static_view_example_fmea",
+    arch_design = ":arch_design_static_view_example",
+    failuremodes = ["fixtures/clickable_example/static_view_failure_modes.trlc"],
+    root_causes = ["fixtures/clickable_example/static_view_fta.puml"],
+)
+
+dependability_analysis(
+    name = "static_view_example_dependability_analysis",
+    arch_design = ":arch_design_static_view_example",
+    fmea = [":static_view_example_fmea"],
+)
+
+dependable_element(
+    name = "static_view_example_lib",
+    architectural_design = [":arch_design_static_view_example"],
+    assumptions_of_use = [":aous"],
+    components = [],
+    dependability_analysis = [":static_view_example_dependability_analysis"],
+    integrity_level = "B",
+    # Downgraded to warnings for the same reason as clickable_example_lib
+    # above: this fixture intentionally reuses "SvInterface" as both a
+    # reference and a definition, which the dependable-element validator
+    # can't distinguish from an accidental duplicate id.
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
 # Live example of clickable_plantuml's "unit to class diagram" linking chain:
 # the *static* architecture (unit_overview.puml, a component diagram) shows
 # `unit_one` as a leaf unit (no children) - a reference - and
@@ -1072,6 +1121,20 @@ sh_test(
         "$(rootpaths :public_api_example_lib_index)",
     ],
     data = [":public_api_example_lib_index"],
+)
+
+# Regression test: clickable_plantuml must inject a working link between an
+# interface used in a *static_view* diagram (static_view_overview.puml) and
+# its definition in the public API diagram (static_view_detail.puml) - the
+# "interface in static_view diagram links to public API" scenario.
+sh_test(
+    name = "static_view_example_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "package_sv.SvInterface",
+        "$(rootpaths :static_view_example_lib_index)",
+    ],
+    data = [":static_view_example_lib_index"],
 )
 
 # Regression test: clickable_plantuml must inject a working link between a
