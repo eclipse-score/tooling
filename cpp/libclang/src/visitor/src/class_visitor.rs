@@ -250,6 +250,10 @@ fn parse_method(entity: &Entity, parsed_method_type: &ParsedMethodType) -> Optio
         .get_overridden_methods()
         .map(|methods| !methods.is_empty())
         .unwrap_or(false);
+    let is_final_method = entity
+        .get_children()
+        .into_iter()
+        .any(|child| child.get_kind() == EntityKind::FinalAttr);
 
     // Only the bare `noexcept` specifier is modeled (mirrors the PlantUML grammar, which has
     // no support for the conditional `noexcept(expr)` form). Requiring `BasicNoexcept` filters
@@ -326,6 +330,7 @@ fn parse_method(entity: &Entity, parsed_method_type: &ParsedMethodType) -> Optio
             (is_noexcept_method, MethodModifier::Noexcept),
             (kind == EntityKind::Constructor, MethodModifier::Constructor),
             (kind == EntityKind::Destructor, MethodModifier::Destructor),
+            (is_final_method, MethodModifier::Final),
         ]),
         source_location: parse_source_location(entity),
     })

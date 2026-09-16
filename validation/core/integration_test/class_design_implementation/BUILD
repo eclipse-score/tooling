@@ -52,6 +52,7 @@ filegroup(
         "//validation/core/integration_test/class_design_implementation/negative_variable_visibility_mismatch:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_class_features:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_method_features:case_data",
+        "//validation/core/integration_test/class_design_implementation/positive_method_final_features:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_method_inheritance_features:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_method_template_pack_features:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_relationship_features:case_data",

@@ -1,0 +1,98 @@
+{
+    "types": {
+        "FinalMethodBase": {
+            "id": "FinalMethodBase",
+            "name": "FinalMethodBase",
+            "enclosing_namespace_id": null,
+            "stereotypes": [],
+            "entity_type": "Class",
+            "type_aliases": [],
+            "variables": [],
+            "methods": [
+                {
+                    "name": "sealedHere",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Final"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_final/final_sample.cpp",
+                        "line": 16
+                    }
+                },
+                {
+                    "name": "overridable",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_final/final_sample.cpp",
+                        "line": 17
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "enum_literals": [],
+            "relationships": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/method_modifier_final/final_sample.cpp",
+                "line": 14
+            }
+        },
+        "FinalMethodDerived": {
+            "id": "FinalMethodDerived",
+            "name": "FinalMethodDerived",
+            "enclosing_namespace_id": null,
+            "stereotypes": [],
+            "entity_type": "Class",
+            "type_aliases": [],
+            "variables": [],
+            "methods": [
+                {
+                    "name": "overridable",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Override",
+                        "Final"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_final/final_sample.cpp",
+                        "line": 22
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "enum_literals": [],
+            "relationships": [
+                {
+                    "source": "FinalMethodDerived",
+                    "target": "FinalMethodBase",
+                    "relation_type": "Inheritance",
+                    "source_multiplicity": null,
+                    "target_multiplicity": null,
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/method_modifier_final/final_sample.cpp",
+                        "line": 20
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/method_modifier_final/final_sample.cpp",
+                "line": 20
+            }
+        }
+    },
+    "functions": []
+}

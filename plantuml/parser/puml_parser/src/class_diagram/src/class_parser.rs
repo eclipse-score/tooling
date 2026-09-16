@@ -456,9 +456,8 @@ impl ClassParseSession<'_> {
                 | Rule::override_modifier
                 | Rule::const_method_qualifier
                 | Rule::noexcept_method_qualifier
-                | Rule::trailing_override_qualifier => {
-                    method.modifiers.push(p.as_str().to_string())
-                }
+                | Rule::trailing_override_qualifier
+                | Rule::final_method_qualifier => method.modifiers.push(p.as_str().to_string()),
                 Rule::friend_specifier => method.is_friend = true,
                 Rule::pure_virtual_suffix => ensure_abstract_modifier(&mut method),
                 Rule::class_visibility => vis = Some(p),
@@ -524,6 +523,8 @@ impl ClassParseSession<'_> {
             }
             Rule::class_body => {
                 for inner in pair.into_inner() {
+                    // Intentionally visit only Rule::class_member; mock_method_invocation pairs
+                    // are modeled as absent from the class diagram, not as real methods.
                     if let Rule::class_member = inner.as_rule() {
                         for member in inner.into_inner() {
                             self.parse_class_member_into(member, def)?;

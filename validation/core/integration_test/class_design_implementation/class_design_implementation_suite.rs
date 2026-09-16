@@ -67,6 +67,11 @@ fn positive_method_features() {
     assert_case("positive_method_features");
 }
 
+#[test]
+fn positive_method_final_features() {
+    assert_case("positive_method_final_features");
+}
+
 // #[test]
 // fn positive_method_template_pack_features() {
 //     assert_case("positive_method_template_pack_features");

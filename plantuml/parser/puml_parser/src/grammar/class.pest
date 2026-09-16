@@ -161,16 +161,157 @@ type_kind = {
     | "interface"
 }
 
-class_body = { "{" ~ EOL* ~ (class_member | class_body_separator)* ~ EOL* ~ "}" }
+class_body = { "{" ~ EOL* ~ (ignored_mock_method_stmt | class_member | class_body_separator)* ~ EOL* ~ "}" }
 
 class_member = { (method | attribute) ~ EOL+ }
 class_body_separator = { "--" ~ EOL+ }
+
+ignored_mock_method_stmt = _{
+    method_modifier*
+    ~ class_visibility?
+    ~ method_modifier*
+    ~ mock_method_invocation
+    ~ ";"?
+    ~ EOL+
+}
+
+mock_method_invocation = {
+    mock_method_modern_invocation
+    | mock_method_legacy_invocation
+}
+
+mock_method_modern_invocation = {
+    mock_method_modern_macro
+    ~ "("
+    ~ EOL*
+    ~ mock_method_return_type
+    ~ EOL*
+    ~ ","
+    ~ EOL*
+    ~ mock_method_name
+    ~ EOL*
+    ~ ","
+    ~ EOL*
+    ~ mock_method_param_group
+    ~ (EOL* ~ "," ~ EOL* ~ mock_method_modifiers)?
+    ~ EOL*
+    ~ ")"
+}
+
+mock_method_legacy_invocation = {
+    mock_method_legacy_with_calltype_invocation
+    | mock_method_legacy_without_calltype_invocation
+}
+
+mock_method_legacy_with_calltype_invocation = {
+    mock_method_legacy_macro_with_calltype
+    ~ "("
+    ~ EOL*
+    ~ mock_method_calltype_value
+    ~ EOL*
+    ~ ","
+    ~ EOL*
+    ~ mock_method_name
+    ~ EOL*
+    ~ ","
+    ~ EOL*
+    ~ mock_method_legacy_signature
+    ~ EOL*
+    ~ ")"
+}
+
+mock_method_legacy_without_calltype_invocation = {
+    mock_method_legacy_macro_without_calltype
+    ~ "("
+    ~ EOL*
+    ~ mock_method_name
+    ~ EOL*
+    ~ ","
+    ~ EOL*
+    ~ mock_method_legacy_signature
+    ~ EOL*
+    ~ ")"
+}
+
+mock_method_modern_macro = @{ "MOCK_METHOD" }
+mock_method_legacy_macro_with_calltype = @{ ("MOCK_METHOD" | "MOCK_CONST_METHOD") ~ ASCII_DIGIT+ ~ ("_WITH_CALLTYPE" | "_T_WITH_CALLTYPE") }
+mock_method_legacy_macro_without_calltype = @{ ("MOCK_METHOD" | "MOCK_CONST_METHOD") ~ ASCII_DIGIT+ ~ "_T"? }
+
+mock_method_calltype_value = @{ (!("," | ")" | EOL) ~ ANY)+ }
+
+mock_method_legacy_signature = {
+    mock_method_legacy_return_type
+    ~ mock_method_param_group
+}
+
+mock_method_legacy_return_type = {
+    mock_method_parenthesized_return_type
+    | mock_method_legacy_simple_return_type
+}
+
+mock_method_legacy_simple_return_type = {
+    const_prefix*
+    ~ prefix_array_prefix*
+    ~ qualified_type
+    ~ generic_type_args?
+    ~ type_suffix*
+}
+
+mock_method_name = { method_name }
+
+mock_method_return_type = {
+    mock_method_parenthesized_return_type
+    | type_name
+}
+
+mock_method_parenthesized_return_type = {
+    "("
+    ~ EOL*
+    ~ type_name
+    ~ EOL*
+    ~ ")"
+}
+
+mock_method_param_group = {
+    "("
+    ~ EOL*
+    ~ param_list?
+    ~ EOL*
+    ~ ")"
+}
+
+mock_method_modifiers = {
+    "("
+    ~ EOL*
+    ~ mock_method_modifier_list?
+    ~ EOL*
+    ~ ")"
+}
+
+mock_method_modifier_list = {
+    mock_method_modifier
+    ~ (EOL* ~ mock_method_modifier_separator ~ EOL* ~ mock_method_modifier)*
+}
+
+mock_method_modifier_separator = _{
+    ","
+}
+
+mock_method_modifier = {
+    method_qualifier
+    | mock_method_ref_qualifier
+    | mock_method_calltype_qualifier
+}
+
+mock_method_ref_qualifier = @{ "ref(" ~ ("&" | "&&") ~ ")" }
+mock_method_calltype_qualifier = @{ "Calltype(" ~ class_qualified_name ~ ")" }
 
 method = {
     method_modifier*
     ~ class_visibility?
     ~ friend_specifier?
     ~ method_modifier*
+    ~ !mock_method_invocation
     ~ method_name
     ~ generic_param_list?
     ~ "("
@@ -192,10 +333,16 @@ static_keyword = { "static" }
 abstract_modifier = { "{" ~ "abstract" ~ "}" | ("<<" ~ "abstract" ~ ">>") }
 virtual_modifier = { "{" ~ "virtual" ~ "}" | ("<<" ~ "virtual" ~ ">>") }
 override_modifier = { "{" ~ "override" ~ "}" | ("<<" ~ "override" ~ ">>") }
-method_qualifier = _{ const_method_qualifier | noexcept_method_qualifier | trailing_override_qualifier }
+method_qualifier = _{
+    const_method_qualifier
+    | noexcept_method_qualifier
+    | trailing_override_qualifier
+    | final_method_qualifier
+}
 const_method_qualifier = { ("<<" ~ "const" ~ ">>") | "const" }
 noexcept_method_qualifier = { "noexcept" }
 trailing_override_qualifier = { "override" }
+final_method_qualifier = { ("<<" ~ "final" ~ ">>") | "final" }
 pure_virtual_suffix = { "=" ~ "0" }
 
 method_name = {
