@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use clang::{Entity, EntityKind};
+use clang::{Entity, EntityKind, ExceptionSpecification};
 
 use class_diagram::{
     EntityType, FunctionArgument, MemberVariable, Method, MethodModifier, SimpleEntity,
@@ -251,6 +251,29 @@ fn parse_method(entity: &Entity, parsed_method_type: &ParsedMethodType) -> Optio
         .map(|methods| !methods.is_empty())
         .unwrap_or(false);
 
+    // Only the bare `noexcept` specifier is modeled (mirrors the PlantUML grammar, which has
+    // no support for the conditional `noexcept(expr)` form). Requiring `BasicNoexcept` filters
+    // out `noexcept(expr)`, but on its own it isn't enough: for an implicit/defaulted special
+    // member (e.g. `~Foo() = default;` with no written specifier at all), the compiler-computed
+    // specification also resolves to `BasicNoexcept` once evaluated -- and that evaluation is
+    // lazily triggered by unrelated code (e.g. a derived class use), making it unstable. So this
+    // also requires the literal `noexcept` token to appear in the declarator (the tokens up to
+    // the first `{` or `;`), which excludes both that case and `noexcept` written inside a
+    // lambda in the method body.
+    let has_noexcept_token = entity.get_range().is_some_and(|range| {
+        range
+            .tokenize()
+            .iter()
+            .take_while(|token| !matches!(token.get_spelling().as_str(), "{" | ";"))
+            .any(|token| token.get_spelling() == "noexcept")
+    });
+
+    let is_noexcept_method = has_noexcept_token
+        && matches!(
+            entity.get_exception_specification(),
+            Some(ExceptionSpecification::BasicNoexcept)
+        );
+
     let return_type = if matches!(kind, EntityKind::Constructor | EntityKind::Destructor) {
         None
     } else {
@@ -300,6 +323,7 @@ fn parse_method(entity: &Entity, parsed_method_type: &ParsedMethodType) -> Optio
             (entity.is_virtual_method(), MethodModifier::Virtual),
             (entity.is_pure_virtual_method(), MethodModifier::Abstract),
             (is_override_method, MethodModifier::Override),
+            (is_noexcept_method, MethodModifier::Noexcept),
             (kind == EntityKind::Constructor, MethodModifier::Constructor),
             (kind == EntityKind::Destructor, MethodModifier::Destructor),
         ]),

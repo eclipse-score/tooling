@@ -16,6 +16,7 @@
             "parameters": [],
             "template_parameters": null,
             "modifiers": [
+              "Virtual",
               "Abstract"
             ],
             "source_location": {
@@ -47,6 +48,7 @@
             "parameters": [],
             "template_parameters": null,
             "modifiers": [
+              "Virtual",
               "Abstract"
             ],
             "source_location": {
@@ -112,7 +114,8 @@
             ],
             "template_parameters": null,
             "modifiers": [
-              "Static"
+              "Static",
+              "Noexcept"
             ],
             "source_location": {
               "file": "",
@@ -127,6 +130,110 @@
         "source_location": {
           "file": "plantuml/parser/integration_test/class_diagram/class_diagram_modifiers/class_diagram_modifiers.puml",
           "line": 25
+        }
+      },
+      {
+        "id": "modifier_case.OverrideDemo",
+        "name": "OverrideDemo",
+        "enclosing_namespace_id": "modifier_case",
+        "entity_type": "Class",
+        "type_aliases": [],
+        "methods": [
+          {
+            "name": "Run",
+            "return_type": "void",
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [
+              "Virtual"
+            ],
+            "source_location": {
+              "file": "",
+              "line": 31
+            }
+          },
+          {
+            "name": "Stop",
+            "return_type": "void",
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [
+              "Virtual",
+              "Override"
+            ],
+            "source_location": {
+              "file": "",
+              "line": 32
+            }
+          },
+          {
+            "name": "Reset",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [
+              "Virtual",
+              "Override"
+            ],
+            "source_location": {
+              "file": "",
+              "line": 33
+            }
+          },
+          {
+            "name": "Count",
+            "return_type": "int",
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [
+              "Static"
+            ],
+            "source_location": {
+              "file": "",
+              "line": 34
+            }
+          },
+          {
+            "name": "Poll",
+            "return_type": "void",
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [
+              "Virtual",
+              "Abstract"
+            ],
+            "source_location": {
+              "file": "",
+              "line": 35
+            }
+          },
+          {
+            "name": "Tick",
+            "return_type": "void",
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [
+              "Virtual"
+            ],
+            "source_location": {
+              "file": "",
+              "line": 36
+            }
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "variables": [],
+        "relationships": [],
+        "source_location": {
+          "file": "plantuml/parser/integration_test/class_diagram/class_diagram_modifiers/class_diagram_modifiers.puml",
+          "line": 30
         }
       }
     ]

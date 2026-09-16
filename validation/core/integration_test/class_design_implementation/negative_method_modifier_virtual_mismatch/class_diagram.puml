@@ -10,18 +10,11 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-@startuml method_modifier_placement
 
-class Worker {
-    - {static} Instance(Recorder*): Runtime&
-    # {abstract} Notify()
-    {static} + Reset(): void
-    # <<virtual>> Run()
-    + <<override>> Stop()
-    + Finish() override
-    + Tick() noexcept
-    # <<abstract>> Poll()
-    + <<static>> Count(): int
+@startuml
+
+struct Base {
+    + run() : void
 }
 
 @enduml

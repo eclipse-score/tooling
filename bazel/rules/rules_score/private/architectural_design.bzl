@@ -62,7 +62,6 @@ def _disambiguated_stems(files):
         stems[f.path] = stem
     return stems
 
-
 def _run_puml_parser(ctx, puml_file, file_stem, exclude_from_definitions = False):
     """Run the PlantUML parser on a single .puml file to produce a FlatBuffers binary,
     a lobster traceability file, and an idmap sidecar.

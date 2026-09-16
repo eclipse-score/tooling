@@ -65,6 +65,90 @@
                   "file": "",
                   "line": 18
                 }
+              },
+              {
+                "visibility": "Protected",
+                "name": "Run",
+                "params": [],
+                "type": null,
+                "template_parameters": null,
+                "modifiers": [
+                  "<<virtual>>"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 19
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "Stop",
+                "params": [],
+                "type": null,
+                "template_parameters": null,
+                "modifiers": [
+                  "<<override>>"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 20
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "Finish",
+                "params": [],
+                "type": null,
+                "template_parameters": null,
+                "modifiers": [
+                  "override"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 21
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "Tick",
+                "params": [],
+                "type": null,
+                "template_parameters": null,
+                "modifiers": [
+                  "noexcept"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 22
+                }
+              },
+              {
+                "visibility": "Protected",
+                "name": "Poll",
+                "params": [],
+                "type": null,
+                "template_parameters": null,
+                "modifiers": [
+                  "<<abstract>>"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 23
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "Count",
+                "params": [],
+                "type": "int",
+                "template_parameters": null,
+                "modifiers": [
+                  "<<static>>"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 24
+                }
               }
             ],
             "template_parameters": null,

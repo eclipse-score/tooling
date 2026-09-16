@@ -154,6 +154,7 @@
             "parameters": [],
             "template_parameters": null,
             "modifiers": [
+              "Virtual",
               "Abstract"
             ],
             "source_location": {
@@ -461,6 +462,7 @@
             "parameters": [],
             "template_parameters": null,
             "modifiers": [
+              "Virtual",
               "Abstract"
             ],
             "source_location": {
@@ -809,7 +811,9 @@
         "id": "sample.newline.<<template>>\\nTest<T>",
         "name": "TestTemplate",
         "enclosing_namespace_id": "sample.newline",
-        "stereotypes": ["service"],
+        "stereotypes": [
+          "service"
+        ],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [
@@ -947,7 +951,8 @@
             ],
             "template_parameters": null,
             "modifiers": [
-              "Static"
+              "Static",
+              "Noexcept"
             ],
             "source_location": {
               "file": "",

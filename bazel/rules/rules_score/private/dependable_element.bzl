@@ -375,8 +375,13 @@ def _process_artifact_files(ctx, artifact_name, label, path_prefix = ""):
 
     return (output_files, index_refs)
 
-def _process_architectural_design_files(ctx, label):
+def _process_architectural_design_files(ctx, label, path_prefix = ""):
     """Process all files from an architectural_design label, returning output_files and classified refs.
+
+    Args:
+        ctx: Rule context
+        label: architectural_design label to process
+        path_prefix: Optional subdirectory used to disambiguate multiple architectural_design labels
 
     Returns:
         Tuple of (output_files, static_refs, dynamic_refs, public_api_refs, internal_api_refs, unclassified_refs)
@@ -428,11 +433,12 @@ def _process_architectural_design_files(ctx, label):
             "architectural_design",
             artifact_file,
             relative_path,
+            path_prefix,
         )
         output_files.append(output_file)
 
         if _is_document_file(artifact_file):
-            doc_path = "architectural_design/" + relative_path
+            doc_path = "architectural_design/" + path_prefix + relative_path
             doc_ref = doc_path.removesuffix(".rst").removesuffix(".md")
             if artifact_file.path in static_paths:
                 static_refs.append(doc_ref)
@@ -452,6 +458,7 @@ def _process_architectural_design_files(ctx, label):
             "architectural_design",
             artifact_file,
             relative_path,
+            path_prefix,
         )
         output_files.append(output_file)
 
@@ -1019,8 +1026,13 @@ def _dependable_element_index_impl(ctx):
     arch_unclassified_refs = []
 
     if ctx.attr.architectural_design:
-        for ad_target in ctx.attr.architectural_design:
-            ad_files, s_refs, d_refs, p_refs, i_refs, u_refs = _process_architectural_design_files(ctx, ad_target)
+        use_label_subdirectories = len(ctx.attr.architectural_design) > 1
+        for index, ad_target in enumerate(ctx.attr.architectural_design):
+            ad_files, s_refs, d_refs, p_refs, i_refs, u_refs = _process_architectural_design_files(
+                ctx,
+                ad_target,
+                path_prefix = "source_{}/".format(index) if use_label_subdirectories else "",
+            )
             output_files.extend(ad_files)
             arch_static_refs.extend(s_refs)
             arch_dynamic_refs.extend(d_refs)
