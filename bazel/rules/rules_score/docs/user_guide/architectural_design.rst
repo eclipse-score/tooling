@@ -214,8 +214,7 @@ Two files that would stage at the same relative path (for example both a
 naming both conflicting sources, instead of surfacing a raw Bazel
 action-conflict error.
 
-See ``examples/seooc/design`` for a working demonstration of all three modes:
-``arch_design.rst`` is a standalone page in the static view, ``index.md``
+See ``examples/seooc/design`` for a working demonstration: ``index.md``
 composes an introduction above the static view's root navigation, and
 ``public_api.rst`` overrides the generated wrapper for ``public_api.puml``.
 
@@ -499,38 +498,6 @@ Include both the wrapper file *and* the referenced ``.puml`` file in the same Ba
             "MySeooc_StaticDesign.puml",  # diagram referenced by the wrapper
         ],
     )
-
-Generated Navigation, and How Authored Pages Interact With It
-----------------------------------------------------------------
-
-Each view organises its diagrams into a navigation tree that mirrors their
-on-disk directory layout: every diagram gets an auto-generated wrapper page,
-and every directory gets a generated ``index.rst`` listing that directory's
-diagrams and sub-directories. Authored pages you pass in the same view slot
-into that tree by name:
-
-- **Same-stem override.** A ``<stem>.rst`` or ``<stem>.md`` next to a
-  same-named ``<stem>.puml`` *replaces* that diagram's generated wrapper page.
-  The generated wrapper is only a placeholder for prose that doesn't exist
-  yet, so your page always wins. The ``.puml`` is still staged beside it, so
-  your own ``.. uml:: <stem>.puml`` resolves — this is exactly the wrapper
-  pattern shown above.
-
-- **Directory index compose.** An ``index.rst`` or ``index.md`` in a directory
-  *composes* with that directory's generated navigation instead of replacing
-  it: your text is rendered first, and the generated toctree follows below it.
-
-  Give the authored body a section title. It becomes the page's title, and
-  without one Sphinx warns that a toctree entry has no title.
-
-Two constraints are enforced at build time, with an error naming the offending
-files:
-
-- A diagram may not be named ``index.puml``/``index.plantuml``; that stem is
-  reserved for the directory's own navigation page.
-- No two files in one view may resolve to the same staged path, and a given
-  stem may not have both a ``.rst`` and a ``.md`` (or both a ``.puml`` and a
-  ``.plantuml``).
 
 Rule Reference: ``architectural_design``
 -------------------------------------------
