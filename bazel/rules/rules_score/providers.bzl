@@ -204,7 +204,7 @@ ArchitecturalDesignInfo = provider(
         "dynamic": "Depset of FlatBuffers binaries for dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
         "public_api": "Depset of FlatBuffers binaries for public API diagrams (class diagrams, etc.)",
         "internal_api": "Depset of FlatBuffers binaries for internal API diagrams (class diagrams, etc.)",
-        "view_indexes": "Dict mapping view name ('static', 'dynamic', 'public_api', 'internal_api') to that view's navigation struct (wrappers, indexes, root_index — see emit_view_navigation), or None for views with no navigable files.",
+        "view_root_indexes": "Dict mapping view name ('static', 'dynamic', 'public_api', 'internal_api') to that view's single top-level toctree-entry File (see emit_view_navigation's root_index), or None for views with no navigable files.",
         "name": "Name of the architectural design target",
         "public_api_lobster_files": "Depset of .lobster traceability files generated from public_api diagrams.",
         "validation_logs": "List of validation log entries produced by this architectural design target. Each entry has file and name fields.",

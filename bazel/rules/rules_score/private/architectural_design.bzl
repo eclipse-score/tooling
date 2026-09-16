@@ -27,15 +27,7 @@ load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "Sphi
 load("//bazel/rules/rules_score/private:puml_utils.bzl", "emit_view_navigation", "plan_view_layout", "relative_source_path")
 load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
-
-# Views recognized by architectural_design, mapped to their display name used
-# as the title of that view's top-level navigation index page.
-_VIEWS = {
-    "static": "Static Design",
-    "dynamic": "Dynamic Design",
-    "public_api": "Public API",
-    "internal_api": "Internal API",
-}
+load("//bazel/rules/rules_score/private:views.bzl", "ARCH_VIEWS")
 
 # ============================================================================
 # Private Rule Implementation
@@ -54,6 +46,12 @@ def _disambiguated_stems(ctx, files):
     existing filenames/titles); only colliding basenames are disambiguated,
     using the file's package-relative directory.
 
+    Disambiguating by directory can itself collide -- e.g. `a/b/foo.puml`
+    and `a_b/foo.puml` both produce the stem `a_b__foo` once their `/` is
+    replaced with `_` -- so every stem actually produced is tracked and a
+    residual collision fails the build, naming both source files, rather
+    than silently overwriting one diagram's output with the other's.
+
     Args:
         ctx: Rule context.
         files: Iterable of File objects (non-.puml/.plantuml entries ignored).
@@ -66,11 +64,20 @@ def _disambiguated_stems(ctx, files):
         basename_counts[f.basename] = basename_counts.get(f.basename, 0) + 1
 
     stems = {}
+    stem_sources = {}
     for f in puml_files:
         stem = f.basename.rsplit(".", 1)[0]
         if basename_counts[f.basename] > 1:
             dir_part = paths.dirname(relative_source_path(f, ctx.label.package, ctx.label.workspace_name))
             stem = "{}__{}".format(dir_part.replace("/", "_"), stem) if dir_part else stem
+
+        previous = stem_sources.get(stem)
+        if previous != None:
+            fail((
+                "architectural_design {}: '{}' and '{}' both disambiguate to the " +
+                "output stem '{}'; rename one of these files so their stems differ"
+            ).format(ctx.label, previous, f.short_path, stem))
+        stem_sources[stem] = f.short_path
         stems[f.path] = stem
     return stems
 
@@ -82,11 +89,11 @@ def _run_puml_parser(ctx, puml_file, file_stem):
     FlatBuffers schema (each diagram type uses its own root_type).
     Lobster output is produced in-process for component diagrams.
 
-    When the input file basename is not unique across all diagrams being
-    parsed by this target (see _disambiguated_stems), a symlink with a
-    disambiguated name is created and passed to puml_cli. This ensures
-    puml_cli produces outputs with unique names even when two source
-    diagrams share the same basename but live in different directories.
+    ``--output-stem`` is passed as the disambiguated `file_stem` (see
+    `_disambiguated_stems`) so puml_cli's output filenames always match the
+    declared output files below, even when two source diagrams share the
+    same basename but live in different directories -- without needing to
+    stage the input file itself under a differently-named symlink first.
 
     ``--source-name`` is passed as ``puml_file.short_path`` so the ``source``
     field embedded in the fbs/lobster/idmap outputs is a stable,
@@ -114,23 +121,13 @@ def _run_puml_parser(ctx, puml_file, file_stem):
         "{}/{}.idmap.json".format(ctx.label.name, file_stem),
     )
 
-    # A symlink under this target's own _puml_inputs/ dir, named after the
-    # disambiguated stem, so puml_cli's output filenames (derived from input
-    # basename) match the declared output files, and two architectural_design
-    # targets in the same package sharing a diagram basename never collide
-    # on the same _puml_inputs/ path.
-    input_symlink = ctx.actions.declare_file(
-        "{}/_puml_inputs/{}.{}".format(ctx.label.name, file_stem, puml_file.extension),
-    )
-    ctx.actions.symlink(output = input_symlink, target_file = puml_file)
-
     ctx.actions.run(
-        inputs = [input_symlink],
+        inputs = [puml_file],
         outputs = [fbs_output, lobster_output, idmap_output],
         executable = ctx.executable._puml_parser,
         arguments = [
             "--file",
-            input_symlink.path,
+            puml_file.path,
             "--fbs-output-dir",
             fbs_output.dirname,
             "--lobster-output-dir",
@@ -139,6 +136,8 @@ def _run_puml_parser(ctx, puml_file, file_stem):
             idmap_output.dirname,
             "--source-name",
             puml_file.short_path,
+            "--output-stem",
+            file_stem,
             "--log-level",
             get_log_level(ctx),
         ],
@@ -189,13 +188,14 @@ def _colocate_view_files(ctx, staged_files, view_output_dir):
             "{ctx.label.name}/{view_name}".
 
     Returns:
-        List of symlinked File objects, one per (File, relative_path) pair.
+        Dict from relative_path to its symlinked File object, one entry per
+        (File, relative_path) pair in `staged_files`.
     """
-    colocated = []
+    colocated = {}
     for source_file, relative_path in staged_files:
         copy = ctx.actions.declare_file("{}/{}".format(view_output_dir, relative_path))
         ctx.actions.symlink(output = copy, target_file = source_file)
-        colocated.append(copy)
+        colocated[relative_path] = copy
     return colocated
 
 def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs_files, internal_api_fbs_files):
@@ -254,21 +254,19 @@ def _architectural_design_impl(ctx):
     )
 
     view_fbs = {}
-    view_fbs_files = {}
     view_lobster = {}
     view_idmap = {}
-    view_indexes = {}
+    view_root_indexes = {}
     view_source_files = []
     view_sphinx_srcs = []
-    view_root_indexes = []
+    root_index_files = []
     view_aux_docs = []
 
-    for view_name, root_title in _VIEWS.items():
+    for view_name, root_title in ARCH_VIEWS:
         view_files = getattr(ctx.files, view_name)
 
         fbs_list, lobster_list, idmap_list = _parse_puml_diagrams(ctx, view_files, stems)
-        view_fbs[view_name] = depset(fbs_list)
-        view_fbs_files[view_name] = fbs_list
+        view_fbs[view_name] = fbs_list
         view_lobster[view_name] = lobster_list
         view_idmap[view_name] = idmap_list
 
@@ -285,7 +283,8 @@ def _architectural_design_impl(ctx):
         # this is required for `.. uml::`/toctree sibling references to
         # resolve once dependable_element.bzl stages these files.
         view_output_dir = "{}/{}".format(ctx.label.name, view_name)
-        colocated_files = _colocate_view_files(ctx, plan.staged, view_output_dir)
+        colocated_by_relative_path = _colocate_view_files(ctx, plan.staged, view_output_dir)
+        colocated_files = colocated_by_relative_path.values()
         view_source_files.append(depset(colocated_files))
 
         navigation = emit_view_navigation(
@@ -294,12 +293,12 @@ def _architectural_design_impl(ctx):
             view_output_dir,
             ctx.file._puml_rst_template,
             root_title,
-            colocated_files,
+            colocated_by_relative_path,
         )
-        view_indexes[view_name] = navigation if navigation.root_index else None
+        view_root_indexes[view_name] = navigation.root_index
         if navigation.root_index:
             view_sphinx_srcs.append(depset(navigation.wrappers + navigation.indexes + [navigation.root_index]))
-            view_root_indexes.append(navigation.root_index)
+            root_index_files.append(navigation.root_index)
 
             # Wrapper pages and non-root indexes must be staged (so the root
             # index's nested toctrees resolve) but are not themselves
@@ -315,10 +314,10 @@ def _architectural_design_impl(ctx):
         # entry and an aux doc.
         view_aux_docs.extend([f for f in colocated_files if f.extension in ("rst", "md") and f != navigation.root_index])
 
-    static_fbs = view_fbs["static"]
-    dynamic_fbs = view_fbs["dynamic"]
-    public_api_fbs = view_fbs["public_api"]
-    internal_api_fbs = view_fbs["internal_api"]
+    static_fbs = depset(view_fbs["static"])
+    dynamic_fbs = depset(view_fbs["dynamic"])
+    public_api_fbs = depset(view_fbs["public_api"])
+    internal_api_fbs = depset(view_fbs["internal_api"])
     public_api_lobster = depset(view_lobster["public_api"])
 
     all_source_files = depset(transitive = view_source_files)
@@ -338,10 +337,10 @@ def _architectural_design_impl(ctx):
 
     validation_log = _run_validation(
         ctx,
-        view_fbs_files["static"],
-        view_fbs_files["dynamic"],
-        view_fbs_files["public_api"],
-        view_fbs_files["internal_api"],
+        view_fbs["static"],
+        view_fbs["dynamic"],
+        view_fbs["public_api"],
+        view_fbs["internal_api"],
     )
 
     # `deps` carries everything needed in the Sphinx tree for this rule
@@ -351,7 +350,7 @@ def _architectural_design_impl(ctx):
     # `aux_srcs` are the wrapper/sub-index/hand-written pages that must be
     # staged but reached only via that root index's own nested toctrees.
     sphinx_deps = depset(transitive = [sphinx_files] + view_sphinx_srcs)
-    sphinx_own_srcs = depset(view_root_indexes)
+    sphinx_own_srcs = depset(root_index_files)
     sphinx_aux_srcs = depset(view_aux_docs)
 
     return [
@@ -361,7 +360,7 @@ def _architectural_design_impl(ctx):
             dynamic = dynamic_fbs,
             public_api = public_api_fbs,
             internal_api = internal_api_fbs,
-            view_indexes = view_indexes,
+            view_root_indexes = view_root_indexes,
             name = ctx.label.name,
             public_api_lobster_files = public_api_lobster,
             validation_logs = [validation_log],
@@ -450,19 +449,13 @@ def architectural_design(
     """Define architectural design following S-CORE process guidelines.
 
     Architectural design documents describe the software architecture of a
-    component, including both static and dynamic views. Static views show
-    the structural organization (classes, components, modules), while dynamic
-    views show the behavioral aspects (sequences, activities, states).
-
-    Each view's diagrams are auto-wrapped and organized into a directory-
-    matching navigation tree (one generated index.rst per source directory).
-    A hand-authored index.rst/index.md placed alongside diagrams composes
-    with (its text is included above) that directory's generated toctree,
-    rather than being replaced by it. A hand-authored <stem>.rst/<stem>.md
-    next to a same-named <stem>.puml suppresses that diagram's generated
-    wrapper page, so real authored prose is always used over the generated
-    placeholder. For full control over a diagram's page, omit the .puml from
-    the view attribute below and reference it with your own `.. uml::`.
+    component: static views (class/component/package diagrams) and dynamic
+    views (sequence/activity/state diagrams), plus public/internal API
+    diagrams. Each view's diagrams are auto-wrapped into a generated,
+    directory-matching navigation tree; hand-authored index/`<stem>` pages
+    compose with or override that generated navigation -- see
+    docs/user_guide/architectural_design.rst for the full authoring-mode
+    reference.
 
     Args:
         name: The name of the architectural design target. Used as the base
