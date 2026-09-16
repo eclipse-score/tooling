@@ -21,27 +21,15 @@ set -euo pipefail
 # Remaining args are the `$(rootpaths :authored_layout_example_lib_index)`
 # runfiles paths.
 
+source "${TEST_SRCDIR}/${TEST_WORKSPACE}/lib/find_runfile.sh"
+
 mode="$1"
 shift
 
-find_file() {
-    local suffix="$1"
-    shift
-    for rel_path in "$@"; do
-        candidate="${TEST_SRCDIR}/${TEST_WORKSPACE}/${rel_path}"
-        if [[ -f "${candidate}" && "${candidate}" == *"${suffix}" ]]; then
-            echo "${candidate}"
-            return 0
-        fi
-    done
-    echo "Error: could not locate '*${suffix}' among: $*" >&2
-    return 1
-}
-
 case "${mode}" in
     compose)
-        index_file=$(find_file "arch_design_authored_index_compose_repro/static/fixtures/authored/index.rst" "$@")
-        inc_file=$(find_file "arch_design_authored_index_compose_repro/static/fixtures/authored/index.rst.inc" "$@")
+        index_file=$(find_runfile "arch_design_authored_index_compose_repro/static/fixtures/authored/index.rst" "$@")
+        inc_file=$(find_runfile "arch_design_authored_index_compose_repro/static/fixtures/authored/index.rst.inc" "$@")
 
         # The generated index.rst must include the authored body instead of
         # emitting its own title/marker.
@@ -66,7 +54,7 @@ case "${mode}" in
         fi
         ;;
     override)
-        overview_file=$(find_file "arch_design_authored_rst_override_repro/static/fixtures/authored_override/overview.rst" "$@")
+        overview_file=$(find_runfile "arch_design_authored_rst_override_repro/static/fixtures/authored_override/overview.rst" "$@")
 
         # The staged overview.rst must be the authored file verbatim...
         if ! grep -Fq 'Hand-authored prose for the overview diagram' "${overview_file}"; then
@@ -83,8 +71,8 @@ case "${mode}" in
         fi
         ;;
     diagram_free)
-        index_file=$(find_file "arch_design_diagram_free_repro/fixtures/diagram_free/index.rst" "$@")
-        inc_file=$(find_file "arch_design_diagram_free_repro/fixtures/diagram_free/index.md.inc" "$@")
+        index_file=$(find_runfile "arch_design_diagram_free_repro/static/fixtures/diagram_free/index.rst" "$@")
+        inc_file=$(find_runfile "arch_design_diagram_free_repro/static/fixtures/diagram_free/index.md.inc" "$@")
 
         # The generated index.rst must include the authored markdown body.
         if ! grep -Fq '.. include:: index.md.inc' "${index_file}"; then
