@@ -387,6 +387,7 @@ impl ClassSerializer {
             MethodModifier::Constructor => fb::MethodModifier::Constructor,
             MethodModifier::Destructor => fb::MethodModifier::Destructor,
             MethodModifier::Noexcept => fb::MethodModifier::Noexcept,
+            MethodModifier::Final => fb::MethodModifier::Final,
         }
     }
 

@@ -106,6 +106,16 @@ fn test_method_modifier_placement() {
 }
 
 #[test]
+fn test_mock_method_variants_ignored() {
+    run_class_diagram_parser_case("mock_method_variants_ignored");
+}
+
+#[test]
+fn test_mock_method_interleaved_members_survive() {
+    run_class_diagram_parser_case("mock_method_interleaved_members_survive");
+}
+
+#[test]
 fn test_multiline_note() {
     run_class_diagram_parser_case("multiline_note");
 }

@@ -1,0 +1,59 @@
+{
+  "mock_method_interleaved_members_survive.puml": {
+    "name": "mock_method_interleaved_members_survive",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "Mixed",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 14
+            },
+            "is_abstract": false,
+            "type_aliases": [],
+            "attributes": [],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "RealOne",
+                "params": [],
+                "type": "int",
+                "template_parameters": null,
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 15
+                }
+              },
+              {
+                "visibility": "Protected",
+                "name": "RealTwo",
+                "params": [],
+                "type": null,
+                "template_parameters": null,
+                "modifiers": [
+                  "noexcept",
+                  "final"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 18
+                }
+              }
+            ],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

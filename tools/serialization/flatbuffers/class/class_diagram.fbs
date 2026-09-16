@@ -48,7 +48,8 @@ enum MethodModifier : byte {
     Override = 3,
     Constructor = 4,
     Destructor = 5,
-    Noexcept = 6
+    Noexcept = 6,
+    Final = 7
 }
 
 enum TemplateParameterKind : byte {

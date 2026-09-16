@@ -177,6 +177,7 @@ pub enum MethodModifier {
     Constructor,
     Destructor,
     Noexcept,
+    Final,
 }
 
 impl MethodModifier {
