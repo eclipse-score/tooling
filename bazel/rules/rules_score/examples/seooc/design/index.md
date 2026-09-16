@@ -16,5 +16,4 @@
 This is a **compose** example (see `architectural_design.rst`'s "Authoring
 Pages Alongside Diagrams"): this file is named `index.md`, so its content is
 rendered above the generated navigation for this directory instead of
-replacing it — `static_design` and `arch_design` below both keep their own
-entries.
+replacing it — `static_design` below keeps its own entry.

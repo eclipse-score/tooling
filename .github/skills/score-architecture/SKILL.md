@@ -1,3 +1,9 @@
+---
+name: score-architecture
+description: "Software architectural design for S-CORE SEooCs using the rules_score Bazel rules. USE FOR: writing PlantUML static/dynamic/public_api/internal_api diagrams, structuring dependable_element → component → unit hierarchies, wiring architectural_design / unit / unit_design / component / dependable_element targets, PlantUML stereotype and interface/port conventions, the declared-vs-implemented architecture consistency check, integrity levels, certified scope, and requirement allocation to architectural elements. Use when working on architecture, .puml files, component/unit structure, or the rules_score architecture rules."
+argument-hint: "component/unit or diagram to model"
+---
+
 <!-- ----------------------------------------------------------------------------
   Copyright (c) 2026 Contributors to the Eclipse Foundation
 
@@ -10,12 +16,6 @@
 
   SPDX-License-Identifier: Apache-2.0
 ----------------------------------------------------------------------------- -->
-
----
-name: score-architecture
-description: "Software architectural design for S-CORE SEooCs using the rules_score Bazel rules. USE FOR: writing PlantUML static/dynamic/public_api/internal_api diagrams, structuring dependable_element → component → unit hierarchies, wiring architectural_design / unit / unit_design / component / dependable_element targets, PlantUML stereotype and interface/port conventions, the declared-vs-implemented architecture consistency check, integrity levels, certified scope, and requirement allocation to architectural elements. Use when working on architecture, .puml files, component/unit structure, or the rules_score architecture rules."
-argument-hint: "component/unit or diagram to model"
----
 
 # S-CORE Architecture Skill
 
@@ -330,9 +330,9 @@ One target bundles every diagram kind (from [`examples/seooc/design/BUILD`](../.
 ```starlark
 architectural_design(
     name         = "sample_seooc_design",
-    static       = ["static_design.puml", "arch_design.rst"],
+    static       = ["static_design.puml", "index.md"],
     dynamic      = ["dynamic_design.puml"],
-    public_api   = ["public_api.puml"],
+    public_api   = ["public_api.puml", "public_api.rst"],
     internal_api = ["internal_api.puml"],
     visibility   = ["//visibility:public"],
     # maturity = "development",  # write validation findings without failing the build
@@ -341,8 +341,10 @@ architectural_design(
 
 `static`/`dynamic` accept `.puml`, `.plantuml`, `.png`, `.svg`, `.rst`, `.md`. To combine a
 diagram with prose, add both the RST/Markdown wrapper *and* the referenced `.puml` to the same
-list (as `static_design.puml` + `arch_design.rst` above); the wrapper embeds the diagram with
-`.. uml:: file.puml`.
+list (as `public_api.puml` + `public_api.rst` above, which overrides `public_api.puml`'s
+generated wrapper page); the wrapper embeds the diagram with `.. uml:: file.puml`. `index.md`
+above is a directory-level `index` page instead, so it *composes* with (rather than overrides)
+the static view's generated navigation — see the next paragraph.
 
 Each view builds a navigation tree mirroring the on-disk directory layout of its diagrams:
 every `.puml` gets an auto-generated wrapper page, and every directory gets a generated
