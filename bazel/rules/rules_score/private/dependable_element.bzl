@@ -276,8 +276,11 @@ def _check_staged_path(seen_paths, declared_relative_path, source_label, errors)
     Bazel's own `declare_file()` collision ("conflicting actions") error
     names only actions/outputs, not the two source labels a documentation
     author would actually need to fix -- so callers `fail()` on `errors`
-    themselves once all staging for this rule has been planned, rather than
-    letting that raw error surface first.
+    themselves once all staging for this rule has been planned. That only
+    works if callers also skip staging (declare_file/symlink) a path this
+    function reports as colliding: registering the same output twice trips
+    Bazel's own action-conflict detection immediately, before this rule's
+    `fail()` is ever reached.
 
     Args:
         seen_paths: Dict from declared relative path (e.g.
@@ -287,6 +290,11 @@ def _check_staged_path(seen_paths, declared_relative_path, source_label, errors)
             relative to `ctx.label.name`.
         source_label: The `Label` this file came from.
         errors: List of human-readable collision messages; mutated in place.
+
+    Returns:
+        True if `declared_relative_path` collides with a path already seen
+        (an error was appended; the caller must not stage this file), False
+        if it was newly recorded and is safe to stage.
     """
     existing = seen_paths.get(declared_relative_path)
     if existing != None:
@@ -307,8 +315,9 @@ def _check_staged_path(seen_paths, declared_relative_path, source_label, errors)
                     source_label,
                 ),
             )
-        return
+        return True
     seen_paths[declared_relative_path] = str(source_label)
+    return False
 
 def _create_artifact_symlink(ctx, artifact_name, artifact_file, relative_path):
     """Create symlink for artifact file in output directory.
@@ -383,7 +392,10 @@ def _process_artifact_files(ctx, artifact_name, label, seen_paths, errors, path_
             continue
 
         relative_path = path_prefix + _compute_relative_path(artifact_file, common_dir)
-        _check_staged_path(seen_paths, artifact_name + "/" + relative_path, label.label, errors)
+        if _check_staged_path(seen_paths, artifact_name + "/" + relative_path, label.label, errors):
+            # Staging a path already reported as colliding would trip Bazel's
+            # own action-conflict detection before this rule's fail().
+            continue
 
         # Create symlink
         output_file = _create_artifact_symlink(
@@ -403,7 +415,8 @@ def _process_artifact_files(ctx, artifact_name, label, seen_paths, errors, path_
     # Process aux_srcs: symlink without adding to outer toctree index.
     for artifact_file in aux_files:
         relative_path = path_prefix + _compute_relative_path(artifact_file, common_dir)
-        _check_staged_path(seen_paths, artifact_name + "/" + relative_path, label.label, errors)
+        if _check_staged_path(seen_paths, artifact_name + "/" + relative_path, label.label, errors):
+            continue
         output_file = _create_artifact_symlink(
             ctx,
             artifact_name,
@@ -413,6 +426,31 @@ def _process_artifact_files(ctx, artifact_name, label, seen_paths, errors, path_
         output_files.append(output_file)
 
     return (output_files, index_refs)
+
+def _architectural_design_root(files, target_name):
+    """Return the staging root for one architectural_design label's files.
+
+    Every file an architectural_design puts into SphinxSourcesInfo is declared
+    under "<package>/<target name>/", so the staged layout is always
+    "<target name>/<view>/...". `_find_common_directory` alone can't guarantee
+    that: a view without diagrams has no idmap sidecars sitting directly in
+    "<target name>/", so the common directory sinks one level deeper and the
+    "<view>/" segment is lost. Truncating at the target-name segment pins it.
+
+    Args:
+        files: List of File objects from one architectural_design label.
+        target_name: That label's target name.
+
+    Returns:
+        String staging root, or `_find_common_directory`'s result unchanged
+        when no path segment matches `target_name`.
+    """
+    common_dir = _find_common_directory(files)
+    parts = common_dir.split("/")
+    for index in range(len(parts) - 1, -1, -1):
+        if parts[index] == target_name:
+            return "/".join(parts[:index + 1])
+    return common_dir
 
 def _process_architectural_design_files(ctx, label, seen_paths, errors, path_prefix = ""):
     """Process all files from an architectural_design label, returning output_files and classified refs.
@@ -425,20 +463,18 @@ def _process_architectural_design_files(ctx, label, seen_paths, errors, path_pre
             (see _process_artifact_files); mutated in place.
         errors: List collecting collision messages; mutated in place.
         path_prefix: Prefix (the target name, e.g. "my_arch_design/") inserted
-            before each file's relative path. Applied unconditionally --not
-            only when 2+ architectural_design labels are attached-- so the
-            staged layout, and therefore the generated HTML URLs, is the same
-            whether a dependable_element has one architectural_design label or
-            several, rather than flat for one and nested for several.
+            before each file's relative path. Applied whether or not a second
+            architectural_design label is attached, so the staged layout --
+            and therefore the generated HTML URLs -- keeps the same shape as
+            the dependable_element grows.
 
     Returns:
-        Tuple of (output_files, static_refs, dynamic_refs, public_api_refs, internal_api_refs, unclassified_refs)
+        Tuple of (output_files, refs_by_view, unclassified_refs), where
+        refs_by_view is a dict keyed by each ARCH_VIEWS view name ("static",
+        "dynamic", "public_api", "internal_api") mapping to that view's refs.
     """
     output_files = []
-    static_refs = []
-    dynamic_refs = []
-    public_api_refs = []
-    internal_api_refs = []
+    refs_by_view = {view_name: [] for view_name, _ in ARCH_VIEWS}
     unclassified_refs = []
 
     all_files = _get_sphinx_files(label)
@@ -449,10 +485,10 @@ def _process_architectural_design_files(ctx, label, seen_paths, errors, path_pre
         aux_files = label[SphinxSourcesInfo].aux_srcs.to_list()
 
     if not doc_files and not aux_files:
-        return (output_files, static_refs, dynamic_refs, public_api_refs, internal_api_refs, unclassified_refs)
+        return (output_files, refs_by_view, unclassified_refs)
 
     srcs_paths = {f.path: True for f in label[SphinxSourcesInfo].srcs.to_list()}
-    common_dir = _find_common_directory(doc_files + aux_files)
+    common_dir = _architectural_design_root(doc_files + aux_files, label.label.name)
 
     # Each view's top-level root index (the only file of that view present
     # in srcs_paths) is the single toctree entry surfaced for that view; map
@@ -469,7 +505,10 @@ def _process_architectural_design_files(ctx, label, seen_paths, errors, path_pre
             continue
 
         relative_path = path_prefix + _compute_relative_path(artifact_file, common_dir)
-        _check_staged_path(seen_paths, "architectural_design/" + relative_path, label.label, errors)
+        if _check_staged_path(seen_paths, "architectural_design/" + relative_path, label.label, errors):
+            # Staging a path already reported as colliding would trip Bazel's
+            # own action-conflict detection before this rule's fail().
+            continue
 
         output_file = _create_artifact_symlink(
             ctx,
@@ -483,20 +522,15 @@ def _process_architectural_design_files(ctx, label, seen_paths, errors, path_pre
             doc_path = "architectural_design/" + relative_path
             doc_ref = doc_path.removesuffix(".rst").removesuffix(".md")
             view_name = view_by_path.get(artifact_file.path)
-            if view_name == "static":
-                static_refs.append(doc_ref)
-            elif view_name == "dynamic":
-                dynamic_refs.append(doc_ref)
-            elif view_name == "public_api":
-                public_api_refs.append(doc_ref)
-            elif view_name == "internal_api":
-                internal_api_refs.append(doc_ref)
+            if view_name in refs_by_view:
+                refs_by_view[view_name].append(doc_ref)
             else:
                 unclassified_refs.append(doc_ref)
 
     for artifact_file in aux_files:
         relative_path = path_prefix + _compute_relative_path(artifact_file, common_dir)
-        _check_staged_path(seen_paths, "architectural_design/" + relative_path, label.label, errors)
+        if _check_staged_path(seen_paths, "architectural_design/" + relative_path, label.label, errors):
+            continue
         output_file = _create_artifact_symlink(
             ctx,
             "architectural_design",
@@ -505,22 +539,18 @@ def _process_architectural_design_files(ctx, label, seen_paths, errors, path_pre
         )
         output_files.append(output_file)
 
-    return (output_files, static_refs, dynamic_refs, public_api_refs, internal_api_refs, unclassified_refs)
+    return (output_files, refs_by_view, unclassified_refs)
 
 def _generate_software_arch_page(
         ctx,
         feature_req_refs,
-        static_refs,
-        dynamic_refs,
-        public_api_refs,
-        internal_api_refs,
+        refs_by_view,
         unclassified_refs,
         dependability_refs,
         output_files):
     """Generate software_arch.rst page with section subheadings when categorized entries exist."""
     has_categories = bool(
-        feature_req_refs or static_refs or dynamic_refs or
-        public_api_refs or internal_api_refs,
+        feature_req_refs or any(refs_by_view.values()),
     )
 
     if not has_categories and not unclassified_refs and not dependability_refs:
@@ -543,12 +573,6 @@ def _generate_software_arch_page(
         # Iterated in ARCH_VIEWS' static/dynamic/public_api/internal_api order
         # so each view gets its own subsection when it has at least one ref
         # (normally just its one root index entry).
-        refs_by_view = {
-            "static": static_refs,
-            "dynamic": dynamic_refs,
-            "public_api": public_api_refs,
-            "internal_api": internal_api_refs,
-        }
         for view_name, view_title in ARCH_VIEWS:
             view_refs = refs_by_view[view_name]
             if not view_refs:
@@ -629,14 +653,13 @@ def _process_artifact_type(ctx, artifact_name, seen_paths, errors):
     # _find_common_directory), so 2+ labels can genuinely resolve the same
     # relative path (e.g. two "checklists" labels each exporting a top-level
     # "checklist.md") even though this artifact type has no per-directory
-    # index.rst of its own. Namespace under each label's own target name in
-    # that case; a single label keeps the flat (unprefixed) layout for
-    # readability. The _check_staged_path safety net below still catches the
-    # residual case of two labels sharing a target *name* from different
-    # packages.
-    use_label_subdirectories = len(attr_list) > 1
+    # index.rst of its own. Namespacing under each label's own target name
+    # keeps the staged layout -- and therefore the generated HTML URLs --
+    # the same shape whether one label is attached or several. The
+    # _check_staged_path safety net below still catches the residual case of
+    # two labels sharing a target *name* from different packages.
     for label in attr_list:
-        path_prefix = "{}/".format(label.label.name) if use_label_subdirectories else ""
+        path_prefix = "{}/".format(label.label.name)
         label_outputs, label_refs = _process_artifact_files(
             ctx,
             artifact_name,
@@ -1065,10 +1088,7 @@ def _dependable_element_index_impl(ctx):
         output_files.extend(files)
         artifacts_by_type[artifact_name] = refs
 
-    arch_static_refs = []
-    arch_dynamic_refs = []
-    arch_public_api_refs = []
-    arch_internal_api_refs = []
+    arch_refs_by_view = {view_name: [] for view_name, _ in ARCH_VIEWS}
     arch_unclassified_refs = []
 
     if ctx.attr.architectural_design:
@@ -1080,7 +1100,7 @@ def _dependable_element_index_impl(ctx):
         # sharing a target *name* from different packages.
         for ad_target in ctx.attr.architectural_design:
             path_prefix = "{}/".format(ad_target.label.name)
-            ad_files, s_refs, d_refs, p_refs, i_refs, u_refs = _process_architectural_design_files(
+            ad_files, view_refs, u_refs = _process_architectural_design_files(
                 ctx,
                 ad_target,
                 seen_staged_paths,
@@ -1088,14 +1108,14 @@ def _dependable_element_index_impl(ctx):
                 path_prefix = path_prefix,
             )
             output_files.extend(ad_files)
-            arch_static_refs.extend(s_refs)
-            arch_dynamic_refs.extend(d_refs)
-            arch_public_api_refs.extend(p_refs)
-            arch_internal_api_refs.extend(i_refs)
+            for view_name, refs in view_refs.items():
+                arch_refs_by_view[view_name].extend(refs)
             arch_unclassified_refs.extend(u_refs)
 
     # Collect feature_requirements refs from requirements targets that
-    # carry FeatureRequirementsInfo.
+    # carry FeatureRequirementsInfo. Namespaced under each label's own target
+    # name, matching the staged layout of architectural_design and every
+    # other artifact type.
     feature_req_refs = []
     for req_target in ctx.attr.requirements:
         if FeatureRequirementsInfo in req_target:
@@ -1105,12 +1125,14 @@ def _dependable_element_index_impl(ctx):
                 req_target,
                 seen_paths = seen_staged_paths,
                 errors = staging_errors,
+                path_prefix = "{}/".format(req_target.label.name),
             )
             output_files.extend(label_files)
             feature_req_refs.extend(label_refs)
 
     # Collect assumed_system_requirements refs from requirements targets that
-    # carry AssumedSystemRequirementsInfo.
+    # carry AssumedSystemRequirementsInfo. Namespaced the same way as
+    # feature_requirements above.
     assumed_system_req_refs = []
     for req_target in ctx.attr.requirements:
         if AssumedSystemRequirementsInfo in req_target:
@@ -1120,6 +1142,7 @@ def _dependable_element_index_impl(ctx):
                 req_target,
                 seen_paths = seen_staged_paths,
                 errors = staging_errors,
+                path_prefix = "{}/".format(req_target.label.name),
             )
             output_files.extend(label_files)
             assumed_system_req_refs.extend(label_refs)
@@ -1213,10 +1236,7 @@ def _dependable_element_index_impl(ctx):
     software_arch_ref = _generate_software_arch_page(
         ctx,
         feature_req_refs = feature_req_refs,
-        static_refs = arch_static_refs,
-        dynamic_refs = arch_dynamic_refs,
-        public_api_refs = arch_public_api_refs,
-        internal_api_refs = arch_internal_api_refs,
+        refs_by_view = arch_refs_by_view,
         unclassified_refs = arch_unclassified_refs,
         dependability_refs = artifacts_by_type["dependability_analysis"],
         output_files = output_files,

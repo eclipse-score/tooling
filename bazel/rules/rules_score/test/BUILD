@@ -35,6 +35,11 @@ load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphi
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test", "trlc_specification")
 load(
+    ":dependable_element_staged_path_collision_test.bzl",
+    "cross_label_collision_fails_test",
+    "same_label_collision_fails_test",
+)
+load(
     ":html_generation_test.bzl",
     "auto_config_generation_test",
     "basic_html_generation_test",
@@ -338,6 +343,62 @@ architectural_design(
 stem_collision_fails_test(
     name = "stem_collision_fails_test",
     target_under_test = ":arch_design_stem_collision_repro",
+)
+
+# Regression fixture: a single label whose SphinxSourcesInfo lists the same
+# file in both `deps` and `aux_srcs` stages the exact same relative path
+# twice from the exact same source label (see
+# :staged_path_dup_srcs_aux_fixture in fixtures/staged_path_collision) --
+# must fail analysis with _check_staged_path's same-label message rather
+# than a raw Bazel "conflicting actions" error; see
+# :staged_path_same_label_collision_fails_test below.
+dependable_element(
+    name = "staged_path_same_label_collision_repro",
+    architectural_design = [],
+    assumptions_of_use = [":aous"],
+    checklists = ["//fixtures/staged_path_collision:dup_srcs_aux"],
+    components = [],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+    deps = [],
+)
+
+same_label_collision_fails_test(
+    name = "staged_path_same_label_collision_fails_test",
+    target_under_test = ":staged_path_same_label_collision_repro_index",
+)
+
+# Regression fixture: two distinct labels from different packages that
+# happen to share a target name ("dup") stage to the same relative path
+# (each gets a "dup/" prefix -- see _process_artifact_type) from two
+# different source labels -- must fail analysis with _check_staged_path's
+# cross-label message; see
+# :staged_path_cross_label_collision_fails_test below.
+dependable_element(
+    name = "staged_path_cross_label_collision_repro",
+    architectural_design = [],
+    assumptions_of_use = [":aous"],
+    checklists = [
+        "//fixtures/staged_path_collision/pkg_a:dup",
+        "//fixtures/staged_path_collision/pkg_b:dup",
+    ],
+    components = [],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+    deps = [],
+)
+
+cross_label_collision_fails_test(
+    name = "staged_path_cross_label_collision_fails_test",
+    target_under_test = ":staged_path_cross_label_collision_repro_index",
 )
 
 # Wraps both crash-repro architectural_design targets above in a real
@@ -1110,7 +1171,10 @@ sh_test(
         "compose",
         "$(rootpaths :authored_layout_example_lib_index)",
     ],
-    data = [":authored_layout_example_lib_index"],
+    data = [
+        "lib/find_runfile.sh",
+        ":authored_layout_example_lib_index",
+    ],
 )
 
 # Regression test: an authored overview.rst *overrides* (suppresses) the
@@ -1123,7 +1187,10 @@ sh_test(
         "override",
         "$(rootpaths :authored_layout_example_lib_index)",
     ],
-    data = [":authored_layout_example_lib_index"],
+    data = [
+        "lib/find_runfile.sh",
+        ":authored_layout_example_lib_index",
+    ],
 )
 
 # Regression test: a diagram-free view (only a hand-authored index.md, no
@@ -1136,7 +1203,10 @@ sh_test(
         "diagram_free",
         "$(rootpaths :authored_layout_example_lib_index)",
     ],
-    data = [":authored_layout_example_lib_index"],
+    data = [
+        "lib/find_runfile.sh",
+        ":authored_layout_example_lib_index",
+    ],
 )
 
 # ============================================================================
@@ -1157,7 +1227,10 @@ sh_test(
         "seooc_test_lib_index/index.rst",
         "$(rootpaths :seooc_test_lib_index)",
     ],
-    data = [":seooc_test_lib_index"],
+    data = [
+        "lib/find_runfile.sh",
+        ":seooc_test_lib_index",
+    ],
 )
 
 # Regression test: clickable_plantuml must actually inject a working link
