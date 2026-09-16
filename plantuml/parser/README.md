@@ -57,6 +57,7 @@ Options:
 | `--diagram-type <component\|class\|sequence\|none>` | Diagram type hint | `none` |
 | `--fbs-output-dir <DIR>` | Output directory for `.fbs.bin` FlatBuffers files | none (no output) |
 | `--lobster-output-dir <DIR>` | Output directory for `.lobster` traceability files | none (no output) |
+| `--output-stem <STEM>` | Override the file stem used to name every output file for this run, instead of deriving it from the input file's own basename. Requires exactly one input file. | none (uses the input file's basename) |
 
 At least one of `--file` or `--folders` is required.
 

@@ -15,6 +15,7 @@ use clap::{ArgGroup, Parser, ValueEnum};
 use env_logger::Builder;
 use log::debug;
 use serde::Serialize;
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -124,6 +125,15 @@ struct Args {
     /// Must be a relative path (never a machine-specific absolute path).
     #[arg(long)]
     source_name: Option<String>,
+
+    /// Override the file stem used to name every output file (`.fbs.bin`,
+    /// `.lobster`, `.idmap.json`, ...) for this run, instead of deriving it
+    /// from the input file's own basename. Only meaningful for a single
+    /// resolved diagram: requires exactly one input file (a single `--file`,
+    /// no `--folders`) and cannot be combined with `--fta-output-dir`. Must
+    /// be a single path component (no `/`, no `.`/`..`), never a path.
+    #[arg(long)]
+    output_stem: Option<String>,
 }
 
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -171,11 +181,17 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         if args.source_name.is_some() {
             return Err("--source-name cannot be combined with --fta-output-dir".into());
         }
+        if args.output_stem.is_some() {
+            return Err("--output-stem cannot be combined with --fta-output-dir".into());
+        }
         return run_fta(&args, dir, log_level);
     }
 
     if let Some(name) = &args.source_name {
         validate_source_name(name)?;
+    }
+    if let Some(stem) = &args.output_stem {
+        validate_output_stem(stem)?;
     }
 
     let emit_debug_json = log_level.to_level_filter() >= log::LevelFilter::Debug;
@@ -213,14 +229,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if file_list.is_empty() {
         return Err("No valid PUML files found.".into());
     }
-    if args.source_name.is_some() && file_list.len() != 1 {
-        return Err(format!(
-            "--source-name requires exactly one input file (a single --file, no \
-             --folders); got {} files",
-            file_list.len(),
-        )
-        .into());
-    }
+    require_single_input(args.source_name.is_some(), file_list.len(), "source-name")?;
+    require_single_input(args.output_stem.is_some(), file_list.len(), "output-stem")?;
     debug!("Collected {} puml files.", file_list.len());
 
     debug!("Preprocessing: include expansion");
@@ -229,29 +239,23 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     debug!("Parsing started");
     for (path, content) in &preprocessed_files {
-        // `source_file` is the stable, workspace-relative path callers want
-        // embedded in outputs (see `--source-name`'s docs); `path` is the
-        // actual file handed to us (e.g. a disambiguating `_puml_inputs/`
-        // symlink) and must keep driving output *filenames*, which are
-        // derived from its basename via `_disambiguated_stems` and may not
-        // match `source_file`'s basename. Parsers only ever read `path` to
-        // stamp per-element `SourceLocation`s (never to access the
-        // filesystem — `content` is already loaded), so substituting a
-        // synthetic path built from `source_file` here is sufficient to
-        // make every `SourceLocation.file` in the resolved model — and thus
-        // in the FlatBuffers output — carry the corrected value too,
-        // matching what already reaches the lobster/idmap outputs below.
-        let source_file = args
-            .source_name
-            .clone()
-            .unwrap_or_else(|| source_path_for_output(path));
-        let source_path: Rc<PathBuf> = Rc::new(PathBuf::from(&source_file));
+        // `naming_path` drives every output *filename* below (via its file
+        // stem); it's `path` unless `--output-stem` overrides it. `source_file`
+        // is the stable, workspace-relative path embedded *inside* outputs
+        // (see `--source-name`'s docs). Parsers only ever read `source_path`
+        // to stamp per-element `SourceLocation`s (never to access the
+        // filesystem -- `content` is already loaded), so with `--source-name`
+        // a synthetic path built from `source_file` is enough to make every
+        // `SourceLocation.file` in the resolved model -- and thus in the
+        // FlatBuffers output -- carry the corrected value as well.
+        let naming_path = output_naming_path(args.output_stem.as_deref(), path);
+        let (source_file, source_path) = output_source_path(args.source_name.as_deref(), path);
 
         let parsed_content = parse_puml_file(&source_path, content, log_level, args.diagram_type)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
         if emit_debug_json {
             if let Some(ref dir) = fbs_output_dir {
-                write_json_to_file(&parsed_content, path, dir, "raw.ast")?;
+                write_json_to_file(&parsed_content, &naming_path, dir, "raw.ast")?;
             }
         }
 
@@ -270,13 +274,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 );
                 if emit_debug_json {
                     if let Some(ref dir) = fbs_output_dir {
-                        write_json_to_file(&logic_result, path, dir, "logic.ast")?;
+                        write_json_to_file(&logic_result, &naming_path, dir, "logic.ast")?;
                     }
                 }
 
                 let fbs_buffer = serialize_resolved_diagram(&logic_result);
                 if let Some(ref dir) = fbs_output_dir {
-                    write_fbs_to_file(&fbs_buffer, path, dir)?;
+                    write_fbs_to_file(&fbs_buffer, &naming_path, dir)?;
                 }
 
                 if let Some(ldir) = &lobster_output_dir {
@@ -286,11 +290,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         ResolvedDiagram::Activity(_) => LobsterModel::Empty,
                         ResolvedDiagram::Sequence(_) => LobsterModel::Empty,
                     };
-                    write_lobster_to_file(lobster_model, path, &source_file, ldir)?;
+                    write_lobster_to_file(lobster_model, &naming_path, &source_file, ldir)?;
                 }
 
                 if let Some(idir) = &idmap_output_dir {
-                    let output_path = puml_idmap::idmap_output_path(path, idir);
+                    let output_path = puml_idmap::idmap_output_path(&naming_path, idir);
                     if !seen_idmap_outputs.insert(output_path.clone()) {
                         return Err(format!(
                             "duplicate idmap output {}: multiple input files map to the \
@@ -306,14 +310,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         Some(idmap_model) => {
                             write_idmap_to_file(
                                 idmap_model,
-                                path,
+                                &naming_path,
                                 Some(&source_file),
                                 diagram_name.as_deref(),
                                 idir,
                             )?;
                         }
                         None => {
-                            write_empty_idmap_to_file(path, Some(&source_file), idir)?;
+                            write_empty_idmap_to_file(&naming_path, Some(&source_file), idir)?;
                         }
                     }
                 }
@@ -687,6 +691,24 @@ fn resolve_path(path: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
     Ok(base_dir.join(path))
 }
 
+/// Reject a flag that only makes sense for a single resolved diagram (e.g.
+/// `--source-name`, `--output-stem`) when more than one input file was
+/// collected.
+fn require_single_input(
+    is_set: bool,
+    file_count: usize,
+    flag_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if is_set && file_count != 1 {
+        return Err(format!(
+            "--{flag_name} requires exactly one input file (a single --file, no \
+             --folders); got {file_count} files"
+        )
+        .into());
+    }
+    Ok(())
+}
+
 /// Validate a user-supplied `--source-name` value.
 ///
 /// Rejects empty strings and absolute paths: an absolute path would leak the
@@ -731,6 +753,61 @@ fn source_path_for_output(path: &Path) -> String {
     path.file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.to_string_lossy().into_owned())
+}
+
+/// Validate a user-supplied `--output-stem` value.
+///
+/// Unlike `--source-name` (a full relative path embedded *inside* outputs),
+/// this becomes the output *filename* stem itself, so it must be a single
+/// path component: rejects empty strings and anything containing a `/` or
+/// resolving to `.`/`..`.
+fn validate_output_stem(stem: &str) -> Result<(), Box<dyn std::error::Error>> {
+    if stem.is_empty() {
+        return Err("--output-stem must not be empty".into());
+    }
+    let mut components = Path::new(stem).components();
+    let is_single_normal_component =
+        matches!(components.next(), Some(std::path::Component::Normal(_)))
+            && components.next().is_none();
+    if !is_single_normal_component {
+        return Err(format!(
+            "--output-stem must be a single path component (no '/', '.', or '..'), got: {stem}"
+        )
+        .into());
+    }
+    Ok(())
+}
+
+/// Compute the corrected, stable `source_file` string (embedded *inside*
+/// outputs) and the `Rc<PathBuf>` that parsers use to stamp `SourceLocation`s,
+/// for one input `path`.
+///
+/// With `--source-name`, both derive from that name so every `SourceLocation`
+/// carries the corrected path too. Without it, `source_file` is
+/// `source_path_for_output(path)` and `SourceLocation`s keep using `path`
+/// itself.
+fn output_source_path(source_name: Option<&str>, path: &Rc<PathBuf>) -> (String, Rc<PathBuf>) {
+    match source_name {
+        Some(name) => {
+            let source_file = name.to_string();
+            let source_path = Rc::new(PathBuf::from(&source_file));
+            (source_file, source_path)
+        }
+        None => (source_path_for_output(path), Rc::clone(path)),
+    }
+}
+
+/// Compute the path whose file stem drives every output *filename* for one
+/// input `path` (the `write_*_to_file` helpers all derive their output name
+/// from a passed-in path's file stem alone).
+///
+/// `output_stem` (`--output-stem`) overrides the stem outright; otherwise
+/// `path` itself is used unchanged.
+fn output_naming_path<'a>(output_stem: Option<&str>, path: &'a Path) -> Cow<'a, Path> {
+    match output_stem {
+        Some(stem) => Cow::Owned(path.with_file_name(stem)),
+        None => Cow::Borrowed(path),
+    }
 }
 
 fn add_single_file(
@@ -1103,22 +1180,17 @@ mod idmap_wiring_tests {
         cleanup_dir(&dir);
     }
 
-    /// `SourceLocation.file` (and thus the FlatBuffers output) must carry the
-    /// corrected `source_file` -- never the raw staging `path` handed to
-    /// `parse_puml_file` -- when `--source-name` (or its computed fallback)
-    /// differs from `path`'s own basename/directory, e.g. the
-    /// `_puml_inputs/<stem>.puml` disambiguating symlink Bazel stages this
-    /// CLI's input from. This mirrors the exact `source_file`/`source_path`
-    /// computation from the main parsing loop above rather than spawning the
-    /// compiled binary.
+    /// With `--source-name`, `SourceLocation.file` (and thus the FlatBuffers
+    /// output) must carry the corrected `source_file`, never the staging
+    /// `path` handed to `parse_puml_file`. Mirrors the `output_source_path`
+    /// call from the main parsing loop rather than spawning the binary.
     #[test]
     fn source_location_uses_corrected_source_not_staging_path() {
-        let staging_path = Path::new("_puml_inputs/dir_part__foo.puml");
-        let source_name = Some("real/pkg/foo.puml".to_string());
+        let staging_path = Rc::new(PathBuf::from("_puml_inputs/dir_part__foo.puml"));
         let content = "@startuml\nclass Foo {\n}\n@enduml";
 
-        let source_file = source_name.unwrap_or_else(|| source_path_for_output(staging_path));
-        let source_path: Rc<PathBuf> = Rc::new(PathBuf::from(&source_file));
+        let (_source_file, source_path) =
+            output_source_path(Some("real/pkg/foo.puml"), &staging_path);
 
         let parsed = parse_puml_file(&source_path, content, LogLevel::Info, DiagramType::Class)
             .expect("class parse must succeed");
@@ -1132,8 +1204,81 @@ mod idmap_wiring_tests {
         );
         assert!(
             !fbs_text.contains("_puml_inputs"),
-            "the disambiguating staging path must never leak into the FBS output, got: {fbs_text}"
+            "the staging path must never leak into the FBS output, got: {fbs_text}"
         );
+    }
+
+    /// Without `--source-name`, `source_file` is
+    /// `source_path_for_output`'s workspace-relative computation while
+    /// `SourceLocation`s keep using the input path itself.
+    #[test]
+    fn source_location_falls_back_to_relative_path_without_source_name() {
+        let path = Rc::new(PathBuf::from("relative/dir/foo.puml"));
+
+        let (source_file, source_path) = output_source_path(None, &path);
+
+        assert_eq!(source_file, source_path_for_output(&path));
+        assert!(Rc::ptr_eq(&source_path, &path));
+    }
+
+    /// `--output-stem` must override every output file's name, independent of
+    /// the input path's own basename.
+    #[test]
+    fn output_stem_overrides_output_filenames() {
+        let content = "@startuml\nclass A {\n    +a\n}\n@enduml";
+        let path = Rc::new(PathBuf::from("cls/original_name.puml"));
+
+        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Class)
+            .expect("class parse must succeed");
+        let resolved = resolve_parsed_diagram(parsed).expect("class must resolve");
+        let idmap_model =
+            idmap_model_for(&resolved).expect("class diagrams must dispatch to an IdMapModel");
+
+        let naming_path = output_naming_path(Some("overridden_stem"), &path);
+        assert_eq!(
+            naming_path.file_name().and_then(|n| n.to_str()),
+            Some("overridden_stem")
+        );
+
+        let dir = unique_dir("output_stem");
+        let source_file = source_path_for_output(&path);
+        let output = write_idmap_to_file(idmap_model, &naming_path, Some(&source_file), None, &dir)
+            .expect("idmap must be written");
+
+        assert_eq!(
+            output.file_name().and_then(|n| n.to_str()),
+            Some("overridden_stem.idmap.json")
+        );
+        // The embedded `source` field is unaffected by the naming override.
+        let json: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&output).unwrap()).unwrap();
+        assert_eq!(json["source"], "cls/original_name.puml");
+
+        cleanup_dir(&dir);
+    }
+
+    /// `--output-stem` requires exactly one input file.
+    #[test]
+    fn output_stem_rejected_with_multiple_inputs() {
+        let err = require_single_input(true, 2, "output-stem")
+            .expect_err("must reject --output-stem with more than one input file");
+        assert!(err.to_string().contains("--output-stem"));
+        assert!(err.to_string().contains("got 2 files"));
+
+        require_single_input(true, 1, "output-stem").expect("a single input file must be fine");
+        require_single_input(false, 2, "output-stem")
+            .expect("the flag being unset must never trigger the check");
+    }
+
+    /// `--output-stem` must be a single path component: no separators, and
+    /// not `.`/`..`.
+    #[test]
+    fn output_stem_validation_rejects_paths_and_empty_values() {
+        validate_output_stem("valid_stem").expect("a plain identifier must be accepted");
+        assert!(validate_output_stem("").is_err());
+        assert!(validate_output_stem("has/slash").is_err());
+        assert!(validate_output_stem(".").is_err());
+        assert!(validate_output_stem("..").is_err());
     }
 
     #[test]
