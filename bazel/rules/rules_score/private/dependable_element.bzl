@@ -58,6 +58,7 @@ load(
 load("//bazel/rules/rules_score/private:sphinx_module.bzl", "sphinx_module")
 load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
+load("//bazel/rules/rules_score/private:views.bzl", "ARCH_VIEWS")
 
 # ============================================================================
 # Template Constants
@@ -128,17 +129,6 @@ _INTEGRITY_LEVEL_RANK = {level: rank for rank, level in enumerate(_INTEGRITY_LEV
 # ============================================================================
 # Helper Functions for Documentation Generation
 # ============================================================================
-
-# View name -> display title, mirroring architectural_design.bzl's own
-# (private) _VIEWS mapping; kept in this same static/dynamic/public_api/
-# internal_api order so software_arch.rst's subsections appear in a stable,
-# predictable order regardless of dict iteration order elsewhere.
-_ARCH_VIEW_TITLES = [
-    ("static", "Static Design"),
-    ("dynamic", "Dynamic Design"),
-    ("public_api", "Public API"),
-    ("internal_api", "Internal API"),
-]
 
 def _make_toctree(caption, entries, maxdepth = 1):
     """Return a toctree RST block with a caption, or empty string if entries is empty."""
@@ -470,10 +460,9 @@ def _process_architectural_design_files(ctx, label, seen_paths, errors, path_pre
     view_by_path = {}
     if ArchitecturalDesignInfo in label:
         info = label[ArchitecturalDesignInfo]
-        if hasattr(info, "view_indexes"):
-            for view_name, navigation in info.view_indexes.items():
-                if navigation and navigation.root_index:
-                    view_by_path[navigation.root_index.path] = view_name
+        for view_name, root_index in info.view_root_indexes.items():
+            if root_index:
+                view_by_path[root_index.path] = view_name
 
     for artifact_file in doc_files:
         if _is_document_file(artifact_file) and artifact_file.path not in srcs_paths:
@@ -551,17 +540,16 @@ def _generate_software_arch_page(
                 "",
             ])
 
-        # Mirrors architectural_design.bzl's _VIEWS mapping (view name ->
-        # display title); iterated in the same static/dynamic/public_api/
-        # internal_api order so each view gets its own subsection when it
-        # has at least one ref (normally just its one root index entry).
+        # Iterated in ARCH_VIEWS' static/dynamic/public_api/internal_api order
+        # so each view gets its own subsection when it has at least one ref
+        # (normally just its one root index entry).
         refs_by_view = {
             "static": static_refs,
             "dynamic": dynamic_refs,
             "public_api": public_api_refs,
             "internal_api": internal_api_refs,
         }
-        for view_name, view_title in _ARCH_VIEW_TITLES:
+        for view_name, view_title in ARCH_VIEWS:
             view_refs = refs_by_view[view_name]
             if not view_refs:
                 continue

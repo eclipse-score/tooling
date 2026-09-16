@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@pip_tooling_test//:requirements.bzl", "requirement")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_test")
@@ -51,12 +52,12 @@ load(
     "lobster_config_test_suite",
 )
 load(
-    ":puml_layout_crash_repro_test.bzl",
-    "puml_layout_crash_repro_test",
-)
-load(
     ":puml_layout_test.bzl",
     "puml_layout_test_suite",
+)
+load(
+    ":puml_stem_collision_test.bzl",
+    "stem_collision_fails_test",
 )
 load(
     ":requirements_multi_spec_test.bzl",
@@ -285,8 +286,7 @@ architectural_design(
 
 # Regression fixtures: a generated navigation page and an authored page
 # claiming the same output path must be reconciled by plan_view_layout()
-# rather than colliding in declare_file(); see
-# puml_layout_crash_repro_test.bzl.
+# rather than colliding in declare_file().
 architectural_design(
     name = "arch_design_authored_index_compose_repro",
     static = [
@@ -303,14 +303,41 @@ architectural_design(
     ],
 )
 
-puml_layout_crash_repro_test(
-    name = "puml_layout_authored_index_compose_builds",
-    target_under_test = ":arch_design_authored_index_compose_repro",
+# Regression fixture: a view with no diagrams at all -- only a hand-authored
+# index.md -- must still produce a valid root index (authored body composed
+# above an empty toctree), not crash or emit a bogus generated title.
+architectural_design(
+    name = "arch_design_diagram_free_repro",
+    static = ["fixtures/diagram_free/index.md"],
 )
 
-puml_layout_crash_repro_test(
+build_test(
+    name = "puml_layout_authored_index_compose_builds",
+    targets = [":arch_design_authored_index_compose_repro"],
+)
+
+build_test(
     name = "puml_layout_authored_rst_override_builds",
-    target_under_test = ":arch_design_authored_rst_override_repro",
+    targets = [":arch_design_authored_rst_override_repro"],
+)
+
+# Regression fixture: two diagrams whose basenames collide ("foo.puml" under
+# both "a/b/" and "a_b/") need directory-based disambiguation, which itself
+# collides once "/" is replaced with "_" in both -- must fail analysis
+# rather than silently overwrite one diagram's output with the other's; see
+# :stem_collision_fails_test below.
+architectural_design(
+    name = "arch_design_stem_collision_repro",
+    static = [
+        "fixtures/stem_collision/a/b/foo.puml",
+        "fixtures/stem_collision/a_b/foo.puml",
+    ],
+    tags = ["manual"],
+)
+
+stem_collision_fails_test(
+    name = "stem_collision_fails_test",
+    target_under_test = ":arch_design_stem_collision_repro",
 )
 
 # Wraps both crash-repro architectural_design targets above in a real
@@ -326,6 +353,7 @@ dependable_element(
     architectural_design = [
         ":arch_design_authored_index_compose_repro",
         ":arch_design_authored_rst_override_repro",
+        ":arch_design_diagram_free_repro",
     ],
     assumptions_of_use = [":aous"],
     components = [],
@@ -1093,6 +1121,19 @@ sh_test(
     srcs = ["check_authored_layout_content.sh"],
     args = [
         "override",
+        "$(rootpaths :authored_layout_example_lib_index)",
+    ],
+    data = [":authored_layout_example_lib_index"],
+)
+
+# Regression test: a diagram-free view (only a hand-authored index.md, no
+# .puml at all) must still stage a root index whose toctree is empty and
+# whose body is the authored markdown, not a crash or a bogus generated page.
+sh_test(
+    name = "authored_layout_diagram_free_test",
+    srcs = ["check_authored_layout_content.sh"],
+    args = [
+        "diagram_free",
         "$(rootpaths :authored_layout_example_lib_index)",
     ],
     data = [":authored_layout_example_lib_index"],
