@@ -297,7 +297,8 @@ Graphviz / ``dot``
 
 Graphviz now comes directly from the docs runtime sysroot
 (``@docs_runtime//:flat``), built with ``rules_distroless`` from the
-``apt.install(dependency_set = "docs_runtime", ...)`` tag in ``//MODULE.bazel``.
+``apt.install(name = "docs_runtime", manifest = "//third_party/docs_runtime:manifest.yaml", nolock = True)``
+tag in ``//MODULE.bazel``.
 The Sphinx action does not call ``dot`` directly; it uses
 ``//third_party/docs_runtime:dot`` — an ``exec_in_sysroot`` wrapper that
 unpacks the sysroot archive and runs ``/usr/bin/dot`` inside it through
@@ -391,3 +392,133 @@ diagram layout instead of its bundled Java port (Smetana).  This ensures the
 graphviz version is identical for both ``sphinx.ext.graphviz`` directives and
 PlantUML diagrams.  There is no Smetana fallback: the hermetic dot is the
 single rendering path.
+
+C toolchain requirements for the docs pipeline
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``@docs_runtime//:flat`` is produced by the ``rules_distroless`` ``flatten``
+rule, which runs ``@gawk//:gawk`` as an exec-configuration tool.  The BCR
+``gawk`` module builds gawk **from source**, so the docs pipeline compiles and
+links C code with *your* C toolchain — even for a project that otherwise only
+builds C++ or no native code at all.
+
+Consequence: a toolchain that cannot build gawk breaks every target that
+renders documentation, while all other targets keep working.  The observed
+failure mode with GCC 9 is a link error deep inside the dependency chain::
+
+   regex.c:function regexec: undefined reference to '_REGEX_NELTS'
+
+(gawk's bundled ``support/regex.c`` relies on a C99 VLA macro that GCC 9 with
+the module's default flags does not expand.)  The chain is::
+
+   //your/doc:target
+     → @score_tooling//third_party/docs_runtime:dot
+       → :dot_sysroot
+         → @docs_runtime//:flat
+           → @gawk//:gawk
+
+Mitigations, in order of preference:
+
+#. Use a C toolchain that can build gawk (GCC 12+ or the hermetic LLVM
+   toolchain) for documentation targets.
+#. Pin an exec-configuration toolchain for the docs pipeline only, so the
+   toolchain used for your product code is unaffected.
+#. Split documentation targets into a separate build invocation with its own
+   ``--config``.
+
+---
+
+.. _restricted-network-ci:
+
+Restricted-network and air-gapped CI
+------------------------------------
+
+``rules_score`` fetches everything it needs through Bazel's downloader, so a
+CI environment without direct internet access needs two things: a rewrite
+rule per external host, and — on IPv6-only networks — explicit IPv6
+preference for the Bazel JVM.
+
+External hosts
+~~~~~~~~~~~~~~
+
+The table lists every host reachable from ``score_tooling``'s own module graph
+and what it is needed for.  Mirror or rewrite all of them that apply to the
+targets you build.
+
+.. list-table::
+   :widths: 32 68
+   :header-rows: 1
+
+   * - Host
+     - Needed for
+   * - ``github.com``
+     - Bazel modules and archives resolved from the Bazel Central Registry and
+       the S-CORE registry
+   * - ``raw.githubusercontent.com``
+     - The S-CORE Bazel registry itself
+       (``https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/``)
+   * - ``pypi.org`` / ``files.pythonhosted.org``
+     - Python wheels for the Sphinx toolchain, TRLC, LOBSTER and the rule
+       implementations
+   * - ``snapshot.ubuntu.com``
+     - ``.deb`` packages for the ``docs_runtime`` and ``tooling_sysroot``
+       ``apt.install`` manifests (pinned Ubuntu 24.04 snapshot)
+   * - ``ftp.gnu.org``
+     - gawk sources, pulled in transitively by the ``rules_distroless``
+       ``flatten`` rule (see above)
+   * - ``repo1.maven.org``
+     - The PlantUML jar (``net.sourceforge.plantuml:plantuml``) — required by
+       **every** documentation target
+   * - ``archive.ubuntu.com``
+     - ``lcov_deb``, used only by ``//coverage:combined_report``
+
+Rewrite them with a ``downloader_config`` file::
+
+   rewrite github.com/(.*) my-mirror.example.com/external-github-com/$1
+   rewrite raw.githubusercontent.com/(.*) my-mirror.example.com/external-raw-githubusercontent-com/$1
+   rewrite pypi.org/(.*) my-mirror.example.com/external-pypi-org/$1
+   rewrite files.pythonhosted.org/(.*) my-mirror.example.com/external-pypi-files/$1
+   rewrite snapshot.ubuntu.com/ubuntu/(.*) my-mirror.example.com/external-ubuntu-snapshots/$1
+   rewrite ftp.gnu.org/gnu/(.*) my-mirror.example.com/external-ftp-gnu-org/$1
+   rewrite repo1.maven.org/maven2/(.*) my-mirror.example.com/external-maven-central/$1
+   rewrite archive.ubuntu.com/ubuntu/(.*) my-mirror.example.com/external-ubuntu-archive/$1
+
+   allow my-mirror.example.com
+
+and reference it from ``.bazelrc``::
+
+   common --downloader_config=downloader_config
+
+.. note::
+
+   ``repo1.maven.org`` and ``snapshot.ubuntu.com`` are easy to miss: neither
+   appears in a ``bazel_dep``.  They are reached from a module extension
+   (``maven.install`` and ``apt.install``) and therefore only fail once a
+   documentation target is actually built.
+
+IPv6-only networks
+~~~~~~~~~~~~~~~~~~
+
+Bazel's downloader runs inside the Bazel JVM, which prefers IPv4 by default.
+On an IPv6-only network — typical for minimal, air-gapped CI containers —
+repository fetches hang or fail with connection errors even though the mirror
+is reachable.  Force IPv6 in ``.bazelrc``::
+
+   # Prefer IPv6 over IPv4, required on IPv6-only CI networks.
+   startup --host_jvm_args=-Djava.net.preferIPv6Addresses=true
+   common --repo_env=JAVA_TOOL_OPTIONS=-Djava.net.preferIPv6Addresses=true
+
+Both lines are needed and cover different processes:
+
+``startup --host_jvm_args``
+  Applies to the Bazel server JVM itself, which performs ``http_archive`` and
+  repository-rule downloads.
+
+``common --repo_env=JAVA_TOOL_OPTIONS``
+  Applies to JVMs started *by* repository rules and module extensions as
+  subprocesses (for example ``rules_jvm_external`` resolving the PlantUML
+  coordinates), which do not inherit ``--host_jvm_args``.
+
+Because ``--repo_env`` is part of the repository-rule cache key, changing it
+invalidates fetched repositories — set it once in a checked-in ``.bazelrc``
+rather than passing it ad hoc.
