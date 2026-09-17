@@ -107,21 +107,38 @@ def _requirements_impl(ctx):
             srcs = depset([lobster_file]),
             name = ctx.label.name,
         )
+        assumed_srcs_from_deps = [
+            dep[AssumedSystemRequirementsInfo].srcs
+            for dep in ctx.attr.deps
+            if AssumedSystemRequirementsInfo in dep
+        ]
+        if assumed_srcs_from_deps:
+            assumed_provider = AssumedSystemRequirementsInfo(
+                srcs = depset(transitive = assumed_srcs_from_deps),
+                name = ctx.label.name,
+                is_transitive = True,
+            )
+        else:
+            assumed_provider = None
     elif ctx.attr.req_kind == "component":
         req_provider = ComponentRequirementsInfo(
             srcs = depset([lobster_file]),
             name = ctx.label.name,
         )
+        assumed_provider = None
     elif ctx.attr.req_kind == "aou":
         req_provider = AssumptionsOfUseInfo(
             aou_lobster = depset([lobster_file]),
             name = ctx.label.name,
         )
+        assumed_provider = None
     else:  # assumed_system
         req_provider = AssumedSystemRequirementsInfo(
             srcs = depset([lobster_file]),
             name = ctx.label.name,
+            is_transitive = False,
         )
+        assumed_provider = None
 
     image_outputs = subrule_trlc_image_stage(ctx.files.image_srcs)
 
@@ -132,7 +149,7 @@ def _requirements_impl(ctx):
         if SphinxSourcesInfo in dep:
             transitive_sphinx.append(dep[SphinxSourcesInfo].deps)
 
-    return [
+    providers = [
         DefaultInfo(files = all_trlc_files),
         TrlcProviderInfo(
             spec = spec_depset,
@@ -146,6 +163,9 @@ def _requirements_impl(ctx):
             aux_srcs = depset(),
         ),
     ]
+    if assumed_provider != None:
+        providers = providers + [assumed_provider]
+    return providers
 
 # ============================================================================
 # Rule Definition
