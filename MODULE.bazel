@@ -184,7 +184,10 @@ crate.annotation(
         "clang_5_0",  # Entity::get_exception_specification()
     ],
 )
-crate.from_specs()
+crate.from_specs(
+    cargo_lockfile = "//:Cargo.lock",
+    lockfile = "//:Cargo.Bazel.lock",
+)
 use_repo(crate, "crates")
 
 ###############################################################################
