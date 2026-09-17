@@ -83,6 +83,7 @@ _IMPORTS = ["ScoreReq"]
 _RE_MARKUP = re.compile(r"\*\*?(.*?)\*\*?")
 _RE_DIRECTIVE = re.compile(r"^\.\.\s+([\w]+)::\s*(.*)")
 _RE_FIELD = re.compile(r"^\s+:([\w]+):\s*(.*)")  # noqa: E501
+_RE_NEEDS_FILTER = re.compile(r"(\s*\[[^\[\]]*\])+\s*$")
 
 _TRLC_HEADER = """\
 /********************************************************************************
@@ -136,8 +137,19 @@ def _escape(text: str) -> str:
 
 
 def _collect_refs(fields: dict[str, str]) -> list[str]:
-    """Extract all cross-reference IDs from relationship fields."""
-    return [r.strip() for k in _REF_FIELDS if k in fields for r in fields[k].split(",") if r.strip()]
+    """Extract all cross-reference IDs from relationship fields.
+
+    Strips one or more trailing sphinx-needs filter expressions (E.g.:
+    [version==1] or [version==1][status==valid]), which are not
+    valid in TRLC reference syntax.
+    """
+    return [
+        _RE_NEEDS_FILTER.sub("", r.strip()).strip()
+        for k in _REF_FIELDS
+        if k in fields
+        for r in fields[k].split(",")
+        if r.strip()
+    ]
 
 
 def parse_directives(content: str) -> list[dict[str, Any]]:
@@ -153,6 +165,14 @@ def parse_directives(content: str) -> list[dict[str, Any]]:
 
         directive, title = m.group(1), m.group(2).strip()
         i += 1
+
+        # RST directive arguments may wrap onto continuation lines (docutils
+        # allows this); consume any such lines here before the field list,
+        # otherwise they get mis-parsed as body text and the real :id: (and
+        # other fields) on the following lines are missed entirely.
+        while i < len(lines) and lines[i].strip() and not _RE_FIELD.match(lines[i]):
+            title += " " + lines[i].strip()
+            i += 1
 
         fields, i = _collect_fields(lines, i)
         raw_body, i = _collect_body(lines, i)

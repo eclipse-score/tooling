@@ -336,6 +336,37 @@ class TestParseDirectives(unittest.TestCase):
         self.assertNotIn("**", result[0]["body"])
         self.assertIn("robust", result[0]["body"])
 
+    def test_multi_line_title_is_joined_and_fields_still_parsed(self):
+        """docutils allows a directive's argument to wrap onto continuation
+        lines with no blank-line separator; the real field list must still
+        be found on the lines that follow."""
+        rst = _rst(
+            ".. comp_req:: Logging During the C++ Static Storage",
+            "   construction and destruction.",
+            "   :id: comp_req__test__001",
+            "   :safety: QM",
+            "",
+            "   Body.",
+        )
+        result = parse_directives(rst)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(
+            result[0]["title"],
+            "Logging During the C++ Static Storage construction and destruction.",
+        )
+        self.assertEqual(result[0]["fields"]["id"], "comp_req__test__001")
+
+    def test_single_line_title_unaffected_by_continuation_handling(self):
+        rst = _rst(
+            ".. feat_req:: Single Line Title",
+            "   :id: feat_req__test__001",
+            "   :safety: QM",
+            "",
+            "   Body.",
+        )
+        result = parse_directives(rst)
+        self.assertEqual(result[0]["title"], "Single Line Title")
+
 
 # ---------------------------------------------------------------------------
 # render_trlc – TRLC output for each S-CORE type
@@ -544,6 +575,25 @@ class TestCollectRefs(unittest.TestCase):
 
     def test_returns_empty_when_no_ref_fields(self):
         self.assertEqual(_collect_refs({"safety": "QM", "reqtype": "Functional"}), [])
+
+    def test_strips_trailing_needs_filter(self):
+        """sphinx-needs filter suffixes are not valid TRLC reference syntax."""
+        self.assertEqual(
+            _collect_refs({"satisfies": "req_001[version==1]"}),
+            ["req_001"],
+        )
+
+    def test_strips_multiple_trailing_needs_filters(self):
+        self.assertEqual(
+            _collect_refs({"satisfies": "req_001[version==1][status==valid]"}),
+            ["req_001"],
+        )
+
+    def test_strips_needs_filter_from_each_comma_separated_ref(self):
+        self.assertEqual(
+            _collect_refs({"satisfies": "req_001[version==1], req_002[status==valid]"}),
+            ["req_001", "req_002"],
+        )
 
 
 # ---------------------------------------------------------------------------

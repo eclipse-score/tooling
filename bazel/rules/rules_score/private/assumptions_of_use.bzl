@@ -40,6 +40,7 @@ def assumptions_of_use(
         srcs,
         deps = [],
         ref_package = None,
+        package = "",
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:aou_config"),
         **kwargs):
     """Define Assumptions of Use following S-CORE process guidelines.
@@ -92,6 +93,7 @@ def assumptions_of_use(
         req_kind = "aou",
         lobster_config = lobster_config,
         ref_package = ref_package or "",
+        package = package,
         **kwargs
     )
     trlc_requirements_test(
