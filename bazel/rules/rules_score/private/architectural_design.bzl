@@ -198,7 +198,7 @@ def _colocate_view_files(ctx, staged_files, view_output_dir):
         colocated[relative_path] = copy
     return colocated
 
-def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs_files, internal_api_fbs_files):
+def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs_files, internal_api_fbs_files, static_view_fbs_files):
     """Run the architectural-design validation profile.
 
     Args:
@@ -207,6 +207,7 @@ def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs
         sequence_fbs_files: Sequence-diagram FlatBuffer files generated from this target's dynamic inputs.
         public_api_fbs_files: List of public-API FlatBuffer files generated from this target's public_api inputs.
         internal_api_fbs_files: List of internal-API FlatBuffer files generated from this target's internal_api inputs.
+        static_view_fbs_files: Component-diagram FlatBuffer files generated from this target's static_view inputs.
     Returns:
         Struct with file and name fields describing the validation log entry.
     """
@@ -220,8 +221,9 @@ def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs
             "sequence_diagrams": [f.path for f in sequence_fbs_files],
             "public_api_diagrams": [f.path for f in public_api_fbs_files],
             "internal_api_diagrams": [f.path for f in internal_api_fbs_files],
+            "static_view": [f.path for f in static_view_fbs_files],
         },
-        inputs = component_fbs_files + sequence_fbs_files + public_api_fbs_files + internal_api_fbs_files,
+        inputs = component_fbs_files + sequence_fbs_files + public_api_fbs_files + internal_api_fbs_files + static_view_fbs_files,
         mnemonic = "ArchitecturalDesignValidate",
         maturity = ctx.attr.maturity,
         log_level = get_log_level(ctx),
@@ -247,10 +249,10 @@ def _architectural_design_impl(ctx):
 
     # All diagrams of this target share one flat fbs/lobster/idmap namespace
     # (keyed by ctx.label.name), so stems must be disambiguated across all
-    # four views together, not per-view.
+    # views together, not per-view.
     stems = _disambiguated_stems(
         ctx,
-        ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api,
+        ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api + ctx.files.static_view,
     )
 
     view_fbs = {}
@@ -319,16 +321,17 @@ def _architectural_design_impl(ctx):
     public_api_fbs = depset(view_fbs["public_api"])
     internal_api_fbs = depset(view_fbs["internal_api"])
     public_api_lobster = depset(view_lobster["public_api"])
+    static_view_fbs = depset(view_fbs["static_view"])
 
     all_source_files = depset(transitive = view_source_files)
 
-    # All idmap sidecars (across static/dynamic/public_api/internal_api) are
+    # All idmap sidecars (across static/dynamic/public_api/internal_api/static_view) are
     # staged into the sphinx sources so the `clickable_plantuml` extension can
     # discover them (it scans `srcdir` recursively for `*.idmap.json`) and
     # resolve cross-diagram links — including component diagrams linking to
     # the class diagrams that elaborate their public/internal API interfaces.
     all_idmap_files = depset(
-        view_idmap["static"] + view_idmap["dynamic"] + view_idmap["public_api"] + view_idmap["internal_api"],
+        view_idmap["static"] + view_idmap["dynamic"] + view_idmap["public_api"] + view_idmap["internal_api"] + view_idmap["static_view"],
     )
 
     sphinx_files = depset(
@@ -341,6 +344,7 @@ def _architectural_design_impl(ctx):
         view_fbs["dynamic"],
         view_fbs["public_api"],
         view_fbs["internal_api"],
+        view_fbs["static_view"],
     )
 
     # `deps` carries everything needed in the Sphinx tree for this rule
@@ -360,6 +364,7 @@ def _architectural_design_impl(ctx):
             dynamic = dynamic_fbs,
             public_api = public_api_fbs,
             internal_api = internal_api_fbs,
+            static_view = static_view_fbs,
             view_root_indexes = view_root_indexes,
             name = ctx.label.name,
             public_api_lobster_files = public_api_lobster,
@@ -406,6 +411,16 @@ def _architectural_design_attrs():
                   "Classified separately so their FlatBuffers outputs are exposed via " +
                   "ArchitecturalDesignInfo.internal_api for downstream validation.",
         ),
+        "static_view": attr.label_list(
+            allow_files = [".puml", ".plantuml"],
+            mandatory = False,
+            doc = "Component diagrams that present a partial view of the static architecture. " +
+                  "Parsed identically to `static`, but never used to define the units/components " +
+                  "validated against the Bazel component graph. Instead, every component/unit " +
+                  "defined here must also be defined, under the same parent, in `static`; " +
+                  "the build fails if a `static_view` diagram introduces a component/unit that is " +
+                  "not present in the `static` diagrams.",
+        ),
         "maturity": attr.string(
             default = "release",
             values = ["release", "development"],
@@ -444,6 +459,7 @@ def architectural_design(
         dynamic = [],
         public_api = [],
         internal_api = [],
+        static_view = [],
         maturity = "release",
         **kwargs):
     """Define architectural design following S-CORE process guidelines.
@@ -478,6 +494,15 @@ def architectural_design(
             static/dynamic diagrams but classified separately so their
             FlatBuffers outputs are exposed via ArchitecturalDesignInfo.
             internal_api for downstream validation.
+        static_view: Optional list of .puml component diagrams that present a
+            partial view of the static architecture. These are parsed
+            identically to `static`, but are not used to define the
+            units/components validated against the Bazel component graph.
+            Instead, every component/unit defined in a `static_view` diagram
+            must also be defined, under the same parent, in `static`: it may
+            only contain a subset of the units/components of the matching
+            `static` diagram. The build fails if a `static_view` diagram
+            introduces a component/unit that is not present in `static`.
         maturity: Maturity level of the architectural design. Use
             "development" to write validation findings without failing the
             Bazel action.
@@ -510,6 +535,7 @@ def architectural_design(
         dynamic = dynamic,
         public_api = public_api,
         internal_api = internal_api,
+        static_view = static_view,
         maturity = maturity,
         **kwargs
     )

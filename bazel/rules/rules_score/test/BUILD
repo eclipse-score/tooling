@@ -600,6 +600,67 @@ dependable_element(
     deps = [],
 )
 
+# Demonstrates architectural_design's `static_view` attribute: `static_view`
+# diagrams are parsed like `static`, but never define the units/components
+# validated against the Bazel component graph. Instead, every component/unit
+# defined in a `static_view` diagram must also be defined, under the same
+# parent, in `static` -- here, static_view_overview.puml (component_sv with a
+# single child unit_sv) is a consistent subset of static_view_static.puml
+# (component_sv with unit_sv AND unit_sv_extra), so `bazel build` succeeds.
+# The static-vs-static_view consistency check itself (including the
+# build-failure case when a static_view diagram introduces an entity absent
+# from static) is covered by validate_static_view_consistency's Rust unit
+# tests in validation/core/src/validators/test/static_view_consistency_validator_test.rs.
+#
+# public_api is also wired in (static_view_detail.puml, defining
+# `package_sv.SvInterface`) so this example also exercises the general
+# "every public API interface item must be referenced by a FailureMode"
+# traceability requirement (see fmea/dependability_analysis below) for a
+# target that also uses `static_view` -- mirroring the fmea/dependability_
+# analysis wiring from the original static_view example fixture.
+architectural_design(
+    name = "arch_design_static_view_example",
+    public_api = ["fixtures/clickable_example/static_view_detail.puml"],
+    static = ["fixtures/clickable_example/static_view_static.puml"],
+    static_view = ["fixtures/clickable_example/static_view_overview.puml"],
+)
+
+# public_api items must be referenced by a FailureMode in the SEooC's own
+# safety analysis - same requirement as public_api_example_fmea above.
+fmea(
+    name = "static_view_example_fmea",
+    arch_design = ":arch_design_static_view_example",
+    failuremodes = ["fixtures/clickable_example/static_view_failure_modes.trlc"],
+    root_causes = ["fixtures/clickable_example/static_view_fta.puml"],
+)
+
+dependability_analysis(
+    name = "static_view_example_dependability_analysis",
+    arch_design = ":arch_design_static_view_example",
+    fmea = [":static_view_example_fmea"],
+)
+
+dependable_element(
+    name = "static_view_example_lib",
+    architectural_design = [":arch_design_static_view_example"],
+    assumptions_of_use = [":aous"],
+    components = [],
+    dependability_analysis = [":static_view_example_dependability_analysis"],
+    integrity_level = "B",
+    # Downgraded to warnings for two reasons: (1) this fixture's `static`
+    # diagram declares package_sv/component_sv/unit_sv purely to demonstrate
+    # the static_view attribute and its consistency check, with no matching
+    # Bazel component/unit targets (same reasoning as unit_example_lib
+    # above); (2) it intentionally reuses "SvInterface" as both a reference
+    # and a definition, which the dependable-element validator can't
+    # distinguish from an accidental duplicate id (same reasoning as
+    # clickable_example_lib above).
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
 # Live example of clickable_plantuml's "unit to class diagram" linking chain:
 # the *static* architecture (unit_overview.puml, a component diagram) shows
 # `unit_one` as a leaf unit (no children) - a reference - and

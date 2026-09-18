@@ -98,6 +98,25 @@ architectural_design(
 Diagrams in `public_api` are classified separately so their lobster items flow
 through `public_api_lobster_files` for failure-mode traceability.
 
+`static_view` is an optional additional section for component diagrams that
+present a partial view of the static architecture (e.g. a diagram scoped to a
+subsystem). Diagrams passed to `static_view` are parsed like `static`, but are
+never used to define the units/components validated against the Bazel
+component graph. Instead, every component/unit defined in a `static_view`
+diagram must also be defined, under the same parent, in `static`: it may only
+contain a subset of the units/components of the matching `static` diagram.
+**`bazel build`** fails if a `static_view` diagram introduces a
+component/unit that is not present in `static`.
+
+The `static_view` section can be used for creating additional diagrams that
+provide a view onto the architecture which make the design easier to view / understand.
+E.g. you can create a diagram which shows a subset of components as showing all
+components in one view may be too "busy". It can also be useful when showing the
+interfaces between components. Adding all the interfaces in the diagrams in the
+`static` view may result in too many interface lines which is not readable. Instead,
+a view can be created with a subset of components and only the interfaces between these
+chosen components can be shown.
+
 ---
 
 ## `unit`
