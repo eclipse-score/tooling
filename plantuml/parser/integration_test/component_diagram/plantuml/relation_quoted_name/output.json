@@ -1,0 +1,61 @@
+{
+  "relation_quoted_name.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "identity": {
+            "name": "ApplicationLogic",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 14
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "score::mw::log",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "ApplicationLogic",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "score::mw::log",
+          "style": null,
+          "description": "verbose",
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
+        }
+      }
+    ]
+  }
+}

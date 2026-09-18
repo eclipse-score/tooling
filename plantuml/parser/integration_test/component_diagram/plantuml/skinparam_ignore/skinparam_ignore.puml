@@ -1,0 +1,45 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+@startuml
+
+skinparam component {
+  FontSize 12
+}
+skinparam component {
+  BackgroundColor<<score_logging>> #FDEBD0
+}
+skinparam component {
+   BackgroundColor<<score_baselibs>> #E8F4FA
+}
+skinparam node {
+   BackgroundColor<<score_logging>> #FDEBD0
+}
+skinparam component {
+   backgroundColor<<safety critical>> Aquamarine
+   fontColor<<needs review>> White
+}
+skinparam queue {
+   backgroundColor<<safety critical>> Aquamarine
+}
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+component Backend <<score_logging>>
+component BaseLibs <<score_baselibs>>
+component SafetyGate <<safety critical>>
+component ReviewGate <<needs review>>
+node LogNode <<score_logging>>
+[Producer] --> [Consumer]
+
+@enduml

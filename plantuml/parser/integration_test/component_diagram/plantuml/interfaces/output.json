@@ -5,7 +5,7 @@
       {
         "Element": {
           "identity": {
-            "name": "\"Command Intake\"",
+            "name": "Command Intake",
             "alias": null,
             "stereotype": null,
             "element_kind": "interface",
@@ -21,7 +21,7 @@
       {
         "Element": {
           "identity": {
-            "name": "\"Status Broadcast\"",
+            "name": "Status Broadcast",
             "alias": "StatusOut",
             "stereotype": null,
             "element_kind": "interface",

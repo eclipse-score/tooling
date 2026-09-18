@@ -211,19 +211,8 @@ sequence_description = { ":" ~ sequence_text_content? }
 // Ignored blocks
 sequence_ignored_block = _{
       sequence_sprite_block
-    | sequence_legend_block
     | sequence_transformation_block
 }
-
-sequence_legend_block = {
-    legend_block_start ~ EOL
-    ~ (!legend_block_end ~ ANY)*
-    ~ legend_block_end ~ EOL?
-}
-legend_block_start = { ^"legend" ~ legend_pos? ~ legend_align? }
-legend_pos = { ^"top" | ^"bottom" }
-legend_align = { ^"left" | ^"right" | ^"center" }
-legend_block_end = { ^"end" ~ WHITESPACE? ~ ^"legend" }
 
 sequence_transformation_block = {
     transformation_block_start ~ EOL?
@@ -269,8 +258,9 @@ sequence_layout_stmt = _{
 sequence_visibility_stmt = _{
       hide_unlinked
     | show_unlinked
-    | hide_show_member
-    | hide_show_stereotype
+    | shared_hide_show_empty_member_core
+    | sequence_hide_show_member
+    | sequence_hide_show_stereotype
 }
 
 sequence_rendering_stmt = _{
@@ -312,19 +302,17 @@ sprite_dimensions = {
 sprite_encoding = { ASCII_ALPHANUMERIC+ }
 sprite_data = { ANY+ }
 
-hide_show_member = {
-    hide_or_show ~ visibility_list ~ member_type
+sequence_hide_show_member = {
+    shared_hide_or_show ~ visibility_list ~ shared_member_type
 }
-hide_show_stereotype = {
-    hide_or_show ~ stereotype_target* ~ empty_kw? ~ stereotype_elem
+sequence_hide_show_stereotype = {
+    shared_hide_or_show ~ stereotype_target* ~ shared_empty_kw? ~ stereotype_elem
 }
-hide_or_show = { ^"hide" | ^"show" }
 visibility_list = { sequence_visibility ~ ("," ~ sequence_visibility)* }
 sequence_visibility = { ^"public" | ^"private" | ^"protected" | ^"package" }
-member_type = { ^"members" | ^"member" | ^"attributes" | ^"attribute" | ^"fields" | ^"field" | ^"methods" | ^"method" }
-stereotype_target = { class_type | sequence_qualified_name | quoted_string | stereotype }
+stereotype_target = { class_type | sequence_target_name | quoted_string | stereotype }
+sequence_target_name = { !shared_empty_kw ~ !stereotype_elem ~ sequence_qualified_name }
 class_type = { ^"class" | ^"object" | ^"interface" | ^"enum" | ^"annotation" | ^"abstract" }
-empty_kw = { ^"empty" }
 stereotype_elem = {
     ^"members" | ^"member" | ^"attributes" | ^"attribute" | ^"fields" | ^"field" |
     ^"methods" | ^"method" | ^"circle" ~ ASCII_ALPHANUMERIC* | ^"stereotypes" | ^"stereotype"
@@ -362,7 +350,7 @@ autonumber_inc = { ^"autonumber" ~ ^"inc" ~ (ASCII_ALPHA)? }
 autoactivate = { ^"autoactivate" ~ autoactivate_state? }
 autoactivate_state = { ^"on" | ^"off" }
 
-footbox_cmd = { hide_or_show? ~ ^"footbox" ~ footbox_state? }
+footbox_cmd = { shared_hide_or_show? ~ ^"footbox" ~ footbox_state? }
 footbox_state = { ^"on" | ^"off" }
 
 function_def = { ^"!function" ~ function_content }

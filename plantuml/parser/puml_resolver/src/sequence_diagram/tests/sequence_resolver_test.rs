@@ -87,6 +87,11 @@ fn test_sequence_interaction_node() {
 }
 
 #[test]
+fn test_sequence_message_direction() {
+    run_sequence_resolver_case("sequence_message_direction");
+}
+
+#[test]
 fn test_sequence_arrow_direction() {
     run_sequence_resolver_case("sequence_arrow_direction");
 }

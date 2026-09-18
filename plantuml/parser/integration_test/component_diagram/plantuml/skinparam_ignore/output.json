@@ -1,0 +1,109 @@
+{
+  "skinparam_ignore.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "identity": {
+            "name": "Backend",
+            "alias": null,
+            "stereotype": "score_logging",
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 38
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "BaseLibs",
+            "alias": null,
+            "stereotype": "score_baselibs",
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 39
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "SafetyGate",
+            "alias": null,
+            "stereotype": "safety critical",
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 40
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "ReviewGate",
+            "alias": null,
+            "stereotype": "needs review",
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 41
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "LogNode",
+            "alias": null,
+            "stereotype": "score_logging",
+            "element_kind": "node",
+            "source_location": {
+              "file": "",
+              "line": 42
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "[Producer]",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "[Consumer]",
+          "style": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 43
+          }
+        }
+      }
+    ]
+  }
+}

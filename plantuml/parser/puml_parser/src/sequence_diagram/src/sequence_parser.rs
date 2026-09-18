@@ -1019,4 +1019,43 @@ mod dispatch_style_tests {
             actual => panic!("expected message after ref statement, got {:?}", actual),
         }
     }
+
+    #[test]
+    fn test_single_line_note_does_not_consume_following_groups() {
+        let input = "@startuml\nparticipant P1\nparticipant P2\npar Concurrent Writing\n  note over P1: WriteDataProducer1(acquired_data)\\nWriting on range [8:72)\nelse\n  note over P2: WriteDataProducer2(acquired_data)\\nWriting on range [80:96)\nend\nP1 -> P2 : done\n@enduml";
+        let mut parser = PumlSequenceParser;
+        let doc = parser
+            .parse_file(
+                &Rc::new(PathBuf::from("single_line_note_group.puml")),
+                input,
+                LogLevel::Info,
+            )
+            .expect("single-line notes must not consume following group statements");
+
+        assert_eq!(doc.statements.len(), 6);
+
+        match &doc.statements[2] {
+            Statement::GroupCmd(GroupCmd::Start(group)) => {
+                assert_eq!(group.kind, GroupKind::Par);
+            }
+            actual => panic!("expected par group start, got {:?}", actual),
+        }
+
+        match &doc.statements[3] {
+            Statement::GroupCmd(GroupCmd::Else(_)) => {}
+            actual => panic!("expected else branch, got {:?}", actual),
+        }
+
+        match &doc.statements[4] {
+            Statement::GroupCmd(GroupCmd::End(_)) => {}
+            actual => panic!("expected group end, got {:?}", actual),
+        }
+
+        match &doc.statements[5] {
+            Statement::Message(message) => {
+                assert_eq!(message.description.as_deref(), Some("done"));
+            }
+            actual => panic!("expected trailing message, got {:?}", actual),
+        }
+    }
 }

@@ -1,0 +1,77 @@
+{
+  "ignored_visibility_statements.puml": {
+    "name": "ignored_visibility_statements",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "A",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 20
+            },
+            "is_abstract": false,
+            "type_aliases": [],
+            "attributes": [],
+            "methods": [],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
+          }
+        }
+      },
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "B",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 21
+            },
+            "is_abstract": false,
+            "type_aliases": [],
+            "attributes": [],
+            "methods": [],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
+          }
+        }
+      },
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "C",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 22
+            },
+            "is_abstract": false,
+            "type_aliases": [],
+            "attributes": [],
+            "methods": [],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

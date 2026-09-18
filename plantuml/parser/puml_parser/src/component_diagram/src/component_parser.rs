@@ -20,7 +20,8 @@ use crate::{
     Statement,
 };
 use parser_core::{
-    format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser, ErrorLocation,
+    find_note_alias, format_parse_tree, is_note_rule, pest_to_syntax_error, BaseParseError,
+    DiagramParser, ErrorLocation, IgnoredNoteRegistry,
 };
 use puml_utils::LogLevel;
 use source_location::SourceLocation;
@@ -56,17 +57,25 @@ pub struct PumlComponentParser;
 // lobster-trace: Tools.ArchitectureModelingComponentHierarchyComponent
 // lobster-trace: Tools.ArchitectureModelingComponentInteract
 impl PumlComponentParser {
+    fn register_ignored_note(
+        ignored_notes: &mut IgnoredNoteRegistry,
+        pair: pest::iterators::Pair<Rule>,
+    ) {
+        if let Some(alias) = find_note_alias(pair) {
+            ignored_notes.register(alias);
+        }
+    }
+
     fn parse_statement(
         pair: pest::iterators::Pair<Rule>,
         source_file: &str,
+        ignored_notes: &mut IgnoredNoteRegistry,
     ) -> Result<Vec<Statement>, ComponentError> {
         for inner in pair.into_inner() {
             match inner.as_rule() {
                 Rule::element => {
-                    return Ok(vec![Statement::Element(Self::parse_element(
-                        inner,
-                        source_file,
-                    )?)]);
+                    let element = Self::parse_element(inner, source_file, ignored_notes)?;
+                    return Ok(vec![Statement::Element(element)]);
                 }
                 Rule::relation => {
                     return Ok(vec![Statement::Relation(Self::parse_relation(
@@ -79,7 +88,11 @@ impl PumlComponentParser {
                 }
                 Rule::together_block => {
                     // Flatten children into the enclosing scope (drop the wrapper)
-                    return Self::parse_together_block(inner, source_file);
+                    return Self::parse_together_block(inner, source_file, ignored_notes);
+                }
+                _ if is_note_rule(inner.as_rule()) => {
+                    Self::register_ignored_note(ignored_notes, inner);
+                    return Ok(vec![]);
                 }
                 _ => {}
             }
@@ -122,11 +135,22 @@ impl PumlComponentParser {
     fn parse_together_block(
         pair: pest::iterators::Pair<Rule>,
         source_file: &str,
+        ignored_notes: &mut IgnoredNoteRegistry,
     ) -> Result<Vec<Statement>, ComponentError> {
         let mut stmts = Vec::new();
         for inner in pair.into_inner() {
-            if inner.as_rule() == Rule::diagram_statement {
-                stmts.append(&mut Self::parse_statement(inner, source_file)?);
+            match inner.as_rule() {
+                Rule::diagram_statement => {
+                    stmts.append(&mut Self::parse_statement(
+                        inner,
+                        source_file,
+                        ignored_notes,
+                    )?);
+                }
+                _ if is_note_rule(inner.as_rule()) => {
+                    Self::register_ignored_note(ignored_notes, inner);
+                }
+                _ => {}
             }
         }
         Ok(stmts)
@@ -135,6 +159,7 @@ impl PumlComponentParser {
     fn parse_element(
         pair: pest::iterators::Pair<Rule>,
         source_file: &str,
+        ignored_notes: &mut IgnoredNoteRegistry,
     ) -> Result<Element, ComponentError> {
         let source_location = SourceLocation::new(source_file, pair.line_col().0 as u32);
         let mut kind = String::new();
@@ -197,11 +222,25 @@ impl PumlComponentParser {
                 Rule::stereotype => {
                     stereotype = Self::extract_stereotype(inner);
                 }
+                Rule::element_modifier => {
+                    for modifier in inner.into_inner() {
+                        match modifier.as_rule() {
+                            Rule::alias_clause => {
+                                alias = Self::extract_alias(modifier);
+                            }
+                            Rule::stereotype => {
+                                stereotype = Self::extract_stereotype(modifier);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
                 Rule::element_style => {
                     element.style = Some(Self::parse_component_style(inner)?);
                 }
                 Rule::statement_block => {
-                    element.statements = Self::parse_statement_block(inner, source_file)?;
+                    element.statements =
+                        Self::parse_statement_block(inner, source_file, ignored_notes)?;
                 }
                 _ => {}
             }
@@ -232,10 +271,10 @@ impl PumlComponentParser {
         for inner in pair.into_inner() {
             match inner.as_rule() {
                 Rule::relation_left => {
-                    lhs = inner.as_str().to_string();
+                    lhs = Self::strip_wrapping_quotes(inner.as_str());
                 }
                 Rule::relation_right => {
-                    rhs = inner.as_str().to_string();
+                    rhs = Self::strip_wrapping_quotes(inner.as_str());
                 }
                 Rule::connection_arrow => {
                     arrow = Self::parse_arrow(inner)?;
@@ -288,7 +327,7 @@ impl PumlComponentParser {
     fn extract_interface_name(pair: pest::iterators::Pair<Rule>) -> String {
         pair.into_inner()
             .find(|inner| inner.as_rule() == Rule::short_form_interface_name)
-            .map(|inner| inner.as_str().to_string())
+            .map(|inner| Self::strip_wrapping_quotes(inner.as_str()))
             .unwrap_or_default()
     }
 
@@ -311,6 +350,14 @@ impl PumlComponentParser {
             .map(|inner| inner.as_str().to_string())
     }
 
+    fn strip_wrapping_quotes(raw: &str) -> String {
+        if let Some(stripped) = raw.strip_prefix('"').and_then(|s| s.strip_suffix('"')) {
+            return stripped.to_string();
+        }
+
+        raw.to_string()
+    }
+
     fn parse_default_element(
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<(String, Option<String>), ComponentError> {
@@ -323,14 +370,7 @@ impl PumlComponentParser {
                     kind = inner.as_str().to_string();
                 }
                 Rule::default_element_name => {
-                    let raw_name = inner.as_str().to_string();
-                    // Remove surrounding quotes if present
-                    let clean_name = if raw_name.starts_with('"') && raw_name.ends_with('"') {
-                        raw_name[1..raw_name.len() - 1].to_string()
-                    } else {
-                        raw_name
-                    };
-                    name = Some(clean_name);
+                    name = Some(Self::strip_wrapping_quotes(inner.as_str()));
                 }
                 _ => {}
             }
@@ -366,22 +406,48 @@ impl PumlComponentParser {
     fn parse_statement_block(
         pair: pest::iterators::Pair<Rule>,
         source_file: &str,
+        ignored_notes: &mut IgnoredNoteRegistry,
     ) -> Result<Vec<Statement>, ComponentError> {
         let mut statements = Vec::new();
 
         for inner in pair.into_inner() {
             match inner.as_rule() {
                 Rule::diagram_statement => {
-                    let mut stmts = Self::parse_statement(inner, source_file)?;
+                    let mut stmts = Self::parse_statement(inner, source_file, ignored_notes)?;
                     statements.append(&mut stmts);
                 }
-                _ => {
-                    // Skip empty lines and other rules like braces
+                _ if is_note_rule(inner.as_rule()) => {
+                    Self::register_ignored_note(ignored_notes, inner);
                 }
+                _ => {}
             }
         }
 
         Ok(statements)
+    }
+
+    fn filter_note_relations(
+        statements: Vec<Statement>,
+        ignored_notes: &IgnoredNoteRegistry,
+    ) -> Vec<Statement> {
+        statements
+            .into_iter()
+            .filter_map(|statement| match statement {
+                Statement::Relation(relation) => {
+                    if ignored_notes.filters_endpoints(&relation.lhs, &relation.rhs) {
+                        None
+                    } else {
+                        Some(Statement::Relation(relation))
+                    }
+                }
+                Statement::Element(mut element) => {
+                    element.statements =
+                        Self::filter_note_relations(element.statements, ignored_notes);
+                    Some(Statement::Element(element))
+                }
+                other => Some(other),
+            })
+            .collect()
     }
 }
 
@@ -419,6 +485,7 @@ impl DiagramParser for PumlComponentParser {
             statements: Vec::new(),
         };
         let source_file = path.as_ref().clone().to_string_lossy().to_string();
+        let mut ignored_notes = IgnoredNoteRegistry::default();
 
         for pair in pairs {
             for inner_pair in pair.into_inner() {
@@ -432,8 +499,12 @@ impl DiagramParser for PumlComponentParser {
                         }
                     }
                     Rule::diagram_statement => {
-                        let mut stmts = Self::parse_statement(inner_pair, &source_file)?;
+                        let mut stmts =
+                            Self::parse_statement(inner_pair, &source_file, &mut ignored_notes)?;
                         document.statements.append(&mut stmts);
+                    }
+                    _ if is_note_rule(inner_pair.as_rule()) => {
+                        Self::register_ignored_note(&mut ignored_notes, inner_pair);
                     }
                     _ => {
                         // Skip empty lines and other rules like enduml
@@ -441,6 +512,8 @@ impl DiagramParser for PumlComponentParser {
                 }
             }
         }
+
+        document.statements = Self::filter_note_relations(document.statements, &ignored_notes);
 
         Ok(document)
     }
@@ -546,5 +619,83 @@ mod dispatch_style_tests {
             relation.source_location.file.as_ref(),
             expected_file.as_str()
         );
+    }
+
+    #[test]
+    fn test_single_line_note_alias_relation_is_filtered() {
+        let input =
+            "@startuml\ncomponent Baselibs\nnote \"Repository boundary\" as N1\nBaselibs -[hidden]down-> N1\n@enduml";
+        let mut parser = PumlComponentParser;
+        let doc = parser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        assert_eq!(doc.statements.len(), 1);
+        assert!(matches!(doc.statements[0], Statement::Element(_)));
+    }
+
+    #[test]
+    fn test_multiline_note_alias_relation_is_filtered() {
+        let input = "@startuml\ncomponent Baselibs\nnote as N1\n  Repository boundary\nend note\nBaselibs -[hidden]down-> N1\n@enduml";
+        let mut parser = PumlComponentParser;
+        let doc = parser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        assert_eq!(doc.statements.len(), 1);
+        assert!(matches!(doc.statements[0], Statement::Element(_)));
+    }
+
+    #[test]
+    fn test_quoted_component_name_matches_quoted_relation_endpoint() {
+        let input = "@startuml\ncomponent \"score::mw::log\"\ncomponent ApplicationLogic\nApplicationLogic --> \"score::mw::log\"\n@enduml";
+        let mut parser = PumlComponentParser;
+        let doc = parser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        let element_name = match &doc.statements[0] {
+            Statement::Element(element) => element
+                .identity
+                .name
+                .as_deref()
+                .expect("component name must be present"),
+            actual => panic!(
+                "expected first statement to be an element, got {:?}",
+                actual
+            ),
+        };
+
+        let relation_rhs = match &doc.statements[2] {
+            Statement::Relation(relation) => relation.rhs.as_str(),
+            actual => panic!(
+                "expected third statement to be a relation, got {:?}",
+                actual
+            ),
+        };
+
+        assert_eq!(element_name, "score::mw::log");
+        assert_eq!(relation_rhs, "score::mw::log");
+    }
+
+    #[test]
+    fn test_nested_element_stereotype_before_alias_is_accepted() {
+        let input = "@startuml\ncomponent Example <<component>> as ExampleAlias\n@enduml";
+        let mut parser = PumlComponentParser;
+        let doc = parser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        let element = match &doc.statements[0] {
+            Statement::Element(element) => element,
+            actual => panic!(
+                "expected first statement to be an element, got {:?}",
+                actual
+            ),
+        };
+
+        assert_eq!(element.identity.name.as_deref(), Some("Example"));
+        assert_eq!(element.identity.alias.as_deref(), Some("ExampleAlias"));
+        assert_eq!(element.identity.stereotype.as_deref(), Some("component"));
     }
 }

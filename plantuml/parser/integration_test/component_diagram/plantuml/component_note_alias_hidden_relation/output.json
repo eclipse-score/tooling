@@ -1,0 +1,39 @@
+{
+  "component_note_alias_hidden_relation.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "identity": {
+            "name": "Baselibs",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "Logging",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      }
+    ]
+  }
+}

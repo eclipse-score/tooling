@@ -1,0 +1,190 @@
+{
+  "element_style_keyword_prefix_color.puml": {
+    "name": "element_style_keyword_prefix_color",
+    "statements": [
+      {
+        "Element": {
+          "identity": {
+            "name": "Trace Collector",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 14
+            }
+          },
+          "style": {
+            "color": null,
+            "attributes": []
+          },
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "Signal Adapter",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
+          },
+          "style": {
+            "color": null,
+            "attributes": []
+          },
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "Status Fanout",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          },
+          "style": {
+            "color": null,
+            "attributes": []
+          },
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "Text Overlay",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
+          },
+          "style": {
+            "color": null,
+            "attributes": []
+          },
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "Control Plane",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 18
+            }
+          },
+          "style": {
+            "color": null,
+            "attributes": []
+          },
+          "statements": []
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "Trace Collector",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "Signal Adapter",
+          "style": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "Signal Adapter",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "Status Fanout",
+          "style": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 20
+          }
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "Status Fanout",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "Text Overlay",
+          "style": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 21
+          }
+        }
+      },
+      {
+        "Relation": {
+          "lhs": "Text Overlay",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "Control Plane",
+          "style": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 22
+          }
+        }
+      }
+    ]
+  }
+}

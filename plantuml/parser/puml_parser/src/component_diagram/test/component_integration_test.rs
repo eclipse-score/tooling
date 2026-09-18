@@ -102,6 +102,21 @@ fn test_individual_colors() {
 }
 
 #[test]
+fn test_element_style_keyword_prefix_color() {
+    run_component_diagram_parser_case("element_style_keyword_prefix_color");
+}
+
+#[test]
+fn test_element_modifier_order() {
+    run_component_diagram_parser_case("element_modifier_order");
+}
+
+#[test]
+fn test_ignored_legend_block() {
+    run_component_diagram_parser_case("ignored_legend_block");
+}
+
+#[test]
 fn test_interfaces() {
     run_component_diagram_parser_case("interfaces");
 }
@@ -114,4 +129,19 @@ fn test_long_description() {
 #[test]
 fn test_use_uml2_notation() {
     run_component_diagram_parser_case("use_uml2_notation");
+}
+
+#[test]
+fn test_skinparam_ignore() {
+    run_component_diagram_parser_case("skinparam_ignore");
+}
+
+#[test]
+fn test_relation_quoted_name() {
+    run_component_diagram_parser_case("relation_quoted_name");
+}
+
+#[test]
+fn test_component_note_alias_hidden_relation() {
+    run_component_diagram_parser_case("component_note_alias_hidden_relation");
 }

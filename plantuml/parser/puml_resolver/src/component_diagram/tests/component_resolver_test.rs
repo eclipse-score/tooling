@@ -105,6 +105,11 @@ fn test_relation_absolute_fqn() {
 }
 
 #[test]
+fn test_relation_quoted_name() {
+    run_component_resolver_case("relation_quoted_name");
+}
+
+#[test]
 fn test_invalid_unresolved_reference() {
     run_component_resolver_case("invalid_unresolved_reference");
 }

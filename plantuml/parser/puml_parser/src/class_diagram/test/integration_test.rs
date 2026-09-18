@@ -101,6 +101,11 @@ fn test_friend_method() {
 }
 
 #[test]
+fn test_ignored_visibility_statements() {
+    run_class_diagram_parser_case("ignored_visibility_statements");
+}
+
+#[test]
 fn test_method_modifier_placement() {
     run_class_diagram_parser_case("method_modifier_placement");
 }

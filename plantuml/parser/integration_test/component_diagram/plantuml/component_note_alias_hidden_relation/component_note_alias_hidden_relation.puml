@@ -1,0 +1,57 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+@startuml
+
+component Baselibs
+component Logging
+
+note "Component boundary" as N2
+
+note as N1
+  Repository boundary note.
+end note
+
+note over Baselibs #PeachPuff
+  Over note.
+end note
+
+note left
+  Left note.
+end note
+
+note right
+  Right note.
+end note
+
+note left of Baselibs
+  Left-of note.
+end note
+
+note right of Logging
+  Right-of note.
+end note
+
+note bottom of Baselibs
+  Bottom-of note.
+end note
+
+note top of Logging
+  Top-of note.
+end note
+
+Baselibs -[hidden]down-> N1
+Logging -[hidden]down-> N1
+Baselibs -[hidden]down-> N2
+Logging -[hidden]down-> N2
+
+@enduml

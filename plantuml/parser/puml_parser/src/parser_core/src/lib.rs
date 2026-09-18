@@ -13,10 +13,12 @@
 pub mod common_ast;
 pub mod common_parser;
 pub mod error;
+pub mod note_utils;
 
 pub use common_ast::*;
 pub use common_parser::*;
 pub use error::{pest_to_syntax_error, BaseParseError, ErrorLocation};
+pub use note_utils::*;
 
 /// Recursively format a Pest parse tree into an indented string for diagnostic output.
 ///

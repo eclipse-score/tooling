@@ -68,10 +68,14 @@ class_start = {
     ~ (COMMENT | empty_line)*
     ~ startuml
     ~ EOL*
-    ~ (top_level ~ EOL* | ignored_block ~ EOL* | ignored_stmt ~ EOL+)*
+    ~ (top_level ~ EOL* | ignored_block ~ EOL* | ignored_stmt ~ EOL+ | class_ignored_stmt ~ EOL+)*
     ~ EOL*
     ~ enduml
     ~ EOI
+}
+
+class_ignored_stmt = _{
+    shared_hide_show_empty_member_core
 }
 
 top_level = {
@@ -93,16 +97,6 @@ together_def = {
     ~ (top_level ~ EOL*)*
     ~ EOL*
     ~ "}"
-}
-
-legend_block = @{
-    ^"legend"
-    ~ (
-        !(WHITESPACE* ~ (^"endlegend" | (^"end" ~ WHITESPACE+ ~ ^"legend")))
-        ~ ANY
-    )*
-    ~ WHITESPACE*
-    ~ (^"endlegend" | (^"end" ~ WHITESPACE+ ~ ^"legend"))
 }
 
 ///////////////////////////////////////////////////////////////
