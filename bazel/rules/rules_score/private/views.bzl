@@ -28,4 +28,5 @@ ARCH_VIEWS = [
     ("dynamic", "Dynamic Design"),
     ("public_api", "Public API"),
     ("internal_api", "Internal API"),
+    ("static_view", "Static View"),
 ]

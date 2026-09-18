@@ -18,7 +18,7 @@ use crate::models::{
 use crate::readers::{ClassDiagramReader, ComponentDiagramReader, SequenceDiagramReader};
 use crate::validators::{
     validate_component_internal_api, validate_component_public_api, validate_component_sequence,
-    validate_sequence_internal_api,
+    validate_sequence_internal_api, validate_static_view_consistency,
 };
 use crate::ValidationResult;
 use serde::Deserialize;
@@ -34,6 +34,7 @@ pub struct ArchitecturalDesignInputs {
     sequence_diagrams: Vec<String>,
     internal_api_diagrams: Vec<String>,
     public_api_diagrams: Vec<String>,
+    static_view: Vec<String>,
 }
 
 fn registered_validators<'a>(
@@ -41,6 +42,7 @@ fn registered_validators<'a>(
     sequence: &'a Option<SequenceDiagramIndex>,
     internal_api: &'a Option<InternalApiIndex>,
     public_api: &'a Option<PublicApiIndex>,
+    static_view: &'a Option<ComponentDiagramArchitecture>,
 ) -> Vec<ProfileValidator<'a>> {
     vec![
         Box::new(move || {
@@ -62,6 +64,10 @@ fn registered_validators<'a>(
                 internal_api,
                 component.as_ref(),
             ))
+        }),
+        Box::new(move || {
+            let (component, static_view) = (component.as_ref()?, static_view.as_ref()?);
+            Some(validate_static_view_consistency(component, static_view))
         }),
     ]
 }
@@ -88,8 +94,19 @@ pub fn run(inputs: &ArchitecturalDesignInputs) -> Result<ProfileRun, String> {
         &mut result,
         |raw: ClassDiagramInputs, _result| PublicApiIndex::build_index(&raw),
     )?;
+    let static_view = read_and_convert::<ComponentDiagramReader, ComponentDiagramArchitecture>(
+        inputs.static_view.as_slice(),
+        &mut result,
+        |raw: ComponentDiagramInputs, errs| raw.to_static_view_architecture(errs),
+    )?;
 
-    let validators = registered_validators(&component, &sequence, &internal_api, &public_api);
+    let validators = registered_validators(
+        &component,
+        &sequence,
+        &internal_api,
+        &public_api,
+        &static_view,
+    );
 
     let mut ran_validator = false;
     for validator in validators {

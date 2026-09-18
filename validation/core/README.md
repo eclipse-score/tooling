@@ -79,6 +79,7 @@ Profile validators:
 
 `architectural-design`:
 - `validate_component_sequence`
+- `validate_static_view_consistency`
 
 `dependable-element`:
 - `validate_bazel_component`
@@ -105,9 +106,18 @@ Each profile owns its own input schema.
   "component_diagrams": ["path/to/component.fbs.bin"],
   "sequence_diagrams": ["path/to/sequence.fbs.bin"],
   "internal_api": ["path/to/internal_api.fbs.bin"],
-  "public_api": ["path/to/public_api.fbs.bin"]
+  "public_api": ["path/to/public_api.fbs.bin"],
+  "static_view": ["path/to/static_view_component.fbs.bin"]
 }
 ```
+
+`static_view` are parsed component-diagram outputs representing a partial
+"view" onto the architecture in `component_diagrams` (the `static` section).
+`validate_static_view_consistency` fails if a `static_view` diagram defines a
+component/unit that is not also defined, under the same parent, in the
+`static` diagrams. A component/unit may be declared in more than one
+`static_view` diagram (e.g. overlapping views); such repetition across
+`static_view` diagrams is not treated as a duplicate-entity error.
 
 `unit`:
 
