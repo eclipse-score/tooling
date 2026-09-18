@@ -817,7 +817,7 @@ and scope checks at build/test time.
    * - Target
      - Purpose
    * - ``<name>``
-     - Main target: build runs Sphinx; ``bazel test`` runs the traceability check
+     - Main target: build runs Sphinx; ``bazel test`` runs the traceability check. Also provides ``TrlcProviderInfo`` (``@trlc//:trlc.bzl``), aggregating this element's own AoU TRLC records (retyped from the original ``AoU`` to ``ScoreReq.ReceivedAoU``, same package + record name, with a fixed generic ``justification`` field injected -- this retyping only applies to what this ``TrlcProviderInfo`` re-exposes; a target depending directly on the original ``assumptions_of_use`` target still gets the true, unmodified ``AoU`` record) with the ``ScoreReq.ReceivedAoU`` records synthesized (retyped from the original ``AoU``/``ReceivedAoU``, same package + record name, with a ``justification`` field injected from ``aou_forwarding.yaml``) for anything it chain-forwards (see ``aou_forwarding`` above) — a downstream ``component_requirements``/``feature_requirements``/``assumed_system_requirements`` target can list this label directly in its own ``deps`` to resolve a ``derived_from`` reference to one of those AoUs, instead of needing direct visibility to the original ``assumptions_of_use`` target. ``deps`` on this provider is always an empty depset: AoU/ReceivedAoU records have no typed cross-reference fields of their own to resolve.
    * - ``<name>_doc``
      - Internal ``sphinx_module`` target; usable as ``deps`` in other Sphinx builds
    * - ``<name>_index``

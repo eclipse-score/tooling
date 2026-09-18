@@ -27,6 +27,7 @@ load(
     "subrule_lobster_report",
 )
 load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
+load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load(
     "//bazel/rules/rules_score:providers.bzl",
     "ArchitecturalDesignInfo",
@@ -39,13 +40,14 @@ load(
     "DependableElementInfo",
     "DependableElementLobsterInfo",
     "FeatureRequirementsInfo",
-    "ForwardedAoUInfo",
+    "ReceivedAoUInfo",
     "SphinxIndexFileInfo",
     "SphinxModuleInfo",
     "SphinxNeedsInfo",
     "SphinxSourcesInfo",
     "UnitInfo",
 )
+load("//bazel/rules/rules_score/private:aou_trlc_dedupe.bzl", "dedupe_aou_trlc_files")
 load(
     "//bazel/rules/rules_score/private:architecture_aspect.bzl",
     "CurrentArchitectureProviderInfo",
@@ -1525,16 +1527,95 @@ def _dependable_element_index_impl(ctx):
 
     own_aou_lobster_depset = depset(transitive = own_aou_lobster_files)
 
+    # Collect this element's own AoU TRLC source records (spec + reqs only --
+    # deliberately no deps; see ReceivedAoUInfo doc in providers.bzl for why
+    # AoU records never need one). assumptions_of_use targets already provide
+    # TrlcProviderInfo (they are the "aou" kind of score_requirements_rule).
+    #
+    # The raw records collected here are still ScoreReq.AoU as authored --
+    # they must never be re-exposed verbatim through this dependable_element's
+    # own TrlcProviderInfo (same "dangling record with no linkage in this
+    # scope" problem filter_forwarded_trlc.py exists to avoid for
+    # chain-forwarded records, see expose_own_aou_trlc.py). A target depending
+    # directly on the assumptions_of_use target itself is unaffected and still
+    # resolves against the true, unmodified AoU. These records are retyped to
+    # ScoreReq.ReceivedAoU below, right before being exposed via this
+    # dependable_element's own_aou_trlc.
+    own_aou_trlc_spec = []
+    own_aou_trlc_raw_reqs = []
+    for aou_target in ctx.attr.assumptions_of_use:
+        if TrlcProviderInfo in aou_target:
+            own_aou_trlc_spec.append(aou_target[TrlcProviderInfo].spec)
+            own_aou_trlc_raw_reqs.append(aou_target[TrlcProviderInfo].reqs)
+
+    own_aou_trlc_raw_reqs_list = depset(transitive = own_aou_trlc_raw_reqs).to_list()
+
+    own_aou_trlc_reqs_depset = depset()
+    if own_aou_trlc_raw_reqs_list:
+        own_aou_trlc_exposed_files = [
+            ctx.actions.declare_file(
+                "{}/own_aou_trlc/{}_{}".format(ctx.label.name, i, f.basename),
+            )
+            for i, f in enumerate(own_aou_trlc_raw_reqs_list)
+        ]
+        own_aou_trlc_args = ctx.actions.args()
+        own_aou_trlc_args.add("--inputs")
+        own_aou_trlc_args.add_all(own_aou_trlc_raw_reqs_list)
+        own_aou_trlc_args.add("--outputs")
+        own_aou_trlc_args.add_all(own_aou_trlc_exposed_files)
+        ctx.actions.run(
+            inputs = own_aou_trlc_raw_reqs_list,
+            outputs = own_aou_trlc_exposed_files,
+            executable = ctx.executable._expose_own_aou_trlc_tool,
+            arguments = [own_aou_trlc_args],
+            progress_message = "Exposing own AoU TRLC records for %s" % ctx.label.name,
+            mnemonic = "OwnAoUTrlcExposure",
+        )
+        own_aou_trlc_reqs_depset = depset(own_aou_trlc_exposed_files)
+
+    own_aou_trlc = struct(
+        spec = depset(transitive = own_aou_trlc_spec),
+        reqs = own_aou_trlc_reqs_depset,
+    )
+
     # Collect forwarded AoU lobster files from deps (received AoUs)
     received_aou_lobster_files = []
     for dep in ctx.attr.processed_deps:
-        if ForwardedAoUInfo in dep:
-            fwd_info = dep[ForwardedAoUInfo]
+        if ReceivedAoUInfo in dep:
+            fwd_info = dep[ReceivedAoUInfo]
             received_aou_lobster_files.append(fwd_info.own_aou_lobster)
             received_aou_lobster_files.append(fwd_info.chain_forwarded_lobster)
 
     received_aou_lobster_depset = depset(transitive = received_aou_lobster_files)
     received_aou_list = received_aou_lobster_depset.to_list()
+
+    # Collect received AoU TRLC source records from deps, mirroring the
+    # lobster collection above (own_aou_trlc + chain_forwarded_trlc from each
+    # dep's ReceivedAoUInfo).
+    received_aou_trlc_spec = []
+    received_aou_trlc_reqs = []
+    for dep in ctx.attr.processed_deps:
+        if ReceivedAoUInfo in dep:
+            fwd_info = dep[ReceivedAoUInfo]
+            received_aou_trlc_spec.append(fwd_info.own_aou_trlc.spec)
+            received_aou_trlc_spec.append(fwd_info.chain_forwarded_trlc.spec)
+            received_aou_trlc_reqs.append(fwd_info.own_aou_trlc.reqs)
+            received_aou_trlc_reqs.append(fwd_info.chain_forwarded_trlc.reqs)
+
+    received_aou_trlc_spec_depset = depset(transitive = received_aou_trlc_spec)
+
+    # Deduplicate before any further processing: this element's own deps may
+    # already form a diamond (e.g. it depends on both an AoU's original
+    # owner and another dep that already chain-forwards that same AoU), in
+    # which case the same Package.RecordName identity would otherwise appear
+    # twice in received_aou_trlc_reqs_list -- once as ScoreReq.AoU, once as
+    # an already-retyped ScoreReq.ReceivedAoU. See aou_trlc_dedupe.bzl.
+    received_aou_trlc_reqs_list = dedupe_aou_trlc_files(
+        ctx,
+        ctx.executable._dedupe_aou_trlc_tool,
+        depset(transitive = received_aou_trlc_reqs).to_list(),
+        "received_aou_trlc_dedup",
+    )
 
     # Chain-forwarding: if aou_forwarding YAML is provided, filter received AoUs.
     chain_forwarded_lobster_depset = depset()
@@ -1564,6 +1645,44 @@ def _dependable_element_index_impl(ctx):
         forwarded_aou_markers_list = [forwarded_aou_markers_file]
         output_files.append(chain_forwarded_lobster_file)
         output_files.append(forwarded_aou_markers_file)
+
+    # Chain-forwarding at the TRLC level: same aou_forwarding YAML selection,
+    # applied to the received .trlc source files (1:1 filtered output per
+    # received input file -- see filter_forwarded_trlc.py for why). spec is
+    # unioned unfiltered (always the same shared RSL files regardless of
+    # which records are selected for forwarding).
+    chain_forwarded_trlc_reqs_depset = depset()
+    if ctx.file.aou_forwarding and received_aou_trlc_reqs_list:
+        # Prefix each output with its index: received files may come from
+        # different deps and share a basename (e.g. multiple upstream
+        # "assumptions_of_use.trlc"), so basename alone is not guaranteed
+        # unique within this target's output tree.
+        chain_forwarded_trlc_files = [
+            ctx.actions.declare_file(
+                "{}/chain_forwarded_trlc/{}_{}".format(ctx.label.name, i, f.basename),
+            )
+            for i, f in enumerate(received_aou_trlc_reqs_list)
+        ]
+        trlc_fwd_args = ctx.actions.args()
+        trlc_fwd_args.add("--yaml", ctx.file.aou_forwarding)
+        trlc_fwd_args.add("--inputs")
+        trlc_fwd_args.add_all(received_aou_trlc_reqs_list)
+        trlc_fwd_args.add("--outputs")
+        trlc_fwd_args.add_all(chain_forwarded_trlc_files)
+        ctx.actions.run(
+            inputs = [ctx.file.aou_forwarding] + received_aou_trlc_reqs_list,
+            outputs = chain_forwarded_trlc_files,
+            executable = ctx.executable._filter_forwarded_trlc_tool,
+            arguments = [trlc_fwd_args],
+            progress_message = "Filtering chain-forwarded AoU TRLC records for %s" % ctx.label.name,
+            mnemonic = "AoUTrlcForwarding",
+        )
+        chain_forwarded_trlc_reqs_depset = depset(chain_forwarded_trlc_files)
+
+    chain_forwarded_trlc = struct(
+        spec = received_aou_trlc_spec_depset,
+        reqs = chain_forwarded_trlc_reqs_depset,
+    )
 
     lobster_report_file = None
     lobster_html_report = None
@@ -1815,9 +1934,16 @@ def _dependable_element_index_impl(ctx):
             lobster_html_report = lobster_html_report,
             lobster_rst_dir = lobster_rst_dir,
         ),
-        ForwardedAoUInfo(
+        ReceivedAoUInfo(
             own_aou_lobster = own_aou_lobster_depset,
             chain_forwarded_lobster = chain_forwarded_lobster_depset,
+            own_aou_trlc = own_aou_trlc,
+            chain_forwarded_trlc = chain_forwarded_trlc,
+        ),
+        TrlcProviderInfo(
+            spec = depset(transitive = [own_aou_trlc.spec, chain_forwarded_trlc.spec]),
+            reqs = depset(transitive = [own_aou_trlc.reqs, chain_forwarded_trlc.reqs]),
+            deps = depset(),
         ),
         OutputGroupInfo(debug = depset(validation_output_files + unit_validation_output_files)),
     ]
@@ -1922,6 +2048,24 @@ def _dependable_element_index_attrs():
             cfg = "exec",
             doc = "Tool for filtering received AoU lobster entries based on chain-forwarding YAML.",
         ),
+        "_filter_forwarded_trlc_tool": attr.label(
+            default = Label("//bazel/rules/rules_score:filter_forwarded_trlc"),
+            executable = True,
+            cfg = "exec",
+            doc = "Tool for filtering received AoU TRLC source records based on chain-forwarding YAML (TRLC-level companion to _aou_forwarding_tool).",
+        ),
+        "_expose_own_aou_trlc_tool": attr.label(
+            default = Label("//bazel/rules/rules_score:expose_own_aou_trlc"),
+            executable = True,
+            cfg = "exec",
+            doc = "Tool for retyping a dependable_element's own AoU TRLC records for first-hop external exposure.",
+        ),
+        "_dedupe_aou_trlc_tool": attr.label(
+            default = Label("//bazel/rules/rules_score:dedupe_aou_trlc"),
+            executable = True,
+            cfg = "exec",
+            doc = "Tool for deduplicating AoU/ReceivedAoU TRLC records received via more than one dep path before chain-forwarding.",
+        ),
         "_test_runner": attr.label(
             default = Label("//bazel/rules/rules_score/src/test_case_coverage:test_runner"),
             executable = True,
@@ -1940,7 +2084,7 @@ _dependable_element_index = rule(
     Despite the name, this is not merely an internal implementation detail:
     it is the actual cross-element provider surface. A dependable_element's
     `deps` on another dependable_element resolve to that element's
-    `<dep>_index` target (see `processed_deps` below), because ForwardedAoUInfo,
+    `<dep>_index` target (see `processed_deps` below), because ReceivedAoUInfo,
     CertifiedScope and DependableElementLobsterInfo are only returned here, not
     by the public `<name>` target.
     """,
@@ -2031,6 +2175,12 @@ def _dependable_element_impl(ctx):
         # integrity-level checks by parent dependable elements
         index_dep[CertifiedScope],
         index_dep[DependableElementInfo],
+        # TrlcProviderInfo: forwarded from index so a requirements()-style
+        # target (component_requirements, feature_requirements, ...) can
+        # list the public dependable_element label directly in its own
+        # `deps` and resolve `derived_from` references against this
+        # element's own or chain-forwarded AoU TRLC records.
+        index_dep[TrlcProviderInfo],
     ] + ([sphinx_dep[SphinxNeedsInfo]] if SphinxNeedsInfo in sphinx_dep else [])
 
 _dependable_element_test = rule(
@@ -2146,7 +2296,7 @@ def dependable_element(
 
     Generated Targets:
         <name>_index: Generates index.rst and copies artifacts. Also the actual
-            cross-element provider API — ForwardedAoUInfo, CertifiedScope and
+            cross-element provider API — ReceivedAoUInfo, CertifiedScope and
             DependableElementLobsterInfo are only exposed here, so a sibling
             dependable_element's `deps` are resolved against `<dep>_index`
             (see `processed_deps`), not against `<dep>` itself.
