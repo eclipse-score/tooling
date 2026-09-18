@@ -46,6 +46,7 @@ statement = _{
 
       // base
     | title_stmt
+    | note_annotation_stmt
     | note_declaration
     | backward_stmt
     | arrow_stmt

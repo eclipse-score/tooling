@@ -1,0 +1,39 @@
+{
+  "element_modifier_order.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "identity": {
+            "name": "Backend",
+            "alias": "BackendAlias",
+            "stereotype": "score_logging",
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 14
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "Storage",
+            "alias": "StorageAlias",
+            "stereotype": "persistent",
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 15
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      }
+    ]
+  }
+}

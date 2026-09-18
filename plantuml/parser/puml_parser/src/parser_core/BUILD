@@ -19,6 +19,7 @@ rust_library(
         "src/common_parser.rs",
         "src/error.rs",
         "src/lib.rs",
+        "src/note_utils.rs",
     ],
     compile_data = [
         "//plantuml/parser/puml_parser/src/grammar:grammar_files",

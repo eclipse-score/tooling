@@ -1,0 +1,29 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml sequence_message_direction
+
+participant Service
+participant Client1
+participant Client2
+
+Service -> Client1 : solid right
+Service <-- Client2 : solid left
+Service --> Client1 : dashed right
+Service <--- Client2 : dashed left
+Service -[#red]x Client1 : cross head right
+Service --[#orange]x Client1 : cross head right dashed
+Service x-[#blue] Client2 : cross head left
+Service x--[#green] Client2 : cross head left dashed
+
+@enduml

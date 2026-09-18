@@ -97,18 +97,52 @@ COMMENT = _{
 //   scale 1.2
 ////////////////////////////////////////////////////////////////////////////////
 ignored_block = _{
-    style_block
+      style_block
+    | skinparam_block
+    | legend_block
     | note_multiline
 }
 
 style_block = { "<style>" ~ EOL ~ (!style_block_end ~ ANY)* ~ style_block_end }
 style_block_end = { "</style>" ~ EOL? }
 
+legend_block = @{
+  legend_block_start
+    ~ EOL
+  ~ (
+    !(WHITESPACE* ~ legend_block_end)
+    ~ ANY
+  )*
+  ~ WHITESPACE*
+  ~ legend_block_end
+}
+
+legend_block_start = {
+  ^"legend"
+  ~ (INLINE_WS+ ~ legend_pos)?
+  ~ (INLINE_WS+ ~ legend_align)?
+  ~ INLINE_WS*
+}
+legend_pos = { ^"top" | ^"bottom" }
+legend_align = { ^"left" | ^"right" | ^"center" }
+legend_block_end = { ^"endlegend" | (^"end" ~ WHITESPACE+ ~ ^"legend") }
+
+skinparam_block = @{
+  ^"skinparam" ~ INLINE_WS+ ~ (!("{" | NEWLINE) ~ ANY)* ~ "{" ~ INLINE_WS* ~ NEWLINE
+  ~ (
+    !(WHITESPACE* ~ "}" ~ EOL?) ~
+    (!NEWLINE ~ ANY)* ~
+    NEWLINE
+  )* ~
+  WHITESPACE* ~ "}" ~ EOL?
+}
+
 ignored_stmt = _{
       direction_stmt
     | skinparam_stmt
     | theme_stmt
     | title_stmt
+    | note_annotation_stmt
     | note_single_line
     | scale_stmt
     | namespace_separator_stmt
@@ -117,6 +151,16 @@ ignored_stmt = _{
 skinparam_stmt = @{ ^"skinparam" ~ LINE_REST }
 theme_stmt = @{ ^"!theme" ~ (INLINE_WS+ ~ (!EOL ~ ANY)*)? }
 title_stmt     = @{ ^"title" ~ LINE_REST }
+note_annotation_stmt = @{ ^"note:" ~ LINE_REST }
+shared_hide_or_show = { ^"hide" | ^"show" }
+shared_empty_kw = { ^"empty" }
+shared_member_type = {
+  ^"members" | ^"member" | ^"attributes" | ^"attribute" |
+  ^"fields" | ^"field" | ^"methods" | ^"method"
+}
+shared_hide_show_empty_member_core = {
+  shared_hide_or_show ~ shared_empty_kw ~ shared_member_type
+}
 direction_stmt = @{
     ("left" | "right" | "top" | "bottom")
     ~ " to "
@@ -196,7 +240,7 @@ note_multiline = {
 }
 
 note_multiline_alias = {
-  note_multiline_alias_head ~ note_alias ~ note_multiline_tail
+  note_multiline_alias_head ~ note_alias ~ note_multiline_body
 }
 
 note_multiline_alias_head = @{
@@ -208,12 +252,13 @@ note_multiline_alias_head = @{
 
 note_multiline_plain = @{
   ^"note" ~
-  !(INLINE_WS+ ~ "as" ~ INLINE_WS+) ~
-  note_multiline_tail
+  !(INLINE_WS+ ~ (STRING ~ INLINE_WS+)? ~ ^"as" ~ INLINE_WS+) ~
+  INLINE_WS+ ~
+  (("::") | (!(":" | NEWLINE) ~ ANY))* ~
+  note_multiline_body
 }
 
-note_multiline_tail = ${
-  (!NEWLINE ~ ANY)* ~  // rest of header line
+note_multiline_body = ${
   NEWLINE ~
   (
     !(INLINE_WS* ~ note_end ~ (INLINE_WS* ~ EOL)) ~

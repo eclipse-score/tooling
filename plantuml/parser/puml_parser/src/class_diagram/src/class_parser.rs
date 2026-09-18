@@ -22,7 +22,8 @@ use crate::source_map::{
 use log::{debug, trace};
 use parser_core::common_parser::{parse_arrow, PlantUmlCommonParser, Rule};
 use parser_core::{
-    format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser, ErrorLocation,
+    find_note_alias, format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser,
+    ErrorLocation, IgnoredNoteRegistry,
 };
 use pest::Parser;
 use puml_utils::LogLevel;
@@ -108,21 +109,6 @@ impl IgnoredObjectRegistry {
     fn filters_relationship(&self, relationship: &Relationship, parent: &Option<String>) -> bool {
         self.contains_reference(&relationship.left, parent)
             || self.contains_reference(&relationship.right, parent)
-    }
-}
-
-#[derive(Debug, Default)]
-struct IgnoredNoteRegistry {
-    aliases: HashSet<String>,
-}
-
-impl IgnoredNoteRegistry {
-    fn register(&mut self, alias: Name) {
-        self.aliases.insert(alias.internal);
-    }
-
-    fn filters_relationship(&self, relationship: &Relationship) -> bool {
-        self.aliases.contains(&relationship.left) || self.aliases.contains(&relationship.right)
     }
 }
 
@@ -570,21 +556,6 @@ impl ClassParseSession<'_> {
         name
     }
 
-    fn parse_note_alias(pair: pest::iterators::Pair<Rule>) -> Option<Name> {
-        fn find_alias(pair: pest::iterators::Pair<Rule>) -> Option<String> {
-            if pair.as_rule() == Rule::note_alias {
-                return Some(pair.as_str().to_string());
-            }
-
-            pair.into_inner().find_map(find_alias)
-        }
-
-        find_alias(pair).map(|internal| Name {
-            internal,
-            ..Name::default()
-        })
-    }
-
     fn filter_relationships(
         relationships: Vec<Relationship>,
         ignored_objects: &IgnoredObjectRegistry,
@@ -907,7 +878,7 @@ impl ClassParseSession<'_> {
     ) -> Result<Vec<ClassUmlTopLevel>, ClassError> {
         match pair.as_rule() {
             Rule::note_declaration => {
-                if let Some(alias) = Self::parse_note_alias(pair) {
+                if let Some(alias) = find_note_alias(pair) {
                     self.ignored_notes.register(alias);
                 }
                 Ok(vec![])
@@ -958,7 +929,7 @@ impl ClassParseSession<'_> {
                     for top_level_inner in Self::flatten_top_level(inner) {
                         match top_level_inner.as_rule() {
                             Rule::note_declaration => {
-                                if let Some(alias) = Self::parse_note_alias(top_level_inner) {
+                                if let Some(alias) = find_note_alias(top_level_inner) {
                                     self.ignored_notes.register(alias);
                                 }
                             }
@@ -1013,7 +984,7 @@ impl ClassParseSession<'_> {
                     for t in Self::flatten_top_level(inner) {
                         match t.as_rule() {
                             Rule::note_declaration => {
-                                if let Some(alias) = Self::parse_note_alias(t) {
+                                if let Some(alias) = find_note_alias(t) {
                                     self.ignored_notes.register(alias);
                                 }
                             }
@@ -1055,7 +1026,11 @@ impl ClassParseSession<'_> {
             &Some(package.name.internal.clone()),
         )
         .into_iter()
-        .filter(|relationship| !self.ignored_notes.filters_relationship(relationship))
+        .filter(|relationship| {
+            !self
+                .ignored_notes
+                .filters_endpoints(&relationship.left, &relationship.right)
+        })
         .collect();
 
         Ok((package, ignored_objects))
@@ -1202,7 +1177,11 @@ impl DiagramParser for PumlClassParser {
                     &None,
                 )
                 .into_iter()
-                .filter(|relationship| !session.ignored_notes.filters_relationship(relationship))
+                .filter(|relationship| {
+                    !session
+                        .ignored_notes
+                        .filters_endpoints(&relationship.left, &relationship.right)
+                })
                 .collect();
             }
             Err(e) => {
@@ -1416,7 +1395,7 @@ mod tests {
         let mut session = make_test_session(&normalized);
         session.parse_top_level_element(pair).unwrap();
 
-        assert!(session.ignored_notes.aliases.contains("SyncNote"));
+        assert!(session.ignored_notes.contains("SyncNote"));
     }
 
     #[test]
@@ -1431,7 +1410,7 @@ mod tests {
         let mut session = make_test_session(&normalized);
         session.parse_top_level_element(pair).unwrap();
 
-        assert!(session.ignored_notes.aliases.contains("SyncNote"));
+        assert!(session.ignored_notes.contains("SyncNote"));
     }
 
     #[test]

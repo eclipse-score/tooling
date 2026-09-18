@@ -1,0 +1,41 @@
+{
+  "relation_quoted_name.puml": {
+    "ApplicationLogic": {
+      "id": "ApplicationLogic",
+      "name": "ApplicationLogic",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "score::mw::log",
+          "annotation": "verbose",
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 16
+          }
+        }
+      ],
+      "source_location": {
+        "file": "",
+        "line": 14
+      }
+    },
+    "score::mw::log": {
+      "id": "score::mw::log",
+      "name": "score::mw::log",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
+    }
+  }
+}

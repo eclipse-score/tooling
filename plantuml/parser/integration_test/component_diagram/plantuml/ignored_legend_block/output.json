@@ -1,0 +1,29 @@
+{
+  "ignored_legend_block.puml": {
+    "name": "ignored_legend_block",
+    "statements": [
+      {
+        "Relation": {
+          "lhs": "[Producer]",
+          "arrow": {
+            "left": null,
+            "line": {
+              "raw": "--"
+            },
+            "middle": null,
+            "right": {
+              "raw": ">"
+            }
+          },
+          "rhs": "[Consumer]",
+          "style": null,
+          "description": null,
+          "source_location": {
+            "file": "",
+            "line": 30
+          }
+        }
+      }
+    ]
+  }
+}

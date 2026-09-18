@@ -249,11 +249,17 @@ fn directed_endpoints(
 ) -> Result<(&MessageEndpoint, &MessageEndpoint), SequenceResolverError> {
     let arrow = &message.arrow;
 
-    let left_arrow = arrow.left.as_ref().is_some_and(|d| d.raw.contains('<'));
+    let left_points_left = arrow.left.as_ref().is_some_and(|d| d.raw.contains('<'));
 
-    let right_arrow = arrow.right.as_ref().is_some_and(|d| d.raw.contains('>'));
+    let right_points_right = arrow.right.as_ref().is_some_and(|d| d.raw.contains('>'));
 
-    match (left_arrow, right_arrow) {
+    let left_terminates = arrow.left.as_ref().is_some_and(|d| d.raw == "x");
+    let right_terminates = arrow.right.as_ref().is_some_and(|d| d.raw == "x");
+
+    match (
+        left_points_left || (left_terminates && arrow.right.is_none()),
+        right_points_right || (right_terminates && arrow.left.is_none()),
+    ) {
         (true, false) => Ok((&message.right, &message.left)),
         (false, true) => Ok((&message.left, &message.right)),
         _ => Err(SequenceResolverError::InvalidMessageDirection {

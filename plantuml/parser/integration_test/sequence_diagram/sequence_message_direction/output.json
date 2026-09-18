@@ -1,0 +1,96 @@
+{
+  "sequence_message_direction.puml": {
+    "name": "sequence_message_direction",
+    "participants": [
+      {
+        "display_name": "Service",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": { "file": "", "line": 16 },
+        "stereotype": null
+      },
+      {
+        "display_name": "Client1",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": { "file": "", "line": 17 },
+        "stereotype": null
+      },
+      {
+        "display_name": "Client2",
+        "alias": null,
+        "participant_type": "Participant",
+        "source_location": { "file": "", "line": 18 },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "Service",
+            "receiver": "Client1",
+            "message": "solid right",
+            "source_location": { "file": "", "line": 20 }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Client2",
+            "receiver": "Service",
+            "message": "solid left",
+            "source_location": { "file": "", "line": 21 }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Service",
+            "receiver": "Client1",
+            "message": "dashed right",
+            "source_location": { "file": "", "line": 22 }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Client2",
+            "receiver": "Service",
+            "message": "dashed left",
+            "source_location": { "file": "", "line": 23 }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Service",
+            "receiver": "Client1",
+            "message": "cross head right",
+            "source_location": { "file": "", "line": 24 }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Service",
+            "receiver": "Client1",
+            "message": "cross head right dashed",
+            "source_location": { "file": "", "line": 25 }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Client2",
+            "receiver": "Service",
+            "message": "cross head left",
+            "source_location": { "file": "", "line": 26 }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "Client2",
+            "receiver": "Service",
+            "message": "cross head left dashed",
+            "source_location": { "file": "", "line": 27 }
+          }
+        }
+      ]
+    }
+  }
+}

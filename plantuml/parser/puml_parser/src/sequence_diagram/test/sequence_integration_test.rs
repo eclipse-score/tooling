@@ -117,6 +117,11 @@ fn test_ignored_blocks() {
 }
 
 #[test]
+fn test_ignored_visibility_statements() {
+    run_sequence_diagram_parser_case("ignored_visibility_statements");
+}
+
+#[test]
 fn test_note_unsupported() {
     run_sequence_diagram_parser_case("note_unsupported");
 }
