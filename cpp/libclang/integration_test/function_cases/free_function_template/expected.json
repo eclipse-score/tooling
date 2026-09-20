@@ -1,4 +1,58 @@
 {
+  "free_function_declarations": [
+    {
+      "name": "consume",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "int",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/free_function_template/optional.h",
+        "line": 14
+      }
+    },
+    {
+      "name": "make_optional",
+      "enclosing_namespace_id": "amp",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "value",
+          "param_type": "T &&",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": [
+        {
+          "Type": {
+            "name": "T",
+            "is_pack": false
+          }
+        }
+      ],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/free_function_template/optional.h",
+        "line": 18
+      }
+    },
+    {
+      "name": "run",
+      "enclosing_namespace_id": null,
+      "return_type": "int",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/free_function_template/functions.cpp",
+        "line": 18
+      }
+    }
+  ],
   "functions": [
     {
       "id": {

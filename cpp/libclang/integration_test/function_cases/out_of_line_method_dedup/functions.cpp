@@ -13,21 +13,4 @@
 
 #include "functions.hpp"
 
-int global_value() {
-    return 1;
-}
-
-namespace app
-{
-
-void run() {}
-
-namespace internal
-{
-
-bool enabled() {
-    return true;
-}
-
-}  // namespace internal
-}  // namespace app
+void A::run() {}

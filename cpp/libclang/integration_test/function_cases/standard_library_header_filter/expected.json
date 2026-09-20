@@ -1,9 +1,29 @@
 {
+  "types": {},
+  "free_function_declarations": [
+    {
+      "name": "local_function",
+      "enclosing_namespace_id": null,
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "value",
+          "param_type": "int",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/standard_library_header_filter/functions.cpp",
+        "line": 16
+      }
+    }
+  ],
   "functions": [
     {
       "id": {
-        "name": "local_function",
-        "scope": "Global"
+        "scope": "Global",
+        "name": "local_function"
       },
       "kind": "Free",
       "return_type": {
@@ -11,6 +31,5 @@
       },
       "body": []
     }
-  ],
-  "types": {}
+  ]
 }

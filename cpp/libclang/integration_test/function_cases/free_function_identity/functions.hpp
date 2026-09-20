@@ -11,23 +11,15 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-#include "functions.hpp"
+#pragma once
 
-int global_value() {
-    return 1;
-}
+void declared_only();
+
+int global_value();
 
 namespace app
 {
 
-void run() {}
+void run();
 
-namespace internal
-{
-
-bool enabled() {
-    return true;
-}
-
-}  // namespace internal
 }  // namespace app

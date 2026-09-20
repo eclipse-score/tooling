@@ -1,4 +1,39 @@
 {
+  "free_function_declarations": [
+    {
+      "name": "shared",
+      "enclosing_namespace_id": null,
+      "return_type": "int",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/header_inline_function_dedup/inline_function.h",
+        "line": 16
+      }
+    },
+    {
+      "name": "first",
+      "enclosing_namespace_id": null,
+      "return_type": "int",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/header_inline_function_dedup/first.cpp",
+        "line": 16
+      }
+    },
+    {
+      "name": "second",
+      "enclosing_namespace_id": null,
+      "return_type": "int",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/header_inline_function_dedup/second.cpp",
+        "line": 16
+      }
+    }
+  ],
   "functions": [
     {
       "id": {

@@ -1,0 +1,33 @@
+{
+  "types": {
+    "util::Widget": {
+      "id": "util::Widget",
+      "name": "Widget",
+      "enclosing_namespace_id": "util",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "value",
+          "data_type": "int",
+          "visibility": "public",
+          "is_static": false,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/definition_then_forward_decl/widget_full.h",
+            "line": 19
+          }
+        }
+      ],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/definition_then_forward_decl/widget_full.h",
+        "line": 17
+      }
+    }
+  },
+  "functions": []
+}

@@ -13,14 +13,20 @@
 load("//cpp/libclang/integration_test:test_rules.bzl", "cpp_parser_integration_test")
 
 cc_library(
-    name = "free_function_identity",
-    srcs = ["functions.cpp"],
-    hdrs = ["functions.hpp"],
+    name = "definition_then_forward_decl",
+    srcs = [
+        "first.cpp",
+        "second.cpp",
+    ],
+    hdrs = [
+        "widget_forward.h",
+        "widget_full.h",
+    ],
     visibility = ["//cpp/libclang:__subpackages__"],
 )
 
 cpp_parser_integration_test(
-    name = "test_free_function_identity",
+    name = "test_definition_then_forward_decl",
     expected_output = ["expected.json"],
-    target = ":free_function_identity",
+    target = ":definition_then_forward_decl",
 )

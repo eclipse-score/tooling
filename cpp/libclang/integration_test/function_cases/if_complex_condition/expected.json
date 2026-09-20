@@ -1,13 +1,71 @@
 {
+  "types": {},
+  "free_function_declarations": [
+    {
+      "name": "is_ready",
+      "enclosing_namespace_id": null,
+      "return_type": "bool",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
+        "line": 14
+      }
+    },
+    {
+      "name": "is_allowed",
+      "enclosing_namespace_id": null,
+      "return_type": "bool",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
+        "line": 15
+      }
+    },
+    {
+      "name": "has_permission",
+      "enclosing_namespace_id": null,
+      "return_type": "bool",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
+        "line": 16
+      }
+    },
+    {
+      "name": "handle_complex",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
+        "line": 17
+      }
+    },
+    {
+      "name": "complex_condition",
+      "enclosing_namespace_id": "flow",
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
+        "line": 20
+      }
+    }
+  ],
   "functions": [
     {
       "id": {
-        "name": "complex_condition",
         "scope": {
           "Namespace": [
             "flow"
           ]
-        }
+        },
+        "name": "complex_condition"
       },
       "kind": "Free",
       "return_type": {
@@ -15,6 +73,7 @@
       },
       "body": [
         {
+          "type": "branch",
           "cases": [
             {
               "guard": {
@@ -26,7 +85,7 @@
                     "text": "is_ready()",
                     "source_location": {
                       "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
-                        "line": 21
+                      "line": 21
                     }
                   },
                   {
@@ -38,7 +97,7 @@
                         "text": "is_allowed()",
                         "source_location": {
                           "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
-                              "line": 21
+                          "line": 21
                         }
                       },
                       {
@@ -49,7 +108,7 @@
                           "text": "has_permission()",
                           "source_location": {
                             "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
-                                "line": 21
+                            "line": 21
                           }
                         }
                       }
@@ -59,12 +118,12 @@
               },
               "body": [
                 {
+                  "type": "call",
                   "target": "handle_complex",
                   "source_location": {
                     "file": "cpp/libclang/integration_test/function_cases/if_complex_condition/flow.cpp",
                     "line": 22
-                  },
-                  "type": "call"
+                  }
                 }
               ],
               "source_location": {
@@ -72,11 +131,9 @@
                 "line": 21
               }
             }
-          ],
-          "type": "branch"
+          ]
         }
       ]
     }
-  ],
-  "types": {}
+  ]
 }

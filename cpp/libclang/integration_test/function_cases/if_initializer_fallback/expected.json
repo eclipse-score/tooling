@@ -1,45 +1,91 @@
 {
-	"types": {},
-	"functions": [
-		{
-			"id": {
-				"scope": {
-					"Namespace": [
-						"flow"
-					]
-				},
-				"name": "if_initializer_fallback"
-			},
-			"kind": "Free",
-			"return_type": {
-				"Builtin": "void"
-			},
-			"body": [
-				{
-					"type": "call",
-					"target": "initialize",
-					"source_location": {
-						"file": "cpp/libclang/integration_test/function_cases/if_initializer_fallback/flow.cpp",
-						"line": 20
-					}
-				},
-				{
-					"type": "call",
-					"target": "handle_ready",
-					"source_location": {
-						"file": "cpp/libclang/integration_test/function_cases/if_initializer_fallback/flow.cpp",
-						"line": 21
-					}
-				},
-				{
-					"type": "call",
-					"target": "handle_failure",
-					"source_location": {
-						"file": "cpp/libclang/integration_test/function_cases/if_initializer_fallback/flow.cpp",
-						"line": 23
-					}
-				}
-			]
-		}
-	]
+  "types": {},
+  "free_function_declarations": [
+    {
+      "name": "initialize",
+      "enclosing_namespace_id": null,
+      "return_type": "bool",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_initializer_fallback/flow.cpp",
+        "line": 14
+      }
+    },
+    {
+      "name": "handle_ready",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_initializer_fallback/flow.cpp",
+        "line": 15
+      }
+    },
+    {
+      "name": "handle_failure",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_initializer_fallback/flow.cpp",
+        "line": 16
+      }
+    },
+    {
+      "name": "if_initializer_fallback",
+      "enclosing_namespace_id": "flow",
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_initializer_fallback/flow.cpp",
+        "line": 19
+      }
+    }
+  ],
+  "functions": [
+    {
+      "id": {
+        "scope": {
+          "Namespace": [
+            "flow"
+          ]
+        },
+        "name": "if_initializer_fallback"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": [
+        {
+          "type": "call",
+          "target": "initialize",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/if_initializer_fallback/flow.cpp",
+            "line": 20
+          }
+        },
+        {
+          "type": "call",
+          "target": "handle_ready",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/if_initializer_fallback/flow.cpp",
+            "line": 21
+          }
+        },
+        {
+          "type": "call",
+          "target": "handle_failure",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/if_initializer_fallback/flow.cpp",
+            "line": 23
+          }
+        }
+      ]
+    }
+  ]
 }

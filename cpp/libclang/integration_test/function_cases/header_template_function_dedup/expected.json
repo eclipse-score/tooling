@@ -1,13 +1,62 @@
 {
+  "types": {},
+  "free_function_declarations": [
+    {
+      "name": "identity",
+      "enclosing_namespace_id": "utility",
+      "return_type": "T",
+      "parameters": [
+        {
+          "name": "value",
+          "param_type": "T",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": [
+        {
+          "Type": {
+            "name": "T",
+            "is_pack": false
+          }
+        }
+      ],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/header_template_function_dedup/template.h",
+        "line": 18
+      }
+    },
+    {
+      "name": "first",
+      "enclosing_namespace_id": null,
+      "return_type": "int",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/header_template_function_dedup/first.cpp",
+        "line": 16
+      }
+    },
+    {
+      "name": "second",
+      "enclosing_namespace_id": null,
+      "return_type": "int",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/header_template_function_dedup/second.cpp",
+        "line": 16
+      }
+    }
+  ],
   "functions": [
     {
       "id": {
-        "name": "identity",
         "scope": {
           "Namespace": [
             "utility"
           ]
-        }
+        },
+        "name": "identity"
       },
       "kind": "Free",
       "return_type": {
@@ -17,8 +66,8 @@
     },
     {
       "id": {
-        "name": "first",
-        "scope": "Global"
+        "scope": "Global",
+        "name": "first"
       },
       "kind": "Free",
       "return_type": {
@@ -30,15 +79,15 @@
           "target": "utility::identity",
           "source_location": {
             "file": "cpp/libclang/integration_test/function_cases/header_template_function_dedup/first.cpp",
-              "line": 17
+            "line": 17
           }
         }
       ]
     },
     {
       "id": {
-        "name": "second",
-        "scope": "Global"
+        "scope": "Global",
+        "name": "second"
       },
       "kind": "Free",
       "return_type": {
@@ -50,11 +99,10 @@
           "target": "utility::identity",
           "source_location": {
             "file": "cpp/libclang/integration_test/function_cases/header_template_function_dedup/second.cpp",
-              "line": 17
+            "line": 17
           }
         }
       ]
     }
-  ],
-  "types": {}
+  ]
 }

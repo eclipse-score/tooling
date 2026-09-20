@@ -1,0 +1,54 @@
+{
+  "functions": [
+    {
+      "id": {
+        "scope": {
+          "Type": {
+            "namespace": [],
+            "type_path": [
+              "A"
+            ]
+          }
+        },
+        "name": "run"
+      },
+      "kind": "Method",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    }
+  ],
+  "types": {
+    "A": {
+      "id": "A",
+      "name": "A",
+      "enclosing_namespace_id": null,
+      "entity_type": "Struct",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "run",
+          "return_type": "void",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/out_of_line_method_dedup/functions.hpp",
+            "line": 17
+          }
+        }
+      ],
+      "relationships": [],
+      "stereotypes": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/out_of_line_method_dedup/functions.hpp",
+        "line": 16
+      }
+    }
+  }
+}

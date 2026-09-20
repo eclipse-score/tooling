@@ -1,13 +1,57 @@
 {
+  "types": {},
+  "free_function_declarations": [
+    {
+      "name": "specialized",
+      "enclosing_namespace_id": "utility",
+      "return_type": "T",
+      "parameters": [
+        {
+          "name": "value",
+          "param_type": "T",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": [
+        {
+          "Type": {
+            "name": "T",
+            "is_pack": false
+          }
+        }
+      ],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/explicit_specialization/specialization.h",
+        "line": 21
+      }
+    },
+    {
+      "name": "specialized",
+      "enclosing_namespace_id": "utility",
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "value",
+          "param_type": "int",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/explicit_specialization/specialization.h",
+        "line": 25
+      }
+    }
+  ],
   "functions": [
     {
       "id": {
-        "name": "specialized",
         "scope": {
           "Namespace": [
             "utility"
           ]
-        }
+        },
+        "name": "specialized"
       },
       "kind": "Free",
       "return_type": {
@@ -15,6 +59,5 @@
       },
       "body": []
     }
-  ],
-  "types": {}
+  ]
 }
