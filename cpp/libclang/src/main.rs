@@ -18,13 +18,13 @@ use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use class_diagram::{ClassDiagram, SimpleEntity};
+use class_diagram::{ClassDiagram, FreeFunctionDecl, SimpleEntity};
 use class_serializer::ClassSerializer;
 
 use utils::{render_entity_tree, write_debug_json, write_entity_tree, write_fbs_output};
 use visit_tu::{
-    is_external_dependency_path, FunctionDef, FunctionDefinitionKey, SourceFileCache, VisitContext,
-    Visitor,
+    is_external_dependency_path, CallableIdentityKey, EntityMapExt, FunctionDef, SourceEntityKey,
+    SourceFileCache, VisitContext, Visitor,
 };
 
 #[derive(ClapParser, Debug)]
@@ -53,13 +53,16 @@ struct Args {
 #[derive(Default)]
 struct ParseOutputs {
     types: BTreeMap<String, SimpleEntity>,
+    free_function_declarations: Vec<FreeFunctionDecl>,
     functions: Vec<FunctionDef>,
 }
 
 #[derive(Default)]
 struct ParseState {
     source_files: SourceFileCache,
-    seen_function_definitions: HashSet<FunctionDefinitionKey>,
+    seen_free_function_declarations: HashSet<CallableIdentityKey>,
+    seen_method_declarations: HashSet<CallableIdentityKey>,
+    seen_function_definitions: HashSet<SourceEntityKey>,
 }
 
 impl ParseOutputs {
@@ -72,9 +75,20 @@ impl ParseOutputs {
 
         for (type_name, entity) in ctx.types {
             debug!("Type {}:\n{:#?}", type_name, entity);
-            self.types.insert(type_name, entity);
+            self.types.insert_or_merge_type(type_name, entity);
         }
-
+        self.free_function_declarations
+            .extend(
+                ctx.free_function_declarations
+                    .into_iter()
+                    .map(|declaration| {
+                        debug!(
+                            "Free function declaration: {}",
+                            declaration.declaration.qualified_name()
+                        );
+                        declaration.declaration
+                    }),
+            );
         self.functions.extend(
             ctx.functions
                 .into_iter()
@@ -165,6 +179,8 @@ fn parse_file(
             let mut visitor = Visitor::new(
                 &mut ctx,
                 &mut state.source_files,
+                &mut state.seen_free_function_declarations,
+                &mut state.seen_method_declarations,
                 &mut state.seen_function_definitions,
             );
             visitor.visit(entity);
@@ -179,11 +195,13 @@ fn parse_file(
 fn serialize_class_diagram(
     output_path: &Path,
     entities: BTreeMap<String, SimpleEntity>,
+    free_functions: Vec<FreeFunctionDecl>,
 ) -> Result<(), std::io::Error> {
     let entities: Vec<_> = entities.into_values().collect();
     let class_diagram = ClassDiagram {
         name: String::new(), // no name for c++ side
         entities,
+        free_functions,
     };
 
     let output_fbs = ClassSerializer::serialize(&class_diagram);
@@ -234,10 +252,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if let Some(debug_json_output) = &command_line_args.debug_json_output {
-        write_debug_json(debug_json_output, &outputs.types, &outputs.functions)?;
+        write_debug_json(
+            debug_json_output,
+            &outputs.types,
+            (!outputs.free_function_declarations.is_empty())
+                .then_some(&outputs.free_function_declarations),
+            &outputs.functions,
+        )?;
     }
 
-    serialize_class_diagram(&command_line_args.class_fbs_output, outputs.types)?;
+    serialize_class_diagram(
+        &command_line_args.class_fbs_output,
+        outputs.types,
+        outputs.free_function_declarations,
+    )?;
 
     Ok(())
 }

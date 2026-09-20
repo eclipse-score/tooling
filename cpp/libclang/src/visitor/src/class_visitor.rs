@@ -11,18 +11,17 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use clang::{Entity, EntityKind, ExceptionSpecification};
+use clang::{Entity, EntityKind};
 
 use class_diagram::{
-    EntityType, FunctionArgument, MemberVariable, Method, MethodModifier, SimpleEntity,
-    TemplateParameter, TypeAlias, Visibility,
+    EntityType, MemberVariable, Method, MethodModifier, SimpleEntity, TypeAlias, Visibility,
 };
-use cpp_semantics::ResolvedType;
 
+use crate::callable_declaration::parse_template_parameters;
 use crate::clang_adapter::scope::{namespace_id, semantic_parent_id};
 use crate::clang_adapter::source_location::parse_source_location;
 use crate::context::{
-    ParsedBaseClass, ParsedClassInfo, ParsedMethodType, ParsedVariableType, VisitContext,
+    ExtractedMethodDeclaration, ParsedBaseClass, ParsedClassInfo, ParsedVariableType, VisitContext,
 };
 use crate::types::renderer::render_type_for_display;
 use crate::types::resolver::resolve_type;
@@ -45,7 +44,7 @@ impl AstVisitor for ClassVisitor {
             Self::visit_class(&entity, semantic_parent.as_deref(), namespace.as_deref())
         {
             class_entity.template_parameters = template_params;
-            ctx.parsed_class_info.push(builder);
+            ctx.parsed_class_info.insert(builder.id.clone(), builder);
             ctx.types.insert(class_entity.id.clone(), class_entity);
         }
     }
@@ -56,6 +55,30 @@ impl ClassVisitor {
     /// relationship phase directly.
     pub fn resolve_relationships(ctx: &mut VisitContext) {
         crate::class_relationship_resolver::resolve_relationships(ctx);
+    }
+
+    /// Adds a callable declaration to its owning class and preserves the
+    /// class-level metadata used by relationship inference.
+    pub(crate) fn add_method_declaration(
+        ctx: &mut VisitContext,
+        declaration: ExtractedMethodDeclaration,
+    ) {
+        let (types, parsed_class_info) = (&mut ctx.types, &mut ctx.parsed_class_info);
+        let (Some(class), Some(builder)) = (
+            types.get_mut(&declaration.class_id),
+            parsed_class_info.get_mut(&declaration.class_id),
+        ) else {
+            log::warn!(
+                "method '{}' has incompletely registered owning class '{}'; skipping declaration",
+                declaration.method.name,
+                declaration.class_id
+            );
+            return;
+        };
+
+        update_entity_type_for_method(class, builder, &declaration.method);
+        class.methods.push(declaration.method);
+        builder.method_types.push(declaration.method_type);
     }
 
     fn visit_class(
@@ -75,6 +98,8 @@ impl ClassVisitor {
             base_classes: vec![],
             variable_types: vec![],
             method_types: vec![],
+            has_abstract_methods: false,
+            has_concrete_methods: false,
         };
 
         let mut class_entity = SimpleEntity {
@@ -89,7 +114,9 @@ impl ClassVisitor {
             Self::visit_member(&child, &mut class_entity, &mut builder);
         }
 
-        class_entity.entity_type = infer_entity_type_from_members(entity.get_kind(), &class_entity);
+        if entity.get_kind() == EntityKind::StructDecl {
+            class_entity.entity_type = EntityType::Struct;
+        }
 
         class_entity.source_location = parse_source_location(entity);
 
@@ -106,12 +133,6 @@ impl ClassVisitor {
                     });
                 }
             }
-            EntityKind::Method | EntityKind::Constructor | EntityKind::Destructor => {
-                let parsed_method_type = collect_method_type(entity, builder);
-                if let Some(method) = parse_method(entity, &parsed_method_type) {
-                    class.methods.push(method);
-                }
-            }
             EntityKind::FieldDecl | EntityKind::VarDecl => {
                 let Some(parsed_variable_type) = collect_variable_type(entity) else {
                     return;
@@ -120,17 +141,6 @@ impl ClassVisitor {
 
                 if let Some(variable) = parse_variable(entity, &parsed_variable_type) {
                     class.variables.push(variable);
-                }
-            }
-            EntityKind::FunctionTemplate => {
-                let template_params = parse_template_parameters(entity);
-                let parsed_method_type = collect_method_type(entity, builder);
-
-                // In current libclang/clang-rs output, method templates are represented
-                // directly on the FunctionTemplate entity.
-                if let Some(mut method) = parse_method(entity, &parsed_method_type) {
-                    method.template_parameters = template_params;
-                    class.methods.push(method);
                 }
             }
             // `using Alias = OriginalType;` -> TypeAliasDecl
@@ -180,45 +190,6 @@ fn collect_variable_type(entity: &Entity) -> Option<ParsedVariableType> {
     })
 }
 
-fn collect_method_type(entity: &Entity, builder: &mut ParsedClassInfo) -> ParsedMethodType {
-    let name = entity.get_name().unwrap_or_default();
-
-    let return_type = entity
-        .get_result_type()
-        .map(|t| resolve_type(&t))
-        .unwrap_or_else(|| ResolvedType::Builtin("void".to_string()));
-    let parameter_types = method_arguments(entity)
-        .into_iter()
-        .filter_map(|arg| arg.get_type().map(|t| resolve_type(&t)))
-        .collect();
-
-    let parsed_method_type = ParsedMethodType {
-        name,
-        return_type,
-        parameter_types,
-        source_location: parse_source_location(entity),
-    };
-    builder.method_types.push(parsed_method_type.clone());
-
-    parsed_method_type
-}
-
-/// Normally libclang provides the parameter list via `Entity::get_arguments()`.
-/// However, for some cursor kinds (e.g. `FunctionTemplate`) or certain libclang
-/// versions, `get_arguments()` may return `None` even though the AST still
-/// contains `ParmDecl` child cursors.
-fn method_arguments<'tu>(entity: &Entity<'tu>) -> Vec<Entity<'tu>> {
-    entity.get_arguments().unwrap_or_else(|| {
-        // fall back to collecting all direct `ParmDecl` children from
-        // the cursor to recover the parameter list.
-        entity
-            .get_children()
-            .into_iter()
-            .filter(|child| child.get_kind() == EntityKind::ParmDecl)
-            .collect()
-    })
-}
-
 fn parse_type_alias(entity: &Entity) -> Option<TypeAlias> {
     let Some(alias) = entity.get_name() else {
         log::debug!("skipping type alias: entity has no name");
@@ -243,99 +214,6 @@ fn parse_type_alias(entity: &Entity) -> Option<TypeAlias> {
     })
 }
 
-fn parse_method(entity: &Entity, parsed_method_type: &ParsedMethodType) -> Option<Method> {
-    let kind = entity.get_kind();
-    let name = entity.get_name()?;
-    let is_override_method = entity
-        .get_overridden_methods()
-        .map(|methods| !methods.is_empty())
-        .unwrap_or(false);
-    let is_final_method = entity
-        .get_children()
-        .into_iter()
-        .any(|child| child.get_kind() == EntityKind::FinalAttr);
-
-    // Only the bare `noexcept` specifier is modeled (mirrors the PlantUML grammar, which has
-    // no support for the conditional `noexcept(expr)` form). Requiring `BasicNoexcept` filters
-    // out `noexcept(expr)`, but on its own it isn't enough: for an implicit/defaulted special
-    // member (e.g. `~Foo() = default;` with no written specifier at all), the compiler-computed
-    // specification also resolves to `BasicNoexcept` once evaluated -- and that evaluation is
-    // lazily triggered by unrelated code (e.g. a derived class use), making it unstable. So this
-    // also requires the literal `noexcept` token to appear in the declarator (the tokens up to
-    // the first `{` or `;`), which excludes both that case and `noexcept` written inside a
-    // lambda in the method body.
-    let has_noexcept_token = entity.get_range().is_some_and(|range| {
-        range
-            .tokenize()
-            .iter()
-            .take_while(|token| !matches!(token.get_spelling().as_str(), "{" | ";"))
-            .any(|token| token.get_spelling() == "noexcept")
-    });
-
-    let is_noexcept_method = has_noexcept_token
-        && matches!(
-            entity.get_exception_specification(),
-            Some(ExceptionSpecification::BasicNoexcept)
-        );
-
-    let return_type = if matches!(kind, EntityKind::Constructor | EntityKind::Destructor) {
-        None
-    } else {
-        entity
-            .get_result_type()
-            .map(|ret| render_type_for_display(&ret, &parsed_method_type.return_type))
-    };
-
-    let mut parameters = Vec::new();
-    let method_is_variadic = entity.get_type().map(|t| t.is_variadic()).unwrap_or(false);
-
-    let args = method_arguments(entity);
-
-    for arg in args {
-        let raw_param_type = arg
-            .get_type()
-            .map(|ty| ty.get_display_name())
-            .unwrap_or_default();
-        let is_pack_expansion = raw_param_type.contains("...");
-        let param_type = normalize_pack_expansion_type(&raw_param_type);
-
-        parameters.push(FunctionArgument {
-            name: arg.get_name().unwrap_or_default(),
-            param_type: Some(param_type),
-            is_variadic: false,
-            is_pack_expansion,
-        });
-    }
-
-    if method_is_variadic {
-        parameters.push(FunctionArgument {
-            name: String::new(),
-            param_type: None,
-            is_variadic: true,
-            is_pack_expansion: false,
-        });
-    }
-
-    Some(Method {
-        name,
-        return_type,
-        visibility: parse_visibility(entity),
-        parameters,
-        template_parameters: None,
-        modifiers: MethodModifier::from_conditions([
-            (entity.is_static_method(), MethodModifier::Static),
-            (entity.is_virtual_method(), MethodModifier::Virtual),
-            (entity.is_pure_virtual_method(), MethodModifier::Abstract),
-            (is_override_method, MethodModifier::Override),
-            (is_noexcept_method, MethodModifier::Noexcept),
-            (kind == EntityKind::Constructor, MethodModifier::Constructor),
-            (kind == EntityKind::Destructor, MethodModifier::Destructor),
-            (is_final_method, MethodModifier::Final),
-        ]),
-        source_location: parse_source_location(entity),
-    })
-}
-
 fn parse_variable(
     entity: &Entity,
     parsed_variable_type: &ParsedVariableType,
@@ -351,76 +229,7 @@ fn parse_variable(
     })
 }
 
-fn parse_template_parameters(entity: &Entity) -> Option<Vec<TemplateParameter>> {
-    let params: Vec<TemplateParameter> = entity
-        .get_children()
-        .into_iter()
-        .enumerate()
-        .filter_map(|(idx, child)| match child.get_kind() {
-            EntityKind::TemplateTypeParameter => {
-                // template <typename Foo>  →  "name: Foo, is_pack: False"
-                // template <typename, typename> -> "name: T0, is_pack: False", "name: T1, is_pack: False"
-                // template <typename... Foo> -> "name: Foo, is_pack: True"
-                let name = child.get_name().unwrap_or_else(|| format!("T{idx}"));
-
-                Some(TemplateParameter::Type {
-                    name,
-                    is_pack: is_template_parameter_pack(&child),
-                })
-            }
-            EntityKind::NonTypeTemplateParameter => {
-                // template <int N>  →  "name: N, value_type: int"
-                let type_name = child
-                    .get_type()
-                    .map(|t| t.get_display_name())
-                    .unwrap_or_default();
-                let name = child.get_name().unwrap_or_default();
-
-                Some(TemplateParameter::NonType {
-                    name,
-                    value_type: type_name,
-                    is_pack: is_template_parameter_pack(&child),
-                })
-            }
-            EntityKind::TemplateTemplateParameter => {
-                // template <template<...> class C>  → "name: C, parameters: [...], is_pack: False"
-                let parameters = parse_template_parameters(&child).unwrap_or_default();
-                let name = child.get_name().unwrap_or_else(|| format!("T{idx}"));
-
-                Some(TemplateParameter::Template {
-                    name,
-                    parameters,
-                    is_pack: is_template_parameter_pack(&child),
-                })
-            }
-            _ => None,
-        })
-        .collect();
-
-    if params.is_empty() {
-        None
-    } else {
-        Some(params)
-    }
-}
-
-fn normalize_pack_expansion_type(param_type: &str) -> String {
-    param_type.replace("...", "").trim().to_string()
-}
-
-fn is_template_parameter_pack(entity: &Entity) -> bool {
-    entity.get_range().is_some_and(|range| {
-        range
-            .tokenize()
-            .iter()
-            .any(|token| token.get_spelling() == "...")
-    }) || entity
-        .get_display_name()
-        .as_deref()
-        .is_some_and(|display_name| display_name.contains("..."))
-}
-
-fn parse_visibility(entity: &Entity) -> Visibility {
+pub(crate) fn parse_visibility(entity: &Entity) -> Visibility {
     match entity.get_accessibility() {
         Some(clang::Accessibility::Public) => Visibility::Public,
         Some(clang::Accessibility::Private) => Visibility::Private,
@@ -429,39 +238,44 @@ fn parse_visibility(entity: &Entity) -> Visibility {
     }
 }
 
-fn infer_entity_type_from_members(kind: EntityKind, class: &SimpleEntity) -> EntityType {
-    if kind == EntityKind::StructDecl {
-        return EntityType::Struct;
+fn update_entity_type_for_method(
+    class: &mut SimpleEntity,
+    builder: &mut ParsedClassInfo,
+    method: &Method,
+) {
+    if class.entity_type == EntityType::Struct {
+        return;
     }
 
-    let has_data_members = !class.variables.is_empty();
-    let mut has_abstract_methods = false;
-    let mut has_concrete_methods = false;
+    update_method_flags(builder, method);
 
-    for method in &class.methods {
-        let is_abstract = method
-            .modifiers
-            .iter()
-            .any(|m| matches!(m, MethodModifier::Abstract));
-        let is_constructor_or_destructor = method
-            .modifiers
-            .iter()
-            .any(|m| matches!(m, MethodModifier::Constructor | MethodModifier::Destructor));
+    class.entity_type = match (
+        builder.has_abstract_methods,
+        builder.has_concrete_methods,
+        class.variables.is_empty(),
+    ) {
+        (true, false, true) => EntityType::Interface,
+        (true, _, _) => EntityType::AbstractClass,
+        _ => EntityType::Class,
+    };
+}
 
-        if is_abstract {
-            has_abstract_methods = true;
-        } else if !is_constructor_or_destructor {
-            has_concrete_methods = true;
-        }
-    }
+fn update_method_flags(builder: &mut ParsedClassInfo, method: &Method) {
+    let is_abstract = method
+        .modifiers
+        .iter()
+        .any(|modifier| matches!(modifier, MethodModifier::Abstract));
 
-    if has_abstract_methods {
-        if !has_concrete_methods && !has_data_members {
-            EntityType::Interface
-        } else {
-            EntityType::AbstractClass
-        }
-    } else {
-        EntityType::Class
+    let is_special_method = method.modifiers.iter().any(|modifier| {
+        matches!(
+            modifier,
+            MethodModifier::Constructor | MethodModifier::Destructor
+        )
+    });
+
+    if is_abstract {
+        builder.has_abstract_methods = true;
+    } else if !is_special_method {
+        builder.has_concrete_methods = true;
     }
 }

@@ -42,17 +42,25 @@ fn write_entity_tree_inner(path: &Path, entity_tree: &str) -> std::io::Result<()
     file_out.flush()
 }
 
-pub fn write_debug_json<T, U>(
+pub fn write_debug_json<T, U, V>(
     output_path: &Path,
     types: &T,
-    functions: &U,
+    free_function_declarations: Option<&U>,
+    functions: &V,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     T: Serialize,
     U: Serialize,
+    V: Serialize,
 {
     let mut debug_json = serde_json::Map::new();
     debug_json.insert("types".to_owned(), serde_json::to_value(types)?);
+    if let Some(free_function_declarations) = free_function_declarations {
+        debug_json.insert(
+            "free_function_declarations".to_owned(),
+            serde_json::to_value(free_function_declarations)?,
+        );
+    }
     debug_json.insert("functions".to_owned(), serde_json::to_value(functions)?);
 
     let output_json = serde_json::to_string_pretty(&debug_json)?;

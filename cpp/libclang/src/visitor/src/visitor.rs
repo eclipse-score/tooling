@@ -19,7 +19,7 @@ use log::warn;
 
 use crate::clang_adapter::source_filter;
 use crate::class_visitor::ClassVisitor;
-use crate::context::{FunctionDefinitionKey, VisitContext};
+use crate::context::{CallableIdentityKey, SourceEntityKey, VisitContext};
 use crate::enum_visitor::EnumVisitor;
 use crate::function_visitor::FunctionVisitor;
 
@@ -58,18 +58,24 @@ impl SourceFileCache {
 pub struct Visitor<'a> {
     ctx: &'a mut VisitContext,
     source_files: &'a mut SourceFileCache,
-    seen_function_definitions: &'a mut HashSet<FunctionDefinitionKey>,
+    seen_free_function_declarations: &'a mut HashSet<CallableIdentityKey>,
+    seen_method_declarations: &'a mut HashSet<CallableIdentityKey>,
+    seen_function_definitions: &'a mut HashSet<SourceEntityKey>,
 }
 
 impl<'a> Visitor<'a> {
     pub fn new(
         ctx: &'a mut VisitContext,
         source_files: &'a mut SourceFileCache,
-        seen_function_definitions: &'a mut HashSet<FunctionDefinitionKey>,
+        seen_free_function_declarations: &'a mut HashSet<CallableIdentityKey>,
+        seen_method_declarations: &'a mut HashSet<CallableIdentityKey>,
+        seen_function_definitions: &'a mut HashSet<SourceEntityKey>,
     ) -> Self {
         Self {
             ctx,
             source_files,
+            seen_free_function_declarations,
+            seen_method_declarations,
             seen_function_definitions,
         }
     }
@@ -92,19 +98,22 @@ impl<'a> Visitor<'a> {
                 ClassVisitor::visit(self.ctx, entity);
             }
             EntityKind::EnumDecl => EnumVisitor::visit(self.ctx, entity),
-            EntityKind::FunctionDecl | EntityKind::FunctionTemplate | EntityKind::Method => {
+            EntityKind::FunctionDecl
+            | EntityKind::FunctionTemplate
+            | EntityKind::Method
+            | EntityKind::Constructor
+            | EntityKind::Destructor => {
                 FunctionVisitor::visit_with_state(
                     self.ctx,
                     self.source_files,
+                    self.seen_free_function_declarations,
+                    self.seen_method_declarations,
                     self.seen_function_definitions,
                     entity,
                 );
             }
-            EntityKind::Constructor | EntityKind::Destructor | EntityKind::ConversionFunction => {
-                warn!(
-                    "Ignoring constructor, destructor, or conversion function: {:?}",
-                    entity
-                );
+            EntityKind::ConversionFunction => {
+                warn!("Ignoring conversion function: {:?}", entity);
             }
             _ => {}
         }

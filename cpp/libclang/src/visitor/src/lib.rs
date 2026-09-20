@@ -11,10 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
+mod callable_declaration;
 mod clang_adapter;
 mod class_relationship_resolver;
 mod class_visitor;
 pub mod context;
+mod context_ext;
 mod enum_visitor;
 mod function_visitor;
 mod types;
@@ -24,7 +26,8 @@ pub use cpp_semantics::{BodyItem, FunctionDef, ResolvedType};
 
 pub use clang_adapter::source_filter::is_external_dependency_path;
 pub use class_visitor::ClassVisitor;
-pub use context::{FunctionDefinitionKey, VisitContext};
+pub use context::{CallableIdentityKey, CallableOwnerIdentityKey, SourceEntityKey, VisitContext};
+pub use context_ext::EntityMapExt;
 pub use enum_visitor::EnumVisitor;
 pub use function_visitor::FunctionVisitor;
 pub use visitor::{AstVisitor, SourceFileCache, Visitor};
