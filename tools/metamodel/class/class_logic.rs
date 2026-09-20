@@ -18,7 +18,10 @@ pub use source_location::SourceLocation;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ClassDiagram {
     pub name: String,
+    #[serde(default)]
     pub entities: Vec<SimpleEntity>,
+    #[serde(default)]
+    pub free_functions: Vec<FreeFunctionDecl>,
 }
 
 /// Represents a class, struct, interface, enum, or other type entity
@@ -259,6 +262,33 @@ pub struct EnumLiteral {
     pub source_location: SourceLocation,
 }
 
+/// Represents a global- or namespace-scope function declaration.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct FreeFunctionDecl {
+    /// Function name without its namespace qualification.
+    pub name: String,
+    /// Namespace containing the function, if any.
+    pub enclosing_namespace_id: Option<String>,
+    /// Return type.
+    pub return_type: Option<String>,
+    /// Function parameters.
+    pub parameters: Vec<FunctionArgument>,
+    /// Template parameters for generic functions.
+    pub template_parameters: Option<Vec<TemplateParameter>>,
+    /// Source location in input.
+    pub source_location: SourceLocation,
+}
+
+impl FreeFunctionDecl {
+    /// Returns the function name qualified by its containing namespace.
+    pub fn qualified_name(&self) -> String {
+        match self.enclosing_namespace_id.as_deref() {
+            Some(namespace) if !namespace.is_empty() => format!("{namespace}::{}", self.name),
+            _ => self.name.clone(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -311,6 +341,22 @@ mod tests {
         };
 
         assert_eq!(inheritance.relation_type, RelationType::Inheritance);
+    }
+
+    #[test]
+    fn free_function_qualified_name_includes_namespace_when_present() {
+        let global = FreeFunctionDecl {
+            name: "log".to_string(),
+            ..Default::default()
+        };
+        let namespaced = FreeFunctionDecl {
+            name: "log".to_string(),
+            enclosing_namespace_id: Some("app::internal".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(global.qualified_name(), "log");
+        assert_eq!(namespaced.qualified_name(), "app::internal::log");
     }
 
     #[test]
