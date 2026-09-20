@@ -1102,6 +1102,7 @@ mod tests {
         let diagrams: ClassDiagramInputs = vec![ClassDiagram {
             name: "unit".to_string(),
             entities,
+            free_functions: Vec::new(),
         }];
         ClassEntityIndex::build_index(&diagrams, &mut ValidationResult::default())
     }

@@ -195,15 +195,17 @@ The top-level visitor currently dispatches these cursor kinds to
 | `FunctionDecl` | `Free` |
 | `FunctionTemplate` | `Free` at global or namespace scope; `Method` or `StaticMethod` at type scope |
 | `Method` | `Method` or `StaticMethod` |
+| `Constructor` | `Constructor` |
+| `Destructor` | `Destructor` |
 
 C++ member operator overloads such as `operator+` and `operator[]` are normally
 reported as `Method`; the current model does not use a distinct operator-method
 kind.
 
 `FunctionVisitor` has internal kind mappings for `Constructor`, `Destructor`,
-and `ConversionFunction`, but the top-level visitor currently logs and ignores
-those cursor kinds. Therefore they do not currently produce `FunctionDef`
-entries. A conversion operator such as `operator bool()` is a
+and `ConversionFunction`. The top-level visitor currently dispatches
+constructors and destructors for extraction, but still logs and ignores
+`ConversionFunction`. A conversion operator such as `operator bool()` is a
 `ConversionFunction` and is distinct from a normal operator overload.
 
 Namespace-level function templates are extracted as `FunctionDef` entries with

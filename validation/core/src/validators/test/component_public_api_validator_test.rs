@@ -41,6 +41,7 @@ fn public_api_index(interfaces: Vec<(&str, Option<&str>)>) -> PublicApiIndex {
             .into_iter()
             .map(|(interface_name, namespace)| class_interface(interface_name, namespace))
             .collect(),
+        free_functions: Vec::new(),
     }];
 
     PublicApiIndex::build_index(&diagrams)

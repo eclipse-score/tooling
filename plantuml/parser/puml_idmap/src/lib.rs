@@ -627,6 +627,7 @@ mod tests {
         let model = ClassDiagram {
             name: "d".to_string(),
             entities: vec![with_members, without_members],
+            free_functions: vec![],
         };
 
         let idmap = class_model_to_idmap(&model, "pkg/classes.puml");
@@ -677,6 +678,7 @@ mod tests {
         let model = ClassDiagram {
             name: "sorted".to_string(),
             entities: vec![with_members_z, ref_m, with_members_a, ref_b],
+            free_functions: vec![],
         };
 
         let idmap = class_model_to_idmap(&model, "pkg/class_sorted.puml");
@@ -782,6 +784,7 @@ mod tests {
         let model = ClassDiagram {
             name: "d".to_string(),
             entities: vec![define],
+            free_functions: vec![],
         };
 
         let idmap = class_model_to_idmap(&model, "pkg/classes.puml");
@@ -815,6 +818,7 @@ mod tests {
         let model = ClassDiagram {
             name: "d".to_string(),
             entities: vec![a, b],
+            free_functions: vec![],
         };
 
         let idmap = class_model_to_idmap(&model, "pkg/classes.puml");
@@ -851,6 +855,7 @@ mod tests {
         let model = ClassDiagram {
             name: "d".to_string(),
             entities: vec![child],
+            free_functions: vec![],
         };
 
         let idmap = class_model_to_idmap(&model, "pkg/ns.puml");
@@ -897,6 +902,7 @@ mod tests {
         let model = ClassDiagram {
             name: "d".to_string(),
             entities: vec![child],
+            free_functions: vec![],
         };
 
         let idmap = class_model_to_idmap(&model, "pkg/ns.puml");
@@ -928,6 +934,7 @@ mod tests {
         let model = ClassDiagram {
             name: "unit_1_class_diagram".to_string(),
             entities: vec![foo],
+            free_functions: vec![],
         };
 
         let idmap = class_model_to_idmap(&model, "unit_1/docs/unit_1_class_diagram.puml");
@@ -962,6 +969,7 @@ mod tests {
         let model = ClassDiagram {
             name: "d".to_string(),
             entities: vec![child, container_as_real_entity],
+            free_functions: vec![],
         };
 
         let idmap = class_model_to_idmap(&model, "pkg/ns.puml");
@@ -995,6 +1003,7 @@ mod tests {
         let model = ClassDiagram {
             name: "Proxy".to_string(),
             entities: vec![proxy, leaf],
+            free_functions: vec![],
         };
 
         let idmap = class_model_to_idmap(&model, "pkg/proxy.puml");
@@ -1129,6 +1138,7 @@ mod tests {
         let model = ClassDiagram {
             name: "d".to_string(),
             entities: vec![with_members],
+            free_functions: vec![],
         };
         let input = Path::new("some/dir/classes.puml");
 

@@ -206,6 +206,7 @@ mod tests {
                 entity("Unit.Sample", "design_a.puml", 12),
                 entity("unit.sample", "design_b.puml", 34),
             ],
+            free_functions: Vec::new(),
         }];
 
         let mut result = ValidationResult::default();
@@ -251,6 +252,7 @@ mod tests {
                     source_location: SourceLocation::new("test.puml", 1),
                 },
             ],
+            free_functions: Vec::new(),
         }];
 
         let index = InternalApiIndex::build_index(&diagrams);
@@ -300,6 +302,7 @@ mod tests {
                     source_location: SourceLocation::new("test.puml", 1),
                 },
             ],
+            free_functions: Vec::new(),
         }];
 
         let index = InternalApiIndex::build_index(&diagrams);

@@ -187,6 +187,7 @@ pub(super) fn internal_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> Internal
                 interface
             })
             .collect(),
+        free_functions: Vec::new(),
     }];
 
     InternalApiIndex::build_index(&diagrams)

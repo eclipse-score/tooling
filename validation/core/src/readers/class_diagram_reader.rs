@@ -324,6 +324,7 @@ impl Reader for ClassDiagramReader {
             diagrams.push(ClassDiagram {
                 name: diagram.name().to_string(),
                 entities,
+                free_functions: Vec::new(),
             });
         }
 
