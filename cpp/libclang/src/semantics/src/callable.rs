@@ -59,7 +59,7 @@ pub enum FunctionKind {
     Conversion,
 }
 
-/// Stable semantic identity of a C++ callable.
+/// Lightweight semantic identity of a C++ callable within this model.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FunctionId {
     pub scope: Scope,

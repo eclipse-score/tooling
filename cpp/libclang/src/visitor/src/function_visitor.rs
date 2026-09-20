@@ -15,16 +15,27 @@
 //! Preserves structured calls, branches, and loops for supported AST shapes,
 //! and falls back to conservative traversal for unsupported control-flow forms.
 
-use clang::{Entity, EntityKind};
+use clang::{Entity, EntityKind, ExceptionSpecification};
+use class_diagram::{FreeFunctionDecl, Method, MethodModifier};
 use cpp_semantics::{
     BodyItem, BranchCase, FunctionDef, FunctionId, FunctionKind, GuardExpression, LoopKind,
+    ResolvedType, Scope,
 };
 use std::collections::HashSet;
 
-use crate::clang_adapter::scope::callable_scope;
+use crate::callable_declaration::{
+    callable_arguments, parse_callable_return_type, parse_function_parameters,
+    parse_template_parameters,
+};
+use crate::clang_adapter::scope::{callable_scope, namespace_id};
 use crate::clang_adapter::source_filter;
 use crate::clang_adapter::source_location::parse_source_location;
-use crate::context::{ExtractedFunction, FunctionDefinitionKey};
+use crate::class_visitor::{parse_visibility, ClassVisitor};
+use crate::context::{
+    CallableArgumentIdentityKey, CallableIdentityKey, CallableOwnerIdentityKey,
+    ExtractedFreeFunctionDeclaration, ExtractedFunction, ExtractedMethodDeclaration,
+    ParsedMethodType, SourceEntityKey,
+};
 use crate::types::resolver::resolve_type;
 use crate::visitor::{normalize_source_identity_path, SourceFileCache};
 use crate::VisitContext;
@@ -43,24 +54,204 @@ impl FunctionVisitor {
     pub(crate) fn visit_with_state(
         ctx: &mut VisitContext,
         source_files: &mut SourceFileCache,
-        seen_function_definitions: &mut HashSet<FunctionDefinitionKey>,
+        seen_free_function_declarations: &mut HashSet<CallableIdentityKey>,
+        seen_method_declarations: &mut HashSet<CallableIdentityKey>,
+        seen_function_definitions: &mut HashSet<SourceEntityKey>,
         entity: Entity,
     ) {
-        if let Some(function) =
-            Self::extract_function_def(source_files, seen_function_definitions, entity)
-        {
+        let Some((function_id, function_kind)) = Self::extract_callable(&entity) else {
+            return;
+        };
+
+        match &function_id.scope {
+            Scope::Type { .. } => {
+                if let Some(declaration) = Self::extract_method_declaration(
+                    seen_method_declarations,
+                    &entity,
+                    &function_id,
+                    function_kind,
+                ) {
+                    ClassVisitor::add_method_declaration(ctx, declaration);
+                } else {
+                    log::debug!(
+                        "skipping type-scoped callable '{}': unsupported function kind {:?}",
+                        function_id.qualified_name(),
+                        function_kind
+                    );
+                }
+            }
+            Scope::Global | Scope::Namespace(_) => {
+                if let Some(declaration) = Self::extract_free_function_declaration(
+                    seen_free_function_declarations,
+                    &entity,
+                    &function_id,
+                ) {
+                    ctx.free_function_declarations.push(declaration);
+                }
+            }
+        }
+
+        if let Some(function) = Self::extract_function_def(
+            entity,
+            function_id,
+            function_kind,
+            source_files,
+            seen_function_definitions,
+        ) {
             ctx.functions.push(function);
         }
     }
 
     // ── Top-level extraction ──────────────────────────────────────────────────
 
+    fn extract_method_declaration(
+        seen_method_declarations: &mut HashSet<CallableIdentityKey>,
+        entity: &Entity,
+        id: &FunctionId,
+        kind: FunctionKind,
+    ) -> Option<ExtractedMethodDeclaration> {
+        if !matches!(
+            kind,
+            FunctionKind::Method
+                | FunctionKind::StaticMethod
+                | FunctionKind::Constructor
+                | FunctionKind::Destructor
+        ) {
+            return None;
+        }
+
+        let parameters = parse_function_parameters(entity);
+        let class_id = id.scope.qualified_name();
+        if !Self::insert_callable_identity(
+            seen_method_declarations,
+            CallableOwnerIdentityKey::Method {
+                class_id: class_id.clone(),
+            },
+            &id.name,
+            &parameters,
+        ) {
+            return None;
+        }
+
+        let return_type = entity
+            .get_result_type()
+            .map(|ty| resolve_type(&ty))
+            .unwrap_or_else(|| ResolvedType::Builtin("void".to_string()));
+        let method_type = ParsedMethodType {
+            name: id.name.clone(),
+            return_type: return_type.clone(),
+            parameter_types: callable_arguments(entity)
+                .into_iter()
+                .filter_map(|argument| argument.get_type().map(|ty| resolve_type(&ty)))
+                .collect(),
+            source_location: parse_source_location(entity),
+        };
+
+        let is_override_method = entity
+            .get_overridden_methods()
+            .is_some_and(|methods| !methods.is_empty());
+        let is_final_method = entity
+            .get_children()
+            .into_iter()
+            .any(|child| child.get_kind() == EntityKind::FinalAttr);
+
+        // Only the bare `noexcept` specifier is modeled (mirrors the PlantUML grammar, which has
+        // no support for the conditional `noexcept(expr)` form). Requiring `BasicNoexcept` filters
+        // out `noexcept(expr)`, but on its own it isn't enough: for an implicit/defaulted special
+        // member (e.g. `~Foo() = default;` with no written specifier at all), the compiler-computed
+        // specification also resolves to `BasicNoexcept` once evaluated -- and that evaluation is
+        // lazily triggered by unrelated code (e.g. a derived class use), making it unstable. So this
+        // also requires the literal `noexcept` token to appear in the declarator (the tokens up to
+        // the first `{` or `;`), which excludes both that case and `noexcept` written inside a
+        // lambda in the method body.
+        let has_noexcept_token = entity.get_range().is_some_and(|range| {
+            range
+                .tokenize()
+                .iter()
+                .take_while(|token| !matches!(token.get_spelling().as_str(), "{" | ";"))
+                .any(|token| token.get_spelling() == "noexcept")
+        });
+
+        let is_noexcept_method = has_noexcept_token
+            && matches!(
+                entity.get_exception_specification(),
+                Some(ExceptionSpecification::BasicNoexcept)
+            );
+
+        let return_type = if matches!(kind, FunctionKind::Constructor | FunctionKind::Destructor) {
+            None
+        } else {
+            parse_callable_return_type(entity)
+        };
+
+        let method = Method {
+            name: id.name.clone(),
+            return_type,
+            visibility: parse_visibility(entity),
+            parameters,
+            template_parameters: parse_template_parameters(entity),
+            modifiers: MethodModifier::from_conditions([
+                (entity.is_static_method(), MethodModifier::Static),
+                (entity.is_virtual_method(), MethodModifier::Virtual),
+                (entity.is_pure_virtual_method(), MethodModifier::Abstract),
+                (is_override_method, MethodModifier::Override),
+                (is_noexcept_method, MethodModifier::Noexcept),
+                (
+                    kind == FunctionKind::Constructor,
+                    MethodModifier::Constructor,
+                ),
+                (kind == FunctionKind::Destructor, MethodModifier::Destructor),
+                (is_final_method, MethodModifier::Final),
+            ]),
+            source_location: parse_source_location(entity),
+        };
+
+        Some(ExtractedMethodDeclaration {
+            class_id,
+            method,
+            method_type,
+        })
+    }
+
+    fn extract_free_function_declaration(
+        seen_free_function_declarations: &mut HashSet<CallableIdentityKey>,
+        entity: &Entity,
+        id: &FunctionId,
+    ) -> Option<ExtractedFreeFunctionDeclaration> {
+        let key = Self::extract_source_entity_key(entity)?;
+        let parameters = parse_function_parameters(entity);
+        if !Self::insert_callable_identity(
+            seen_free_function_declarations,
+            CallableOwnerIdentityKey::FreeFunction {
+                enclosing_namespace_id: namespace_id(entity),
+            },
+            &id.name,
+            &parameters,
+        ) {
+            return None;
+        }
+
+        Some(ExtractedFreeFunctionDeclaration {
+            key,
+            declaration: FreeFunctionDecl {
+                name: id.name.clone(),
+                enclosing_namespace_id: namespace_id(entity),
+                return_type: parse_callable_return_type(entity),
+                parameters,
+                template_parameters: parse_template_parameters(entity),
+                source_location: parse_source_location(entity),
+            },
+        })
+    }
+
     fn extract_function_def(
-        source_files: &mut SourceFileCache,
-        seen_function_definitions: &mut HashSet<FunctionDefinitionKey>,
         entity: Entity,
+        id: FunctionId,
+        kind: FunctionKind,
+        source_files: &mut SourceFileCache,
+        seen_function_definitions: &mut HashSet<SourceEntityKey>,
     ) -> Option<ExtractedFunction> {
-        let key = Self::extract_definition_key(&entity)?;
+        let key = Self::extract_source_entity_key(&entity)?;
 
         if seen_function_definitions.contains(&key) {
             log::debug!(
@@ -70,23 +261,6 @@ impl FunctionVisitor {
             );
             return None;
         }
-
-        let Some(id) = Self::extract_function_id(&entity) else {
-            log::debug!(
-                "skipping callable '{}': no supported function identity",
-                entity.get_name().unwrap_or_default()
-            );
-            return None;
-        };
-
-        let Some(kind) = Self::extract_function_kind(&entity) else {
-            log::debug!(
-                "skipping callable '{}': unsupported callable kind {:?}",
-                id.qualified_name(),
-                entity.get_kind()
-            );
-            return None;
-        };
 
         let Some(body) = Self::process_function_body(source_files, entity, &id) else {
             log::debug!(
@@ -116,7 +290,29 @@ impl FunctionVisitor {
         Some(extracted_function)
     }
 
+    fn insert_callable_identity(
+        seen_declarations: &mut HashSet<CallableIdentityKey>,
+        owner: CallableOwnerIdentityKey,
+        name: &str,
+        parameters: &[class_diagram::FunctionArgument],
+    ) -> bool {
+        seen_declarations.insert(CallableIdentityKey {
+            owner,
+            name: name.to_string(),
+            parameters: parameters
+                .iter()
+                .map(CallableArgumentIdentityKey::from)
+                .collect(),
+        })
+    }
+
     // ── AST navigation helpers ────────────────────────────────────────────────
+
+    fn extract_callable(entity: &Entity) -> Option<(FunctionId, FunctionKind)> {
+        let function_id = Self::extract_function_id(entity)?;
+        let function_kind = Self::extract_function_kind(entity, &function_id.scope)?;
+        Some((function_id, function_kind))
+    }
 
     fn extract_function_id(entity: &Entity) -> Option<FunctionId> {
         Some(FunctionId {
@@ -125,9 +321,32 @@ impl FunctionVisitor {
         })
     }
 
-    fn extract_definition_key(entity: &Entity) -> Option<FunctionDefinitionKey> {
+    fn extract_function_kind(entity: &Entity, scope: &Scope) -> Option<FunctionKind> {
+        match entity.get_kind() {
+            EntityKind::FunctionDecl => Some(FunctionKind::Free),
+            EntityKind::FunctionTemplate => match scope {
+                Scope::Type { .. } => Some(Self::method_function_kind(entity)),
+                Scope::Global | Scope::Namespace(_) => Some(FunctionKind::Free),
+            },
+            EntityKind::Method => Some(Self::method_function_kind(entity)),
+            EntityKind::Constructor => Some(FunctionKind::Constructor),
+            EntityKind::Destructor => Some(FunctionKind::Destructor),
+            EntityKind::ConversionFunction => Some(FunctionKind::Conversion),
+            _ => None,
+        }
+    }
+
+    fn method_function_kind(entity: &Entity) -> FunctionKind {
+        if entity.is_static_method() {
+            FunctionKind::StaticMethod
+        } else {
+            FunctionKind::Method
+        }
+    }
+
+    fn extract_source_entity_key(entity: &Entity) -> Option<SourceEntityKey> {
         let location = entity.get_location()?.get_file_location();
-        Some(FunctionDefinitionKey {
+        Some(SourceEntityKey {
             source_file: normalize_source_identity_path(&location.file?.get_path()),
             source_offset: location.offset,
         })
@@ -164,31 +383,6 @@ impl FunctionVisitor {
             .unwrap_or_default()
     }
 
-    fn extract_function_kind(entity: &Entity) -> Option<FunctionKind> {
-        match entity.get_kind() {
-            EntityKind::FunctionDecl => Some(FunctionKind::Free),
-            EntityKind::FunctionTemplate => match callable_scope(entity)? {
-                cpp_semantics::Scope::Type { .. } => Some(if entity.is_static_method() {
-                    FunctionKind::StaticMethod
-                } else {
-                    FunctionKind::Method
-                }),
-                cpp_semantics::Scope::Global | cpp_semantics::Scope::Namespace(_) => {
-                    Some(FunctionKind::Free)
-                }
-            },
-            EntityKind::Method => Some(if entity.is_static_method() {
-                FunctionKind::StaticMethod
-            } else {
-                FunctionKind::Method
-            }),
-            EntityKind::Constructor => Some(FunctionKind::Constructor),
-            EntityKind::Destructor => Some(FunctionKind::Destructor),
-            EntityKind::ConversionFunction => Some(FunctionKind::Conversion),
-            _ => None,
-        }
-    }
-
     /// Resolves a call expression to its semantic callable target.
     fn extract_call_target(call_expr: Entity) -> Option<FunctionId> {
         // Direct reference works for simple `obj.method()` calls.
@@ -205,8 +399,7 @@ impl FunctionVisitor {
             return None;
         }
 
-        Self::extract_function_kind(&resolved)?;
-        Self::extract_function_id(&resolved)
+        Self::extract_callable(&resolved).map(|(function_id, _)| function_id)
     }
 
     fn is_cross_owner_call(caller: &FunctionId, callee: &FunctionId) -> bool {

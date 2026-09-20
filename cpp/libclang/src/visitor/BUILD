@@ -15,6 +15,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 rust_library(
     name = "visit_tu",
     srcs = [
+        "src/callable_declaration.rs",
         "src/clang_adapter/mod.rs",
         "src/clang_adapter/scope.rs",
         "src/clang_adapter/source_filter.rs",
@@ -22,6 +23,7 @@ rust_library(
         "src/class_relationship_resolver.rs",
         "src/class_visitor.rs",
         "src/context.rs",
+        "src/context_ext.rs",
         "src/enum_visitor.rs",
         "src/function_visitor.rs",
         "src/lib.rs",

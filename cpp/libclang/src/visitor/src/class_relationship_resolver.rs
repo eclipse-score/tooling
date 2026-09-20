@@ -24,7 +24,7 @@ pub(crate) fn resolve_relationships(ctx: &mut VisitContext) {
     let builders = std::mem::take(&mut ctx.parsed_class_info);
     let known_type_ids: HashSet<String> = ctx.types.keys().cloned().collect();
 
-    for builder in builders {
+    for builder in builders.into_values() {
         build_relationships_for_class(ctx, &builder);
         infer_relationships_from_builder(ctx, &builder, &known_type_ids);
     }
@@ -267,21 +267,25 @@ mod tests {
             },
         );
 
-        ctx.parsed_class_info.push(ParsedClassInfo {
-            id: "Car".to_string(),
-            base_classes: vec![],
-            variable_types: vec![ParsedVariableType {
-                name: "engine".to_string(),
-                resolved_type: ResolvedType::UserDefined("Engine".to_string()),
-                source_location: SourceLocation::new(source_file, 5),
-            }],
-            method_types: vec![ParsedMethodType {
-                name: "buildEngine".to_string(),
-                return_type: ResolvedType::UserDefined("Engine".to_string()),
-                parameter_types: vec![],
-                source_location: SourceLocation::new(source_file, 6),
-            }],
-        });
+        ctx.parsed_class_info.insert(
+            "Car".to_string(),
+            ParsedClassInfo {
+                id: "Car".to_string(),
+                base_classes: vec![],
+                variable_types: vec![ParsedVariableType {
+                    name: "engine".to_string(),
+                    resolved_type: ResolvedType::UserDefined("Engine".to_string()),
+                    source_location: SourceLocation::new(source_file, 5),
+                }],
+                method_types: vec![ParsedMethodType {
+                    name: "buildEngine".to_string(),
+                    return_type: ResolvedType::UserDefined("Engine".to_string()),
+                    parameter_types: vec![],
+                    source_location: SourceLocation::new(source_file, 6),
+                }],
+                ..Default::default()
+            },
+        );
 
         resolve_relationships(&mut ctx);
 
@@ -349,27 +353,31 @@ mod tests {
                 ..Default::default()
             },
         );
-        ctx.parsed_class_info.push(ParsedClassInfo {
-            id: "amp::detail::is_maplike_container".to_string(),
-            base_classes: vec![
-                // Unresolvable dependent expression — must be skipped, not panic.
-                ParsedBaseClass {
-                    resolved_type: ResolvedType::Dependent(
-                        "decltype(is_maplike_container_impl(std::declval<T>()))".to_string(),
-                    ),
-                    source_location: SourceLocation::new(source_file, 5),
-                },
-                // A normal, resolvable base class alongside the dependent one.
-                ParsedBaseClass {
-                    resolved_type: ResolvedType::UserDefined(
-                        "amp::detail::is_container_base".to_string(),
-                    ),
-                    source_location: SourceLocation::new(source_file, 5),
-                },
-            ],
-            variable_types: vec![],
-            method_types: vec![],
-        });
+        ctx.parsed_class_info.insert(
+            "amp::detail::is_maplike_container".to_string(),
+            ParsedClassInfo {
+                id: "amp::detail::is_maplike_container".to_string(),
+                base_classes: vec![
+                    // Unresolvable dependent expression — must be skipped, not panic.
+                    ParsedBaseClass {
+                        resolved_type: ResolvedType::Dependent(
+                            "decltype(is_maplike_container_impl(std::declval<T>()))".to_string(),
+                        ),
+                        source_location: SourceLocation::new(source_file, 5),
+                    },
+                    // A normal, resolvable base class alongside the dependent one.
+                    ParsedBaseClass {
+                        resolved_type: ResolvedType::UserDefined(
+                            "amp::detail::is_container_base".to_string(),
+                        ),
+                        source_location: SourceLocation::new(source_file, 5),
+                    },
+                ],
+                variable_types: vec![],
+                method_types: vec![],
+                ..Default::default()
+            },
+        );
 
         // Must not panic.
         resolve_relationships(&mut ctx);
@@ -419,16 +427,20 @@ mod tests {
                 ..Default::default()
             },
         );
-        ctx.parsed_class_info.push(ParsedClassInfo {
-            id: "Derived".to_string(),
-            base_classes: vec![ParsedBaseClass {
-                // Not `Dependent`: an unexpected, unresolvable base type.
-                resolved_type: ResolvedType::Unknown("SomeWeirdType".to_string()),
-                source_location: SourceLocation::new(source_file, 1),
-            }],
-            variable_types: vec![],
-            method_types: vec![],
-        });
+        ctx.parsed_class_info.insert(
+            "Derived".to_string(),
+            ParsedClassInfo {
+                id: "Derived".to_string(),
+                base_classes: vec![ParsedBaseClass {
+                    // Not `Dependent`: an unexpected, unresolvable base type.
+                    resolved_type: ResolvedType::Unknown("SomeWeirdType".to_string()),
+                    source_location: SourceLocation::new(source_file, 1),
+                }],
+                variable_types: vec![],
+                method_types: vec![],
+                ..Default::default()
+            },
+        );
 
         // Must not panic.
         resolve_relationships(&mut ctx);
