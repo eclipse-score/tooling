@@ -45,7 +45,7 @@ not filtered out, it dispatches to the relevant specialized visitor:
 | --- | --- |
 | `ClassDecl`, `StructDecl`, `ClassTemplate`, and `ClassTemplatePartialSpecialization` | Extract class/struct entities, members, aliases, bases, and relationship inputs. |
 | `EnumDecl` | Extract enum entities and literals. |
-| `FunctionDecl`, `FunctionTemplate`, and `Method` | Extract callable definitions and their body control flow. Function templates are classified as free functions, methods, or static methods according to their scope. |
+| `FunctionDecl`, `FunctionTemplate`, `Method`, `Constructor`, and `Destructor` | Extract callable definitions and their body control flow. Function templates are classified as free functions, methods, or static methods according to their scope. Constructors and destructors are routed through the same callable visitor and participate in body extraction when they have a direct compound body. |
 
 After traversal, class relationship resolution uses the collected base,
 variable, and method type information to populate the class-diagram

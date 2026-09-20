@@ -261,6 +261,7 @@ mod tests {
         let model = ClassDiagram {
             name: "d".to_string(),
             entities: vec![entity],
+            free_functions: vec![],
         };
         let dir = unique_tmp_dir("class");
         let input = Path::new("some/dir/classes.puml");
@@ -291,6 +292,7 @@ mod tests {
         let model = ClassDiagram {
             name: "d".to_string(),
             entities: vec![entity],
+            free_functions: vec![],
         };
         let dir = unique_tmp_dir("class_override");
         let input = Path::new("some/dir/classes.puml");

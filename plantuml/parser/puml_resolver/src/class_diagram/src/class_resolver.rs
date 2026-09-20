@@ -70,6 +70,7 @@ impl ClassResolver {
             logic: ClassDiagram {
                 name: String::new(),
                 entities: Vec::new(),
+                free_functions: Vec::new(),
             },
             name_map: HashMap::new(),
         }
@@ -846,6 +847,7 @@ impl DiagramResolver for ClassResolver {
             ClassDiagram {
                 name: String::new(),
                 entities: Vec::new(),
+                free_functions: Vec::new(),
             },
         );
 
