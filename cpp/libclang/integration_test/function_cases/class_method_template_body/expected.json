@@ -1,4 +1,17 @@
 {
+  "free_function_declarations": [
+    {
+      "name": "notify",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/class_method_template_body/functions.cpp",
+        "line": 14
+      }
+    }
+  ],
   "functions": [
     {
       "id": {

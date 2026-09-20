@@ -1,13 +1,44 @@
 {
+  "types": {},
+  "free_function_declarations": [
+    {
+      "name": "handle_no_else",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_without_else/flow.cpp",
+        "line": 14
+      }
+    },
+    {
+      "name": "without_else",
+      "enclosing_namespace_id": "flow",
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "enabled",
+          "param_type": "bool",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_without_else/flow.cpp",
+        "line": 17
+      }
+    }
+  ],
   "functions": [
     {
       "id": {
-        "name": "without_else",
         "scope": {
           "Namespace": [
             "flow"
           ]
-        }
+        },
+        "name": "without_else"
       },
       "kind": "Free",
       "return_type": {
@@ -15,6 +46,7 @@
       },
       "body": [
         {
+          "type": "branch",
           "cases": [
             {
               "guard": {
@@ -22,17 +54,17 @@
                 "text": "enabled",
                 "source_location": {
                   "file": "cpp/libclang/integration_test/function_cases/if_without_else/flow.cpp",
-                    "line": 18
+                  "line": 18
                 }
               },
               "body": [
                 {
+                  "type": "call",
                   "target": "handle_no_else",
                   "source_location": {
                     "file": "cpp/libclang/integration_test/function_cases/if_without_else/flow.cpp",
-                      "line": 19
-                  },
-                  "type": "call"
+                    "line": 19
+                  }
                 }
               ],
               "source_location": {
@@ -40,11 +72,9 @@
                 "line": 18
               }
             }
-          ],
-          "type": "branch"
+          ]
         }
       ]
     }
-  ],
-  "types": {}
+  ]
 }

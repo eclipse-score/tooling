@@ -1,9 +1,47 @@
 {
+  "types": {},
+  "free_function_declarations": [
+    {
+      "name": "declared_only",
+      "enclosing_namespace_id": "utility",
+      "return_type": "T",
+      "parameters": [
+        {
+          "name": "value",
+          "param_type": "T",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": [
+        {
+          "Type": {
+            "name": "T",
+            "is_pack": false
+          }
+        }
+      ],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/template_declaration_without_definition/declaration_only.h",
+        "line": 21
+      }
+    },
+    {
+      "name": "run",
+      "enclosing_namespace_id": null,
+      "return_type": "int",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/template_declaration_without_definition/functions.cpp",
+        "line": 16
+      }
+    }
+  ],
   "functions": [
     {
       "id": {
-        "name": "run",
-        "scope": "Global"
+        "scope": "Global",
+        "name": "run"
       },
       "kind": "Free",
       "return_type": {
@@ -20,6 +58,5 @@
         }
       ]
     }
-  ],
-  "types": {}
+  ]
 }

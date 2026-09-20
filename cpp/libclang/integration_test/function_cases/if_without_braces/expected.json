@@ -1,13 +1,55 @@
 {
+  "types": {},
+  "free_function_declarations": [
+    {
+      "name": "handle_unbraced",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_without_braces/flow.cpp",
+        "line": 14
+      }
+    },
+    {
+      "name": "handle_failure",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_without_braces/flow.cpp",
+        "line": 15
+      }
+    },
+    {
+      "name": "without_braces",
+      "enclosing_namespace_id": "flow",
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "enabled",
+          "param_type": "bool",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_without_braces/flow.cpp",
+        "line": 18
+      }
+    }
+  ],
   "functions": [
     {
       "id": {
-        "name": "without_braces",
         "scope": {
           "Namespace": [
             "flow"
           ]
-        }
+        },
+        "name": "without_braces"
       },
       "kind": "Free",
       "return_type": {
@@ -15,6 +57,7 @@
       },
       "body": [
         {
+          "type": "branch",
           "cases": [
             {
               "guard": {
@@ -22,17 +65,17 @@
                 "text": "enabled",
                 "source_location": {
                   "file": "cpp/libclang/integration_test/function_cases/if_without_braces/flow.cpp",
-                    "line": 19
+                  "line": 19
                 }
               },
               "body": [
                 {
+                  "type": "call",
                   "target": "handle_unbraced",
                   "source_location": {
                     "file": "cpp/libclang/integration_test/function_cases/if_without_braces/flow.cpp",
-                      "line": 20
-                  },
-                  "type": "call"
+                    "line": 20
+                  }
                 }
               ],
               "source_location": {
@@ -44,12 +87,12 @@
               "guard": null,
               "body": [
                 {
+                  "type": "call",
                   "target": "handle_failure",
                   "source_location": {
                     "file": "cpp/libclang/integration_test/function_cases/if_without_braces/flow.cpp",
                     "line": 22
-                  },
-                  "type": "call"
+                  }
                 }
               ],
               "source_location": {
@@ -57,11 +100,9 @@
                 "line": 22
               }
             }
-          ],
-          "type": "branch"
+          ]
         }
       ]
     }
-  ],
-  "types": {}
+  ]
 }

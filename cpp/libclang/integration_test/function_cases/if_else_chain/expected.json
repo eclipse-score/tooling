@@ -1,13 +1,77 @@
 {
+  "types": {},
+  "free_function_declarations": [
+    {
+      "name": "is_ready",
+      "enclosing_namespace_id": null,
+      "return_type": "bool",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_else_chain/flow.cpp",
+        "line": 14
+      }
+    },
+    {
+      "name": "handle_ready",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_else_chain/flow.cpp",
+        "line": 15
+      }
+    },
+    {
+      "name": "handle_retry",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_else_chain/flow.cpp",
+        "line": 16
+      }
+    },
+    {
+      "name": "handle_failure",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_else_chain/flow.cpp",
+        "line": 17
+      }
+    },
+    {
+      "name": "evaluate",
+      "enclosing_namespace_id": "flow",
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "retry",
+          "param_type": "bool",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/if_else_chain/flow.cpp",
+        "line": 22
+      }
+    }
+  ],
   "functions": [
     {
       "id": {
-        "name": "evaluate",
         "scope": {
           "Namespace": [
             "flow"
           ]
-        }
+        },
+        "name": "evaluate"
       },
       "kind": "Free",
       "return_type": {
@@ -15,6 +79,7 @@
       },
       "body": [
         {
+          "type": "branch",
           "cases": [
             {
               "guard": {
@@ -28,12 +93,12 @@
               },
               "body": [
                 {
+                  "type": "call",
                   "target": "handle_ready",
                   "source_location": {
                     "file": "cpp/libclang/integration_test/function_cases/if_else_chain/flow.cpp",
                     "line": 26
-                  },
-                  "type": "call"
+                  }
                 }
               ],
               "source_location": {
@@ -52,12 +117,12 @@
               },
               "body": [
                 {
+                  "type": "call",
                   "target": "handle_retry",
                   "source_location": {
                     "file": "cpp/libclang/integration_test/function_cases/if_else_chain/flow.cpp",
                     "line": 30
-                  },
-                  "type": "call"
+                  }
                 }
               ],
               "source_location": {
@@ -69,12 +134,12 @@
               "guard": null,
               "body": [
                 {
+                  "type": "call",
                   "target": "handle_failure",
                   "source_location": {
                     "file": "cpp/libclang/integration_test/function_cases/if_else_chain/flow.cpp",
                     "line": 34
-                  },
-                  "type": "call"
+                  }
                 }
               ],
               "source_location": {
@@ -82,11 +147,9 @@
                 "line": 33
               }
             }
-          ],
-          "type": "branch"
+          ]
         }
       ]
     }
-  ],
-  "types": {}
+  ]
 }

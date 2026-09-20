@@ -13,14 +13,14 @@
 load("//cpp/libclang/integration_test:test_rules.bzl", "cpp_parser_integration_test")
 
 cc_library(
-    name = "free_function_identity",
+    name = "out_of_line_method_dedup",
     srcs = ["functions.cpp"],
     hdrs = ["functions.hpp"],
     visibility = ["//cpp/libclang:__subpackages__"],
 )
 
 cpp_parser_integration_test(
-    name = "test_free_function_identity",
+    name = "test_out_of_line_method_dedup",
     expected_output = ["expected.json"],
-    target = ":free_function_identity",
+    target = ":out_of_line_method_dedup",
 )

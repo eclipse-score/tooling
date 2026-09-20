@@ -148,5 +148,60 @@
             }
         }
     },
+    "free_function_declarations": [
+        {
+            "name": "declval",
+            "enclosing_namespace_id": null,
+            "return_type": "T",
+            "parameters": [],
+            "template_parameters": [
+                {
+                    "Type": {
+                        "name": "T",
+                        "is_pack": false
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/dependent_decltype_base/dependent_base.cpp",
+                "line": 19
+            }
+        },
+        {
+            "name": "is_maplike_container_impl",
+            "enclosing_namespace_id": null,
+            "return_type": "decltype(value.begin())",
+            "parameters": [
+                {
+                    "name": "value",
+                    "param_type": "T",
+                    "is_variadic": false
+                }
+            ],
+            "template_parameters": [
+                {
+                    "Type": {
+                        "name": "T",
+                        "is_pack": false
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/dependent_decltype_base/dependent_base.cpp",
+                "line": 22
+            }
+        },
+        {
+            "name": "make_widget",
+            "enclosing_namespace_id": null,
+            "return_type": "Widget",
+            "parameters": [],
+            "template_parameters": null,
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/dependent_decltype_base/dependent_base.cpp",
+                "line": 43
+            }
+        }
+    ],
     "functions": []
 }

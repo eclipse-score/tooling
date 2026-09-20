@@ -1,4 +1,50 @@
 {
+  "free_function_declarations": [
+    {
+      "name": "declared_only",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/free_function_identity/functions.hpp",
+        "line": 16
+      }
+    },
+    {
+      "name": "global_value",
+      "enclosing_namespace_id": null,
+      "return_type": "int",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/free_function_identity/functions.hpp",
+        "line": 18
+      }
+    },
+    {
+      "name": "run",
+      "enclosing_namespace_id": "app",
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/free_function_identity/functions.hpp",
+        "line": 23
+      }
+    },
+    {
+      "name": "enabled",
+      "enclosing_namespace_id": "app::internal",
+      "return_type": "bool",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/free_function_identity/functions.cpp",
+        "line": 28
+      }
+    }
+  ],
   "functions": [
     {
       "id": {
