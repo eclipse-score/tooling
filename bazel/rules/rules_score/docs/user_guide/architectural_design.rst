@@ -314,6 +314,70 @@ When an element needs an explicitly named, standalone binding point — for exam
 
     @enduml
 
+.. _overview-and-detail-diagrams:
+
+Splitting Into an Overview and Detail Diagrams
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For a large architecture, pass more than one file to ``static``: one shared
+**overview** diagram that bare-declares the SEooC boundary and its top-level
+components, plus one or more **detail** diagrams that elaborate a component's
+internals. Each file is parsed independently and then merged by entity id, so
+the same component can appear in both without repeating its full contents:
+
+.. code-block:: text
+
+    ' overview_design.puml
+    @startuml overview_design
+
+    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
+        component "ComponentExample" as component_example <<component>>
+    }
+
+    interface "SampleLibraryAPI" as SampleLibraryAPI
+    safety_software_seooc_example )-d- SampleLibraryAPI
+
+    @enduml
+
+.. code-block:: text
+
+    ' static_design.puml
+    @startuml static_design
+
+    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
+        component "ComponentExample" as component_example <<component>> {
+            component "Unit 1" as unit_1 <<unit>>
+            component "Unit 2" as unit_2 <<unit>>
+        }
+    }
+
+    @enduml
+
+.. code-block:: starlark
+
+    architectural_design(
+        name   = "my_arch",
+        static = ["overview_design.puml", "static_design.puml"],
+    )
+
+See ``examples/seooc/design`` for the full working pair.
+
+**Limitations:**
+
+- Exactly one file must be the "home" for a given parent's full set of
+  children — one diagram declares *all* of a parent's children; the others
+  may only bare-declare that parent (no children) or repeat that same full
+  set. Two files each declaring a different, incomplete subset of the same
+  parent's children is rejected as a merge error — in practice, use one
+  shared overview file plus one or more detail files that each own a
+  disjoint part of the hierarchy, not several files partially detailing the
+  same component.
+- A relation may only reference aliases declared in the *same* file — an
+  overview cannot wire up a relation to an alias that only a detail file
+  declares. Keep each file self-contained.
+
+See :ref:`multiple-static-puml-files` for the complete merge rules.
+
 Bazel
 ~~~~~~
 
@@ -329,6 +393,10 @@ architectural_design
         static = ["static_design.puml"],  # the static diagram above
         dynamic = ["sequence_design.puml"],
     )
+
+``static`` accepts more than one ``.puml`` file — see
+:ref:`overview-and-detail-diagrams` above for splitting a large architecture
+into an overview plus detail diagrams, and their limitations.
 
 unit
 ^^^^^

@@ -1,0 +1,28 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+' Home file: the only file containing the full decomposition of component_a
+' (unit_1 and unit_2). Together with overview_diagram.puml (no children) and
+' detail_diagram.puml (unit_1 only, a subset), this stresses the
+' single-home-file check across three files instead of just two.
+
+@startuml full_diagram
+
+package "Package A" as package_a <<SEooC>> {
+    component "Component A" as component_a <<component>> {
+        component "Unit 1" as unit_1 <<unit>>
+        component "Unit 2" as unit_2 <<unit>>
+    }
+}
+
+@enduml

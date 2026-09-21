@@ -266,9 +266,9 @@ fn append_debug_log(
     diagnostics.debug(|| {
         format!(
             "Filtered to {} SEooC packages, {} components and {} units",
-            diagram.filtered_seooc_count,
-            diagram.filtered_component_count,
-            diagram.filtered_unit_count
+            diagram.seooc_set.len(),
+            diagram.comp_set.len(),
+            diagram.unit_set.len()
         )
     });
     diagnostics.debug(|| "PlantUML SEooC set:".to_string());

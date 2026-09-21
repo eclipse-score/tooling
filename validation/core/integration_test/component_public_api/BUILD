@@ -22,6 +22,7 @@ filegroup(
         "//validation/core/integration_test/component_public_api/negative_public_api_missing_with_suggestion:case_data",
         "//validation/core/integration_test/component_public_api/negative_public_api_missing_with_suggestions:case_data",
         "//validation/core/integration_test/component_public_api/negative_public_api_wrong_type:case_data",
+        "//validation/core/integration_test/component_public_api/positive_overview_seooc_relation_merge:case_data",
         "//validation/core/integration_test/component_public_api/positive_public_api_match:case_data",
     ],
 )

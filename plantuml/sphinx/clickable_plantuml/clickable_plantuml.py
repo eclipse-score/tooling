@@ -33,8 +33,12 @@ The matching algorithm:
 3. If exactly one definer: emit the link.
 4. If multiple definers: pick the one sharing the longest common workspace-
    relative path prefix with the source diagram (proximity tiebreak).
-   On a tie: log a warning and emit no link (safe over wrong).
-5. Never link a diagram to itself.
+5. If proximity still ties (e.g. same directory): pick the one with the most
+   idmap entries nested under the referenced id (descendant-count tiebreak) —
+   the file that elaborates more of that id's decomposition is assumed to be
+   the more useful navigation target.
+6. If still tied: log a warning and emit no link (safe over wrong).
+7. Never link a diagram to itself.
 """
 
 from __future__ import annotations
@@ -44,6 +48,7 @@ import json
 import os
 import re
 import urllib.parse
+from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -122,32 +127,47 @@ def _common_prefix_length(path_a: str, path_b: str) -> int:
     return count
 
 
-def _proximity_tiebreak(source: str, candidates: list[str]) -> str | None:
-    """Pick the candidate with the longest common prefix with *source*.
+def _tied_top(candidates: list[str], score: Callable[[str], int]) -> tuple[int | None, list[str]]:
+    """Return the max score and every candidate achieving it (``(None, [])`` if empty).
+
+    Shared by both tiebreak stages in :func:`_resolve_definer`.
+    """
+    best_score: int | None = None
+    best: list[str] = []
+    for candidate in candidates:
+        candidate_score = score(candidate)
+        if best_score is None or candidate_score > best_score:
+            best_score = candidate_score
+            best = [candidate]
+        elif candidate_score == best_score:
+            best.append(candidate)
+    return best_score, best
+
+
+def _proximity_score(source: str, candidate: str) -> int:
+    """Common-prefix-length score used by the proximity tiebreak stage.
 
     All inputs are canonical workspace-relative POSIX keys (guaranteed by the
     exact-matching in P0-1); the assertions guard that invariant so a staging
-    path can never sneak into the comparison.  Returns ``None`` when two or
-    more candidates score equally (tie → no link).
+    path can never sneak into the comparison.
     """
     _assert_canonical_source_key(source)
-    best_candidate: str | None = None
-    best_score = -1
-    has_tie = False
+    _assert_canonical_source_key(candidate)
+    return _common_prefix_length(source, candidate)
 
-    for candidate in candidates:
-        _assert_canonical_source_key(candidate)
-        score = _common_prefix_length(source, candidate)
-        if score > best_score:
-            best_score = score
-            best_candidate = candidate
-            has_tie = False
-        elif score == best_score:
-            has_tie = True
 
-    if has_tie or best_candidate is None:
-        return None
-    return best_candidate
+def _descendant_count(idmap_by_source: dict[str, Any], source_key: str, fqn: str) -> int:
+    """Count *source_key*'s idmap entries nested under *fqn* (id starts with ``f"{fqn}."``).
+
+    Second tiebreak stage in :func:`_resolve_definer`: prefers the file that
+    elaborates more of that id's decomposition.
+    """
+    idmap = idmap_by_source.get(source_key)
+    if idmap is None:
+        return 0
+    prefix = f"{fqn}."
+    entries = idmap.get("defines", []) + idmap.get("references", [])
+    return sum(1 for entry in entries if entry.get("id", "").startswith(prefix))
 
 
 def _resolve_definer(
@@ -155,6 +175,7 @@ def _resolve_definer(
     fqn: str,
     source_key: str,
     definition_index: dict[str, list[str]],
+    idmap_by_source: dict[str, Any] | None = None,
 ) -> str | None:
     """Return the definer source key for one reference, or ``None``.
 
@@ -167,9 +188,9 @@ def _resolve_definer(
       while a distinct diagram elaborates it under a shared alias).
     * A diagram never links to itself (self-links are dropped from both
       lookups).
-    * A single remaining candidate wins outright; multiple candidates go
-      through the proximity tiebreak, and a genuine tie logs a warning and
-      returns ``None`` (safe over wrong).
+    * A single remaining candidate wins outright. Multiple candidates go
+      through the proximity tiebreak, then the descendant-count tiebreak;
+      a genuine tie after both logs a warning and returns ``None``.
     """
     _assert_canonical_source_key(source_key)
 
@@ -184,7 +205,17 @@ def _resolve_definer(
         return None
     if len(candidates) == 1:
         return candidates[0]
-    target = _proximity_tiebreak(source_key, candidates)
+
+    proximity_group = _tied_top(candidates, lambda c: _proximity_score(source_key, c))[1]
+    target: str | None = proximity_group[0] if len(proximity_group) == 1 else None
+
+    if target is None and idmap_by_source:
+        descendant_score, descendant_group = _tied_top(
+            proximity_group, lambda c: _descendant_count(idmap_by_source, c, fqn)
+        )
+        if len(descendant_group) == 1 and descendant_score > 0:
+            target = descendant_group[0]
+
     if target is None:
         logger.warning(
             "clickable_plantuml: ambiguous definition for '%s' in '%s' — tied candidates %s; no link emitted",
@@ -617,7 +648,7 @@ def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> N
             if not alias or alias in seen_aliases_in_node:
                 continue
 
-            target_source = _resolve_definer(alias, fqn, source_key, definition_index)
+            target_source = _resolve_definer(alias, fqn, source_key, definition_index, idmap_by_source)
             if target_source is None:
                 continue
 

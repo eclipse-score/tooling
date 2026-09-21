@@ -84,6 +84,29 @@ section "Tool Requirements" {
 
         }
 
+        section "Component Model Validator" {
+
+            ToolQualification.ToolRequirement ComponentModelCrossFileDeclarationConsistency {
+                description = '''When an entity with the same id is declared
+                in more than one `static` PlantUML file, the validator shall
+                report an error if the declarations disagree on stereotype or
+                element type, and shall otherwise merge their relations into
+                a single entity.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ComponentModelSingleHomeDecomposition {
+                description = '''The validator shall report an error when an
+                entity's children are declared across more than one `static`
+                PlantUML file and no single file declares the full set of
+                children declared for that entity anywhere.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+        }
+
         section "Component Sequence Validator" {
 
             ToolQualification.ToolRequirement ComponentSequenceAliasConsistency {

@@ -25,9 +25,12 @@ filegroup(
         "//validation/core/integration_test/bazel_component/negative_extra_unit:case_data",
         "//validation/core/integration_test/bazel_component/negative_missing_component:case_data",
         "//validation/core/integration_test/bazel_component/negative_missing_unit:case_data",
+        "//validation/core/integration_test/bazel_component/negative_multi_file_extra_component:case_data",
+        "//validation/core/integration_test/bazel_component/negative_multi_file_wrong_nesting:case_data",
         "//validation/core/integration_test/bazel_component/negative_wrong_stereotype:case_data",
         "//validation/core/integration_test/bazel_component/positive_case_insensitive:case_data",
         "//validation/core/integration_test/bazel_component/positive_component:case_data",
+        "//validation/core/integration_test/bazel_component/positive_multi_file_component:case_data",
     ],
 )
 

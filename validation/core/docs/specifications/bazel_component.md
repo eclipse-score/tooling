@@ -22,6 +22,13 @@ It shall make sure that the same architectural elements exist on both sides and 
 
 ## What is Validated
 
+`architectural_design.static` may list more than one PlantUML file (e.g. a
+boundary overview diagram plus one or more detail diagrams); these are merged
+into a single component diagram model before this validator runs, so the
+checks below operate on that merged view regardless of how many static files
+contributed to it. See the `architectural_design` rule reference for the
+cross-file merge rules.
+
 All comparisons are case-insensitive: both Bazel target short names and
 PlantUML aliases/IDs are normalized to lowercase before matching, so a Bazel
 target `Component_X` matches a PlantUML entity `as COMPONENT_X`. Names are

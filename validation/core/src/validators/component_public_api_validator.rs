@@ -16,7 +16,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::shared::{best_string_suggestion, format_name_list};
+use super::shared::{best_string_suggestion, earliest_source_by_id, format_name_list};
 use crate::models::{ComponentDiagramArchitecture, LogicComponentExt, PublicApiIndex};
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
@@ -127,12 +127,13 @@ fn append_debug_log(
 fn collect_component_public_api_sources(
     component_diagram: &ComponentDiagramArchitecture,
 ) -> BTreeMap<String, SourceLocation> {
-    component_diagram
-        .entities
-        .iter()
-        .filter(|entity| entity.is_interface() && entity.parent_id.is_none())
-        .map(|entity| (entity.id.clone(), entity.source_location.clone()))
-        .collect()
+    earliest_source_by_id(
+        component_diagram
+            .entities
+            .iter()
+            .filter(|entity| entity.is_interface() && entity.parent_id.is_none())
+            .map(|entity| (entity.id.clone(), entity.source_location.clone())),
+    )
 }
 
 fn collect_seooc_related_public_api_ids(

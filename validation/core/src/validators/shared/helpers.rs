@@ -13,8 +13,9 @@
 
 //! Helper functions shared by validators.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
+use source_location::SourceLocation;
 use strsim::jaro_winkler;
 
 pub(in crate::validators) const DEFAULT_SUGGESTION_THRESHOLD: f64 = 0.75;
@@ -29,6 +30,26 @@ pub(in crate::validators) fn format_name_list(names: &BTreeSet<String>) -> Strin
         .map(|name| format!("\"{name}\""))
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+/// Reduces `(id, source_location)` pairs to one entry per `id`, keeping the
+/// earliest location (by file, then line) so the result doesn't depend on
+/// iteration order.
+pub(in crate::validators) fn earliest_source_by_id(
+    entries: impl IntoIterator<Item = (String, SourceLocation)>,
+) -> BTreeMap<String, SourceLocation> {
+    let mut result: BTreeMap<String, SourceLocation> = BTreeMap::new();
+    for (id, location) in entries {
+        result
+            .entry(id)
+            .and_modify(|existing| {
+                if location.display() < existing.display() {
+                    *existing = location.clone();
+                }
+            })
+            .or_insert(location);
+    }
+    result
 }
 
 pub(in crate::validators) fn format_sequence_call(
@@ -77,7 +98,8 @@ pub(in crate::validators) fn best_string_suggestion<'a>(
 
 #[cfg(test)]
 mod tests {
-    use super::{best_string_suggestion, DEFAULT_SUGGESTION_THRESHOLD};
+    use super::{best_string_suggestion, earliest_source_by_id, DEFAULT_SUGGESTION_THRESHOLD};
+    use source_location::SourceLocation;
     use strsim::jaro_winkler;
 
     #[test]
@@ -102,5 +124,39 @@ mod tests {
         assert!(score < DEFAULT_SUGGESTION_THRESHOLD);
 
         assert_eq!(best_string_suggestion("abc", ["xyz"]), None);
+    }
+
+    #[test]
+    fn earliest_source_by_id_keeps_lexicographically_earlier_file() {
+        let result = earliest_source_by_id([
+            ("id_a".to_string(), SourceLocation::new("overview.puml", 1)),
+            ("id_a".to_string(), SourceLocation::new("detail.puml", 1)),
+        ]);
+
+        assert_eq!(result["id_a"].display(), ("detail.puml".to_string(), 1));
+    }
+
+    #[test]
+    fn earliest_source_by_id_keeps_lower_line_in_same_file() {
+        let result = earliest_source_by_id([
+            ("id_a".to_string(), SourceLocation::new("detail.puml", 10)),
+            ("id_a".to_string(), SourceLocation::new("detail.puml", 3)),
+        ]);
+
+        assert_eq!(result["id_a"].display(), ("detail.puml".to_string(), 3));
+    }
+
+    #[test]
+    fn earliest_source_by_id_is_order_independent() {
+        let forward = earliest_source_by_id([
+            ("id_a".to_string(), SourceLocation::new("detail.puml", 1)),
+            ("id_a".to_string(), SourceLocation::new("overview.puml", 1)),
+        ]);
+        let reversed = earliest_source_by_id([
+            ("id_a".to_string(), SourceLocation::new("overview.puml", 1)),
+            ("id_a".to_string(), SourceLocation::new("detail.puml", 1)),
+        ]);
+
+        assert_eq!(forward["id_a"].display(), reversed["id_a"].display());
     }
 }

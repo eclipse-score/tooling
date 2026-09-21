@@ -30,6 +30,7 @@ architectural_design(
     ],
     static = [
         "static_design.puml",
+        "overview_design.puml",
         "index.md",
     ],
     visibility = ["//visibility:public"],

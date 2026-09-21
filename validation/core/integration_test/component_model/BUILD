@@ -1,0 +1,46 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+filegroup(
+    name = "component_model_test_data",
+    srcs = [
+        "//validation/core/integration_test/component_model/negative_children_split_across_files:case_data",
+        "//validation/core/integration_test/component_model/negative_conflicting_element_type:case_data",
+        "//validation/core/integration_test/component_model/negative_conflicting_stereotype:case_data",
+        "//validation/core/integration_test/component_model/negative_duplicate_component_alias_casefolded:case_data",
+        "//validation/core/integration_test/component_model/negative_duplicate_dependable_element_alias_casefolded:case_data",
+        "//validation/core/integration_test/component_model/negative_duplicate_interface_alias_casefolded:case_data",
+        "//validation/core/integration_test/component_model/negative_duplicate_unit_alias_casefolded:case_data",
+        "//validation/core/integration_test/component_model/positive_overview_nested_public_interface:case_data",
+        "//validation/core/integration_test/component_model/positive_overview_partial_subset:case_data",
+        "//validation/core/integration_test/component_model/positive_overview_subset:case_data",
+        "//validation/core/integration_test/component_model/positive_three_file_merge:case_data",
+    ],
+)
+
+rust_test(
+    name = "component_model_integration_test",
+    srcs = ["component_model_suite.rs"],
+    crate_root = "component_model_suite.rs",
+    data = [
+        ":component_model_test_data",
+    ],
+    deps = [
+        "//validation/core:validation_cli",
+        "//validation/core/integration_test:test_framework",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
+)
