@@ -57,13 +57,15 @@ The following participant declaration forms are supported:
 
 ```text
 participant Service
-participant "Order Service"
 participant "Order Service" as OrderService
 participant OrderService as "Order Service"  // not recommended
 participant "Order Service" as OrderService <<service>>
+participant "order : orders::OrderService" as OrderService
 ```
 
 The alias form is recommended. Although `participant OrderService as "Order Service"` is supported by the current grammar, the consistent form should be `"Display Name" as Alias` to avoid confusing display names with reference names.
+
+A quoted free-text display name **requires** an alias — `participant "Order Service"` on its own is rejected, because the resolver cannot derive an identifier from it. See [Element Identifiers](element-identifiers.md) for how the identifier is built from the display name and why the qualified form `"instance : package::Component::Unit"` is preferred for diagrams that must link to a component or class diagram.
 
 The display name, alias, participant type, and stereotype are written to the logical model.
 
@@ -72,7 +74,7 @@ participant "Order Service" as OrderService
 Client -> OrderService : correct()
 ```
 
-After declaring an alias, subsequent messages, lifecycle commands, and `ref` blocks should use that alias consistently. Referring to the quoted display name instead may create a separate implicit participant, so using the display name as a message endpoint is not recommended.
+After declaring an alias, subsequent messages, lifecycle commands, and `ref` blocks must use that alias consistently. Referring to the quoted display name instead is rejected when that display name is free text.
 
 Undeclared message endpoints are automatically created as regular `participant` instances. This is convenient for short diagrams, but explicit declarations are recommended for production diagrams to preserve participant type, stereotype, and stable source locations.
 

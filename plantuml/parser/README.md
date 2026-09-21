@@ -58,6 +58,7 @@ Options:
 | `--fbs-output-dir <DIR>` | Output directory for `.fbs.bin` FlatBuffers files | none (no output) |
 | `--lobster-output-dir <DIR>` | Output directory for `.lobster` traceability files | none (no output) |
 | `--output-stem <STEM>` | Override the file stem used to name every output file for this run, instead of deriving it from the input file's own basename. Requires exactly one input file. | none (uses the input file's basename) |
+| `--root-anchor <PATH>` | Identifier prefix for the resolved diagram, supplied by the owning `rules_score` target as its Bazel package | empty (no prefix) |
 
 At least one of `--file` or `--folders` is required.
 
@@ -94,3 +95,8 @@ Shared model and serialization crates are split by responsibility:
   schemas and serializer crates that produce `.fbs.bin` outputs.
 
 For the detailed design and users Guide, see `docs/README.md` in the source tree.
+
+Authoring guides:
+
+- [`docs/element-identifiers.md`](docs/element-identifiers.md) — how element identifiers are constructed and how to link component, class, and sequence diagrams
+- [`docs/sequence-diagram.md`](docs/sequence-diagram.md) — supported sequence diagram syntax and semantics

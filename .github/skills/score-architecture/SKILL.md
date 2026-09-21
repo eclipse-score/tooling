@@ -304,6 +304,60 @@ namespace safety_software_seooc_example {
 
 ---
 
+## Element Identifiers
+
+Every element across the `static`, `unit_design` (class), and `dynamic` (sequence) diagrams is
+resolved to a **canonical identifier**. Two elements are the same architecture element exactly
+when their identifiers match — that is how the validators link a `static` component to its
+`unit_design` class and to a `dynamic` sequence participant. You never write an identifier
+yourself; it is assembled from three inputs joined with `.`:
+
+| # | Input | Comes from | Example |
+|---|-------|-----------|---------|
+| 1 | Root anchor | The Bazel package of the owning `architectural_design`/`unit_design` target (`/` → `.`) | `unit_1/docs` → `unit_1.docs` |
+| 2 | Internal scope | The `package`/`component`/`namespace` nesting the element is written in | `logging.Recorder` |
+| 3 | Leaf | The element's alias (`as X`), or its name if there is no alias | `Backend` |
+
+joined: `unit_1.docs.logging.Recorder.Backend`. `::` and `.` are equivalent separators; a
+dotted/`::`-qualified reference (an interface binding, a class relationship, …) is always read
+**relative to the root anchor**, never as an absolute path.
+
+**Sequence diagrams are the exception**: a participant has no nesting to draw scope from, so its
+identifier is read out of the **quoted label**, not the alias — the alias is only a local shortcut
+for drawing arrows.
+
+| What you write | Identifier comes from |
+|-----------------|-----------------------|
+| `participant "backend : logging::Recorder::Backend" as Backend` | text right of the `:` |
+| `participant "Unit 1" as unit_1` | falls back to the **alias** (`unit_1`) |
+
+If a participant represents a nested unit, write the full qualified label —
+`"instance : Component::Unit"` — so the identifier matches the `static` diagram. A bare prose
+label still parses, but if it doesn't resolve to the same identifier as the component diagram
+there is no parse error, only a **cross-diagram validation mismatch** (see **Active validations**,
+`component_sequence.md`).
+
+`ExternalEndpoint` is a reserved participant name for an actor outside the described architecture;
+it is emitted verbatim (no root anchor, no scope) so it always matches itself across diagrams.
+
+**Best practices**:
+- Give every architecture-relevant element an explicit `as` alias; never rely on a prose label.
+- Keep `architectural_design` and `unit_design` for one subsystem under the same root Bazel
+  package — different packages get different root anchors, and their identifiers can never match.
+- Mirror the nesting between the `static` and `unit_design` diagrams; scope segments must be
+  identical on both sides.
+- In sequence diagrams, write the full qualified label (`"instance : Component::Unit"`) once
+  nesting is involved; use the bare alias only when the unit is top-level. Use the alias for arrows
+  either way.
+- Use `ExternalEndpoint` verbatim for out-of-scope actors.
+- Treat identifiers as derived, not authored — to change one, change the nesting, alias, or owning
+  Bazel package, not the identifier itself.
+
+> Full rule set (root-anchor construction, qualified-reference resolution, uniqueness errors):
+> `plantuml/parser/docs/element-identifiers.md` (this repo) — the resolver's authoring guide.
+
+---
+
 ## Bazel Rules — Step 2 (mechanical)
 
 Do this **only after the targeted architecture is agreed with the user** (see **Workflow**). Each
