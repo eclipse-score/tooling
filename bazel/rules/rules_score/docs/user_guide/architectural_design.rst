@@ -171,6 +171,13 @@ put every diagram on, plus a place in the sidebar to reach it from.
 - The view's top-level (root) index is the single toctree entry surfaced on
   the enclosing ``dependable_element`` page for that view.
 
+Since directory skipping is derived from the current file layout, the sidebar's
+nesting depth for a given directory can change simply because a sibling file or
+subdirectory was added or removed elsewhere in the view — this is expected,
+purely cosmetic (page URLs and stems never change), and not something callers
+should try to pin down: there is no flag to opt out of it and no stable
+navigation shape guaranteed across structural changes.
+
 Authoring pages alongside diagrams
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
