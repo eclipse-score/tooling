@@ -284,6 +284,14 @@ architectural_design(
     static = ["fixtures/test_dependable_element.puml"],
 )
 
+# Dedicated architectural_design for ":test_dependable_element_aou_middle":
+# its puml package name must match the label, so it can't share
+# ":arch_design_elem" (scoped to "test_dependable_element").
+architectural_design(
+    name = "arch_design_elem_aou_middle",
+    static = ["fixtures/test_dependable_element_aou_middle.puml"],
+)
+
 architectural_design(
     name = "arch_design_nested",
     static = ["fixtures/test_dependable_element_nested.puml"],
@@ -973,7 +981,8 @@ dependable_element(
 dependable_element(
     name = "test_dependable_element_aou_middle",
     testonly = True,
-    architectural_design = [":arch_design_elem"],
+    aou_forwarding = "fixtures/seooc_test/aou_forwarding_select_temp.yaml",
+    architectural_design = [":arch_design_elem_aou_middle"],
     # Deliberately NOT ":aous" (same as ":test_dependable_element"'s own AoUs):
     # reusing the identical assumptions_of_use target here as well as
     # receiving it forwarded from ":test_dependable_element" would make this
@@ -983,14 +992,13 @@ dependable_element(
     # "this element has its own AoUs *and* forwards different received ones"
     # without any accidental self-collision.
     assumptions_of_use = [":aous_rst"],
-    aou_forwarding = "fixtures/seooc_test/aou_forwarding_select_temp.yaml",
     components = [":test_component"],
     dependability_analysis = [":dependability_analysis_target"],
-    deps = [":test_dependable_element"],
     integrity_level = "B",
     maturity = "development",
     requirements = [":feat_req"],
     tests = [],  # Empty for testing
+    deps = [":test_dependable_element"],
 )
 
 # Regression/feature fixtures: downstream requirements targets referencing
@@ -1038,7 +1046,6 @@ component_requirements(
         ":test_dependable_element_aou_middle",
     ],
 )
-
 
 # Dependable elements wrapping a test_case_coverage_lock component — used to verify the
 # ComponentTestCaseCoverageLockCheck action wiring (mnemonic/inputs/argv) at both
@@ -1958,7 +1965,7 @@ test_suite(
 component_requirements(
     name = "comp_req_chain_aou_negative",
     testonly = True,
-    tags = ["manual"],
     srcs = ["fixtures/seooc_test/component_requirements_chain_aou_negative.trlc"],
+    tags = ["manual"],
     deps = [":test_dependable_element_aou_middle"],
 )
