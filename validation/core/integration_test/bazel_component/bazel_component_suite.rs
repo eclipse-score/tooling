@@ -56,6 +56,21 @@ fn positive_component_suite_case() {
 }
 
 #[test]
+fn positive_multi_file_component_suite_case() {
+    assert_case("positive_multi_file_component");
+}
+
+#[test]
+fn negative_multi_file_extra_component_suite_case() {
+    assert_case("negative_multi_file_extra_component");
+}
+
+#[test]
+fn negative_multi_file_wrong_nesting_suite_case() {
+    assert_case("negative_multi_file_wrong_nesting");
+}
+
+#[test]
 fn positive_case_insensitive_suite_case() {
     assert_case("positive_case_insensitive");
 }

@@ -99,7 +99,8 @@ Sphinx build lifecycle                   clickable_plantuml hooks
   │       (per document)                 For each plantuml node, load its idmap.
   │                                      For each reference entry, look up the
   │                                      definition index (FQN first, then alias).
-  │                                      Apply proximity tiebreak on ambiguity.
+  │                                      Apply proximity, then descendant-count
+  │                                      tiebreak on ambiguity.
   │                                      Build the URL (relative to _images/ in
   │                                      svg_obj mode, else page-relative via
   │                                      get_relative_uri), then append
@@ -133,9 +134,16 @@ Sphinx build lifecycle                   clickable_plantuml hooks
    reference in a diagram's idmap, resolves the unique definer via the index.
    When multiple diagrams define the same element, a *proximity tiebreak*
    selects the definer sharing the longest common path prefix with the source
-   diagram.  On a genuine tie, no link is emitted (safe over wrong).  URLs are
-   built relative to `_images/` in `svg_obj` mode (else page-relative via
-   `app.builder.get_relative_uri()`) and percent-encoded before injection.
+   diagram (this is the case for a reference resolved across multiple
+   `static` files merged into one architecture, see the `component_model`
+   validator spec). If proximity still ties (e.g. candidates in the same
+   directory), a *descendant-count tiebreak* prefers the candidate whose
+   idmap elaborates more nested entries under the referenced id — this can
+   change which file a link points to compared to earlier releases, where a
+   proximity tie always meant no link. On a genuine tie after both stages, no
+   link is emitted (safe over wrong). URLs are built relative to `_images/`
+   in `svg_obj` mode (else page-relative via `app.builder.get_relative_uri()`)
+   and percent-encoded before injection.
 
 4. **Incremental / parallel support** – `env-purge-doc` removes stale entries
    when a document is re-read; `env-merge-info` merges state from parallel

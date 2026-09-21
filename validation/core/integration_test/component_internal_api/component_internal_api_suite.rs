@@ -67,26 +67,6 @@ fn negative_interfaces_missing_from_internal_api_with_suggestions_suite_case() {
 }
 
 #[test]
-fn negative_duplicate_unit_alias_casefolded_suite_case() {
-    assert_case("negative_duplicate_unit_alias_casefolded");
-}
-
-#[test]
-fn negative_duplicate_component_alias_casefolded_suite_case() {
-    assert_case("negative_duplicate_component_alias_casefolded");
-}
-
-#[test]
-fn negative_duplicate_interface_alias_casefolded_suite_case() {
-    assert_case("negative_duplicate_interface_alias_casefolded");
-}
-
-#[test]
-fn negative_duplicate_dependable_element_alias_casefolded_suite_case() {
-    assert_case("negative_duplicate_dependable_element_alias_casefolded");
-}
-
-#[test]
 fn positive_interface_match_suite_case() {
     assert_case("positive_interface_match");
 }

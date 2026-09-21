@@ -24,11 +24,13 @@ integration_test/
 ├── BUILD                        # shared Rust test framework library
 ├── puml_fixture.bzl             # Starlark rule: provider → category dirs
 ├── bazel_component/             # BazelComponent suite, cases, and test binary
-├── component_class/             # ComponentClass suite, cases, and test binary
+├── component_model/             # ComponentModel suite, cases, and test binary
 ├── component_sequence/          # ComponentSequence suite, cases, and test binary
 ├── component_internal_api/      # ComponentInternalApi cases
+├── component_public_api/        # ComponentPublicApi cases
 ├── sequence_internal_api/       # SequenceInternalApi cases
 ├── class_design_implementation/ # ClassDesignImplementation suite, cases, and test binary
+├── class_design_sequence/       # ClassDesignSequence suite, cases, and test binary
 ├── src/                         # Rust crate sources for shared test_framework
 │   ├── lib.rs                   # re-exports from test_framework
 │   └── test_framework.rs        # shared helpers (CLI runner, assertions)
@@ -229,11 +231,14 @@ bazel test //validation/core/integration_test/...
 Run a single suite:
 
 ```bash
-bazel test //validation/core/integration_test/bazel_component:integration_test
-bazel test //validation/core/integration_test/component_sequence:integration_test
+bazel test //validation/core/integration_test/bazel_component:bazel_component_integration_test
+bazel test //validation/core/integration_test/component_model:component_model_integration_test
+bazel test //validation/core/integration_test/component_sequence:component_sequence_integration_test
 bazel test //validation/core/integration_test/component_internal_api:component_internal_api_integration_test
+bazel test //validation/core/integration_test/component_public_api:component_public_api_integration_test
 bazel test //validation/core/integration_test/sequence_internal_api:sequence_internal_api_integration_test
-bazel test //validation/core/integration_test/class_design_implementation:integration_test
+bazel test //validation/core/integration_test/class_design_implementation:class_design_implementation_integration_test
+bazel test //validation/core/integration_test/class_design_sequence:class_design_sequence_integration_test
 ```
 
 ## Adding a new test case
@@ -252,10 +257,10 @@ bazel test //validation/core/integration_test/class_design_implementation:integr
 4. Create a `BUILD` file following the pattern of an existing case in the same
    suite.
 
-5. Add the new `case_data` target to the matching filegroup in
-  [`BUILD`](BUILD) (`bazel_component_test_data`,
-  `component_sequence_test_data`, `component_internal_api_test_data`, `sequence_internal_api_test_data`,
-  or `class_design_implementation_test_data`).
+5. Add the new `case_data` target to the matching filegroup in the suite's
+   own `BUILD` file (e.g. `component_model_test_data` in
+   [`component_model/BUILD`](component_model/BUILD)) — each suite keeps its
+   `<suite>_test_data` filegroup alongside its `rust_test` target.
 
 6. Add a `#[test]` function in the matching suite file, such as
    `bazel_component_suite.rs` or `class_design_implementation_suite.rs`.

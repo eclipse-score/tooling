@@ -1,0 +1,26 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains:
+  # Asserts exactly one error fires: the wrongly-nested "unit_1" (a direct
+  # child of the package) not found in Bazel. Guards against a spurious
+  # split-decomposition error also firing for the correctly-nested "unit_1"
+  # under "component_example" that detail_diagram.puml declares.
+  - "FAILED (1 error(s)):"
+  - |
+    [Naming] Unit "unit_1" from the PlantUML component diagram not found in Bazel.
+      Alias                 : "unit_1"
+      Parent                : safety_software_seooc_example
+      Component source file : "validation/core/integration_test/bazel_component/negative_multi_file_wrong_nesting/overview_diagram.puml"
+      Component source line : 25
+      Fix                   : Add the corresponding Bazel unit definition for "unit_1", or remove it from the PlantUML component diagram.

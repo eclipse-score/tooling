@@ -57,6 +57,11 @@ fn positive_exact_match_suite_case() {
 }
 
 #[test]
+fn positive_overview_preserves_unit_bindings_suite_case() {
+    assert_case("positive_overview_preserves_unit_bindings");
+}
+
+#[test]
 fn negative_missing_participant_suite_case() {
     assert_case("negative_missing_participant");
 }

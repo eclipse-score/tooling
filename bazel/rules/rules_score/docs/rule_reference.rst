@@ -419,7 +419,7 @@ and ``fmea``.
    * - ``static``
      - label list
      - no
-     - Static-view files (``.puml``, ``.rst``, ``.md``, ``.svg``, ``.png``) (default ``[]``)
+     - Static-view files (``.puml``, ``.rst``, ``.md``, ``.svg``, ``.png``) (default ``[]``). Multiple ``.puml`` files are allowed — e.g. a boundary overview diagram alongside a detailed one — and are merged into a single architecture, see `Multiple static PlantUML files`_ below.
    * - ``dynamic``
      - label list
      - no
@@ -442,6 +442,47 @@ and ``fmea``.
      - Bazel visibility
 
 **Generated targets:** ``<name>`` (provides ``ArchitecturalDesignInfo``; no standalone test — consistency is validated as part of ``bazel test //pkg:my_element``)
+
+.. _multiple-static-puml-files:
+
+Multiple static PlantUML files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``static`` accepts more than one ``.puml`` file. This is intended for splitting
+a large architecture into a boundary **overview** diagram (the SEooC and its
+public interfaces only) and one or more **detail** diagrams that elaborate the
+internals, without repeating every relation and nested entity in both places.
+
+The files are parsed independently and then merged by entity id (the full
+dot-path of parent aliases). Rules for the merge:
+
+* Re-declaring the *same* entity (identical id) in more than one file is
+  allowed as long as its ``stereotype`` and element type agree across files;
+  their relations are unioned (duplicate relations are de-duplicated). This
+  is what lets an overview file bare-declare a component or unit that a
+  detail file elaborates further.
+* Re-declaring the same alias with a conflicting ``stereotype`` or element
+  type across files is an error.
+* A parent whose children are declared across more than one file is only
+  allowed if a single file contains the full set of children (i.e. one file
+  is the "home" file and the others only add a benign subset); if the
+  children are genuinely split with no file containing all of them, this is
+  reported as an error.
+* Re-nesting an entity under a *different* parent in another file is **not**
+  detected as a same-entity conflict, because the id encodes the parent
+  chain — a different parent means a different id, hence a different
+  entity. Such "wrong nesting" mistakes are instead caught by the existing
+  Bazel-vs-diagram comparison (an entity nested under the wrong parent shows
+  up as an extra/missing entry there).
+
+Each ``.puml`` file is parsed and resolved **independently**, before the
+merge step above ever runs. A relation (``-->``, ``..>``, etc.) may only
+reference aliases declared in the *same* file — an alias declared only in
+another ``static`` file is not visible yet at that point. Referencing such
+an alias fails at PlantUML parse time with an ``Element Resolver:
+UnresolvedReference: <alias>`` error, not as a Design validation error. Keep
+every file self-contained: if a detail file wires up an entity's
+interfaces, declare (or re-declare) those interfaces in that same file.
 
 .. _rule-unit-design:
 

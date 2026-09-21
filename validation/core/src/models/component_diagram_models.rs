@@ -11,6 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
+mod component_diagram_merge;
+
 use std::collections::BTreeMap;
 
 use super::EntityKey;
@@ -85,9 +87,6 @@ pub struct ComponentDiagramArchitecture {
     pub unit_set: BTreeMap<EntityKey, LogicComponent>,
     /// Full raw entity list, kept for debug output.
     pub entities: Vec<LogicComponent>,
-    pub filtered_seooc_count: usize,
-    pub filtered_component_count: usize,
-    pub filtered_unit_count: usize,
 }
 
 impl ComponentDiagramArchitecture {
@@ -96,7 +95,9 @@ impl ComponentDiagramArchitecture {
     /// `<<SEooC>>` go into `seooc_set`;
     /// `<<component>>` go into `comp_set`;
     /// `<<unit>>` go into `unit_set`.
-    /// Duplicates (same [`EntityKey`]) are reported via `result`.
+    /// Duplicates (same [`EntityKey`]) are reported via `result`, except
+    /// benign re-declarations of the exact same entity across multiple
+    /// `static` files (see [`Self::build_set`]), which are merged instead.
     fn from_entities(entities: &[LogicComponent], result: &mut ValidationResult) -> Self {
         // Index by raw id for parent resolution; PlantUML nesting uses id,
         // not alias.
@@ -104,6 +105,21 @@ impl ComponentDiagramArchitecture {
         for entity in entities {
             let key = entity.id.to_lowercase();
             if let Some(prev) = id_index.insert(key.clone(), entity) {
+                // Same id: benign re-declaration (merged in build_set) or a
+                // conflicting one; a different id colliding after lowercasing
+                // is a genuine duplicate-alias error instead.
+                if prev.id == entity.id {
+                    if let Some(field) =
+                        component_diagram_merge::conflicting_declaration_field(prev, entity)
+                    {
+                        result.add_failure(
+                            component_diagram_merge::format_conflicting_declaration_error(
+                                prev, entity, field,
+                            ),
+                        );
+                    }
+                    continue;
+                }
                 let kind = entity_kind_name(entity);
                 let alias = entity.match_key();
                 let parent =
@@ -129,6 +145,8 @@ impl ComponentDiagramArchitecture {
             }
         }
 
+        component_diagram_merge::check_single_home_decomposition(entities, result);
+
         let seoocs: Vec<&LogicComponent> = entities
             .iter()
             .filter(|entity| entity.is_seooc_package())
@@ -140,10 +158,6 @@ impl ComponentDiagramArchitecture {
         let units: Vec<&LogicComponent> =
             entities.iter().filter(|entity| entity.is_unit()).collect();
 
-        let filtered_seooc_count = seoocs.len();
-        let filtered_component_count = components.len();
-        let filtered_unit_count = units.len();
-
         let seooc_set = Self::build_set(&seoocs, &id_index, result);
         let comp_set = Self::build_set(&components, &id_index, result);
         let unit_set = Self::build_set(&units, &id_index, result);
@@ -153,9 +167,6 @@ impl ComponentDiagramArchitecture {
             comp_set,
             unit_set,
             entities: entities.to_vec(),
-            filtered_seooc_count,
-            filtered_component_count,
-            filtered_unit_count,
         }
     }
 
@@ -164,7 +175,7 @@ impl ComponentDiagramArchitecture {
         id_index: &BTreeMap<String, &LogicComponent>,
         result: &mut ValidationResult,
     ) -> BTreeMap<EntityKey, LogicComponent> {
-        let mut set = BTreeMap::new();
+        let mut set: BTreeMap<EntityKey, LogicComponent> = BTreeMap::new();
         for entity in items {
             let alias = entity.match_key();
             let parent_alias = match &entity.parent_id {
@@ -194,6 +205,13 @@ impl ComponentDiagramArchitecture {
                 None => None,
             };
             let key = (alias, parent_alias);
+            // Benign re-declaration: merge relations instead of overwriting.
+            if let Some(existing) = set.get_mut(&key) {
+                if existing.id == entity.id {
+                    component_diagram_merge::merge_relations(existing, entity);
+                    continue;
+                }
+            }
             if let Some(prev) = set.insert(key.clone(), (*entity).clone()) {
                 if prev.id.eq_ignore_ascii_case(&entity.id) {
                     continue;

@@ -44,6 +44,7 @@ Rules SCORE for Bazel
 
    tool_reference/specs/bazel_component
    tool_reference/specs/class_design_implementation
+   tool_reference/specs/component_model
    tool_reference/specs/component_internal_api
    tool_reference/specs/component_public_api
    tool_reference/specs/component_sequence

@@ -117,6 +117,10 @@ Bazel/C++ implementation:
 - **Bazel ↔ static design** — every ``component``/``unit`` target must appear in
   the static PlantUML diagram and vice versa
   (:doc:`spec <tool_reference/specs/bazel_component>`).
+- **Static design merge** — ``static`` may list more than one PlantUML file
+  (e.g. a boundary overview plus detail diagrams); they are merged by entity
+  id before the checks below run
+  (:doc:`spec <tool_reference/specs/component_model>`).
 - **Static ↔ public/internal API** — interfaces referenced in the static design
   must be declared by the public/internal API class diagrams
   (:doc:`public API spec <tool_reference/specs/component_public_api>`,

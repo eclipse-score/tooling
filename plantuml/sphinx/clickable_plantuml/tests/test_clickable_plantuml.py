@@ -456,6 +456,61 @@ def test_resolve_definer_tie_returns_none_and_warns(
     assert "ambiguous definition" in caplog.text
 
 
+def test_resolve_definer_same_directory_tie_broken_by_descendant_count() -> None:
+    # Same-directory candidates tie on proximity; descendant count breaks the tie.
+    definition_index = {
+        "pkg.component_example": ["design/static_design.puml", "design/internal_api.puml"],
+    }
+    idmap_by_source = {
+        "design/static_design.puml": {
+            "defines": [
+                {"alias": "component_example", "id": "pkg.component_example"},
+            ],
+            "references": [
+                {"alias": "unit_1", "id": "pkg.component_example.unit_1"},
+                {"alias": "unit_2", "id": "pkg.component_example.unit_2"},
+                {"alias": "sub_component_example", "id": "pkg.component_example.sub_component_example"},
+                {"alias": "InternalInterface", "id": "pkg.component_example.InternalInterface"},
+            ],
+        },
+        "design/internal_api.puml": {
+            "defines": [
+                {"alias": "component_example", "id": "pkg.component_example"},
+                {"alias": "InternalInterface", "id": "pkg.component_example.InternalInterface"},
+            ],
+            "references": [],
+        },
+    }
+
+    target = _resolve_definer(
+        "component_example",
+        "pkg.component_example",
+        "design/overview_design.puml",
+        definition_index,
+        idmap_by_source,
+    )
+
+    assert target == "design/static_design.puml"
+
+
+def test_resolve_definer_same_directory_tie_with_equal_descendant_counts_still_warns(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    definition_index = {
+        "pkg.Proxy": ["design/one.puml", "design/two.puml"],
+    }
+    idmap_by_source = {
+        "design/one.puml": {"defines": [{"alias": "Proxy", "id": "pkg.Proxy"}], "references": []},
+        "design/two.puml": {"defines": [{"alias": "Proxy", "id": "pkg.Proxy"}], "references": []},
+    }
+
+    caplog.set_level(logging.WARNING)
+    target = _resolve_definer("Proxy", "pkg.Proxy", "design/overview.puml", definition_index, idmap_by_source)
+
+    assert target is None
+    assert "ambiguous definition" in caplog.text
+
+
 def test_common_prefix_length_requires_canonical_keys() -> None:
     with pytest.raises(ValueError, match="non-canonical source key"):
         _common_prefix_length("/abs/a.puml", "pkg/b.puml")

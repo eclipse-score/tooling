@@ -384,7 +384,7 @@ One target bundles every diagram kind (from [`examples/seooc/design/BUILD`](../.
 ```starlark
 architectural_design(
     name         = "sample_seooc_design",
-    static       = ["static_design.puml", "index.md"],
+    static       = ["static_design.puml", "overview_design.puml", "index.md"],
     dynamic      = ["dynamic_design.puml"],
     public_api   = ["public_api.puml", "public_api.rst"],
     internal_api = ["internal_api.puml"],
@@ -392,6 +392,24 @@ architectural_design(
     # maturity = "development",  # write validation findings without failing the build
 )
 ```
+
+`static` accepts more than one `.puml` file. They are merged by entity id (the full parent-alias
+dot-path) into a single architecture: re-declaring the same entity (same id) in more than one
+file is allowed and merges its relations, as long as `stereotype`/element type agree everywhere
+it's declared — this is how `overview_design.puml` above can bare-declare the SEooC and its
+top-level component while `static_design.puml` elaborates their internals, without duplicating
+every nested unit and relation in both files. A parent whose children are split across files with
+no single file containing all of them is an error. Re-nesting an entity under a different parent
+across files is *not* caught here (different parent ⇒ different id ⇒ a different entity) — that
+class of mistake instead surfaces as a Bazel ↔ diagram mismatch (extra/missing entity) in the
+`bazel_component` check below.
+
+Each `.puml` file is parsed and resolved on its own, *before* the id-based merge above runs — a
+relation may only reference an alias declared in that same file. Referencing an alias that's only
+declared in another `static` file fails at PlantUML parse time (`Element Resolver:
+UnresolvedReference: <alias>`), not as a Design validation error. So keep each file
+self-contained: if a detail file wires up an entity's interfaces, (re-)declare those interfaces
+in that same file rather than assuming they're visible from the overview file.
 
 `static`/`dynamic` accept `.puml`, `.plantuml`, `.png`, `.svg`, `.rst`, `.md`. To combine a
 diagram with prose, add both the RST/Markdown wrapper *and* the referenced `.puml` to the same
