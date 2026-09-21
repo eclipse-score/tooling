@@ -25,6 +25,7 @@ verification tooling.
 """
 
 load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo", "UnitDesignInfo")
+load("//bazel/rules/rules_score/private:puml_utils.bzl", "package_root_anchor")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 # ============================================================================
@@ -68,6 +69,8 @@ def _run_puml_parser(ctx, puml_file):
             idmap_output.dirname,
             "--source-name",
             puml_file.short_path,
+            "--root-anchor",
+            package_root_anchor(ctx),
             "--log-level",
             get_log_level(ctx),
         ],

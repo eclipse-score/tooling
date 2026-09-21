@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "puml_resolver",
@@ -22,6 +22,7 @@ rust_library(
         ":component_resolver",
         ":resolver_traits",
         ":sequence_resolver",
+        ":uid_normalization",
     ],
 )
 
@@ -60,4 +61,22 @@ rust_library(
     deps = [
         "@crates//:log",
     ],
+)
+
+rust_library(
+    name = "uid_normalization",
+    srcs = [
+        "src/uid_normalization.rs",
+    ],
+    crate_name = "uid_normalization",
+    crate_root = "src/uid_normalization.rs",
+    visibility = ["//plantuml/parser:__subpackages__"],
+    deps = [
+        "//tools/metamodel/common:uid_utils",
+    ],
+)
+
+rust_test(
+    name = "uid_normalization_unit_test",
+    crate = ":uid_normalization",
 )

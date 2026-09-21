@@ -1,5 +1,5 @@
 ' *******************************************************************************
-' Copyright (c) 2025 Contributors to the Eclipse Foundation
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
 '
 ' See the NOTICE file(s) distributed with this work for additional
 ' information regarding copyright ownership.
@@ -10,13 +10,18 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
+@startuml "Qualified Name Does Not Search Descendants"
 
-@startuml
+package "Root" as Root {
+    component "Group" as Group {
+        component "A" as A {
+            component "B" as B
+        }
+    }
 
-participant "Unit 1 : safety_software_seooc_example::component_example::unit_1" as unit_1 <<unit>>
-participant "Unit 2 : safety_software_seooc_example::component_example::unit_2" as unit_2 <<unit>>
+    component "Target" as Target
 
-unit_1 -> unit_2 : GetData()
-return Data*
+    A.B --> Target
+}
 
 @enduml

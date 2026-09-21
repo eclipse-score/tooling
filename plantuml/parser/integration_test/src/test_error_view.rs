@@ -346,6 +346,20 @@ impl ErrorView for SequenceResolverError {
     fn project(&self, base_dir: &Path) -> ProjectedError {
         let _ = base_dir;
         match self {
+            SequenceResolverError::InvalidParticipantIdentifier {
+                participant,
+                reason,
+                source_location,
+            } => ProjectedError::new("InvalidParticipantIdentifier")
+                .with_field("participant", participant.clone())
+                .with_field("reason", reason.clone())
+                .with_field("line", source_location.line.to_string()),
+            SequenceResolverError::DuplicateParticipantId {
+                participant_id,
+                source_location,
+            } => ProjectedError::new("DuplicateParticipantId")
+                .with_field("participant_id", participant_id.clone())
+                .with_field("line", source_location.line.to_string()),
             SequenceResolverError::DestroyedParticipantUse {
                 participant,
                 source_location,
