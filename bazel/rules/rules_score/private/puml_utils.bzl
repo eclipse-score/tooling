@@ -343,7 +343,7 @@ def emit_view_navigation(ctx, plan, output_dir, template, root_title, colocated_
             preamble = ".. include:: {}{}\n\n".format(body_basename, parser_option)
         else:
             title = _directory_title(index_plan.directory, root_title)
-            preamble = "{}\n{}\n\n".format(title, "-" * len(title))
+            preamble = ":score-directory-index:\n\n{}\n{}\n\n".format(title, "-" * len(title))
 
         index = ctx.actions.declare_file(
             "{}/{}".format(output_dir, paths.join(index_plan.directory, "index.rst")),
