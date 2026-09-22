@@ -334,6 +334,17 @@ impl ComponentResolver {
 
         // 2. relative qualified name
         if let Some(res) = self.resolve_relative(&parts)? {
+            // A distinct top-level element can also match the literal text;
+            // silently preferring the scope-relative hit would shadow it.
+            let absolute_fqn = parts.join(".");
+            if absolute_fqn != res && self.elements.contains_key(&absolute_fqn) {
+                let mut candidates = vec![res, absolute_fqn];
+                candidates.sort();
+                return Err(ComponentResolverError::AmbiguousReference {
+                    reference: raw.to_string(),
+                    candidates,
+                });
+            }
             return Ok(res);
         }
 
