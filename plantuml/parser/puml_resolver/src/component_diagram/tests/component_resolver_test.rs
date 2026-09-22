@@ -120,6 +120,11 @@ fn test_invalid_ambiguous_reference_element_alias() {
 }
 
 #[test]
+fn test_invalid_ambiguous_root_vs_relative() {
+    run_component_resolver_case("invalid_ambiguous_root_vs_relative");
+}
+
+#[test]
 fn test_invalid_duplicate_component() {
     run_component_resolver_case("invalid_duplicate_component");
 }
