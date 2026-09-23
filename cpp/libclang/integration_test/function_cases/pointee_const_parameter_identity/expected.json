@@ -1,0 +1,63 @@
+{
+  "free_function_declarations": [
+    {
+      "name": "pointee_const",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "int *",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/pointee_const_parameter_identity/functions.hpp",
+        "line": 16
+      }
+    },
+    {
+      "name": "pointee_const",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "const int *",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/pointee_const_parameter_identity/functions.hpp",
+        "line": 17
+      }
+    }
+  ],
+  "functions": [
+    {
+      "id": {
+        "name": "pointee_const",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "pointee_const",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    }
+  ],
+  "types": {}
+}

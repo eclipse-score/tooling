@@ -1,0 +1,40 @@
+{
+  "free_function_declarations": [
+    {
+      "name": "choose",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "int",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/overloaded_parameter_identity/functions.hpp",
+        "line": 16
+      }
+    },
+    {
+      "name": "choose",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "double",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/overloaded_parameter_identity/functions.hpp",
+        "line": 17
+      }
+    }
+  ],
+  "functions": [],
+  "types": {}
+}

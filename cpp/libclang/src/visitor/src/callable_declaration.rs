@@ -13,9 +13,22 @@
 
 use clang::{Entity, EntityKind};
 use class_diagram::{FunctionArgument, TemplateParameter};
+use cpp_semantics::ResolvedType;
 
+use crate::context::CallableArgumentKey;
 use crate::types::renderer::render_type_for_display;
 use crate::types::resolver::resolve_type;
+
+/// Parameter data extracted once from a callable cursor.
+///
+/// `parameters`: display output.
+/// `parameter_types`: semantic analysis.
+/// `parameter_keys`: declaration deduplication.
+pub(crate) struct ParsedCallableParameters {
+    pub parameters: Vec<FunctionArgument>,
+    pub parameter_types: Vec<ResolvedType>,
+    pub parameter_keys: Vec<CallableArgumentKey>,
+}
 
 /// Returns callable parameters, including the fallback required for template cursors.
 ///
@@ -35,23 +48,40 @@ pub(crate) fn callable_arguments<'tu>(entity: &Entity<'tu>) -> Vec<Entity<'tu>> 
     })
 }
 
-pub(crate) fn parse_function_parameters(entity: &Entity) -> Vec<FunctionArgument> {
-    let mut parameters: Vec<FunctionArgument> = callable_arguments(entity)
-        .into_iter()
-        .map(|argument| {
-            let raw_param_type = argument
-                .get_type()
-                .map(|ty| ty.get_display_name())
-                .unwrap_or_default();
+pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParameters {
+    let mut parameters = Vec::new();
+    let mut parameter_types = Vec::new();
+    let mut parameter_keys = Vec::new();
 
-            FunctionArgument {
-                name: argument.get_name().unwrap_or_default(),
-                param_type: Some(normalize_pack_expansion_type(&raw_param_type)),
+    for argument in callable_arguments(entity) {
+        let raw_param_type = argument
+            .get_type()
+            .map(|ty| ty.get_display_name())
+            .unwrap_or_default();
+        let resolved_type = argument.get_type().map(|ty| resolve_type(&ty));
+
+        parameters.push(FunctionArgument {
+            name: argument.get_name().unwrap_or_default(),
+            param_type: Some(normalize_pack_expansion_type(&raw_param_type)),
+            is_variadic: false,
+            is_pack_expansion: raw_param_type.contains("..."),
+        });
+
+        if let Some(resolved_type) = resolved_type {
+            parameter_keys.push(CallableArgumentKey {
+                param_type: Some(render_resolved_type_for_signature_identity(&resolved_type)),
                 is_variadic: false,
                 is_pack_expansion: raw_param_type.contains("..."),
-            }
-        })
-        .collect();
+            });
+            parameter_types.push(resolved_type);
+        } else {
+            parameter_keys.push(CallableArgumentKey {
+                param_type: None,
+                is_variadic: false,
+                is_pack_expansion: raw_param_type.contains("..."),
+            });
+        }
+    }
 
     if entity.get_type().is_some_and(|ty| ty.is_variadic()) {
         parameters.push(FunctionArgument {
@@ -60,9 +90,18 @@ pub(crate) fn parse_function_parameters(entity: &Entity) -> Vec<FunctionArgument
             is_variadic: true,
             is_pack_expansion: false,
         });
+        parameter_keys.push(CallableArgumentKey {
+            param_type: None,
+            is_variadic: true,
+            is_pack_expansion: false,
+        });
     }
 
-    parameters
+    ParsedCallableParameters {
+        parameters,
+        parameter_types,
+        parameter_keys,
+    }
 }
 
 pub(crate) fn parse_callable_return_type(entity: &Entity) -> Option<String> {
@@ -109,6 +148,19 @@ pub(crate) fn parse_template_parameters(entity: &Entity) -> Option<Vec<TemplateP
 
 fn normalize_pack_expansion_type(param_type: &str) -> String {
     param_type.replace("...", "").trim().to_string()
+}
+
+fn render_resolved_type_for_signature_identity(resolved: &ResolvedType) -> String {
+    strip_top_level_cv_qualifiers_ref(resolved).render_for_display()
+}
+
+fn strip_top_level_cv_qualifiers_ref(resolved: &ResolvedType) -> &ResolvedType {
+    match resolved {
+        ResolvedType::Const(inner) | ResolvedType::Volatile(inner) => {
+            strip_top_level_cv_qualifiers_ref(inner)
+        }
+        other => other,
+    }
 }
 
 fn is_template_parameter_pack(entity: &Entity) -> bool {

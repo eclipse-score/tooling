@@ -12,6 +12,7 @@
 // *******************************************************************************
 
 use clang::{Entity, EntityKind};
+use std::collections::HashSet;
 
 use class_diagram::{
     EntityType, MemberVariable, Method, MethodModifier, SimpleEntity, TypeAlias, Visibility,
@@ -21,7 +22,8 @@ use crate::callable_declaration::parse_template_parameters;
 use crate::clang_adapter::scope::{namespace_id, semantic_parent_id};
 use crate::clang_adapter::source_location::parse_source_location;
 use crate::context::{
-    ExtractedMethodDeclaration, ParsedBaseClass, ParsedClassInfo, ParsedVariableType, VisitContext,
+    CallableDeclarationKey, CallableOwnerKey, ExtractedMethodDeclaration, ParsedBaseClass,
+    ParsedClassInfo, ParsedVariableType, VisitContext,
 };
 use crate::types::renderer::render_type_for_display;
 use crate::types::resolver::resolve_type;
@@ -57,12 +59,37 @@ impl ClassVisitor {
         crate::class_relationship_resolver::resolve_relationships(ctx);
     }
 
+    /// Registers a method declaration exactly once, but only if its owning class
+    /// has already been registered in the visit context.
+    pub(crate) fn register_method_declaration(
+        ctx: &mut VisitContext,
+        seen_method_declarations: &mut HashSet<CallableDeclarationKey>,
+        declaration: ExtractedMethodDeclaration,
+    ) -> bool {
+        let identity = CallableDeclarationKey {
+            owner: CallableOwnerKey::Method {
+                class_id: declaration.class_id.clone(),
+            },
+            signature: declaration.signature_key.clone(),
+        };
+
+        if seen_method_declarations.contains(&identity) {
+            return false;
+        }
+
+        if !Self::attach_method_declaration(ctx, declaration) {
+            return false;
+        }
+
+        seen_method_declarations.insert(identity)
+    }
+
     /// Adds a callable declaration to its owning class and preserves the
     /// class-level metadata used by relationship inference.
-    pub(crate) fn add_method_declaration(
+    fn attach_method_declaration(
         ctx: &mut VisitContext,
         declaration: ExtractedMethodDeclaration,
-    ) {
+    ) -> bool {
         let (types, parsed_class_info) = (&mut ctx.types, &mut ctx.parsed_class_info);
         let (Some(class), Some(builder)) = (
             types.get_mut(&declaration.class_id),
@@ -73,12 +100,13 @@ impl ClassVisitor {
                 declaration.method.name,
                 declaration.class_id
             );
-            return;
+            return false;
         };
 
         update_entity_type_for_method(class, builder, &declaration.method);
         class.methods.push(declaration.method);
         builder.method_types.push(declaration.method_type);
+        true
     }
 
     fn visit_class(
@@ -277,5 +305,101 @@ fn update_method_flags(builder: &mut ParsedClassInfo, method: &Method) {
         builder.has_abstract_methods = true;
     } else if !is_special_method {
         builder.has_concrete_methods = true;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ClassVisitor;
+    use crate::context::{
+        CallableDeclarationKey, CallableOwnerKey, CallableSignatureKey, ExtractedMethodDeclaration,
+        ParsedClassInfo, ParsedMethodType, VisitContext,
+    };
+    use class_diagram::{Method, SimpleEntity};
+    use cpp_semantics::ResolvedType;
+    use std::collections::HashSet;
+
+    #[test]
+    fn missing_owning_class_does_not_burn_method_identity() {
+        let mut ctx = VisitContext::default();
+        let mut seen = HashSet::<CallableDeclarationKey>::new();
+        let declaration = method_declaration();
+
+        assert!(!ClassVisitor::register_method_declaration(
+            &mut ctx,
+            &mut seen,
+            declaration,
+        ));
+        assert!(seen.is_empty());
+    }
+
+    #[test]
+    fn successful_method_insert_is_still_deduplicated() {
+        let mut ctx = VisitContext::default();
+        ctx.types.insert(
+            "Widget".to_string(),
+            SimpleEntity {
+                id: "Widget".to_string(),
+                name: "Widget".to_string(),
+                ..Default::default()
+            },
+        );
+        ctx.parsed_class_info.insert(
+            "Widget".to_string(),
+            ParsedClassInfo {
+                id: "Widget".to_string(),
+                ..Default::default()
+            },
+        );
+
+        let mut seen = HashSet::<CallableDeclarationKey>::new();
+
+        assert!(ClassVisitor::register_method_declaration(
+            &mut ctx,
+            &mut seen,
+            method_declaration(),
+        ));
+        assert!(!ClassVisitor::register_method_declaration(
+            &mut ctx,
+            &mut seen,
+            method_declaration(),
+        ));
+
+        let class = ctx.types.get("Widget").expect("class should exist");
+        assert_eq!(class.methods.len(), 1);
+        assert_eq!(ctx.parsed_class_info["Widget"].method_types.len(), 1);
+        assert_eq!(
+            seen,
+            HashSet::from([CallableDeclarationKey {
+                owner: CallableOwnerKey::Method {
+                    class_id: "Widget".to_string(),
+                },
+                signature: CallableSignatureKey {
+                    name: "compute".to_string(),
+                    parameters: vec![],
+                },
+            }])
+        );
+    }
+
+    fn method_declaration() -> ExtractedMethodDeclaration {
+        ExtractedMethodDeclaration {
+            class_id: "Widget".to_string(),
+            method: Method {
+                name: "compute".to_string(),
+                parameters: vec![],
+                ..Default::default()
+            },
+            method_type: ParsedMethodType {
+                name: "compute".to_string(),
+                return_type: ResolvedType::Builtin("void".to_string()),
+                parameter_types: vec![],
+                source_location: Default::default(),
+            },
+            signature_key: CallableSignatureKey {
+                name: "compute".to_string(),
+                parameters: vec![],
+            },
+        }
     }
 }

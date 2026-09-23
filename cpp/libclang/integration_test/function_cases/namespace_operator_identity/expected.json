@@ -1,0 +1,62 @@
+{
+  "free_function_declarations": [
+    {
+      "name": "operator==",
+      "enclosing_namespace_id": "app",
+      "return_type": "bool",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "const Token &",
+          "is_variadic": false
+        },
+        {
+          "name": "",
+          "param_type": "const Token &",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/namespace_operator_identity/functions.hpp",
+        "line": 20
+      }
+    }
+  ],
+  "functions": [
+    {
+      "id": {
+        "name": "operator==",
+        "scope": {
+          "Namespace": [
+            "app"
+          ]
+        }
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "bool"
+      },
+      "body": []
+    }
+  ],
+  "types": {
+    "app::Token": {
+      "id": "app::Token",
+      "name": "Token",
+      "enclosing_namespace_id": "app",
+      "entity_type": "Struct",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "stereotypes": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/namespace_operator_identity/functions.hpp",
+        "line": 18
+      }
+    }
+  }
+}

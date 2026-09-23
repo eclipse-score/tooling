@@ -28,32 +28,50 @@ pub struct SourceEntityKey {
     pub source_offset: u32,
 }
 
-/// Identifies a free function by its logical signature for class-diagram output.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CallableIdentityKey {
-    pub owner: CallableOwnerIdentityKey,
-    pub name: String,
-    pub parameters: Vec<CallableArgumentIdentityKey>,
+/// Identifies a callable declaration by owner and logical signature for deduplication.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CallableDeclarationKey {
+    pub owner: CallableOwnerKey,
+    pub signature: CallableSignatureKey,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum CallableOwnerIdentityKey {
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CallableSignatureKey {
+    pub name: String,
+    pub parameters: Vec<CallableArgumentKey>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CallableOwnerKey {
     FreeFunction {
         enclosing_namespace_id: Option<String>,
+        linkage_scope: CallableLinkageScope,
     },
     Method {
         class_id: String,
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CallableArgumentIdentityKey {
+/// Distinguishes free functions whose logical identity can span translation
+/// units from those that are local to a single translation unit.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CallableLinkageScope {
+    /// The callable has external linkage, so repeated declarations from
+    /// different translation units can be deduplicated by logical signature.
+    External,
+    /// The callable has translation-unit-local linkage, so declarations from
+    /// different source files must remain distinct.
+    TranslationUnitLocal { source_file: PathBuf },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CallableArgumentKey {
     pub param_type: Option<String>,
     pub is_variadic: bool,
     pub is_pack_expansion: bool,
 }
 
-impl From<&FunctionArgument> for CallableArgumentIdentityKey {
+impl From<&FunctionArgument> for CallableArgumentKey {
     fn from(argument: &FunctionArgument) -> Self {
         Self {
             param_type: argument.param_type.clone(),
@@ -80,6 +98,7 @@ pub struct ExtractedMethodDeclaration {
     pub class_id: String,
     pub method: Method,
     pub method_type: ParsedMethodType,
+    pub signature_key: CallableSignatureKey,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]

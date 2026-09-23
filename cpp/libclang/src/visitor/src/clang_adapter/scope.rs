@@ -13,7 +13,7 @@
 
 //! Shared semantic-scope extraction helpers for libclang entities.
 
-use clang::{Entity, EntityKind};
+use clang::{Entity, EntityKind, Linkage};
 use cpp_semantics::Scope;
 
 // ── Namespace scopes ───────────────────────────────────────────────────────
@@ -43,6 +43,14 @@ pub(crate) fn namespace_path(entity: &Entity) -> Vec<String> {
 pub(crate) fn namespace_id(entity: &Entity) -> Option<String> {
     let path = namespace_path(entity);
     (!path.is_empty()).then(|| path.join("::"))
+}
+
+/// Returns whether the entity has linkage local to a single translation unit.
+pub(crate) fn has_translation_unit_local_linkage(entity: &Entity) -> bool {
+    matches!(
+        entity.get_linkage(),
+        Some(Linkage::Internal | Linkage::UniqueExternal)
+    )
 }
 
 // ── Type scopes ────────────────────────────────────────────────────────────
