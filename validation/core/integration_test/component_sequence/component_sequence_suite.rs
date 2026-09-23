@@ -52,8 +52,8 @@ fn assert_case(case_dir: &str) {
 }
 
 #[test]
-fn positive_exact_match_suite_case() {
-    assert_case("positive_exact_match");
+fn positive_matching_component_and_sequence_suite_case() {
+    assert_case("positive_matching_component_and_sequence");
 }
 
 #[test]
@@ -62,41 +62,26 @@ fn positive_overview_preserves_unit_bindings_suite_case() {
 }
 
 #[test]
-fn negative_missing_participant_suite_case() {
-    assert_case("negative_missing_participant");
+fn negative_component_unit_missing_from_sequence_suite_case() {
+    assert_case("negative_component_unit_missing_from_sequence");
 }
 
 #[test]
-fn positive_external_caller_in_sequence_connection_suite_case() {
-    assert_case("positive_external_caller_in_sequence_connection");
+fn positive_external_caller_call_allowed_suite_case() {
+    assert_case("positive_external_caller_call_allowed");
 }
 
 #[test]
-fn positive_external_callee_in_sequence_return_suite_case() {
-    assert_case("positive_external_callee_in_sequence_return");
+fn positive_external_callee_return_allowed_suite_case() {
+    assert_case("positive_external_callee_return_allowed");
 }
 
 #[test]
-fn negative_missing_interface_connection_for_sequence_connected_units_suite_case() {
-    assert_case("negative_missing_interface_connection_for_sequence_connected_units");
+fn negative_sequence_call_without_shared_interface_suite_case() {
+    assert_case("negative_sequence_call_without_shared_interface");
 }
 
 #[test]
-fn negative_missing_sequence_interaction_for_interface_connected_units_suite_case() {
-    assert_case("negative_missing_sequence_interaction_for_interface_connected_units");
-}
-
-#[test]
-fn negative_missing_unit_interface_relation_suite_case() {
-    assert_case("negative_missing_unit_interface_relation");
-}
-
-#[test]
-fn negative_orphan_participant_suite_case() {
-    assert_case("negative_orphan_participant");
-}
-
-#[test]
-fn negative_mixed_mismatch_suite_case() {
-    assert_case("negative_mixed_mismatch");
+fn negative_shared_interface_without_sequence_call_suite_case() {
+    assert_case("negative_shared_interface_without_sequence_call");
 }

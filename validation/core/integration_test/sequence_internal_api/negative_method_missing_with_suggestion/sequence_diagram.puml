@@ -17,6 +17,5 @@ participant "package_a::component_a::unit_1" as unit_1 <<unit>>
 participant "package_a::component_a::unit_2" as unit_2 <<unit>>
 
 unit_1 -> unit_2 : GetData()
-return Ack
 
 @enduml

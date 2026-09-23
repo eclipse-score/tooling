@@ -15,10 +15,10 @@ error_contains: |
   [Implementation] Field type alias "Speed" original type on entity "Engine" differs between the unit design and the C++ class implementation.
     Entity                     : "Engine"
     Field                      : type alias "Speed" original type
-    Design value               : std::uint8_t
+    Design value               : uint8_t
     Design source file         : "validation/core/integration_test/class_design_implementation/negative_type_alias_mismatch/class_diagram.puml"
     Design source line         : 16
-    Implementation value       : std::uint16_t
+    Implementation value       : uint16_t
     Implementation source file : "validation/core/integration_test/class_design_implementation/negative_type_alias_mismatch/transport.cpp"
     Implementation source line : 16
     Fix                        : Make type alias "Speed" original type in entity "Engine" consistent between the unit design and the C++ class implementation.
