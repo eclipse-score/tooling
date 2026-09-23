@@ -1,0 +1,90 @@
+{
+  "free_function_declarations": [
+    {
+      "name": "topconst",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "int",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/top_level_const_parameter_dedup/functions.hpp",
+        "line": 16
+      }
+    }
+  ],
+  "functions": [
+    {
+      "id": {
+        "name": "topconst",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "scope": {
+          "Type": {
+            "namespace": [],
+            "type_path": [
+              "Widget"
+            ]
+          }
+        },
+        "name": "topvolatile"
+      },
+      "kind": "Method",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    }
+  ],
+  "types": {
+    "Widget": {
+      "id": "Widget",
+      "name": "Widget",
+      "enclosing_namespace_id": null,
+      "entity_type": "Struct",
+      "enum_literals": [],
+      "methods": [
+        {
+          "name": "topvolatile",
+          "return_type": "void",
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "",
+              "param_type": "int",
+              "is_variadic": false
+            }
+          ],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/top_level_const_parameter_dedup/functions.hpp",
+            "line": 19
+          }
+        }
+      ],
+      "relationships": [],
+      "stereotypes": [],
+      "template_parameters": null,
+      "type_aliases": [],
+      "variables": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/top_level_const_parameter_dedup/functions.hpp",
+        "line": 18
+      }
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "free_function_declarations": [
+    {
+      "name": "hidden",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/internal_linkage_declaration_identity/first.cpp",
+        "line": 15
+      }
+    },
+    {
+      "name": "local_static",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/internal_linkage_declaration_identity/first.cpp",
+        "line": 18
+      }
+    },
+    {
+      "name": "hidden",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/internal_linkage_declaration_identity/second.cpp",
+        "line": 15
+      }
+    },
+    {
+      "name": "local_static",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/internal_linkage_declaration_identity/second.cpp",
+        "line": 18
+      }
+    }
+  ],
+  "functions": [],
+  "types": {}
+}

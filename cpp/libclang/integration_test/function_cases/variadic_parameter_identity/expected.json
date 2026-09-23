@@ -1,0 +1,68 @@
+{
+  "free_function_declarations": [
+    {
+      "name": "log_message",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "int",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/variadic_parameter_identity/functions.hpp",
+        "line": 16
+      }
+    },
+    {
+      "name": "log_message",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "int",
+          "is_variadic": false
+        },
+        {
+          "name": "",
+          "param_type": null,
+          "is_variadic": true
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/variadic_parameter_identity/functions.hpp",
+        "line": 17
+      }
+    }
+  ],
+  "functions": [
+    {
+      "id": {
+        "name": "log_message",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "log_message",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    }
+  ],
+  "types": {}
+}

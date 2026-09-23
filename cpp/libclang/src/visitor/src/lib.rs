@@ -26,7 +26,7 @@ pub use cpp_semantics::{BodyItem, FunctionDef, ResolvedType};
 
 pub use clang_adapter::source_filter::is_external_dependency_path;
 pub use class_visitor::ClassVisitor;
-pub use context::{CallableIdentityKey, CallableOwnerIdentityKey, SourceEntityKey, VisitContext};
+pub use context::{CallableDeclarationKey, CallableOwnerKey, SourceEntityKey, VisitContext};
 pub use context_ext::EntityMapExt;
 pub use enum_visitor::EnumVisitor;
 pub use function_visitor::FunctionVisitor;

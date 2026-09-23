@@ -1,0 +1,63 @@
+{
+  "free_function_declarations": [
+    {
+      "name": "c_api",
+      "enclosing_namespace_id": null,
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "int",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/extern_c_identity/functions.hpp",
+        "line": 16
+      }
+    },
+    {
+      "name": "c_api_block",
+      "enclosing_namespace_id": null,
+      "return_type": "int",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "double",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/extern_c_identity/functions.hpp",
+        "line": 19
+      }
+    }
+  ],
+  "functions": [
+    {
+      "id": {
+        "name": "c_api",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "c_api_block",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "int"
+      },
+      "body": []
+    }
+  ],
+  "types": {}
+}

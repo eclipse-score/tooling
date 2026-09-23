@@ -23,8 +23,8 @@ use class_serializer::ClassSerializer;
 
 use utils::{render_entity_tree, write_debug_json, write_entity_tree, write_fbs_output};
 use visit_tu::{
-    is_external_dependency_path, CallableIdentityKey, EntityMapExt, FunctionDef, SourceEntityKey,
-    SourceFileCache, VisitContext, Visitor,
+    is_external_dependency_path, CallableDeclarationKey, EntityMapExt, FunctionDef,
+    SourceEntityKey, SourceFileCache, VisitContext, Visitor,
 };
 
 #[derive(ClapParser, Debug)]
@@ -60,8 +60,8 @@ struct ParseOutputs {
 #[derive(Default)]
 struct ParseState {
     source_files: SourceFileCache,
-    seen_free_function_declarations: HashSet<CallableIdentityKey>,
-    seen_method_declarations: HashSet<CallableIdentityKey>,
+    seen_free_function_declarations: HashSet<CallableDeclarationKey>,
+    seen_method_declarations: HashSet<CallableDeclarationKey>,
     seen_function_definitions: HashSet<SourceEntityKey>,
 }
 

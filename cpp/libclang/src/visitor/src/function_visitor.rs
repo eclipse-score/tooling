@@ -24,15 +24,16 @@ use cpp_semantics::{
 use std::collections::HashSet;
 
 use crate::callable_declaration::{
-    callable_arguments, parse_callable_return_type, parse_function_parameters,
-    parse_template_parameters,
+    parse_callable_parameters, parse_callable_return_type, parse_template_parameters,
 };
-use crate::clang_adapter::scope::{callable_scope, namespace_id};
+use crate::clang_adapter::scope::{
+    callable_scope, has_translation_unit_local_linkage, namespace_id,
+};
 use crate::clang_adapter::source_filter;
 use crate::clang_adapter::source_location::parse_source_location;
 use crate::class_visitor::{parse_visibility, ClassVisitor};
 use crate::context::{
-    CallableArgumentIdentityKey, CallableIdentityKey, CallableOwnerIdentityKey,
+    CallableDeclarationKey, CallableLinkageScope, CallableOwnerKey, CallableSignatureKey,
     ExtractedFreeFunctionDeclaration, ExtractedFunction, ExtractedMethodDeclaration,
     ParsedMethodType, SourceEntityKey,
 };
@@ -54,8 +55,8 @@ impl FunctionVisitor {
     pub(crate) fn visit_with_state(
         ctx: &mut VisitContext,
         source_files: &mut SourceFileCache,
-        seen_free_function_declarations: &mut HashSet<CallableIdentityKey>,
-        seen_method_declarations: &mut HashSet<CallableIdentityKey>,
+        seen_free_function_declarations: &mut HashSet<CallableDeclarationKey>,
+        seen_method_declarations: &mut HashSet<CallableDeclarationKey>,
         seen_function_definitions: &mut HashSet<SourceEntityKey>,
         entity: Entity,
     ) {
@@ -65,13 +66,14 @@ impl FunctionVisitor {
 
         match &function_id.scope {
             Scope::Type { .. } => {
-                if let Some(declaration) = Self::extract_method_declaration(
-                    seen_method_declarations,
-                    &entity,
-                    &function_id,
-                    function_kind,
-                ) {
-                    ClassVisitor::add_method_declaration(ctx, declaration);
+                if let Some(declaration) =
+                    Self::extract_method_declaration(&entity, &function_id, function_kind)
+                {
+                    ClassVisitor::register_method_declaration(
+                        ctx,
+                        seen_method_declarations,
+                        declaration,
+                    );
                 } else {
                     log::debug!(
                         "skipping type-scoped callable '{}': unsupported function kind {:?}",
@@ -105,7 +107,6 @@ impl FunctionVisitor {
     // ── Top-level extraction ──────────────────────────────────────────────────
 
     fn extract_method_declaration(
-        seen_method_declarations: &mut HashSet<CallableIdentityKey>,
         entity: &Entity,
         id: &FunctionId,
         kind: FunctionKind,
@@ -120,18 +121,8 @@ impl FunctionVisitor {
             return None;
         }
 
-        let parameters = parse_function_parameters(entity);
+        let parsed_parameters = parse_callable_parameters(entity);
         let class_id = id.scope.qualified_name();
-        if !Self::insert_callable_identity(
-            seen_method_declarations,
-            CallableOwnerIdentityKey::Method {
-                class_id: class_id.clone(),
-            },
-            &id.name,
-            &parameters,
-        ) {
-            return None;
-        }
 
         let return_type = entity
             .get_result_type()
@@ -140,10 +131,7 @@ impl FunctionVisitor {
         let method_type = ParsedMethodType {
             name: id.name.clone(),
             return_type: return_type.clone(),
-            parameter_types: callable_arguments(entity)
-                .into_iter()
-                .filter_map(|argument| argument.get_type().map(|ty| resolve_type(&ty)))
-                .collect(),
+            parameter_types: parsed_parameters.parameter_types.clone(),
             source_location: parse_source_location(entity),
         };
 
@@ -188,7 +176,7 @@ impl FunctionVisitor {
             name: id.name.clone(),
             return_type,
             visibility: parse_visibility(entity),
-            parameters,
+            parameters: parsed_parameters.parameters,
             template_parameters: parse_template_parameters(entity),
             modifiers: MethodModifier::from_conditions([
                 (entity.is_static_method(), MethodModifier::Static),
@@ -210,24 +198,27 @@ impl FunctionVisitor {
             class_id,
             method,
             method_type,
+            signature_key: CallableSignatureKey {
+                name: id.name.clone(),
+                parameters: parsed_parameters.parameter_keys,
+            },
         })
     }
 
     fn extract_free_function_declaration(
-        seen_free_function_declarations: &mut HashSet<CallableIdentityKey>,
+        seen_free_function_declarations: &mut HashSet<CallableDeclarationKey>,
         entity: &Entity,
         id: &FunctionId,
     ) -> Option<ExtractedFreeFunctionDeclaration> {
         let key = Self::extract_source_entity_key(entity)?;
-        let parameters = parse_function_parameters(entity);
-        if !Self::insert_callable_identity(
-            seen_free_function_declarations,
-            CallableOwnerIdentityKey::FreeFunction {
-                enclosing_namespace_id: namespace_id(entity),
+        let parsed_parameters = parse_callable_parameters(entity);
+        if !seen_free_function_declarations.insert(CallableDeclarationKey {
+            owner: Self::free_function_owner_key(entity, &key),
+            signature: CallableSignatureKey {
+                name: id.name.clone(),
+                parameters: parsed_parameters.parameter_keys,
             },
-            &id.name,
-            &parameters,
-        ) {
+        }) {
             return None;
         }
 
@@ -237,7 +228,7 @@ impl FunctionVisitor {
                 name: id.name.clone(),
                 enclosing_namespace_id: namespace_id(entity),
                 return_type: parse_callable_return_type(entity),
-                parameters,
+                parameters: parsed_parameters.parameters,
                 template_parameters: parse_template_parameters(entity),
                 source_location: parse_source_location(entity),
             },
@@ -290,20 +281,17 @@ impl FunctionVisitor {
         Some(extracted_function)
     }
 
-    fn insert_callable_identity(
-        seen_declarations: &mut HashSet<CallableIdentityKey>,
-        owner: CallableOwnerIdentityKey,
-        name: &str,
-        parameters: &[class_diagram::FunctionArgument],
-    ) -> bool {
-        seen_declarations.insert(CallableIdentityKey {
-            owner,
-            name: name.to_string(),
-            parameters: parameters
-                .iter()
-                .map(CallableArgumentIdentityKey::from)
-                .collect(),
-        })
+    fn free_function_owner_key(entity: &Entity, key: &SourceEntityKey) -> CallableOwnerKey {
+        CallableOwnerKey::FreeFunction {
+            enclosing_namespace_id: namespace_id(entity),
+            linkage_scope: if has_translation_unit_local_linkage(entity) {
+                CallableLinkageScope::TranslationUnitLocal {
+                    source_file: key.source_file.clone(),
+                }
+            } else {
+                CallableLinkageScope::External
+            },
+        }
     }
 
     // ── AST navigation helpers ────────────────────────────────────────────────

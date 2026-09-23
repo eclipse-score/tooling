@@ -19,7 +19,7 @@ use log::warn;
 
 use crate::clang_adapter::source_filter;
 use crate::class_visitor::ClassVisitor;
-use crate::context::{CallableIdentityKey, SourceEntityKey, VisitContext};
+use crate::context::{CallableDeclarationKey, SourceEntityKey, VisitContext};
 use crate::enum_visitor::EnumVisitor;
 use crate::function_visitor::FunctionVisitor;
 
@@ -58,8 +58,8 @@ impl SourceFileCache {
 pub struct Visitor<'a> {
     ctx: &'a mut VisitContext,
     source_files: &'a mut SourceFileCache,
-    seen_free_function_declarations: &'a mut HashSet<CallableIdentityKey>,
-    seen_method_declarations: &'a mut HashSet<CallableIdentityKey>,
+    seen_free_function_declarations: &'a mut HashSet<CallableDeclarationKey>,
+    seen_method_declarations: &'a mut HashSet<CallableDeclarationKey>,
     seen_function_definitions: &'a mut HashSet<SourceEntityKey>,
 }
 
@@ -67,8 +67,8 @@ impl<'a> Visitor<'a> {
     pub fn new(
         ctx: &'a mut VisitContext,
         source_files: &'a mut SourceFileCache,
-        seen_free_function_declarations: &'a mut HashSet<CallableIdentityKey>,
-        seen_method_declarations: &'a mut HashSet<CallableIdentityKey>,
+        seen_free_function_declarations: &'a mut HashSet<CallableDeclarationKey>,
+        seen_method_declarations: &'a mut HashSet<CallableDeclarationKey>,
         seen_function_definitions: &'a mut HashSet<SourceEntityKey>,
     ) -> Self {
         Self {
