@@ -1,0 +1,54 @@
+{
+  "anonymous_frame.puml": {
+    "ExternalCaller": {
+      "id": "ExternalCaller",
+      "name": "ExternalCaller",
+      "alias": null,
+      "parent_id": null,
+      "element_type": "Component",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "AdaptiveApplication.ApplicationLogic",
+          "annotation": "call",
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 23
+          }
+        }
+      ],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
+    },
+    "AdaptiveApplication": {
+      "id": "AdaptiveApplication",
+      "name": "AdaptiveApplication",
+      "alias": null,
+      "parent_id": null,
+      "element_type": "Node",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 18
+      }
+    },
+    "AdaptiveApplication.ApplicationLogic": {
+      "id": "AdaptiveApplication.ApplicationLogic",
+      "name": "ApplicationLogic",
+      "alias": null,
+      "parent_id": "AdaptiveApplication",
+      "element_type": "Component",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 19
+      }
+    }
+  }
+}

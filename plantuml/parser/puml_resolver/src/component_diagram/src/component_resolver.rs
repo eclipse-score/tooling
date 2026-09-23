@@ -16,6 +16,7 @@ use std::collections::{BTreeSet, HashMap};
 
 use component_diagram::{
     ComponentRelationType, ComponentType, EndpointRole, LogicComponent, LogicRelation,
+    SourceLocation,
 };
 use component_parser::{Arrow, CompPumlDocument, Element, Port, PortType, Relation, Statement};
 use resolver_traits::DiagramResolver;
@@ -36,6 +37,9 @@ pub enum ComponentResolverError {
 
     #[error("Unknown element type: {element_type}")]
     UnknownElementType { element_type: String },
+
+    #[error("Element at {source_location:?} has neither a name nor an alias")]
+    MissingElementIdentity { source_location: SourceLocation },
 
     #[error("Invalid relationship: {from} -> {to}: {reason}")]
     InvalidRelationship {
@@ -796,7 +800,9 @@ impl ComponentResolver {
             .alias
             .as_deref()
             .or(element.identity.name.as_deref())
-            .expect("Element must have name or alias (guaranteed by grammar)");
+            .ok_or_else(|| ComponentResolverError::MissingElementIdentity {
+                source_location: element.identity.source_location.clone(),
+            })?;
 
         let fqn = self.make_fqn(local_id);
         if self.elements.contains_key(&fqn) {

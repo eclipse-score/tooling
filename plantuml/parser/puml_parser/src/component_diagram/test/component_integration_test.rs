@@ -145,3 +145,8 @@ fn test_relation_quoted_name() {
 fn test_component_note_alias_hidden_relation() {
     run_component_diagram_parser_case("component_note_alias_hidden_relation");
 }
+
+#[test]
+fn test_hide_show_empty_members() {
+    run_component_diagram_parser_case("hide_show_empty_members");
+}

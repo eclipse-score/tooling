@@ -266,6 +266,11 @@ impl ErrorView for ComponentResolverError {
             } => ProjectedError::new("AmbiguousReference")
                 .with_field("reference", reference.clone())
                 .with_field("candidates", candidates.join(", ")),
+
+            ComponentResolverError::MissingElementIdentity { source_location } => {
+                ProjectedError::new("MissingElementIdentity")
+                    .with_field("source_location", format!("{:?}", source_location))
+            }
         }
     }
 }

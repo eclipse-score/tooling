@@ -14,7 +14,7 @@ activity_diagram = {
     SOI
     ~ empty_line*
     ~ startuml
-    ~ (statement | empty_line)*
+    ~ (ignored_block | ignored_stmt | statement | empty_line)*
     ~ activity_enduml
     ~ EOI
 }

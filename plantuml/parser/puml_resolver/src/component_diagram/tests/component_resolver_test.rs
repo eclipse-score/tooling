@@ -110,6 +110,11 @@ fn test_relation_quoted_name() {
 }
 
 #[test]
+fn test_anonymous_frame() {
+    run_component_resolver_case("anonymous_frame");
+}
+
+#[test]
 fn test_invalid_unresolved_reference() {
     run_component_resolver_case("invalid_unresolved_reference");
 }
