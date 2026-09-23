@@ -75,6 +75,11 @@ fn test_start_stop() {
 }
 
 #[test]
+fn test_skinparam_and_legend() {
+    run_activity_diagram_parser_case("skinparam_and_legend");
+}
+
+#[test]
 fn test_if() {
     run_activity_diagram_parser_case("if");
 }
