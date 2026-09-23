@@ -20,18 +20,6 @@ use strsim::jaro_winkler;
 
 pub(in crate::validators) const DEFAULT_SUGGESTION_THRESHOLD: f64 = 0.75;
 
-pub(in crate::validators) fn format_name_list(names: &BTreeSet<String>) -> String {
-    if names.is_empty() {
-        return "<none>".to_string();
-    }
-
-    names
-        .iter()
-        .map(|name| format!("\"{name}\""))
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
 /// Reduces `(id, source_location)` pairs to one entry per `id`, keeping the
 /// earliest location (by file, then line) so the result doesn't depend on
 /// iteration order.
@@ -50,14 +38,6 @@ pub(in crate::validators) fn earliest_source_by_id(
             .or_insert(location);
     }
     result
-}
-
-pub(in crate::validators) fn format_sequence_call(
-    caller_unit: &str,
-    callee_unit: &str,
-    method_name: &str,
-) -> String {
-    format!("\"{caller_unit}\" -> \"{callee_unit}\" : \"{method_name}\"")
 }
 
 pub(in crate::validators) fn extract_method_name(method: &str) -> &str {

@@ -73,6 +73,30 @@ pub(super) fn unit_without_interfaces(alias: &str) -> LogicComponent {
     unit(alias, &[], &[])
 }
 
+pub(super) fn unit_with_id(id: &str, alias: Option<&str>) -> LogicComponent {
+    unit_with_fields(id, alias, alias, None, &[], &[])
+}
+
+pub(super) fn unit_with_fields(
+    id: &str,
+    alias: Option<&str>,
+    display_name: Option<&str>,
+    parent_id: Option<&str>,
+    required_interfaces: &[&str],
+    provided_interfaces: &[&str],
+) -> LogicComponent {
+    LogicComponent {
+        id: id.to_string(),
+        name: display_name.map(str::to_string),
+        alias: alias.map(str::to_string),
+        parent_id: parent_id.map(str::to_string),
+        element_type: ComponentType::Component,
+        stereotype: Some("unit".to_string()),
+        relations: interface_binding_relations(required_interfaces, provided_interfaces),
+        source_location: dummy_source_location(),
+    }
+}
+
 pub(super) fn interface(alias: &str) -> LogicComponent {
     interface_entity(alias, None)
 }
@@ -164,10 +188,95 @@ pub(super) fn sequence_calls(calls: &[(&str, &str, &str)]) -> SequenceDiagramInp
     }
 }
 
+pub(super) fn sequence_calls_with_participants(
+    participants: &[&str],
+    calls: &[(&str, &str, &str)],
+) -> SequenceDiagramInputs {
+    SequenceDiagramInputs {
+        diagrams: vec![SequenceTree {
+            name: Some("seq".to_string()),
+            participants: participants
+                .iter()
+                .map(|participant| sequence_participant(participant))
+                .collect(),
+            root: Block {
+                items: calls
+                    .iter()
+                    .map(|(caller, callee, method)| {
+                        Node::Interaction(Interaction {
+                            sender: Some((*caller).to_string().into()),
+                            receiver: Some((*callee).to_string().into()),
+                            message: Some((*method).to_string()),
+                            source_location: dummy_source_location(),
+                        })
+                    })
+                    .collect(),
+            },
+        }],
+    }
+}
+
+pub(super) fn sequence_calls_with_custom_participants(
+    participants: Vec<SequenceParticipant>,
+    calls: &[(&str, &str, &str)],
+) -> SequenceDiagramInputs {
+    SequenceDiagramInputs {
+        diagrams: vec![SequenceTree {
+            name: Some("seq".to_string()),
+            participants,
+            root: Block {
+                items: calls
+                    .iter()
+                    .map(|(caller, callee, method)| {
+                        Node::Interaction(Interaction {
+                            sender: Some((*caller).to_string().into()),
+                            receiver: Some((*callee).to_string().into()),
+                            message: Some((*method).to_string()),
+                            source_location: dummy_source_location(),
+                        })
+                    })
+                    .collect(),
+            },
+        }],
+    }
+}
+
+pub(super) fn sequence_participant_with_fields(
+    uid: &str,
+    reference_name: Option<&str>,
+    display_name: &str,
+) -> SequenceParticipant {
+    SequenceParticipant {
+        display_name: display_name.to_string(),
+        alias: reference_name.map(str::to_string),
+        uid: uid.to_string(),
+        participant_type: ParticipantType::Participant,
+        source_location: dummy_source_location(),
+        stereotype: None,
+    }
+}
+
+pub(super) fn class_interface_with_fields(
+    id: &str,
+    name: &str,
+    namespace: Option<&str>,
+) -> SimpleEntity {
+    simple_entity_with_fields(id, name, EntityType::Interface, namespace)
+}
+
+pub(super) fn class_entity_with_fields(
+    id: &str,
+    name: &str,
+    namespace: Option<&str>,
+) -> SimpleEntity {
+    simple_entity_with_fields(id, name, EntityType::Class, namespace)
+}
+
 fn sequence_participant(participant: &str) -> SequenceParticipant {
     SequenceParticipant {
         display_name: participant.to_string(),
         alias: None,
+        uid: participant.to_string(),
         participant_type: ParticipantType::Participant,
         source_location: dummy_source_location(),
         stereotype: None,
@@ -194,12 +303,17 @@ pub(super) fn internal_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> Internal
 }
 
 pub(super) fn class_interface(name: &str, namespace: Option<&str>) -> SimpleEntity {
-    simple_entity(name, EntityType::Interface, namespace)
+    class_interface_with_fields(&entity_id(name, namespace), name, namespace)
 }
 
-fn simple_entity(name: &str, entity_type: EntityType, namespace: Option<&str>) -> SimpleEntity {
+fn simple_entity_with_fields(
+    id: &str,
+    name: &str,
+    entity_type: EntityType,
+    namespace: Option<&str>,
+) -> SimpleEntity {
     SimpleEntity {
-        id: entity_id(name, namespace),
+        id: id.to_string(),
         name: name.to_string(),
         enclosing_namespace_id: namespace.map(str::to_string),
         stereotypes: Vec::new(),
@@ -212,6 +326,31 @@ fn simple_entity(name: &str, entity_type: EntityType, namespace: Option<&str>) -
         relationships: Vec::new(),
         source_location: dummy_source_location(),
     }
+}
+
+fn interface_binding_relations(
+    required_interfaces: &[&str],
+    provided_interfaces: &[&str],
+) -> Vec<LogicRelation> {
+    let mut relations = Vec::new();
+
+    for target in required_interfaces {
+        relations.push(relation(
+            target,
+            ComponentRelationType::InterfaceBinding,
+            EndpointRole::Required,
+        ));
+    }
+
+    for target in provided_interfaces {
+        relations.push(relation(
+            target,
+            ComponentRelationType::InterfaceBinding,
+            EndpointRole::Provided,
+        ));
+    }
+
+    relations
 }
 
 pub(super) fn method(name: &str) -> Method {

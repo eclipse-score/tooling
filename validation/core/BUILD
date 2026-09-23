@@ -67,6 +67,7 @@ rust_library(
         "src/validators/mod.rs",
         "src/validators/sequence_internal_api_validator.rs",
         "src/validators/shared/diagram_analysis.rs",
+        "src/validators/shared/display.rs",
         "src/validators/shared/helpers.rs",
         "src/validators/shared/mod.rs",
         "src/validators/test/class_design_sequence_validator_test.rs",
@@ -81,6 +82,7 @@ rust_library(
     deps = [
         "//tools/metamodel/class:class_diagram",
         "//tools/metamodel/common:source_location",
+        "//tools/metamodel/common:uid_utils",
         "//tools/metamodel/component:component_diagram",
         "//tools/metamodel/sequence:sequence_diagram",
         "//tools/serialization/flatbuffers/class:class_fbs",

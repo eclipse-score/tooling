@@ -14,13 +14,22 @@
 //! Shared validator analysis and helper utilities.
 
 mod diagram_analysis;
+mod display;
 mod helpers;
 
 pub(in crate::validators) use diagram_analysis::{
     build_observed_call_contexts, build_unit_bindings, SequenceCallContext, UnitBindings,
     UnitInterfaces,
 };
-pub(in crate::validators) use helpers::{
-    best_string_suggestion, earliest_source_by_id, extract_method_name, format_name_list,
-    format_sequence_call, intersect_interfaces,
+pub(crate) use display::display_name_from_source_path;
+pub(crate) use display::{display_entity_name, display_reference_name, display_relationship_name};
+pub(in crate::validators) use display::{
+    display_name_from_source_path_in_context, display_name_from_sources, display_names,
+    display_names_from_sources, display_names_without_common_prefix, display_reference_name_set,
+    display_unit_pair_from_optional_source_paths, format_display_names, format_name_list,
+    format_sequence_call,
 };
+pub(in crate::validators) use helpers::{
+    best_string_suggestion, earliest_source_by_id, extract_method_name, intersect_interfaces,
+};
+pub(crate) use uid_utils::normalize;

@@ -16,7 +16,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::shared::{best_string_suggestion, earliest_source_by_id, format_name_list};
+use super::shared::{
+    best_string_suggestion, display_name_from_source_path_in_context, display_name_from_sources,
+    display_names_from_sources, earliest_source_by_id, format_name_list,
+};
 use crate::models::{ComponentDiagramArchitecture, InternalApiIndex, LogicComponentExt};
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
@@ -123,7 +126,9 @@ fn format_missing_internal_api_interface_error(
     component_interface_sources: &BTreeMap<String, SourceLocation>,
     internal_api_interface_ids: &BTreeSet<String>,
 ) -> String {
-    let missing_interfaces = format_name_list(missing_internal_api_interfaces);
+    let missing_interface_display_names =
+        display_names_from_sources(missing_internal_api_interfaces, component_interface_sources);
+    let missing_interfaces = format_name_list(&missing_interface_display_names);
 
     let mut error = ErrorBuilder::new(ErrorCategory::Interface)
         .title(format!(
@@ -132,24 +137,37 @@ fn format_missing_internal_api_interface_error(
         .field("missing interfaces", missing_interfaces.clone());
 
     for interface_id in missing_internal_api_interfaces {
+        let display_interface_id =
+            display_name_from_sources(interface_id, component_interface_sources);
+
         if let Some(source_location) = component_interface_sources.get(interface_id) {
             let (source_file, source_line) = source_location.display();
             error = error
                 .field(
-                    format!("component source file for \"{interface_id}\""),
+                    format!("component source file for \"{display_interface_id}\""),
                     format!("\"{source_file}\""),
                 )
                 .field(
-                    format!("component source line for \"{interface_id}\""),
+                    format!("component source line for \"{display_interface_id}\""),
                     source_line.to_string(),
                 );
         }
 
+        let internal_candidates: BTreeSet<String> = internal_api_interface_ids
+            .iter()
+            .map(|interface_id| {
+                display_name_from_source_path_in_context(interface_id, "", std::iter::empty())
+            })
+            .collect();
         if let Some(suggested_interface) = best_string_suggestion(
-            interface_id,
-            internal_api_interface_ids.iter().map(String::as_str),
+            &display_interface_id,
+            internal_candidates.iter().map(String::as_str),
         ) {
-            error = error.suggest(interface_id, Some("interface"), &suggested_interface);
+            error = error.suggest(
+                &display_interface_id,
+                Some("interface"),
+                &suggested_interface,
+            );
         }
     }
 
