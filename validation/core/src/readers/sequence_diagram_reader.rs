@@ -258,6 +258,7 @@ fn read_participant(
     Ok(SequenceParticipant {
         display_name: participant.display_name().to_string(),
         alias: participant.alias().map(|s| s.to_string()),
+        uid: participant.uid().map(|s| s.to_string()).unwrap_or_default(),
         participant_type: map_participant_type(participant.participant_type())
             .map_err(|err| format!("{participant_path}: {err}"))?,
         source_location: to_source_location(

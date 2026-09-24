@@ -504,6 +504,7 @@ mod tests {
         SequenceParticipant {
             display_name: name.to_string(),
             alias: None,
+            uid: name.to_string(),
             participant_type: ParticipantType::Participant,
             source_location: SourceLocation::new("test.puml", 0),
             stereotype: None,

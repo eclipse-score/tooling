@@ -42,9 +42,10 @@ fn class_diagrams(entities: Vec<class_diagram::SimpleEntity>) -> ClassDiagramInp
 }
 
 fn class_entity(id: &str, namespace: Option<&str>) -> class_diagram::SimpleEntity {
-    let mut entity = class_interface(id, namespace);
-    entity.entity_type = class_diagram::EntityType::Class;
-    entity
+    let entity_id = namespace
+        .map(|namespace| format!("{namespace}.{id}"))
+        .unwrap_or_else(|| id.to_string());
+    class_entity_with_fields(&entity_id, id, namespace)
 }
 
 #[test]
@@ -87,8 +88,42 @@ fn reports_sequence_participant_missing_with_fuzzy_class_suggestion() {
 }
 
 #[test]
+fn reports_short_participant_name_for_missing_fully_qualified_class_id() {
+    let design_classes = class_diagrams(vec![class_entity("Repository", None)]);
+    let sequence_diagrams = sequence_diagrams(&["validation.core.example.Repositry"]);
+
+    let validation_result = validate(design_classes, sequence_diagrams);
+
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0].contains(
+        "[Class] Sequence participant \"Repositry\" has no matching class in the class diagram."
+    ));
+    assert!(validation_result.failures[0]
+        .contains("Suggestion for \"Repositry\" : Did you mean class \"Repository\"?"));
+}
+
+#[test]
+fn suggests_namespaced_class_id_for_short_participant_name() {
+    let design_classes = class_diagrams(vec![class_entity("Repository", Some("A"))]);
+    let sequence_diagrams = sequence_diagrams(&["Repository"]);
+
+    let validation_result = validate(design_classes, sequence_diagrams);
+
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0]
+        .contains("Suggestion for \"Repository\" : Did you mean class \"A.Repository\"?"));
+    assert!(
+        validation_result.failures[0].contains("Add class \"A.Repository\" to the class diagram")
+    );
+}
+
+#[test]
 fn matches_sequence_participant_against_fully_qualified_class_id() {
-    let design_classes = class_diagrams(vec![class_entity("Controller", Some("unit_1"))]);
+    let design_classes = class_diagrams(vec![class_entity_with_fields(
+        "unit_1.Controller",
+        "DisplayedController",
+        Some("unit_1"),
+    )]);
     let sequence_diagrams = sequence_diagrams(&["unit_1::Controller"]);
 
     let validation_result = validate(design_classes, sequence_diagrams);
@@ -97,31 +132,36 @@ fn matches_sequence_participant_against_fully_qualified_class_id() {
 }
 
 #[test]
-fn matches_sequence_participant_against_unique_short_name() {
+fn reports_sequence_participant_missing_when_only_short_name_is_provided() {
     let design_classes = class_diagrams(vec![class_entity("Controller", Some("unit_1"))]);
-    let sequence_diagrams = sequence_diagrams(&["Controller"]);
-
-    let validation_result = validate(design_classes, sequence_diagrams);
-
-    assert!(validation_result.failures.is_empty());
-}
-
-#[test]
-fn reports_sequence_participant_with_ambiguous_short_name() {
-    let design_classes = class_diagrams(vec![
-        class_entity("Controller", Some("unit_1")),
-        class_entity("Controller", Some("unit_2")),
-    ]);
     let sequence_diagrams = sequence_diagrams(&["Controller"]);
 
     let validation_result = validate(design_classes, sequence_diagrams);
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains(
-        "[Class] Sequence participant \"Controller\" matches multiple classes in the class diagram."
+        "[Class] Sequence participant \"Controller\" has no matching class in the class diagram."
     ));
-    assert!(validation_result.failures[0].contains("\"unit_1.Controller\""));
-    assert!(validation_result.failures[0].contains("\"unit_2.Controller\""));
+}
+
+#[test]
+fn reports_invalid_participant_identifier_when_sequence_participant_is_not_class_like() {
+    let design_classes = class_diagrams(vec![class_entity("Process", None)]);
+    let sequence_diagrams = sequence_calls_with_custom_participants(
+        vec![sequence_participant_with_fields(
+            "Process/nara.com user",
+            Some("help"),
+            ":Process/nara::com user",
+        )],
+        &[("help", "help", "Execute()")],
+    );
+
+    let validation_result = validate(design_classes, sequence_diagrams);
+    let failure = &validation_result.failures[0];
+
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(failure.contains("valid class identifier"));
+    assert!(failure.contains("participant uid"));
 }
 
 #[test]
@@ -191,29 +231,6 @@ fn passes_when_sequence_self_call_targets_existing_method() {
     let validation_result = validate(design_classes, sequence_diagrams);
 
     assert!(validation_result.failures.is_empty());
-}
-
-#[test]
-fn extracts_ignored_special_display_suffix() {
-    let mut sequence_diagrams = sequence_diagrams(&["help"]);
-    sequence_diagrams.diagrams[0].participants[0].display_name =
-        ":Process/nara::com user".to_string();
-    sequence_diagrams.diagrams[0].participants[0].alias = Some("help".to_string());
-
-    let mut setup_result = ValidationResult::default();
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
-    assert!(
-        setup_result.is_empty(),
-        "test fixture setup failed: {:?}",
-        setup_result.failures
-    );
-
-    let participant_info = sequence_index.participant_info("help").unwrap();
-
-    assert_eq!(
-        ignored_special_display_suffix(participant_info),
-        Some("ara::com user".to_string())
-    );
 }
 
 fn relationship(source: &str, target: &str, relation_type: RelationType) -> Relationship {

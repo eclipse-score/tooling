@@ -16,14 +16,13 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 filegroup(
     name = "component_public_api_test_data",
     srcs = [
-        "//validation/core/integration_test/component_public_api/negative_case_sensitive:case_data",
-        "//validation/core/integration_test/component_public_api/negative_public_api_lack_of_relationship:case_data",
-        "//validation/core/integration_test/component_public_api/negative_public_api_missing:case_data",
-        "//validation/core/integration_test/component_public_api/negative_public_api_missing_with_suggestion:case_data",
-        "//validation/core/integration_test/component_public_api/negative_public_api_missing_with_suggestions:case_data",
-        "//validation/core/integration_test/component_public_api/negative_public_api_wrong_type:case_data",
+        "//validation/core/integration_test/component_public_api/negative_public_api_case_mismatch:case_data",
+        "//validation/core/integration_test/component_public_api/negative_public_api_declared_as_class_is_treated_as_missing:case_data",
+        "//validation/core/integration_test/component_public_api/negative_public_api_without_seooc_relationship:case_data",
+        "//validation/core/integration_test/component_public_api/negative_public_apis_missing_from_public_api_diagram:case_data",
+        "//validation/core/integration_test/component_public_api/negative_public_apis_missing_from_public_api_diagram_with_suggestions:case_data",
         "//validation/core/integration_test/component_public_api/positive_overview_seooc_relation_merge:case_data",
-        "//validation/core/integration_test/component_public_api/positive_public_api_match:case_data",
+        "//validation/core/integration_test/component_public_api/positive_public_api_declared_and_related_to_seooc:case_data",
     ],
 )
 

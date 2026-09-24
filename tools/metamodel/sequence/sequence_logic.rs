@@ -165,6 +165,8 @@ pub enum ParticipantType {
 pub struct SequenceParticipant {
     pub display_name: String,
     pub alias: Option<String>,
+    #[serde(default)]
+    pub uid: String,
     pub participant_type: ParticipantType,
     pub source_location: SourceLocation,
     pub stereotype: Option<String>,

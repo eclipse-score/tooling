@@ -15,9 +15,10 @@
 
 use crate::{ErrorBuilder, ErrorCategory};
 
-/// Composite key: `(canonical_alias, parent_alias)`. `parent_alias` is `None`
-/// for top-level entities. Using the parent as part of the key means two
-/// identically-named entities under different parents are treated as distinct.
+/// Composite comparison key: `(name, parent_name)`. `parent_name` is `None`
+/// for top-level entities. The names are normalized projections used to compare
+/// Bazel targets with component-diagram entities. Including the parent means
+/// entities with the same name under different parents are distinct.
 pub type EntityKey = (String, Option<String>);
 
 /// Extract the target name from a Bazel label like `@//path/to/package:target`

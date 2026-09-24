@@ -19,6 +19,7 @@ use class_fbs::class_metamodel as fb_class;
 
 use crate::models::ClassDiagramInputs;
 use crate::readers::{to_source_location, Reader};
+use crate::validators::shared::normalize;
 use class_diagram::{
     ClassDiagram, EntityType, EnumLiteral, FunctionArgument, MemberVariable, Method,
     MethodModifier, RelationType, Relationship, SimpleEntity, TemplateParameter, TypeAlias,
@@ -26,6 +27,65 @@ use class_diagram::{
 };
 
 pub struct ClassDiagramReader;
+
+fn canonical_reference_name(text: &str) -> String {
+    normalize(text.trim())
+}
+
+fn canonical_optional_reference_name(value: Option<&str>) -> Option<String> {
+    value.map(canonical_reference_name)
+}
+
+fn canonical_template_parameters(
+    values: Option<Vec<TemplateParameter>>,
+) -> Option<Vec<TemplateParameter>> {
+    values.map(|parameters| {
+        parameters
+            .into_iter()
+            .map(canonical_template_parameter)
+            .collect()
+    })
+}
+
+fn canonical_function_arguments(values: Vec<FunctionArgument>) -> Vec<FunctionArgument> {
+    values
+        .into_iter()
+        .map(|parameter| FunctionArgument {
+            param_type: parameter
+                .param_type
+                .as_deref()
+                .map(canonical_reference_name),
+            ..parameter
+        })
+        .collect()
+}
+
+fn canonical_template_parameter(parameter: TemplateParameter) -> TemplateParameter {
+    match parameter {
+        TemplateParameter::Type { name, is_pack } => TemplateParameter::Type { name, is_pack },
+        TemplateParameter::NonType {
+            name,
+            value_type,
+            is_pack,
+        } => TemplateParameter::NonType {
+            name,
+            value_type: canonical_reference_name(&value_type),
+            is_pack,
+        },
+        TemplateParameter::Template {
+            name,
+            parameters,
+            is_pack,
+        } => TemplateParameter::Template {
+            name,
+            parameters: parameters
+                .into_iter()
+                .map(canonical_template_parameter)
+                .collect(),
+            is_pack,
+        },
+    }
+}
 
 fn read_template_parameters(
     values: Option<
@@ -88,7 +148,7 @@ fn read_type_aliases(entity: fb_class::SimpleEntity<'_>) -> Vec<TypeAlias> {
                 .iter()
                 .map(|value| TypeAlias {
                     alias: value.alias().to_string(),
-                    original_type: value.original_type().to_string(),
+                    original_type: canonical_reference_name(value.original_type()),
                     source_location: to_source_location(
                         value.source_location().file(),
                         value.source_location().line(),
@@ -111,7 +171,7 @@ fn read_variables(
                 .map(|value| {
                     Ok(MemberVariable {
                         name: value.name().to_string(),
-                        data_type: value.data_type().map(|s| s.to_string()),
+                        data_type: canonical_optional_reference_name(value.data_type()),
                         visibility: map_visibility(
                             value.visibility(),
                             &format!("{path}:entity:{}:variable:{}", entity.id(), value.name()),
@@ -171,13 +231,13 @@ fn read_method(
 
     Ok(Method {
         name: method.name().to_string(),
-        return_type: method.return_type().map(|s| s.to_string()),
+        return_type: canonical_optional_reference_name(method.return_type()),
         visibility: map_visibility(
             method.visibility(),
             &format!("{path}:entity:{}:method:{}", entity.id(), method.name()),
         )?,
-        parameters,
-        template_parameters,
+        parameters: canonical_function_arguments(parameters),
+        template_parameters: canonical_template_parameters(template_parameters),
         modifiers,
         source_location: to_source_location(
             method.source_location().file(),
@@ -238,9 +298,9 @@ fn read_entity_relationships(
 
 fn read_entity(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<SimpleEntity, String> {
     Ok(SimpleEntity {
-        id: entity.id().to_string(),
+        id: canonical_reference_name(entity.id()),
         name: entity.name().to_string(),
-        enclosing_namespace_id: entity.enclosing_namespace_id().map(|s| s.to_string()),
+        enclosing_namespace_id: canonical_optional_reference_name(entity.enclosing_namespace_id()),
         stereotypes: entity
             .stereotypes()
             .map(|values| values.iter().map(|value| value.to_string()).collect())
@@ -252,10 +312,10 @@ fn read_entity(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<SimpleE
         type_aliases: read_type_aliases(entity),
         variables: read_variables(entity, path)?,
         methods: read_methods(entity, path)?,
-        template_parameters: read_template_parameters(
+        template_parameters: canonical_template_parameters(read_template_parameters(
             entity.template_parameters(),
             &format!("{path}:entity:{}", entity.id()),
-        )?,
+        )?),
         enum_literals: read_enum_literals(entity),
         relationships: read_entity_relationships(entity, path)?,
         source_location: to_source_location(
@@ -285,8 +345,8 @@ fn read_relationship(
     context: &str,
 ) -> Result<Relationship, String> {
     Ok(Relationship {
-        source: rel.source().to_string(),
-        target: rel.target().to_string(),
+        source: canonical_reference_name(rel.source()),
+        target: canonical_reference_name(rel.target()),
         relation_type: map_relation_type(rel.relation_type(), context)?,
         source_multiplicity: rel.source_multiplicity().map(|s| s.to_string()),
         target_multiplicity: rel.target_multiplicity().map(|s| s.to_string()),
@@ -382,5 +442,49 @@ fn map_method_modifier(
         fb_class::MethodModifier::Noexcept => Ok(MethodModifier::Noexcept),
         fb_class::MethodModifier::Final => Ok(MethodModifier::Final),
         _ => Err(unsupported_enum(context, "method_modifier", value)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{canonical_reference_name, canonical_template_parameter};
+    use class_diagram::TemplateParameter;
+
+    #[test]
+    fn canonical_reference_name_uses_dot_namespaces() {
+        assert_eq!(
+            canonical_reference_name("vehicle::Engine"),
+            "vehicle.Engine"
+        );
+        assert_eq!(
+            canonical_reference_name(" validation.core.Engine "),
+            "validation.core.Engine"
+        );
+    }
+
+    #[test]
+    fn canonical_template_parameter_normalizes_non_type_value_types_recursively() {
+        let parameter = TemplateParameter::Template {
+            name: "Factory".to_string(),
+            parameters: vec![TemplateParameter::NonType {
+                name: "Value".to_string(),
+                value_type: "score::cpp::Span".to_string(),
+                is_pack: false,
+            }],
+            is_pack: false,
+        };
+
+        assert_eq!(
+            canonical_template_parameter(parameter),
+            TemplateParameter::Template {
+                name: "Factory".to_string(),
+                parameters: vec![TemplateParameter::NonType {
+                    name: "Value".to_string(),
+                    value_type: "score.cpp.Span".to_string(),
+                    is_pack: false,
+                }],
+                is_pack: false,
+            }
+        );
     }
 }

@@ -10,7 +10,8 @@
           "file": "",
           "line": 16
         },
-        "stereotype": "component"
+        "stereotype": "component",
+        "uid": "Service"
       },
       {
         "display_name": "Caller",
@@ -20,17 +21,19 @@
           "file": "",
           "line": 17
         },
-        "stereotype": null
+        "stereotype": null,
+        "uid": "Caller"
       },
       {
-        "display_name": "Display Service",
-        "alias": null,
+        "display_name": "core::service::ResourceBuilder",
+        "alias": "Builder",
         "participant_type": "Participant",
         "source_location": {
           "file": "",
-          "line": 22
+          "line": 18
         },
-        "stereotype": null
+        "stereotype": null,
+        "uid": "core.service.ResourceBuilder"
       }
     ],
     "root": {
@@ -42,18 +45,18 @@
             "message": "callByAlias()",
             "source_location": {
               "file": "",
-              "line": 19
+              "line": 20
             }
           }
         },
         {
           "Interaction": {
             "sender": "Service",
-            "receiver": "Display Service",
-            "message": "callByDisplayName()",
+            "receiver": "core.service.ResourceBuilder",
+            "message": "callByTypeTextAlias()",
             "source_location": {
               "file": "",
-              "line": 22
+              "line": 21
             }
           }
         }

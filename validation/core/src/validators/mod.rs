@@ -20,7 +20,7 @@ mod component_internal_api_validator;
 mod component_public_api_validator;
 mod component_sequence_validator;
 mod sequence_internal_api_validator;
-mod shared;
+pub(crate) mod shared;
 
 #[cfg(test)]
 #[path = "test/fixtures.rs"]

@@ -36,7 +36,7 @@ impl DiagramProcessor for SequenceResolverRunner {
     ) -> Result<HashMap<Rc<PathBuf>, SequenceTree>, SequenceResolverError> {
         let mut results = HashMap::new();
         let mut parser = PumlSequenceParser;
-        let mut resolver = SequenceResolver;
+        let mut resolver = SequenceResolver::new();
 
         for path in files {
             let puml_file = fs::read_to_string(&**path).expect("Failed to read test file");
@@ -119,6 +119,16 @@ fn test_combined_lifecycle_suffix() {
 #[test]
 fn test_invalid_message_direction() {
     run_sequence_resolver_case("invalid_message_direction");
+}
+
+#[test]
+fn test_invalid_free_text_participant_identifier() {
+    run_sequence_resolver_case("invalid_free_text_participant_identifier");
+}
+
+#[test]
+fn test_invalid_duplicate_participant_id() {
+    run_sequence_resolver_case("invalid_duplicate_participant_id");
 }
 
 #[test]

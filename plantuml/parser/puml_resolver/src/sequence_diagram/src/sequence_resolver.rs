@@ -14,6 +14,7 @@
 use resolver_traits::DiagramResolver;
 use sequence_logic::SequenceTree;
 use sequence_parser::SeqPumlDocument;
+use uid_normalization::RootAnchor;
 
 use crate::error::SequenceResolverError;
 use crate::lifecycle_validator::validate_lifecycle_consistency;
@@ -26,7 +27,27 @@ use crate::statement_resolver::build_sequence_tree;
 /// validates lifecycle consistency before assembling the final `SequenceTree`.
 /// The resolver stores no per-document state, so the same instance can resolve
 /// multiple documents safely.
-pub struct SequenceResolver;
+pub struct SequenceResolver {
+    root_anchor: RootAnchor,
+}
+
+impl Default for SequenceResolver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SequenceResolver {
+    pub fn new() -> Self {
+        Self::with_root_anchor(None)
+    }
+
+    pub fn with_root_anchor(root_anchor: Option<&str>) -> Self {
+        Self {
+            root_anchor: RootAnchor::new(root_anchor),
+        }
+    }
+}
 
 impl DiagramResolver for SequenceResolver {
     type Document = SeqPumlDocument;
@@ -34,13 +55,14 @@ impl DiagramResolver for SequenceResolver {
     type Error = SequenceResolverError;
 
     fn resolve(&mut self, document: &SeqPumlDocument) -> Result<SequenceTree, Self::Error> {
-        let participants = build_participant_table(&document.statements);
-        let root = build_sequence_tree(&document.statements)?;
+        let participant_table = build_participant_table(&document.statements, &self.root_anchor)?;
+        let root =
+            build_sequence_tree(&document.statements, &participant_table, &self.root_anchor)?;
         validate_lifecycle_consistency(&root)?;
 
         Ok(SequenceTree {
             name: document.name.clone(),
-            participants,
+            participants: participant_table.into_participants(),
             root,
         })
     }
@@ -101,7 +123,7 @@ mod sequence_resolver_tests {
     /// An empty diagram produces an empty SequenceTree.
     #[test]
     fn test_empty_document_yields_empty_tree() {
-        let mut resolver = SequenceResolver;
+        let mut resolver = SequenceResolver::new();
         let doc = SeqPumlDocument {
             name: Some("empty".to_string()),
             statements: vec![],
@@ -124,7 +146,7 @@ mod sequence_resolver_tests {
             statements: stmts,
         };
 
-        let mut resolver = SequenceResolver;
+        let mut resolver = SequenceResolver::new();
         let tree1 = resolver.resolve(&doc1).unwrap();
         let tree2 = resolver.resolve(&doc2).unwrap();
 

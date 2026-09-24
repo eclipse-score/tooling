@@ -24,6 +24,8 @@ rust_library(
     deps = [
         "//plantuml/parser/puml_parser:component_diagram",
         "//plantuml/parser/puml_resolver:resolver_traits",
+        "//plantuml/parser/puml_resolver:uid_normalization",
+        "//tools/metamodel/common:uid_utils",
         "//tools/metamodel/component:component_diagram",
         "@crates//:log",
         "@crates//:thiserror",
@@ -47,7 +49,9 @@ rust_test(
         "//plantuml/parser/puml_parser:component_diagram",
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_resolver:resolver_traits",
+        "//plantuml/parser/puml_resolver:uid_normalization",
         "//plantuml/parser/puml_utils",
+        "//tools/metamodel/common:uid_utils",
         "//tools/metamodel/component:component_diagram",
         "@crates//:serde_json",
     ],

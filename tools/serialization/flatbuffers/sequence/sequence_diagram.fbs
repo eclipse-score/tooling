@@ -55,6 +55,8 @@ table SequenceParticipant {
     display_name: string (required);
     /// Optional alias used for references in messages
     alias: string;
+    /// Resolver-generated participant uid derived by normalization/root anchor rules
+    uid: string;
     /// Participant kind (participant, actor, boundary, ...)
     participant_type: ParticipantType = Participant;
     /// Source location of the declaration, when available

@@ -274,6 +274,7 @@ def run_cpp_parser_action(
         output_prefix,
         tool,
         log_level,
+        root_anchor = "",
         extra_args = [],
         emit_debug_json = False):
     """Register the libclang parser action and return its declared outputs.
@@ -313,6 +314,12 @@ def run_cpp_parser_action(
         args += [
             "--debug-json-output",
             debug_json_output.path,
+        ]
+
+    if root_anchor:
+        args += [
+            "--root-anchor",
+            root_anchor,
         ]
 
     target_compilation_flags_list = target[CompilationFlagsInfo].flags.to_list()
