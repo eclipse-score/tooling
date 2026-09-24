@@ -367,6 +367,18 @@ class TestParseDirectives(unittest.TestCase):
         result = parse_directives(rst)
         self.assertEqual(result[0]["title"], "Single Line Title")
 
+    def test_unindented_next_directive_not_swallowed_as_continuation(self):
+        rst = _rst(
+            ".. comp_req:: A",
+            ".. comp_req:: B",
+            "   :id: comp_req__test__b",
+        )
+        result = parse_directives(rst)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["title"], "A")
+        self.assertEqual(result[1]["title"], "B")
+        self.assertEqual(result[1]["fields"]["id"], "comp_req__test__b")
+
 
 # ---------------------------------------------------------------------------
 # render_trlc – TRLC output for each S-CORE type
@@ -426,6 +438,13 @@ class TestRenderTrlc(unittest.TestCase):
         items = self._single("feat_req", {"satisfies": "asr_req__test__001"})
         out = render_trlc(items, "FeatPkg", "AsrPkg")
         self.assertIn("import AsrPkg", out)
+
+    def test_feat_req_satisfies_that_is_only_a_filter_produces_no_derived_from(self):
+        """A satisfies value like "[version==1]" has no id before the filter;
+        it must not render a malformed "derived_from = [AsrPkg.@1]" entry."""
+        items = self._single("feat_req", {"satisfies": "[version==1]"})
+        out = render_trlc(items, "FeatPkg", "AsrPkg")
+        self.assertNotIn("derived_from", out)
 
     # --- CompReq ---
 
@@ -593,6 +612,29 @@ class TestCollectRefs(unittest.TestCase):
         self.assertEqual(
             _collect_refs({"satisfies": "req_001[version==1], req_002[status==valid]"}),
             ["req_001", "req_002"],
+        )
+
+    def test_ref_that_is_only_a_filter_expression_is_dropped(self):
+        """A ref field containing only a filter (no id before the bracket)
+        must not render as an empty derived_from entry."""
+        self.assertEqual(_collect_refs({"satisfies": "[version==1]"}), [])
+
+    def test_filter_containing_comma_is_not_split_into_two_refs(self):
+        """sphinx-needs filters may contain commas of their own (E.g. a
+        top-level ``,`` inside the filter's argument list); only commas
+        outside of the trailing ``[...]`` separate distinct refs."""
+        self.assertEqual(
+            _collect_refs({"satisfies": "req_001[version==1, status==x]"}),
+            ["req_001"],
+        )
+
+    def test_filter_with_bracketed_list_argument_is_not_split(self):
+        """A ``,`` inside a nested ``[...]`` filter argument must not be
+        treated as a ref separator, even though the top-level filter regex
+        does not itself strip nested brackets."""
+        self.assertEqual(
+            _collect_refs({"satisfies": 'req_001[tags in ["a", "b"]]'}),
+            ['req_001[tags in ["a", "b"]]'],
         )
 
 
