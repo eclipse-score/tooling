@@ -1,0 +1,39 @@
+{
+  "hide_show_empty_members.puml": {
+    "name": null,
+    "statements": [
+      {
+        "Element": {
+          "identity": {
+            "name": "A",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      },
+      {
+        "Element": {
+          "identity": {
+            "name": "B",
+            "alias": null,
+            "stereotype": null,
+            "element_kind": "component",
+            "source_location": {
+              "file": "",
+              "line": 21
+            }
+          },
+          "style": null,
+          "statements": []
+        }
+      }
+    ]
+  }
+}

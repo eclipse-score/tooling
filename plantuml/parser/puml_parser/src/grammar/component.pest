@@ -15,7 +15,11 @@
 
 diagram_start = { empty_line* ~ startuml ~ (ignored_block | diagram_statement | empty_line)* ~ enduml }
 
-diagram_statement = { ((ignored_stmt | relation | together_block | port_declaration | element | footer_line) ~ EOL) }
+diagram_statement = { ((ignored_stmt | component_ignored_stmt | relation | together_block | port_declaration | element | footer_line) ~ EOL) }
+
+component_ignored_stmt = _{
+    shared_hide_show_empty_member_core
+}
 
 port_declaration = { port_keyword ~ port_name ~ alias_clause? }
 port_keyword = @{ "portin" | "portout" | "port" }

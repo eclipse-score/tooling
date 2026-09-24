@@ -1,0 +1,32 @@
+{
+  "skinparam_and_legend.puml": {
+    "name": "skinparam_and_legend",
+    "statements": [
+      {
+        "Start": {
+          "source": {
+            "start_line": 19,
+            "start_column": 1
+          }
+        }
+      },
+      {
+        "Action": {
+          "label": "do something",
+          "source": {
+            "start_line": 20,
+            "start_column": 1
+          }
+        }
+      },
+      {
+        "Stop": {
+          "source": {
+            "start_line": 21,
+            "start_column": 1
+          }
+        }
+      }
+    ]
+  }
+}

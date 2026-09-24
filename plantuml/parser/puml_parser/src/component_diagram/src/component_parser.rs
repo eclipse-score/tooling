@@ -75,6 +75,12 @@ impl PumlComponentParser {
             match inner.as_rule() {
                 Rule::element => {
                     let element = Self::parse_element(inner, source_file, ignored_notes)?;
+                    if element.identity.name.is_none() && element.identity.alias.is_none() {
+                        // Anonymous container (e.g. bare `frame { ... }`) has no identity to
+                        // resolve against; flatten it like `together` instead of keeping a
+                        // nameless wrapper the resolver can't build an FQN for.
+                        return Ok(element.statements);
+                    }
                     return Ok(vec![Statement::Element(element)]);
                 }
                 Rule::relation => {
