@@ -32,6 +32,7 @@ load(
     "unit_design",
 )
 load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphinx_toolchain")
+load("@score_tooling//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test", "trlc_specification")
 load(
@@ -70,6 +71,12 @@ load(
     "comp_req_multi_spec_provider_test",
     "feat_req_multi_spec_provider_test",
     "requirements_multi_spec_test_suite",
+)
+load(
+    ":requirements_package_test.bzl",
+    "asr_package_forwarded_test",
+    "requirements_package_test_suite",
+    "rst_to_trlc_no_collision_test",
 )
 load(
     ":requirements_rst_test.bzl",
@@ -1662,6 +1669,38 @@ aous_rst_sphinx_test(
 requirements_rst_test_suite(name = "requirements_rst_tests")
 
 # ============================================================================
+# package attr forwarding / rst_to_trlc output-path collision tests
+# ============================================================================
+
+# Fixture: package attr must forward to the generated rst_to_trlc target.
+assumed_system_requirements(
+    name = "asr_custom_package",
+    srcs = ["fixtures/rst_requirements/assumed_system_requirements.rst"],
+    package = "CustomAsrPackage",
+)
+
+asr_package_forwarded_test(
+    name = "asr_package_forwarded_test",
+    target_under_test = ":_asr_custom_package_rst_gen_0",
+)
+
+# Fixture: same-basename .rst srcs in one target must not collide.
+rst_to_trlc(
+    name = "rst_collision_fixture",
+    srcs = [
+        "fixtures/rst_collision/a/req.rst",
+        "fixtures/rst_collision/b/req.rst",
+    ],
+)
+
+rst_to_trlc_no_collision_test(
+    name = "rst_to_trlc_no_collision_test",
+    target_under_test = ":rst_collision_fixture",
+)
+
+requirements_package_test_suite(name = "requirements_package_tests")
+
+# ============================================================================
 # Multi-spec Requirements Tests
 # ============================================================================
 
@@ -1822,6 +1861,7 @@ test_suite(
     tests = [
         ":lobster_config_tests",
         ":requirements_multi_spec_tests",
+        ":requirements_package_tests",
         ":requirements_rst_tests",
         ":seooc_tests",
         ":sphinx_module_tests",
