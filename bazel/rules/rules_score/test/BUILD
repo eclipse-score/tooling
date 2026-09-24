@@ -284,6 +284,14 @@ architectural_design(
     static = ["fixtures/test_dependable_element.puml"],
 )
 
+# Dedicated architectural_design for ":test_dependable_element_aou_middle":
+# its puml package name must match the label, so it can't share
+# ":arch_design_elem" (scoped to "test_dependable_element").
+architectural_design(
+    name = "arch_design_elem_aou_middle",
+    static = ["fixtures/test_dependable_element_aou_middle.puml"],
+)
+
 architectural_design(
     name = "arch_design_nested",
     static = ["fixtures/test_dependable_element_nested.puml"],
@@ -961,6 +969,82 @@ dependable_element(
     maturity = "development",
     requirements = [":feat_req"],
     tests = [],  # Empty for testing
+)
+
+# Intermediate dependable_element in an AoU chain-forwarding scenario:
+# receives AoUs from ":test_dependable_element" (its own AoUs, exposed via
+# TrlcProviderInfo) and chain-forwards a single one of them onward (selected
+# by fixtures/seooc_test/aou_forwarding_select_temp.yaml) so that a further
+# downstream requirements target (":comp_req_chain_aou" below) can reference
+# it via `derived_from` without needing to depend on
+# ":test_dependable_element" directly.
+dependable_element(
+    name = "test_dependable_element_aou_middle",
+    testonly = True,
+    aou_forwarding = "fixtures/seooc_test/aou_forwarding_select_temp.yaml",
+    architectural_design = [":arch_design_elem_aou_middle"],
+    # Deliberately NOT ":aous" (same as ":test_dependable_element"'s own AoUs):
+    # reusing the identical assumptions_of_use target here as well as
+    # receiving it forwarded from ":test_dependable_element" would make this
+    # element's own_aou_trlc and chain_forwarded_trlc contain the exact same
+    # TRLC record identity twice, which TRLC's own duplicate-definition check
+    # correctly rejects. ":aous_rst" has disjoint record ids, so it exercises
+    # "this element has its own AoUs *and* forwards different received ones"
+    # without any accidental self-collision.
+    assumptions_of_use = [":aous_rst"],
+    components = [":test_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],  # Empty for testing
+    deps = [":test_dependable_element"],
+)
+
+# Regression/feature fixtures: downstream requirements targets referencing
+# AoUs exposed via TrlcProviderInfo -- see plan.md "Expose TrlcProviderInfo
+# (AoUs) from dependable_element".
+#
+# Direct case: ":comp_req_direct_aou" depends directly on
+# ":test_dependable_element" (an upstream dependable_element) and references
+# one of *its own* AoUs via `derived_from`. This target and its
+# auto-generated ":comp_req_direct_aou_test" must build successfully.
+component_requirements(
+    name = "comp_req_direct_aou",
+    testonly = True,
+    srcs = ["fixtures/seooc_test/component_requirements_direct_aou.trlc"],
+    deps = [":test_dependable_element"],
+)
+
+# Chain-forwarded case: ":comp_req_chain_aou" depends on
+# ":test_dependable_element_aou_middle" (NOT on ":test_dependable_element"
+# directly) and references the AoU that was received-then-chain-forwarded by
+# the middle element. This must build successfully, proving chain-forwarded
+# AoUs (not just an element's own AoUs) are resolvable at the TRLC level by
+# further downstream dependees.
+component_requirements(
+    name = "comp_req_chain_aou",
+    testonly = True,
+    srcs = ["fixtures/seooc_test/component_requirements_chain_aou.trlc"],
+    deps = [":test_dependable_element_aou_middle"],
+)
+
+# Diamond-dependency regression test: ":comp_req_diamond_aou" depends on BOTH
+# ":test_dependable_element" (the AoU's original owner) AND
+# ":test_dependable_element_aou_middle" (which chain-forwards that same AoU,
+# retyped to ScoreReq.ReceivedAoU with the identical package + record name --
+# see filter_forwarded_trlc.py). Without deduplication (aou_trlc_dedupe.bzl /
+# dedupe_aou_trlc.py), the same AoU identity would be merged twice into one
+# TRLC parse and rejected by TRLC's own duplicate-definition check. This must
+# build and test successfully, proving the diamond shape is handled.
+component_requirements(
+    name = "comp_req_diamond_aou",
+    testonly = True,
+    srcs = ["fixtures/seooc_test/component_requirements_diamond_aou.trlc"],
+    deps = [
+        ":test_dependable_element",
+        ":test_dependable_element_aou_middle",
+    ],
 )
 
 # Dependable elements wrapping a test_case_coverage_lock component — used to verify the
@@ -1776,6 +1860,33 @@ py_test(
 )
 
 py_test(
+    name = "test_filter_forwarded_trlc",
+    size = "small",
+    srcs = ["test_filter_forwarded_trlc.py"],
+    deps = [
+        "@score_tooling//bazel/rules/rules_score:filter_forwarded_trlc",
+    ],
+)
+
+py_test(
+    name = "test_dedupe_aou_trlc",
+    size = "small",
+    srcs = ["test_dedupe_aou_trlc.py"],
+    deps = [
+        "@score_tooling//bazel/rules/rules_score:dedupe_aou_trlc",
+    ],
+)
+
+py_test(
+    name = "test_expose_own_aou_trlc",
+    size = "small",
+    srcs = ["test_expose_own_aou_trlc.py"],
+    deps = [
+        "@score_tooling//bazel/rules/rules_score:expose_own_aou_trlc",
+    ],
+)
+
+py_test(
     name = "test_sphinx_html_merge",
     size = "small",
     srcs = ["test_sphinx_html_merge.py"],
@@ -1827,6 +1938,9 @@ test_suite(
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",
         ":test_bazel_sphinx_needs",
+        ":test_dedupe_aou_trlc",
+        ":test_expose_own_aou_trlc",
+        ":test_filter_forwarded_trlc",
         ":test_fmea_assembler",
         ":test_rst_to_trlc",
         ":test_sphinx_html_merge",
@@ -1837,4 +1951,21 @@ test_suite(
         "//fixtures/image_srcs:requirements_image_tests",
         "//fixtures/spec_extras:requirements_spec_extras_tests",
     ],
+)
+
+# Negative regression check (manual verification, not a standing green test):
+# references an AoU ("supply_voltage") that was received by
+# ":test_dependable_element_aou_middle" but NOT selected in
+# fixtures/seooc_test/aou_forwarding_select_temp.yaml -- must FAIL to build,
+# proving non-selected AoUs are genuinely excluded from chain_forwarded_trlc,
+# not merely unfiltered. Kept tagged "manual" (not part of //... or any test
+# suite) since this repo has no expect-failure Bazel test harness; verify by
+# running `bazel build :comp_req_chain_aou_negative_test` and confirming it
+# fails with an "undefined identifier" TRLC error.
+component_requirements(
+    name = "comp_req_chain_aou_negative",
+    testonly = True,
+    srcs = ["fixtures/seooc_test/component_requirements_chain_aou_negative.trlc"],
+    tags = ["manual"],
+    deps = [":test_dependable_element_aou_middle"],
 )
