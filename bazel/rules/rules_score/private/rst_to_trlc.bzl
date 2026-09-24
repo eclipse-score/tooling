@@ -62,11 +62,8 @@ def rst_srcs_to_trlc(name, srcs, deps = [], ref_package = ""):
 def _rst_to_trlc_impl(ctx):
     """Convert each .rst source file to a .trlc file via the Python converter."""
     outs = []
-    for src in ctx.files.srcs:
-        # `src` may come from a different repository (E.g.: a cross-repo RST label)
-        # Nest under the target's own name so two rst_to_trlc targets in the
-        # same package converting same-named files don't clash on the output path.
-        out = ctx.actions.declare_file(ctx.label.name + "/" + src.basename[:-4] + ".trlc")
+    for i, src in enumerate(ctx.files.srcs):
+        out = ctx.actions.declare_file(ctx.label.name + "/" + str(i) + "/" + src.basename.removesuffix(".rst") + ".trlc")
         outs.append(out)
 
         args = ctx.actions.args()
