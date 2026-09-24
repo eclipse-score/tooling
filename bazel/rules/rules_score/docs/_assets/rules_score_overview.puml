@@ -44,8 +44,8 @@ component "assumptions_of_use" <<requirements>> as aou
 component "unit" <<implementation>> as unit
 component "component" <<implementation>> as comp
 
-' ── Safety Analysis rules ─────────────────────────────────────────────────────
-component "fmea" <<analysis>> as fmea
+' ── Safety Analysis rules ──────────────────────────────────────────────────────────
+component "safety_analysis" <<analysis>> as safety_analysis
 component "dependability_analysis" <<analysis>> as da
 
 ' ── Documentation rules ───────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ component "dependable_element" as de
 
 unit_design  -->  unit  : <<UnitDesignInfo>>
 
-arch  -->  fmea   : <<ArchitecturalDesignInfo>>
+arch  -->  safety_analysis   : <<ArchitecturalDesignInfo>>
 arch  -->  de     : <<ArchitecturalDesignInfo>>
 
 feat_req  -->  aou  : <<FeatureRequirementsInfo>>
@@ -65,7 +65,7 @@ feat_req  -->  de   : <<FeatureRequirementsInfo>>
 comp_req  -->  comp  : <<ComponentRequirementsInfo>>
 comp_req  -->  aou   : <<ComponentRequirementsInfo>>
 
-fmea  -->  da  : <<AnalysisInfo>>
+safety_analysis  -->  da  : <<AnalysisInfo>>
 da    -->  de  : <<DependabilityAnalysisInfo>>
 
 aou   -->  de  : <<AssumptionsOfUseInfo>>

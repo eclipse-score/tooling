@@ -40,7 +40,7 @@ Use this skill to coordinate; open the specialized skill for the actual work:
 | `.trlc` requirement records, `ScoreReq` model, traceability, `assumed_system_requirements` / `feature_requirements` / `component_requirements` / `assumptions_of_use` | **score-requirements** |
 | PlantUML diagrams, `architectural_design` / `unit` / `unit_design` / `component` / `dependable_element` structure, architecture/API/sequence validations | **score-architecture** |
 | GoogleTest `lobster-tracing` + Given-When-Then, `test_case_coverage.lock.yaml`, attaching tests | **score-testing** |
-| FMEA, `FailureMode` / `ControlMeasure` / FTA, `fmea` / `dependability_analysis` | **score-safety-analysis** |
+| FMEA, `FailureMode` / `ControlMeasure` / FTA, `safety_analysis` / `dependability_analysis` | **score-safety-analysis** |
 
 ---
 
@@ -59,7 +59,7 @@ with a traceability report.
 | Architectural Design | `architectural_design` | score-architecture |
 | Units & Components | `unit`, `unit_design`, `component` | score-architecture |
 | Tests & Coverage | `tests` attr, `test_case_coverage_lock` | score-testing |
-| Dependability Analysis | `fmea`, `dependability_analysis` | score-safety-analysis |
+| Dependability Analysis | `safety_analysis`, `dependability_analysis` | score-safety-analysis |
 | SEooC assembly | `dependable_element` | this skill |
 
 ### Hierarchy
@@ -182,7 +182,7 @@ FMEA, cross-module `deps`, and test-case coverage — see
 3. **Implementation & tests** → back each `unit` with a `cc_library` + `cc_test`; annotate tests
    with `lobster-tracing` + Given-When-Then; add `test_case_coverage_lock` on components.
    *(score-testing)*
-4. **Safety analysis** → add `fmea` (FailureMode + ControlMeasure + FTA) and wrap it in a
+4. **Safety analysis** → add `safety_analysis` (FailureMode + ControlMeasure + FTA) and wrap it in a
    `dependability_analysis`. *(score-safety-analysis)*
 5. **Assemble** → allocate `CompReq` to `component(requirements=…)` and `FeatReq` to
    `dependable_element(requirements=…)`; wire `architectural_design`, `components`,

@@ -15,6 +15,6 @@
 
 !include fta_metamodel.puml
 
-$TopEvent("TaskInterface stops responding", "DynamicExampleFmea.TaskInterfaceFailure")
+$TopEvent("TaskInterface stops responding", "DynamicExampleSafetyAnalysis.TaskInterfaceFailure")
 
 @enduml

@@ -34,7 +34,7 @@ score/<component>/dependability/
 │   ├── failure_modes.trlc      # FailureMode records (one per unique root-cause cluster)
 │   ├── control_measures.trlc   # ControlMeasure / PreventiveMeasure / AoU records
 │   ├── fta_<failure_mode>.puml # One FTA diagram per FailureMode
-│   └── BUILD                   # fmea() rule — must list all .puml in fta_files filegroup
+│   └── BUILD                   # safety_analysis() rule — must list all .puml in fta_files filegroup
 ├── assumed_system/
 │   └── aous.trlc               # AoU records (caller obligations)
 └── requirements/

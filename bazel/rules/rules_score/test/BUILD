@@ -26,7 +26,7 @@ load(
     "dependability_analysis",
     "dependable_element",
     "feature_requirements",
-    "fmea",
+    "safety_analysis",
     "sphinx_module",
     "unit",
     "unit_design",
@@ -429,15 +429,15 @@ dependable_element(
 )
 
 # - Safety Analysis (DFA):    wp__sw_component_dfa
-# - Safety Analysis (FMEA):   wp__sw_component_fmea
+# - Safety Analysis (FMEA):   wp__sw_component_safety_analysis
 dependability_analysis(
     name = "dependability_analysis_target",
     arch_design = ":arch_design",
     dfa = ["fixtures/seooc_test/dfa.rst"],
-    fmea = [":samplelibrary_safety_analysis"],
+    safety_analysis = [":samplelibrary_safety_analysis"],
 )
 
-fmea(
+safety_analysis(
     name = "samplelibrary_safety_analysis",
     # TODO: add failure modes, control measures, and root causes here
     # failuremodes = [],
@@ -570,8 +570,8 @@ architectural_design(
 # dependability_analysis_target/samplelibrary_safety_analysis fixture used by
 # other targets in this file is deliberately empty, so this scenario gets its
 # own minimal FMEA that traces to "package_pub.PublicInterface".
-fmea(
-    name = "public_api_example_fmea",
+safety_analysis(
+    name = "public_api_example_safety_analysis",
     arch_design = ":arch_design_public_api_example",
     failuremodes = ["fixtures/clickable_example/public_api_failure_modes.trlc"],
     root_causes = ["fixtures/clickable_example/public_api_fta.puml"],
@@ -580,7 +580,7 @@ fmea(
 dependability_analysis(
     name = "public_api_example_dependability_analysis",
     arch_design = ":arch_design_public_api_example",
-    fmea = [":public_api_example_fmea"],
+    safety_analysis = [":public_api_example_safety_analysis"],
 )
 
 dependable_element(
@@ -746,11 +746,11 @@ architectural_design(
 )
 
 # public_api items must be referenced by a FailureMode in the SEooC's own
-# safety analysis (see :public_api_example_fmea above for the same reasoning)
+# safety analysis (see :public_api_example_safety_analysis above for the same reasoning)
 # - the shared dependability_analysis_target fixture is deliberately empty, so
 # this scenario gets its own minimal FMEA that traces to "TaskInterface".
-fmea(
-    name = "dynamic_example_fmea",
+safety_analysis(
+    name = "dynamic_example_safety_analysis",
     arch_design = ":arch_design_dynamic_example",
     failuremodes = ["fixtures/clickable_example/dynamic_public_api_failure_modes.trlc"],
     root_causes = ["fixtures/clickable_example/dynamic_public_api_fta.puml"],
@@ -759,7 +759,7 @@ fmea(
 dependability_analysis(
     name = "dynamic_example_dependability_analysis",
     arch_design = ":arch_design_dynamic_example",
-    fmea = [":dynamic_example_fmea"],
+    safety_analysis = [":dynamic_example_safety_analysis"],
 )
 
 dependable_element(
@@ -1759,10 +1759,10 @@ trlc_requirements_test(
 )
 
 py_test(
-    name = "test_fmea_assembler",
+    name = "test_safety_analysis_assembler",
     size = "small",
-    srcs = ["test_fmea_assembler.py"],
-    deps = ["@score_tooling//bazel/rules/rules_score:fmea_assembler"],
+    srcs = ["test_safety_analysis_assembler.py"],
+    deps = ["@score_tooling//bazel/rules/rules_score:safety_analysis_assembler"],
 )
 
 py_test(
@@ -1827,8 +1827,8 @@ test_suite(
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",
         ":test_bazel_sphinx_needs",
-        ":test_fmea_assembler",
         ":test_rst_to_trlc",
+        ":test_safety_analysis_assembler",
         ":test_sphinx_html_merge",
         ":test_sphinx_module_ext",
         ":test_trlc_rst_image_rendering",

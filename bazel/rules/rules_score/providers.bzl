@@ -224,11 +224,11 @@ DependabilityAnalysisInfo = provider(
     doc = """Provider for dependability analysis artifacts.
 
     Aggregates sub-analyses:
-      * **fmea**              – fmea rule targets (FM + CM + optional root causes).
+      * **safety_analysis**   – safety_analysis rule targets (FM + CM + optional root causes).
       * **security_analysis** – security analysis targets (placeholder).
     """,
     fields = {
-        "fmea": "Depset of output files from fmea targets.",
+        "safety_analysis": "Depset of output files from safety_analysis targets.",
         "security_analysis": "Depset of output files from security analysis targets.",
         "dfa": "Depset of DFA documentation files (placeholder).",
         "arch_design": "ArchitecturalDesignInfo from the linked architectural design (placeholder).",

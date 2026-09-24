@@ -28,7 +28,7 @@ for safety related automotive software.
 | `architectural_design` | `ArchitecturalDesignInfo` |
 | `unit` | `UnitInfo`, `CertifiedScope` |
 | `component` | `ComponentInfo` |
-| `fmea` | `AnalysisInfo` |
+| `safety_analysis` | `AnalysisInfo` |
 | `glossary` | `SphinxSourcesInfo` |
 | `dependability_analysis` | `DependabilityAnalysisInfo` |
 | `dependable_element` | HTML documentation zip (Sphinx) |
@@ -137,11 +137,11 @@ and collects requirement + architecture + test lobster sources.
 
 ---
 
-## `fmea`
+## `safety_analysis`
 
 ```starlark
-fmea(
-    name = "my_fmea",
+safety_analysis(
+    name = "my_safety_analysis",
     failuremodes = [":failure_modes"],
     controlmeasures = [":control_measures"],
     root_causes = ["fta.puml"],
@@ -149,7 +149,7 @@ fmea(
 )
 ```
 
-**`bazel build`** — generates `fmea.rst` (merged FM / CM / FTA sections),
+**`bazel build`** — generates `safety_analysis.rst` (merged FM / CM / FTA sections),
 runs `lobster-trlc` on TRLC inputs, and extracts FTA events from `.puml`
 diagrams into `fta.lobster`. Build-only; traceability validation is done
 by the wrapping `dependability_analysis` test.
@@ -212,7 +212,7 @@ dependable_element(
 ```starlark
 dependability_analysis(
     name = "my_da",
-    fmea = [":my_fmea"],
+    safety_analysis = [":my_safety_analysis"],
     arch_design = ":my_design",
 )
 ```

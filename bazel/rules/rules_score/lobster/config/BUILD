@@ -12,7 +12,7 @@
 # *******************************************************************************
 
 # Lobster-trlc YAML configs and report config templates for S-CORE traceability.
-# Used as defaults by rules_score rules (component, dependable_element, fmea, etc.).
+# Used as defaults by rules_score rules (component, dependable_element, safety_analysis, etc.).
 
 filegroup(
     name = "component_requirement",

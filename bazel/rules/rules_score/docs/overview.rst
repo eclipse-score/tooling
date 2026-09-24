@@ -102,7 +102,7 @@ target two layers of checks apply:
   derivation chain ``AssumedSystemReq → FeatReq → CompReq``, requires an ``Asil`` safety
   classification and defines the safety-analysis
   vocabulary (``FailureMode`` with HAZOP ``Guideword``\ s, ``ControlMeasure``,
-  ``AoU``) used by ``fmea``/``assumptions_of_use``.
+  ``AoU``) used by ``safety_analysis``/``assumptions_of_use``.
 
 Architecture consistency (build)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -315,7 +315,7 @@ Quick Reference
    * - :ref:`unit_design <rule-unit-design>`
      - Artifact
      - :doc:`user_guide/unit_design`
-   * - :ref:`fmea <rule-fmea>`
+   * - :ref:`safety_analysis <rule-safety-analysis>`
      - Artifact
      - :doc:`user_guide/dependability_analysis`
    * - :ref:`dependability_analysis <rule-dependability-analysis>`

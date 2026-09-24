@@ -28,7 +28,7 @@ Three layers
 build wires layers 2 and 3 automatically.
 
 #. **Macros / rules** (Starlark, ``private/*.bzl``) — the public work-product
-   declarations (``feature_requirements``, ``architectural_design``, ``fmea``,
+   declarations (``feature_requirements``, ``architectural_design``, ``safety_analysis``,
    ``unit``, ``component``, ``dependability_analysis``, ``dependable_element``,
    …). Each one declares actions and emits **providers**.
 #. **Providers** (``providers.bzl``) — the typed contracts that carry data
@@ -37,8 +37,8 @@ build wires layers 2 and 3 automatically.
    :doc:`overview` for the provider-flow diagram.
 #. **Tools** — the executables each action runs. Some are vendored third-party
    tools (TRLC, Lobster, the PlantUML parser, Sphinx); some are local helpers
-   under ``src/`` (``rst_to_trlc.py``, ``fmea_assembler.py``,
-   ``sphinx_html_merge.py``). The FMEA fault-tree processing lives in the Rust
+   under ``src/`` (``rst_to_trlc.py``, ``safety_analysis_assembler.py``,
+   ``sphinx_html_merge.py``). The safety-analysis fault-tree processing lives in the Rust
    ``puml_cli`` (FTA mode, backed by the ``puml_fta`` crate).
 
 Rule → tool invocation map
@@ -79,11 +79,11 @@ are rendered under :doc:`tool_reference/index`.
      - ``@trlc//tools/trlc_rst:trlc_rst`` + TRLC parser;
        ``trlc_requirements_test``
      - ``feature_requirements``, ``component_requirements``,
-       ``assumed_system_requirements``, ``fmea``
-     - Parses and type-checks requirement / FMEA records against the ``.rsl``
+       ``assumed_system_requirements``, ``safety_analysis``
+     - Parses and type-checks requirement / safety-analysis records against the ``.rsl``
        metamodel and renders them to ``.rst``.  ``trlc_rst`` also ships a
-       reusable ``TRLCRST`` library that ``fmea_assembler`` links directly to
-       build the FMEA page from a single in-process parse (no per-record
+       reusable ``TRLCRST`` library that ``safety_analysis_assembler`` links directly to
+       build the safety-analysis page from a single in-process parse (no per-record
        ``.inc`` files).
    * - **rst_to_trlc**
      - ``src/rst_to_trlc.py`` (local)
@@ -102,7 +102,7 @@ are rendered under :doc:`tool_reference/index`.
    * - **puml_cli (FTA mode)**
      - ``//plantuml/parser/puml_cli`` ``--fta-output-dir`` (Rust; FTA model in
        the ``puml_fta`` crate)
-     - ``fmea``
+     - ``safety_analysis``
      - Analysis only: parses the ``$TopEvent`` / ``$BasicEvent`` / gate macro
        calls of each root-cause FTA diagram into
        two outputs: ``root_causes.lobster`` (``lobster-act-trace``) and
@@ -113,20 +113,11 @@ are rendered under :doc:`tool_reference/index`.
        sphinxcontrib-plantuml's ``-pipe`` mode.  Unrooted basic events and
        malformed TRLC aliases are reported as build warnings rather than silently
        dropped.
-   * - **fmea_assembler**
-     - ``//bazel/rules/rules_score:fmea_assembler``
-       (``src/fmea_assembler.py``, local; links the ``TRLCRST`` library)
-     - ``fmea``
-     - Assembles the failure-mode-centric ``fmea.rst`` from ``fta_chains.json``
-       plus the FailureMode / ControlMeasure records in one in-process TRLC
-       parse: an overview table, one section per failure mode (detail + inline
-       fault tree + that chain's control measures), and trailing "Unlinked"
-       sections so nothing is dropped.
-   * - **safety_analysis_tools**
-     - ``//bazel/rules/rules_score:safety_analysis_tools``
-       (``src/safety_analysis_tools.py``, local)
-     - ``fmea``
-     - Assembles the failure-mode-centric ``fmea.rst`` from ``fta_chains.json``
+   * - **safety_analysis_assembler**
+     - ``//bazel/rules/rules_score:safety_analysis_assembler``
+       (``src/safety_analysis_assembler.py``, local; links the ``TRLCRST`` library)
+     - ``safety_analysis``
+     - Assembles the failure-mode-centric ``safety_analysis.rst`` from ``fta_chains.json``
        plus the FailureMode / ControlMeasure records in one in-process TRLC
        parse: an overview table, one section per failure mode (detail + inline
        fault tree + that chain's control measures), and trailing "Unlinked"
@@ -135,7 +126,7 @@ are rendered under :doc:`tool_reference/index`.
      - ``@lobster//`` : ``lobster-trlc``, ``lobster-report``,
        ``lobster-ci-report``, ``lobster-html-report``, ``gtest_report``,
        ``lobster-rst-report``
-     - ``*_requirements``, ``fmea``, ``unit``, ``dependability_analysis``,
+     - ``*_requirements``, ``safety_analysis``, ``unit``, ``dependability_analysis``,
        ``dependable_element``
      - The traceability backbone. ``lobster-trlc`` extracts ``.lobster`` items
        from TRLC; ``gtest_report`` turns test results into ``.lobster``;
@@ -205,7 +196,7 @@ feed that pipeline:
 * **Requirements** (``.trlc``) → ``lobster-trlc`` → ``requirements.lobster``.
 * **Public API diagrams** (``public_api.puml``) → PlantUML parser →
   ``public_api.lobster`` (enables failure-mode-to-interface tracing).
-* **FMEA** (``failuremodes.trlc`` / ``controlmeasures.trlc``) → ``lobster-trlc``;
+* **Safety analysis** (``failuremodes.trlc`` / ``controlmeasures.trlc``) → ``lobster-trlc``;
   **FTA** (``fta.puml``) → ``puml_cli`` (FTA mode) → ``root_causes.lobster``.
 * **Unit tests** (gtest) → ``gtest_report`` → ``<unit>.lobster``.
 
@@ -326,11 +317,11 @@ self-contained.
 Safety analysis document pipeline
 ----------------------------------
 
-The component diagram below shows how the FMEA **input artifacts** — authored
+The component diagram below shows how the safety-analysis **input artifacts** — authored
 ``.trlc`` records and ``fta_*.puml`` diagrams plus the tooling defaults
-(``ScoreReq`` ``.rsl`` spec, ``fta_metamodel.puml``, ``fmea.template.rst`` and
+(``ScoreReq`` ``.rsl`` spec, ``fta_metamodel.puml``, ``safety_analysis.template.rst`` and
 the lobster configs) — flow through the three in-process tool actions of the
-``fmea`` rule into the generated files, the providers, and finally the Sphinx
+``safety_analysis`` rule into the generated files, the providers, and finally the Sphinx
 staging tree.  Blue boxes are authored sources, light-blue are tooling defaults,
 green components are the tool actions, orange boxes are generated files, yellow
 boxes are the provider payloads, and the purple box is the staging directory
@@ -341,17 +332,17 @@ consumed by Sphinx.
    :alt: Safety analysis document pipeline
    :width: 100%
 
-The ``fmea`` rule drives three actions, all reading the input artifacts above:
+The ``safety_analysis`` rule drives three actions, all reading the input artifacts above:
 
 #. **puml_cli (FTA mode)** parses each ``fta_*.puml`` directly (no rewriting)
    and writes ``root_causes.lobster`` and ``fta_chains.json`` (the ordered
    per-failure-mode chains).  The diagrams keep their ``!include
    fta_metamodel.puml``; the metamodel is on PlantUML's global include path
    (shipped in the docs toolchain runfiles), so it resolves at render time.
-#. **fmea_assembler** consumes ``fta_chains.json`` and parses the FailureMode /
+#. **safety_analysis_assembler** consumes ``fta_chains.json`` and parses the FailureMode /
    ControlMeasure ``.trlc`` records (with the ``.rsl`` spec for import
    resolution) in a single in-process ``TRLCRST`` pass, expanding
-   ``fmea.template.rst`` into ``fmea.rst``.
+   ``safety_analysis.template.rst`` into ``safety_analysis.rst``.
 #. **lobster-trlc** (run twice) turns the FailureMode and ControlMeasure records
    into ``failuremodes.lobster`` / ``controlmeasures.lobster`` for the
    traceability report.
@@ -359,14 +350,14 @@ The ``fmea`` rule drives three actions, all reading the input artifacts above:
 ``SphinxSourcesInfo`` carries three depsets:
 
 - **srcs** — files that become top-level toctree entries in the enclosing
-  document section.  ``fmea`` emits exactly one: ``fmea.rst``.
+  document section.  ``safety_analysis`` emits exactly one: ``safety_analysis.rst``.
 - **deps** — all files that must be present in the staging directory; for
-  ``fmea`` this is just ``fmea.rst``, because the page is self-contained
+  ``safety_analysis`` this is just ``safety_analysis.rst``, because the page is self-contained
   (failure modes and control measures are rendered inline, not pulled in via
   ``.. include::``).
 - **aux_srcs** — files to symlink alongside ``srcs``/``deps`` but **not** added
-  to any toctree.  ``fmea`` uses this for the authored ``fta_*.puml`` diagrams,
-  which ``fmea.rst`` references inline via ``.. uml::`` and which must therefore
+  to any toctree.  ``safety_analysis`` uses this for the authored ``fta_*.puml`` diagrams,
+  which ``safety_analysis.rst`` references inline via ``.. uml::`` and which must therefore
   sit beside it in the staging tree without being indexed as documents.  (The
   metamodel is not staged here — it resolves via PlantUML's global include
   path.)

@@ -190,7 +190,7 @@ Complete Example
         "architectural_design", "assumed_system_requirements",
         "assumptions_of_use", "component", "component_requirements",
         "dependability_analysis", "dependable_element",
-        "feature_requirements", "fmea", "unit")
+        "feature_requirements", "safety_analysis", "unit")
 
    # Requirements
    assumed_system_requirements(name = "sys_req", srcs = ["docs/sys_req.trlc"])
@@ -208,11 +208,11 @@ Complete Example
                         public_api = ["docs/public_api.puml"])
 
    # Safety analysis
-   fmea(name = "my_fmea", arch_design = ":arch",
+   safety_analysis(name = "my_safety_analysis", arch_design = ":arch",
         controlmeasures = ["docs/controls.trlc"],
         failuremodes    = ["docs/failures.trlc"],
         root_causes     = ["docs/fta.puml"])
-   dependability_analysis(name = "analysis", fmea = [":my_fmea"])
+   dependability_analysis(name = "analysis", safety_analysis = [":my_safety_analysis"])
 
    # Implementation
    cc_library(name = "kvs_lib", srcs = ["kvs.cpp"], hdrs = ["kvs.h"])

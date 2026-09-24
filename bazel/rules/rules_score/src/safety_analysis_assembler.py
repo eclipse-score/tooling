@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""Assemble a failure-mode-centric ``fmea.rst`` page.
+"""Assemble a failure-mode-centric ``safety_analysis.rst`` page.
 
 The page is pivoted around the safety chain: an overview summary table followed
 by one section per failure mode, each containing the failure-mode detail, the
@@ -78,7 +78,7 @@ def _indent(text: str, n: int = 3) -> str:
 
 def _anchor(fqn: str) -> str:
     """Sphinx cross-reference label derived from a fully-qualified name."""
-    return "fmea-" + re.sub(r"[^0-9a-zA-Z]+", "-", fqn).strip("-").lower()
+    return "safety-analysis-" + re.sub(r"[^0-9a-zA-Z]+", "-", fqn).strip("-").lower()
 
 
 def _ref(fqn: str, name: str) -> str:
@@ -281,7 +281,7 @@ def _build_body(renderer: TRLCRST, chains: list, title: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", required=True, help="Output fmea.rst path.")
+    parser.add_argument("--output", required=True, help="Output safety_analysis.rst path.")
     parser.add_argument("--template", required=True, help="RST template path.")
     parser.add_argument("--title", required=True, help="Page title.")
     parser.add_argument(

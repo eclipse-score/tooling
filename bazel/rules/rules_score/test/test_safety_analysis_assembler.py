@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""Unit tests for the FMEA page assembler layout logic."""
+"""Unit tests for the safety-analysis page assembler layout logic."""
 
 import json
 import os
@@ -18,7 +18,7 @@ import sys
 import tempfile
 import unittest
 
-import fmea_assembler as fa
+import safety_analysis_assembler as fa
 
 
 class _Type:
@@ -82,12 +82,12 @@ def _objs():
 
 class AnchorTest(unittest.TestCase):
     def test_anchor_is_sanitised_lowercase(self):
-        self.assertEqual(fa._anchor("Lib.FM_A"), "fmea-lib-fm-a")
+        self.assertEqual(fa._anchor("Lib.FM_A"), "safety-analysis-lib-fm-a")
 
     def test_ref_targets_anchor(self):
         self.assertEqual(
             fa._ref("Lib.FM_A", "FM_A"),
-            ":ref:`FM_A <fmea-lib-fm-a>`",
+            ":ref:`FM_A <safety-analysis-lib-fm-a>`",
         )
 
 
@@ -112,7 +112,7 @@ class BuildBodyTest(unittest.TestCase):
         # FM dropdown titled by its full fqn only (no ASIL in the heading).
         self.assertIn(".. dropdown:: Lib.FM_A\n", body)
         self.assertNotIn(".. dropdown:: Lib.FM_A :bdg", body)
-        self.assertIn(":name: fmea-lib-fm-a", body)
+        self.assertIn(":name: safety-analysis-lib-fm-a", body)
         # Attributes as a grid of cards; no inner requirement id.
         self.assertNotIn(".. requirement:definition::", body)
         self.assertIn(".. grid:: 2", body)
@@ -167,7 +167,7 @@ class BuildBodyTest(unittest.TestCase):
         ]
         import logging as _logging
 
-        with self.assertLogs("fmea_assembler", level=_logging.WARNING) as log:
+        with self.assertLogs("safety_analysis_assembler", level=_logging.WARNING) as log:
             body = fa._build_body(self.renderer, chains, "Title")
         self.assertTrue(any("Lib.NoSuchFM" in m for m in log.output))
         # The unknown FM is skipped; the known FMs still render.
@@ -197,7 +197,7 @@ class ChainValidationTest(unittest.TestCase):
 # types the assembler keys on, so main() runs a real TRLCRST parse (catching
 # contract drift the _FakeRenderer cannot).
 _RSL = """\
-package TestFmea
+package TestSafetyAnalysis
 
 type FailureMode {
     guideword optional String
@@ -214,7 +214,7 @@ type ControlMeasure {
 """
 
 _FM_TRLC = """\
-package TestFmea
+package TestSafetyAnalysis
 
 FailureMode FmA {
     guideword = "TooLate"
@@ -226,7 +226,7 @@ FailureMode FmA {
 """
 
 _CM_TRLC = """\
-package TestFmea
+package TestSafetyAnalysis
 
 ControlMeasure CmA {
     safety = "ASIL_D"
@@ -236,7 +236,7 @@ ControlMeasure CmA {
 
 
 class MainIntegrationTest(unittest.TestCase):
-    """End-to-end main(): real TRLCRST parse + chains JSON -> fmea.rst."""
+    """End-to-end main(): real TRLCRST parse + chains JSON -> safety_analysis.rst."""
 
     def _write(self, directory, name, content):
         path = os.path.join(directory, name)
@@ -264,19 +264,19 @@ class MainIntegrationTest(unittest.TestCase):
                 json.dumps(
                     [
                         {
-                            "fm_fqn": "TestFmea.FmA",
+                            "fm_fqn": "TestSafetyAnalysis.FmA",
                             "fm_name": "Fm A",
                             "puml": "a.puml",
-                            "control_measures": ["TestFmea.CmA"],
+                            "control_measures": ["TestSafetyAnalysis.CmA"],
                         }
                     ]
                 ),
             )
-            out = os.path.join(tmp, "fmea.rst")
+            out = os.path.join(tmp, "safety_analysis.rst")
 
             self._run_main(
                 [
-                    "fmea_assembler",
+                    "safety_analysis_assembler",
                     "--output",
                     out,
                     "--template",
@@ -301,8 +301,8 @@ class MainIntegrationTest(unittest.TestCase):
             self.assertIn("Test FMEA", rst)
             self.assertIn("Overview", rst)
             self.assertIn(".. list-table::", rst)
-            self.assertIn(".. dropdown:: TestFmea.FmA\n", rst)
-            self.assertIn(":name: fmea-testfmea-fma", rst)
+            self.assertIn(".. dropdown:: TestSafetyAnalysis.FmA\n", rst)
+            self.assertIn(":name: safety-analysis-testsafetyanalysis-fma", rst)
             self.assertIn(".. grid-item-card:: Description", rst)
             self.assertIn(".. rubric:: Root Cause Analysis", rst)
             self.assertIn(".. uml:: a.puml", rst)
@@ -315,11 +315,11 @@ class MainIntegrationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             template = self._write(tmp, "tmpl.rst", "{body}\n")
             bad = self._write(tmp, "chains.json", "{ this is not json")
-            out = os.path.join(tmp, "fmea.rst")
+            out = os.path.join(tmp, "safety_analysis.rst")
             with self.assertRaises(SystemExit) as ctx:
                 self._run_main(
                     [
-                        "fmea_assembler",
+                        "safety_analysis_assembler",
                         "--output",
                         out,
                         "--template",
@@ -337,11 +337,11 @@ class MainIntegrationTest(unittest.TestCase):
             # Template without the required {body} placeholder.
             template = self._write(tmp, "tmpl.rst", "no placeholder here\n")
             chains = self._write(tmp, "chains.json", "[]")
-            out = os.path.join(tmp, "fmea.rst")
+            out = os.path.join(tmp, "safety_analysis.rst")
             with self.assertRaises(SystemExit) as ctx:
                 self._run_main(
                     [
-                        "fmea_assembler",
+                        "safety_analysis_assembler",
                         "--output",
                         out,
                         "--template",

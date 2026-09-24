@@ -392,7 +392,7 @@ architectural_design
 
 Bundles static, dynamic, public-API, and internal-API architecture views into a
 single target. Provides ``ArchitecturalDesignInfo`` consumed by ``dependable_element``
-and ``fmea``.
+and ``safety_analysis``.
 
 .. code-block:: python
 
@@ -528,18 +528,18 @@ implementation.
 
 **Generated targets:** ``<name>`` (no standalone test; diagrams are consumed by the parent ``unit``)
 
-.. _rule-fmea:
+.. _rule-safety-analysis:
 
-fmea
-~~~~
+safety_analysis
+~~~~~~~~~~~~~~~
 
-Bundles failure modes, control measures, and FTA diagrams into a single FMEA
-documentation target.
+Bundles failure modes, control measures, and FTA diagrams into a single
+safety-analysis documentation target.
 
 .. code-block:: python
 
-   fmea(
-       name            = "my_fmea",
+   safety_analysis(
+       name            = "my_safety_analysis",
        failuremodes    = ["docs/failuremodes.trlc"],
        controlmeasures = ["docs/controlmeasures.trlc"],
        root_causes     = ["docs/fta.puml"],
@@ -586,15 +586,15 @@ documentation target.
 dependability_analysis
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Wraps one or more ``fmea`` targets into a complete safety-analysis package.
-Running ``bazel test`` validates the full FMEA traceability chain.
+Wraps one or more ``safety_analysis`` targets into a complete safety-analysis package.
+Running ``bazel test`` validates the full traceability chain.
 
 .. code-block:: python
 
    dependability_analysis(
-       name        = "analysis",
-       arch_design = ":my_arch",
-       fmea        = [":my_fmea"],
+       name            = "analysis",
+       arch_design     = ":my_arch",
+       safety_analysis = [":my_safety_analysis"],
    )
 
 .. list-table::
@@ -609,10 +609,10 @@ Running ``bazel test`` validates the full FMEA traceability chain.
      - string
      - yes
      - Target name
-   * - ``fmea``
+   * - ``safety_analysis``
      - label list
      - no
-     - ``fmea`` targets to include in this analysis (default ``[]``)
+     - ``safety_analysis`` targets to include in this analysis (default ``[]``)
    * - ``arch_design``
      - label
      - no
@@ -622,7 +622,7 @@ Running ``bazel test`` validates the full FMEA traceability chain.
      - no
      - Bazel visibility
 
-**Generated targets:** ``<name>`` (build → documentation; ``bazel test //pkg:analysis`` → full FMEA traceability validation)
+**Generated targets:** ``<name>`` (build → documentation; ``bazel test //pkg:analysis`` → full traceability validation)
 
 
 Structural Rules

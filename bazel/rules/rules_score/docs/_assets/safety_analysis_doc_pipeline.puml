@@ -13,8 +13,8 @@
 
 @startuml safety_analysis_doc_pipeline
 
-' Component view of the FMEA build: input artifacts (authored + tooling
-' defaults) flow through three in-process tool actions of the ``fmea`` rule into
+' Component view of the safety-analysis build: input artifacts (authored + tooling
+' defaults) flow through three in-process tool actions of the ``safety_analysis`` rule into
 ' the generated files, the providers, and finally the Sphinx staging tree.
 
 skinparam linetype ortho
@@ -49,14 +49,14 @@ package "Authored by the component team" {
 package "Tooling defaults (rules_score / ScoreReq)" {
     rectangle "ScoreReq *.rsl\n(spec attr)"        <<def>> as rsl
     rectangle "fta_metamodel.puml\n(on PlantUML include path)" <<def>> as meta
-    rectangle "fmea.template.rst\n({body})"        <<def>> as tmpl
+    rectangle "safety_analysis.template.rst\n({body})"        <<def>> as tmpl
     rectangle "fm/cm lobster\nconfigs"             <<def>> as lcfg
 }
 
-' ── fmea rule: three tool actions ────────────────────────────────────────────
-package "fmea rule actions" {
+' ── safety_analysis rule: three tool actions ───────────────────────────────────────────
+package "safety_analysis rule actions" {
     component "puml_cli  (FTA mode)\n--fta-output-dir\n[crate: puml_fta]" <<tool>> as puml
-    component "fmea_assembler\n[lib: TRLCRST]"                            <<tool>> as asm
+    component "safety_analysis_assembler\n[lib: TRLCRST]"                            <<tool>> as asm
     component "lobster-trlc  x2"                                          <<tool>> as ltrlc
 }
 
@@ -65,18 +65,18 @@ package "Generated files" {
     rectangle "fta_*.puml\n(authored, symlinked)"   <<gen>> as puml_inl
     rectangle "fta_chains.json"        <<gen>> as chains
     rectangle "root_causes.lobster"    <<gen>> as rc_lob
-    rectangle "fmea.rst"               <<gen>> as fmea_rst
+    rectangle "safety_analysis.rst"               <<gen>> as sa_rst
     rectangle "failuremodes.lobster\ncontrolmeasures.lobster" <<gen>> as fmcm_lob
 }
 
 ' ── Providers ────────────────────────────────────────────────────────────────
-rectangle "SphinxSourcesInfo\n────────────────\nsrcs:     fmea.rst\ndeps:     fmea.rst\naux_srcs: fta_*.puml" <<prov>> as ssi
+rectangle "SphinxSourcesInfo\n────────────────\nsrcs:     safety_analysis.rst\ndeps:     safety_analysis.rst\naux_srcs: fta_*.puml" <<prov>> as ssi
 rectangle "AnalysisInfo.lobster_files\n────────────────\nfailuremodes.lobster\ncontrolmeasures.lobster\nroot_causes.lobster" <<prov>> as ai
 
 ' ── Downstream rules + staging ───────────────────────────────────────────────
 component "dependability_analysis" <<tool>> as da
 component "dependable_element"     <<tool>> as de
-rectangle "dependability_analysis/\n  dfa.rst    <- toctree\n  fmea.rst   <- toctree\n  fta_*.puml (.. uml::)" <<stage>> as stage
+rectangle "dependability_analysis/\n  dfa.rst    <- toctree\n  safety_analysis.rst   <- toctree\n  fta_*.puml (.. uml::)" <<stage>> as stage
 
 ' ── Edges: inputs -> tools ───────────────────────────────────────────────────
 fta_puml --> puml : parse macro calls
@@ -93,15 +93,15 @@ rsl      --> ltrlc
 lcfg     --> ltrlc
 
 ' ── Edges: tools -> generated ────────────────────────────────────────────────
-fta_puml --> puml_inl : symlinked beside fmea.rst
+fta_puml --> puml_inl : symlinked beside safety_analysis.rst
 meta     --> stage : on PlantUML include path
 puml  --> chains
 puml  --> rc_lob
-asm   --> fmea_rst
+asm   --> sa_rst
 ltrlc --> fmcm_lob
 
-' ── Edges: generated -> providers ────────────────────────────────────────────
-fmea_rst --> ssi
+' ── Edges: generated -> providers ─────────────────────────────────────────────────────
+sa_rst --> ssi
 puml_inl --> ssi
 rc_lob   --> ai
 fmcm_lob --> ai
