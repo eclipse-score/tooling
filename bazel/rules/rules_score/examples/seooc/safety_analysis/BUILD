@@ -13,7 +13,7 @@
 
 load(
     "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
-    "fmea",
+    "safety_analysis",
 )
 
 #  FTA
@@ -27,11 +27,11 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-fmea(
-    name = "sample_fmea",
+safety_analysis(
+    name = "sample_safety_analysis",
     arch_design = "//design:sample_seooc_design",
-    controlmeasures = ["sample_fmea_control_measures.trlc"],
-    failuremodes = ["sample_fmea_failure_modes.trlc"],
+    controlmeasures = ["sample_safety_analysis_control_measures.trlc"],
+    failuremodes = ["sample_safety_analysis_failure_modes.trlc"],
     root_causes = [":sample_fta"],
     visibility = ["//visibility:public"],
 )

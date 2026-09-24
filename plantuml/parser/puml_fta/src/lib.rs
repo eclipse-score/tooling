@@ -22,7 +22,7 @@
 //!   `dependability_analysis` traceability test is unaffected, and
 //! * an ordered list of *chains* (`fta_chains.json`) describing, per failure
 //!   mode, the inline diagram and the control measures (basic events) that
-//!   trace up to it — consumed by the FMEA page assembler.
+//!   trace up to it — consumed by the safety-analysis page assembler.
 //!
 //! [`lobster-act-trace`]: https://github.com/bmw-software-engineering/lobster
 

@@ -49,7 +49,7 @@ rectangle "architectural_design" <<rule>> as arch_r
 rectangle "unit_design" <<rule>> as ud_r
 rectangle "unit" <<rule>> as unit_r
 rectangle "component" <<rule>> as comp_r2
-rectangle "fmea" <<rule>> as fmea_r
+rectangle "safety_analysis" <<rule>> as safety_analysis_r
 rectangle "dependability_analysis" <<rule>> as da_r
 rectangle "dependable_element" <<rule>> as de_r
 
@@ -65,9 +65,9 @@ arch_in --> arch_r
 ud_in --> ud_r
 impl_in --> unit_r
 tests_in --> unit_r
-fm_in --> fmea_r
-cm_in --> fmea_r
-fta_in --> fmea_r
+fm_in --> safety_analysis_r
+cm_in --> safety_analysis_r
+fta_in --> safety_analysis_r
 
 asr_r --> feat_r : deps
 asr_r --> aou_r
@@ -77,7 +77,7 @@ comp_r --> comp_r2 : requirements
 
 ud_r --> unit_r : unit_design
 unit_r --> comp_r2 : components
-fmea_r --> da_r : fmea
+safety_analysis_r --> da_r : safety_analysis
 
 arch_r --> de_r : architectural_design
 aou_r --> de_r : assumptions_of_use

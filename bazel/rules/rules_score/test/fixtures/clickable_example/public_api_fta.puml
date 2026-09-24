@@ -15,6 +15,6 @@
 
 !include fta_metamodel.puml
 
-$TopEvent("PublicInterface stops responding", "PublicApiExampleFmea.PublicInterfaceFailure")
+$TopEvent("PublicInterface stops responding", "PublicApiExampleSafetyAnalysis.PublicInterfaceFailure")
 
 @enduml

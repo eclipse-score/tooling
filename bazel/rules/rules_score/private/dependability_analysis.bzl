@@ -16,7 +16,7 @@ Dependability Analysis build rules for S-CORE projects.
 
 A dependability analysis aggregates sub-analysis rules
 
-  * **fmea**              – ``fmea`` rule targets (failure modes, control
+  * **safety_analysis**   – ``safety_analysis`` rule targets (failure modes, control
                             measures, and optional root cause FTA diagrams).
   * **security_analysis** – security analysis rule targets (placeholder,
                             optional).
@@ -36,7 +36,7 @@ def _collect_analysis_providers(sa, rst_srcs_list, rst_deps_list, rst_aux_list, 
     Updates the provided lists/dicts in-place.
 
     Args:
-        sa:            A sub-analysis target (fmea or security).
+        sa:            A sub-analysis target (safety_analysis or security).
         rst_srcs_list: List of depsets to extend with SphinxSourcesInfo.srcs.
         rst_deps_list: List of depsets to extend with SphinxSourcesInfo.deps.
         rst_aux_list:  List of depsets to extend with SphinxSourcesInfo.aux_srcs.
@@ -81,11 +81,11 @@ def _dependability_analysis_impl(ctx):
     lobster_files = {}  # canonical name → File, merged from all sub-analyses
 
     # -------------------------------------------------------------------------
-    # Collect from fmea targets
+    # Collect from safety_analysis targets
     # -------------------------------------------------------------------------
-    fmea_output_files = []
-    for sa in ctx.attr.fmea:
-        fmea_output_files.append(sa[DefaultInfo].files)
+    safety_analysis_output_files = []
+    for sa in ctx.attr.safety_analysis:
+        safety_analysis_output_files.append(sa[DefaultInfo].files)
         _collect_analysis_providers(sa, rst_srcs_transitive, rst_deps_transitive, rst_aux_transitive, lobster_files)
 
     # -------------------------------------------------------------------------
@@ -173,7 +173,7 @@ def _dependability_analysis_impl(ctx):
     # =========================================================================
     all_output_files = depset(
         report_files,
-        transitive = [dfa_rst_files] + fmea_output_files + security_output_files,
+        transitive = [dfa_rst_files] + safety_analysis_output_files + security_output_files,
     )
 
     return [
@@ -183,7 +183,7 @@ def _dependability_analysis_impl(ctx):
             executable = test_executable,
         ),
         DependabilityAnalysisInfo(
-            fmea = depset(transitive = fmea_output_files),
+            safety_analysis = depset(transitive = safety_analysis_output_files),
             security_analysis = depset(transitive = security_output_files),
             dfa = dfa_rst_files,
             arch_design = arch_design_info,
@@ -203,13 +203,13 @@ def _dependability_analysis_impl(ctx):
 
 _dependability_analysis_test = rule(
     implementation = _dependability_analysis_impl,
-    doc = "Aggregates dependability analysis sub-analyses (fmea, security_analysis) " +
+    doc = "Aggregates dependability analysis sub-analyses (safety_analysis, security_analysis) " +
           "and validates the combined traceability chain via lobster-ci-report.",
     attrs = {
-        "fmea": attr.label_list(
+        "safety_analysis": attr.label_list(
             providers = [AnalysisInfo],
             mandatory = False,
-            doc = "fmea rule targets (failure modes + control measures).",
+            doc = "safety_analysis rule targets (failure modes + control measures).",
         ),
         "security_analysis": attr.label_list(
             providers = [AnalysisInfo],
@@ -253,7 +253,7 @@ _dependability_analysis_test = rule(
 
 def dependability_analysis(
         name,
-        fmea = [],
+        safety_analysis = [],
         security_analysis = [],
         dfa = [],
         arch_design = None,
@@ -270,7 +270,7 @@ def dependability_analysis(
 
     Args:
         name: The name of the dependability analysis target.
-        fmea: Optional list of ``fmea`` rule target labels.
+        safety_analysis: Optional list of ``safety_analysis`` rule target labels.
         security_analysis: Optional list of security analysis rule target
             labels (placeholder -- not yet implemented).
         dfa: Optional list of ``.rst``/``.md`` DFA documentation files
@@ -287,12 +287,12 @@ def dependability_analysis(
 
             dependability_analysis(
                 name = "my_da",
-                fmea = [":my_fmea"],
+                safety_analysis = [":my_safety_analysis"],
             )
     """
     _dependability_analysis_test(
         name = name,
-        fmea = fmea,
+        safety_analysis = safety_analysis,
         security_analysis = security_analysis,
         dfa = dfa,
         arch_design = arch_design,

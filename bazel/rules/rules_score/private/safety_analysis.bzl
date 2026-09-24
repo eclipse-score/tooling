@@ -12,9 +12,9 @@
 # *******************************************************************************
 
 """
-FMEA (Failure Mode and Effects Analysis) build rules for S-CORE projects.
+Safety analysis (FMEA – Failure Mode and Effects Analysis) build rules for S-CORE projects.
 
-The rule generates a single, failure-mode-centric ``fmea.rst`` page: an
+The rule generates a single, failure-mode-centric ``safety_analysis.rst`` page: an
 overview summary table followed by one section per failure mode.  Each section
 carries the full failure-mode safety attributes, the fault-tree diagram inline
 (``.. uml::``), and a "Control Measures" subsection holding only that chain's
@@ -28,9 +28,9 @@ Pipeline:
      metamodel-inlined ``.puml`` (for ``.. uml::``), ``root_causes.lobster``
      (``lobster-act-trace``) and ``fta_chains.json`` (the ordered per-failure
      mode chains).
-  2. **Assembly** (``fmea_assembler``) – a single in-process TRLC parse via the
+  2. **Assembly** (``safety_analysis_assembler``) – a single in-process TRLC parse via the
      extended ``TRLCRST`` library renders the overview table and every chain
-     section into ``fmea.rst``.
+     section into ``safety_analysis.rst``.
   3. **Lobster** (``lobster-trlc``) – FailureMode and ControlMeasure
      traceability files, unchanged.
 
@@ -63,7 +63,7 @@ def _process_root_causes(ctx):
       * ``fta_chains.json`` (the ordered per-failure-mode chains).
 
     The diagrams are *not* rewritten: each source ``.puml`` is symlinked next to
-    ``fmea.rst`` so ``.. uml:: <basename>`` resolves to the authored diagram.
+    ``safety_analysis.rst`` so ``.. uml:: <basename>`` resolves to the authored diagram.
     Its ``!include fta_metamodel.puml`` is resolved at render time via the docs
     toolchain's global PlantUML include path (the metamodel is shipped with
     the registered ``sphinx_toolchain``), so the metamodel is not staged here.
@@ -88,7 +88,7 @@ def _process_root_causes(ctx):
         ctx.actions.write(chains_json, "[]\n")
         return [], None, chains_json
 
-    # Symlink each authored diagram next to fmea.rst so ``.. uml:: <basename>``
+    # Symlink each authored diagram next to safety_analysis.rst so ``.. uml:: <basename>``
     # resolves in the Sphinx tree.
     diagram_aux_files = []
     for src in puml_inputs:
@@ -138,19 +138,19 @@ def _lobster_trlc(ctx, trlc_files, config, out_name):
 # Private Rule Implementation
 # ============================================================================
 
-def _fmea_impl(ctx):
+def _safety_analysis_impl(ctx):
     output_files = []
 
     # 0. FTA: extract chains/lobster + stage diagrams (and metamodel) for rendering.
     diagram_aux_files, root_causes_lobster, chains_json = _process_root_causes(ctx)
     output_files.extend(diagram_aux_files)
 
-    # 1. Assemble fmea.rst from the chains + TRLC records (single in-process parse).
-    fmea_rst = ctx.actions.declare_file("{}/fmea.rst".format(ctx.label.name))
+    # 1. Assemble safety_analysis.rst from the chains + TRLC records (single in-process parse).
+    safety_analysis_rst = ctx.actions.declare_file("{}/safety_analysis.rst".format(ctx.label.name))
     title = ctx.label.name
 
     args = ctx.actions.args()
-    args.add("--output", fmea_rst.path)
+    args.add("--output", safety_analysis_rst.path)
     args.add("--template", ctx.file._template.path)
     args.add("--title", title)
     args.add("--chains", chains_json.path)
@@ -171,12 +171,12 @@ def _fmea_impl(ctx):
             ctx.files.spec +
             [chains_json, ctx.file._template]
         ),
-        outputs = [fmea_rst],
-        executable = ctx.executable._fmea_assembler,
+        outputs = [safety_analysis_rst],
+        executable = ctx.executable._safety_analysis_assembler,
         arguments = [args],
-        progress_message = "Assembling FMEA page for %s" % ctx.label.name,
+        progress_message = "Assembling safety-analysis page for %s" % ctx.label.name,
     )
-    output_files.append(fmea_rst)
+    output_files.append(safety_analysis_rst)
 
     # 2. lobster-trlc traceability for FailureMode / ControlMeasure records.
     fm_lobster = _lobster_trlc(ctx, ctx.files.failuremodes, ctx.file._fm_lobster_config, "failuremodes.lobster")
@@ -193,8 +193,8 @@ def _fmea_impl(ctx):
 
     # The preprocessed .puml diagrams are referenced inline via ``.. uml::`` but
     # must not be toctree documents, so they travel as aux_srcs (symlinked
-    # alongside fmea.rst by dependable_element without being indexed).
-    sphinx_srcs = depset([fmea_rst])
+    # alongside safety_analysis.rst by dependable_element without being indexed).
+    sphinx_srcs = depset([safety_analysis_rst])
 
     return [
         DefaultInfo(
@@ -215,9 +215,9 @@ def _fmea_impl(ctx):
 # Rule Definition
 # ============================================================================
 
-_fmea = rule(
-    implementation = _fmea_impl,
-    doc = "Renders a failure-mode-centric FMEA page (overview table + one chain " +
+_safety_analysis = rule(
+    implementation = _safety_analysis_impl,
+    doc = "Renders a failure-mode-centric safety-analysis page (overview table + one chain " +
           "section per failure mode) and lobster traceability files. " +
           "Build-only rule; traceability testing is owned by dependability_analysis.",
     attrs = dict(
@@ -258,12 +258,12 @@ _fmea = rule(
                 doc = "puml_cli binary used in FTA mode to inline the metamodel and " +
                       "extract root_causes.lobster + fta_chains.json.",
             ),
-            "_fmea_assembler": attr.label(
-                default = Label("//bazel/rules/rules_score:fmea_assembler"),
+            "_safety_analysis_assembler": attr.label(
+                default = Label("//bazel/rules/rules_score:safety_analysis_assembler"),
                 executable = True,
                 allow_files = True,
                 cfg = "exec",
-                doc = "FMEA page assembler (imports the extended TRLCRST library).",
+                doc = "Safety-analysis page assembler (imports the extended TRLCRST library).",
             ),
             "_lobster_trlc": attr.label(
                 default = Label("@lobster//:lobster-trlc"),
@@ -283,9 +283,9 @@ _fmea = rule(
                 doc = "lobster-trlc YAML config for ControlMeasure records.",
             ),
             "_template": attr.label(
-                default = Label("//bazel/rules/rules_score:templates/fmea.template.rst"),
+                default = Label("//bazel/rules/rules_score:templates/safety_analysis.template.rst"),
                 allow_single_file = True,
-                doc = "RST template for the FMEA page (single ``{body}`` placeholder).",
+                doc = "RST template for the safety-analysis page (single ``{body}`` placeholder).",
             ),
         },
         **VERBOSITY_ATTR
@@ -296,7 +296,7 @@ _fmea = rule(
 # Public Macro
 # ============================================================================
 
-def fmea(
+def safety_analysis(
         name,
         spec = None,
         failuremodes = [],
@@ -304,9 +304,9 @@ def fmea(
         root_causes = [],
         arch_design = None,
         **kwargs):
-    """Define FMEA (Failure Mode and Effects Analysis) following S-CORE process guidelines.
+    """Define a safety analysis (FMEA – Failure Mode and Effects Analysis) following S-CORE process guidelines.
 
-    Generates a single, failure-mode-centric ``fmea.rst`` page: an overview
+    Generates a single, failure-mode-centric ``safety_analysis.rst`` page: an overview
     summary table followed by one section per failure mode (failure-mode detail,
     the fault tree inline, and that chain's control measures).
 
@@ -330,7 +330,7 @@ def fmea(
         arch_design: Optional ``architectural_design`` target for traceability.
         **kwargs: Additional arguments (e.g. ``visibility``, ``tags``).
     """
-    _fmea(
+    _safety_analysis(
         name = name,
         spec = spec,
         failuremodes = failuremodes,

@@ -54,12 +54,12 @@ load(
     _filter_execpath = "filter_execpath",
 )
 load(
-    "//bazel/rules/rules_score/private:fmea.bzl",
-    _fmea = "fmea",
-)
-load(
     "//bazel/rules/rules_score/private:glossary.bzl",
     _glossary = "glossary",
+)
+load(
+    "//bazel/rules/rules_score/private:safety_analysis.bzl",
+    _safety_analysis = "safety_analysis",
 )
 load(
     "//bazel/rules/rules_score/private:sphinx_module.bzl",
@@ -82,7 +82,7 @@ dependability_analysis = _dependability_analysis
 feature_requirements = _feature_requirements
 glossary = _glossary
 filter_execpath = _filter_execpath
-fmea = _fmea
+safety_analysis = _safety_analysis
 sphinx_module = _sphinx_module
 unit = _unit
 unit_design = _unit_design

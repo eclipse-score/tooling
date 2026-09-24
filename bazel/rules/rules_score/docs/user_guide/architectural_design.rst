@@ -147,77 +147,6 @@ Common anti-patterns
 - **Leaky public API** — exposing an interface publicly for convenience. It then
   drags in unnecessary failure modes and AoUs.
 
-Rendering: Diagrams, Wrapper Pages, and Directory Navigation
----------------------------------------------------------------
-
-Each view (``static``, ``dynamic``, ``public_api``, ``internal_api``) is just a
-flat list of ``.puml``/``.plantuml`` files, but Sphinx needs an actual page to
-put every diagram on, plus a place in the sidebar to reach it from.
-``architectural_design`` builds that structure automatically:
-
-- Every diagram gets an auto-generated wrapper page — a ``.rst`` file
-  containing a single ``.. uml::`` directive — named after the diagram's own
-  file stem (``foo.puml`` → page ``foo``).
-- Every directory that contains at least one diagram or authored page gets a
-  generated ``index.rst`` with a ``toctree`` listing that directory's pages
-  and its subdirectories, mirroring the on-disk layout of the files you passed
-  to ``static``/``dynamic``/``public_api``/``internal_api``. Nesting is
-  unlimited.
-- Directory levels that hold nothing of their own and lead to a single
-  subdirectory are skipped, so a diagram at ``foo/bar/baz.puml`` is reached
-  through one ``foo/bar/index.rst`` rather than a chain of navigation pages
-  that each contain a single link. A view consisting of one page and nothing
-  else gets no generated index at all; that page becomes the view's root.
-- The view's top-level (root) index is the single toctree entry surfaced on
-  the enclosing ``dependable_element`` page for that view.
-
-Authoring pages alongside diagrams
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-A generated wrapper page is only a placeholder; real prose belongs alongside
-your ``.puml`` files, passed in the same view attribute. What happens depends
-on the file's stem relative to the diagrams already in that directory:
-
-.. list-table::
-   :header-rows: 1
-
-   * - You add
-     - Effect
-     - When to use it
-   * - ``<stem>.rst``/``.md`` with no matching ``<stem>.puml`` in the same
-       directory
-     - **Standalone page** — an ordinary extra entry in that directory's
-       toctree.
-     - Prose that isn't about one specific diagram — design rationale, an
-       overview, background context.
-   * - ``<stem>.rst``/``.md`` next to a same-stem ``<stem>.puml``/
-       ``.plantuml``
-     - **Override** — replaces that diagram's generated wrapper page
-       outright. The ``.puml`` is still staged as a sibling, so your page can
-       embed it with its own ``.. uml:: <stem>.puml``.
-     - You want narrative directly around one specific diagram instead of it
-       rendering bare.
-   * - ``index.rst``/``index.md``
-     - **Compose** — your content is rendered *above* the generated
-       directory-level toctree, which is otherwise left untouched (every
-       diagram in that directory keeps its navigation entry). Your title
-       becomes the index page's title.
-     - A directory-level introduction that must not hide any diagram from
-       the navigation.
-
-A ``.puml``/``.plantuml`` file whose own stem is literally ``index`` is
-rejected at analysis time — that stem is reserved for the directory's
-generated navigation page; name the diagram something else.
-
-Two files that would stage at the same relative path (for example both a
-``.rst`` and a ``.md`` for the same stem) also fail the build, with a message
-naming both conflicting sources, instead of surfacing a raw Bazel
-action-conflict error.
-
-See ``examples/seooc/design`` for a working demonstration: ``index.md``
-composes an introduction above the static view's root navigation, and
-``public_api.rst`` overrides the generated wrapper for ``public_api.puml``.
-
 Static Architecture
 --------------------
 
@@ -439,7 +368,7 @@ Bazel
         public_api = ["public_api.puml"],
     )
 
-The ``public_api`` attribute also generates traceability items that can be referenced by ``fmea`` targets (see :doc:`dependability_analysis`) via the ``arch_design`` attribute.
+The ``public_api`` attribute also generates traceability items that can be referenced by ``safety_analysis`` targets (see :doc:`dependability_analysis`) via the ``arch_design`` attribute.
 
 Internal API
 --------------
