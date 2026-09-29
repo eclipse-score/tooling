@@ -134,6 +134,12 @@ struct Args {
     /// be a single path component (no `/`, no `.`/`..`), never a path.
     #[arg(long)]
     output_stem: Option<String>,
+
+    /// Optional uid root anchor prefix for class/component/sequence resolvers.
+    /// This should come from the owning rules_score package context rather
+    /// than being derived from the input file path.
+    #[arg(long)]
+    root_anchor: Option<String>,
 }
 
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -266,7 +272,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             _ => None,
         };
 
-        match resolve_parsed_diagram(parsed_content) {
+        match resolve_parsed_diagram(parsed_content, args.root_anchor.as_deref()) {
             Ok(logic_result) => {
                 debug!(
                     "Successfully resolved PlantUML document: {}",
@@ -476,6 +482,7 @@ fn idmap_model_for(resolved: &ResolvedDiagram) -> Option<IdMapModel<'_>> {
 
 fn resolve_parsed_diagram(
     parsed_content: ParsedDiagram,
+    root_anchor: Option<&str>,
 ) -> Result<ResolvedDiagram, Box<dyn std::error::Error>> {
     match parsed_content {
         ParsedDiagram::Activity(parsed_content) => {
@@ -483,15 +490,15 @@ fn resolve_parsed_diagram(
             puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Activity)
         }
         ParsedDiagram::Component(parsed_content) => {
-            let mut resolver = ComponentResolver::new();
+            let mut resolver = ComponentResolver::with_root_anchor(root_anchor);
             puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Component)
         }
         ParsedDiagram::Class(parsed_content) => {
-            let mut resolver = ClassResolver::new();
+            let mut resolver = ClassResolver::with_root_anchor(root_anchor);
             puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Class)
         }
         ParsedDiagram::Sequence(parsed_content) => {
-            let mut resolver = SequenceResolver;
+            let mut resolver = SequenceResolver::with_root_anchor(root_anchor);
             puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Sequence)
         }
     }
@@ -875,7 +882,7 @@ B --> A : reply
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Sequence)
             .expect("sequence parse must succeed");
 
-        let resolved = resolve_parsed_diagram(parsed);
+        let resolved = resolve_parsed_diagram(parsed, None);
         assert!(
             resolved.is_ok(),
             "sequence diagram must resolve without error; got: {:?}",
@@ -1071,7 +1078,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Activity)
             .expect("activity parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("activity must resolve");
+        let resolved = resolve_parsed_diagram(parsed, None).expect("activity must resolve");
         assert!(
             matches!(resolved, ResolvedDiagram::Activity(_)),
             "activity diagram must resolve to the Activity variant that triggers the empty writer"
@@ -1127,7 +1134,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Component)
             .expect("component parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("component must resolve");
+        let resolved = resolve_parsed_diagram(parsed, None).expect("component must resolve");
         assert!(matches!(resolved, ResolvedDiagram::Component(_)));
 
         let idmap_model =
@@ -1158,7 +1165,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Class)
             .expect("class parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("class must resolve");
+        let resolved = resolve_parsed_diagram(parsed, None).expect("class must resolve");
         assert!(matches!(resolved, ResolvedDiagram::Class(_)));
 
         let idmap_model =
@@ -1194,7 +1201,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&source_path, content, LogLevel::Info, DiagramType::Class)
             .expect("class parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("class diagram must resolve");
+        let resolved = resolve_parsed_diagram(parsed, None).expect("class diagram must resolve");
         let fbs_bytes = serialize_resolved_diagram(&resolved);
         let fbs_text = String::from_utf8_lossy(&fbs_bytes);
 
@@ -1230,7 +1237,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Class)
             .expect("class parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("class must resolve");
+        let resolved = resolve_parsed_diagram(parsed, None).expect("class must resolve");
         let idmap_model =
             idmap_model_for(&resolved).expect("class diagrams must dispatch to an IdMapModel");
 
@@ -1289,7 +1296,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Sequence)
             .expect("sequence parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("sequence must resolve");
+        let resolved = resolve_parsed_diagram(parsed, None).expect("sequence must resolve");
         assert!(matches!(resolved, ResolvedDiagram::Sequence(_)));
 
         let idmap_model =
@@ -1346,7 +1353,7 @@ mod idmap_wiring_tests {
         )
         .expect("component parse must succeed");
         let component_resolved =
-            resolve_parsed_diagram(component_parsed).expect("component must resolve");
+            resolve_parsed_diagram(component_parsed, None).expect("component must resolve");
         let component_idmap_model = idmap_model_for(&component_resolved)
             .expect("component diagrams must dispatch to an IdMapModel");
 
@@ -1365,7 +1372,8 @@ mod idmap_wiring_tests {
             DiagramType::Class,
         )
         .expect("class parse must succeed");
-        let class_resolved = resolve_parsed_diagram(class_parsed).expect("class must resolve");
+        let class_resolved =
+            resolve_parsed_diagram(class_parsed, None).expect("class must resolve");
         let class_idmap_model = idmap_model_for(&class_resolved)
             .expect("class diagrams must dispatch to an IdMapModel");
 
@@ -1419,5 +1427,59 @@ mod idmap_wiring_tests {
         assert_eq!(component_ref_id, "package_a.InternalInterface");
 
         cleanup_dir(&dir);
+    }
+
+    #[test]
+    fn class_diagram_root_anchor_prefixes_defined_ids() {
+        let content = "@startuml\n\
+             package package_a {\n\
+                 interface \"InternalInterface\" as InternalInterface {\n\
+                     +GetData()\n\
+                 }\n\
+             }\n\
+             @enduml";
+        let path = Rc::new(PathBuf::from("cls/internal_api_diagram.puml"));
+
+        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Class)
+            .expect("class parse must succeed");
+        let resolved =
+            resolve_parsed_diagram(parsed, Some("score::logging")).expect("class must resolve");
+
+        let ResolvedDiagram::Class(model) = resolved else {
+            panic!("expected class diagram");
+        };
+
+        assert!(model
+            .entities
+            .iter()
+            .any(|entity| entity.id == "score.logging.package_a.InternalInterface"));
+    }
+
+    #[test]
+    fn sequence_diagram_root_anchor_prefixes_type_text_derived_participants() {
+        let content = "@startuml\nparticipant \"core::service::ResourceBuilder\" as Builder\nBuilder -> Builder : ping\n@enduml";
+        let path = Rc::new(PathBuf::from("seq/builder.puml"));
+
+        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Sequence)
+            .expect("sequence parse must succeed");
+        let resolved =
+            resolve_parsed_diagram(parsed, Some("score::logging")).expect("sequence must resolve");
+
+        let ResolvedDiagram::Sequence(model) = resolved else {
+            panic!("expected sequence diagram");
+        };
+
+        let sequence_logic::Node::Interaction(interaction) = &model.root.items[0] else {
+            panic!("expected interaction node");
+        };
+
+        assert_eq!(
+            interaction.sender.as_deref(),
+            Some("score.logging.core.service.ResourceBuilder")
+        );
+        assert_eq!(
+            interaction.receiver.as_deref(),
+            Some("score.logging.core.service.ResourceBuilder")
+        );
     }
 }

@@ -16,10 +16,9 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 filegroup(
     name = "component_internal_api_test_data",
     srcs = [
-        "//validation/core/integration_test/component_internal_api/negative_interface_missing_from_internal_api:case_data",
-        "//validation/core/integration_test/component_internal_api/negative_interface_missing_from_internal_api_with_suggestion:case_data",
-        "//validation/core/integration_test/component_internal_api/negative_interfaces_missing_from_internal_api_with_suggestions:case_data",
-        "//validation/core/integration_test/component_internal_api/positive_interface_match:case_data",
+        "//validation/core/integration_test/component_internal_api/negative_component_interface_missing_from_internal_api:case_data",
+        "//validation/core/integration_test/component_internal_api/negative_component_interfaces_missing_from_internal_api_with_suggestions:case_data",
+        "//validation/core/integration_test/component_internal_api/positive_component_interfaces_match_internal_api:case_data",
     ],
 )
 

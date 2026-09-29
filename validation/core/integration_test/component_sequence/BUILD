@@ -16,15 +16,12 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 filegroup(
     name = "component_sequence_test_data",
     srcs = [
-        "//validation/core/integration_test/component_sequence/negative_missing_interface_connection_for_sequence_connected_units:case_data",
-        "//validation/core/integration_test/component_sequence/negative_missing_participant:case_data",
-        "//validation/core/integration_test/component_sequence/negative_missing_sequence_interaction_for_interface_connected_units:case_data",
-        "//validation/core/integration_test/component_sequence/negative_missing_unit_interface_relation:case_data",
-        "//validation/core/integration_test/component_sequence/negative_mixed_mismatch:case_data",
-        "//validation/core/integration_test/component_sequence/negative_orphan_participant:case_data",
-        "//validation/core/integration_test/component_sequence/positive_exact_match:case_data",
-        "//validation/core/integration_test/component_sequence/positive_external_callee_in_sequence_return:case_data",
-        "//validation/core/integration_test/component_sequence/positive_external_caller_in_sequence_connection:case_data",
+        "//validation/core/integration_test/component_sequence/negative_component_unit_missing_from_sequence:case_data",
+        "//validation/core/integration_test/component_sequence/negative_sequence_call_without_shared_interface:case_data",
+        "//validation/core/integration_test/component_sequence/negative_shared_interface_without_sequence_call:case_data",
+        "//validation/core/integration_test/component_sequence/positive_external_callee_return_allowed:case_data",
+        "//validation/core/integration_test/component_sequence/positive_external_caller_call_allowed:case_data",
+        "//validation/core/integration_test/component_sequence/positive_matching_component_and_sequence:case_data",
         "//validation/core/integration_test/component_sequence/positive_overview_preserves_unit_bindings:case_data",
     ],
 )

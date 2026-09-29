@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -23,4 +23,17 @@ rust_library(
     deps = [
         "@crates//:serde",
     ],
+)
+
+rust_library(
+    name = "uid_utils",
+    srcs = ["uid_utils.rs"],
+    crate_name = "uid_utils",
+    crate_root = "uid_utils.rs",
+    edition = "2021",
+)
+
+rust_test(
+    name = "uid_utils_unit_test",
+    crate = ":uid_utils",
 )

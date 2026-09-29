@@ -13,10 +13,8 @@
 
 @startuml
 
-namespace safety_software_seooc_example {
-    interface "SampleLibraryAPI" as SampleLibraryAPI {
-        + GetNumber(): int
-    }
+interface "SampleLibraryAPI" as SampleLibraryAPI <<interface>> {
+    + GetNumber(): int
 }
 
 @enduml

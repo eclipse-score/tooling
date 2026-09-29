@@ -13,7 +13,8 @@
 should_pass: false
 error_contains: |
   [Class] Sequence participant "Repository" has no matching class in the class diagram.
-    Participant          : "Repository"
-    Sequence source file : "validation/core/integration_test/class_design_sequence/negative_participant_missing/sequence_diagram.puml"
-    Sequence source line : 16
-    Fix                  : Add class "Repository" to the class diagram, or remove the participant from the sequence diagram.
+    Participant                 : "Repository"
+    Sequence source file        : "validation/core/integration_test/class_design_sequence/negative_participant_missing/sequence_diagram.puml"
+    Sequence source line        : 16
+    Suggestion for "Repository" : Did you mean class "Controller"?
+    Fix                         : Add class "Repository" to the class diagram, or remove the participant from the sequence diagram.

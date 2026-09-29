@@ -62,13 +62,18 @@ fn positive_participant_multilevel_inherited_method_match_suite_case() {
 }
 
 #[test]
-fn positive_participant_alias_display_name_class_name_match_suite_case() {
-    assert_case("positive_participant_alias_display_name_class_name_match");
+fn negative_participant_alias_display_name_not_matching_class_suite_case() {
+    assert_case("negative_participant_alias_display_name_not_matching_class");
 }
 
 #[test]
-fn positive_participant_alias_display_name_namespace_match_suite_case() {
-    assert_case("positive_participant_alias_display_name_namespace_match");
+fn negative_participant_reference_conflicting_uid_suite_case() {
+    assert_case("negative_participant_reference_conflicting_uid");
+}
+
+#[test]
+fn negative_participant_uid_duplicate_reference_suite_case() {
+    assert_case("negative_participant_uid_duplicate_reference");
 }
 
 #[test]
@@ -77,8 +82,8 @@ fn positive_participant_namespace_callee_method_match_suite_case() {
 }
 
 #[test]
-fn positive_participant_short_name_namespace_match_suite_case() {
-    assert_case("positive_participant_short_name_namespace_match");
+fn negative_participant_short_name_namespace_mismatch_suite_case() {
+    assert_case("negative_participant_short_name_namespace_mismatch");
 }
 
 #[test]
@@ -97,18 +102,8 @@ fn positive_participant_special_display_short_type_match_suite_case() {
 }
 
 #[test]
-fn positive_participant_special_display_encoded_newline_match_suite_case() {
-    assert_case("positive_participant_special_display_encoded_newline_match");
-}
-
-#[test]
 fn negative_participant_missing_suite_case() {
     assert_case("negative_participant_missing");
-}
-
-#[test]
-fn negative_participant_ambiguous_short_name_suite_case() {
-    assert_case("negative_participant_ambiguous_short_name");
 }
 
 #[test]
@@ -122,21 +117,11 @@ fn negative_participant_method_missing_with_suggestion_suite_case() {
 }
 
 #[test]
-fn negative_participant_private_inherited_method_suite_case() {
-    assert_case("negative_participant_private_inherited_method");
+fn negative_participant_inaccessible_inherited_method_suite_case() {
+    assert_case("negative_participant_inaccessible_inherited_method");
 }
 
 #[test]
 fn negative_participant_missing_with_suggestion_suite_case() {
     assert_case("negative_participant_missing_with_suggestion");
-}
-
-#[test]
-fn negative_participant_special_display_multiple_colons_suite_case() {
-    assert_case("negative_participant_special_display_multiple_colons");
-}
-
-#[test]
-fn negative_participant_special_display_empty_suffix_suite_case() {
-    assert_case("negative_participant_special_display_empty_suffix");
 }

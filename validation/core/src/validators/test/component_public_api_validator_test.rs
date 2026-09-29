@@ -68,7 +68,7 @@ fn passes_when_top_level_public_api_is_declared_and_related_from_seooc() {
         seooc_with_public_api_relations("sample_seooc", &["SampleLibraryAPI"]),
         interface("SampleLibraryAPI"),
     ]);
-    let public_api = public_api_index(vec![("SampleLibraryAPI", Some("sample_seooc"))]);
+    let public_api = public_api_index(vec![("SampleLibraryAPI", None)]);
 
     let validation_result = validate(component_diagrams, &public_api);
 
@@ -97,7 +97,7 @@ fn reports_public_api_without_seooc_relationship() {
         seooc_with_public_api_relations("sample_seooc", &[]),
         interface("SampleLibraryAPI"),
     ]);
-    let public_api = public_api_index(vec![("SampleLibraryAPI", Some("sample_seooc"))]);
+    let public_api = public_api_index(vec![("SampleLibraryAPI", None)]);
 
     let validation_result = validate(component_diagrams, &public_api);
 
@@ -123,7 +123,7 @@ fn ignores_component_relationships_when_checking_public_api() {
         component,
         interface("SampleLibraryAPI"),
     ]);
-    let public_api = public_api_index(vec![("SampleLibraryAPI", Some("component_example"))]);
+    let public_api = public_api_index(vec![("SampleLibraryAPI", None)]);
 
     let validation_result = validate(component_diagrams, &public_api);
 
@@ -132,6 +132,22 @@ fn ignores_component_relationships_when_checking_public_api() {
         "[Interface] Public API interface(s) \"SampleLibraryAPI\" in the static diagram have no relationship to the SEooC."
     ));
     assert!(validation_result.failures[0].contains("\"SampleLibraryAPI\""));
+}
+
+#[test]
+fn reports_missing_when_only_namespaced_public_api_id_exists() {
+    let component_diagrams = component_diagram(vec![
+        seooc_with_public_api_relations("sample_seooc", &["SampleLibraryAPI"]),
+        interface("SampleLibraryAPI"),
+    ]);
+    let public_api = public_api_index(vec![("SampleLibraryAPI", Some("sample_seooc"))]);
+
+    let validation_result = validate(component_diagrams, &public_api);
+
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0].contains(
+        "[Interface] Public API interface(s) \"SampleLibraryAPI\" from the static diagram not found in the public API diagram."
+    ));
 }
 
 #[test]

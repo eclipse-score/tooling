@@ -24,7 +24,7 @@ to produce FlatBuffers binary representations of the parsed diagrams.
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:puml_utils.bzl", "emit_view_navigation", "plan_view_layout", "relative_source_path")
+load("//bazel/rules/rules_score/private:puml_utils.bzl", "emit_view_navigation", "package_root_anchor", "plan_view_layout", "relative_source_path")
 load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 load("//bazel/rules/rules_score/private:views.bzl", "ARCH_VIEWS")
@@ -138,6 +138,8 @@ def _run_puml_parser(ctx, puml_file, file_stem):
             puml_file.short_path,
             "--output-stem",
             file_stem,
+            "--root-anchor",
+            package_root_anchor(ctx),
             "--log-level",
             get_log_level(ctx),
         ],

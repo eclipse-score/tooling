@@ -18,6 +18,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use class_diagram::{ClassDiagram as ClassDiagramInput, EntityType, SimpleEntity};
 use source_location::SourceLocation;
 
+use crate::validators::shared::display_entity_name;
 use crate::{ErrorBuilder, ErrorCategory, ValidationResult};
 
 /// Collection of class diagrams loaded from one or more FlatBuffer files.
@@ -35,27 +36,30 @@ impl ClassEntityIndex {
 
         for diagram in diagrams {
             for entity in &diagram.entities {
-                let indexed_entity = entity.clone();
+                let current_entity = entity.clone();
 
-                let key = indexed_entity.id.to_lowercase();
-                if let Some(prev) = entities.get(&key) {
-                    let (first_source_file, _) = prev.source_location.display();
-                    let (second_source_file, _) = indexed_entity.source_location.display();
+                let normalized_entity_id = current_entity.id.to_lowercase();
+                if let Some(existing_entity) = entities.get(&normalized_entity_id) {
+                    let (first_source_file, _) = existing_entity.source_location.display();
+                    let (second_source_file, _) = current_entity.source_location.display();
 
                     result.add_failure(
                         ErrorBuilder::new(ErrorCategory::Class)
                             .title(format!(
                                 "class \"{}\" is defined more than once in the class diagram.",
-                                prev.id,
+                                display_entity_name(existing_entity),
                             ))
-                            .field("class", format!("\"{}\"", prev.id))
+                            .field(
+                                "class",
+                                format!("\"{}\"", display_entity_name(existing_entity)),
+                            )
                             .field(
                                 "design source file",
                                 format!("\"{}\"", first_source_file),
                             )
                             .field(
                                 "design source line",
-                                prev.source_location.line.to_string(),
+                                existing_entity.source_location.line.to_string(),
                             )
                             .field(
                                 "duplicate source file",
@@ -63,16 +67,16 @@ impl ClassEntityIndex {
                             )
                             .field(
                                 "duplicate source line",
-                                indexed_entity.source_location.line.to_string(),
+                                current_entity.source_location.line.to_string(),
                             )
                             .fix(format!(
                                 "remove or rename one of the duplicate class \"{}\" declarations in the class diagram",
-                                prev.id,
+                                display_entity_name(existing_entity),
                             ))
                             .build(),
                     );
                 } else {
-                    entities.insert(key, indexed_entity);
+                    entities.insert(normalized_entity_id, current_entity);
                 }
             }
         }
@@ -137,13 +141,13 @@ impl InternalApiIndex {
 
 /// Indexed public-API data prepared for component/public-API validators.
 pub struct PublicApiIndex {
-    api_index: BTreeMap<String, String>, // <interface name, interface id>
+    api_ids: BTreeSet<String>,
 }
 
 impl PublicApiIndex {
     /// Build a [`PublicApiIndex`] from public-API class diagram inputs.
     pub fn build_index(diagrams: &[ClassDiagramInput]) -> Self {
-        let mut api_index: BTreeMap<String, String> = BTreeMap::new();
+        let mut api_ids = BTreeSet::new();
 
         for diagram in diagrams {
             for entity in &diagram.entities {
@@ -151,15 +155,15 @@ impl PublicApiIndex {
                     continue;
                 }
 
-                api_index.insert(entity.name.clone(), entity.id.clone());
+                api_ids.insert(entity.id.clone());
             }
         }
 
-        Self { api_index }
+        Self { api_ids }
     }
 
-    pub fn api_names(&self) -> impl Iterator<Item = &String> + '_ {
-        self.api_index.keys()
+    pub fn api_ids(&self) -> impl Iterator<Item = &String> + '_ {
+        self.api_ids.iter()
     }
 }
 
@@ -213,9 +217,8 @@ mod tests {
         let _index = ClassEntityIndex::build_index(&diagrams, &mut result);
 
         assert_eq!(result.failures.len(), 1);
-        assert!(result.failures[0].contains(
-            "[Class] Class \"Unit.Sample\" is defined more than once in the class diagram."
-        ));
+        assert!(result.failures[0]
+            .contains("[Class] Class \"Sample\" is defined more than once in the class diagram."));
     }
 
     #[test]
@@ -315,5 +318,51 @@ mod tests {
         assert_eq!(interface_ids.len(), 2);
         assert!(interface_ids.contains("InternalAPI.InternalInterfaceA"));
         assert!(interface_ids.contains("InternalAPI.InternalInterfaceB"));
+    }
+
+    #[test]
+    fn public_api_index_keeps_distinct_interface_ids_even_when_names_match() {
+        let diagrams = vec![ClassDiagram {
+            name: "public_api".to_string(),
+            entities: vec![
+                SimpleEntity {
+                    id: "ServiceA.SampleLibraryAPI".to_string(),
+                    name: "SampleLibraryAPI".to_string(),
+                    enclosing_namespace_id: Some("ServiceA".to_string()),
+                    stereotypes: Vec::new(),
+                    entity_type: EntityType::Interface,
+                    type_aliases: Vec::new(),
+                    variables: Vec::new(),
+                    methods: Vec::new(),
+                    template_parameters: None,
+                    enum_literals: Vec::new(),
+                    relationships: Vec::new(),
+                    source_location: SourceLocation::new("test_a.puml", 1),
+                },
+                SimpleEntity {
+                    id: "ServiceB.SampleLibraryAPI".to_string(),
+                    name: "SampleLibraryAPI".to_string(),
+                    enclosing_namespace_id: Some("ServiceB".to_string()),
+                    stereotypes: Vec::new(),
+                    entity_type: EntityType::Interface,
+                    type_aliases: Vec::new(),
+                    variables: Vec::new(),
+                    methods: Vec::new(),
+                    template_parameters: None,
+                    enum_literals: Vec::new(),
+                    relationships: Vec::new(),
+                    source_location: SourceLocation::new("test_b.puml", 1),
+                },
+            ],
+            free_functions: Vec::new(),
+        }];
+
+        let index = PublicApiIndex::build_index(&diagrams);
+
+        let public_api_ids: BTreeSet<&str> = index.api_ids().map(String::as_str).collect();
+
+        assert_eq!(public_api_ids.len(), 2);
+        assert!(public_api_ids.contains("ServiceA.SampleLibraryAPI"));
+        assert!(public_api_ids.contains("ServiceB.SampleLibraryAPI"));
     }
 }

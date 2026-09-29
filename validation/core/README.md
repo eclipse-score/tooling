@@ -31,9 +31,9 @@ The current implementation supports these validation flows:
    PlantUML component-diagram structure.
 2. `ComponentInternalApi`: checks that every component-diagram interface is
   declared by the Internal API diagram.
-3. `ComponentSequence`: checks that component-diagram unit aliases, shared
-  interface relations, and sequence-diagram function-call connections stay in
-  sync.
+3. `ComponentSequence`: checks that component-diagram unit ids, shared
+  interface relations, and sequence-diagram participant/function-call
+  connections stay in sync.
 4. `SequenceInternalApi`: checks that Internal API methods are exercised by
   sequence interactions. When component input is also available, it uses that
   component context to check sequence function names against related shared

@@ -15,10 +15,9 @@
 
 participant "Display Service" as Service <<component>>
 participant Caller
+participant "core::service::ResourceBuilder" as Builder
 
 Caller -> Service : callByAlias()
-' Note: "Display Service" is a new participant that is implicitly created by
-'       the message endpoint resolution(confirmed by Plantuml Preview).
-Service -> "Display Service" : callByDisplayName()
+Service -> Builder : callByTypeTextAlias()
 
 @enduml

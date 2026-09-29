@@ -14,7 +14,10 @@
 //! Class implementation validation: compare unit design class diagrams with
 //! C++ implementation produced by the C++ parser.
 
-use super::shared::best_string_suggestion;
+use super::shared::{
+    best_string_suggestion, display_entity_name, display_reference_name, display_relationship_name,
+    normalize,
+};
 use crate::models::ClassEntityIndex;
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::ValidationResult;
@@ -64,16 +67,13 @@ impl ClassDesignImplementationValidator {
     ) {
         for design_entity in design_classes.entities() {
             let normalized_design_id = normalize_reference_name(&design_entity.id);
-            let Some(implementation_entity) = implementation_classes
-                .find_by_id(&design_entity.id)
-                .or_else(|| implementation_classes.find_by_id(&normalized_design_id))
-            else {
-                let suggested_class = best_string_suggestion(
-                    &design_entity.id,
-                    implementation_classes
-                        .entities()
-                        .map(|entity| entity.id.as_str()),
-                );
+            let Some(implementation_entity) = find_implementation_entity(
+                implementation_classes,
+                &design_entity.id,
+                &normalized_design_id,
+            ) else {
+                let suggested_class =
+                    best_implementation_class_suggestion(&design_entity.id, implementation_classes);
                 self.result.add_failure(Self::format_missing_class(
                     design_entity,
                     suggested_class.as_deref(),
@@ -150,8 +150,8 @@ impl ClassDesignImplementationValidator {
                         design_alias.alias.as_str()
                     ),
                     FieldReferenceStyle::Verbatim,
-                    &design_alias.original_type,
-                    &implementation_alias.original_type,
+                    &normalize_type_name(&design_alias.original_type),
+                    &normalize_type_name(&implementation_alias.original_type),
                 )),
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
@@ -453,11 +453,14 @@ impl ClassDesignImplementationValidator {
         design_entity: &SimpleEntity,
         implementation_entity: &SimpleEntity,
     ) {
-        let implementation_relationships = relationship_map(implementation_entity);
         for design_relationship in &design_entity.relationships {
-            let key = relationship_key(design_relationship);
-            let display_name = relationship_display_name(design_relationship);
-            match implementation_relationships.get(key.as_str()) {
+            let display_name = display_relationship_name(design_relationship);
+            match implementation_entity
+                .relationships
+                .iter()
+                .find(|implementation_relationship| {
+                    relationships_share_endpoints(design_relationship, implementation_relationship)
+                }) {
                 Some(implementation_relationship)
                     if design_relationship.relation_type
                         == implementation_relationship.relation_type => {}
@@ -468,22 +471,22 @@ impl ClassDesignImplementationValidator {
                         "relationship type",
                         FieldReferenceStyle::Quoted,
                         &display_name,
-                        &relationship_display_name(implementation_relationship),
+                        &display_relationship_name(implementation_relationship),
                     ))
                 }
                 None => {
                     let implementation_relationship_names = implementation_entity
                         .relationships
                         .iter()
-                        .map(relationship_display_name)
+                        .map(display_relationship_name)
                         .collect::<Vec<_>>();
                     self.result.add_failure(Self::format_missing_member(
                         design_entity,
                         "relationship",
                         &display_name,
-                        best_string_suggestion(
-                            &display_name,
-                            implementation_relationship_names.iter().map(String::as_str),
+                        best_relationship_suggestion(
+                            design_relationship,
+                            &implementation_relationship_names,
                         )
                         .as_deref(),
                     ))
@@ -493,21 +496,23 @@ impl ClassDesignImplementationValidator {
     }
 
     fn format_missing_class(entity: &SimpleEntity, suggested_class: Option<&str>) -> String {
+        let display_name = display_entity_name(entity);
+
         let error = ErrorBuilder::new(ErrorCategory::Class)
             .title(format!(
                 "class \"{}\" from the unit design not found in the C++ class implementation",
-                entity.id
+                display_name
             ))
-            .field("class", format!("\"{}\"", entity.id))
+            .field("class", format!("\"{}\"", display_name))
             .field("design source file", format!("\"{}\"", design_source_file(entity)))
             .field("design source line", design_source_line(entity).to_string())
             .fix(format!(
                 "add implementation class \"{}\" in the C++ class implementation, or remove it from the unit design",
-                entity.id
+                display_name
             ));
 
         let error = if let Some(suggested_class) = suggested_class {
-            error.suggest(&entity.id, Some("class"), suggested_class)
+            error.suggest(display_name, Some("class"), suggested_class)
         } else {
             error
         };
@@ -521,12 +526,14 @@ impl ClassDesignImplementationValidator {
         member_name: &str,
         suggested_member: Option<&str>,
     ) -> String {
+        let display_entity = display_entity_name(design_entity);
+
         let error = ErrorBuilder::new(ErrorCategory::Member)
             .title(format!(
                 "{member_type} \"{member_name}\" from entity \"{}\" in the unit design not found in the C++ class implementation",
-                design_entity.id
+                display_entity
             ))
-            .field("entity", format!("\"{}\"", design_entity.id))
+            .field("entity", format!("\"{}\"", display_entity))
             .field("member", format!("{member_type} \"{member_name}\""))
             .field(
                 "design source file",
@@ -535,7 +542,7 @@ impl ClassDesignImplementationValidator {
             .field("design source line", design_source_line(design_entity).to_string())
             .fix(format!(
                 "add {member_type} \"{member_name}\" to entity \"{}\" in the C++ class implementation, or remove it from the unit design",
-                design_entity.id
+                display_entity
             ));
 
         let error = if let Some(suggested_member) = suggested_member {
@@ -556,13 +563,14 @@ impl ClassDesignImplementationValidator {
         implementation_value: &str,
     ) -> String {
         let field_reference = format_field_reference(field, field_reference_style);
+        let display_entity = display_entity_name(design_entity);
 
         ErrorBuilder::new(ErrorCategory::Implementation)
             .title(format!(
                 "field {field_reference} on entity \"{}\" differs between the unit design and the C++ class implementation",
-                design_entity.id,
+                display_entity,
             ))
-            .field("entity", format!("\"{}\"", design_entity.id))
+            .field("entity", format!("\"{}\"", display_entity))
             .field("field", field)
             .field("design value", design_value)
             .field(
@@ -581,10 +589,60 @@ impl ClassDesignImplementationValidator {
             )
             .fix(format!(
                 "make {field_reference} in entity \"{}\" consistent between the unit design and the C++ class implementation",
-                design_entity.id
+                display_entity
             ))
             .build()
     }
+}
+
+fn find_implementation_entity<'a>(
+    implementation_classes: &'a ClassEntityIndex,
+    design_id: &str,
+    normalized_design_id: &str,
+) -> Option<&'a SimpleEntity> {
+    implementation_classes
+        .find_by_id(design_id)
+        .or_else(|| implementation_classes.find_by_id(normalized_design_id))
+        .or_else(|| find_unique_normalized_id_match(implementation_classes, normalized_design_id))
+}
+
+fn find_unique_normalized_id_match<'a>(
+    classes: &'a ClassEntityIndex,
+    normalized_id: &str,
+) -> Option<&'a SimpleEntity> {
+    let mut matches = classes
+        .entities()
+        .filter(|entity| normalize_reference_name(&entity.id) == normalized_id);
+
+    let first_match = matches.next()?;
+    if matches.next().is_some() {
+        return None;
+    }
+
+    Some(first_match)
+}
+
+fn best_implementation_class_suggestion(
+    design_id: &str,
+    implementation_classes: &ClassEntityIndex,
+) -> Option<String> {
+    let design_name = display_reference_name(design_id);
+    best_string_suggestion(
+        design_name,
+        implementation_classes
+            .entities()
+            .map(|entity| display_reference_name(&entity.id)),
+    )
+}
+
+fn best_relationship_suggestion(
+    design_relationship: &Relationship,
+    implementation_relationship_names: &[String],
+) -> Option<String> {
+    best_string_suggestion(
+        &display_relationship_name(design_relationship),
+        implementation_relationship_names.iter().map(String::as_str),
+    )
 }
 
 fn format_field_reference(field: &str, style: FieldReferenceStyle) -> String {
@@ -920,15 +978,14 @@ fn normalize_type_name(type_name: &str) -> String {
         &type_name
             .trim()
             .trim_start_matches("::")
-            .replace("std::", "")
             .replace(" *", "*")
             .replace(" &", "&"),
     )
+    .replace("std.", "")
 }
 
 fn normalize_reference_name(reference: &str) -> String {
-    // TODO: Remove this workaround once class diagram and implementation parser UIDs use the same namespace separator.
-    reference.trim().replace('.', "::")
+    normalize(reference)
 }
 
 fn enum_literal_map(entity: &SimpleEntity) -> BTreeMap<&str, &EnumLiteral> {
@@ -951,27 +1008,31 @@ fn enum_literal_value(literal: &EnumLiteral) -> String {
     }
 }
 
-fn relationship_map(entity: &SimpleEntity) -> BTreeMap<String, &Relationship> {
-    entity
-        .relationships
-        .iter()
-        .map(|relationship| (relationship_key(relationship), relationship))
-        .collect()
+fn relationships_share_endpoints(
+    design_relationship: &Relationship,
+    implementation_relationship: &Relationship,
+) -> bool {
+    references_match(
+        &design_relationship.source,
+        &implementation_relationship.source,
+    ) && references_match(
+        &design_relationship.target,
+        &implementation_relationship.target,
+    )
 }
 
+fn references_match(left: &str, right: &str) -> bool {
+    let normalized_left = normalize_reference_name(left);
+    let normalized_right = normalize_reference_name(right);
+
+    normalized_left == normalized_right
+}
+
+#[cfg(test)]
 fn relationship_key(relationship: &Relationship) -> String {
     format!(
         "{} -> {}",
         normalize_reference_name(&relationship.source),
-        normalize_reference_name(&relationship.target)
-    )
-}
-
-fn relationship_display_name(relationship: &Relationship) -> String {
-    format!(
-        "{} -> {:?} -> {}",
-        normalize_reference_name(&relationship.source),
-        relationship.relation_type,
         normalize_reference_name(&relationship.target)
     )
 }
@@ -1115,10 +1176,7 @@ mod tests {
             parameter("args", "vehicle.Payload", true),
         ];
 
-        assert_eq!(
-            method_key(&method),
-            "dispatch(uint8_t, vehicle::Payload...)"
-        );
+        assert_eq!(method_key(&method), "dispatch(uint8_t, vehicle.Payload...)");
     }
 
     #[test]
@@ -1168,21 +1226,18 @@ mod tests {
 
         assert_eq!(
             relationship_key(&relationship),
-            "vehicle::Engine -> vehicle::Manufacturer"
+            "vehicle.Engine -> vehicle.Manufacturer"
         );
         assert_eq!(
-            relationship_display_name(&relationship),
-            "vehicle::Engine -> Composition -> vehicle::Manufacturer"
+            display_relationship_name(&relationship),
+            "Engine -> Composition -> Manufacturer"
         );
     }
 
     #[test]
     fn type_name_normalization_ignores_pointer_and_reference_spacing() {
         assert_eq!(normalize_type_name("std::uint8_t *"), "uint8_t*");
-        assert_eq!(
-            normalize_type_name("vehicle.Payload &"),
-            "vehicle::Payload&"
-        );
+        assert_eq!(normalize_type_name("vehicle.Payload &"), "vehicle.Payload&");
     }
 
     #[test]
@@ -1190,8 +1245,67 @@ mod tests {
         assert_eq!(normalize_type_name("::std::uint8_t"), "uint8_t");
         assert_eq!(
             normalize_type_name(" ::vehicle::Payload "),
-            "vehicle::Payload"
+            "vehicle.Payload"
         );
+    }
+
+    #[test]
+    fn implementation_entity_match_rejects_root_anchored_design_id_suffix() {
+        let implementation_classes = index(vec![entity_in_namespace(
+            "vehicle::Engine",
+            Some("vehicle"),
+            vec![],
+        )]);
+
+        let matched = find_implementation_entity(
+            &implementation_classes,
+            "validation.core.integration_test.case.vehicle.Engine",
+            "validation.core.integration_test.case.vehicle.Engine",
+        );
+
+        assert!(matched.is_none());
+    }
+
+    #[test]
+    fn implementation_class_suggestion_uses_leaf_name_for_root_anchored_design_id() {
+        let implementation_classes = index(vec![entity("ControlPanl", vec![])]);
+
+        let suggested = best_implementation_class_suggestion(
+            "validation.core.integration_test.case.ControlPanel",
+            &implementation_classes,
+        );
+
+        assert_eq!(suggested, Some("ControlPanl".to_string()));
+    }
+
+    #[test]
+    fn relationship_endpoint_match_rejects_root_anchored_design_id_suffix() {
+        let design = relationship(
+            "validation.core.integration_test.case.vehicle.Engine",
+            "validation.core.integration_test.case.vehicle.Manufacturer",
+            RelationType::Composition,
+        );
+        let implementation = relationship(
+            "vehicle::Engine",
+            "vehicle::Manufacturer",
+            RelationType::Composition,
+        );
+
+        assert!(!relationships_share_endpoints(&design, &implementation));
+    }
+
+    #[test]
+    fn relationship_suggestion_uses_leaf_names_for_root_anchored_design_ids() {
+        let design = relationship(
+            "validation.core.integration_test.case.Car",
+            "validation.core.integration_test.case.Wheel",
+            RelationType::Composition,
+        );
+        let suggestions = vec!["Car -> Composition -> Whell".to_string()];
+
+        let suggested = best_relationship_suggestion(&design, &suggestions);
+
+        assert_eq!(suggested, Some("Car -> Composition -> Whell".to_string()));
     }
 
     #[test]

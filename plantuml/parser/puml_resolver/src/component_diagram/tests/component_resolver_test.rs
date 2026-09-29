@@ -90,6 +90,11 @@ fn test_relation_relative_name() {
 }
 
 #[test]
+fn test_qualified_name_does_not_search_descendants() {
+    run_component_resolver_case("qualified_name_does_not_search_descendants");
+}
+
+#[test]
 fn test_relation_simple_name_alias() {
     run_component_resolver_case("relation_simple_name_alias");
 }

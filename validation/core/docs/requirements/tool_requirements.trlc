@@ -109,12 +109,12 @@ section "Tool Requirements" {
 
         section "Component Sequence Validator" {
 
-            ToolQualification.ToolRequirement ComponentSequenceAliasConsistency {
+            ToolQualification.ToolRequirement ComponentSequenceIdentifierConsistency {
                 description = '''The validator shall report an error when a
-                unit alias defined in the component diagram does not appear
-                among the participants in any sequence diagram, or when a
-                participant alias in a sequence diagram does not match any
-                unit alias in the component diagram.'''
+                unit id defined in the component diagram does not appear as a
+                participant uid in any sequence diagram, or when a participant
+                uid in a sequence diagram does not match any unit id in the
+                component diagram.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
@@ -291,9 +291,9 @@ section "Tool Requirements" {
             ToolQualification.ToolRequirement ClassDesignSequenceParticipantClassConsistency {
                 description = '''The validator shall report an error when a
                 sequence participant that represents a designed runtime
-                element has no matching class in the unit design class
-                diagram, or when the participant matches multiple design
-                classes ambiguously.'''
+                element does not provide a valid class identifier for
+                class-design validation, or when it has no matching class
+                in the unit design class diagram.'''
                 derived_from = [UseCases.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }

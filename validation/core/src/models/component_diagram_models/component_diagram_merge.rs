@@ -67,7 +67,7 @@ pub(super) fn format_conflicting_declaration_error(
     // Order by source location so the message is stable regardless of file order.
     let (first, second) = ordered_declarations(prev, entity);
     let kind = entity_kind_name(first);
-    let alias = first.match_key();
+    let alias = first.display_key();
     let (source_file, source_line) = first.source_location.display();
     let (conflicting_file, conflicting_line) = second.source_location.display();
     ErrorBuilder::new(ErrorCategory::Design)
@@ -135,7 +135,7 @@ pub(super) fn check_single_home_decomposition(
         let parent_alias = entities
             .iter()
             .find(|entity| entity.id.to_lowercase() == *parent_key)
-            .map(LogicComponentExt::match_key)
+            .map(LogicComponentExt::display_key)
             .unwrap_or_else(|| parent_key.clone());
 
         // Report per file so a benign subset re-declaration isn't shown as a duplicate.
@@ -147,7 +147,7 @@ pub(super) fn check_single_home_decomposition(
         for (file, children) in by_file {
             let children_display = children
                 .values()
-                .map(|child| format!("\"{}\"", child.match_key()))
+                .map(|child| format!("\"{}\"", child.display_key()))
                 .collect::<Vec<_>>()
                 .join(", ");
             error = error.field(format!("children in \"{file}\""), children_display);

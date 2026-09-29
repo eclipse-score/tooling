@@ -10,7 +10,8 @@
           "file": "",
           "line": 16
         },
-        "stereotype": null
+        "stereotype": null,
+        "uid": "Client"
       },
       {
         "display_name": "Service",
@@ -20,7 +21,8 @@
           "file": "",
           "line": 17
         },
-        "stereotype": null
+        "stereotype": null,
+        "uid": "Service"
       }
     ],
     "root": {

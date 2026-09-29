@@ -18,9 +18,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::shared::{
-    best_string_suggestion, build_observed_call_contexts, build_unit_bindings, extract_method_name,
-    format_name_list, format_sequence_call, intersect_interfaces, SequenceCallContext,
-    UnitBindings, UnitInterfaces,
+    best_string_suggestion, build_observed_call_contexts, build_unit_bindings,
+    display_name_from_source_path_in_context, display_names,
+    display_unit_pair_from_optional_source_paths, extract_method_name, format_name_list,
+    format_sequence_call, intersect_interfaces, SequenceCallContext, UnitBindings, UnitInterfaces,
 };
 use crate::models::{
     ComponentDiagramArchitecture, InternalApiIndex, InternalApiInterface, LogicComponentExt,
@@ -166,6 +167,7 @@ impl<'a> SequenceInternalApiValidator<'a> {
                 candidate_method_names.iter().map(String::as_str),
             );
             return Some(format_sequence_method_consistency_error(
+                &component_context.unit_bindings,
                 call_context,
                 method_name,
                 "sequence function name was not found in available interface methods",
@@ -188,8 +190,8 @@ impl<'a> SequenceInternalApiValidator<'a> {
             return None;
         }
 
-        if units_with_missing_internal_api_interfaces.contains(call_context.caller_unit)
-            || units_with_missing_internal_api_interfaces.contains(call_context.callee_unit)
+        if units_with_missing_internal_api_interfaces.contains(&call_context.caller_unit)
+            || units_with_missing_internal_api_interfaces.contains(&call_context.callee_unit)
         {
             // The component-internal-api validator reports missing interface declarations first.
             return None;
@@ -223,6 +225,7 @@ impl<'a> SequenceInternalApiValidator<'a> {
                 candidate_method_names.iter().map(String::as_str),
             );
             return Some(format_sequence_method_consistency_error(
+                &component_context.unit_bindings,
                 call_context,
                 method_name,
                 "sequence function name was not found in the related interface methods",
@@ -247,10 +250,10 @@ impl<'a> SequenceInternalApiValidator<'a> {
     ) -> Option<String> {
         let caller_bindings = component_context
             .unit_bindings
-            .get(call_context.caller_unit)?;
+            .get(&call_context.caller_unit)?;
         let callee_bindings = component_context
             .unit_bindings
-            .get(call_context.callee_unit)?;
+            .get(&call_context.callee_unit)?;
 
         let caller_method_role_interfaces =
             intersect_interfaces(shared_method_interfaces, &role_interfaces(caller_bindings));
@@ -288,6 +291,7 @@ impl<'a> SequenceInternalApiValidator<'a> {
 
         if directional_method_interfaces.is_empty() {
             return Some(format_sequence_role_consistency_error(
+                &component_context.unit_bindings,
                 call_context,
                 method_name,
                 shared_method_interfaces,
@@ -339,11 +343,12 @@ fn append_debug_log(
             });
         }
 
-        diagnostics.debug(|| "Unit interface targets from component diagrams:".to_string());
-        for (unit_alias, bindings) in &component_context.unit_bindings {
+        diagnostics
+            .debug(|| "Unit interface targets from component diagrams (by unit id):".to_string());
+        for (unit_id, bindings) in &component_context.unit_bindings {
             diagnostics.debug(|| {
                 format!(
-                    "  {unit_alias} -> {}",
+                    "  {unit_id} -> {}",
                     format_name_list(&bindings.all_interfaces)
                 )
             });
@@ -378,8 +383,11 @@ fn build_component_context<'a>(
 ) -> ComponentContext<'a> {
     let unit_bindings = build_unit_bindings(component_diagram);
     let all_interfaces = build_all_interfaces(component_diagram, internal_api_diagram);
-    let observed_call_contexts =
-        build_observed_call_contexts(sequence_diagram.observed_calls(), &unit_bindings);
+    let observed_call_contexts = build_observed_call_contexts(
+        sequence_diagram.observed_calls(),
+        sequence_diagram.participants(),
+        &unit_bindings,
+    );
 
     ComponentContext {
         observed_call_contexts,
@@ -479,7 +487,7 @@ fn collect_units_with_missing_internal_api_interfaces(
                 !internal_api_interfaces_by_id.contains_key(interface_id.as_str())
             })
         })
-        .map(|(unit_alias, _)| unit_alias.clone())
+        .map(|(unit_id, _)| unit_id.clone())
         .collect()
 }
 
@@ -504,32 +512,36 @@ fn format_interface_method_coverage_error(
 ) -> String {
     let missing_functions = format_name_list(missing_methods);
     let (source_file, source_line) = interface.source_location.display();
+    let display_interface_id =
+        display_internal_api_interface_name(interface.id.as_str(), &source_file);
 
     ErrorBuilder::new(ErrorCategory::Coverage)
         .title(format!(
             "methods {missing_functions} declared on internal API interface \"{}\" in the internal API diagram are not exercised in the sequence diagram",
-            interface.id
+            display_interface_id
         ))
-        .field("interface id", format!("\"{}\"", interface.id))
+        .field("interface id", format!("\"{}\"", display_interface_id))
         .field("internal API source file", format!("\"{source_file}\""))
         .field("internal API source line", source_line.to_string())
         .field("missing functions", missing_functions.clone())
         .fix(format!(
             "add sequence interactions for functions {missing_functions} in the sequence diagram, or remove function declarations {missing_functions} in internal API interface \"{}\"",
-            interface.id
+            display_interface_id
         ))
         .build()
 }
 
 fn format_sequence_method_consistency_error(
+    unit_bindings: &UnitBindings,
     call_context: &SequenceCallContext<'_>,
     method_name: &str,
     description: &str,
     suggested_method: Option<&str>,
 ) -> String {
-    let sequence_call = format_sequence_call(
-        call_context.caller_unit,
-        call_context.callee_unit,
+    let sequence_call = format_displayed_sequence_call(
+        unit_bindings,
+        &call_context.caller_unit,
+        &call_context.callee_unit,
         method_name,
     );
     let (source_file, source_line) = call_context.source_location.display();
@@ -555,17 +567,23 @@ fn format_sequence_method_consistency_error(
 }
 
 fn format_sequence_role_consistency_error(
+    unit_bindings: &UnitBindings,
     call_context: &SequenceCallContext<'_>,
     method_name: &str,
     expected_interfaces: &BTreeSet<String>,
 ) -> String {
-    let sequence_call = format_sequence_call(
-        call_context.caller_unit,
-        call_context.callee_unit,
+    let sequence_call = format_displayed_sequence_call(
+        unit_bindings,
+        &call_context.caller_unit,
+        &call_context.callee_unit,
         method_name,
     );
-
-    let expected_interfaces = format_name_list(expected_interfaces);
+    let [displayed_caller_unit, displayed_callee_unit] = display_trimmed_unit_pair(
+        unit_bindings,
+        &call_context.caller_unit,
+        &call_context.callee_unit,
+    );
+    let expected_interfaces = format_trimmed_interface_list(expected_interfaces);
     let (source_file, source_line) = call_context.source_location.display();
 
     ErrorBuilder::new(ErrorCategory::Interface)
@@ -579,20 +597,64 @@ fn format_sequence_role_consistency_error(
             "expected caller role",
             format!(
                 "\"{}\" should require shared interface(s) {}",
-                call_context.caller_unit, expected_interfaces
+                displayed_caller_unit, expected_interfaces
             ),
         )
         .field(
             "expected callee role",
             format!(
                 "\"{}\" should provide shared interface(s) {}",
-                call_context.callee_unit, expected_interfaces
+                displayed_callee_unit, expected_interfaces
             ),
         )
         .fix(format!(
             "add required/provided interface bindings for shared interface(s) {expected_interfaces} in the component diagram, or remove sequence call {sequence_call} in the sequence diagram"
         ))
         .build()
+}
+
+fn format_displayed_sequence_call(
+    unit_bindings: &UnitBindings,
+    caller_unit: &str,
+    callee_unit: &str,
+    method_name: &str,
+) -> String {
+    let [displayed_caller_unit, displayed_callee_unit] =
+        display_trimmed_unit_pair(unit_bindings, caller_unit, callee_unit);
+
+    format_sequence_call(&displayed_caller_unit, &displayed_callee_unit, method_name)
+}
+
+fn display_trimmed_unit_pair(unit_bindings: &UnitBindings, left: &str, right: &str) -> [String; 2] {
+    let left_source_file = unit_source_file(unit_bindings, left);
+    let right_source_file = unit_source_file(unit_bindings, right);
+
+    display_unit_pair_from_optional_source_paths(
+        left,
+        (!left_source_file.is_empty()).then_some(left_source_file.as_str()),
+        right,
+        (!right_source_file.is_empty()).then_some(right_source_file.as_str()),
+    )
+}
+
+fn unit_source_file(unit_bindings: &UnitBindings, unit_id: &str) -> String {
+    unit_bindings
+        .get(unit_id)
+        .and_then(|bindings| bindings.source_location.as_ref())
+        .map(|source_location| source_location.display().0)
+        .unwrap_or_default()
+}
+
+fn format_trimmed_interface_list(names: &BTreeSet<String>) -> String {
+    display_names(names.iter().map(String::as_str), 1)
+        .into_iter()
+        .map(|name| format!("\"{name}\""))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn display_internal_api_interface_name(name: &str, source_file: &str) -> String {
+    display_name_from_source_path_in_context(name, source_file, std::iter::empty())
 }
 
 #[cfg(test)]

@@ -58,28 +58,28 @@ fn assert_case(case_dir: &str) {
 }
 
 #[test]
-fn negative_interface_function_not_exercised_suite_case() {
-    assert_case("negative_interface_function_not_exercised");
+fn negative_internal_api_method_not_exercised_suite_case() {
+    assert_case("negative_internal_api_method_not_exercised");
 }
 
 #[test]
-fn negative_invalid_consumer_provider_direction_suite_case() {
-    assert_case("negative_invalid_consumer_provider_direction");
+fn negative_sequence_call_direction_mismatch_suite_case() {
+    assert_case("negative_sequence_call_direction_mismatch");
 }
 
 #[test]
-fn negative_missing_method_in_related_interface_suite_case() {
-    assert_case("negative_missing_method_in_related_interface");
+fn negative_method_not_declared_in_related_interface_suite_case() {
+    assert_case("negative_method_not_declared_in_related_interface");
 }
 
 #[test]
-fn negative_missing_method_in_available_interfaces_with_suggestion_suite_case() {
-    assert_case("negative_missing_method_in_available_interfaces_with_suggestion");
+fn negative_method_missing_with_suggestion_suite_case() {
+    assert_case("negative_method_missing_with_suggestion");
 }
 
 #[test]
-fn negative_method_available_but_not_on_related_interface_suite_case() {
-    assert_case("negative_method_available_but_not_on_related_interface");
+fn negative_method_declared_on_unrelated_interface_suite_case() {
+    assert_case("negative_method_declared_on_unrelated_interface");
 }
 
 #[test]

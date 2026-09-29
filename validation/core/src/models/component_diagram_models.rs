@@ -26,6 +26,9 @@ pub trait LogicComponentExt {
     /// Canonical match key: alias (lowercased) when present, otherwise raw id.
     fn match_key(&self) -> String;
 
+    /// User-facing identifier for diagnostics.
+    fn display_key(&self) -> String;
+
     fn is_component(&self) -> bool;
 
     fn is_unit(&self) -> bool;
@@ -39,6 +42,10 @@ pub trait LogicComponentExt {
 impl LogicComponentExt for LogicComponent {
     fn match_key(&self) -> String {
         self.alias.as_deref().unwrap_or(&self.id).to_lowercase()
+    }
+
+    fn display_key(&self) -> String {
+        self.alias.clone().unwrap_or_else(|| self.id.clone())
     }
 
     fn is_component(&self) -> bool {
@@ -79,25 +86,29 @@ impl ComponentDiagramInputs {
 /// Indexed entity key-maps derived from the parsed PlantUML diagram entities.
 ///
 /// Built via [`ComponentDiagramInputs::to_diagram_architecture`].
+/// The keyed sets are Bazel-comparison projections; canonical entity ids stay
+/// on [`ComponentDiagramArchitecture::entities`].
 pub struct ComponentDiagramArchitecture {
-    /// `<<SEooC>>` package entities, keyed with `parent = None`.
+    /// `<<SEooC>>` package entities projected for Bazel comparison, keyed with `parent = None`.
     pub seooc_set: BTreeMap<EntityKey, LogicComponent>,
-    /// `<<component>>` entities, keyed with `parent = Some(..)`.
+    /// `<<component>>` entities projected for Bazel comparison, keyed with `parent = Some(..)`.
     pub comp_set: BTreeMap<EntityKey, LogicComponent>,
+    /// `<<unit>>` entities projected for Bazel comparison, keyed with `parent = Some(..)`.
     pub unit_set: BTreeMap<EntityKey, LogicComponent>,
     /// Full raw entity list, kept for debug output.
     pub entities: Vec<LogicComponent>,
 }
 
 impl ComponentDiagramArchitecture {
-    /// Index `entities` by stereotype and parent alias.
+    /// Index `entities` by stereotype and parent id.
     ///
     /// `<<SEooC>>` go into `seooc_set`;
     /// `<<component>>` go into `comp_set`;
     /// `<<unit>>` go into `unit_set`.
-    /// Duplicates (same [`EntityKey`]) are reported via `result`, except
-    /// benign re-declarations of the exact same entity across multiple
-    /// `static` files (see [`Self::build_set`]), which are merged instead.
+    /// These sets are keyed by names projected for Bazel comparison rather than
+    /// canonical entity ids. Duplicates (same [`EntityKey`]) are reported via
+    /// `result`, except benign re-declarations of the exact same entity across
+    /// multiple `static` files (see [`Self::build_set`]), which are merged instead.
     fn from_entities(entities: &[LogicComponent], result: &mut ValidationResult) -> Self {
         // Index by raw id for parent resolution; PlantUML nesting uses id,
         // not alias.
@@ -121,24 +132,24 @@ impl ComponentDiagramArchitecture {
                     continue;
                 }
                 let kind = entity_kind_name(entity);
-                let alias = entity.match_key();
+                let display_name = entity.display_key();
                 let parent =
-                    entity_parent_alias(entity, &id_index).unwrap_or_else(|| "<none>".to_string());
+                    entity_parent_key(entity, &id_index).unwrap_or_else(|| "<none>".to_string());
                 let ((source_file, source_line), (duplicate_file, duplicate_line)) =
                     ordered_source_locations(&prev.source_location, &entity.source_location);
                 result.add_failure(
                     ErrorBuilder::new(ErrorCategory::Design)
                         .title(format!(
-                            "{kind} \"{alias}\" is defined more than once in the component diagram."
+                            "{kind} \"{display_name}\" is defined more than once in the component diagram."
                         ))
-                        .field(kind, format!("\"{alias}\""))
+                        .field(kind, format!("\"{display_name}\""))
                         .field("parent", &parent)
                         .field("component source file", format!("\"{source_file}\""))
                         .field("component source line", source_line.to_string())
                         .field("duplicate source file", format!("\"{duplicate_file}\""))
                         .field("duplicate source line", duplicate_line.to_string())
                         .fix(format!(
-                            "keep only one {kind} \"{alias}\" under \"{parent}\", or rename one of the duplicate entities"
+                            "keep only one {kind} \"{display_name}\" under \"{parent}\", or rename one of the duplicate entities"
                         ))
                         .build(),
                 );
@@ -183,19 +194,19 @@ impl ComponentDiagramArchitecture {
                     Some(parent) => Some(parent.match_key()),
                     None => {
                         let kind = entity_kind_name(entity);
-                        let alias = entity.match_key();
+                        let display_name = entity.display_key();
                         let (source_file, source_line) = entity.source_location.display();
                         result.add_failure(
                             ErrorBuilder::new(ErrorCategory::Design)
                                 .title(format!(
-                                    "{kind} \"{alias}\" references a parent that is not defined in the component diagram."
+                                    "{kind} \"{display_name}\" references a parent that is not defined in the component diagram."
                                 ))
-                                .field(kind, format!("\"{alias}\""))
+                                .field(kind, format!("\"{display_name}\""))
                                 .field("parent", format!("\"{parent_id}\""))
                                 .field("component source file", format!("\"{source_file}\""))
                                 .field("component source line", source_line.to_string())
                                 .fix(format!(
-                                    "update the parent reference for {kind} \"{alias}\", or add the missing parent entity in the component diagram"
+                                    "update the parent reference for {kind} \"{display_name}\", or add the missing parent entity in the component diagram"
                                 ))
                                 .build(),
                         );
@@ -217,16 +228,16 @@ impl ComponentDiagramArchitecture {
                     continue;
                 }
                 let kind = entity_kind_name(entity);
-                let alias = entity.match_key();
+                let display_name = entity.display_key();
                 let parent = key.1.as_deref().unwrap_or("<none>");
                 let ((source_file, source_line), (duplicate_file, duplicate_line)) =
                     ordered_source_locations(&prev.source_location, &entity.source_location);
                 result.add_failure(
                     ErrorBuilder::new(ErrorCategory::Design)
                         .title(format!(
-                            "{kind} \"{alias}\" is defined more than once in the component diagram."
+                            "{kind} \"{display_name}\" is defined more than once in the component diagram."
                         ))
-                        .field(kind, format!("\"{alias}\""))
+                        .field(kind, format!("\"{display_name}\""))
                         .field("parent", parent)
                         .field("component source file", format!("\"{source_file}\""))
                         .field("component source line", source_line.to_string())
@@ -234,7 +245,7 @@ impl ComponentDiagramArchitecture {
                         .field("duplicate source line", duplicate_line.to_string())
                         .fix(
                             format!(
-                                "keep only one {kind} \"{alias}\" under \"{parent}\", or rename one of the duplicate entities"
+                                "keep only one {kind} \"{display_name}\" under \"{parent}\", or rename one of the duplicate entities"
                             ),
                         )
                         .build(),
@@ -259,14 +270,14 @@ fn entity_kind_name(entity: &LogicComponent) -> &'static str {
     }
 }
 
-fn entity_parent_alias(
+fn entity_parent_key(
     entity: &LogicComponent,
     id_index: &BTreeMap<String, &LogicComponent>,
 ) -> Option<String> {
     entity.parent_id.as_deref().map(|parent_id| {
         id_index
             .get(&parent_id.to_lowercase())
-            .map(|parent| parent.match_key())
+            .map(|parent| parent.display_key())
             .unwrap_or_else(|| parent_id.to_string())
     })
 }

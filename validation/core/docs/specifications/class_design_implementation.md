@@ -263,14 +263,14 @@ Before comparing types, the validator applies limited normalization.
 | `std::uint8_t` | `uint8_t` |
 | `uint8_t *` | `uint8_t*` |
 | `Payload &` | `Payload&` |
-| `vehicle.Engine` | `vehicle::Engine` |
+| `vehicle::Engine` | `vehicle.Engine` |
 
-The last row accounts for a difference between the class diagram and
-implementation parser UIDs: dots used as namespace separators are converted to
-`::` before comparison. This applies to type names, class/entity IDs, and
-relationship source/target identifiers alike. cv-qualifiers such as `const`
-and `volatile`, and the pointer/reference decorators `*`/`&`, are preserved
-(only the spacing around them is normalized).
+The last row canonicalizes implementation-side C++ namespace separators to the
+same dot-separated UID form used by class diagrams and root anchors. This
+applies to type names, class/entity IDs, and relationship source/target
+identifiers alike. cv-qualifiers such as `const` and `volatile`, and the
+pointer/reference decorators `*`/`&`, are preserved (only the spacing around
+them is normalized).
 
 ## Failure Cases
 

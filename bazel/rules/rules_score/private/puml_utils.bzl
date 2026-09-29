@@ -16,6 +16,21 @@ indexes for one architectural design view (static/dynamic/public_api/internal_ap
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
+def package_root_anchor(ctx):
+    """Return the resolver root anchor derived from the owning Bazel package.
+
+    The resolver uid model uses dot-separated package segments, while Bazel
+    labels use `/` between package path elements.
+
+    Args:
+        ctx: Rule context.
+
+    Returns:
+        Dot-separated package path string, or the empty string for repo-root
+        targets.
+    """
+    return ctx.label.package.replace("/", ".")
+
 def relative_source_path(file, package, own_repo = None):
     """Return `file`'s path relative to `package`, or its full workspace-relative
     short_path when it doesn't live under `package` -- never just the bare

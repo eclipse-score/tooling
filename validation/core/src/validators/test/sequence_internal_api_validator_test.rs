@@ -255,6 +255,109 @@ fn passes_when_sequence_function_exists_on_related_interface_with_component_cont
 }
 
 #[test]
+fn passes_when_participant_uid_matches_component_id_but_call_uses_reference_names() {
+    let component_diagrams = component_diagram(vec![
+        unit_with_fields(
+            "validation.core.example.unit_1",
+            Some("component_alias_1"),
+            Some("Component Unit One"),
+            None,
+            &["InternalInterface"],
+            &[],
+        ),
+        unit_with_fields(
+            "validation.core.example.unit_2",
+            Some("component_alias_2"),
+            Some("Component Unit Two"),
+            None,
+            &[],
+            &["InternalInterface"],
+        ),
+        interface("InternalInterface"),
+    ]);
+    let sequence_diagrams = sequence_calls_with_custom_participants(
+        vec![
+            sequence_participant_with_fields(
+                "validation.core.example.unit_1",
+                Some("participant_a"),
+                "Unit One",
+            ),
+            sequence_participant_with_fields(
+                "validation.core.example.unit_2",
+                Some("participant_b"),
+                "Unit Two",
+            ),
+        ],
+        &[("participant_a", "participant_b", "GetData()")],
+    );
+    let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
+
+    let validation_result =
+        validate_with_component_context(component_diagrams, sequence_diagrams, &internal_api);
+
+    assert!(validation_result.failures.is_empty());
+}
+
+#[test]
+fn reports_short_but_discriminative_names_for_long_unit_and_interface_ids() {
+    let component_diagrams = component_diagram(vec![
+        unit_with_fields(
+            "validation.core.example.package_a.component_a.unit_1",
+            Some("component_alias_1"),
+            Some("Long Unit One"),
+            None,
+            &["validation.core.example.package_a.InternalInterface"],
+            &[],
+        ),
+        unit_with_fields(
+            "validation.core.example.package_a.component_a.unit_2",
+            Some("component_alias_2"),
+            Some("Long Unit Two"),
+            None,
+            &[],
+            &["validation.core.example.package_a.InternalInterface"],
+        ),
+        interface("validation.core.example.package_a.InternalInterface"),
+    ]);
+    let sequence_diagrams = sequence_calls_with_custom_participants(
+        vec![
+            sequence_participant_with_fields(
+                "validation.core.example.package_a.component_a.unit_1",
+                Some("participant_a"),
+                "Unit One",
+            ),
+            sequence_participant_with_fields(
+                "validation.core.example.package_a.component_a.unit_2",
+                Some("participant_b"),
+                "Unit Two",
+            ),
+        ],
+        &[("participant_a", "participant_b", "GetData()")],
+    );
+    let internal_api = internal_api_index(vec![(
+        "validation.core.example.package_a.InternalInterface",
+        vec!["OtherMethod"],
+    )]);
+
+    let validation_result =
+        validate_with_component_context(component_diagrams, sequence_diagrams, &internal_api);
+
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
+        message.contains(
+            "Sequence function \"GetData\" from sequence call \"package_a.component_a.unit_1\" -> \"package_a.component_a.unit_2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+        ) && message.contains(
+            "\"package_a.component_a.unit_1\" -> \"package_a.component_a.unit_2\" : \"GetData\""
+        )
+    }));
+    assert!(validation_result.failures.iter().any(|message| {
+        message.contains(
+            "Methods \"OtherMethod\" declared on internal API interface \"InternalInterface\" in the internal API diagram are not exercised in the sequence diagram."
+        ) && message.contains("\"InternalInterface\"")
+    }));
+}
+
+#[test]
 fn reports_self_call_function_missing_from_available_interfaces() {
     let component_diagrams = component_diagram(vec![unit_without_interfaces("u1")]);
     let sequence_diagrams = sequence_calls(&[("u1", "u1", "GetData()")]);
@@ -324,12 +427,40 @@ fn reports_self_call_without_any_available_interfaces() {
 #[test]
 fn reports_method_declared_only_on_caller_side_interfaces() {
     let component_diagrams = component_diagram(vec![
-        unit("u1", &["SharedInterface", "CallerOnlyInterface"], &[]),
-        unit("u2", &[], &["SharedInterface"]),
+        unit_with_fields(
+            "validation.core.example.unit_1",
+            Some("component_alias_1"),
+            Some("Caller Unit"),
+            None,
+            &["SharedInterface", "CallerOnlyInterface"],
+            &[],
+        ),
+        unit_with_fields(
+            "validation.core.example.unit_2",
+            Some("component_alias_2"),
+            Some("Callee Unit"),
+            None,
+            &[],
+            &["SharedInterface"],
+        ),
         interface("SharedInterface"),
         interface("CallerOnlyInterface"),
     ]);
-    let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
+    let sequence_diagrams = sequence_calls_with_custom_participants(
+        vec![
+            sequence_participant_with_fields(
+                "validation.core.example.unit_1",
+                Some("participant_a"),
+                "Displayed Caller",
+            ),
+            sequence_participant_with_fields(
+                "validation.core.example.unit_2",
+                Some("participant_b"),
+                "Displayed Callee",
+            ),
+        ],
+        &[("participant_a", "participant_b", "GetData()")],
+    );
     let internal_api = internal_api_index(vec![
         ("SharedInterface", vec!["OtherMethod"]),
         ("CallerOnlyInterface", vec!["GetData"]),
@@ -341,7 +472,7 @@ fn reports_method_declared_only_on_caller_side_interfaces() {
     assert_eq!(validation_result.failures.len(), 2);
     assert!(validation_result.failures.iter().any(|message| {
         message.contains(
-            "Sequence function \"GetData\" from sequence call \"u1\" -> \"u2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+            "Sequence function \"GetData\" from sequence call \"example.unit_1\" -> \"example.unit_2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
         ) && message.contains("sequence function name was not found in the related interface methods")
     }));
     assert!(validation_result.failures.iter().any(|message| {
@@ -360,12 +491,40 @@ fn reports_method_declared_only_on_caller_side_interfaces() {
 #[test]
 fn reports_method_declared_only_on_callee_side_interfaces() {
     let component_diagrams = component_diagram(vec![
-        unit("u1", &["SharedInterface"], &[]),
-        unit("u2", &[], &["SharedInterface", "CalleeOnlyInterface"]),
+        unit_with_fields(
+            "validation.core.example.unit_1",
+            Some("component_alias_1"),
+            Some("Caller Unit"),
+            None,
+            &["SharedInterface"],
+            &[],
+        ),
+        unit_with_fields(
+            "validation.core.example.unit_2",
+            Some("component_alias_2"),
+            Some("Callee Unit"),
+            None,
+            &[],
+            &["SharedInterface", "CalleeOnlyInterface"],
+        ),
         interface("SharedInterface"),
         interface("CalleeOnlyInterface"),
     ]);
-    let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
+    let sequence_diagrams = sequence_calls_with_custom_participants(
+        vec![
+            sequence_participant_with_fields(
+                "validation.core.example.unit_1",
+                Some("participant_a"),
+                "Displayed Caller",
+            ),
+            sequence_participant_with_fields(
+                "validation.core.example.unit_2",
+                Some("participant_b"),
+                "Displayed Callee",
+            ),
+        ],
+        &[("participant_a", "participant_b", "GetData()")],
+    );
     let internal_api = internal_api_index(vec![
         ("SharedInterface", vec!["OtherMethod"]),
         ("CalleeOnlyInterface", vec!["GetData"]),
@@ -377,7 +536,7 @@ fn reports_method_declared_only_on_callee_side_interfaces() {
     assert_eq!(validation_result.failures.len(), 2);
     assert!(validation_result.failures.iter().any(|message| {
         message.contains(
-            "Sequence function \"GetData\" from sequence call \"u1\" -> \"u2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+            "Sequence function \"GetData\" from sequence call \"example.unit_1\" -> \"example.unit_2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
         ) && message.contains("sequence function name was not found in the related interface methods")
     }));
     assert!(validation_result.failures.iter().any(|message| {
@@ -396,13 +555,41 @@ fn reports_method_declared_only_on_callee_side_interfaces() {
 #[test]
 fn reports_method_declared_on_both_sides_but_not_on_shared_interface() {
     let component_diagrams = component_diagram(vec![
-        unit("u1", &["SharedInterface", "CallerOnlyInterface"], &[]),
-        unit("u2", &[], &["SharedInterface", "CalleeOnlyInterface"]),
+        unit_with_fields(
+            "validation.core.example.unit_1",
+            Some("component_alias_1"),
+            Some("Caller Unit"),
+            None,
+            &["SharedInterface", "CallerOnlyInterface"],
+            &[],
+        ),
+        unit_with_fields(
+            "validation.core.example.unit_2",
+            Some("component_alias_2"),
+            Some("Callee Unit"),
+            None,
+            &[],
+            &["SharedInterface", "CalleeOnlyInterface"],
+        ),
         interface("SharedInterface"),
         interface("CallerOnlyInterface"),
         interface("CalleeOnlyInterface"),
     ]);
-    let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
+    let sequence_diagrams = sequence_calls_with_custom_participants(
+        vec![
+            sequence_participant_with_fields(
+                "validation.core.example.unit_1",
+                Some("participant_a"),
+                "Displayed Caller",
+            ),
+            sequence_participant_with_fields(
+                "validation.core.example.unit_2",
+                Some("participant_b"),
+                "Displayed Callee",
+            ),
+        ],
+        &[("participant_a", "participant_b", "GetData()")],
+    );
     let internal_api = internal_api_index(vec![
         ("SharedInterface", vec!["OtherMethod"]),
         ("CallerOnlyInterface", vec!["GetData"]),
@@ -415,7 +602,7 @@ fn reports_method_declared_on_both_sides_but_not_on_shared_interface() {
     assert_eq!(validation_result.failures.len(), 2);
     assert!(validation_result.failures.iter().any(|message| {
         message.contains(
-            "Sequence function \"GetData\" from sequence call \"u1\" -> \"u2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
+            "Sequence function \"GetData\" from sequence call \"example.unit_1\" -> \"example.unit_2\" : \"GetData\" in the sequence diagram not found in the internal API diagram."
         ) && message.contains("sequence function name was not found in the related interface methods")
     }));
     assert!(validation_result.failures.iter().any(|message| {
@@ -434,11 +621,39 @@ fn reports_method_declared_on_both_sides_but_not_on_shared_interface() {
 #[test]
 fn reports_role_violation_when_method_exists_only_on_reverse_direction_interface() {
     let component_diagrams = component_diagram(vec![
-        unit("u1", &[], &["InternalInterface"]),
-        unit("u2", &["InternalInterface"], &[]),
+        unit_with_fields(
+            "validation.core.example.unit_1",
+            Some("component_alias_1"),
+            Some("Provider Unit"),
+            None,
+            &[],
+            &["InternalInterface"],
+        ),
+        unit_with_fields(
+            "validation.core.example.unit_2",
+            Some("component_alias_2"),
+            Some("Consumer Unit"),
+            None,
+            &["InternalInterface"],
+            &[],
+        ),
         interface("InternalInterface"),
     ]);
-    let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
+    let sequence_diagrams = sequence_calls_with_custom_participants(
+        vec![
+            sequence_participant_with_fields(
+                "validation.core.example.unit_1",
+                Some("participant_a"),
+                "Displayed Provider",
+            ),
+            sequence_participant_with_fields(
+                "validation.core.example.unit_2",
+                Some("participant_b"),
+                "Displayed Consumer",
+            ),
+        ],
+        &[("participant_a", "participant_b", "GetData()")],
+    );
     let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
 
     let validation_result =
@@ -446,13 +661,14 @@ fn reports_role_violation_when_method_exists_only_on_reverse_direction_interface
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains(
-        "Sequence call \"u1\" -> \"u2\" : \"GetData\" in the sequence diagram does not match the required/provided interface roles in the component diagram."
+        "Sequence call \"example.unit_1\" -> \"example.unit_2\" : \"GetData\" in the sequence diagram does not match the required/provided interface roles in the component diagram."
     ));
-    assert!(validation_result.failures[0].contains("\"u1\" -> \"u2\" : \"GetData\""));
     assert!(validation_result.failures[0]
-        .contains("\"u1\" should require shared interface(s) \"InternalInterface\""));
+        .contains("\"example.unit_1\" -> \"example.unit_2\" : \"GetData\""));
     assert!(validation_result.failures[0]
-        .contains("\"u2\" should provide shared interface(s) \"InternalInterface\""));
+        .contains("\"example.unit_1\" should require shared interface(s) \"InternalInterface\""));
+    assert!(validation_result.failures[0]
+        .contains("\"example.unit_2\" should provide shared interface(s) \"InternalInterface\""));
     assert!(!validation_result.failures[0].contains("[Method]"));
 }
 

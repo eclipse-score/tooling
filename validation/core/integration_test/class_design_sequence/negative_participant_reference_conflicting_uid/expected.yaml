@@ -1,0 +1,23 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains: |
+  [Design] Sequence participant uid "validation.core.integration_test.class_design_sequence.negative_participant_reference_conflicting_uid.A.Service" is declared with conflicting reference names.
+    Participant uid                      : "validation.core.integration_test.class_design_sequence.negative_participant_reference_conflicting_uid.A.Service"
+    First participant reference name     : "ServiceA"
+    Duplicate participant reference name : "ServiceB"
+    First sequence source file           : "validation/core/integration_test/class_design_sequence/negative_participant_reference_conflicting_uid/sequence_a.puml"
+    First sequence source line           : 16
+    Duplicate sequence source file       : "validation/core/integration_test/class_design_sequence/negative_participant_reference_conflicting_uid/sequence_b.puml"
+    Duplicate sequence source line       : 16
+    Fix                                  : Use one reference name consistently for the same sequence participant uid.

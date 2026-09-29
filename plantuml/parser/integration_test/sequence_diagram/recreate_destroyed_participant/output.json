@@ -10,7 +10,8 @@
           "file": "",
           "line": 16
         },
-        "stereotype": null
+        "stereotype": null,
+        "uid": "A"
       },
       {
         "display_name": "B",
@@ -20,7 +21,8 @@
           "file": "",
           "line": 16
         },
-        "stereotype": null
+        "stereotype": null,
+        "uid": "B"
       }
     ],
     "root": {

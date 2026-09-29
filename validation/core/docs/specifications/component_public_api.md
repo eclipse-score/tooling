@@ -40,9 +40,9 @@ Public API diagram entities must be declared as interfaces to be matched.
 Other entity types (e.g. a `class` with the same name) are not indexed as
 public API interfaces, so a same-named class does not satisfy the check.
 
-Matching is done by the public API diagram entity's **name** (not its fully
-qualified ID), compared case-sensitively against the static design interface's
-ID.
+Matching is done by the public API interface **id**, compared
+case-sensitively against the static design interface id. Display names remain
+diagnostic-only.
 
 ### Interface Declaration Consistency
 
@@ -50,9 +50,9 @@ Every public API interface declared in the static design diagram must resolve
 to an interface declared in the public API class diagram.
 *(Requirement: {requirement:downstream-ref}`Tools.ComponentPublicApiInterfaceDeclarationConsistency`)*
 
-The component public API interface is matched against public API interface
-entries derived from the public API diagram. Matching is exact and
-case-sensitive.
+The component public API interface is matched against public API interface ids
+derived from the public API diagram. Matching is exact and case-sensitive,
+with the existing normalization only bridging parser formatting differences.
 
 ```text
 ' static design diagram

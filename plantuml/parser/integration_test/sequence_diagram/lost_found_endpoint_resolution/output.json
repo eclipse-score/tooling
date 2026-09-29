@@ -10,7 +10,8 @@
           "file": "",
           "line": 16
         },
-        "stereotype": null
+        "stereotype": null,
+        "uid": "Service"
       }
     ],
     "root": {

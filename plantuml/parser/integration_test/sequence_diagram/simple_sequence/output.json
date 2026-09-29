@@ -10,7 +10,8 @@
           "file": "",
           "line": 16
         },
-        "stereotype": "component"
+        "stereotype": "component",
+        "uid": "ComponentA"
       },
       {
         "display_name": "Component B",
@@ -20,7 +21,8 @@
           "file": "",
           "line": 17
         },
-        "stereotype": "component"
+        "stereotype": "component",
+        "uid": "ComponentB"
       },
       {
         "display_name": "Component C",
@@ -30,7 +32,8 @@
           "file": "",
           "line": 18
         },
-        "stereotype": "component"
+        "stereotype": "component",
+        "uid": "ComponentC"
       }
     ],
     "root": {
@@ -141,17 +144,17 @@
                                               "line": 31
                                             }
                                           }
-                                          },
-                                          {
-                                            "Interaction": {
-                                              "sender": "ComponentC",
-                                              "receiver": "ComponentB",
-                                              "message": "Return Result",
-                                              "source_location": {
-                                                "file": "",
-                                                "line": 32
-                                              }
+                                        },
+                                        {
+                                          "Interaction": {
+                                            "sender": "ComponentC",
+                                            "receiver": "ComponentB",
+                                            "message": "Return Result",
+                                            "source_location": {
+                                              "file": "",
+                                              "line": 32
                                             }
+                                          }
                                         }
                                       ]
                                     },
@@ -215,17 +218,17 @@
                                               "line": 40
                                             }
                                           }
-                                          },
-                                          {
-                                            "Interaction": {
-                                              "sender": "ComponentC",
-                                              "receiver": "ComponentB",
-                                              "message": "Return Result",
-                                              "source_location": {
-                                                "file": "",
-                                                "line": 41
-                                              }
+                                        },
+                                        {
+                                          "Interaction": {
+                                            "sender": "ComponentC",
+                                            "receiver": "ComponentB",
+                                            "message": "Return Result",
+                                            "source_location": {
+                                              "file": "",
+                                              "line": 41
                                             }
+                                          }
                                         }
                                       ]
                                     },
@@ -248,17 +251,17 @@
                                               "line": 43
                                             }
                                           }
-                                          },
-                                          {
-                                            "Interaction": {
-                                              "sender": "ComponentC",
-                                              "receiver": "ComponentB",
-                                              "message": "Return Result",
-                                              "source_location": {
-                                                "file": "",
-                                                "line": 44
-                                              }
+                                        },
+                                        {
+                                          "Interaction": {
+                                            "sender": "ComponentC",
+                                            "receiver": "ComponentB",
+                                            "message": "Return Result",
+                                            "source_location": {
+                                              "file": "",
+                                              "line": 44
                                             }
+                                          }
                                         }
                                       ]
                                     },

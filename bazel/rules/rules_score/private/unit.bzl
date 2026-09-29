@@ -26,6 +26,7 @@ load("@rules_rust//rust:defs.bzl", "rust_common")
 load("//bazel/rules/rules_score:providers.bzl", "CcDependencyInfo", "CertifiedScope", "SphinxSourcesInfo", "UnitDesignInfo", "UnitInfo")
 load("//cpp/libclang:cpp_parser.bzl", "cpp_parser_action_internal_attrs", "cpp_parser_action_toolchains", "cpp_parser_target_aspects", "has_cpp_parser_inputs", "run_cpp_parser_action")
 load(":cc_dependency_aspect.bzl", "cc_dependencies_aspect")
+load(":puml_utils.bzl", "package_root_anchor")
 load(":validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
 load(":verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
@@ -36,6 +37,7 @@ def _run_implementation_cpp_parser(ctx, impl, output_prefix):
         output_prefix = output_prefix,
         tool = ctx.attr._tool,
         log_level = ctx.attr._log_level[BuildSettingInfo].value,
+        root_anchor = package_root_anchor(ctx),
     )
 
 def _target_output_prefix(ctx, target):

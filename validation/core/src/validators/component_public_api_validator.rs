@@ -16,7 +16,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::shared::{best_string_suggestion, earliest_source_by_id, format_name_list};
+use super::shared::{
+    best_string_suggestion, display_name_from_sources, display_names_from_sources,
+    display_reference_name_set, earliest_source_by_id, format_name_list, normalize,
+};
 use crate::models::{ComponentDiagramArchitecture, LogicComponentExt, PublicApiIndex};
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
@@ -35,7 +38,7 @@ struct ComponentPublicApiValidator {
     component_public_api_sources: BTreeMap<String, SourceLocation>,
     /// Public API interfaces referenced by relationships from SEooC entities.
     seooc_related_public_api_ids: BTreeSet<String>,
-    /// Public API interfaces declared in the public API class diagram.
+    /// Public API interface ids declared in the public API class diagram.
     design_public_api_ids: BTreeSet<String>,
     result: ValidationResult,
 }
@@ -48,7 +51,7 @@ impl ComponentPublicApiValidator {
         Self {
             seooc_related_public_api_ids: collect_seooc_related_public_api_ids(component_diagram),
             component_public_api_sources: collect_component_public_api_sources(component_diagram),
-            design_public_api_ids: public_api_index.api_names().cloned().collect(),
+            design_public_api_ids: public_api_index.api_ids().cloned().collect(),
             result: ValidationResult::default(),
         }
     }
@@ -72,7 +75,10 @@ impl ComponentPublicApiValidator {
         let component_public_api_ids: BTreeSet<String> =
             self.component_public_api_sources.keys().cloned().collect();
         let missing_public_apis: BTreeSet<String> = component_public_api_ids
-            .difference(&self.design_public_api_ids)
+            .iter()
+            .filter(|component_id| {
+                !has_matching_public_api_id(component_id, &self.design_public_api_ids)
+            })
             .cloned()
             .collect();
 
@@ -102,6 +108,15 @@ impl ComponentPublicApiValidator {
     }
 }
 
+fn has_matching_public_api_id(
+    component_id: &str,
+    design_public_api_ids: &BTreeSet<String>,
+) -> bool {
+    design_public_api_ids
+        .iter()
+        .any(|design_id| normalize(component_id) == normalize(design_id))
+}
+
 fn append_debug_log(
     diagnostics: &mut Diagnostics,
     component_public_api_ids: &BTreeSet<String>,
@@ -118,7 +133,7 @@ fn append_debug_log(
         diagnostics.debug(|| format!("  {api_id}"));
     }
 
-    diagnostics.debug(|| "Public API entries available for component public APIs:".to_string());
+    diagnostics.debug(|| "Public API ids available for component public APIs:".to_string());
     for api_id in design_public_api_ids {
         diagnostics.debug(|| format!("  {api_id}"));
     }
@@ -160,9 +175,14 @@ fn format_missing_public_api_error(
     component_public_api_sources: &BTreeMap<String, SourceLocation>,
     design_public_api_ids: &BTreeSet<String>,
 ) -> String {
-    let missing_public_api_names = format_name_list(missing_public_apis);
-    let case_mismatch_public_apis =
-        collect_case_mismatch_public_apis(missing_public_apis, design_public_api_ids);
+    let display_missing_public_apis =
+        display_names_from_sources(missing_public_apis, component_public_api_sources);
+    let missing_public_api_names = format_name_list(&display_missing_public_apis);
+    let display_design_public_api_ids = display_reference_name_set(design_public_api_ids);
+    let case_mismatch_public_apis = collect_case_mismatch_public_apis(
+        &display_missing_public_apis,
+        &display_design_public_api_ids,
+    );
     let has_case_mismatch = !case_mismatch_public_apis.is_empty();
     let case_mismatch_names = format_name_list(&case_mismatch_public_apis);
     let case_mismatch_title_suffix = if has_case_mismatch {
@@ -183,28 +203,38 @@ fn format_missing_public_api_error(
         .field("missing public APIs", missing_public_api_names.clone());
 
     for interface_id in missing_public_apis {
+        let display_interface_id =
+            display_name_from_sources(interface_id, component_public_api_sources);
+
         if let Some(source_location) = component_public_api_sources.get(interface_id) {
             let (source_file, source_line) = source_location.display();
             error = error
                 .field(
-                    format!("static source file for \"{interface_id}\""),
+                    format!("static source file for \"{display_interface_id}\""),
                     format!("\"{source_file}\""),
                 )
                 .field(
-                    format!("static source line for \"{interface_id}\""),
+                    format!("static source line for \"{display_interface_id}\""),
                     source_line.to_string(),
                 );
         }
 
-        if case_mismatch_public_apis.contains(interface_id) {
+        if case_mismatch_public_apis
+            .iter()
+            .any(|name| name.eq_ignore_ascii_case(&display_interface_id))
+        {
             continue;
         }
 
         if let Some(suggested_interface) = best_string_suggestion(
-            interface_id,
-            design_public_api_ids.iter().map(String::as_str),
+            &display_interface_id,
+            display_design_public_api_ids.iter().map(String::as_str),
         ) {
-            error = error.suggest(interface_id, Some("interface"), &suggested_interface);
+            error = error.suggest(
+                &display_interface_id,
+                Some("interface"),
+                &suggested_interface,
+            );
         }
     }
 
@@ -234,7 +264,9 @@ fn format_unrelated_public_api_error(
     unrelated_public_apis: &BTreeSet<String>,
     component_public_api_sources: &BTreeMap<String, SourceLocation>,
 ) -> String {
-    let public_api_names = format_name_list(unrelated_public_apis);
+    let display_unrelated_public_apis =
+        display_names_from_sources(unrelated_public_apis, component_public_api_sources);
+    let public_api_names = format_name_list(&display_unrelated_public_apis);
 
     let mut error = ErrorBuilder::new(ErrorCategory::Interface)
         .title(format!(
@@ -243,15 +275,18 @@ fn format_unrelated_public_api_error(
         .field("public APIs", public_api_names.clone());
 
     for interface_id in unrelated_public_apis {
+        let display_interface_id =
+            display_name_from_sources(interface_id, component_public_api_sources);
+
         if let Some(source_location) = component_public_api_sources.get(interface_id) {
             let (source_file, source_line) = source_location.display();
             error = error
                 .field(
-                    format!("static source file for \"{interface_id}\""),
+                    format!("static source file for \"{display_interface_id}\""),
                     format!("\"{source_file}\""),
                 )
                 .field(
-                    format!("static source line for \"{interface_id}\""),
+                    format!("static source line for \"{display_interface_id}\""),
                     source_line.to_string(),
                 );
         }

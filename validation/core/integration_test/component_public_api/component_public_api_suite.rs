@@ -50,8 +50,8 @@ fn assert_case(case_dir: &str) {
 }
 
 #[test]
-fn positive_public_api_match_suite_case() {
-    assert_case("positive_public_api_match");
+fn positive_public_api_declared_and_related_to_seooc_suite_case() {
+    assert_case("positive_public_api_declared_and_related_to_seooc");
 }
 
 #[test]
@@ -60,31 +60,26 @@ fn positive_overview_seooc_relation_merge_suite_case() {
 }
 
 #[test]
-fn negative_public_api_missing_suite_case() {
-    assert_case("negative_public_api_missing");
+fn negative_public_apis_missing_from_public_api_diagram_suite_case() {
+    assert_case("negative_public_apis_missing_from_public_api_diagram");
 }
 
 #[test]
-fn negative_public_api_missing_with_suggestion_suite_case() {
-    assert_case("negative_public_api_missing_with_suggestion");
+fn negative_public_apis_missing_from_public_api_diagram_with_suggestions_suite_case() {
+    assert_case("negative_public_apis_missing_from_public_api_diagram_with_suggestions");
 }
 
 #[test]
-fn negative_public_api_missing_with_suggestions_suite_case() {
-    assert_case("negative_public_api_missing_with_suggestions");
+fn negative_public_api_declared_as_class_is_treated_as_missing_suite_case() {
+    assert_case("negative_public_api_declared_as_class_is_treated_as_missing");
 }
 
 #[test]
-fn negative_public_api_wrong_type_suite_case() {
-    assert_case("negative_public_api_wrong_type");
+fn negative_public_api_case_mismatch_suite_case() {
+    assert_case("negative_public_api_case_mismatch");
 }
 
 #[test]
-fn negative_case_sensitive_suite_case() {
-    assert_case("negative_case_sensitive");
-}
-
-#[test]
-fn negative_public_api_lack_of_relationship_suite_case() {
-    assert_case("negative_public_api_lack_of_relationship");
+fn negative_public_api_without_seooc_relationship_suite_case() {
+    assert_case("negative_public_api_without_seooc_relationship");
 }

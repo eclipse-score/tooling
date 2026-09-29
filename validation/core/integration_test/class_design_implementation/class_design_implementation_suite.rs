@@ -108,11 +108,6 @@ fn negative_class_missing_with_suggestion() {
 }
 
 #[test]
-fn negative_class_missing_without_suggestion() {
-    assert_case("negative_class_missing_without_suggestion");
-}
-
-#[test]
 fn negative_type_alias_missing_with_suggestion() {
     assert_case("negative_type_alias_missing_with_suggestion");
 }

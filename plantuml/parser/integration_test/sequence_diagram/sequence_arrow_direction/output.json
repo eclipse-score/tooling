@@ -6,15 +6,23 @@
         "display_name": "A",
         "alias": null,
         "participant_type": "Participant",
-        "source_location": { "file": "", "line": 16 },
-        "stereotype": null
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null,
+        "uid": "A"
       },
       {
         "display_name": "B",
         "alias": null,
         "participant_type": "Participant",
-        "source_location": { "file": "", "line": 17 },
-        "stereotype": null
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null,
+        "uid": "B"
       }
     ],
     "root": {
@@ -24,7 +32,10 @@
             "sender": "A",
             "receiver": "B",
             "message": "solid right",
-            "source_location": { "file": "", "line": 19 }
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
           }
         },
         {
@@ -32,7 +43,10 @@
             "sender": "B",
             "receiver": "A",
             "message": "solid left",
-            "source_location": { "file": "", "line": 20 }
+            "source_location": {
+              "file": "",
+              "line": 20
+            }
           }
         },
         {
@@ -40,7 +54,10 @@
             "sender": "A",
             "receiver": "B",
             "message": "dashed right",
-            "source_location": { "file": "", "line": 21 }
+            "source_location": {
+              "file": "",
+              "line": 21
+            }
           }
         },
         {
@@ -48,7 +65,10 @@
             "sender": "B",
             "receiver": "A",
             "message": "dashed left",
-            "source_location": { "file": "", "line": 22 }
+            "source_location": {
+              "file": "",
+              "line": 22
+            }
           }
         }
       ]

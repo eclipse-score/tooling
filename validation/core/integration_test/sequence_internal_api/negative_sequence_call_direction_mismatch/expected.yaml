@@ -1,0 +1,21 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains: |
+  [Interface] Sequence call "package_a.component_a.unit_2" -> "package_a.component_a.unit_1" : "SendSignal" in the sequence diagram does not match the required/provided interface roles in the component diagram.
+    Sequence call        : "package_a.component_a.unit_2" -> "package_a.component_a.unit_1" : "SendSignal"
+    Sequence source file : "validation/core/integration_test/sequence_internal_api/negative_sequence_call_direction_mismatch/sequence_diagram.puml"
+    Sequence source line : 19
+    Expected caller role : "package_a.component_a.unit_2" should require shared interface(s) "InternalInterface"
+    Expected callee role : "package_a.component_a.unit_1" should provide shared interface(s) "InternalInterface"
+    Fix                  : Add required/provided interface bindings for shared interface(s) "InternalInterface" in the component diagram, or remove sequence call "package_a.component_a.unit_2" -> "package_a.component_a.unit_1" : "SendSignal" in the sequence diagram.

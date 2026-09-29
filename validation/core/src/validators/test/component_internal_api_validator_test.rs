@@ -42,7 +42,7 @@ fn reports_missing_component_interface_declared_by_internal_api() {
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains(
-        "Component interface(s) \"component_example.InternalInterface\" from the component diagram not found in the internal API diagram."
+        "Component interface(s) \"InternalInterface\" from the component diagram not found in the internal API diagram."
     ));
     assert!(!validation_result.failures[0].contains("Unit                :"));
 }
@@ -55,17 +55,12 @@ fn reports_each_missing_component_interface_once() {
         interface_with_parent_id("InternalInterface", "component_example"),
         interface_with_parent_id("InternalInterface1", "component_example"),
     ]);
-    let internal_api = internal_api_index(vec![(
-        "component_example.InternalInterface",
-        vec!["GetData"],
-    )]);
+    let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
 
     let validation_result = validate(component_diagrams, &internal_api);
 
     assert_eq!(validation_result.failures.len(), 1);
-    assert!(validation_result.failures[0].contains(
-        "Component interface(s) \"component_example.InternalInterface1\" from the component diagram not found in the internal API diagram."
-    ));
+    assert!(validation_result.failures[0].contains("\"InternalInterface1\""));
 }
 
 #[test]
@@ -80,7 +75,7 @@ fn reports_missing_component_interface_even_without_unit_relation() {
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains(
-        "Component interface(s) \"component_example.UnusedInterface\" from the component diagram not found in the internal API diagram."
+        "Component interface(s) \"UnusedInterface\" from the component diagram not found in the internal API diagram."
     ));
 }
 
@@ -93,17 +88,12 @@ fn reports_all_missing_component_interfaces_in_one_message() {
         interface_with_parent_id("InternalInterface", "component_example"),
         interface_with_parent_id("InternalInterface1", "component_example"),
     ]);
-    let internal_api = internal_api_index(vec![(
-        "component_example.InternalInterface",
-        vec!["GetData"],
-    )]);
+    let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
 
     let validation_result = validate(component_diagrams, &internal_api);
 
     assert_eq!(validation_result.failures.len(), 1);
-    assert!(validation_result.failures[0].contains(
-        "Component interface(s) \"component_example.InternalInterface1\" from the component diagram not found in the internal API diagram."
-    ));
+    assert!(validation_result.failures[0].contains("\"InternalInterface1\""));
 }
 
 #[test]
@@ -118,7 +108,7 @@ fn reports_missing_component_interface_without_sequence_method_call() {
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains(
-        "Component interface(s) \"component_example.InternalInterface\" from the component diagram not found in the internal API diagram."
+        "Component interface(s) \"InternalInterface\" from the component diagram not found in the internal API diagram."
     ));
 }
 
@@ -135,12 +125,12 @@ fn reports_case_mismatch_between_component_and_internal_api_interface_names() {
 
     assert_eq!(validation_result.failures.len(), 1);
     assert!(validation_result.failures[0].contains(
-        "Component interface(s) \"component_example.InternalInterface\" from the component diagram not found in the internal API diagram."
+        "Component interface(s) \"InternalInterface\" from the component diagram not found in the internal API diagram."
     ));
 }
 
 #[test]
-fn matches_internal_api_by_component_interface_id_when_alias_differs() {
+fn matches_internal_api_by_component_interface_id_when_interface_reference_format_differs() {
     let component_diagrams = component_diagram(vec![
         unit("u1", &["pkg.InternalInterface"], &[]),
         unit("u2", &["pkg.InternalInterface"], &[]),

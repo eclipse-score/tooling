@@ -48,6 +48,10 @@ struct Args {
     /// Debug JSON output path (internal use only)
     #[arg(long, hide = true)]
     debug_json_output: Option<PathBuf>,
+
+    /// Resolver root anchor for IDs emitted by this parser (internal use only)
+    #[arg(long, hide = true, default_value = "")]
+    root_anchor: String,
 }
 
 #[derive(Default)]
@@ -210,6 +214,37 @@ fn serialize_class_diagram(
     Ok(())
 }
 
+fn apply_root_anchor(
+    entities: &mut BTreeMap<String, SimpleEntity>,
+    free_functions: &mut [FreeFunctionDecl],
+    root_anchor: &str,
+) {
+    if root_anchor.is_empty() {
+        return;
+    }
+
+    let mut anchored_entities = BTreeMap::new();
+    for (_, mut entity) in std::mem::take(entities) {
+        entity.id = format!("{root_anchor}::{}", entity.id);
+        entity.enclosing_namespace_id = entity
+            .enclosing_namespace_id
+            .map(|namespace| format!("{root_anchor}::{namespace}"));
+        for relationship in &mut entity.relationships {
+            relationship.source = format!("{root_anchor}::{}", relationship.source);
+            relationship.target = format!("{root_anchor}::{}", relationship.target);
+        }
+        anchored_entities.insert(entity.id.clone(), entity);
+    }
+    *entities = anchored_entities;
+
+    for free_function in free_functions {
+        free_function.enclosing_namespace_id = Some(match &free_function.enclosing_namespace_id {
+            Some(namespace) if !namespace.is_empty() => format!("{root_anchor}::{namespace}"),
+            _ => root_anchor.to_string(),
+        });
+    }
+}
+
 fn ensure_output_parent_exists(path: &Path) -> Result<(), std::io::Error> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
@@ -251,6 +286,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
+    apply_root_anchor(
+        &mut outputs.types,
+        &mut outputs.free_function_declarations,
+        &command_line_args.root_anchor,
+    );
     if let Some(debug_json_output) = &command_line_args.debug_json_output {
         write_debug_json(
             debug_json_output,
@@ -260,7 +300,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &outputs.functions,
         )?;
     }
-
     serialize_class_diagram(
         &command_line_args.class_fbs_output,
         outputs.types,

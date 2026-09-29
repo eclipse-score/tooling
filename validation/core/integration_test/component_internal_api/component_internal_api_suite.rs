@@ -52,21 +52,16 @@ fn assert_case(case_dir: &str) {
 }
 
 #[test]
-fn negative_interface_missing_from_internal_api_suite_case() {
-    assert_case("negative_interface_missing_from_internal_api");
+fn negative_component_interface_missing_from_internal_api_suite_case() {
+    assert_case("negative_component_interface_missing_from_internal_api");
 }
 
 #[test]
-fn negative_interface_missing_from_internal_api_with_suggestion_suite_case() {
-    assert_case("negative_interface_missing_from_internal_api_with_suggestion");
+fn negative_component_interfaces_missing_from_internal_api_with_suggestions_suite_case() {
+    assert_case("negative_component_interfaces_missing_from_internal_api_with_suggestions");
 }
 
 #[test]
-fn negative_interfaces_missing_from_internal_api_with_suggestions_suite_case() {
-    assert_case("negative_interfaces_missing_from_internal_api_with_suggestions");
-}
-
-#[test]
-fn positive_interface_match_suite_case() {
-    assert_case("positive_interface_match");
+fn positive_component_interfaces_match_internal_api_suite_case() {
+    assert_case("positive_component_interfaces_match_internal_api");
 }
