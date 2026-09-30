@@ -88,6 +88,11 @@ fn positive_variable_features() {
 }
 
 #[test]
+fn positive_unresolved_type_not_int() {
+    assert_case("positive_unresolved_type_not_int");
+}
+
+#[test]
 fn positive_method_inheritance_features() {
     assert_case("positive_method_inheritance_features");
 }
