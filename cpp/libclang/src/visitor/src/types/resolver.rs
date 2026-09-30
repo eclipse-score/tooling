@@ -18,6 +18,7 @@
 use clang::{Entity, EntityKind, Type, TypeKind};
 use cpp_semantics::ResolvedType;
 
+use crate::clang_adapter::exception_specification::has_plain_noexcept;
 use crate::clang_adapter::source_filter;
 
 pub(crate) fn resolve_type(original: &Type) -> ResolvedType {
@@ -83,6 +84,15 @@ fn resolve_unqualified_type(original: &Type, canonical: &Type) -> ResolvedType {
             ),
             size: original.get_size(),
         },
+        TypeKind::IncompleteArray => ResolvedType::Array {
+            element: Box::new(
+                original
+                    .get_element_type()
+                    .map(|element| resolve_type(&element))
+                    .unwrap_or_else(|| unknown(original)),
+            ),
+            size: None,
+        },
 
         // ===== user-defined / template =====
         // Named types (including aliases/templates) are resolved through decl-aware fallback.
@@ -122,6 +132,7 @@ fn resolve_function_type(original: &Type) -> ResolvedType {
         return_type: Box::new(return_type),
         parameter_types,
         is_variadic: original.is_variadic(),
+        is_noexcept: has_plain_noexcept(original.get_exception_specification()),
     }
 }
 

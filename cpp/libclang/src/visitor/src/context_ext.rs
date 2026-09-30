@@ -14,7 +14,7 @@
 use log::warn;
 use std::collections::BTreeMap;
 
-use class_diagram::SimpleEntity;
+use class_diagram::{EntityType, SimpleEntity};
 
 pub trait EntityMapExt {
     fn insert_or_merge_type(&mut self, type_name: String, entity: SimpleEntity);
@@ -51,7 +51,20 @@ fn merge_simple_entity(existing: &mut SimpleEntity, incoming: SimpleEntity) {
         existing.source_location = incoming.source_location.clone();
     }
 
-    if existing.entity_type != incoming.entity_type {
+    // Replace the default Class classification only when the incoming entity
+    // exposes abstract semantics.
+    if matches!(
+        (existing.entity_type, incoming.entity_type),
+        (
+            EntityType::Class,
+            EntityType::AbstractClass | EntityType::Interface
+        )
+    ) {
+        existing.entity_type = incoming.entity_type;
+        existing.source_location = incoming.source_location.clone();
+    }
+
+    if !entity_types_are_compatible(existing.entity_type, incoming.entity_type) {
         warn!(
             "conflicting entity types while merging '{}': keeping {:?}, dropping {:?}",
             existing.id, existing.entity_type, incoming.entity_type
@@ -64,6 +77,17 @@ fn merge_simple_entity(existing: &mut SimpleEntity, incoming: SimpleEntity) {
     extend_unique(&mut existing.methods, incoming.methods);
     extend_unique(&mut existing.enum_literals, incoming.enum_literals);
     extend_unique(&mut existing.relationships, incoming.relationships);
+}
+
+fn entity_types_are_compatible(existing: EntityType, incoming: EntityType) -> bool {
+    existing == incoming || (is_class_entity_type(existing) && is_class_entity_type(incoming))
+}
+
+fn is_class_entity_type(entity_type: EntityType) -> bool {
+    matches!(
+        entity_type,
+        EntityType::Class | EntityType::Struct | EntityType::Interface | EntityType::AbstractClass
+    )
 }
 
 fn extend_unique<T: PartialEq>(existing: &mut Vec<T>, incoming: Vec<T>) {
@@ -173,5 +197,69 @@ mod tests {
         assert_eq!(widget.stereotypes, vec!["header-only"]);
         assert_eq!(widget.source_location, SourceLocation::new("second.h", 1));
         assert_eq!(widget.enclosing_namespace_id.as_deref(), Some("util"));
+    }
+
+    #[test]
+    fn insert_or_merge_type_upgrades_a_class_to_an_abstract_class() {
+        let mut types = BTreeMap::new();
+        types.insert_or_merge_type(
+            "svc::IThing".to_string(),
+            SimpleEntity {
+                id: "svc::IThing".to_string(),
+                name: "IThing".to_string(),
+                enclosing_namespace_id: Some("svc".to_string()),
+                entity_type: EntityType::Class,
+                source_location: SourceLocation::new("fwd.hpp", 2),
+                ..Default::default()
+            },
+        );
+
+        types.insert_or_merge_type(
+            "svc::IThing".to_string(),
+            SimpleEntity {
+                id: "svc::IThing".to_string(),
+                name: "IThing".to_string(),
+                enclosing_namespace_id: Some("svc".to_string()),
+                entity_type: EntityType::AbstractClass,
+                source_location: SourceLocation::new("definition.hpp", 4),
+                ..Default::default()
+            },
+        );
+
+        let thing = types.get("svc::IThing").expect("merged type should exist");
+        assert_eq!(thing.entity_type, EntityType::AbstractClass);
+        assert_eq!(
+            thing.source_location,
+            SourceLocation::new("definition.hpp", 4)
+        );
+    }
+
+    #[test]
+    fn insert_or_merge_type_does_not_downgrade_an_interface() {
+        let mut types = BTreeMap::new();
+        types.insert_or_merge_type(
+            "svc::IThing".to_string(),
+            SimpleEntity {
+                id: "svc::IThing".to_string(),
+                name: "IThing".to_string(),
+                enclosing_namespace_id: Some("svc".to_string()),
+                entity_type: EntityType::Interface,
+                ..Default::default()
+            },
+        );
+
+        types.insert_or_merge_type(
+            "svc::IThing".to_string(),
+            SimpleEntity {
+                id: "svc::IThing".to_string(),
+                name: "IThing".to_string(),
+                enclosing_namespace_id: Some("svc".to_string()),
+                entity_type: EntityType::AbstractClass,
+                ..Default::default()
+            },
+        );
+
+        let thing = types.get("svc::IThing").expect("merged type should exist");
+        assert_eq!(thing.entity_type, EntityType::Interface);
     }
 }

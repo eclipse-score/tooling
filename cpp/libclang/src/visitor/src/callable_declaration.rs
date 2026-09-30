@@ -54,33 +54,35 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
     let mut parameter_keys = Vec::new();
 
     for argument in callable_arguments(entity) {
-        let raw_param_type = argument
-            .get_type()
+        let argument_type = argument.get_type();
+        let raw_param_type = argument_type
+            .as_ref()
             .map(|ty| ty.get_display_name())
             .unwrap_or_default();
-        let resolved_type = argument.get_type().map(|ty| resolve_type(&ty));
+        let resolved_type = argument_type.as_ref().map(resolve_type);
+        let signature_type = argument_type
+            .as_ref()
+            .map(|ty| resolve_type(&ty.get_canonical_type()));
+        let is_pack_expansion = raw_param_type.contains("...");
 
         parameters.push(FunctionArgument {
             name: argument.get_name().unwrap_or_default(),
             param_type: Some(normalize_pack_expansion_type(&raw_param_type)),
             is_variadic: false,
-            is_pack_expansion: raw_param_type.contains("..."),
+            is_pack_expansion,
         });
 
         if let Some(resolved_type) = resolved_type {
-            parameter_keys.push(CallableArgumentKey {
-                param_type: Some(render_resolved_type_for_signature_identity(&resolved_type)),
-                is_variadic: false,
-                is_pack_expansion: raw_param_type.contains("..."),
-            });
             parameter_types.push(resolved_type);
-        } else {
-            parameter_keys.push(CallableArgumentKey {
-                param_type: None,
-                is_variadic: false,
-                is_pack_expansion: raw_param_type.contains("..."),
-            });
         }
+
+        parameter_keys.push(CallableArgumentKey {
+            param_type: signature_type
+                .as_ref()
+                .map(render_resolved_type_for_signature_identity),
+            is_variadic: false,
+            is_pack_expansion,
+        });
     }
 
     if entity.get_type().is_some_and(|ty| ty.is_variadic()) {
@@ -151,7 +153,16 @@ fn normalize_pack_expansion_type(param_type: &str) -> String {
 }
 
 fn render_resolved_type_for_signature_identity(resolved: &ResolvedType) -> String {
-    strip_top_level_cv_qualifiers_ref(resolved).render_for_display()
+    let resolved = strip_top_level_cv_qualifiers_ref(resolved);
+    match resolved {
+        ResolvedType::Array { element, .. } => {
+            ResolvedType::Pointer(element.clone()).render_for_display()
+        }
+        ResolvedType::Function { .. } => {
+            ResolvedType::FunctionPointer(Box::new(resolved.clone())).render_for_display()
+        }
+        _ => resolved.render_for_display(),
+    }
 }
 
 fn strip_top_level_cv_qualifiers_ref(resolved: &ResolvedType) -> &ResolvedType {

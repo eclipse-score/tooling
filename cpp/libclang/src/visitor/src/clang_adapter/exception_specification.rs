@@ -11,9 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-//! Adapters from libclang entities and types to visitor-local concepts.
+use clang::ExceptionSpecification;
 
-pub(crate) mod exception_specification;
-pub(crate) mod scope;
-pub(crate) mod source_filter;
-pub(crate) mod source_location;
+pub(crate) fn has_plain_noexcept(exception_specification: Option<ExceptionSpecification>) -> bool {
+    matches!(
+        exception_specification,
+        Some(ExceptionSpecification::BasicNoexcept)
+    )
+}

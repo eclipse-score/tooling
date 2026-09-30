@@ -1,0 +1,203 @@
+{
+  "free_function_declarations": [
+    {
+      "name": "alias_fn",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "MyInt",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/parameter_adjustment_dedup/functions.hpp",
+        "line": 19
+      }
+    },
+    {
+      "name": "typedef_fn",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "OldInt",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/parameter_adjustment_dedup/functions.hpp",
+        "line": 20
+      }
+    },
+    {
+      "name": "arr_fn",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "int[5]",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/parameter_adjustment_dedup/functions.hpp",
+        "line": 21
+      }
+    },
+    {
+      "name": "incomplete_arr_fn",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "int[]",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/parameter_adjustment_dedup/functions.hpp",
+        "line": 22
+      }
+    },
+    {
+      "name": "callback_fn",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "callback",
+          "param_type": "void (int)",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/parameter_adjustment_dedup/functions.hpp",
+        "line": 23
+      }
+    },
+    {
+      "name": "callback_noexcept_identity",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "void (*)()",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/parameter_adjustment_dedup/functions.hpp",
+        "line": 24
+      }
+    },
+    {
+      "name": "callback_noexcept_identity",
+      "enclosing_namespace_id": null,
+      "return_type": "void",
+      "parameters": [
+        {
+          "name": "",
+          "param_type": "void (*)() noexcept",
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/function_cases/parameter_adjustment_dedup/functions.hpp",
+        "line": 25
+      }
+    }
+  ],
+  "functions": [
+    {
+      "id": {
+        "name": "alias_fn",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "typedef_fn",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "arr_fn",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "incomplete_arr_fn",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "callback_fn",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "callback_noexcept_identity",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "name": "callback_noexcept_identity",
+        "scope": "Global"
+      },
+      "kind": "Free",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
+    }
+  ],
+  "types": {}
+}

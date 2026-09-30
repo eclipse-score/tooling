@@ -28,6 +28,8 @@ pub enum ResolvedType {
         return_type: Box<ResolvedType>,
         parameter_types: Vec<ResolvedType>,
         is_variadic: bool,
+        #[serde(default, skip_serializing_if = "is_false")]
+        is_noexcept: bool,
     },
     FunctionPointer(Box<ResolvedType>),
     FunctionReference(Box<ResolvedType>),
@@ -173,12 +175,18 @@ impl ResolvedType {
                 return_type,
                 parameter_types,
                 is_variadic,
+                is_noexcept,
             } => {
                 let mut parameters = parameter_types.iter().map(Self::render).collect::<Vec<_>>();
                 if *is_variadic {
                     parameters.push("...".to_string());
                 }
-                format!("{}({})", return_type.render(), parameters.join(", "))
+                let noexcept = if *is_noexcept { " noexcept" } else { "" };
+                format!(
+                    "{}({}){noexcept}",
+                    return_type.render(),
+                    parameters.join(", ")
+                )
             }
             Self::FunctionPointer(inner) => render_function_wrapper(inner, "*"),
             Self::FunctionReference(inner) => render_function_wrapper(inner, "&"),
@@ -198,11 +206,16 @@ impl ResolvedType {
     }
 }
 
+fn is_false(value: &bool) -> bool {
+    !value
+}
+
 fn render_function_wrapper(inner: &ResolvedType, marker: &str) -> String {
     if let ResolvedType::Function {
         return_type,
         parameter_types,
         is_variadic,
+        is_noexcept,
     } = inner
     {
         let mut parameters = parameter_types
@@ -212,8 +225,9 @@ fn render_function_wrapper(inner: &ResolvedType, marker: &str) -> String {
         if *is_variadic {
             parameters.push("...".to_string());
         }
+        let noexcept = if *is_noexcept { " noexcept" } else { "" };
         format!(
-            "{} ({marker})({})",
+            "{} ({marker})({}){noexcept}",
             return_type.render(),
             parameters.join(", ")
         )
@@ -335,6 +349,7 @@ mod tests {
             return_type: Box::new(ResolvedType::Builtin("void".to_string())),
             parameter_types: vec![ResolvedType::UserDefined("Engine".to_string())],
             is_variadic: false,
+            is_noexcept: false,
         };
         assert_eq!(
             ResolvedType::FunctionPointer(Box::new(function)).render_for_display(),
