@@ -28,6 +28,31 @@ to author diagrams so that the links actually resolve.
 
 ---
 
+## 0. Implementation status
+
+This guide describes the target design. As of this writing, only part of it is
+implemented on `main`; the rest lands incrementally. The
+[cross-diagram test suite](../integration_test/cross_diagram/) pins down
+exactly what is true today with executable goldens — when a row below changes,
+that suite's goldens change with it.
+
+| Topic | Today (`main`) | Target (this guide) | Test case |
+|-------|----------------|----------------------|-----------|
+| Root anchor ([§1](#1-the-three-inputs), [Rule D](#rule-d)) | **not implemented** — identifiers have no Bazel-package prefix | `ctx.label.package` prepended to every identifier | — |
+| Component id leaf ([§2](#2-component-diagrams), [Rule A](#rule-a)) | implemented — alias when present, else name | (same) | `component_nesting` |
+| Class id leaf ([§3](#3-class-diagrams), [Rule A](#rule-a)) | **not implemented** — the label/internal name is used, not the alias | alias wins over the label | `class_alias_wins` |
+| Class/component reference resolution ([§5](#5-linking-the-three-diagrams), [Rule C](#rule-c)) | first match, qualified names accepted unchecked | nearest enclosing scope, existence and ambiguity checked | `qualified_reference` |
+| Sequence participant identity ([§4](#4-sequence-diagrams), [Rule B](#rule-b)) | **not implemented** — identity is the alias, else the display name, verbatim (none of the label forms are parsed) | `uid` derived from the label per the label forms | `sequence_forms`, `prose_without_alias` |
+| Sequence ↔ component/class linking ([§5](#5-linking-the-three-diagrams)) | works only by coincidence when both sides use a plain, un-nested alias | component/class id == participant uid | `linking_three_diagrams`, `component_nesting` |
+| `ExternalEndpoint` marker ([§6](#6-special-cases), [Rule E](#rule-e)) | **not implemented** — no such reserved participant exists | emitted verbatim, never anchored | — |
+| Errors in [§7](#7-errors-you-may-hit) (`free-text participant display names require an alias…`, `multiple standalone ':' separators…`, `Duplicate entity id`, `duplicate sequence participant id`) | **not implemented** — none of these diagnostics exist yet; the rejected forms currently parse without error | as described | `prose_without_alias` |
+| Id normalization (`::` / `.` equivalence, [Definitions](#definitions)) | implemented for scope paths inside one class diagram; `::` in class and component relationship endpoints (`A --> ns::B`) is rejected, not normalized | works everywhere an identifier is read or written | `namespace_and_package`, `qualified_reference` |
+| Label markup stripping (creole tags in labels) | implemented for activity diagram labels only | also strips markup from sequence participant labels before Rule B derivation | — |
+| Qualified name inside a nested declaration ([§9](#9-current-limitations)) | **bug** — appended to the enclosing scope instead of replacing it | replaces the enclosing scope | — |
+| Cross-diagram hyperlinks (`idmap`) for sequence participants ([§9](#9-current-limitations)) | not identifier-based; links from a sequence participant may not resolve | identifier-based, same as component/class | — |
+
+---
+
 ## 1. The three inputs
 
 An identifier is assembled from exactly three things:
@@ -136,7 +161,7 @@ up.
 Sequence diagrams have no nesting, so the whole scope has to be written into
 the label.
 
-### The four forms
+### The label forms
 
 | What you write | Identity is taken from | Resulting identifier |
 |----------------|------------------------|----------------------|
@@ -331,7 +356,9 @@ participant "Display Service" as DisplayService
 
 ## 9. Current limitations
 
-Known gaps between this guide and the present implementation:
+See the [implementation status table](#0-implementation-status) for what is and
+isn't implemented yet. The two rows below are bugs rather than pending work —
+they have no planned test case and no target-design row of their own:
 
 - **A qualified name used in a *declaration* inside a block is appended to the
   enclosing scope instead of replacing it.** For example
@@ -341,7 +368,6 @@ Known gaps between this guide and the present implementation:
 - **Cross-diagram hyperlinks (`idmap`) are not yet identifier-based for
   sequence diagrams**, so clickable links from a sequence participant to its
   component may not resolve.
-- **Cross-diagrams in Class Diagrams** also have a bug currently
 
 ---
 
