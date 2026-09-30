@@ -539,7 +539,7 @@ class TestCollectRefs(unittest.TestCase):
         self.assertEqual(_collect_refs({"fulfils": "some_req"}), [])
 
     def test_mitigates_is_not_a_ref_field(self):
-        """mitigates is a String field on AoU/CompReq, not a cross-reference."""
+        """mitigates is not part of the S-CORE process and must not produce refs."""
         self.assertEqual(_collect_refs({"mitigates": "some_req"}), [])
 
     def test_returns_empty_when_no_ref_fields(self):

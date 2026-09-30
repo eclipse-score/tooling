@@ -15,8 +15,7 @@ package SampleType
 import ScoreReq
 
 ScoreReq.AoU SampleAoU {
-    description = "It shall be made sure that this SampleAoU never ends up anywhere"
+    description = "It shall be made sure that shared memory segments are never created with the wrong name (ShmemCreatedWrongName)"
     safety = ScoreReq.Asil.B
-    mitigates = "ShmemCreatedWrongName"
     version = 1
 }

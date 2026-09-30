@@ -392,7 +392,7 @@ architectural_design
 
 Bundles static, dynamic, public-API, and internal-API architecture views into a
 single target. Provides ``ArchitecturalDesignInfo`` consumed by ``dependable_element``
-and ``fmea``.
+and ``safety_analysis``.
 
 .. code-block:: python
 
@@ -528,21 +528,21 @@ implementation.
 
 **Generated targets:** ``<name>`` (no standalone test; diagrams are consumed by the parent ``unit``)
 
-.. _rule-fmea:
+.. _rule-safety-analysis:
 
-fmea
-~~~~
+safety_analysis
+~~~~~~~~~~~~~~~
 
-Bundles failure modes, control measures, and FTA diagrams into a single FMEA
+Bundles failure modes, safety measures, and FTA diagrams into a single FMEA
 documentation target.
 
 .. code-block:: python
 
-   fmea(
-       name            = "my_fmea",
+   safety_analysis(
+       name            = "my_safety_analysis",
        failuremodes    = ["docs/failuremodes.trlc"],
-       controlmeasures = ["docs/controlmeasures.trlc"],
        root_causes     = ["docs/fta.puml"],
+       safetymeasures  = ["docs/safetymeasures.trlc"],
        arch_design     = ":arch",
    )
 
@@ -562,14 +562,20 @@ documentation target.
      - label list
      - no
      - ``.trlc`` files containing ``FailureMode`` records (default ``[]``)
-   * - ``controlmeasures``
+   * - ``safetymeasures``
      - label list
      - no
-     - ``.trlc`` files containing ``ControlMeasure`` records (default ``[]``)
+     - ``.trlc`` files containing ``Mitigation``/``AoU``/``CompReq`` records (default ``[]``)
    * - ``root_causes``
      - label list
      - no
      - FTA PlantUML diagram files (``.puml`` / ``.plantuml``) (default ``[]``)
+   * - ``fta_package``
+     - string
+     - no
+     - TRLC package name for the generated ``fta_events.trlc`` stub (the
+       ``FtaFailureMode``/``RootCause`` records derived from ``root_causes``).
+       Defaults to a sanitized form of ``name`` with a ``_fta`` suffix.
    * - ``arch_design``
      - label
      - no
@@ -586,7 +592,7 @@ documentation target.
 dependability_analysis
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Wraps one or more ``fmea`` targets into a complete safety-analysis package.
+Wraps one or more ``safety_analysis`` targets into a complete safety-analysis package.
 Running ``bazel test`` validates the full FMEA traceability chain.
 
 .. code-block:: python
@@ -594,7 +600,7 @@ Running ``bazel test`` validates the full FMEA traceability chain.
    dependability_analysis(
        name        = "analysis",
        arch_design = ":my_arch",
-       fmea        = [":my_fmea"],
+       safety_analysis = [":my_safety_analysis"],
    )
 
 .. list-table::
@@ -609,10 +615,14 @@ Running ``bazel test`` validates the full FMEA traceability chain.
      - string
      - yes
      - Target name
-   * - ``fmea``
+   * - ``safety_analysis``
      - label list
      - no
-     - ``fmea`` targets to include in this analysis (default ``[]``)
+     - ``safety_analysis`` targets to include in this analysis (default ``[]``)
+   * - ``measures``
+     - label list
+     - no
+     - Additional ``Mitigation``/``AoU``/``CompReq`` ``.trlc`` files not scoped to a single ``safety_analysis`` target, considered for the root-cause-coverage completeness check (default ``[]``)
    * - ``arch_design``
      - label
      - no

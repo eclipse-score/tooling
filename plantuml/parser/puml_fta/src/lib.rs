@@ -14,29 +14,21 @@
 //! Fault-Tree-Analysis (FTA) model and emitters.
 //!
 //! Consumes the procedure parser's [`ProcedureFile`] (the stream of
-//! `$TopEvent(...)` / `$BasicEvent(...)` / gate macro calls produced after
-//! `fta_metamodel.puml` has been inlined) and turns it into:
-//!
-//! * a [`lobster-act-trace`] JSON document (`root_causes.lobster`) — schema
-//!   compatible with the legacy `safety_analysis_tools.py` so the
-//!   `dependability_analysis` traceability test is unaffected, and
-//! * an ordered list of *chains* (`fta_chains.json`) describing, per failure
-//!   mode, the inline diagram and the control measures (basic events) that
-//!   trace up to it — consumed by the FMEA page assembler.
-//!
-//! [`lobster-act-trace`]: https://github.com/bmw-software-engineering/lobster
+//! `$FailureMode(...)` / `$RootCause(...)` / gate macro calls produced after
+//! `fta_metamodel.puml` has been inlined) and turns it into the generated
+//! `FailureMode`/`RootCause` TRLC stub records (`fta_events.trlc`, see
+//! [`render_trlc_stub`]) consumed by the `safety_analysis` rule.
 
 use std::collections::HashMap;
 
 use log::warn;
 use procedure_preprocessor::{Arg, MacroCallDef, ProcedureFile, Statement};
 use serde::Serialize;
-use serde_json::{json, Value};
 
 /// Procedure macro names recognised in an FTA diagram.
-const TOP_EVENT: &str = "$TopEvent";
+const FAILURE_MODE: &str = "$FailureMode";
 const INTERMEDIATE_EVENT: &str = "$IntermediateEvent";
-const BASIC_EVENT: &str = "$BasicEvent";
+const ROOT_CAUSE: &str = "$RootCause";
 const AND_GATE: &str = "$AndGate";
 const OR_GATE: &str = "$OrGate";
 const TRANSFER_IN_GATE: &str = "$TransferInGate";
@@ -44,12 +36,12 @@ const TRANSFER_IN_GATE: &str = "$TransferInGate";
 /// The kind of a node in a fault tree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum NodeKind {
-    /// `$TopEvent` — the failure mode at the root of the tree.
-    TopEvent,
+    /// `$FailureMode` — the root of the tree; covers one or more failure modes.
+    FailureMode,
     /// `$IntermediateEvent` — a named intermediate node.
     IntermediateEvent,
-    /// `$BasicEvent` — a leaf root cause / control measure.
-    BasicEvent,
+    /// `$RootCause` — a leaf root cause / control measure.
+    RootCause,
     /// `$AndGate`, `$OrGate`, `$TransferInGate` — a logic gate.  Use
     /// [`FtaNode::gate_kind`] to distinguish which one.
     Gate,
@@ -58,15 +50,15 @@ pub enum NodeKind {
 /// Which specific gate macro produced a [`NodeKind::Gate`] node.
 ///
 /// `NodeKind::Gate` alone does not distinguish an internal `$AndGate`/`$OrGate`
-/// from a `$TransferInGate` (which links to another diagram's top event).
+/// from a `$TransferInGate` (which links to another diagram's failure mode).
 /// Consumers that need that distinction (e.g. `puml_idmap`) must match on this
 /// field rather than guessing from the node's `alias` shape.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum GateKind {
     And,
     Or,
-    /// Transfers into another diagram's top event; `alias` is that top
-    /// event's TRLC fully-qualified name.
+    /// Transfers into another diagram's failure mode; `alias` is that
+    /// failure mode's TRLC fully-qualified name.
     TransferIn,
 }
 
@@ -76,15 +68,19 @@ pub struct FtaNode {
     pub kind: NodeKind,
     /// Human readable display name (events only; gates carry `None`).
     pub name: Option<String>,
-    /// Alias / identifier.  For top and basic events this is the TRLC
-    /// fully-qualified name of the corresponding record.
+    /// Alias / identifier.  For a failure mode this is always the same as the
+    /// first entry of `failure_modes` (a TRLC fully-qualified name); for a
+    /// root cause it is a plain TRLC identifier.
     pub alias: String,
     /// Alias of the parent node this node connects upward to.  `None` for the
-    /// top event (the root).
+    /// failure mode (the root).
     pub connection: Option<String>,
     /// `Some` only when `kind == NodeKind::Gate`; identifies which gate macro
     /// produced this node. `None` for all other kinds.
     pub gate_kind: Option<GateKind>,
+    /// `NodeKind::FailureMode` only: TRLC fully-qualified names of the failure
+    /// modes this failure mode covers.  Empty for every other kind.
+    pub failure_modes: Vec<String>,
     /// 1-based line of the macro call in its source diagram.
     /// `None` when the line is unavailable (e.g. synthesised nodes in tests).
     pub line: Option<usize>,
@@ -96,19 +92,26 @@ pub struct FtaModel {
     pub nodes: Vec<FtaNode>,
 }
 
-/// One failure-mode chain: the failure mode together with the control measures
-/// (basic events) whose ancestry reaches it, plus the diagram to render.
+/// One record to emit into the generated TRLC stub package (see
+/// [`render_trlc_stub`]).  Produced per-diagram by [`FtaModel::stub_events`]
+/// and merged across every diagram of an `fta_package` by
+/// [`merge_stub_events`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct FtaChain {
-    /// Fully-qualified name of the failure mode (top event alias).
-    pub fm_fqn: String,
-    /// Human readable failure mode name.
-    pub fm_name: String,
-    /// Basename of the preprocessed `.puml` diagram to render inline.
-    pub puml: String,
-    /// Fully-qualified names of the control measures for this chain, in the
-    /// order they appear in the diagram.
-    pub control_measures: Vec<String>,
+pub struct StubEvent {
+    /// `NodeKind::FailureMode` or `NodeKind::RootCause` — never any other kind.
+    pub kind: NodeKind,
+    /// TRLC record name within the generated `fta_package` (see [`stub_name`]).
+    pub stub_name: String,
+    pub title: String,
+    /// Basename of the source `.puml` diagram (first diagram, if merged).
+    pub diagram: String,
+    /// Source line in `diagram` (first diagram, if merged).
+    pub line: usize,
+    /// `FailureMode` only: fully-qualified names of the failure modes it covers.
+    pub failure_modes: Vec<String>,
+    /// `RootCause` only: `stub_name`s of the failure modes it contributes to,
+    /// merged (order-preserving, de-duplicated) across every diagram.
+    pub fta_failure_modes: Vec<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -117,6 +120,42 @@ pub enum FtaError {
     MissingArgs { macro_name: String, expected: usize },
     #[error("FTA macro {macro_name} expected a string argument at position {index}")]
     NonStringArg { macro_name: String, index: usize },
+    #[error(
+        "FTA macro $FailureMode at line {line}: failure mode {fm_fqn:?} is not a valid TRLC \
+         fully-qualified name (expected 'Package.Name')"
+    )]
+    InvalidFailureModeFqn { line: usize, fm_fqn: String },
+    #[error(
+        "FTA {diagram}:{line}: $RootCause alias {alias:?} must be a plain TRLC identifier -- \
+         dotted 'Package.Name' aliases are no longer supported for root causes"
+    )]
+    InvalidRootCauseAlias {
+        diagram: String,
+        line: usize,
+        alias: String,
+    },
+    #[error(
+        "FTA stub {stub_name:?} is declared as both a FailureMode (in {first_diagram}) and a \
+         RootCause (in {second_diagram}); stub names must be unique across all diagrams \
+         sharing an fta_package"
+    )]
+    StubKindClash {
+        stub_name: String,
+        first_diagram: String,
+        second_diagram: String,
+    },
+    #[error(
+        "FTA stub {stub_name:?} has a different title in {first_diagram} ({first_title:?}) than \
+         in {second_diagram} ({second_title:?}); use the same title everywhere the same root \
+         cause or failure mode is referenced"
+    )]
+    StubTitleMismatch {
+        stub_name: String,
+        first_diagram: String,
+        first_title: String,
+        second_diagram: String,
+        second_title: String,
+    },
 }
 
 /// Legacy guardrail (ported from `safety_analysis_tools.py`): a TRLC
@@ -127,11 +166,21 @@ fn is_valid_trlc_fqn(alias: &str) -> bool {
     if parts.len() != 2 {
         return false;
     }
-    parts.iter().all(|part| {
-        let mut chars = part.chars();
-        let first_ok = matches!(chars.next(), Some(c) if c.is_ascii_alphabetic() || c == '_');
-        first_ok && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
-    })
+    parts.iter().all(|part| is_valid_identifier(part))
+}
+
+/// A single TRLC identifier: `[A-Za-z_][A-Za-z0-9_]*`.
+fn is_valid_identifier(s: &str) -> bool {
+    let mut chars = s.chars();
+    let first_ok = matches!(chars.next(), Some(c) if c.is_ascii_alphabetic() || c == '_');
+    first_ok && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+/// Derive the local TRLC stub identifier from a diagram alias: a legacy
+/// dotted alias (`Package.Name`) collapses to its last segment; any other
+/// alias (new-style diagrams) is used verbatim.
+fn stub_name(alias: &str) -> &str {
+    alias.rsplit('.').next().unwrap_or(alias)
 }
 
 fn string_arg(call: &MacroCallDef, index: usize) -> Result<String, FtaError> {
@@ -158,29 +207,57 @@ impl FtaModel {
                 continue;
             };
             let line = call.line;
+
             let node = match call.name.as_str() {
-                TOP_EVENT => FtaNode {
-                    kind: NodeKind::TopEvent,
-                    name: Some(string_arg(call, 0)?),
-                    alias: string_arg(call, 1)?,
-                    connection: None,
-                    gate_kind: None,
-                    line,
-                },
+                FAILURE_MODE => {
+                    if call.args.len() < 2 {
+                        return Err(FtaError::MissingArgs {
+                            macro_name: call.name.clone(),
+                            expected: 2,
+                        });
+                    }
+                    let name = string_arg(call, 0)?;
+                    let mut failure_modes = Vec::with_capacity(call.args.len() - 1);
+                    for i in 1..call.args.len() {
+                        let fm_fqn = string_arg(call, i)?;
+                        if !is_valid_trlc_fqn(&fm_fqn) {
+                            return Err(FtaError::InvalidFailureModeFqn {
+                                line: line.unwrap_or(0),
+                                fm_fqn,
+                            });
+                        }
+                        if !failure_modes.contains(&fm_fqn) {
+                            failure_modes.push(fm_fqn);
+                        }
+                    }
+                    // Non-empty: the loop above ran at least once (`args.len() >= 2`).
+                    let alias = failure_modes[0].clone();
+                    FtaNode {
+                        kind: NodeKind::FailureMode,
+                        name: Some(name),
+                        alias,
+                        connection: None,
+                        gate_kind: None,
+                        failure_modes,
+                        line,
+                    }
+                }
                 INTERMEDIATE_EVENT => FtaNode {
                     kind: NodeKind::IntermediateEvent,
                     name: Some(string_arg(call, 0)?),
                     alias: string_arg(call, 1)?,
                     connection: Some(string_arg(call, 2)?),
                     gate_kind: None,
+                    failure_modes: Vec::new(),
                     line,
                 },
-                BASIC_EVENT => FtaNode {
-                    kind: NodeKind::BasicEvent,
+                ROOT_CAUSE => FtaNode {
+                    kind: NodeKind::RootCause,
                     name: Some(string_arg(call, 0)?),
                     alias: string_arg(call, 1)?,
                     connection: Some(string_arg(call, 2)?),
                     gate_kind: None,
+                    failure_modes: Vec::new(),
                     line,
                 },
                 AND_GATE | OR_GATE | TRANSFER_IN_GATE => {
@@ -196,28 +273,16 @@ impl FtaModel {
                         alias: string_arg(call, 0)?,
                         connection: Some(string_arg(call, 1)?),
                         gate_kind: Some(gate_kind),
+                        failure_modes: Vec::new(),
                         line,
                     }
                 }
                 // Unknown / cosmetic macros are not part of the topology.
                 _ => continue,
             };
-            // Top and basic events carry TRLC fully-qualified names that must
-            // resolve to requirements in the traceability chain; warn (rather
-            // than fail) on a malformed alias so the build still produces output.
-            if matches!(node.kind, NodeKind::TopEvent | NodeKind::BasicEvent)
-                && !is_valid_trlc_fqn(&node.alias)
-            {
-                warn!(
-                    "FTA {} at line {}: alias {:?} is not a valid TRLC fully-qualified \
-                     name (expected 'Package.Record')",
-                    call.name,
-                    node.line.unwrap_or(0),
-                    node.alias,
-                );
-            }
             nodes.push(node);
         }
+
         Ok(Self { nodes })
     }
 
@@ -246,14 +311,14 @@ impl FtaModel {
 
     /// Resolve the top-event (failure-mode) alias a node ultimately connects to
     /// by walking the `connection` parent links upward.  Returns `None` when the
-    /// chain does not terminate at a known top event (dangling or cyclic
+    /// chain does not terminate at a known failure mode (dangling or cyclic
     /// diagram).  `by_alias` is the precomputed [`alias_index`], so each step is
     /// O(1).
     fn root_for(&self, start: &FtaNode, by_alias: &HashMap<&str, &FtaNode>) -> Option<String> {
         let mut current = start;
         // Bound the walk by node count to defend against cyclic connections.
         for _ in 0..=self.nodes.len() {
-            if current.kind == NodeKind::TopEvent {
+            if current.kind == NodeKind::FailureMode {
                 return Some(current.alias.clone());
             }
             let parent_alias = current.connection.as_deref()?;
@@ -262,93 +327,186 @@ impl FtaModel {
         None
     }
 
-    /// Assemble ordered failure-mode chains for `puml_basename`.
-    ///
-    /// Basic events whose ancestry does not terminate at a known top event are
-    /// not silently discarded: each emits a `warn!` naming the alias, diagram
-    /// and line so a malformed fault tree is visible in the build log rather
-    /// than quietly losing a control measure from the safety chain.
-    pub fn chains(&self, puml_basename: &str) -> Vec<FtaChain> {
+    /// Assemble the [`StubEvent`]s this diagram contributes to the generated
+    /// TRLC stub package (see [`render_trlc_stub`]).  One entry per failure mode
+    /// (with its `failure_modes`) and one per root cause reachable from a top
+    /// event (with the `stub_name` of that failure mode); root causes that do
+    /// not connect to any failure mode are dropped with a `warn!` naming the
+    /// alias, diagram and line so a malformed fault tree is visible in the
+    /// build log rather than quietly losing a root cause from the safety
+    /// chain.
+    pub fn stub_events(&self, puml_basename: &str) -> Result<Vec<StubEvent>, FtaError> {
         let by_alias = self.alias_index();
-        let mut chains: Vec<FtaChain> = self
-            .iter_kind(NodeKind::TopEvent)
-            .map(|fm| FtaChain {
-                fm_fqn: fm.alias.clone(),
-                fm_name: fm.name.clone().unwrap_or_else(|| fm.alias.clone()),
-                puml: puml_basename.to_string(),
-                control_measures: Vec::new(),
-            })
-            .collect();
+        let mut out = Vec::new();
 
-        for basic in self.iter_kind(NodeKind::BasicEvent) {
-            match self.root_for(basic, &by_alias) {
-                Some(root) => {
-                    if let Some(chain) = chains.iter_mut().find(|c| c.fm_fqn == root) {
-                        chain.control_measures.push(basic.alias.clone());
-                    }
-                }
-                None => warn!(
-                    "FTA {}:{}: basic event {:?} does not connect to any top event; \
-                     it is dropped from every failure-mode chain",
-                    puml_basename,
-                    basic.line.unwrap_or(0),
-                    basic.alias,
-                ),
-            }
+        for te in self.iter_kind(NodeKind::FailureMode) {
+            let line = te.line.unwrap_or(0);
+            // `te.alias` is `te.failure_modes[0]`, already validated as a TRLC
+            // fully-qualified name by `from_procedure_file`, so its last
+            // segment (see `stub_name`) is guaranteed to be a valid identifier.
+            let name = stub_name(&te.alias);
+            out.push(StubEvent {
+                kind: NodeKind::FailureMode,
+                stub_name: name.to_string(),
+                title: te.name.clone().unwrap_or_default(),
+                diagram: puml_basename.to_string(),
+                line,
+                failure_modes: te.failure_modes.clone(),
+                fta_failure_modes: Vec::new(),
+            });
         }
-        chains
-    }
 
-    /// Emit `lobster-act-trace` items for the top and basic events, mirroring
-    /// the legacy `safety_analysis_tools.py` schema (tag `fta <alias>`,
-    /// `refs: [req <alias>]`).
-    pub fn lobster_items(&self, source_file: &str) -> Vec<Value> {
-        self.nodes
-            .iter()
-            .filter(|n| matches!(n.kind, NodeKind::TopEvent | NodeKind::BasicEvent))
-            .map(|n| {
-                let kind = match n.kind {
-                    NodeKind::TopEvent => "TopEvent",
-                    NodeKind::BasicEvent => "BasicEvent",
-                    _ => unreachable!(),
-                };
-                json!({
-                    "tag": format!("fta {}", n.alias),
-                    "location": {
-                        "kind": "file",
-                        "file": source_file,
-                        "line": n.line.map(|l| json!(l)).unwrap_or(Value::Null),
-                        "column": null,
-                    },
-                    "name": n.alias,
-                    "messages": [],
-                    "just_up": [],
-                    "just_down": [],
-                    "just_global": [],
-                    "refs": [format!("req {}", n.alias)],
-                    "framework": "PlantUML",
-                    "kind": kind,
-                })
-            })
-            .collect()
+        for be in self.iter_kind(NodeKind::RootCause) {
+            let line = be.line.unwrap_or(0);
+            if !is_valid_identifier(&be.alias) {
+                return Err(FtaError::InvalidRootCauseAlias {
+                    diagram: puml_basename.to_string(),
+                    line,
+                    alias: be.alias.clone(),
+                });
+            }
+            let Some(root_alias) = self.root_for(be, &by_alias) else {
+                warn!(
+                    "FTA {}:{}: root cause {:?} does not connect to any failure mode; \
+                     it is dropped from the generated TRLC stub",
+                    puml_basename, line, be.alias,
+                );
+                continue;
+            };
+            out.push(StubEvent {
+                kind: NodeKind::RootCause,
+                stub_name: be.alias.clone(),
+                title: be.name.clone().unwrap_or_default(),
+                diagram: puml_basename.to_string(),
+                line,
+                failure_modes: Vec::new(),
+                fta_failure_modes: vec![stub_name(&root_alias).to_string()],
+            });
+        }
+
+        Ok(out)
     }
 }
 
-/// Wrap lobster items in the standard `lobster-act-trace` envelope, sorted by
-/// tag for deterministic output.
-pub fn lobster_document(mut items: Vec<Value>) -> Value {
-    items.sort_by(|a, b| {
-        a["tag"]
-            .as_str()
-            .unwrap_or("")
-            .cmp(b["tag"].as_str().unwrap_or(""))
+/// Merge [`StubEvent`]s collected across every diagram of one `fta_package`
+/// into a single, deduplicated set (one entry per `stub_name`): a root cause
+/// shared by several diagrams keeps a single record with its `fta_failure_modes`
+/// merged. Returns an error when the same `stub_name` is used for both a top
+/// and a root cause, or with two different titles.
+pub fn merge_stub_events(events: Vec<StubEvent>) -> Result<Vec<StubEvent>, FtaError> {
+    let mut merged: HashMap<String, StubEvent> = HashMap::new();
+    for ev in events {
+        match merged.get_mut(&ev.stub_name) {
+            None => {
+                merged.insert(ev.stub_name.clone(), ev);
+            }
+            Some(existing) => {
+                if existing.kind != ev.kind {
+                    return Err(FtaError::StubKindClash {
+                        stub_name: ev.stub_name,
+                        first_diagram: existing.diagram.clone(),
+                        second_diagram: ev.diagram,
+                    });
+                }
+                if existing.title != ev.title {
+                    return Err(FtaError::StubTitleMismatch {
+                        stub_name: ev.stub_name,
+                        first_diagram: existing.diagram.clone(),
+                        first_title: existing.title.clone(),
+                        second_diagram: ev.diagram,
+                        second_title: ev.title,
+                    });
+                }
+                for fm in ev.failure_modes {
+                    if !existing.failure_modes.contains(&fm) {
+                        existing.failure_modes.push(fm);
+                    }
+                }
+                for te in ev.fta_failure_modes {
+                    if !existing.fta_failure_modes.contains(&te) {
+                        existing.fta_failure_modes.push(te);
+                    }
+                }
+            }
+        }
+    }
+
+    let mut result: Vec<StubEvent> = merged.into_values().collect();
+    result.sort_by(|a, b| {
+        let rank = |k: NodeKind| if k == NodeKind::FailureMode { 0 } else { 1 };
+        (rank(a.kind), &a.stub_name).cmp(&(rank(b.kind), &b.stub_name))
     });
-    json!({
-        "data": items,
-        "generator": "puml_fta",
-        "schema": "lobster-act-trace",
-        "version": 3,
-    })
+    Ok(result)
+}
+
+/// Escape a Rust string as a TRLC string literal (including the surrounding
+/// quotes).
+fn trlc_string_literal(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+    for c in s.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            _ => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// Render merged [`StubEvent`]s (see [`merge_stub_events`]) as one TRLC file:
+/// a `FailureMode`/`RootCause` record per event, importing `ScoreReq` plus every
+/// package referenced by a `failure_modes` fully-qualified name. Output order
+/// is deterministic (see [`merge_stub_events`]) and every record carries a
+/// `<diagram>:<line>` comment pointing back at its source macro call.
+pub fn render_trlc_stub(package: &str, events: &[StubEvent]) -> String {
+    let mut fm_packages: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+    for ev in events {
+        for fm in &ev.failure_modes {
+            if let Some((pkg, _)) = fm.rsplit_once('.') {
+                fm_packages.insert(pkg);
+            }
+        }
+    }
+
+    let mut out = String::new();
+    out.push_str("// GENERATED by puml_cli from FTA diagrams -- do not edit\n");
+    out.push_str(&format!("package {}\n\n", package));
+    out.push_str("import ScoreReq\n");
+    for pkg in fm_packages {
+        out.push_str(&format!("import {}\n", pkg));
+    }
+    out.push('\n');
+
+    for ev in events {
+        out.push_str(&format!("// {}:{}\n", ev.diagram, ev.line));
+        match ev.kind {
+            NodeKind::FailureMode => {
+                out.push_str(&format!(
+                    "ScoreReq.FtaFailureMode {} {{\n  title = {}\n  diagram = {}\n  line = {}\n  failure_modes = [{}]\n}}\n\n",
+                    ev.stub_name,
+                    trlc_string_literal(&ev.title),
+                    trlc_string_literal(&ev.diagram),
+                    ev.line,
+                    ev.failure_modes.join(", "),
+                ));
+            }
+            NodeKind::RootCause => {
+                out.push_str(&format!(
+                    "ScoreReq.RootCause {} {{\n  title = {}\n  diagram = {}\n  line = {}\n  failure_modes = [{}]\n}}\n\n",
+                    ev.stub_name,
+                    trlc_string_literal(&ev.title),
+                    trlc_string_literal(&ev.diagram),
+                    ev.line,
+                    ev.fta_failure_modes.join(", "),
+                ));
+            }
+            _ => unreachable!("StubEvent::kind is always FailureMode or RootCause"),
+        }
+    }
+    out
 }
 
 #[cfg(test)]
@@ -375,13 +533,13 @@ mod tests {
     }
 
     const SAMPLE: &str = r#"
-!procedure $TopEvent($name, $alias)
+!procedure $FailureMode($name, $alias)
   rectangle "$name" as $alias
 !endprocedure
 !procedure $IntermediateEvent($name, $alias, $connection)
   rectangle "$name" as $alias
 !endprocedure
-!procedure $BasicEvent($name, $alias, $connection)
+!procedure $RootCause($name, $alias, $connection)
   usecase "$name" as $alias
 !endprocedure
 !procedure $OrGate($alias, $connection)
@@ -390,13 +548,13 @@ mod tests {
 !procedure $AndGate($alias, $connection)
   rectangle " " as $alias
 !endprocedure
-$TopEvent("SampleFailureMode takes over the world", "SampleLibrary.SampleFailureMode")
+$FailureMode("SampleFailureMode takes over the world", "SampleLibrary.SampleFailureMode")
 $OrGate("OG1", "SampleLibrary.SampleFailureMode")
 $IntermediateEvent("SampleFailureMode is Angry", "IEF", "OG1")
-$BasicEvent("Just bad luck", "SampleLibrary.JustBadLuck", "OG1")
+$RootCause("Just bad luck", "JustBadLuck", "OG1")
 $AndGate("AG2", "IEF")
-$BasicEvent("No More Cookies", "SampleLibrary.NoMoreCookies", "AG2")
-$BasicEvent("No More Coffee", "SampleLibrary.NoMoreCoffee", "AG2")
+$RootCause("No More Cookies", "NoMoreCookies", "AG2")
+$RootCause("No More Coffee", "NoMoreCoffee", "AG2")
 "#;
 
     fn model_from(content: &str) -> FtaModel {
@@ -410,47 +568,30 @@ $BasicEvent("No More Coffee", "SampleLibrary.NoMoreCoffee", "AG2")
     #[test]
     fn builds_all_topology_nodes() {
         let model = model_from(SAMPLE);
-        assert_eq!(model.iter_kind(NodeKind::TopEvent).count(), 1);
-        assert_eq!(model.iter_kind(NodeKind::BasicEvent).count(), 3);
+        assert_eq!(model.iter_kind(NodeKind::FailureMode).count(), 1);
+        assert_eq!(model.iter_kind(NodeKind::RootCause).count(), 3);
         assert_eq!(model.iter_kind(NodeKind::Gate).count(), 2);
         assert_eq!(model.iter_kind(NodeKind::IntermediateEvent).count(), 1);
     }
 
     #[test]
-    fn chain_groups_basic_events_under_failure_mode() {
+    fn stub_events_groups_root_causes_under_failure_mode() {
         let model = model_from(SAMPLE);
-        let chains = model.chains("sample_fta.puml");
-        assert_eq!(chains.len(), 1);
-        let chain = &chains[0];
-        assert_eq!(chain.fm_fqn, "SampleLibrary.SampleFailureMode");
-        assert_eq!(chain.puml, "sample_fta.puml");
-        assert_eq!(
-            chain.control_measures,
-            vec![
-                "SampleLibrary.JustBadLuck",
-                "SampleLibrary.NoMoreCookies",
-                "SampleLibrary.NoMoreCoffee",
-            ]
-        );
-    }
-
-    #[test]
-    fn lobster_items_match_legacy_schema() {
-        let model = model_from(SAMPLE);
-        let doc = lobster_document(model.lobster_items("sample_fta.puml"));
-        assert_eq!(doc["schema"], "lobster-act-trace");
-        assert_eq!(doc["version"], 3);
-        let data = doc["data"].as_array().unwrap();
-        // 1 top event + 3 basic events.
-        assert_eq!(data.len(), 4);
-        let top = data
+        let stubs = model.stub_events("sample_fta.puml").expect("stub events");
+        let mut root_causes: Vec<&str> = stubs
             .iter()
-            .find(|i| i["name"] == "SampleLibrary.SampleFailureMode")
-            .unwrap();
-        assert_eq!(top["tag"], "fta SampleLibrary.SampleFailureMode");
-        assert_eq!(top["refs"][0], "req SampleLibrary.SampleFailureMode");
-        assert_eq!(top["kind"], "TopEvent");
-        assert_eq!(top["framework"], "PlantUML");
+            .filter(|e| e.kind == NodeKind::RootCause)
+            .map(|e| e.stub_name.as_str())
+            .collect();
+        root_causes.sort_unstable();
+        assert_eq!(
+            root_causes,
+            vec!["JustBadLuck", "NoMoreCoffee", "NoMoreCookies"]
+        );
+        assert!(stubs
+            .iter()
+            .filter(|e| e.kind == NodeKind::RootCause)
+            .all(|e| e.fta_failure_modes == vec!["SampleFailureMode".to_string()]));
     }
 
     #[test]
@@ -465,55 +606,39 @@ $BasicEvent("No More Coffee", "SampleLibrary.NoMoreCoffee", "AG2")
     }
 
     #[test]
-    fn multiple_top_events_get_separate_chains() {
-        let chains = model_from_stmts(vec![
-            mk_call(TOP_EVENT, &["FM one", "Lib.FmA"], 1),
+    fn multiple_fta_failure_modes_produce_independent_stub_entries() {
+        let model = model_from_stmts(vec![
+            mk_call(FAILURE_MODE, &["FM one", "Lib.FmA"], 1),
             mk_call(OR_GATE, &["OGA", "Lib.FmA"], 2),
-            mk_call(BASIC_EVENT, &["cm a", "Lib.CmA", "OGA"], 3),
-            mk_call(TOP_EVENT, &["FM two", "Lib.FmB"], 4),
+            mk_call(ROOT_CAUSE, &["cm a", "CmA", "OGA"], 3),
+            mk_call(FAILURE_MODE, &["FM two", "Lib.FmB"], 4),
             mk_call(OR_GATE, &["OGB", "Lib.FmB"], 5),
-            mk_call(BASIC_EVENT, &["cm b", "Lib.CmB", "OGB"], 6),
-        ])
-        .chains("d.puml");
-
-        assert_eq!(chains.len(), 2);
-        let a = chains.iter().find(|c| c.fm_fqn == "Lib.FmA").unwrap();
-        assert_eq!(a.control_measures, vec!["Lib.CmA"]);
-        let b = chains.iter().find(|c| c.fm_fqn == "Lib.FmB").unwrap();
-        assert_eq!(b.control_measures, vec!["Lib.CmB"]);
-    }
-
-    #[test]
-    fn dangling_basic_event_is_dropped_from_chains() {
-        // Basic event connects to a gate alias that does not exist.
-        let chains = model_from_stmts(vec![
-            mk_call(TOP_EVENT, &["FM", "Lib.Fm"], 1),
-            mk_call(BASIC_EVENT, &["cm", "Lib.Cm", "MissingGate"], 2),
-        ])
-        .chains("d.puml");
-
-        assert_eq!(chains.len(), 1);
-        assert!(chains[0].control_measures.is_empty());
+            mk_call(ROOT_CAUSE, &["cm b", "CmB", "OGB"], 6),
+        ]);
+        let stubs = model.stub_events("d.puml").expect("stub events");
+        let a = stubs.iter().find(|e| e.stub_name == "CmA").unwrap();
+        assert_eq!(a.fta_failure_modes, vec!["FmA".to_string()]);
+        let b = stubs.iter().find(|e| e.stub_name == "CmB").unwrap();
+        assert_eq!(b.fta_failure_modes, vec!["FmB".to_string()]);
     }
 
     #[test]
     fn cyclic_connections_terminate_without_hanging() {
-        // G1 -> G2 -> G1 cycle, no reachable top event.  The bounded walk must
-        // return without looping forever.
-        let chains = model_from_stmts(vec![
+        // G1 -> G2 -> G1 cycle, no reachable failure mode.  The bounded walk must
+        // return without looping forever, and the root cause is dropped.
+        let model = model_from_stmts(vec![
             mk_call(OR_GATE, &["G1", "G2"], 1),
             mk_call(OR_GATE, &["G2", "G1"], 2),
-            mk_call(BASIC_EVENT, &["cm", "Lib.Cm", "G1"], 3),
-        ])
-        .chains("d.puml");
-
-        assert!(chains.is_empty());
+            mk_call(ROOT_CAUSE, &["cm", "Cm", "G1"], 3),
+        ]);
+        let stubs = model.stub_events("d.puml").expect("stub events");
+        assert!(stubs.is_empty());
     }
 
     #[test]
     fn missing_argument_is_an_error() {
         let file = ProcedureFile {
-            stmts: vec![mk_call(TOP_EVENT, &["only name"], 1)],
+            stmts: vec![mk_call(FAILURE_MODE, &["only name"], 1)],
         };
         let err = FtaModel::from_procedure_file(&file).unwrap_err();
         assert!(matches!(err, FtaError::MissingArgs { .. }));
@@ -523,7 +648,7 @@ $BasicEvent("No More Coffee", "SampleLibrary.NoMoreCoffee", "AG2")
     fn non_string_argument_is_an_error() {
         let file = ProcedureFile {
             stmts: vec![Statement::MacroCall(MacroCallDef {
-                name: TOP_EVENT.to_string(),
+                name: FAILURE_MODE.to_string(),
                 args: vec![Arg::Number(1), Arg::String("Lib.Fm".to_string())],
                 line: Some(1),
             })],
@@ -533,50 +658,238 @@ $BasicEvent("No More Coffee", "SampleLibrary.NoMoreCoffee", "AG2")
     }
 
     #[test]
-    fn lobster_document_sorted_by_tag() {
-        let doc = lobster_document(
-            model_from_stmts(vec![
-                mk_call(TOP_EVENT, &["FM", "Lib.Zeta"], 1),
-                mk_call(OR_GATE, &["OG", "Lib.Zeta"], 2),
-                mk_call(BASIC_EVENT, &["cm", "Lib.Alpha", "OG"], 3),
-            ])
-            .lobster_items("d.puml"),
-        );
-        let data = doc["data"].as_array().unwrap();
-        let tags: Vec<&str> = data.iter().map(|i| i["tag"].as_str().unwrap()).collect();
-        let mut expected = tags.clone();
-        expected.sort_unstable();
-        assert_eq!(tags, expected);
-        assert_eq!(data[0]["name"], "Lib.Alpha");
-    }
-
-    #[test]
-    fn lobster_items_carry_source_line() {
-        let items = model_from_stmts(vec![mk_call(TOP_EVENT, &["FM", "Lib.Fm"], 7)])
-            .lobster_items("d.puml");
-        assert_eq!(items[0]["location"]["line"], 7);
-    }
-
-    #[test]
-    fn duplicate_alias_last_write_wins_and_basic_event_is_attributed_correctly() {
-        // Two top events share the same alias; only the second should be
-        // reachable via `alias_index`, and the basic event must end up in the
-        // chain for the winning (second) entry.
-        let chains = model_from_stmts(vec![
-            mk_call(TOP_EVENT, &["FM first", "Lib.Fm"], 1),
-            mk_call(TOP_EVENT, &["FM second", "Lib.Fm"], 2),
+    fn duplicate_alias_last_write_wins_and_root_cause_is_attributed_correctly() {
+        // Two failure modes happen to share the same failure-mode alias; only
+        // the last one is reachable via `alias_index`, so the root cause's
+        // ancestry resolves through it regardless of which node "wins".
+        let model = model_from_stmts(vec![
+            mk_call(FAILURE_MODE, &["FM first", "Lib.Fm"], 1),
+            mk_call(FAILURE_MODE, &["FM second", "Lib.Fm"], 2),
             mk_call(OR_GATE, &["OG", "Lib.Fm"], 3),
-            mk_call(BASIC_EVENT, &["cm", "Lib.Cm", "OG"], 4),
-        ])
-        .chains("d.puml");
-        // Two chain entries (one per TopEvent node), but the basic event
-        // connects through OG → Lib.Fm which resolves to the last-write node.
-        assert_eq!(chains.len(), 2);
-        let with_cm: Vec<_> = chains
+            mk_call(ROOT_CAUSE, &["cm", "Cm", "OG"], 4),
+        ]);
+        let stubs = model.stub_events("d.puml").expect("stub events");
+        let top_names: Vec<&str> = stubs
             .iter()
-            .filter(|c| !c.control_measures.is_empty())
+            .filter(|e| e.kind == NodeKind::FailureMode)
+            .map(|e| e.stub_name.as_str())
             .collect();
-        assert_eq!(with_cm.len(), 1);
-        assert_eq!(with_cm[0].control_measures, vec!["Lib.Cm"]);
+        assert_eq!(top_names, vec!["Fm", "Fm"]);
+        let be = stubs
+            .iter()
+            .find(|e| e.kind == NodeKind::RootCause)
+            .unwrap();
+        assert_eq!(be.stub_name, "Cm");
+        assert_eq!(be.fta_failure_modes, vec!["Fm".to_string()]);
+    }
+
+    #[test]
+    fn failure_mode_alias_equals_first_failure_mode() {
+        let model = model_from_stmts(vec![mk_call(FAILURE_MODE, &["FM", "Lib.Fm"], 1)]);
+        let te = model.iter_kind(NodeKind::FailureMode).next().unwrap();
+        assert_eq!(te.alias, "Lib.Fm");
+        assert_eq!(te.failure_modes, vec!["Lib.Fm".to_string()]);
+    }
+
+    #[test]
+    fn failure_mode_with_multiple_failure_modes_dedups_and_keeps_order() {
+        let model = model_from_stmts(vec![mk_call(
+            FAILURE_MODE,
+            &["Top", "Lib.A", "Lib.B", "Lib.A"],
+            1,
+        )]);
+        let te = model.iter_kind(NodeKind::FailureMode).next().unwrap();
+        assert_eq!(te.alias, "Lib.A");
+        assert_eq!(
+            te.failure_modes,
+            vec!["Lib.A".to_string(), "Lib.B".to_string()]
+        );
+    }
+
+    #[test]
+    fn failure_mode_rejects_invalid_failure_mode_fqn() {
+        let file = ProcedureFile {
+            stmts: vec![mk_call(FAILURE_MODE, &["Top", "NotDotted"], 2)],
+        };
+        let err = FtaModel::from_procedure_file(&file).unwrap_err();
+        assert!(matches!(
+            err,
+            FtaError::InvalidFailureModeFqn { line: 2, .. }
+        ));
+    }
+
+    #[test]
+    fn stub_events_collapses_failure_mode_alias_to_last_segment() {
+        let model = model_from_stmts(vec![
+            mk_call(FAILURE_MODE, &["FM", "Lib.Fm"], 1),
+            mk_call(OR_GATE, &["OG", "Lib.Fm"], 2),
+            mk_call(ROOT_CAUSE, &["cm", "Cm", "OG"], 3),
+        ]);
+        let stubs = model.stub_events("d.puml").expect("stub events");
+        let te = stubs
+            .iter()
+            .find(|e| e.kind == NodeKind::FailureMode)
+            .unwrap();
+        assert_eq!(te.stub_name, "Fm");
+        assert_eq!(te.failure_modes, vec!["Lib.Fm".to_string()]);
+        let be = stubs
+            .iter()
+            .find(|e| e.kind == NodeKind::RootCause)
+            .unwrap();
+        assert_eq!(be.stub_name, "Cm");
+        assert_eq!(be.fta_failure_modes, vec!["Fm".to_string()]);
+    }
+
+    #[test]
+    fn stub_events_new_style_diagram_uses_plain_names() {
+        let model = model_from_stmts(vec![
+            mk_call(FAILURE_MODE, &["Top", "Lib.A", "Lib.B"], 1),
+            mk_call(OR_GATE, &["OG", "Lib.A"], 4),
+            mk_call(ROOT_CAUSE, &["Root", "TooBig", "OG"], 5),
+        ]);
+        let stubs = model.stub_events("d.puml").expect("stub events");
+        let te = stubs
+            .iter()
+            .find(|e| e.kind == NodeKind::FailureMode)
+            .unwrap();
+        assert_eq!(te.stub_name, "A");
+        assert_eq!(
+            te.failure_modes,
+            vec!["Lib.A".to_string(), "Lib.B".to_string()]
+        );
+        let be = stubs
+            .iter()
+            .find(|e| e.kind == NodeKind::RootCause)
+            .unwrap();
+        assert_eq!(be.stub_name, "TooBig");
+        assert_eq!(be.fta_failure_modes, vec!["A".to_string()]);
+    }
+
+    #[test]
+    fn root_cause_rejects_dotted_alias() {
+        let model = model_from_stmts(vec![
+            mk_call(FAILURE_MODE, &["FM", "Lib.Fm"], 1),
+            mk_call(OR_GATE, &["OG", "Lib.Fm"], 2),
+            mk_call(ROOT_CAUSE, &["cm", "Lib.Cm", "OG"], 3),
+        ]);
+        let err = model.stub_events("d.puml").unwrap_err();
+        assert!(matches!(
+            err,
+            FtaError::InvalidRootCauseAlias { line: 3, .. }
+        ));
+    }
+
+    #[test]
+    fn stub_events_drops_dangling_root_cause_with_warning() {
+        let model = model_from_stmts(vec![
+            mk_call(FAILURE_MODE, &["FM", "Lib.Fm"], 1),
+            mk_call(ROOT_CAUSE, &["cm", "Cm", "MissingGate"], 2),
+        ]);
+        let stubs = model.stub_events("d.puml").expect("stub events");
+        assert!(!stubs.iter().any(|e| e.kind == NodeKind::RootCause));
+    }
+
+    #[test]
+    fn merge_stub_events_unions_fta_failure_modes_for_shared_root_cause() {
+        let a = StubEvent {
+            kind: NodeKind::RootCause,
+            stub_name: "Shared".into(),
+            title: "shared root cause".into(),
+            diagram: "a.puml".into(),
+            line: 1,
+            failure_modes: vec![],
+            fta_failure_modes: vec!["TeA".into()],
+        };
+        let b = StubEvent {
+            fta_failure_modes: vec!["TeB".into()],
+            diagram: "b.puml".into(),
+            line: 2,
+            ..a.clone()
+        };
+        let merged = merge_stub_events(vec![a, b]).expect("merge");
+        assert_eq!(merged.len(), 1);
+        assert_eq!(
+            merged[0].fta_failure_modes,
+            vec!["TeA".to_string(), "TeB".to_string()]
+        );
+    }
+
+    #[test]
+    fn merge_stub_events_errors_on_kind_clash() {
+        let te = StubEvent {
+            kind: NodeKind::FailureMode,
+            stub_name: "X".into(),
+            title: "t".into(),
+            diagram: "a.puml".into(),
+            line: 1,
+            failure_modes: vec!["Lib.Fm".into()],
+            fta_failure_modes: vec![],
+        };
+        let be = StubEvent {
+            kind: NodeKind::RootCause,
+            diagram: "b.puml".into(),
+            line: 2,
+            failure_modes: vec![],
+            fta_failure_modes: vec!["Other".into()],
+            ..te.clone()
+        };
+        let err = merge_stub_events(vec![te, be]).unwrap_err();
+        assert!(matches!(err, FtaError::StubKindClash { .. }));
+    }
+
+    #[test]
+    fn merge_stub_events_errors_on_title_mismatch() {
+        let a = StubEvent {
+            kind: NodeKind::RootCause,
+            stub_name: "X".into(),
+            title: "one title".into(),
+            diagram: "a.puml".into(),
+            line: 1,
+            failure_modes: vec![],
+            fta_failure_modes: vec!["Te".into()],
+        };
+        let b = StubEvent {
+            title: "different title".into(),
+            diagram: "b.puml".into(),
+            line: 2,
+            ..a.clone()
+        };
+        let err = merge_stub_events(vec![a, b]).unwrap_err();
+        assert!(matches!(err, FtaError::StubTitleMismatch { .. }));
+    }
+
+    #[test]
+    fn render_trlc_stub_emits_package_imports_and_records() {
+        let events = vec![
+            StubEvent {
+                kind: NodeKind::FailureMode,
+                stub_name: "TeOne".into(),
+                title: "top \"quoted\"".into(),
+                diagram: "d.puml".into(),
+                line: 4,
+                failure_modes: vec!["Lib.A".into(), "Other.B".into()],
+                fta_failure_modes: vec![],
+            },
+            StubEvent {
+                kind: NodeKind::RootCause,
+                stub_name: "BeOne".into(),
+                title: "root cause".into(),
+                diagram: "d.puml".into(),
+                line: 8,
+                failure_modes: vec![],
+                fta_failure_modes: vec!["TeOne".into()],
+            },
+        ];
+        let out = render_trlc_stub("MyFta", &events);
+        assert!(out.contains("package MyFta"));
+        assert!(out.contains("import ScoreReq"));
+        assert!(out.contains("import Lib"));
+        assert!(out.contains("import Other"));
+        assert!(out.contains("ScoreReq.FtaFailureMode TeOne {"));
+        assert!(out.contains("failure_modes = [Lib.A, Other.B]"));
+        assert!(out.contains("top \\\"quoted\\\""));
+        assert!(out.contains("ScoreReq.RootCause BeOne {"));
+        assert!(out.contains("failure_modes = [TeOne]"));
+        assert!(out.contains("// d.puml:4"));
     }
 }

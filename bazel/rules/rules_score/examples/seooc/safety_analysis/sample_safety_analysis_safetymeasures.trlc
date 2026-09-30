@@ -13,33 +13,44 @@
 package SampleLibrary
 
 import ScoreReq
+import sample_safety_analysis_fta
 
-ScoreReq.ControlMeasure JustBadLuck{
+ScoreReq.Mitigation JustBadLuck{
     safety = ScoreReq.Asil.B
     description = "Sometimes, the dark side wins. We shall be prepared for that."
+    justification = "This root cause is outside our control; no active measure can prevent it."
     version = 1
+    root_causes = [sample_safety_analysis_fta.JustBadLuck]
 }
 
-ScoreReq.ControlMeasure NoMoreCookies{
+ScoreReq.Mitigation NoMoreCookies{
     safety = ScoreReq.Asil.B
     description = "We shall only order family size cookie jars"
+    justification = "Ordering only family size jars keeps the reserve stable, so this root cause does not apply."
     version = 1
+    root_causes = [sample_safety_analysis_fta.NoMoreCookies]
 }
 
-ScoreReq.ControlMeasure NoMoreCoffee{
+ScoreReq.Mitigation NoMoreCoffee{
     safety = ScoreReq.Asil.B
     description = "We shall keep a coffee reserve for emergencies"
+    justification = "An emergency reserve is kept on hand, so this root cause does not apply."
     version = 1
+    root_causes = [sample_safety_analysis_fta.NoMoreCoffee]
 }
 
-ScoreReq.ControlMeasure WatchdogTimer{
+ScoreReq.Mitigation WatchdogTimer{
     safety = ScoreReq.Asil.D
     description = "A watchdog shall detect overruns and force a safe state"
+    justification = "The watchdog design ensures this overrun cannot go undetected in this context."
     version = 1
+    root_causes = [sample_safety_analysis_fta.WatchdogTimer]
 }
 
-ScoreReq.ControlMeasure DeadlineMonitor{
+ScoreReq.Mitigation DeadlineMonitor{
     safety = ScoreReq.Asil.D
     description = "Per-request deadline monitoring shall flag late responses"
+    justification = "Deadline monitoring ensures late responses cannot go unflagged in this context."
     version = 1
+    root_causes = [sample_safety_analysis_fta.DeadlineMonitor]
 }

@@ -507,7 +507,7 @@ Bazel
         public_api = ["public_api.puml"],
     )
 
-The ``public_api`` attribute also generates traceability items that can be referenced by ``fmea`` targets (see :doc:`dependability_analysis`) via the ``arch_design`` attribute.
+The ``public_api`` attribute also generates traceability items that can be referenced by ``safety_analysis`` targets (see :doc:`dependability_analysis`) via the ``arch_design`` attribute.
 
 Internal API
 --------------

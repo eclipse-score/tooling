@@ -15,23 +15,26 @@
 left to right direction
 rectangle "public_api.puml" as arch
 rectangle "failuremodes.trlc" as fm
-rectangle "controlmeasures.trlc" as cm
+rectangle "safetymeasures.trlc" as sm
 rectangle "fta.puml" as fta
 rectangle "architecture.lobster" as arch_lob
 rectangle "failuremodes.lobster" as fm_lob
-rectangle "controlmeasures.lobster" as cm_lob
-rectangle "root_causes.lobster" as rc_lob
+rectangle "safetymeasures.lobster" as sm_lob
+rectangle "fta_failure_modes.lobster" as te_lob
+rectangle "fta_root_causes.lobster" as rc_lob
 rectangle "lobster_sa.conf" as conf
 rectangle "report.json" as json
 rectangle "report.html" as html
 
 arch --> arch_lob : puml_parser
 fm --> fm_lob : lobster-trlc
-cm --> cm_lob : lobster-trlc
-fta --> rc_lob : safety_analysis_tools
+sm --> sm_lob : lobster-trlc
+fta --> te_lob : puml_cli (FTA mode)
+fta --> rc_lob : puml_cli (FTA mode)
 arch_lob --> conf
 fm_lob --> conf
-cm_lob --> conf
+sm_lob --> conf
+te_lob --> conf
 rc_lob --> conf
 conf --> json : lobster-ci-report
 json --> html : lobster-html-report

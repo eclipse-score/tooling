@@ -14,7 +14,7 @@
 @startuml safety_analysis_doc_pipeline
 
 ' Component view of the FMEA build: input artifacts (authored + tooling
-' defaults) flow through three in-process tool actions of the ``fmea`` rule into
+' defaults) flow through three in-process tool actions of the ``safety_analysis`` rule into
 ' the generated files, the providers, and finally the Sphinx staging tree.
 
 skinparam linetype ortho
@@ -42,73 +42,76 @@ skinparam component {
 
 ' ── Input artifacts ──────────────────────────────────────────────────────────
 package "Authored by the component team" {
-    rectangle "failuremodes.trlc\n(FailureMode records)"     <<src>> as fm_trlc
-    rectangle "controlmeasures.trlc\n(ControlMeasure records)" <<src>> as cm_trlc
-    rectangle "fta_*.puml\n(root_causes attr)"               <<src>> as fta_puml
+    rectangle "failuremodes.trlc\n(FailureMode records)"    <<src>> as fm_trlc
+    rectangle "safetymeasures.trlc\n(Mitigation/AoU/CompReq)"  <<src>> as sm_trlc
+    rectangle "fta_*.puml\n(root_causes attr)"              <<src>> as fta_puml
 }
 package "Tooling defaults (rules_score / ScoreReq)" {
     rectangle "ScoreReq *.rsl\n(spec attr)"        <<def>> as rsl
     rectangle "fta_metamodel.puml\n(on PlantUML include path)" <<def>> as meta
-    rectangle "fmea.template.rst\n({body})"        <<def>> as tmpl
-    rectangle "fm/cm lobster\nconfigs"             <<def>> as lcfg
+    rectangle "safety_analysis.template.rst\n({body})"        <<def>> as tmpl
+    rectangle "fm/safetymeasures lobster\nconfigs"    <<def>> as lcfg
 }
 
-' ── fmea rule: three tool actions ────────────────────────────────────────────
-package "fmea rule actions" {
+' ── safety_analysis rule: three tool actions ────────────────────────────────────────────
+package "safety_analysis rule actions" {
     component "puml_cli  (FTA mode)\n--fta-output-dir\n[crate: puml_fta]" <<tool>> as puml
-    component "fmea_assembler\n[lib: TRLCRST]"                            <<tool>> as asm
-    component "lobster-trlc  x2"                                          <<tool>> as ltrlc
+    component "safety_analysis_assembler\n[lib: TRLCRST]"                            <<tool>> as asm
+    component "lobster-trlc  x4"                                          <<tool>> as ltrlc
 }
 
 ' ── Generated files ──────────────────────────────────────────────────────────
 package "Generated files" {
     rectangle "fta_*.puml\n(authored, symlinked)"   <<gen>> as puml_inl
-    rectangle "fta_chains.json"        <<gen>> as chains
-    rectangle "root_causes.lobster"    <<gen>> as rc_lob
-    rectangle "fmea.rst"               <<gen>> as fmea_rst
-    rectangle "failuremodes.lobster\ncontrolmeasures.lobster" <<gen>> as fmcm_lob
+    rectangle "fta_events.trlc\n(FtaFailureMode/RootCause stubs)" <<gen>> as fta_events
+    rectangle "safety_analysis.rst"               <<gen>> as safety_analysis_rst
+    rectangle "failuremodes.lobster\nsafetymeasures.lobster\nfta_failure_modes.lobster\nfta_root_causes.lobster" <<gen>> as fmcm_lob
 }
 
 ' ── Providers ────────────────────────────────────────────────────────────────
-rectangle "SphinxSourcesInfo\n────────────────\nsrcs:     fmea.rst\ndeps:     fmea.rst\naux_srcs: fta_*.puml" <<prov>> as ssi
-rectangle "AnalysisInfo.lobster_files\n────────────────\nfailuremodes.lobster\ncontrolmeasures.lobster\nroot_causes.lobster" <<prov>> as ai
+rectangle "SphinxSourcesInfo\n────────────────\nsrcs:     safety_analysis.rst\ndeps:     safety_analysis.rst\naux_srcs: fta_*.puml" <<prov>> as ssi
+rectangle "AnalysisInfo.lobster_files\n────────────────\nfailuremodes.lobster\nsafetymeasures.lobster\nfta_failure_modes.lobster\nfta_root_causes.lobster" <<prov>> as ai
+rectangle "SafetyAnalysisProviderInfo\n────────────────\nfailuremodes, safetymeasures,\nfta_events, spec" <<prov>> as tpi
 
 ' ── Downstream rules + staging ───────────────────────────────────────────────
-component "dependability_analysis" <<tool>> as da
+component "dependability_analysis\n(+ root-cause coverage check)" <<tool>> as da
 component "dependable_element"     <<tool>> as de
-rectangle "dependability_analysis/\n  dfa.rst    <- toctree\n  fmea.rst   <- toctree\n  fta_*.puml (.. uml::)" <<stage>> as stage
+rectangle "dependability_analysis/\n  dfa.rst    <- toctree\n  safety_analysis.rst   <- toctree\n  fta_*.puml (.. uml::)" <<stage>> as stage
 
 ' ── Edges: inputs -> tools ───────────────────────────────────────────────────
 fta_puml --> puml : parse macro calls
 
-chains   --> asm
+fta_events --> asm
 fm_trlc  --> asm
-cm_trlc  --> asm
+sm_trlc  --> asm
 rsl      --> asm : import resolution
 tmpl     --> asm
 
 fm_trlc  --> ltrlc
-cm_trlc  --> ltrlc
+sm_trlc  --> ltrlc
+fta_events --> ltrlc
 rsl      --> ltrlc
 lcfg     --> ltrlc
 
 ' ── Edges: tools -> generated ────────────────────────────────────────────────
-fta_puml --> puml_inl : symlinked beside fmea.rst
+fta_puml --> puml_inl : symlinked beside safety_analysis.rst
 meta     --> stage : on PlantUML include path
-puml  --> chains
-puml  --> rc_lob
-asm   --> fmea_rst
+puml  --> fta_events
+asm   --> safety_analysis_rst
 ltrlc --> fmcm_lob
 
 ' ── Edges: generated -> providers ────────────────────────────────────────────
-fmea_rst --> ssi
+safety_analysis_rst --> ssi
 puml_inl --> ssi
-rc_lob   --> ai
 fmcm_lob --> ai
+fm_trlc    --> tpi
+sm_trlc    --> tpi
+fta_events --> tpi
 
 ' ── Edges: providers -> downstream -> staging ────────────────────────────────
 ssi --> da : merge SphinxSourcesInfo
 ai  --> da : merge lobster_files
+tpi --> da : merge for root-cause\ncoverage check
 da  --> de
 de  --> stage : symlink srcs + aux_srcs\n(aux not indexed in toctree)
 

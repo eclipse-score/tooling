@@ -67,7 +67,7 @@ component(
 dependability_analysis(
     name = "sample_dependability_analysis",
     arch_design = "//design:sample_seooc_design",
-    fmea = ["//safety_analysis:sample_fmea"],
+    safety_analysis = ["//safety_analysis:sample_safety_analysis"],
 )
 
 dependable_element(

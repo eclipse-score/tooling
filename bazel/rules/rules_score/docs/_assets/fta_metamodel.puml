@@ -29,8 +29,37 @@ sprite $transferin <svg width="60" height="70" viewBox="0 0 60 70" xmlns="http:/
 'skinparam linetype polyline
 'skinparam linetype ortho
 
-!procedure $TopEvent($name, $alias)
-  rectangle "$name" as $alias
+' $FailureMode(name, fm1, fm2, ..., fm8): a fault-tree top-level node covering
+' one or more failure modes, each given as a TRLC 'Package.Name' fully-qualified
+' name. The *first* failure mode ($fm1) doubles as this node's alias -- the
+' connection point every gate/root-cause ancestor attaches to. Any further
+' failure modes ($fm2..$fm8) are rendered as extra notes so a reader can see
+' at a glance that this node covers more than one failure mode. PlantUML
+' procedures have no true variadic arguments, only trailing defaults, so the
+' argument count is capped at 8 failure modes per node.
+!procedure $FailureMode($name, $fm1, $fm2="", $fm3="", $fm4="", $fm5="", $fm6="", $fm7="", $fm8="")
+  rectangle "$name" as $fm1
+  !if ($fm2 != "")
+  note right of $fm1: $fm2
+  !endif
+  !if ($fm3 != "")
+  note right of $fm1: $fm3
+  !endif
+  !if ($fm4 != "")
+  note right of $fm1: $fm4
+  !endif
+  !if ($fm5 != "")
+  note right of $fm1: $fm5
+  !endif
+  !if ($fm6 != "")
+  note right of $fm1: $fm6
+  !endif
+  !if ($fm7 != "")
+  note right of $fm1: $fm7
+  !endif
+  !if ($fm8 != "")
+  note right of $fm1: $fm8
+  !endif
 !endprocedure
 
 !procedure $IntermediateEvent($name, $alias, $connection)
@@ -38,7 +67,7 @@ sprite $transferin <svg width="60" height="70" viewBox="0 0 60 70" xmlns="http:/
   $alias -u-> $connection
 !endprocedure
 
-!procedure $BasicEvent($name, $alias, $connection)
+!procedure $RootCause($name, $alias, $connection)
   usecase "$name" as $alias
   $alias -u-> $connection
 !endprocedure

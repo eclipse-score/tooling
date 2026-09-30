@@ -33,7 +33,7 @@ skinparam rectangle {
     BorderColor<<out>> #6A1B9A
 }
 
-rectangle "A: Per-level .lobster files\n(Feature/Component Req, Unit Test,\nCoverage, Architecture, Public API,\nFailure Modes, Control Measures,\nRoot Causes)" <<src>> as A
+rectangle "A: Per-level .lobster files\n(Feature/Component Req, Unit Test,\nCoverage, Architecture, Public API,\nFailure Modes, Safety Measures,\nRoot Causes)" <<src>> as A
 
 rectangle "B: expand_template\nformat_lobster_block() per level\n(emit_empty=strict in release)" <<own>> as B
 rectangle "de_traceability_config" <<rep>> as conf

@@ -16,12 +16,12 @@
 !include fta_metamodel.puml
 
 ' Top level (skeleton)
-$TopEvent("SampleFailureMode2 responds too late", "SampleLibrary.SampleFailureMode2")
+$FailureMode("SampleFailureMode2 responds too late", "SampleLibrary.SampleFailureMode2")
 
-' 2nd level gate and basic events
+' 2nd level gate and root causes
 $OrGate("OG1", "SampleLibrary.SampleFailureMode2")
 
-$BasicEvent("Watchdog timer", "SampleLibrary.WatchdogTimer", "OG1")
-$BasicEvent("Deadline monitor", "SampleLibrary.DeadlineMonitor", "OG1")
+$RootCause("Watchdog timer", "WatchdogTimer", "OG1")
+$RootCause("Deadline monitor", "DeadlineMonitor", "OG1")
 
 @enduml

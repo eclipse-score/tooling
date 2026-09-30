@@ -1384,12 +1384,13 @@ def _dependable_element_index_impl(ctx):
     # Lobster Traceability: Dependable Element Level
     # Builds the multi-level traceability report (Feature/Assumed-System
     # Requirements, Component Requirements, Unit Test, Test Case Coverage,
-    # Architecture, Public API, Failure Modes, Control Measures, Root Causes).
+    # Architecture, Public API, Failure Modes, FTA Failure Modes, Root Causes,
+    # Safety Measures).
     # The report is produced whenever any level has data; each level and its
     # `trace to:` coverage edges are emitted only when relevant. In release
     # mode every checking level (Unit Test, Test Case Coverage, Architecture,
-    # Failure Modes, Root Causes) is emitted even when empty, so a missing
-    # unit test / coverage / architecture allocation / public API
+    # Failure Modes, FTA Failure Modes, Root Causes) is emitted even when empty, so a
+    # missing unit test / coverage / architecture allocation / public API
     # characterization / root cause fails the traceability check (see the
     # strict handling below).
     # =========================================================================
@@ -1510,8 +1511,9 @@ def _dependable_element_index_impl(ctx):
     comp_arch_list = comp_arch_lobster_depset.to_list()
     interface_req_list = public_api_lobster_list
     fm_list = [sa_lobster_files["failuremodes.lobster"]] if "failuremodes.lobster" in sa_lobster_files else []
-    cm_list = [sa_lobster_files["controlmeasures.lobster"]] if "controlmeasures.lobster" in sa_lobster_files else []
-    rc_list = [sa_lobster_files["root_causes.lobster"]] if "root_causes.lobster" in sa_lobster_files else []
+    fta_fm_list = [sa_lobster_files["fta_failure_modes.lobster"]] if "fta_failure_modes.lobster" in sa_lobster_files else []
+    rc_list = [sa_lobster_files["fta_root_causes.lobster"]] if "fta_root_causes.lobster" in sa_lobster_files else []
+    safetymeasures_list = [sa_lobster_files["safetymeasures.lobster"]] if "safetymeasures.lobster" in sa_lobster_files else []
 
     # =========================================================================
     # AoU Forwarding: collect own AoUs and received AoUs from deps
@@ -1585,8 +1587,9 @@ def _dependable_element_index_impl(ctx):
         comp_arch_list,
         interface_req_list,
         fm_list,
-        cm_list,
+        fta_fm_list,
         rc_list,
+        safetymeasures_list,
     ])
 
     if has_any_lobster_input:
@@ -1604,8 +1607,12 @@ def _dependable_element_index_impl(ctx):
         #     -> check Component Requirements coverage
         #   * Failure Modes
         #     -> check Public API coverage
+        #   * FTA Failure Modes
+        #     -> check Failure Modes coverage
         #   * Root Causes
-        #     -> check Failure Modes and Control Measures coverage
+        #     -> check FTA Failure Modes coverage
+        #   * Safety Measures
+        #     -> check Root Causes coverage
         # In development mode these checking levels are omitted when empty
         # instead, keeping the in-progress report free of noise.
         #
@@ -1622,7 +1629,8 @@ def _dependable_element_index_impl(ctx):
         has_received_aou = bool(received_aou_list)
         has_public_api = bool(interface_req_list) or strict
         has_fm = bool(fm_list) or strict
-        has_cm = bool(cm_list) or strict
+        has_fta_fm = bool(fta_fm_list) or strict
+        has_rc = bool(rc_list) or strict
 
         lobster_config = ctx.actions.declare_file(ctx.label.name + "/de_traceability_config")
 
@@ -1705,23 +1713,31 @@ def _dependable_element_index_impl(ctx):
                     trace_to = _cond_names((has_public_api, "Public API")),
                     emit_empty = strict,
                 ),
-                "{CM_BLOCK}": format_lobster_block(
-                    "requirements",
-                    "Control Measures",
-                    cm_list,
+                "{FTA_FM_BLOCK}": format_lobster_block(
+                    "activity",
+                    "FTA Failure Modes",
+                    fta_fm_list,
+                    trace_to = _cond_names((has_fm, "Failure Modes")),
                     emit_empty = strict,
                 ),
                 "{RC_BLOCK}": format_lobster_block(
                     "activity",
                     "Root Causes",
                     rc_list,
-                    trace_to = _cond_names((has_fm, "Failure Modes"), (has_cm, "Control Measures")),
+                    trace_to = _cond_names((has_fta_fm, "FTA Failure Modes")),
+                    emit_empty = strict,
+                ),
+                "{SAFETYMEASURES_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Safety Measures",
+                    safetymeasures_list,
+                    trace_to = _cond_names((has_rc, "Root Causes")),
                     emit_empty = strict,
                 ),
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + cm_list + rc_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
+        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + fta_fm_list + rc_list + safetymeasures_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_files = [lobster_config, lobster_report_file]
 
