@@ -7,12 +7,15 @@ requirements "Failure Modes" {
   trace to: "Architecture";
 }
 
-requirements "Control Measures" {
-{CM_SOURCES}
+activity "FTA Failure Modes" {
+{FTA_FM_SOURCES}
+  trace to: "Failure Modes";
 }
 
 activity "Root Causes" {
 {RC_SOURCES}
-  trace to: "Failure Modes";
-  trace to: "Control Measures";
+}
+
+requirements "Safety Measures" {
+{SAFETYMEASURES_SOURCES}
 }

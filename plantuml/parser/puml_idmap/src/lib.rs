@@ -341,12 +341,12 @@ fn is_trlc_fqn(alias: &str) -> bool {
 
 /// Produce an [`IdMapFile`] from a resolved FTA model.
 ///
-/// A node is a **define** when it is the tree's top event (`NodeKind::TopEvent`,
+/// A node is a **define** when it is the tree's failure mode (`NodeKind::FailureMode`,
 /// `connection` is `None` — a relation sink never used as a source).
 /// A gate node is a **reference** only when [`FtaNode::gate_kind`] is
 /// `GateKind::TransferIn` (a `$TransferInGate` pointing to another diagram's
-/// top event); `GateKind::And`/`GateKind::Or` gates are internal and produce
-/// no cross-diagram link. All other nodes (basic/intermediate events) are
+/// failure mode); `GateKind::And`/`GateKind::Or` gates are internal and produce
+/// no cross-diagram link. All other nodes (root-cause/intermediate events) are
 /// likewise internal.
 fn fta_model_to_idmap(model: &FtaModel, source: &str) -> IdMapFile {
     let mut defines = Vec::new();
@@ -354,7 +354,7 @@ fn fta_model_to_idmap(model: &FtaModel, source: &str) -> IdMapFile {
 
     for node in &model.nodes {
         match node.kind {
-            NodeKind::TopEvent => {
+            NodeKind::FailureMode => {
                 defines.push(IdMapEntry {
                     alias: node.alias.clone(),
                     id: node.alias.clone(),
@@ -374,7 +374,7 @@ fn fta_model_to_idmap(model: &FtaModel, source: &str) -> IdMapFile {
                     id: node.alias.clone(),
                 });
             }
-            _ => {} // BasicEvent, IntermediateEvent, $AndGate/$OrGate — internal, no link.
+            _ => {} // RootCause, IntermediateEvent, $AndGate/$OrGate — internal, no link.
         }
     }
 
@@ -1021,15 +1021,16 @@ mod tests {
             alias: alias.to_string(),
             connection: None,
             gate_kind,
+            failure_modes: Vec::new(),
             line: None,
         }
     }
 
     #[test]
-    fn fta_top_event_is_define_and_transfer_gate_is_reference() {
+    fn fta_failure_mode_is_define_and_transfer_gate_is_reference() {
         let model = FtaModel {
             nodes: vec![
-                fta_node(NodeKind::TopEvent, None, "pkg.TopFailure"),
+                fta_node(NodeKind::FailureMode, None, "pkg.TopFailure"),
                 // $TransferInGate: alias is a foreign top-event FQN → reference.
                 fta_node(
                     NodeKind::Gate,
@@ -1042,8 +1043,8 @@ mod tests {
                 // cross-diagram reference (regression test).
                 fta_node(NodeKind::Gate, Some(GateKind::And), "And.Gate1"),
                 fta_node(NodeKind::Gate, Some(GateKind::Or), "OG"),
-                // Basic events are internal even when the alias looks like an FQN.
-                fta_node(NodeKind::BasicEvent, None, "pkg.Cause"),
+                // Root causes are internal even when the alias looks like an FQN.
+                fta_node(NodeKind::RootCause, None, "pkg.Cause"),
                 fta_node(NodeKind::IntermediateEvent, None, "IE"),
             ],
         };

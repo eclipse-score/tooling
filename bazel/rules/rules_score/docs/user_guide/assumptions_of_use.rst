@@ -16,8 +16,9 @@ Assumptions of Use
 ===================
 
 Conditions that the *integrating project* must satisfy when using your SEooC.
-The optional ``mitigates`` field describes (as a free-form string) the hazard
-or risk that is mitigated when this assumption is fulfilled.
+The optional ``root_causes`` field lets an ``AoU`` close one or more FTA
+``RootCause`` root causes directly, pushing the obligation to prevent them
+out to the integrator.
 
 Traceability to requirements is established at the Bazel level via the ``deps``
 attribute on the ``assumptions_of_use`` rule — there is no TRLC ``derived_from``
@@ -33,9 +34,8 @@ however, declare that it implements a received AoU by referencing it from its ow
     import ScoreReq
 
     ScoreReq.AoU SampleAoU {
-        description = "It shall be made sure that this SampleAoU never ends up anywhere"
+        description = "It shall be made sure that shared memory segments are never created with the wrong name (ShmemCreatedWrongName)"
         safety      = ScoreReq.Asil.B
-        mitigates   = "ShmemCreatedWrongName"
         version     = 1
     }
 

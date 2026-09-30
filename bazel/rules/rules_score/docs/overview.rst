@@ -101,8 +101,8 @@ target two layers of checks apply:
 - **S-CORE requirements model**  enforces the
   derivation chain ``AssumedSystemReq → FeatReq → CompReq``, requires an ``Asil`` safety
   classification and defines the safety-analysis
-  vocabulary (``FailureMode`` with HAZOP ``Guideword``\ s, ``ControlMeasure``,
-  ``AoU``) used by ``fmea``/``assumptions_of_use``.
+  vocabulary (``FailureMode`` with HAZOP ``Guideword``\ s, ``SafetyMeasure``,
+  ``AoU``) used by ``safety_analysis``/``assumptions_of_use``.
 
 Architecture consistency (build)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -192,7 +192,7 @@ lacks full up/down traceability.
       "Architecture" [fillcolor="#4CAF50", fontcolor="white"];
       "Public API" [fillcolor="#4CAF50", fontcolor="white"];
       "Failure Modes" [fillcolor="#2196F3", fontcolor="white"];
-      "Control Measures" [fillcolor="#2196F3", fontcolor="white"];
+      "Safety Measures" [fillcolor="#2196F3", fontcolor="white"];
       "Root Causes" [fillcolor="#FF9800", fontcolor="white"];
       "Forwarded AoUs" -> "Received AoUs";
       "Component Requirements" -> "Feature Requirements";
@@ -202,7 +202,7 @@ lacks full up/down traceability.
       "Architecture" -> "Component Requirements";
       "Failure Modes" -> "Public API";
       "Root Causes" -> "Failure Modes";
-      "Root Causes" -> "Control Measures";
+      "Root Causes" -> "Safety Measures";
    }
 
 Execution Overview (Current Behavior)
@@ -315,7 +315,7 @@ Quick Reference
    * - :ref:`unit_design <rule-unit-design>`
      - Artifact
      - :doc:`user_guide/unit_design`
-   * - :ref:`fmea <rule-fmea>`
+   * - :ref:`safety_analysis <rule-safety-analysis>`
      - Artifact
      - :doc:`user_guide/dependability_analysis`
    * - :ref:`dependability_analysis <rule-dependability-analysis>`

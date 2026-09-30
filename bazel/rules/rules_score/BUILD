@@ -38,7 +38,7 @@ exports_files([
     "templates/section_page.template.rst",
     "templates/unit.template.rst",
     "templates/component.template.rst",
-    "templates/fmea.template.rst",
+    "templates/safety_analysis.template.rst",
     "templates/puml_diagram.template.rst",
 ])
 
@@ -88,13 +88,13 @@ py_binary(
     visibility = ["//visibility:public"],
 )
 
-# FMEA page assembler: builds the failure-mode-centric fmea.rst body in-process
-# via the extended TRLCRST library and the FTA chains JSON from puml_cli.
+# Safety-analysis page assembler: builds the failure-mode-centric safety_analysis.rst body
+# in-process via the extended TRLCRST library and the FTA chains JSON from puml_cli.
 py_binary(
-    name = "fmea_assembler",
-    srcs = ["src/fmea_assembler.py"],
+    name = "safety_analysis_assembler",
+    srcs = ["src/safety_analysis_assembler.py"],
     imports = ["src"],
-    main = "src/fmea_assembler.py",
+    main = "src/safety_analysis_assembler.py",
     visibility = ["//visibility:public"],
     deps = [
         "@trlc//tools/trlc_rst:trlc_rst_lib",

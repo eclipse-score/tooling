@@ -82,7 +82,7 @@ section "Tool Requirements" {
 
         ToolQualification.ToolRequirement Render_All_Failure_Modes {
             description = '''
-                The FMEA rule shall render every FailureMode record from the
+                The safety_analysis rule shall render every FailureMode record from the
                 input TRLC sources into the documentation output.
             '''
             mitigates = [Missing_Failure_Mode_In_Render]

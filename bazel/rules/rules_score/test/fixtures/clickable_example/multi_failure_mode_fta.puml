@@ -11,19 +11,10 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml SeoocExample_FTA
+@startuml
 
 !include fta_metamodel.puml
 
-$FailureMode("SampleFailureMode takes over the world", "SampleLibrary.SampleFailureMode")
-
-$OrGate("OG1", "SampleLibrary.SampleFailureMode")
-
-$IntermediateEvent("SampleFailureMode is Angry", "IEF", "OG1")
-$RootCause("Just bad luck", "JustBadLuck", "OG1")
-
-$AndGate("AG2", "IEF")
-$RootCause("No More Cookies", "NoMoreCookies", "AG2")
-$RootCause("No More Coffee", "NoMoreCoffee", "AG2")
+$FailureMode("Message lost, incomplete, or corrupted during IPC transmission", "MultiFailureModeExampleSafetyAnalysis.MessageLost", "MultiFailureModeExampleSafetyAnalysis.MessagePartiallyDelivered", "MultiFailureModeExampleSafetyAnalysis.MessageCorrupted")
 
 @enduml

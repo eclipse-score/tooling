@@ -117,7 +117,24 @@ AnalysisInfo = provider(
     fields = {
         "name": "Name of the analysis target.",
         "lobster_files": "Dict mapping canonical lobster file names to File objects " +
-                         "(e.g. {'failuremodes.lobster': File, 'root_causes.lobster': File}).",
+                         "(e.g. {'failuremodes.lobster': File, 'safetymeasures.lobster': File}).",
+    },
+)
+
+SafetyAnalysisProviderInfo = provider(
+    doc = """Provider carrying a safety_analysis target's raw TRLC source files.
+
+    Consumed by ``dependability_analysis`` to combine every safety_analysis sub-target's
+    fault-tree topology (RootCause root causes) with its own ``measures``
+    attribute into a single root-cause-coverage completeness check (every
+    RootCause addressed by at least one Mitigation, AoU, or CompReq),
+    without re-rendering each safety_analysis target's own ``safety_analysis.rst`` page.
+    """,
+    fields = {
+        "failuremodes": "Depset of FailureMode .trlc source files.",
+        "safetymeasures": "Depset of Mitigation/AoU/CompReq .trlc source files.",
+        "fta_events": "Depset containing the single generated fta_events.trlc stub file.",
+        "spec": "Depset of .rsl/.trlc model spec files needed for import resolution.",
     },
 )
 
@@ -224,11 +241,11 @@ DependabilityAnalysisInfo = provider(
     doc = """Provider for dependability analysis artifacts.
 
     Aggregates sub-analyses:
-      * **fmea**              – fmea rule targets (FM + CM + optional root causes).
+      * **safety_analysis**   – safety_analysis rule targets (FM + CM + optional root causes).
       * **security_analysis** – security analysis targets (placeholder).
     """,
     fields = {
-        "fmea": "Depset of output files from fmea targets.",
+        "safety_analysis": "Depset of output files from safety_analysis targets.",
         "security_analysis": "Depset of output files from security analysis targets.",
         "dfa": "Depset of DFA documentation files (placeholder).",
         "arch_design": "ArchitecturalDesignInfo from the linked architectural design (placeholder).",

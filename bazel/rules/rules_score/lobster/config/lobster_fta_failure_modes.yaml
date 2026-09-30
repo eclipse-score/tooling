@@ -10,11 +10,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-# lobster-trlc configuration for FMEA Control Measure records.
+# lobster-trlc configuration for FTA-generated FtaFailureMode stub records.
 inputs:
   - .
 conversion-rules:
   - package: ScoreReq
-    record-type: ControlMeasure
+    record-type: FtaFailureMode
     namespace: req
-    description-fields: description
+    description-fields: title
+    tags:
+      - failure_modes

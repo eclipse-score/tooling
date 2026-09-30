@@ -23,3 +23,11 @@ bazel/rules/rules_score/examples/seooc
 bazel/rules/rules_score/examples/some_other_library
 # Separate local Bazel module (system integrator demo, depends on @seooc//)
 bazel/rules/rules_score/examples/integrator
+# minimal is a separate local Bazel module too, but its :doc_sources filegroup
+# is still loaded directly from the parent workspace (rules_score_doc). Only
+# ignore its own convenience symlinks, whose targets loop back into this
+# directory and would otherwise trip a symlink-cycle error during globbing.
+bazel/rules/rules_score/examples/minimal/bazel-bin
+bazel/rules/rules_score/examples/minimal/bazel-minimal
+bazel/rules/rules_score/examples/minimal/bazel-out
+bazel/rules/rules_score/examples/minimal/bazel-testlogs

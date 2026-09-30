@@ -11,36 +11,56 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-// Fixture exercising the updated Measure type hierarchy (commit bff44df3).
-// - ControlMeasure: no "mitigates" field; tracing is implicit via name-matching
-//   (record FQN must equal the $BasicEvent alias in the FTA diagram).
-// - PreventiveMeasure: new type, no mitigates field
-// - Mitigation: new type, no mitigates field
-// - AoU: still allows optional "mitigates" field (unchanged)
+// Fixture exercising the Measure type hierarchy (SafetyMeasure/Mitigation/AoU/
+// CompReq): every fault-tree root cause (RootCause) must be addressed by at
+// least one concrete measure.
+// - SafetyMeasure: abstract, never instantiated directly; only exists so
+//   Mitigation can inherit the mandatory ``root_causes`` field.
+// - Mitigation: extends SafetyMeasure, adds a mandatory ``justification``
+//   explaining why the root cause does not apply in this context.
+// - AoU: independent type (does not extend SafetyMeasure); its
+//   ``root_causes`` field is optional -- an AoU acts as a preventive measure
+//   only when it addresses a fault-tree root cause.
+// - CompReq (elsewhere): acts as a control measure when its ``derived_from``
+//   references a fault-tree RootCause.
 
 package TestSafetyMeasures
 
 import ScoreReq
 
-ScoreReq.ControlMeasure SomeBasicEvent {
-    safety      = ScoreReq.Asil.B
-    description = "Control measure linked to FTA BasicEvent by name-matching (no mitigates field)"
-    version     = 1
+ScoreReq.FailureMode SomeFailureMode {
+    guidewords    = [ScoreReq.Guideword.LossOfFunction]
+    failureeffect = "Some effect"
+    safety        = ScoreReq.Asil.B
+    description   = "A failure mode backing this fixture's fault tree"
+    version       = 1
 }
 
-ScoreReq.PreventiveMeasure SomePreventiveMeasure {
+ScoreReq.FtaFailureMode SomeFtaFailureMode {
+    title         = "Some failure mode"
+    diagram       = "n/a"
+    line          = 1
+    failure_modes = [TestSafetyMeasures.SomeFailureMode]
+}
+
+ScoreReq.RootCause SomeRootCause {
+    title      = "Some root cause"
+    diagram    = "n/a"
+    line       = 2
+    failure_modes = [TestSafetyMeasures.SomeFtaFailureMode]
 }
 
 ScoreReq.Mitigation SomeMitigation {
-    safety      = ScoreReq.Asil.B
-    description = "A mitigation that reduces the severity of a hazard"
-    rationale   = "Reduces severity by providing an alternative processing path"
-    version     = 1
+    safety        = ScoreReq.Asil.B
+    description   = "Mitigation linked to the FTA RootCause via an explicit root_causes reference"
+    justification = "This root cause cannot occur in this context because of an independent design property"
+    version       = 1
+    root_causes   = [TestSafetyMeasures.SomeRootCause]
 }
 
 ScoreReq.AoU SomeAoU {
     safety      = ScoreReq.Asil.B
-    description = "An assumption of use with an explicit mitigates link"
+    description = "An assumption of use that also addresses a fault-tree root cause"
     version     = 1
-    mitigates   = "TestSafetyMeasures.SomeBasicEvent"
+    root_causes = [TestSafetyMeasures.SomeRootCause]
 }

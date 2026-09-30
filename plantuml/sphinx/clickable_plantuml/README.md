@@ -173,14 +173,14 @@ Given the resolved model of one `.puml` diagram:
    - It has member variables or methods (class diagrams).
    - The diagram's `@startuml <name>` matches its alias or display name
      (component and class diagrams).
-   - It is a `$TopEvent` node — the tree root whose `connection` is `None`,
+   - It is a `$FailureMode` node — the tree root whose `connection` is `None`,
      never used as a relation source (FTA diagrams).
 2. **references** – Elements that link away to another diagram:
    - Top-level leaf boxes and relation endpoints (component diagrams).
    - All participants (sequence diagrams — no defines in sequence).
    - `$TransferInGate` nodes whose alias is a TRLC-style FQN
-     (`Package.Record`) referencing another diagram's top event (FTA diagrams).
-   - Internal FTA nodes (`$BasicEvent`, `$IntermediateEvent`, `$AndGate`,
+     (`Package.Record`) referencing another diagram's failure-mode node (FTA diagrams).
+   - Internal FTA nodes (`$RootCause`, `$IntermediateEvent`, `$AndGate`,
      `$OrGate`) are omitted — they do not cross-link to other diagrams.
 
 ### Concrete example
