@@ -173,7 +173,15 @@ crate.annotation(
     crate_features = [
         "runtime",
         "clang_18_0",
+        "clang_3_5",
+        "clang_3_6",
+        "clang_3_7",
+        "clang_3_8",
+        "clang_3_9",
+        "clang_4_0",
         "clang_5_0",  # clang_getCursorExceptionSpecificationType et al.
+        "clang_6_0",
+        "clang_7_0",  # clang_isInvalidDeclaration
     ],
     deps = ["@crates//:libloading"],
 )
@@ -181,7 +189,15 @@ crate.annotation(
     crate = "clang",
     crate_features = [
         "runtime",
+        "clang_3_5",
+        "clang_3_6",
+        "clang_3_7",
+        "clang_3_8",
+        "clang_3_9",
+        "clang_4_0",
         "clang_5_0",  # Entity::get_exception_specification()
+        "clang_6_0",
+        "clang_7_0",  # Entity::is_invalid_declaration()
     ],
 )
 crate.from_specs()
