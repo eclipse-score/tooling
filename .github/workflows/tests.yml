@@ -56,6 +56,12 @@ jobs:
       - name: Run Validation Tooling tests
         run: |
           bazel test //validation/...
+      - name: Run Tools clippy
+        run: |
+          bazel build //tools/... --config=clippy
+      - name: Run Tools tests
+        run: |
+          bazel test //tools/...
       - name: Ensure correct dependency resolution
         run: |
           bazel mod deps --lockfile_mode=update

@@ -26,6 +26,7 @@ rust_library(
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//tools/metamodel/class:class_diagram",
+        "//tools/metamodel/common:uid_utils",
         "@crates//:log",
         "@crates//:serde",
         "@crates//:thiserror",

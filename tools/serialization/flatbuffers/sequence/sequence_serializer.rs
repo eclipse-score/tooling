@@ -178,7 +178,7 @@ impl SequenceSerializer {
             builder,
             &fb::InteractionArgs {
                 sender,
-                receiver: receiver,
+                receiver,
                 message,
                 source_location: Some(source_location),
             },

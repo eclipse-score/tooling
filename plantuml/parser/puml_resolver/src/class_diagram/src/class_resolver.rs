@@ -105,16 +105,12 @@ impl ClassResolver {
         }
     }
 
-    fn normalize_fqn(raw: &str) -> String {
-        raw.replace("::", ".").trim_matches('.').to_string()
-    }
-
     fn build_fqn(&self, name: &str, parent: &Option<String>) -> String {
-        let normalized_name = Self::normalize_fqn(name);
+        let normalized_name = uid_utils::normalize(name);
 
         match parent {
             Some(p) => {
-                let normalized_parent = Self::normalize_fqn(p);
+                let normalized_parent = uid_utils::normalize(p);
 
                 if normalized_parent.is_empty() {
                     normalized_name
@@ -144,8 +140,8 @@ impl ClassResolver {
 
     fn resolve_name(&self, name: &str, parent: &Option<String>) -> Option<String> {
         // 1. FQN
-        if name.contains('.') || name.contains("::") {
-            return Some(Self::normalize_fqn(name));
+        if uid_utils::is_identifier_path(name) {
+            return Some(uid_utils::normalize(name));
         }
 
         // 2. Current Namespace
