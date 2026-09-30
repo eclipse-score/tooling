@@ -15,5 +15,5 @@ mod test_framework;
 
 pub use test_error_view::{ErrorView, ProjectedError};
 pub use test_framework::{
-    run_case, DefaultExpectationChecker, DiagramProcessor, ExpectationChecker,
+    run_case, DefaultExpectationChecker, DiagramProcessor, ExpectationChecker, Expected,
 };

@@ -1,0 +1,8 @@
+{
+    "class_diagram.puml": {
+        "defines": {
+            "SampleLibraryAPI": "Sample Library API"
+        },
+        "references": {}
+    }
+}

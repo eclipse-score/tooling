@@ -135,6 +135,11 @@ pub trait DiagramProcessor {
 pub trait ExpectationChecker<Error: ErrorView, Output> {
     fn check_ok(&self, actual: &Output, expected: &Expected<Output>);
     fn check_err(&self, err: &Error, expected: &YamlValue, base_dir: &Path);
+
+    /// Called once per case, after every per-file check has passed, with
+    /// every output the processor produced. No-op by default; override it
+    /// for assertions that span multiple files (e.g. cross-file id links).
+    fn check_case(&self, _outputs: &HashMap<Rc<PathBuf>, Output>, _dir: &Path) {}
 }
 
 // =================== Default Checker ===================
@@ -285,5 +290,9 @@ where
                 checker.check_ok(actual, &expected);
             }
         }
+    }
+
+    if let Ok(outputs) = &result {
+        checker.check_case(outputs, &dir);
     }
 }
