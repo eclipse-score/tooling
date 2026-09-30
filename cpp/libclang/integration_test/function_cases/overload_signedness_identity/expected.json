@@ -1,0 +1,119 @@
+{
+    "types": {},
+    "free_function_declarations": [
+        {
+            "name": "fixed_width",
+            "enclosing_namespace_id": null,
+            "return_type": "void",
+            "parameters": [
+                {
+                    "name": "",
+                    "param_type": "std::int32_t",
+                    "is_variadic": false
+                }
+            ],
+            "template_parameters": null,
+            "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/overload_signedness_identity/functions.hpp",
+                "line": 19
+            }
+        },
+        {
+            "name": "fixed_width",
+            "enclosing_namespace_id": null,
+            "return_type": "void",
+            "parameters": [
+                {
+                    "name": "",
+                    "param_type": "std::uint32_t",
+                    "is_variadic": false
+                }
+            ],
+            "template_parameters": null,
+            "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/overload_signedness_identity/functions.hpp",
+                "line": 20
+            }
+        },
+        {
+            "name": "size_vs_long",
+            "enclosing_namespace_id": null,
+            "return_type": "void",
+            "parameters": [
+                {
+                    "name": "",
+                    "param_type": "long",
+                    "is_variadic": false
+                }
+            ],
+            "template_parameters": null,
+            "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/overload_signedness_identity/functions.hpp",
+                "line": 21
+            }
+        },
+        {
+            "name": "size_vs_long",
+            "enclosing_namespace_id": null,
+            "return_type": "void",
+            "parameters": [
+                {
+                    "name": "",
+                    "param_type": "std::size_t",
+                    "is_variadic": false
+                }
+            ],
+            "template_parameters": null,
+            "source_location": {
+                "file": "cpp/libclang/integration_test/function_cases/overload_signedness_identity/functions.hpp",
+                "line": 22
+            }
+        }
+    ],
+    "functions": [
+        {
+            "id": {
+                "scope": "Global",
+                "name": "fixed_width"
+            },
+            "kind": "Free",
+            "return_type": {
+                "Builtin": "void"
+            },
+            "body": []
+        },
+        {
+            "id": {
+                "scope": "Global",
+                "name": "fixed_width"
+            },
+            "kind": "Free",
+            "return_type": {
+                "Builtin": "void"
+            },
+            "body": []
+        },
+        {
+            "id": {
+                "scope": "Global",
+                "name": "size_vs_long"
+            },
+            "kind": "Free",
+            "return_type": {
+                "Builtin": "void"
+            },
+            "body": []
+        },
+        {
+            "id": {
+                "scope": "Global",
+                "name": "size_vs_long"
+            },
+            "kind": "Free",
+            "return_type": {
+                "Builtin": "void"
+            },
+            "body": []
+        }
+    ]
+}

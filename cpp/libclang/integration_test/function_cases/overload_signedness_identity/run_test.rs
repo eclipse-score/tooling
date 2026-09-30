@@ -11,11 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use clang::ExceptionSpecification;
+use test_framework::run_parser_case;
 
-pub(crate) fn has_plain_noexcept(exception_specification: Option<ExceptionSpecification>) -> bool {
-    matches!(
-        exception_specification,
-        Some(ExceptionSpecification::BasicNoexcept | ExceptionSpecification::DynamicNone)
-    )
+#[test]
+fn test_overload_signedness_identity() {
+    run_parser_case();
 }
