@@ -1,0 +1,73 @@
+{
+  "types": {
+    "EventControl": {
+      "id": "EventControl",
+      "name": "EventControl",
+      "enclosing_namespace_id": null,
+      "stereotypes": [],
+      "entity_type": "Struct",
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "slot_count",
+          "data_type": "int",
+          "visibility": "public",
+          "is_static": false,
+          "source_location": {
+            "file": "",
+            "line": 19
+          }
+        }
+      ],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "",
+        "line": 17
+      }
+    },
+    "RegistrationResult": {
+      "id": "RegistrationResult",
+      "name": "RegistrationResult",
+      "enclosing_namespace_id": null,
+      "stereotypes": [],
+      "entity_type": "Struct",
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "event_control",
+          "data_type": "EventControl &",
+          "visibility": "public",
+          "is_static": false,
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
+        }
+      ],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [
+        {
+          "source": "RegistrationResult",
+          "target": "EventControl",
+          "relation_type": "Aggregation",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 17
+          }
+        }
+      ],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
+    }
+  },
+  "functions": []
+}

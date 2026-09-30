@@ -39,9 +39,19 @@ def _cc_sources_aspect_impl(target, ctx):
     direct_textual_hdrs = _extract_files_from_attr(ctx.rule.attr, "textual_hdrs")
 
     transitive_inputs = []
-    for dep in getattr(ctx.rule.attr, "deps", []):
+    for dep in getattr(ctx.rule.attr, "deps", []) + getattr(ctx.rule.attr, "implementation_deps", []):
         if SourceFilesInfo in dep:
             transitive_inputs.append(dep[SourceFilesInfo].inputs)
+
+    # implementation_deps' headers are only used to compile the current
+    # target's own sources: they are deliberately excluded from the
+    # target's own exported CcInfo.compilation_context (below), so they
+    # must be pulled in here directly instead. Regular deps' headers don't
+    # need this extra step: they're already covered by target[CcInfo]'s own
+    # (transitively merged) compilation_context, pulled in below.
+    for dep in getattr(ctx.rule.attr, "implementation_deps", []):
+        if CcInfo in dep:
+            transitive_inputs.append(dep[CcInfo].compilation_context.headers)
 
     # Also pull in every header CcInfo's compilation_context reports as
     # needed (this is Bazel's own authoritative transitive header set, e.g.
@@ -74,7 +84,7 @@ def _cc_sources_aspect_impl(target, ctx):
 
 cc_sources_aspect = aspect(
     implementation = _cc_sources_aspect_impl,
-    attr_aspects = ["deps"],
+    attr_aspects = ["deps", "implementation_deps"],
 )
 
 CompilationFlagsInfo = provider(
@@ -92,33 +102,48 @@ CppParserInfo = provider(
     },
 )
 
-def _collect_from_cc_info(target, ctx):
+def _collect_from_cc_info(cc_info):
     flags = []
 
-    if CcInfo in target:
-        cc_info = target[CcInfo]
+    if hasattr(cc_info, "compilation_context"):
+        cc_ctx = cc_info.compilation_context
 
-        if hasattr(cc_info, "compilation_context"):
-            cc_ctx = cc_info.compilation_context
-
-            flags.extend(["-D%s" % d for d in cc_ctx.defines.to_list()])
-            flags.extend(["-D%s" % d for d in cc_ctx.local_defines.to_list()])
-            flags.extend(["-I%s" % p for p in cc_ctx.includes.to_list()])
-            flags.extend(["-iquote%s" % p for p in cc_ctx.quote_includes.to_list()])
-            flags.extend(["-isystem%s" % p for p in cc_ctx.system_includes.to_list()])
-            flags.extend(["-isystem%s" % p for p in cc_ctx.external_includes.to_list()])
-            flags.extend(["-F%s" % p for p in cc_ctx.framework_includes.to_list()])
+        flags.extend(["-D%s" % d for d in cc_ctx.defines.to_list()])
+        flags.extend(["-D%s" % d for d in cc_ctx.local_defines.to_list()])
+        flags.extend(["-I%s" % p for p in cc_ctx.includes.to_list()])
+        flags.extend(["-iquote%s" % p for p in cc_ctx.quote_includes.to_list()])
+        flags.extend(["-isystem%s" % p for p in cc_ctx.system_includes.to_list()])
+        flags.extend(["-isystem%s" % p for p in cc_ctx.external_includes.to_list()])
+        flags.extend(["-F%s" % p for p in cc_ctx.framework_includes.to_list()])
 
     return flags
 
 def _compilation_flags_aspect_impl(target, ctx):
     transitive = []
 
-    for dep in getattr(ctx.rule.attr, "deps", []):
+    for dep in getattr(ctx.rule.attr, "deps", []) + getattr(ctx.rule.attr, "implementation_deps", []):
         if CompilationFlagsInfo in dep:
             transitive.append(dep[CompilationFlagsInfo].flags)
 
-    direct_flags = _collect_from_cc_info(target, ctx)
+    # implementation_deps' own include paths/defines are private to the
+    # current target's compile action and are not re-exported through
+    # target[CcInfo] below, so they must be added directly here. Regular
+    # deps' flags don't need this extra step: they're already covered by
+    # target[CcInfo]'s own (transitively merged) compilation_context, pulled
+    # in below via direct_flags.
+    #
+    # Note this does mean implementation_deps' flags end up in this target's
+    # own CompilationFlagsInfo, which -- unlike CcInfo's public/private
+    # split -- is then visible to whatever consumes *this* target as a dep
+    # in turn. This is an accepted, known difference from a real compile
+    # (where implementation_deps' flags never leak to consumers): the parser
+    # only needs "enough flags to make libclang happy", not a byte-perfect
+    # reproduction of the real compilation command line.
+    for dep in getattr(ctx.rule.attr, "implementation_deps", []):
+        if CcInfo in dep:
+            transitive.append(depset(_collect_from_cc_info(dep[CcInfo])))
+
+    direct_flags = _collect_from_cc_info(target[CcInfo]) if CcInfo in target else []
 
     return [
         CompilationFlagsInfo(
@@ -128,7 +153,7 @@ def _compilation_flags_aspect_impl(target, ctx):
 
 compilation_flags_aspect = aspect(
     implementation = _compilation_flags_aspect_impl,
-    attr_aspects = ["deps"],
+    attr_aspects = ["deps", "implementation_deps"],
 )
 
 # Public integration helpers for rules that want to reuse the parser action.
