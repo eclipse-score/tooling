@@ -117,6 +117,23 @@ statement with an initializer can use the fallback path: reachable calls are
 retained, but the initializer and condition are not represented as a reliable
 branch shape.
 
+### Parameter and return types under unresolved includes
+
+When a `#include` fails to resolve, clang recovers by silently replacing the
+affected type with a placeholder (typically `int`) so it can keep parsing. The
+visitor detects this via the declaration's (or its enclosing callable's)
+invalid-declaration state and falls back to re-tokenizing the source to
+recover the type as written, but only when that recovered spelling actually
+differs from clang's reported type -- so a declaration that is valid despite
+an invalid sibling (e.g. a method whose return type is fine but whose
+parameter type failed to resolve) keeps its real, clang-resolved type rather
+than being overridden. The recovery also handles operator overloads,
+out-of-line definitions, and nested templates; see
+`cpp/libclang/integration_test/cases/unresolved_type_edge_cases` for worked
+examples, and the one known limitation: an unnamed parameter whose type is
+itself entirely unresolved has no libclang source range to recover from, so
+clang's placeholder is reported as-is in that case.
+
 ## Callable scope and identity
 
 A `FunctionId` contains a callable name and a structured `Scope`.

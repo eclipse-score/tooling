@@ -36,6 +36,211 @@ pub(crate) fn resolve_type(original: &Type) -> ResolvedType {
     resolved
 }
 
+/// Resolves the type of a declaration (field or function), guarding against
+/// clang's own error-recovery behavior.
+///
+/// When `entity` has an invalid declaration -- typically because a
+/// `#include` for the type failed to resolve -- `entity.get_type()` may no
+/// longer reflect what was written in the source: clang silently substitutes
+/// a placeholder type (commonly `int`) so it can keep parsing. Reporting
+/// that placeholder as the real type would produce a misleading "type
+/// differs between design and implementation" finding instead of surfacing
+/// the real problem (the failed `#include`). In that case, this recovers the
+/// type as written by re-tokenizing the declaration's own source range
+/// instead. If the recovered spelling matches what clang already reports
+/// (i.e. this particular declaration parsed fine despite a sibling error),
+/// clang's own resolution is kept so builtins still resolve as builtins.
+pub(crate) fn resolve_declared_type(entity: &Entity, original: &Type) -> ResolvedType {
+    match recover_declared_spelling(entity, original, entity.is_invalid_declaration()) {
+        Some(spelled) => ResolvedType::Unknown(spelled),
+        None => resolve_type(original),
+    }
+}
+
+/// Same guard as [`resolve_declared_type`], for a callable's parameter.
+///
+/// clang's "invalid declaration" bit is not reliably set on an unnamed
+/// `ParmDecl` even when the callable it belongs to is invalid (and
+/// `Entity::get_semantic_parent()` is not reliably set on parameters either),
+/// so the callable's own bit is checked explicitly as well.
+pub(crate) fn resolve_declared_argument_type(
+    argument: &Entity,
+    callable: &Entity,
+    original: &Type,
+) -> ResolvedType {
+    let invalid = argument.is_invalid_declaration() || callable.is_invalid_declaration();
+    match recover_declared_spelling(argument, original, invalid) {
+        Some(spelled) => ResolvedType::Unknown(spelled),
+        None => resolve_type(original),
+    }
+}
+
+/// Same guard as [`resolve_declared_argument_type`], but for call sites that
+/// render a parameter's type via `Type::get_display_name()` directly.
+pub(crate) fn declared_argument_display_name(
+    argument: &Entity,
+    callable: &Entity,
+    original: &Type,
+) -> String {
+    let invalid = argument.is_invalid_declaration() || callable.is_invalid_declaration();
+    recover_declared_spelling(argument, original, invalid)
+        .unwrap_or_else(|| original.get_display_name())
+}
+
+/// Returns the type as written in the source, but only when `invalid` and the
+/// recovered spelling differs from what clang itself reports -- i.e. only
+/// when clang's reported type is actually the error-recovery placeholder,
+/// not just a sibling declaration's unrelated invalidity.
+fn recover_declared_spelling(entity: &Entity, original: &Type, invalid: bool) -> Option<String> {
+    if !invalid {
+        return None;
+    }
+    let spelled = spelled_type_from_source(entity)?;
+    if spelled == original.get_display_name() {
+        return None;
+    }
+    log::debug!(
+        "'{}' has an invalid declaration (likely caused by an unresolved #include); \
+         using the type as written ('{}') instead of clang's error-recovery type",
+        entity.get_name().unwrap_or_default(),
+        spelled,
+    );
+    Some(spelled)
+}
+
+/// Recovers a declaration's type as written in the source, by re-tokenizing
+/// its own source range and taking everything before the declarator name (or
+/// before a top-level `=` default value, for an unnamed declaration). Returns
+/// `None` if the entity has no source range or no leading tokens (e.g. the
+/// type itself could not be tokenized, such as for a macro-expanded
+/// declaration).
+///
+/// Known limitation: for a parameter that is both unnamed *and* of a fully
+/// unresolved type (e.g. `void f(Missing);` where `Missing` is never
+/// declared), libclang reports no source range at all for the `ParmDecl`, so
+/// recovery is not possible and clang's placeholder type is reported as-is.
+/// This combination is rare in practice (unresolved custom types are
+/// normally still named for readability); named parameters and unnamed
+/// parameters of an otherwise-resolvable type are unaffected.
+fn spelled_type_from_source(entity: &Entity) -> Option<String> {
+    const SKIP_KEYWORDS: &[&str] = &[
+        "static",
+        "mutable",
+        "inline",
+        "constexpr",
+        "virtual",
+        "explicit",
+        "extern",
+        "friend",
+        "register",
+        "thread_local",
+    ];
+
+    // Position of the declarator name itself, so tokens making up e.g. an
+    // array size, initializer, or nested-name-specifier that *follows* the
+    // name are never mistaken for a leading one. Absent for unnamed
+    // declarations (e.g. an unnamed parameter).
+    let name_offset = entity
+        .get_name()
+        .filter(|name| !name.is_empty())
+        .and_then(|_| entity.get_location())
+        .map(|location| location.get_spelling_location().offset);
+
+    let tokens = entity.get_range()?.tokenize();
+
+    let mut type_tokens = Vec::new();
+    let mut angle_depth: i32 = 0;
+    for token in &tokens {
+        let spelling = token.get_spelling();
+
+        match name_offset {
+            Some(name_offset) => {
+                if token.get_location().get_spelling_location().offset >= name_offset {
+                    break;
+                }
+            }
+            // No declarator name to bound the scan (unnamed declaration): stop
+            // at a top-level default value instead (e.g. `void f(int = 5)`).
+            None if spelling == "=" && angle_depth == 0 => break,
+            None => {}
+        }
+
+        if spelling == "<" {
+            angle_depth += 1;
+        } else if is_closing_angles(&spelling) {
+            angle_depth -= spelling.len() as i32;
+        }
+
+        if !SKIP_KEYWORDS.contains(&spelling.as_str()) {
+            type_tokens.push(spelling);
+        }
+    }
+
+    if type_tokens.is_empty() {
+        return None;
+    }
+
+    Some(render_type_tokens(&strip_trailing_qualifier(type_tokens)))
+}
+
+/// Removes a trailing nested-name-specifier (e.g. `Ns::Class::` or a
+/// templated `Class<T>::`) from the end of a declaration's leading tokens.
+/// This is the qualifier of an out-of-line definition's declarator name
+/// (`ReturnType Class::method()`), not part of the return type itself.
+fn strip_trailing_qualifier(mut tokens: Vec<String>) -> Vec<String> {
+    while tokens.last().map(String::as_str) == Some("::") {
+        tokens.pop();
+        match tokens.pop() {
+            Some(closing) if is_closing_angles(&closing) => {
+                let mut depth = closing.len() as i32;
+                while depth > 0 {
+                    match tokens.pop() {
+                        Some(inner) if inner == "<" => depth -= 1,
+                        Some(inner) if is_closing_angles(&inner) => depth += inner.len() as i32,
+                        Some(_) => {}
+                        None => break,
+                    }
+                }
+                tokens.pop(); // the template name preceding '<'
+            }
+            _ => {} // a plain identifier qualifier, already popped
+        }
+    }
+    tokens
+}
+
+/// A token consisting solely of `>` characters (clang's raw lexer emits `>>`
+/// and `>>>` as single tokens; it does not perform the C++11 "maximal munch"
+/// split into separate `>` tokens that a template-aware parser would).
+fn is_closing_angles(token: &str) -> bool {
+    !token.is_empty() && token.chars().all(|c| c == '>')
+}
+
+/// Joins spelled-out declaration tokens back into a single type string,
+/// keeping template/scope punctuation tight (`std::vector<int>`) while still
+/// spacing out keywords and declarators (`const T &`).
+fn render_type_tokens(tokens: &[String]) -> String {
+    fn no_space_before(token: &str) -> bool {
+        token == "::" || token == "," || token == "<" || is_closing_angles(token)
+    }
+    fn no_space_after(token: &str) -> bool {
+        token == "::" || token == "<"
+    }
+
+    let mut rendered = String::new();
+    for (index, token) in tokens.iter().enumerate() {
+        let previous = index.checked_sub(1).map(|i| tokens[i].as_str());
+        let needs_space = !rendered.is_empty()
+            && !no_space_before(token)
+            && !previous.is_some_and(no_space_after);
+        if needs_space {
+            rendered.push(' ');
+        }
+        rendered.push_str(token);
+    }
+    rendered
+}
+
 fn resolve_unqualified_type(original: &Type, canonical: &Type) -> ResolvedType {
     // Single source of truth for builtin mapping; extend here when adding builtin support.
     if let Some(name) = builtin_name(original.get_kind()) {
@@ -326,7 +531,78 @@ fn build_fqn_from_entity(entity: &Entity) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::collapse_std_internal_namespaces;
+    use super::{collapse_std_internal_namespaces, render_type_tokens, strip_trailing_qualifier};
+
+    fn tokens(spellings: &[&str]) -> Vec<String> {
+        spellings.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn renders_simple_name() {
+        assert_eq!(render_type_tokens(&tokens(&["Missing"])), "Missing");
+    }
+
+    #[test]
+    fn renders_reference_with_leading_space() {
+        assert_eq!(
+            render_type_tokens(&tokens(&["const", "Missing", "&"])),
+            "const Missing &"
+        );
+    }
+
+    #[test]
+    fn renders_nested_template_without_stray_spaces() {
+        let nested = tokens(&[
+            "std", "::", "map", "<", "int", ",", "std", "::", "vector", "<", "Missing", ">>",
+        ]);
+        assert_eq!(
+            render_type_tokens(&nested),
+            "std::map<int, std::vector<Missing>>"
+        );
+    }
+
+    #[test]
+    fn renders_single_level_template() {
+        let single = tokens(&["std", "::", "vector", "<", "Missing", ">"]);
+        assert_eq!(render_type_tokens(&single), "std::vector<Missing>");
+    }
+
+    #[test]
+    fn strips_simple_out_of_line_qualifier() {
+        let with_qualifier = tokens(&["Missing", "S", "::"]);
+        assert_eq!(
+            strip_trailing_qualifier(with_qualifier),
+            tokens(&["Missing"])
+        );
+    }
+
+    #[test]
+    fn strips_namespaced_out_of_line_qualifier() {
+        let with_qualifier = tokens(&["Missing", "ns", "::", "S", "::"]);
+        assert_eq!(
+            strip_trailing_qualifier(with_qualifier),
+            tokens(&["Missing"])
+        );
+    }
+
+    #[test]
+    fn strips_templated_out_of_line_qualifier() {
+        let with_qualifier = tokens(&["Missing", "Foo", "<", "T", ">", "::"]);
+        assert_eq!(
+            strip_trailing_qualifier(with_qualifier),
+            tokens(&["Missing"])
+        );
+    }
+
+    #[test]
+    fn leaves_trailing_template_close_untouched() {
+        // A type's own trailing '>' (not a qualifier) must survive unstripped.
+        let plain_template = tokens(&["std", "::", "vector", "<", "Missing", ">"]);
+        assert_eq!(
+            strip_trailing_qualifier(plain_template.clone()),
+            plain_template
+        );
+    }
 
     #[test]
     fn collapses_std_internal_namespaces_only_under_std() {

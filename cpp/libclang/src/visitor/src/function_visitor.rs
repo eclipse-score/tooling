@@ -38,7 +38,7 @@ use crate::context::{
     ExtractedFreeFunctionDeclaration, ExtractedFunction, ExtractedMethodDeclaration,
     ParsedMethodType, SourceEntityKey,
 };
-use crate::types::resolver::resolve_type;
+use crate::types::resolver::resolve_declared_type;
 use crate::visitor::{normalize_source_identity_path, SourceFileCache};
 use crate::VisitContext;
 
@@ -127,7 +127,7 @@ impl FunctionVisitor {
 
         let return_type = entity
             .get_result_type()
-            .map(|ty| resolve_type(&ty))
+            .map(|ty| resolve_declared_type(entity, &ty))
             .unwrap_or_else(|| ResolvedType::Builtin("void".to_string()));
         let method_type = ParsedMethodType {
             name: id.name.clone(),
@@ -262,7 +262,9 @@ impl FunctionVisitor {
         let return_type = if matches!(kind, FunctionKind::Constructor | FunctionKind::Destructor) {
             None
         } else {
-            entity.get_result_type().map(|t| resolve_type(&t))
+            entity
+                .get_result_type()
+                .map(|t| resolve_declared_type(&entity, &t))
         };
 
         let extracted_function = ExtractedFunction {
