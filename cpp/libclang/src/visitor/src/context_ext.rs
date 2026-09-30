@@ -51,24 +51,23 @@ fn merge_simple_entity(existing: &mut SimpleEntity, incoming: SimpleEntity) {
         existing.source_location = incoming.source_location.clone();
     }
 
-    // Replace the default Class classification only when the incoming entity
-    // exposes abstract semantics.
-    if matches!(
-        (existing.entity_type, incoming.entity_type),
-        (
-            EntityType::Class,
-            EntityType::AbstractClass | EntityType::Interface
-        )
-    ) {
-        existing.entity_type = incoming.entity_type;
-        existing.source_location = incoming.source_location.clone();
-    }
-
-    if !entity_types_are_compatible(existing.entity_type, incoming.entity_type) {
-        warn!(
-            "conflicting entity types while merging '{}': keeping {:?}, dropping {:?}",
-            existing.id, existing.entity_type, incoming.entity_type
-        );
+    // A forward declaration (`class X;`) is classified as the default `Class`
+    // until a definition with abstract semantics is seen; adopt the richer
+    // classification regardless of which one was merged first, and only
+    // suppress the conflict warning for that specific, expected transition.
+    match (existing.entity_type, incoming.entity_type) {
+        (EntityType::Class, EntityType::AbstractClass | EntityType::Interface) => {
+            existing.entity_type = incoming.entity_type;
+            existing.source_location = incoming.source_location.clone();
+        }
+        (EntityType::AbstractClass | EntityType::Interface, EntityType::Class) => {}
+        (existing_type, incoming_type) if existing_type != incoming_type => {
+            warn!(
+                "conflicting entity types while merging '{}': keeping {:?}, dropping {:?}",
+                existing.id, existing.entity_type, incoming.entity_type
+            );
+        }
+        _ => {}
     }
 
     extend_unique(&mut existing.stereotypes, incoming.stereotypes);
@@ -77,17 +76,6 @@ fn merge_simple_entity(existing: &mut SimpleEntity, incoming: SimpleEntity) {
     extend_unique(&mut existing.methods, incoming.methods);
     extend_unique(&mut existing.enum_literals, incoming.enum_literals);
     extend_unique(&mut existing.relationships, incoming.relationships);
-}
-
-fn entity_types_are_compatible(existing: EntityType, incoming: EntityType) -> bool {
-    existing == incoming || (is_class_entity_type(existing) && is_class_entity_type(incoming))
-}
-
-fn is_class_entity_type(entity_type: EntityType) -> bool {
-    matches!(
-        entity_type,
-        EntityType::Class | EntityType::Struct | EntityType::Interface | EntityType::AbstractClass
-    )
 }
 
 fn extend_unique<T: PartialEq>(existing: &mut Vec<T>, incoming: Vec<T>) {
@@ -261,5 +249,40 @@ mod tests {
 
         let thing = types.get("svc::IThing").expect("merged type should exist");
         assert_eq!(thing.entity_type, EntityType::Interface);
+    }
+
+    #[test]
+    fn insert_or_merge_type_keeps_abstract_class_when_forward_declaration_arrives_later() {
+        let mut types = BTreeMap::new();
+        types.insert_or_merge_type(
+            "svc::IThing".to_string(),
+            SimpleEntity {
+                id: "svc::IThing".to_string(),
+                name: "IThing".to_string(),
+                enclosing_namespace_id: Some("svc".to_string()),
+                entity_type: EntityType::AbstractClass,
+                source_location: SourceLocation::new("definition.hpp", 4),
+                ..Default::default()
+            },
+        );
+
+        types.insert_or_merge_type(
+            "svc::IThing".to_string(),
+            SimpleEntity {
+                id: "svc::IThing".to_string(),
+                name: "IThing".to_string(),
+                enclosing_namespace_id: Some("svc".to_string()),
+                entity_type: EntityType::Class,
+                source_location: SourceLocation::new("fwd.hpp", 2),
+                ..Default::default()
+            },
+        );
+
+        let thing = types.get("svc::IThing").expect("merged type should exist");
+        assert_eq!(thing.entity_type, EntityType::AbstractClass);
+        assert_eq!(
+            thing.source_location,
+            SourceLocation::new("definition.hpp", 4)
+        );
     }
 }

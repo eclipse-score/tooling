@@ -28,7 +28,7 @@ pub enum ResolvedType {
         return_type: Box<ResolvedType>,
         parameter_types: Vec<ResolvedType>,
         is_variadic: bool,
-        #[serde(default, skip_serializing_if = "is_false")]
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         is_noexcept: bool,
     },
     FunctionPointer(Box<ResolvedType>),
@@ -204,10 +204,6 @@ impl ResolvedType {
             },
         }
     }
-}
-
-fn is_false(value: &bool) -> bool {
-    !value
 }
 
 fn render_function_wrapper(inner: &ResolvedType, marker: &str) -> String {

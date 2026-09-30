@@ -1,0 +1,84 @@
+{
+    "types": {
+        "IThing": {
+            "id": "IThing",
+            "name": "IThing",
+            "enclosing_namespace_id": null,
+            "stereotypes": [],
+            "entity_type": "Interface",
+            "type_aliases": [],
+            "variables": [],
+            "methods": [
+                {
+                    "name": "~IThing",
+                    "return_type": null,
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Destructor"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_declared_interface_merge/a_full_definition.cpp",
+                        "line": 16
+                    }
+                },
+                {
+                    "name": "run",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Abstract"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_declared_interface_merge/a_full_definition.cpp",
+                        "line": 17
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "enum_literals": [],
+            "relationships": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/forward_declared_interface_merge/a_full_definition.cpp",
+                "line": 13
+            }
+        }
+    },
+    "free_function_declarations": [
+        {
+            "name": "use_thing",
+            "enclosing_namespace_id": null,
+            "return_type": "void",
+            "parameters": [
+                {
+                    "name": "thing",
+                    "param_type": "IThing *",
+                    "is_variadic": false
+                }
+            ],
+            "template_parameters": null,
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/forward_declared_interface_merge/b_forward_declaration.cpp",
+                "line": 15
+            }
+        }
+    ],
+    "functions": [
+        {
+            "id": {
+                "scope": "Global",
+                "name": "use_thing"
+            },
+            "kind": "Free",
+            "return_type": {
+                "Builtin": "void"
+            },
+            "body": []
+        }
+    ]
+}
