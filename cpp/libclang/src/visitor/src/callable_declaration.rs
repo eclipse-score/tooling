@@ -17,7 +17,10 @@ use cpp_semantics::ResolvedType;
 
 use crate::context::CallableArgumentKey;
 use crate::types::renderer::render_type_for_display;
-use crate::types::resolver::resolve_type;
+use crate::types::resolver::{
+    declared_argument_display_name, resolve_declared_argument_type, resolve_declared_type,
+    resolve_type,
+};
 
 /// Parameter data extracted once from a callable cursor.
 ///
@@ -57,9 +60,11 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
         let argument_type = argument.get_type();
         let raw_param_type = argument_type
             .as_ref()
-            .map(|ty| ty.get_display_name())
+            .map(|ty| declared_argument_display_name(&argument, entity, ty))
             .unwrap_or_default();
-        let resolved_type = argument_type.as_ref().map(resolve_type);
+        let resolved_type = argument_type
+            .as_ref()
+            .map(|ty| resolve_declared_argument_type(&argument, entity, ty));
         let signature_type = argument_type
             .as_ref()
             .map(|ty| resolve_type(&ty.get_canonical_type()));
@@ -108,7 +113,7 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
 
 pub(crate) fn parse_callable_return_type(entity: &Entity) -> Option<String> {
     entity.get_result_type().map(|return_type| {
-        let resolved_type = resolve_type(&return_type);
+        let resolved_type = resolve_declared_type(entity, &return_type);
         render_type_for_display(&return_type, &resolved_type)
     })
 }

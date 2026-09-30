@@ -26,7 +26,7 @@ use crate::context::{
     ParsedClassInfo, ParsedVariableType, VisitContext,
 };
 use crate::types::renderer::render_type_for_display;
-use crate::types::resolver::resolve_type;
+use crate::types::resolver::{resolve_declared_type, resolve_type};
 use crate::visitor::AstVisitor;
 
 pub struct ClassVisitor;
@@ -213,7 +213,7 @@ fn collect_variable_type(entity: &Entity) -> Option<ParsedVariableType> {
 
     Some(ParsedVariableType {
         name,
-        resolved_type: resolve_type(&field_type),
+        resolved_type: resolve_declared_type(entity, &field_type),
         source_location: parse_source_location(entity),
     })
 }

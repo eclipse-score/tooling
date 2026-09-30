@@ -41,6 +41,7 @@ def cpp_parser_integration_test(
         expected_output,
         srcs = None,
         extra_args = None,
+        allow_parse_errors = False,
         visibility = None):
     if srcs == None:
         srcs = ["run_test.rs"]
@@ -57,6 +58,7 @@ def cpp_parser_integration_test(
 
     cpp_parser(
         name = "parser",
+        allow_parse_errors = allow_parse_errors,
         emit_debug_json = True,
         extra_args = extra_args,
         target = target,
