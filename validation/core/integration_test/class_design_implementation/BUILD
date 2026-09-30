@@ -56,6 +56,7 @@ filegroup(
         "//validation/core/integration_test/class_design_implementation/positive_method_inheritance_features:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_method_template_pack_features:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_relationship_features:case_data",
+        "//validation/core/integration_test/class_design_implementation/positive_unresolved_type_not_int:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_variable_features:case_data",
     ],
 )
