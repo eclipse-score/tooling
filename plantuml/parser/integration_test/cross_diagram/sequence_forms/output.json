@@ -1,0 +1,9 @@
+{
+    "sequence_diagram.puml": {
+        "defines": {},
+        "references": {
+            "Frontend": "Frontend",
+            "Backend": "Backend"
+        }
+    }
+}

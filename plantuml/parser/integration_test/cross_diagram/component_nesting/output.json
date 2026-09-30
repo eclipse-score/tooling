@@ -1,0 +1,18 @@
+{
+    "component_diagram.puml": {
+        "defines": {
+            "logging": "logging",
+            "Recorder": "logging.Recorder"
+        },
+        "references": {
+            "Backend": "logging.Recorder.Backend",
+            "Frontend": "logging.Recorder.Frontend"
+        }
+    },
+    "sequence_diagram.puml": {
+        "defines": {},
+        "references": {
+            "Backend": "Backend"
+        }
+    }
+}

@@ -1,0 +1,21 @@
+{
+    "component_diagram.puml": {
+        "defines": {},
+        "references": {
+            "Backend": "Backend"
+        }
+    },
+    "class_diagram.puml": {
+        "defines": {
+            "IBackend": "IBackend"
+        },
+        "references": {}
+    },
+    "sequence_diagram.puml": {
+        "defines": {},
+        "references": {
+            "Backend": "Backend",
+            "IBackend": "IBackend"
+        }
+    }
+}

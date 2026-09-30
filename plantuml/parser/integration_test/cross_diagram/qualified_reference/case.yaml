@@ -1,0 +1,19 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+# Regression baseline for F3: the grammar truncates a `::`-qualified
+# relationship endpoint to its first segment, so `A --> a::B` looks up a bare
+# name `a` instead of resolving `a::B` as a path. This is expected to become a
+# passing case once the qualified_identifier grammar accepts `::` in
+# relationship endpoints.
+diagram_types:
+  class_diagram.puml: class

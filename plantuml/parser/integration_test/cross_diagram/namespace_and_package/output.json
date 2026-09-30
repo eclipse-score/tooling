@@ -1,0 +1,11 @@
+{
+    "class_diagram.puml": {
+        "defines": {
+            "score": "score",
+            "Recorder": "score.Recorder",
+            "logging": "logging",
+            "Formatter": "logging.Formatter"
+        },
+        "references": {}
+    }
+}
