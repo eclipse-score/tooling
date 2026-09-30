@@ -40,6 +40,7 @@ rust_library(
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_utils",
         "//tools/metamodel/common:source_location",
+        "//tools/metamodel/common:uid_utils",
         "@crates//:log",
         "@crates//:pest",
         "@crates//:serde",

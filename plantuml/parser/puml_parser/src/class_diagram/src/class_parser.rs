@@ -61,16 +61,12 @@ struct IgnoredObjectRegistry {
 }
 
 impl IgnoredObjectRegistry {
-    fn normalize_fqn(raw: &str) -> String {
-        raw.replace("::", ".").trim_matches('.').to_string()
-    }
-
     fn build_fqn(name: &str, parent: &Option<String>) -> String {
-        let normalized_name = Self::normalize_fqn(name);
+        let normalized_name = uid_utils::normalize(name);
 
         match parent {
             Some(p) => {
-                let normalized_parent = Self::normalize_fqn(p);
+                let normalized_parent = uid_utils::normalize(p);
 
                 if normalized_parent.is_empty() {
                     normalized_name
@@ -99,7 +95,7 @@ impl IgnoredObjectRegistry {
     }
 
     fn contains_reference(&self, name: &str, parent: &Option<String>) -> bool {
-        let normalized = Self::normalize_fqn(name);
+        let normalized = uid_utils::normalize(name);
 
         self.ids.contains(&normalized)
             || self.ids.contains(&Self::build_fqn(name, parent))
