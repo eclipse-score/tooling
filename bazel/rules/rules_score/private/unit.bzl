@@ -36,6 +36,15 @@ def _run_implementation_cpp_parser(ctx, impl, output_prefix):
         output_prefix = output_prefix,
         tool = ctx.attr._tool,
         log_level = ctx.attr._log_level[BuildSettingInfo].value,
+        # "development" maturity already downgrades validation findings to
+        # warnings; extend the same leniency to the parser itself so a
+        # broken #include doesn't hard-fail the unit before validation even
+        # runs. "release" units default to strict (clang's own error-recovery
+        # placeholder types, e.g. an unresolved field type reported as
+        # `int`, must not be silently accepted), but can opt in per-unit via
+        # `allow_parse_errors` without downgrading maturity everywhere else
+        # (validation findings still stay errors).
+        allow_parse_errors = ctx.attr.allow_parse_errors or ctx.attr.maturity == "development",
     )
 
 def _target_output_prefix(ctx, target):
@@ -183,7 +192,11 @@ _unit_attrs = {
     "maturity": attr.string(
         default = "release",
         values = ["release", "development"],
-        doc = "Maturity level of the unit. 'release' treats validation findings as errors; 'development' emits warnings and continues.",
+        doc = "Maturity level of the unit. 'release' treats validation findings as errors and requires the implementation to parse without errors; 'development' emits warnings, continues, and tolerates parse errors (see also 'allow_parse_errors').",
+    ),
+    "allow_parse_errors": attr.bool(
+        default = False,
+        doc = "Opt in to tolerating parse errors (e.g. an unresolved #include) even for a 'release' maturity unit. 'development' maturity is always lenient regardless of this attr.",
     ),
 }
 
@@ -233,6 +246,12 @@ def unit(
         testonly: If true, only testonly targets can depend on this unit. Set to true
             when the unit depends on testonly targets like tests.
         visibility: Bazel visibility specification for the unit target.
+        maturity: 'release' (default) or 'development'. 'development' emits validation
+            findings as warnings and tolerates implementation parse errors (e.g. an
+            unresolved #include); 'release' treats both as hard errors.
+        allow_parse_errors: Opt in to tolerating implementation parse errors for a
+            'release' maturity unit, without downgrading its validation findings to
+            warnings. Default False. Ignored (always lenient) for 'development' maturity.
 
     Example:
         ```python
