@@ -300,7 +300,8 @@ def run_cpp_parser_action(
         tool,
         log_level,
         extra_args = [],
-        emit_debug_json = False):
+        emit_debug_json = False,
+        allow_parse_errors = False):
     """Register the libclang parser action and return its declared outputs.
 
     The target must be analyzed with cpp_parser_target_aspects() before this
@@ -310,6 +311,12 @@ def run_cpp_parser_action(
     header-only target with no headers reachable from srcs/hdrs/CcInfo) would
     otherwise crash on an out-of-bounds list access. The calling rule must
     declare the toolchains returned by cpp_parser_action_toolchains().
+
+    allow_parse_errors controls whether the action fails when a translation
+    unit has parse errors (e.g. a missing header). When False (the default),
+    the action fails loudly instead of silently emitting clang's own
+    error-recovery placeholder types (e.g. an unresolved field type reported
+    as `int`).
     """
 
     libclang_info = ctx.toolchains[LIBCLANG_TOOLCHAIN_TYPE].libclang_info
@@ -339,6 +346,9 @@ def run_cpp_parser_action(
             "--debug-json-output",
             debug_json_output.path,
         ]
+
+    if allow_parse_errors:
+        args += ["--allow-parse-errors"]
 
     target_compilation_flags_list = target[CompilationFlagsInfo].flags.to_list()
 
@@ -402,6 +412,7 @@ def _cpp_parser_impl(ctx):
         log_level = ctx.attr._log_level[BuildSettingInfo].value,
         extra_args = ctx.attr.extra_args,
         emit_debug_json = ctx.attr.emit_debug_json,
+        allow_parse_errors = ctx.attr.allow_parse_errors,
     )
 
     runfiles_files = [outputs.class_fbs]
@@ -430,6 +441,10 @@ _cpp_parser_attrs = {
     "emit_debug_json": attr.bool(
         default = False,
         doc = "Emit debug.json alongside the FlatBuffer output. Intended for tests/debugging.",
+    ),
+    "allow_parse_errors": attr.bool(
+        default = False,
+        doc = "Do not fail the action when a translation unit has parse errors. Intended for tests/debugging.",
     ),
 }
 

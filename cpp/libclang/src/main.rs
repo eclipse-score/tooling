@@ -11,9 +11,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
+use clang::diagnostic::Severity;
 use clap::Parser as ClapParser;
 use env_logger::Builder;
-use log::{debug, error, LevelFilter};
+use log::{debug, error, warn, LevelFilter};
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -48,6 +49,13 @@ struct Args {
     /// Debug JSON output path (internal use only)
     #[arg(long, hide = true)]
     debug_json_output: Option<PathBuf>,
+
+    /// Do not fail the action when a translation unit has parse errors
+    /// (fatal libclang diagnostics or an outright parse failure). The
+    /// resulting AST may then contain clang's own error-recovery
+    /// placeholders (e.g. an unresolved field type reported as `int`).
+    #[arg(long)]
+    allow_parse_errors: bool,
 }
 
 #[derive(Default)]
@@ -141,15 +149,16 @@ fn parse_file(
     compilation_flags: &[String],
     index: &clang::Index,
     trace_output_dir: Option<&Path>,
+    allow_parse_errors: bool,
     state: &mut ParseState,
     outputs: &mut ParseOutputs,
-) {
+) -> bool {
     debug!("Parsing TU: {:?}", file);
 
     if let Some(path_str) = file.to_str() {
         if is_external_dependency_path(path_str) {
             debug!("Skipping external dependency file: {:?}", file);
-            return;
+            return true;
         }
     };
 
@@ -158,10 +167,22 @@ fn parse_file(
     match parse_result {
         Ok(parsed) => {
             let diagnostics = parsed.get_diagnostics();
+            let mut has_errors = false;
             if !diagnostics.is_empty() {
                 debug!("Diagnostics: {}", diagnostics.len());
                 for diagnostic in &diagnostics {
                     debug!("Diagnostic: {:?}", diagnostic);
+                    if matches!(diagnostic.get_severity(), Severity::Error | Severity::Fatal) {
+                        has_errors = true;
+                        // A tolerated parse error still needs surfacing, but not at
+                        // `error!` level: the caller opted in to continuing anyway
+                        // (--allow-parse-errors), so this is expected, not fatal.
+                        if allow_parse_errors {
+                            warn!("{}", diagnostic);
+                        } else {
+                            error!("{}", diagnostic);
+                        }
+                    }
                 }
             }
 
@@ -185,9 +206,11 @@ fn parse_file(
             );
             visitor.visit(entity);
             outputs.extend_from_ctx(ctx);
+            !has_errors
         }
         Err(e) => {
             error!("Failed to parse {:?}: {:?}", file, e);
+            false
         }
     }
 }
@@ -238,17 +261,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .and_then(Path::parent)
     });
 
+    let mut all_parsed_cleanly = true;
     for file in &command_line_args.input {
         let compilation_flags = &command_line_args.extra_args;
 
-        parse_file(
+        let parsed_cleanly = parse_file(
             file,
             compilation_flags,
             &index,
             trace_output_dir,
+            command_line_args.allow_parse_errors,
             &mut state,
             &mut outputs,
         );
+        all_parsed_cleanly &= parsed_cleanly;
     }
 
     if let Some(debug_json_output) = &command_line_args.debug_json_output {
@@ -266,6 +292,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         outputs.types,
         outputs.free_function_declarations,
     )?;
+
+    if !all_parsed_cleanly && !command_line_args.allow_parse_errors {
+        return Err(
+            "one or more translation units had parse errors (pass --allow-parse-errors to continue anyway)"
+                .into(),
+        );
+    }
 
     Ok(())
 }
