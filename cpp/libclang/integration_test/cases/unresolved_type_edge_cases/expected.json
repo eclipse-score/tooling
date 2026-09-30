@@ -1,0 +1,101 @@
+{
+    "types": {
+        "Registrar": {
+            "id": "Registrar",
+            "name": "Registrar",
+            "enclosing_namespace_id": null,
+            "stereotypes": [],
+            "entity_type": "Struct",
+            "type_aliases": [],
+            "variables": [
+                {
+                    "name": "nested",
+                    "data_type": "std::map<int, std::vector<EventControl>>",
+                    "visibility": "public",
+                    "is_static": false,
+                    "source_location": {
+                        "file": "",
+                        "line": 33
+                    }
+                }
+            ],
+            "methods": [
+                {
+                    "name": "valid_return_bad_param",
+                    "return_type": "bool",
+                    "visibility": "public",
+                    "parameters": [
+                        {
+                            "name": "control",
+                            "param_type": "const EventControl &",
+                            "is_variadic": false
+                        }
+                    ],
+                    "template_parameters": null,
+                    "modifiers": [],
+                    "source_location": {
+                        "file": "",
+                        "line": 25
+                    }
+                },
+                {
+                    "name": "operator==",
+                    "return_type": "bool",
+                    "visibility": "public",
+                    "parameters": [
+                        {
+                            "name": "other",
+                            "param_type": "const EventControl &",
+                            "is_variadic": false
+                        }
+                    ],
+                    "template_parameters": null,
+                    "modifiers": [],
+                    "source_location": {
+                        "file": "",
+                        "line": 29
+                    }
+                },
+                {
+                    "name": "out_of_line",
+                    "return_type": "EventControl",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [],
+                    "source_location": {
+                        "file": "",
+                        "line": 37
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "enum_literals": [],
+            "relationships": [],
+            "source_location": {
+                "file": "",
+                "line": 21
+            }
+        }
+    },
+    "functions": [
+        {
+            "id": {
+                "scope": {
+                    "Type": {
+                        "namespace": [],
+                        "type_path": [
+                            "Registrar"
+                        ]
+                    }
+                },
+                "name": "out_of_line"
+            },
+            "kind": "Method",
+            "return_type": {
+                "Unknown": "EventControl"
+            },
+            "body": []
+        }
+    ]
+}
