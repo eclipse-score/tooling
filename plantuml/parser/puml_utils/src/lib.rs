@@ -10,8 +10,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
+mod label_markup;
 mod log;
 mod write_files;
 
+pub use label_markup::{
+    decode_newline_escapes, normalize_identity_label, strip_style_markup, style_markup_tag_length,
+};
 pub use log::LogLevel;
 pub use write_files::{write_fbs_to_file, write_json_to_file, write_placeholder_file};

@@ -67,7 +67,7 @@ fn normalize_creole_inline(text: &str) -> String {
             continue;
         }
 
-        if let Some(tag_len) = creole_tag_length(remaining) {
+        if let Some(tag_len) = puml_utils::style_markup_tag_length(remaining) {
             index += tag_len;
             continue;
         }
@@ -193,29 +193,6 @@ fn strip_tooltip(text: &str) -> &str {
     }
 }
 
-fn creole_tag_length(text: &str) -> Option<usize> {
-    if !text.starts_with('<') {
-        return None;
-    }
-
-    let end = text.find('>')?;
-    let tag = &text[1..end].trim().to_ascii_lowercase();
-
-    let known_tags = [
-        "b", "/b", "i", "/i", "u", "/u", "s", "/s", "w", "/w", "img", "/img", "font", "/font",
-    ];
-
-    if known_tags.contains(&tag.as_str())
-        || tag.starts_with("color:")
-        || tag.starts_with("back:")
-        || tag.starts_with("size:")
-    {
-        Some(end + 1)
-    } else {
-        None
-    }
-}
-
 fn looks_like_table_row(text: &str) -> bool {
     text.starts_with('|') && text.ends_with('|') && text.len() >= 2
 }
@@ -300,5 +277,15 @@ mod tests {
     #[test]
     fn normalize_full_line_bold_text_without_list_stripping() {
         assert_eq!(normalize_creole_text("**action green**"), "action green");
+    }
+
+    #[test]
+    fn normalize_creole_strips_closing_color_back_size_tags() {
+        assert_eq!(
+            normalize_creole_text(
+                "<color:red>red</color> <back:yellow>hl</back> <size:14>big</size>"
+            ),
+            "red hl big"
+        );
     }
 }
