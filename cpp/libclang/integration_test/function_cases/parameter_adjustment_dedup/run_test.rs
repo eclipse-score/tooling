@@ -11,9 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-//! Adapters from libclang entities and types to visitor-local concepts.
+use test_framework::run_parser_case;
 
-pub(crate) mod exception_specification;
-pub(crate) mod scope;
-pub(crate) mod source_filter;
-pub(crate) mod source_location;
+#[test]
+fn test_parameter_adjustment_dedup() {
+    run_parser_case();
+}

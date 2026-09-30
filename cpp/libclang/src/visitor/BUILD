@@ -16,6 +16,7 @@ rust_library(
     name = "visit_tu",
     srcs = [
         "src/callable_declaration.rs",
+        "src/clang_adapter/exception_specification.rs",
         "src/clang_adapter/mod.rs",
         "src/clang_adapter/scope.rs",
         "src/clang_adapter/source_filter.rs",

@@ -15,7 +15,7 @@
 //! Preserves structured calls, branches, and loops for supported AST shapes,
 //! and falls back to conservative traversal for unsupported control-flow forms.
 
-use clang::{Entity, EntityKind, ExceptionSpecification};
+use clang::{Entity, EntityKind};
 use class_diagram::{FreeFunctionDecl, Method, MethodModifier};
 use cpp_semantics::{
     BodyItem, BranchCase, FunctionDef, FunctionId, FunctionKind, GuardExpression, LoopKind,
@@ -26,6 +26,7 @@ use std::collections::HashSet;
 use crate::callable_declaration::{
     parse_callable_parameters, parse_callable_return_type, parse_template_parameters,
 };
+use crate::clang_adapter::exception_specification::has_plain_noexcept;
 use crate::clang_adapter::scope::{
     callable_scope, has_translation_unit_local_linkage, namespace_id,
 };
@@ -160,11 +161,8 @@ impl FunctionVisitor {
                 .any(|token| token.get_spelling() == "noexcept")
         });
 
-        let is_noexcept_method = has_noexcept_token
-            && matches!(
-                entity.get_exception_specification(),
-                Some(ExceptionSpecification::BasicNoexcept)
-            );
+        let is_noexcept_method =
+            has_noexcept_token && has_plain_noexcept(entity.get_exception_specification());
 
         let return_type = if matches!(kind, FunctionKind::Constructor | FunctionKind::Destructor) {
             None
