@@ -140,6 +140,11 @@ fn test_invalid_duplicate_component() {
 }
 
 #[test]
+fn test_invalid_duplicate_component_separator() {
+    run_component_resolver_case("invalid_duplicate_component_separator");
+}
+
+#[test]
 fn test_invalid_interface_decor_between_components() {
     run_component_resolver_case("invalid_interface_decor_between_components");
 }
@@ -332,6 +337,52 @@ fn test_arrows_link() {
 #[test]
 fn test_nested_elements() {
     run_deployment_resolver_case("nested_elements");
+}
+
+#[test]
+fn test_root_anchor_prefixes_ids_and_resolves_references() {
+    let source = "@startuml\n\
+        component C\n\
+        component D\n\
+        package P {\n\
+        component A {\n\
+        portout p\n\
+        }\n\
+        component B\n\
+        A --> B\n\
+        }\n\
+        C --> P.A\n\
+        D --> p\n\
+        @enduml\n";
+    let path = Rc::new(PathBuf::from("anchor.puml"));
+    let document = PumlComponentParser
+        .parse_file(&path, source, LogLevel::Error)
+        .expect("source must parse");
+
+    let mut resolver = ComponentResolver::with_root_anchor(Some("score::mw"));
+    let logic = resolver.resolve(&document).expect("document must resolve");
+
+    let mut ids: Vec<&str> = logic.keys().map(String::as_str).collect();
+    ids.sort();
+    assert_eq!(
+        ids,
+        [
+            "score.mw.C",
+            "score.mw.D",
+            "score.mw.P",
+            "score.mw.P.A",
+            "score.mw.P.B"
+        ]
+    );
+
+    assert_eq!(logic["score.mw.C"].parent_id, None);
+    assert_eq!(
+        logic["score.mw.P.A"].parent_id.as_deref(),
+        Some("score.mw.P")
+    );
+    assert_eq!(logic["score.mw.C"].relations[0].target, "score.mw.P.A");
+    assert_eq!(logic["score.mw.D"].relations[0].target, "score.mw.P.A");
+    assert_eq!(logic["score.mw.P.A"].relations[0].target, "score.mw.P.B");
 }
 
 #[test]
