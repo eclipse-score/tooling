@@ -1,0 +1,45 @@
+{
+    "types": {
+        "svc::Box": {
+            "id": "svc::Box",
+            "name": "Box",
+            "enclosing_namespace_id": "svc",
+            "stereotypes": [],
+            "entity_type": "Interface",
+            "type_aliases": [],
+            "variables": [],
+            "methods": [
+                {
+                    "name": "Get",
+                    "return_type": "T",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Abstract"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_decl_template_after_definition/box.h",
+                        "line": 19
+                    }
+                }
+            ],
+            "template_parameters": [
+                {
+                    "Type": {
+                        "name": "T",
+                        "is_pack": false
+                    }
+                }
+            ],
+            "enum_literals": [],
+            "relationships": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/forward_decl_template_after_definition/box.h",
+                "line": 17
+            }
+        }
+    },
+    "functions": []
+}

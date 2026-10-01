@@ -13,21 +13,39 @@
 
 use std::{path::PathBuf, str::FromStr};
 
-fn remove_source_location_file(value: &mut serde_json::Value) {
-    match value {
-        serde_json::Value::Object(map) => {
-            if let Some(serde_json::Value::Object(source_location)) = map.get_mut("source_location")
-            {
-                source_location.remove("file");
-            }
+/// Expected `source_location.file == ""` ignores the actual file; otherwise both
+/// must match after dropping a leading `./`.
+fn normalize_source_files(expected: &mut serde_json::Value, actual: &mut serde_json::Value) {
+    use serde_json::Value;
 
-            for value in map.values_mut() {
-                remove_source_location_file(value);
+    match (expected, actual) {
+        (Value::Object(expected_map), Value::Object(actual_map)) => {
+            if let (Some(Value::Object(expected_location)), Some(Value::Object(actual_location))) = (
+                expected_map.get_mut("source_location"),
+                actual_map.get_mut("source_location"),
+            ) {
+                if expected_location.get("file").and_then(Value::as_str) == Some("") {
+                    expected_location.remove("file");
+                    actual_location.remove("file");
+                } else {
+                    for location in [expected_location, actual_location] {
+                        if let Some(Value::String(file)) = location.get_mut("file") {
+                            if let Some(stripped) = file.strip_prefix("./") {
+                                *file = stripped.to_string();
+                            }
+                        }
+                    }
+                }
+            }
+            for (key, expected_value) in expected_map.iter_mut() {
+                if let Some(actual_value) = actual_map.get_mut(key) {
+                    normalize_source_files(expected_value, actual_value);
+                }
             }
         }
-        serde_json::Value::Array(array) => {
-            for value in array {
-                remove_source_location_file(value);
+        (Value::Array(expected_array), Value::Array(actual_array)) => {
+            for (expected_value, actual_value) in expected_array.iter_mut().zip(actual_array) {
+                normalize_source_files(expected_value, actual_value);
             }
         }
         _ => {}
@@ -45,8 +63,7 @@ fn compare(expected_path: &str, output_path: &str) {
     let mut actual_json: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(output).unwrap()).unwrap();
 
-    remove_source_location_file(&mut expected_json);
-    remove_source_location_file(&mut actual_json);
+    normalize_source_files(&mut expected_json, &mut actual_json);
     assert_json_diff::assert_json_eq!(expected_json, actual_json);
 }
 

@@ -22,7 +22,12 @@ use crate::context::{ParsedClassInfo, ParsedMethodType, ParsedVariableType, Visi
 
 pub(crate) fn resolve_relationships(ctx: &mut VisitContext) {
     let builders = std::mem::take(&mut ctx.parsed_class_info);
-    let known_type_ids: HashSet<String> = ctx.types.keys().cloned().collect();
+    let known_type_ids: HashSet<String> = ctx
+        .types
+        .keys()
+        .chain(ctx.declared_type_ids.iter())
+        .cloned()
+        .collect();
 
     for builder in builders.into_values() {
         build_relationships_for_class(ctx, &builder);
@@ -453,5 +458,63 @@ mod tests {
             derived.relationships.is_empty(),
             "unresolvable base class must not produce a relationship"
         );
+    }
+
+    fn owner_with_peer_member() -> VisitContext {
+        let source_file = "unit_source.cpp";
+        let mut ctx = VisitContext::default();
+        ctx.types.insert(
+            "Owner".to_string(),
+            SimpleEntity {
+                id: "Owner".to_string(),
+                name: "Owner".to_string(),
+                source_location: SourceLocation::new(source_file, 1),
+                ..Default::default()
+            },
+        );
+        ctx.parsed_class_info.insert(
+            "Owner".to_string(),
+            ParsedClassInfo {
+                id: "Owner".to_string(),
+                variable_types: vec![ParsedVariableType {
+                    name: "peer".to_string(),
+                    resolved_type: ResolvedType::UserDefined("Peer".to_string()),
+                    source_location: SourceLocation::new(source_file, 2),
+                }],
+                ..Default::default()
+            },
+        );
+        ctx
+    }
+
+    #[test]
+    fn resolve_relationships_targets_type_known_only_from_forward_declaration() {
+        let mut ctx = owner_with_peer_member();
+        ctx.declared_type_ids.insert("Peer".to_string());
+
+        resolve_relationships(&mut ctx);
+
+        let owner = ctx.types.get("Owner").expect("Owner must still exist");
+        assert!(
+            owner.relationships.iter().any(|relationship| {
+                relationship.target == "Peer"
+                    && relationship.relation_type == RelationType::Composition
+            }),
+            "forward-declared type must be a valid relationship target"
+        );
+        assert!(
+            !ctx.types.contains_key("Peer"),
+            "forward declaration must not create an entity"
+        );
+    }
+
+    #[test]
+    fn resolve_relationships_ignores_type_that_is_neither_defined_nor_declared() {
+        let mut ctx = owner_with_peer_member();
+
+        resolve_relationships(&mut ctx);
+
+        let owner = ctx.types.get("Owner").expect("Owner must still exist");
+        assert!(owner.relationships.is_empty());
     }
 }

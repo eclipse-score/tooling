@@ -51,15 +51,10 @@ fn merge_simple_entity(existing: &mut SimpleEntity, incoming: SimpleEntity) {
         existing.source_location = incoming.source_location.clone();
     }
 
-    // A forward declaration (`class X;`) is classified as the default `Class`
-    // until a definition with abstract semantics is seen; adopt the richer
-    // classification regardless of which one was merged first, and only
-    // suppress the conflict warning for that specific, expected transition.
+    // Later translation units re-visit a definition without its methods (method
+    // declarations are deduplicated globally) and are classified as `Class`;
+    // keep the richer classification from the first visit.
     match (existing.entity_type, incoming.entity_type) {
-        (EntityType::Class, EntityType::AbstractClass | EntityType::Interface) => {
-            existing.entity_type = incoming.entity_type;
-            existing.source_location = incoming.source_location.clone();
-        }
         (EntityType::AbstractClass | EntityType::Interface, EntityType::Class) => {}
         (existing_type, incoming_type) if existing_type != incoming_type => {
             warn!(
@@ -188,41 +183,6 @@ mod tests {
     }
 
     #[test]
-    fn insert_or_merge_type_upgrades_a_class_to_an_abstract_class() {
-        let mut types = BTreeMap::new();
-        types.insert_or_merge_type(
-            "svc::IThing".to_string(),
-            SimpleEntity {
-                id: "svc::IThing".to_string(),
-                name: "IThing".to_string(),
-                enclosing_namespace_id: Some("svc".to_string()),
-                entity_type: EntityType::Class,
-                source_location: SourceLocation::new("fwd.hpp", 2),
-                ..Default::default()
-            },
-        );
-
-        types.insert_or_merge_type(
-            "svc::IThing".to_string(),
-            SimpleEntity {
-                id: "svc::IThing".to_string(),
-                name: "IThing".to_string(),
-                enclosing_namespace_id: Some("svc".to_string()),
-                entity_type: EntityType::AbstractClass,
-                source_location: SourceLocation::new("definition.hpp", 4),
-                ..Default::default()
-            },
-        );
-
-        let thing = types.get("svc::IThing").expect("merged type should exist");
-        assert_eq!(thing.entity_type, EntityType::AbstractClass);
-        assert_eq!(
-            thing.source_location,
-            SourceLocation::new("definition.hpp", 4)
-        );
-    }
-
-    #[test]
     fn insert_or_merge_type_does_not_downgrade_an_interface() {
         let mut types = BTreeMap::new();
         types.insert_or_merge_type(
@@ -252,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_or_merge_type_keeps_abstract_class_when_forward_declaration_arrives_later() {
+    fn insert_or_merge_type_keeps_abstract_class_when_later_visit_lacks_methods() {
         let mut types = BTreeMap::new();
         types.insert_or_merge_type(
             "svc::IThing".to_string(),
@@ -273,7 +233,7 @@ mod tests {
                 name: "IThing".to_string(),
                 enclosing_namespace_id: Some("svc".to_string()),
                 entity_type: EntityType::Class,
-                source_location: SourceLocation::new("fwd.hpp", 2),
+                source_location: SourceLocation::new("definition.hpp", 4),
                 ..Default::default()
             },
         );
