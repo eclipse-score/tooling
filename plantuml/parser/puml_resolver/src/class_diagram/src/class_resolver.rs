@@ -23,8 +23,7 @@ use class_parser::{
 use parser_core::common_ast::Arrow;
 use resolver_traits::DiagramResolver;
 use thiserror::Error;
-use uid_normalization::{InternalScope, Resolution, RootAnchor};
-use uid_utils::normalized_segments;
+use uid_normalization::{leaf_key, InternalScope, Resolution, RootAnchor};
 
 #[derive(Debug, Error)]
 pub enum ClassPumlResolverError {
@@ -173,11 +172,8 @@ impl ClassResolver {
         self.declared_at
             .insert(entity.id.clone(), entity.source_location.line);
 
-        let leaf_key = normalized_segments(leaf)
-            .pop()
-            .unwrap_or_else(|| leaf.to_string());
         self.name_map
-            .entry(leaf_key)
+            .entry(leaf_key(leaf))
             .or_default()
             .push(entity.id.clone());
         self.logic.entities.push(entity);
@@ -475,9 +471,7 @@ impl ClassResolver {
 
         let leaf = Self::id_leaf(name);
         let id = self.resolve_entity_id(leaf, scope);
-        let owner_name = normalized_segments(leaf)
-            .pop()
-            .unwrap_or_else(|| leaf.to_string());
+        let owner_name = leaf_key(leaf);
 
         let template_parameters =
             Self::convert_class_template_parameters(template_parameters, methods);

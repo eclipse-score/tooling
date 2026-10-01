@@ -12,7 +12,7 @@
 // *******************************************************************************
 
 use log::error;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 
 use component_diagram::{
     ComponentRelationType, ComponentType, EndpointRole, LogicComponent, LogicRelation,
@@ -20,7 +20,7 @@ use component_diagram::{
 };
 use component_parser::{Arrow, CompPumlDocument, Element, Port, PortType, Relation, Statement};
 use resolver_traits::DiagramResolver;
-use uid_normalization::{normalize, resolve_explicit_path, InternalScope, RootAnchor};
+use uid_normalization::{leaf_key, resolve_reference, InternalScope, Resolution, RootAnchor};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ComponentResolverError {
@@ -82,12 +82,14 @@ pub struct ComponentResolver {
     scope: InternalScope,
     root_anchor: RootAnchor,
     pub elements: HashMap<String, LogicComponent>, // FQN -> LogicComponent
-    /// Maps parent FQN -> direct child element FQNs
-    pub child_elements_by_parent: HashMap<Option<String>, Vec<String>>,
     /// Maps port FQN → parent element FQN (for relation lifting)
     pub port_parents: HashMap<String, String>,
     /// Maps port FQN -> parser port type (`port` / `portin` / `portout`)
     pub port_types: HashMap<String, PortType>,
+    // leaf (Rule A, last segment) -> every element id registered under it
+    element_leaves: HashMap<String, Vec<String>>,
+    // same for ports
+    port_leaves: HashMap<String, Vec<String>>,
     pending_relations: Vec<PendingRelation>,
 }
 
@@ -104,16 +106,6 @@ impl ComponentResolver {
         }
     }
 
-    /// Root anchor and nesting scope as id segments.
-    fn lookup_scope(&self) -> Vec<String> {
-        self.scope
-            .resolve(&self.root_anchor)
-            .split('.')
-            .filter(|segment| !segment.is_empty())
-            .map(str::to_string)
-            .collect()
-    }
-
     fn port_type_to_role(port_type: PortType) -> EndpointRole {
         match port_type {
             PortType::Port => EndpointRole::None,
@@ -122,343 +114,67 @@ impl ComponentResolver {
         }
     }
 
-    /// Collect all matching port FQNs by local/simple port name within `scope`
-    /// and all descendant scopes.
-    ///
-    /// Notes:
-    /// - `port_local` is treated as a single-segment name (no dot path parsing here).
-    /// - Direct candidate `<scope>.<port_local>` is checked first.
-    /// - Descendant matches are included when their parent component is inside scope.
-    /// - Return value is deterministic and deduplicated (sorted via `BTreeSet`).
-    fn collect_matching_port_fqns_in_scope_or_children(
-        &self,
-        scope: &[String],
-        port_local: &str,
-    ) -> Vec<String> {
-        let mut matches = BTreeSet::new();
-
-        // 1. Direct candidate: scope + port_local
-        let mut candidate = scope.to_vec();
-        candidate.push(port_local.to_string());
-
-        let direct_fqn = candidate.join(".");
-        if self.port_parents.contains_key(&direct_fqn) {
-            return vec![direct_fqn];
-        }
-
-        // 2. scope prefix
-        // Search at any depth below the current scope: a port whose simple alias matches
-        // and whose parent element is a descendant of (or equal to) the current scope.
-        let scope_prefix = scope.join(".");
-        for (pfqn, parent_comp) in &self.port_parents {
-            let pfqn_last = match pfqn.rfind('.') {
-                Some(i) => &pfqn[i + 1..],
-                None => pfqn,
-            };
-            if pfqn_last != port_local {
-                continue;
-            }
-
-            if scope.is_empty()
-                || parent_comp == &scope_prefix
-                || parent_comp.starts_with(&format!("{scope_prefix}."))
-            {
-                matches.insert(pfqn.clone());
-            }
-        }
-
-        matches.into_iter().collect()
-    }
-
-    /// Collect all element FQN candidates for `parts` (single or multi segment path)
-    /// under `scope` and all descendant scopes.
-    ///
-    /// Behavior:
-    /// - Builds candidate `<scope>.<parts...>` and checks exact existence.
-    /// - Recursively descends into child elements and repeats the same lookup.
-    /// - Returns all matches (not first-hit), deduplicated and deterministically ordered.
-    fn collect_element_fqns_in_scope_or_children(
-        &self,
-        scope: &[String],
-        parts: &[&str],
-    ) -> Vec<String> {
-        let mut found = BTreeSet::new();
-
-        self.collect_element_fqns_rec(scope, parts, &mut found);
-
-        found.into_iter().collect()
-    }
-
-    fn collect_element_fqns_rec(
-        &self,
-        scope: &[String],
-        parts: &[&str],
-        found: &mut BTreeSet<String>,
-    ) {
-        // 1. direct FQN check
-        let fqn = if scope.is_empty() {
-            parts.join(".")
-        } else {
-            format!("{}.{}", scope.join("."), parts.join("."))
-        };
-
-        if self.elements.contains_key(&fqn) {
-            found.insert(fqn);
-        }
-
-        // 2. find children
-        let scope_key = if scope.is_empty() {
-            None
-        } else {
-            Some(scope.join("."))
-        };
-
-        let children: &[String] = self
-            .child_elements_by_parent
-            .get(&scope_key)
-            .map(Vec::as_slice)
-            .unwrap_or(&[]);
-
-        for child_id in children {
-            let Some(element) = self.elements.get(child_id) else {
-                continue;
-            };
-
-            let Some(name) = element.alias.as_deref().or(element.name.as_deref()) else {
-                continue;
-            };
-
-            let mut child_scope = scope.to_vec();
-            child_scope.push(name.to_string());
-
-            self.collect_element_fqns_rec(&child_scope, parts, found);
-        }
-    }
-
-    /// Collect possible port FQN candidates from a raw reference token.
-    /// Returns deduplicated, deterministic candidates (sorted by `BTreeSet`).
-    fn collect_port_fqn_candidates_for_raw(&self, raw: &str) -> Vec<String> {
-        let normalized = normalize(raw);
-        let parts: Vec<&str> = normalized.split('.').collect();
-        let scope = self.lookup_scope();
-        let mut candidates = std::collections::BTreeSet::new();
-
-        // 1. scope-based lookup (only for simple name)
-        if parts.len() == 1 {
-            for i in (0..=scope.len()).rev() {
-                let outer_scope = &scope[..i];
-                let matches =
-                    self.collect_matching_port_fqns_in_scope_or_children(outer_scope, &normalized);
-                if !matches.is_empty() {
-                    // Keep nearest-scope matches only for simple names.
-                    candidates.extend(matches);
-                    break;
-                }
-            }
-        }
-
-        // 2. relative FQN (scope + parts)
-        let mut relative = scope;
-        relative.extend(parts.iter().map(|p| p.to_string()));
-
-        let relative_port_fqn = relative.join(".");
-        if self.port_types.contains_key(&relative_port_fqn) {
-            candidates.insert(relative_port_fqn);
-        }
-
-        // 3. direct match
-        let absolute = resolve_explicit_path(&self.root_anchor, raw);
-        if self.port_types.contains_key(&absolute) {
-            candidates.insert(absolute);
-        }
-
-        candidates.into_iter().collect()
-    }
-
-    /// Resolve a port role hint for `raw` reference, but only when port candidates are
-    /// consistent with the already resolved endpoint identity (`resolved`).
-    ///
-    /// This prevents using an unrelated same-name port as role hint.
-    ///
-    /// Returns:
-    /// - `Ok(None)`: no usable/aligned port hint.
-    /// - `Ok(Some(role))`: exactly one aligned port candidate.
-    /// - `Err(AmbiguousReference)`: multiple aligned port candidates.
-    fn resolve_port_role_hint_for_ref(
+    fn lookup(
         &self,
         raw: &str,
-        resolved: &str,
-    ) -> Result<Option<EndpointRole>, ComponentResolverError> {
-        let candidates = self.collect_port_fqn_candidates_for_raw(raw);
-
-        let mut matched: Option<&String> = None;
-
-        for pfqn in &candidates {
-            let ok = pfqn == resolved
-                || self
-                    .port_parents
-                    .get(pfqn)
-                    .map(|p| p == resolved)
-                    .unwrap_or(false);
-
-            if ok {
-                // Invariant: after aligning candidates to resolved endpoint identity, there should be at most one match.
-                // If multiple matches remain, this indicates inconsistent resolver state or unexpected duplicate-alignment; fail fast with AmbiguousReference instead of silently picking one.
-                if matched.is_some() {
-                    return Err(ComponentResolverError::AmbiguousReference {
-                        reference: raw.to_string(),
-                        candidates,
-                    });
-                }
-                matched = Some(pfqn);
-            }
-        }
-
-        let pfqn = match matched {
-            Some(v) => v,
-            None => return Ok(None),
-        };
-
-        Ok(self
-            .port_types
-            .get(pfqn)
-            .copied()
-            .map(Self::port_type_to_role))
+        exists: impl Fn(&str) -> bool,
+        leaves: &HashMap<String, Vec<String>>,
+    ) -> Resolution {
+        resolve_reference(
+            &self.scope,
+            &self.root_anchor,
+            raw,
+            &exists,
+            &exists,
+            |leaf| leaves.get(leaf).cloned().unwrap_or_default(),
+        )
     }
 
-    /// Resolve relation references, supporting:
-    /// 1) Simple name: search upward from current scope + recurse into children
-    /// 2) Relative qualified name: path starting from current scope
-    /// 3) Absolute FQN: full path
-    ///
-    /// Ambiguity handling:
-    /// - If any stage returns multiple valid candidates, return
-    ///   `ComponentResolverError::AmbiguousReference` immediately.
-    pub fn resolve_ref(&self, raw: &str) -> Result<String, ComponentResolverError> {
-        let normalized = normalize(raw);
-        let parts: Vec<&str> = normalized.split('.').collect();
+    /// Rule C lookup over the whole diagram. Elements first; when none
+    /// matches, ports, which resolve to their owning element. Returns the
+    /// element id and the role of the port the reference named, if any.
+    fn resolve_endpoint(
+        &self,
+        raw: &str,
+    ) -> Result<(String, Option<EndpointRole>), ComponentResolverError> {
+        let by_element = self.lookup(
+            raw,
+            |id| self.elements.contains_key(id),
+            &self.element_leaves,
+        );
+        let (resolution, via_port) = match by_element {
+            Resolution::Unresolved => (
+                self.lookup(
+                    raw,
+                    |id| self.port_parents.contains_key(id),
+                    &self.port_leaves,
+                ),
+                true,
+            ),
+            found => (found, false),
+        };
 
-        // 1. simple name
-        if parts.len() == 1 {
-            if let Some(res) = self.resolve_simple_name(parts[0], raw)? {
-                return Ok(res);
+        match resolution {
+            Resolution::Resolved(port) if via_port => {
+                let role = self
+                    .port_types
+                    .get(&port)
+                    .copied()
+                    .map(Self::port_type_to_role);
+                Ok((self.port_parents[&port].clone(), role))
             }
-        }
-
-        // 2. relative qualified name
-        if let Some(res) = self.resolve_relative(&parts)? {
-            // A distinct top-level element can also match the literal text;
-            // silently preferring the scope-relative hit would shadow it.
-            let absolute_fqn = resolve_explicit_path(&self.root_anchor, raw);
-            if absolute_fqn != res && self.elements.contains_key(&absolute_fqn) {
-                let mut candidates = vec![res, absolute_fqn];
-                candidates.sort();
-                return Err(ComponentResolverError::AmbiguousReference {
+            Resolution::Resolved(id) => Ok((id, None)),
+            Resolution::Ambiguous(candidates) => Err(ComponentResolverError::AmbiguousReference {
+                reference: raw.to_string(),
+                candidates,
+            }),
+            Resolution::Unresolved => {
+                error!("Unresolved reference: {}", raw);
+                Err(ComponentResolverError::UnresolvedReference {
                     reference: raw.to_string(),
-                    candidates,
-                });
-            }
-            return Ok(res);
-        }
-
-        // 3. absolute FQN
-        let fqn = resolve_explicit_path(&self.root_anchor, raw);
-        if self.elements.contains_key(&fqn) {
-            return Ok(fqn);
-        }
-
-        error!("Unresolved reference: {}", raw);
-        Err(ComponentResolverError::UnresolvedReference {
-            reference: raw.to_string(),
-        })
-    }
-
-    fn resolve_simple_name(
-        &self,
-        name: &str,
-        raw: &str,
-    ) -> Result<Option<String>, ComponentResolverError> {
-        // 1) lexical element lookup
-        if let Some(res) = self.walk_scopes_nearest_first(|scope| {
-            let matches = self.collect_element_fqns_in_scope_or_children(scope, &[name]);
-            Self::pick_unique(matches, raw)
-        })? {
-            return Ok(Some(res));
-        }
-
-        // 2) lexical port lookup (collapsed to parent component)
-        if let Some(res) = self.walk_scopes_nearest_first(|scope| {
-            let ports = self.collect_matching_port_fqns_in_scope_or_children(scope, name);
-
-            if ports.is_empty() {
-                return Ok(None);
-            }
-
-            let parents: Vec<String> = ports
-                .iter()
-                .filter_map(|p| self.port_parents.get(p))
-                .cloned()
-                .collect::<std::collections::BTreeSet<_>>()
-                .into_iter()
-                .collect();
-
-            Self::pick_unique(parents, raw)
-        })? {
-            return Ok(Some(res));
-        }
-
-        // 3) global alias fallback
-        let global: Vec<String> = self
-            .elements
-            .values()
-            .filter(|e| e.alias.as_deref() == Some(name) || e.name.as_deref() == Some(name))
-            .map(|e| e.id.clone())
-            .collect::<std::collections::BTreeSet<_>>()
-            .into_iter()
-            .collect();
-
-        Self::pick_unique(global, raw)
-    }
-
-    fn resolve_relative(&self, parts: &[&str]) -> Result<Option<String>, ComponentResolverError> {
-        let matches = self.collect_element_fqns_in_scope_or_children(&self.lookup_scope(), parts);
-
-        Self::pick_unique(matches, &parts.join("."))
-    }
-
-    fn walk_scopes_nearest_first<F>(
-        &self,
-        mut f: F,
-    ) -> Result<Option<String>, ComponentResolverError>
-    where
-        F: FnMut(&[String]) -> Result<Option<String>, ComponentResolverError>,
-    {
-        let scope = self.lookup_scope();
-        for i in (0..=scope.len()).rev() {
-            if let Some(res) = f(&scope[..i])? {
-                return Ok(Some(res));
+                })
             }
         }
-        Ok(None)
-    }
-
-    fn pick_unique(
-        mut matches: Vec<String>,
-        raw: &str,
-    ) -> Result<Option<String>, ComponentResolverError> {
-        if matches.is_empty() {
-            return Ok(None);
-        }
-
-        if matches.len() == 1 {
-            return Ok(Some(matches.remove(0)));
-        }
-
-        matches.sort();
-        Err(ComponentResolverError::AmbiguousReference {
-            reference: raw.to_string(),
-            candidates: matches,
-        })
     }
 }
 
@@ -542,8 +258,7 @@ impl ComponentResolver {
         &self,
         raw: &str,
     ) -> Result<(String, Option<EndpointRole>, Option<ComponentType>), ComponentResolverError> {
-        let resolved = self.resolve_ref(raw)?;
-        let port_role_hint = self.resolve_port_role_hint_for_ref(raw, &resolved)?;
+        let (resolved, port_role_hint) = self.resolve_endpoint(raw)?;
 
         let element_type = self.elements.get(&resolved).map(|e| e.element_type);
 
@@ -751,9 +466,10 @@ impl DiagramResolver for ComponentResolver {
     fn resolve(&mut self, document: &CompPumlDocument) -> Result<Self::Output, Self::Error> {
         self.scope = InternalScope::default();
         self.elements.clear();
-        self.child_elements_by_parent.clear();
         self.port_parents.clear();
         self.port_types.clear();
+        self.element_leaves.clear();
+        self.port_leaves.clear();
         self.pending_relations.clear();
 
         for stmt in &document.statements {
@@ -799,6 +515,10 @@ impl ComponentResolver {
         } else {
             // Nested port: record port_fqn -> parent_fqn for relation lifting.
             self.port_types.insert(fqn.clone(), port.port_type);
+            self.port_leaves
+                .entry(leaf_key(local_id))
+                .or_default()
+                .push(fqn.clone());
             self.port_parents
                 .insert(fqn, self.scope.resolve(&self.root_anchor));
         }
@@ -819,26 +539,24 @@ impl ComponentResolver {
             return Err(ComponentResolverError::DuplicateElement { element_id: fqn });
         }
 
-        let parent_key = Some(self.scope.resolve(&self.root_anchor)).filter(|key| !key.is_empty());
-        let parent_id = parent_key.clone().filter(|_| !self.scope.is_empty());
+        let parent_id = (!self.scope.is_empty()).then(|| self.scope.resolve(&self.root_anchor));
 
         let logic = LogicComponent {
             id: fqn.clone(),
             name: element.identity.name.clone(),
             alias: element.identity.alias.clone(),
             source_location: element.identity.source_location.clone(),
-            parent_id: parent_id.clone(),
+            parent_id,
             element_type: parse_kind(&element.identity.element_kind)?,
             stereotype: element.identity.stereotype.clone(),
             relations: Vec::new(),
         };
 
         self.elements.insert(fqn.clone(), logic);
-
-        self.child_elements_by_parent
-            .entry(parent_key)
+        self.element_leaves
+            .entry(leaf_key(local_id))
             .or_default()
-            .push(fqn.clone());
+            .push(fqn);
 
         let nested = self.scope.child(local_id);
         let outer = std::mem::replace(&mut self.scope, nested);
