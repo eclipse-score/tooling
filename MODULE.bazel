@@ -200,7 +200,10 @@ crate.annotation(
         "clang_7_0",  # Entity::is_invalid_declaration()
     ],
 )
-crate.from_specs()
+crate.from_specs(
+    cargo_lockfile = "//:Cargo.lock",
+    lockfile = "//:Cargo.Bazel.lock",
+)
 use_repo(crate, "crates")
 
 ###############################################################################
