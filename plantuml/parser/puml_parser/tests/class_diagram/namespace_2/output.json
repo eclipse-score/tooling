@@ -9,6 +9,7 @@
             "display": null
           },
           "types": [],
+          "relationships": [],
           "namespaces": [
             {
               "name": {
@@ -38,6 +39,7 @@
                   }
                 }
               ],
+              "relationships": [],
               "namespaces": []
             }
           ]
