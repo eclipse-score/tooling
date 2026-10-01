@@ -301,10 +301,19 @@ fn append_debug_log(
 mod tests {
     use super::*;
     use crate::models::{
-        BazelInput, BazelInputEntry, ComponentDiagramInputs, ComponentType, LogicComponent,
+        BazelEntityRef, BazelInput, BazelInputEntry, ComponentDiagramInputs, ComponentType,
+        LogicComponent,
     };
     use crate::validators::fixtures::dummy_source_location;
     use std::collections::BTreeMap;
+
+    fn entity_ref(label: &str) -> BazelEntityRef {
+        let design_name = label.rsplit_once(':').map(|(_, n)| n).unwrap_or(label);
+        BazelEntityRef {
+            label: label.to_string(),
+            design_name: design_name.to_string(),
+        }
+    }
 
     fn make_arch(entries: Vec<(&str, Vec<&str>, Vec<&str>)>) -> BazelInput {
         let mut components = BTreeMap::new();
@@ -312,8 +321,8 @@ mod tests {
             components.insert(
                 label.to_string(),
                 BazelInputEntry {
-                    units: units.into_iter().map(|s| s.to_string()).collect(),
-                    components: nested.into_iter().map(|s| s.to_string()).collect(),
+                    units: units.into_iter().map(entity_ref).collect(),
+                    components: nested.into_iter().map(entity_ref).collect(),
                 },
             );
         }

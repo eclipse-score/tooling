@@ -46,7 +46,7 @@ impl BazelInput {
             .components
             .values()
             .flat_map(|entry| entry.components.iter())
-            .map(|label| label.to_lowercase())
+            .map(|component| component.label.to_lowercase())
             .collect();
 
         for (comp_label, entry) in &self.components {
@@ -72,42 +72,38 @@ impl BazelInput {
                 }
             }
 
-            for unit_label in &entry.units {
-                let unit_key = match label_short_name(unit_label) {
-                    Ok(name) => name.to_lowercase(),
-                    Err(msg) => {
-                        result.add_failure(msg);
-                        continue;
-                    }
-                };
+            for unit in &entry.units {
+                if let Err(msg) = label_short_name(&unit.label) {
+                    result.add_failure(msg);
+                    continue;
+                }
+                let unit_key = unit.design_name.to_lowercase();
                 let key = (unit_key, Some(comp_key.clone()));
-                if let Some(prev) = unit_set.insert(key.clone(), unit_label.clone()) {
+                if let Some(prev) = unit_set.insert(key.clone(), unit.label.clone()) {
                     result.add_failure(duplicate_bazel_entity_error(
                         "unit",
                         &key.0,
                         Some(&comp_key),
                         &prev,
-                        unit_label,
+                        &unit.label,
                     ));
                 }
             }
 
-            for component_label in &entry.components {
-                let component_key = match label_short_name(component_label) {
-                    Ok(name) => name.to_lowercase(),
-                    Err(msg) => {
-                        result.add_failure(msg);
-                        continue;
-                    }
-                };
+            for component in &entry.components {
+                if let Err(msg) = label_short_name(&component.label) {
+                    result.add_failure(msg);
+                    continue;
+                }
+                let component_key = component.design_name.to_lowercase();
                 let key = (component_key, Some(comp_key.clone()));
-                if let Some(prev) = comp_set.insert(key.clone(), component_label.clone()) {
+                if let Some(prev) = comp_set.insert(key.clone(), component.label.clone()) {
                     result.add_failure(duplicate_bazel_entity_error(
                         "component",
                         &key.0,
                         Some(&comp_key),
                         &prev,
-                        component_label,
+                        &component.label,
                     ));
                 }
             }
@@ -127,9 +123,18 @@ impl BazelInput {
 #[serde(deny_unknown_fields)]
 pub struct BazelInputEntry {
     #[serde(default)]
-    pub units: Vec<String>,
+    pub units: Vec<BazelEntityRef>,
     #[serde(default)]
-    pub components: Vec<String>,
+    pub components: Vec<BazelEntityRef>,
+}
+
+/// A nested unit/component reference: the real Bazel label (for diagnostics
+/// and uniqueness) plus the design_name matched against the PlantUML alias.
+#[derive(Debug, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct BazelEntityRef {
+    pub label: String,
+    pub design_name: String,
 }
 
 /// Indexed entity key-maps derived from the Bazel build graph.
@@ -183,14 +188,21 @@ fn duplicate_bazel_entity_error(
 mod tests {
     use super::*;
 
+    fn entity_ref(label: &str) -> BazelEntityRef {
+        BazelEntityRef {
+            label: label.to_string(),
+            design_name: label_short_name(label).unwrap_or(label).to_string(),
+        }
+    }
+
     fn make_arch(entries: Vec<(&str, Vec<&str>, Vec<&str>)>) -> BazelInput {
         let mut components = BTreeMap::new();
         for (label, units, nested) in entries {
             components.insert(
                 label.to_string(),
                 BazelInputEntry {
-                    units: units.into_iter().map(str::to_string).collect(),
-                    components: nested.into_iter().map(str::to_string).collect(),
+                    units: units.into_iter().map(entity_ref).collect(),
+                    components: nested.into_iter().map(entity_ref).collect(),
                 },
             );
         }

@@ -449,6 +449,24 @@ component
         tests        = [],
     )
 
+Decoupling the Bazel Target Name from the Diagram Alias
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default the consistency check matches a ``unit``/``component`` against the
+PlantUML diagram by its Bazel target name. Pass ``design_name`` to match
+against a different alias instead — useful when the Bazel target name must
+follow a repo-wide naming convention that differs from the architecture diagram:
+
+.. code-block:: starlark
+
+    unit(
+        name           = "unit_1_impl",
+        design_name    = "unit_1",  # matches "unit_1" in the PlantUML diagram
+        unit_design    = ["//unit_1/docs:unit_design"],
+        implementation = [":unit_1_lib"],
+        tests          = [":unit_1_test"],
+    )
+
 Dynamic Architecture
 ----------------------
 

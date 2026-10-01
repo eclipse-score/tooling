@@ -977,9 +977,9 @@ def _collect_architecture_components(ctx):
     de_units = []
     for comp in ctx.attr.components:
         if ComponentInfo in comp:
-            de_components.append(str(comp.label))
+            de_components.append({"label": str(comp.label), "design_name": comp[ComponentInfo].design_name})
         elif UnitInfo in comp:
-            de_units.append(str(comp.label))
+            de_units.append({"label": str(comp.label), "design_name": comp[UnitInfo].design_name})
 
     de_entry = {}
     if de_components:

@@ -76,6 +76,7 @@ UnitInfo = provider(
     doc = "Provider for unit artifacts.",
     fields = {
         "name": "Name of the unit target.",
+        "design_name": "Name used to match this unit against its PlantUML component-diagram alias; defaults to name.",
         "unit_design": "Depset of design artifact files (PlantUML diagrams, RST documents, etc.).",
         "unit_design_static_fbs": "Depset of FlatBuffers binaries generated from static unit_design diagrams.",
         "unit_design_dynamic_fbs": "Depset of FlatBuffers binaries generated from dynamic unit_design diagrams.",
@@ -146,6 +147,7 @@ ComponentInfo = provider(
     doc = "Provider for component artifacts.",
     fields = {
         "name": "Name of the component target.",
+        "design_name": "Name used to match this component against its PlantUML component-diagram alias; defaults to name.",
         "requirements": "Depset of component requirement traceability files (.lobster) collected from this component's own ComponentRequirementsInfo targets only (CompReq kind); not rolled up from nested components. Does not include feature or assumed-system requirement files. Consumed only by dependable_element's test-case-coverage-lock check. Includes `derived_from` tracing targets, including any AoU references within it (resolved only at the dependable_element level).",
         "requirements_transitive": "Depset of component requirement traceability files (.lobster), rolled up transitively from this component and all nested components. Consumed by dependable_element to build the aggregated 'Component Requirements' traceability report tier.",
         "components": "Depset of nested component and/or unit Targets that comprise this component.",

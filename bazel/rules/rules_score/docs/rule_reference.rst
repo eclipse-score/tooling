@@ -658,7 +658,11 @@ diagram.
    * - ``name``
      - string
      - yes
-     - Target name; **must match** the ``<<unit>>`` name in the static PlantUML diagram
+     - Target name; **must match** the ``<<unit>>`` name in the static PlantUML diagram unless ``design_name`` is set
+   * - ``design_name``
+     - string
+     - no
+     - Name to match against the static PlantUML diagram instead of ``name`` (default: ``name``)
    * - ``unit_design``
      - label list
      - yes
@@ -720,7 +724,11 @@ diagram.
    * - ``name``
      - string
      - yes
-     - Target name; **must match** the ``<<component>>`` name in the static PlantUML diagram
+     - Target name; **must match** the ``<<component>>`` name in the static PlantUML diagram unless ``design_name`` is set
+   * - ``design_name``
+     - string
+     - no
+     - Name to match against the static PlantUML diagram instead of ``name`` (default: ``name``)
    * - ``requirements``
      - label list
      - yes

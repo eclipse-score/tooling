@@ -325,6 +325,7 @@ def _component_impl(ctx):
         # ComponentInfo: lobster traceability files for requirements, architecture, and tests; propagated up to dependable_element
         ComponentInfo(
             name = ctx.label.name,
+            design_name = ctx.attr.design_name or ctx.label.name,
             requirements = req_lobster_depset,
             requirements_transitive = req_lobster_transitive_depset,
             components = components_depset,
@@ -360,6 +361,10 @@ _component_test = rule(
     implementation = _component_impl,
     doc = "Defines a software component composed of multiple units for S-CORE process compliance",
     attrs = {
+        "design_name": attr.string(
+            default = "",
+            doc = "Name matched against the PlantUML component-diagram alias; defaults to name.",
+        ),
         "requirements": attr.label_list(
             default = [],
             providers = [[ComponentRequirementsInfo], [FeatureRequirementsInfo]],
@@ -408,6 +413,7 @@ def component(
         requirements = None,
         components = [],
         test_case_coverage_lock = None,
+        design_name = None,
         testonly = True,
         **kwargs):
     """Define a software component following S-CORE process guidelines.
@@ -437,6 +443,9 @@ def component(
             If provided, the component rule generates test_case_coverage.lobster by comparing
             computed test coverage against the committed lock. Enables `.update`
             target for refreshing coverage.
+        design_name: Optional name matched against the PlantUML component-diagram
+            alias, decoupled from the Bazel target name (analogous to py_binary's
+            `main`). Defaults to name.
         testonly: If true, only testonly targets can depend on this component.
         visibility: Bazel visibility specification for the component target.
 
@@ -459,6 +468,7 @@ def component(
         components = components,
         tests = tests,
         test_case_coverage_lock = test_case_coverage_lock,
+        design_name = design_name or "",
         testonly = testonly,
         **kwargs
     )

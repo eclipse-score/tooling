@@ -21,9 +21,9 @@ mod shared;
 
 use shared::EntityKey;
 
-#[cfg(test)]
-pub use bazel_models::BazelInputEntry;
 pub use bazel_models::{BazelArchitecture, BazelInput};
+#[cfg(test)]
+pub use bazel_models::{BazelEntityRef, BazelInputEntry};
 pub use class_diagram_models::{
     ClassDiagramInputs, ClassEntityIndex, InternalApiIndex, InternalApiInterface, PublicApiIndex,
 };
