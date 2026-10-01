@@ -9,7 +9,7 @@
       "stereotype": null,
       "relations": [
         {
-          "target": "score::mw::log",
+          "target": "score.mw.log",
           "annotation": "verbose",
           "relation_type": "Dependency",
           "source_role": "None",
@@ -24,8 +24,8 @@
         "line": 14
       }
     },
-    "score::mw::log": {
-      "id": "score::mw::log",
+    "score.mw.log": {
+      "id": "score.mw.log",
       "name": "score::mw::log",
       "alias": null,
       "parent_id": null,

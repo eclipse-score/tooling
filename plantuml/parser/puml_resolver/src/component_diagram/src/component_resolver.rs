@@ -20,6 +20,7 @@ use component_diagram::{
 };
 use component_parser::{Arrow, CompPumlDocument, Element, Port, PortType, Relation, Statement};
 use resolver_traits::DiagramResolver;
+use uid_normalization::{normalize, resolve_explicit_path, InternalScope, RootAnchor};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ComponentResolverError {
@@ -51,7 +52,7 @@ pub enum ComponentResolverError {
 
 #[derive(Clone)]
 struct PendingRelation {
-    scope: Vec<String>,
+    scope: InternalScope,
     relation: Relation,
 }
 
@@ -78,7 +79,8 @@ type RelationValidationRule = fn(&RelationValidationInput<'_>) -> Option<Compone
 
 #[derive(Default)]
 pub struct ComponentResolver {
-    pub scope: Vec<String>,                        // element id stack
+    scope: InternalScope,
+    root_anchor: RootAnchor,
     pub elements: HashMap<String, LogicComponent>, // FQN -> LogicComponent
     /// Maps parent FQN -> direct child element FQNs
     pub child_elements_by_parent: HashMap<Option<String>, Vec<String>>,
@@ -91,14 +93,25 @@ pub struct ComponentResolver {
 
 impl ComponentResolver {
     pub fn new() -> Self {
+        Self::with_root_anchor(None)
+    }
+
+    /// Resolver whose ids are prefixed with `root_anchor`.
+    pub fn with_root_anchor(root_anchor: Option<&str>) -> Self {
         Self {
-            scope: Vec::new(),
-            elements: HashMap::new(),
-            child_elements_by_parent: HashMap::new(),
-            port_parents: HashMap::new(),
-            port_types: HashMap::new(),
-            pending_relations: Vec::new(),
+            root_anchor: RootAnchor::new(root_anchor),
+            ..Self::default()
         }
+    }
+
+    /// Root anchor and nesting scope as id segments.
+    fn lookup_scope(&self) -> Vec<String> {
+        self.scope
+            .resolve(&self.root_anchor)
+            .split('.')
+            .filter(|segment| !segment.is_empty())
+            .map(str::to_string)
+            .collect()
     }
 
     fn port_type_to_role(port_type: PortType) -> EndpointRole {
@@ -225,15 +238,17 @@ impl ComponentResolver {
     /// Collect possible port FQN candidates from a raw reference token.
     /// Returns deduplicated, deterministic candidates (sorted by `BTreeSet`).
     fn collect_port_fqn_candidates_for_raw(&self, raw: &str) -> Vec<String> {
-        let parts: Vec<&str> = raw.split('.').collect();
+        let normalized = normalize(raw);
+        let parts: Vec<&str> = normalized.split('.').collect();
+        let scope = self.lookup_scope();
         let mut candidates = std::collections::BTreeSet::new();
 
         // 1. scope-based lookup (only for simple name)
         if parts.len() == 1 {
-            for i in (0..=self.scope.len()).rev() {
-                let outer_scope = &self.scope[..i];
+            for i in (0..=scope.len()).rev() {
+                let outer_scope = &scope[..i];
                 let matches =
-                    self.collect_matching_port_fqns_in_scope_or_children(outer_scope, raw);
+                    self.collect_matching_port_fqns_in_scope_or_children(outer_scope, &normalized);
                 if !matches.is_empty() {
                     // Keep nearest-scope matches only for simple names.
                     candidates.extend(matches);
@@ -243,7 +258,7 @@ impl ComponentResolver {
         }
 
         // 2. relative FQN (scope + parts)
-        let mut relative = self.scope.clone();
+        let mut relative = scope;
         relative.extend(parts.iter().map(|p| p.to_string()));
 
         let relative_port_fqn = relative.join(".");
@@ -252,8 +267,9 @@ impl ComponentResolver {
         }
 
         // 3. direct match
-        if self.port_types.contains_key(raw) {
-            candidates.insert(raw.to_string());
+        let absolute = resolve_explicit_path(&self.root_anchor, raw);
+        if self.port_types.contains_key(&absolute) {
+            candidates.insert(absolute);
         }
 
         candidates.into_iter().collect()
@@ -310,14 +326,6 @@ impl ComponentResolver {
             .map(Self::port_type_to_role))
     }
 
-    fn make_fqn(&self, local: &str) -> String {
-        if self.scope.is_empty() {
-            local.to_string()
-        } else {
-            format!("{}.{}", self.scope.join("."), local)
-        }
-    }
-
     /// Resolve relation references, supporting:
     /// 1) Simple name: search upward from current scope + recurse into children
     /// 2) Relative qualified name: path starting from current scope
@@ -327,7 +335,8 @@ impl ComponentResolver {
     /// - If any stage returns multiple valid candidates, return
     ///   `ComponentResolverError::AmbiguousReference` immediately.
     pub fn resolve_ref(&self, raw: &str) -> Result<String, ComponentResolverError> {
-        let parts: Vec<&str> = raw.split('.').collect();
+        let normalized = normalize(raw);
+        let parts: Vec<&str> = normalized.split('.').collect();
 
         // 1. simple name
         if parts.len() == 1 {
@@ -340,7 +349,7 @@ impl ComponentResolver {
         if let Some(res) = self.resolve_relative(&parts)? {
             // A distinct top-level element can also match the literal text;
             // silently preferring the scope-relative hit would shadow it.
-            let absolute_fqn = parts.join(".");
+            let absolute_fqn = resolve_explicit_path(&self.root_anchor, raw);
             if absolute_fqn != res && self.elements.contains_key(&absolute_fqn) {
                 let mut candidates = vec![res, absolute_fqn];
                 candidates.sort();
@@ -353,7 +362,7 @@ impl ComponentResolver {
         }
 
         // 3. absolute FQN
-        let fqn = parts.join(".");
+        let fqn = resolve_explicit_path(&self.root_anchor, raw);
         if self.elements.contains_key(&fqn) {
             return Ok(fqn);
         }
@@ -412,7 +421,7 @@ impl ComponentResolver {
     }
 
     fn resolve_relative(&self, parts: &[&str]) -> Result<Option<String>, ComponentResolverError> {
-        let matches = self.collect_element_fqns_in_scope_or_children(&self.scope, parts);
+        let matches = self.collect_element_fqns_in_scope_or_children(&self.lookup_scope(), parts);
 
         Self::pick_unique(matches, &parts.join("."))
     }
@@ -424,9 +433,9 @@ impl ComponentResolver {
     where
         F: FnMut(&[String]) -> Result<Option<String>, ComponentResolverError>,
     {
-        for i in (0..=self.scope.len()).rev() {
-            let scope = &self.scope[..i];
-            if let Some(res) = f(scope)? {
+        let scope = self.lookup_scope();
+        for i in (0..=scope.len()).rev() {
+            if let Some(res) = f(&scope[..i])? {
                 return Ok(Some(res));
             }
         }
@@ -740,7 +749,7 @@ impl DiagramResolver for ComponentResolver {
     type Error = ComponentResolverError;
 
     fn resolve(&mut self, document: &CompPumlDocument) -> Result<Self::Output, Self::Error> {
-        self.scope.clear();
+        self.scope = InternalScope::default();
         self.elements.clear();
         self.child_elements_by_parent.clear();
         self.port_parents.clear();
@@ -782,7 +791,7 @@ impl ComponentResolver {
 impl ComponentResolver {
     fn visit_port(&mut self, port: &Port) {
         let local_id = port.alias.as_deref().unwrap_or(&port.name);
-        let fqn = self.make_fqn(local_id);
+        let fqn = self.scope.resolve_with_leaf(&self.root_anchor, local_id);
 
         if self.scope.is_empty() {
             // Top-level ports are pure connectors/aliases, not entities — ignore them.
@@ -790,7 +799,8 @@ impl ComponentResolver {
         } else {
             // Nested port: record port_fqn -> parent_fqn for relation lifting.
             self.port_types.insert(fqn.clone(), port.port_type);
-            self.port_parents.insert(fqn, self.scope.join("."));
+            self.port_parents
+                .insert(fqn, self.scope.resolve(&self.root_anchor));
         }
     }
 
@@ -804,16 +814,13 @@ impl ComponentResolver {
                 source_location: element.identity.source_location.clone(),
             })?;
 
-        let fqn = self.make_fqn(local_id);
+        let fqn = self.scope.resolve_with_leaf(&self.root_anchor, local_id);
         if self.elements.contains_key(&fqn) {
             return Err(ComponentResolverError::DuplicateElement { element_id: fqn });
         }
 
-        let parent_id = if self.scope.is_empty() {
-            None
-        } else {
-            Some(self.scope.join("."))
-        };
+        let parent_key = Some(self.scope.resolve(&self.root_anchor)).filter(|key| !key.is_empty());
+        let parent_id = parent_key.clone().filter(|_| !self.scope.is_empty());
 
         let logic = LogicComponent {
             id: fqn.clone(),
@@ -829,17 +836,18 @@ impl ComponentResolver {
         self.elements.insert(fqn.clone(), logic);
 
         self.child_elements_by_parent
-            .entry(parent_id.clone())
+            .entry(parent_key)
             .or_default()
             .push(fqn.clone());
 
-        self.scope.push(local_id.to_string());
+        let nested = self.scope.child(local_id);
+        let outer = std::mem::replace(&mut self.scope, nested);
 
         for stmt in &element.statements {
             self.visit_statement(stmt)?;
         }
 
-        self.scope.pop();
+        self.scope = outer;
 
         Ok(())
     }
