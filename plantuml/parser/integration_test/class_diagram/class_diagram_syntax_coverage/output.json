@@ -808,7 +808,7 @@
         }
       },
       {
-        "id": "sample.newline.<<template>>\\nTest<T>",
+        "id": "sample.newline.TestTemplate",
         "name": "TestTemplate",
         "enclosing_namespace_id": "sample.newline",
         "stereotypes": [

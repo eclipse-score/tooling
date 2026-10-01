@@ -1,0 +1,45 @@
+{
+  "package_relationship_reopened_package.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "pkg.A",
+        "name": "A",
+        "enclosing_namespace_id": "pkg",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 16 }
+      },
+      {
+        "id": "pkg.B",
+        "name": "B",
+        "enclosing_namespace_id": "pkg",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "pkg.B",
+            "target": "pkg.A",
+            "relation_type": "Association",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 20 }
+          }
+        ],
+        "source_location": { "file": "", "line": 19 }
+      }
+    ],
+    "free_functions": []
+  }
+}

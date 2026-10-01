@@ -290,6 +290,7 @@ pub struct EnumItem {
 pub struct Namespace {
     pub name: Name,
     pub types: Vec<Element>,
+    pub relationships: Vec<Relationship>,
     pub namespaces: Vec<Namespace>,
 }
 

@@ -1,0 +1,22 @@
+{
+  "class_alias_id_leaf.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "P.F",
+        "name": "F",
+        "enclosing_namespace_id": "P",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 16 }
+      }
+    ],
+    "free_functions": []
+  }
+}

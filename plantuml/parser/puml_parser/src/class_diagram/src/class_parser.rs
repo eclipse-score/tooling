@@ -915,6 +915,7 @@ impl ClassParseSession<'_> {
     ) -> Result<(Namespace, IgnoredObjectRegistry), ClassError> {
         let mut namespace = Namespace::default();
         let mut ignored_objects = IgnoredObjectRegistry::default();
+        let mut relationships = Vec::new();
 
         for inner in pair.into_inner() {
             match inner.as_rule() {
@@ -945,6 +946,12 @@ impl ClassParseSession<'_> {
                                 enum_def.set_namespace(namespace.name.internal.clone());
                                 namespace.types.push(enum_def);
                             }
+                            Rule::relationship => {
+                                let source_location =
+                                    self.original_source_location(&top_level_inner);
+                                relationships
+                                    .push(parse_relationship(top_level_inner, source_location));
+                            }
                             Rule::namespace_def => {
                                 let (nested_namespace, nested_ignored_objects) =
                                     self.parse_namespace(top_level_inner)?;
@@ -958,6 +965,19 @@ impl ClassParseSession<'_> {
                 _ => (),
             }
         }
+
+        namespace.relationships = Self::filter_relationships(
+            relationships,
+            &ignored_objects,
+            &Some(namespace.name.internal.clone()),
+        )
+        .into_iter()
+        .filter(|relationship| {
+            !self
+                .ignored_notes
+                .filters_endpoints(&relationship.left, &relationship.right)
+        })
+        .collect();
 
         Ok((namespace, ignored_objects))
     }
@@ -1442,6 +1462,59 @@ mod tests {
         assert_eq!(rel.left_multiplicity, None);
         assert_eq!(rel.right_multiplicity, None);
         assert_eq!(rel.source_location.line, 1);
+    }
+
+    #[test]
+    fn test_parse_relationship_colon_qualified_endpoint() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "A --> ns::B")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
+
+        assert_eq!(rel.left, "A");
+        assert_eq!(rel.right, "ns::B");
+    }
+
+    #[test]
+    fn test_parse_relationship_colon_qualified_endpoint_with_multiplicities() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "A \"1\" --> \"*\" ns::B")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
+
+        assert_eq!(rel.left, "A");
+        assert_eq!(rel.right, "ns::B");
+        assert_eq!(rel.left_multiplicity.as_deref(), Some("1"));
+        assert_eq!(rel.right_multiplicity.as_deref(), Some("*"));
+    }
+
+    #[test]
+    fn test_parse_relationship_label_is_not_mistaken_for_endpoint() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "A --> B : ns::x")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
+
+        assert_eq!(rel.right, "B");
+        assert_eq!(rel.label.as_deref(), Some("ns::x"));
+    }
+
+    #[test]
+    fn test_parse_relationship_root_marker_endpoint() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "A --> .B")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
+
+        assert_eq!(rel.right, ".B");
     }
 
     #[test]

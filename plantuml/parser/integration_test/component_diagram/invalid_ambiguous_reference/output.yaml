@@ -15,4 +15,4 @@ invalid_ambiguous_reference.puml:
     type: "AmbiguousReference"
     fields:
       reference: "p"
-      candidates: "Pkg.A, Pkg.B"
+      candidates: "Pkg.A.p, Pkg.B.p"

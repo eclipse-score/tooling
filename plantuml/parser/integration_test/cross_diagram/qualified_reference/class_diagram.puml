@@ -11,6 +11,9 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 @startuml
+namespace a {
+  class B
+}
 class A
 A --> a::B
 @enduml

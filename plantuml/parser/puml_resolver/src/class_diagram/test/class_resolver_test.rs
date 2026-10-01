@@ -131,3 +131,103 @@ fn test_class_template_pack() {
 fn test_empty_template_args() {
     run_class_resolver_case("empty_template_args");
 }
+
+#[test]
+fn test_class_alias_id_leaf() {
+    run_class_resolver_case("class_alias_id_leaf");
+}
+
+#[test]
+fn test_relation_leaf_of_qualified_declaration() {
+    run_class_resolver_case("relation_leaf_of_qualified_declaration");
+}
+
+#[test]
+fn test_package_relationship_reopened_package() {
+    run_class_resolver_case("package_relationship_reopened_package");
+}
+
+#[test]
+fn test_relation_nearest_scope_shadowing() {
+    run_class_resolver_case("relation_nearest_scope_shadowing");
+}
+
+#[test]
+fn test_extends_root_marker() {
+    run_class_resolver_case("extends_root_marker");
+}
+
+#[test]
+fn test_invalid_duplicate_entity() {
+    run_class_resolver_case("invalid_duplicate_entity");
+}
+
+#[test]
+fn test_invalid_duplicate_entity_alias() {
+    run_class_resolver_case("invalid_duplicate_entity_alias");
+}
+
+#[test]
+fn test_invalid_duplicate_entity_separator() {
+    run_class_resolver_case("invalid_duplicate_entity_separator");
+}
+
+#[test]
+fn test_invalid_forward_reference() {
+    run_class_resolver_case("invalid_forward_reference");
+}
+
+#[test]
+fn test_invalid_ambiguous_simple_reference() {
+    run_class_resolver_case("invalid_ambiguous_simple_reference");
+}
+
+#[test]
+fn test_invalid_ambiguous_outer_reference() {
+    run_class_resolver_case("invalid_ambiguous_outer_reference");
+}
+
+#[test]
+fn test_invalid_unresolved_label_reference() {
+    run_class_resolver_case("invalid_unresolved_label_reference");
+}
+
+#[test]
+fn test_invalid_ambiguous_qualified_reference() {
+    run_class_resolver_case("invalid_ambiguous_qualified_reference");
+}
+
+#[test]
+fn test_invalid_unresolved_qualified_reference() {
+    run_class_resolver_case("invalid_unresolved_qualified_reference");
+}
+
+#[test]
+fn test_invalid_unresolved_nested_qualified_reference() {
+    run_class_resolver_case("invalid_unresolved_nested_qualified_reference");
+}
+
+#[test]
+fn test_invalid_unresolved_qualified_base() {
+    run_class_resolver_case("invalid_unresolved_qualified_base");
+}
+
+#[test]
+fn test_relation_colon_qualified_endpoint() {
+    run_class_resolver_case("relation_colon_qualified_endpoint");
+}
+
+#[test]
+fn test_relation_root_marker() {
+    run_class_resolver_case("relation_root_marker");
+}
+
+#[test]
+fn test_namespace_relationship() {
+    run_class_resolver_case("namespace_relationship");
+}
+
+#[test]
+fn test_invalid_namespace_unresolved_relationship() {
+    run_class_resolver_case("invalid_namespace_unresolved_relationship");
+}

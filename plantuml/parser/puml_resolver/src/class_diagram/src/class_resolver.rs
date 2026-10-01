@@ -23,14 +23,24 @@ use class_parser::{
 use parser_core::common_ast::Arrow;
 use resolver_traits::DiagramResolver;
 use thiserror::Error;
+use uid_normalization::{leaf_key, InternalScope, Resolution, RootAnchor};
 
 #[derive(Debug, Error)]
 pub enum ClassPumlResolverError {
     #[error("Class Resolver: Unresolved reference: {reference}")]
     UnresolvedReference { reference: String },
 
-    #[error("Duplicate entity id: {entity_id}")]
-    DuplicateEntity { entity_id: String },
+    #[error("Duplicate entity id: {entity_id} (line {line})", line = source_location.line)]
+    DuplicateEntity {
+        entity_id: String,
+        source_location: SourceLocation,
+    },
+
+    #[error("Ambiguous reference: {reference} -> {candidates}", candidates = candidates.join(", "))]
+    AmbiguousReference {
+        reference: String,
+        candidates: Vec<String>,
+    },
 
     #[error("Unknown entity type: {entity_type}")]
     UnknownEntityType { entity_type: String },
@@ -54,8 +64,11 @@ pub enum ClassPumlResolverError {
 
 pub struct ClassResolver {
     pub logic: ClassDiagram,
-    // internal name or alias -> FQN
-    name_map: HashMap<String, String>,
+    root_anchor: RootAnchor,
+    // entity leaf (Rule A, last segment) -> every id registered under that leaf
+    name_map: HashMap<String, Vec<String>>,
+    // entity id -> its declaration line; also the existence check
+    declared_at: HashMap<String, u32>,
 }
 
 impl Default for ClassResolver {
@@ -66,27 +79,36 @@ impl Default for ClassResolver {
 
 impl ClassResolver {
     pub fn new() -> Self {
+        Self::with_root_anchor(None)
+    }
+
+    /// Resolver whose ids are prefixed with `root_anchor`.
+    pub fn with_root_anchor(root_anchor: Option<&str>) -> Self {
         Self {
             logic: ClassDiagram {
                 name: String::new(),
                 entities: Vec::new(),
                 free_functions: Vec::new(),
             },
+            root_anchor: RootAnchor::new(root_anchor),
             name_map: HashMap::new(),
+            declared_at: HashMap::new(),
         }
     }
 
     fn analyze(&mut self, file: &ClassUmlFile) -> Result<(), ClassPumlResolverError> {
+        let root = InternalScope::default();
+
         for elem in &file.elements {
-            self.process_top_level(elem, None)?;
+            self.process_top_level(elem, &root)?;
         }
 
         for rel in &file.relationships {
-            self.process_relationship(rel, Some(String::new()))?;
+            self.process_relationship(rel, &root)?;
         }
 
         for elem in &file.elements {
-            self.process_declared_relations_top_level(elem, None)?;
+            self.process_declared_relations_top_level(elem, &root)?;
         }
 
         Ok(())
@@ -105,87 +127,107 @@ impl ClassResolver {
         }
     }
 
-    fn build_fqn(&self, name: &str, parent: &Option<String>) -> String {
-        let normalized_name = uid_utils::normalize(name);
-
-        match parent {
-            Some(p) => {
-                let normalized_parent = uid_utils::normalize(p);
-
-                if normalized_parent.is_empty() {
-                    normalized_name
-                } else if normalized_name.is_empty() {
-                    normalized_parent
-                } else {
-                    format!("{}.{}", normalized_parent, normalized_name)
-                }
-            }
-            None => normalized_name,
-        }
+    /// Rule A: the id leaf is the alias when present, else the name.
+    fn id_leaf(name: &Name) -> &str {
+        name.display.as_deref().unwrap_or(&name.internal)
     }
 
-    fn entity_name(name: &Name) -> String {
-        name.display
-            .clone()
-            .unwrap_or_else(|| name.internal.clone())
+    /// Nesting scope path, without root anchor.
+    fn enclosing_namespace_id(scope: &InternalScope) -> Option<String> {
+        (!scope.is_empty()).then(|| scope.resolve(&RootAnchor::default()))
     }
 
-    fn register_entity_names(&mut self, name: &Name, id: &str) {
-        self.name_map.insert(name.internal.clone(), id.to_string());
-
-        if let Some(display) = &name.display {
-            self.name_map.insert(display.clone(), id.to_string());
-        }
+    fn resolve_entity_id(&self, leaf: &str, scope: &InternalScope) -> String {
+        scope.resolve_with_leaf(&self.root_anchor, leaf)
     }
 
-    fn resolve_name(&self, name: &str, parent: &Option<String>) -> Option<String> {
-        // 1. FQN
-        if uid_utils::is_identifier_path(name) {
-            return Some(uid_utils::normalize(name));
+    fn declared_before(&self, id: &str, reference_line: u32) -> bool {
+        self.declared_at
+            .get(id)
+            .is_some_and(|&line| line < reference_line)
+    }
+
+    fn leaf_candidates(&self, leaf: &str, reference_line: u32) -> Vec<String> {
+        self.name_map
+            .get(leaf)
+            .into_iter()
+            .flatten()
+            .filter(|id| self.declared_before(id, reference_line))
+            .cloned()
+            .collect()
+    }
+
+    fn push_entity(
+        &mut self,
+        entity: SimpleEntity,
+        leaf: &str,
+    ) -> Result<(), ClassPumlResolverError> {
+        if self.declared_at.contains_key(&entity.id) {
+            return Err(ClassPumlResolverError::DuplicateEntity {
+                entity_id: entity.id,
+                source_location: entity.source_location,
+            });
         }
 
-        // 2. Current Namespace
-        if let Some(p) = parent {
-            let candidate = format!("{}.{}", p, name);
+        self.declared_at
+            .insert(entity.id.clone(), entity.source_location.line);
 
-            if self.logic.entities.iter().any(|e| e.id == candidate) {
-                return Some(candidate);
-            }
+        self.name_map
+            .entry(leaf_key(leaf))
+            .or_default()
+            .push(entity.id.clone());
+        self.logic.entities.push(entity);
+        Ok(())
+    }
+
+    /// Rule C lookup; sees entities declared earlier, plus the scope-local hit.
+    fn resolve_reference(
+        &self,
+        raw: &str,
+        scope: &InternalScope,
+        reference_line: u32,
+    ) -> Result<String, ClassPumlResolverError> {
+        let resolution = uid_normalization::resolve_reference(
+            scope,
+            &self.root_anchor,
+            raw,
+            |id| self.declared_at.contains_key(id),
+            |id| self.declared_before(id, reference_line),
+            |leaf| self.leaf_candidates(leaf, reference_line),
+        );
+
+        match resolution {
+            Resolution::Resolved(id) => Ok(id),
+            Resolution::Unresolved => Err(ClassPumlResolverError::UnresolvedReference {
+                reference: raw.to_string(),
+            }),
+            Resolution::Ambiguous(candidates) => Err(ClassPumlResolverError::AmbiguousReference {
+                reference: raw.to_string(),
+                candidates,
+            }),
         }
-
-        // 3. Global search id
-        if let Some(id) = self.name_map.get(name) {
-            return Some(id.clone());
-        }
-
-        // 4. Global search exported name
-        if let Some(e) = self.logic.entities.iter().find(|e| e.name == name) {
-            return Some(e.id.clone());
-        }
-
-        None
     }
 
     fn process_top_level(
         &mut self,
         elem: &ClassUmlTopLevel,
-        parent: Option<String>,
+        scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
         match elem {
             ClassUmlTopLevel::Types(element) => {
-                self.process_element(element, parent);
+                self.process_element(element, scope)?;
             }
 
             ClassUmlTopLevel::Enum(enum_def) => {
-                self.process_enum(enum_def, parent);
+                self.process_enum(enum_def, scope)?;
             }
 
             ClassUmlTopLevel::Namespace(ns) => {
-                self.process_namespace(ns, parent)?;
+                self.process_namespace(ns, scope)?;
             }
 
             ClassUmlTopLevel::Package(pkg) => {
-                self.process_package(pkg, parent)?;
+                self.process_package(pkg, scope)?;
             }
         }
         Ok(())
@@ -194,18 +236,18 @@ impl ClassResolver {
     fn process_declared_relations_top_level(
         &mut self,
         elem: &ClassUmlTopLevel,
-        parent: Option<String>,
+        scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
         match elem {
             ClassUmlTopLevel::Types(element) => {
-                self.process_declared_relations_element(element, parent)?;
+                self.process_declared_relations_element(element, scope)?;
             }
             ClassUmlTopLevel::Enum(_) => {}
             ClassUmlTopLevel::Namespace(ns) => {
-                self.process_namespace_declared_relations(ns, parent)?;
+                self.process_namespace_declared_relations(ns, scope)?;
             }
             ClassUmlTopLevel::Package(pkg) => {
-                self.process_package_declared_relations(pkg, parent)?;
+                self.process_package_declared_relations(pkg, scope)?;
             }
         }
 
@@ -215,20 +257,16 @@ impl ClassResolver {
     fn process_package(
         &mut self,
         pkg: &Package,
-        parent: Option<String>,
+        scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let fqn = self.build_fqn(&pkg.name.internal, &parent);
+        let nested = scope.child(Self::id_leaf(&pkg.name));
 
         for t in &pkg.types {
-            self.process_element(t, Some(fqn.clone()));
+            self.process_element(t, &nested)?;
         }
 
         for sub in &pkg.packages {
-            self.process_package(sub, Some(fqn.clone()))?;
-        }
-
-        for rel in &pkg.relationships {
-            self.process_relationship(rel, Some(fqn.clone()))?;
+            self.process_package(sub, &nested)?;
         }
 
         Ok(())
@@ -237,34 +275,39 @@ impl ClassResolver {
     fn process_namespace(
         &mut self,
         ns: &Namespace,
-        parent: Option<String>,
+        scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let fqn = self.build_fqn(&ns.name.internal, &parent);
+        let nested = scope.child(Self::id_leaf(&ns.name));
 
         for t in &ns.types {
-            self.process_element(t, Some(fqn.clone()));
+            self.process_element(t, &nested)?;
         }
 
         for sub in &ns.namespaces {
-            self.process_namespace(sub, Some(fqn.clone()))?;
+            self.process_namespace(sub, &nested)?;
         }
 
         Ok(())
     }
 
+    /// Resolves nested relationships once all entities are registered.
     fn process_package_declared_relations(
         &mut self,
         pkg: &Package,
-        parent: Option<String>,
+        scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let fqn = self.build_fqn(&pkg.name.internal, &parent);
+        let nested = scope.child(Self::id_leaf(&pkg.name));
 
         for t in &pkg.types {
-            self.process_declared_relations_element(t, Some(fqn.clone()))?;
+            self.process_declared_relations_element(t, &nested)?;
+        }
+
+        for rel in &pkg.relationships {
+            self.process_relationship(rel, &nested)?;
         }
 
         for sub in &pkg.packages {
-            self.process_package_declared_relations(sub, Some(fqn.clone()))?;
+            self.process_package_declared_relations(sub, &nested)?;
         }
 
         Ok(())
@@ -273,16 +316,20 @@ impl ClassResolver {
     fn process_namespace_declared_relations(
         &mut self,
         ns: &Namespace,
-        parent: Option<String>,
+        scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let fqn = self.build_fqn(&ns.name.internal, &parent);
+        let nested = scope.child(Self::id_leaf(&ns.name));
 
         for t in &ns.types {
-            self.process_declared_relations_element(t, Some(fqn.clone()))?;
+            self.process_declared_relations_element(t, &nested)?;
+        }
+
+        for rel in &ns.relationships {
+            self.process_relationship(rel, &nested)?;
         }
 
         for sub in &ns.namespaces {
-            self.process_namespace_declared_relations(sub, Some(fqn.clone()))?;
+            self.process_namespace_declared_relations(sub, &nested)?;
         }
 
         Ok(())
@@ -291,28 +338,31 @@ impl ClassResolver {
     fn process_declared_relations_element(
         &mut self,
         element: &Element,
-        parent: Option<String>,
+        scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
         match element {
             Element::ClassDef(def) => {
-                self.process_extends_relationships(
-                    &def.name.internal,
+                self.process_declared_relationships(
+                    Self::id_leaf(&def.name),
                     &def.extends,
-                    parent.clone(),
+                    scope,
+                    RelationType::Inheritance,
                     &def.source_location,
                 )?;
-                self.process_implements_relationships(
-                    &def.name.internal,
+                self.process_declared_relationships(
+                    Self::id_leaf(&def.name),
                     &def.implements,
-                    parent,
+                    scope,
+                    RelationType::Implementation,
                     &def.source_location,
                 )?;
             }
             Element::InterfaceDef(def) => {
-                self.process_extends_relationships(
-                    &def.name.internal,
+                self.process_declared_relationships(
+                    Self::id_leaf(&def.name),
                     &def.extends,
-                    parent,
+                    scope,
+                    RelationType::Inheritance,
                     &def.source_location,
                 )?;
             }
@@ -322,43 +372,11 @@ impl ClassResolver {
         Ok(())
     }
 
-    fn process_extends_relationships(
-        &mut self,
-        child_name: &str,
-        bases: &[String],
-        parent: Option<String>,
-        source_location: &SourceLocation,
-    ) -> Result<(), ClassPumlResolverError> {
-        self.process_declared_relationships(
-            child_name,
-            bases,
-            parent,
-            RelationType::Inheritance,
-            source_location,
-        )
-    }
-
-    fn process_implements_relationships(
-        &mut self,
-        class_name: &str,
-        interfaces: &[String],
-        parent: Option<String>,
-        source_location: &SourceLocation,
-    ) -> Result<(), ClassPumlResolverError> {
-        self.process_declared_relationships(
-            class_name,
-            interfaces,
-            parent,
-            RelationType::Implementation,
-            source_location,
-        )
-    }
-
     fn process_declared_relationships(
         &mut self,
-        source_name: &str,
+        source_leaf: &str,
         targets: &[String],
-        parent: Option<String>,
+        scope: &InternalScope,
         relation_type: RelationType,
         source_location: &SourceLocation,
     ) -> Result<(), ClassPumlResolverError> {
@@ -366,14 +384,10 @@ impl ClassResolver {
             return Ok(());
         }
 
-        let source = self.build_fqn(source_name, &parent);
+        let source = self.resolve_entity_id(source_leaf, scope);
 
         for declared_target in targets {
-            let target = self.resolve_name(declared_target, &parent).ok_or_else(|| {
-                ClassPumlResolverError::UnresolvedReference {
-                    reference: declared_target.clone(),
-                }
-            })?;
+            let target = self.resolve_reference(declared_target, scope, source_location.line)?;
 
             self.add_relationship(Relationship {
                 source: source.clone(),
@@ -388,9 +402,13 @@ impl ClassResolver {
         Ok(())
     }
 
-    fn process_element(&mut self, element: &Element, parent: Option<String>) {
+    fn process_element(
+        &mut self,
+        element: &Element,
+        scope: &InternalScope,
+    ) -> Result<(), ClassPumlResolverError> {
         match element {
-            Element::EnumDef(def) => self.process_enum(def, parent),
+            Element::EnumDef(def) => self.process_enum(def, scope),
             _ => {
                 let entity_type = match element {
                     Element::ClassDef(def) if def.is_abstract => EntityType::AbstractClass,
@@ -399,12 +417,17 @@ impl ClassResolver {
                     Element::InterfaceDef(_) => EntityType::Interface,
                     _ => unreachable!(),
                 };
-                self.process_class(element, parent, entity_type);
+                self.process_class(element, scope, entity_type)
             }
         }
     }
 
-    fn process_class(&mut self, def: &Element, parent: Option<String>, entity_type: EntityType) {
+    fn process_class(
+        &mut self,
+        def: &Element,
+        scope: &InternalScope,
+        entity_type: EntityType,
+    ) -> Result<(), ClassPumlResolverError> {
         let (
             name,
             stereotypes,
@@ -446,22 +469,24 @@ impl ClassResolver {
             }
         };
 
-        let id = self.build_fqn(&name.internal, &parent);
+        let leaf = Self::id_leaf(name);
+        let id = self.resolve_entity_id(leaf, scope);
+        let owner_name = leaf_key(leaf);
 
         let template_parameters =
             Self::convert_class_template_parameters(template_parameters, methods);
 
         let entity = SimpleEntity {
             id: id.clone(),
-            name: Self::entity_name(name),
-            enclosing_namespace_id: parent.clone(),
+            name: leaf.to_string(),
+            enclosing_namespace_id: Self::enclosing_namespace_id(scope),
             stereotypes: stereotypes.clone(),
             entity_type,
             type_aliases: type_aliases.iter().map(Self::convert_type_alias).collect(),
             variables: attributes.iter().map(Self::convert_variable).collect(),
             methods: methods
                 .iter()
-                .map(|method| Self::convert_method(method, &name.internal))
+                .map(|method| Self::convert_method(method, &owner_name))
                 .collect(),
             template_parameters,
             enum_literals: vec![],
@@ -469,8 +494,7 @@ impl ClassResolver {
             source_location: source_location.clone(),
         };
 
-        self.register_entity_names(name, &id);
-        self.logic.entities.push(entity);
+        self.push_entity(entity, leaf)
     }
 
     fn convert_type_alias(type_alias: &ParserTypeAlias) -> TypeAlias {
@@ -638,8 +662,13 @@ impl ClassResolver {
         }
     }
 
-    fn process_enum(&mut self, def: &EnumDef, parent: Option<String>) {
-        let id = self.build_fqn(&def.name.internal, &parent);
+    fn process_enum(
+        &mut self,
+        def: &EnumDef,
+        scope: &InternalScope,
+    ) -> Result<(), ClassPumlResolverError> {
+        let leaf = Self::id_leaf(&def.name);
+        let id = self.resolve_entity_id(leaf, scope);
 
         let mut last_value: Option<i128> = None;
         let literals = def
@@ -667,10 +696,10 @@ impl ClassResolver {
             })
             .collect();
 
-        self.logic.entities.push(SimpleEntity {
+        let entity = SimpleEntity {
             id: id.clone(),
-            name: Self::entity_name(&def.name),
-            enclosing_namespace_id: parent.clone(),
+            name: leaf.to_string(),
+            enclosing_namespace_id: Self::enclosing_namespace_id(scope),
             stereotypes: def.stereotypes.clone(),
             entity_type: EntityType::Enum,
             type_aliases: vec![],
@@ -680,9 +709,9 @@ impl ClassResolver {
             enum_literals: literals,
             relationships: vec![],
             source_location: def.source_location.clone(),
-        });
+        };
 
-        self.register_entity_names(&def.name, &id);
+        self.push_entity(entity, leaf)
     }
 
     fn convert_arrow(&self, arrow: &Arrow) -> Result<(RelationType, bool), ClassPumlResolverError> {
@@ -759,19 +788,10 @@ impl ClassResolver {
     fn process_relationship(
         &mut self,
         rel: &ParserRelationship,
-        parent: Option<String>,
+        scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let left = self.resolve_name(&rel.left, &parent).ok_or_else(|| {
-            ClassPumlResolverError::UnresolvedReference {
-                reference: rel.left.clone(),
-            }
-        })?;
-
-        let right = self.resolve_name(&rel.right, &parent).ok_or_else(|| {
-            ClassPumlResolverError::UnresolvedReference {
-                reference: rel.right.clone(),
-            }
-        })?;
+        let left = self.resolve_reference(&rel.left, scope, rel.source_location.line)?;
+        let right = self.resolve_reference(&rel.right, scope, rel.source_location.line)?;
 
         let (relation_type, reversed) = self.convert_arrow(&rel.arrow)?;
 
@@ -829,10 +849,9 @@ impl DiagramResolver for ClassResolver {
     type Output = ClassDiagram;
     type Error = ClassPumlResolverError;
 
-    // DESIGN: single-pass resolver — all logic lives in analyze(); there is no
-    // per-statement visitor step.
     fn resolve(&mut self, document: &Self::Document) -> Result<Self::Output, Self::Error> {
         self.name_map.clear();
+        self.declared_at.clear();
 
         self.logic.name = document.name.clone();
 
@@ -867,13 +886,13 @@ mod tests {
         }
     }
 
-    fn make_class(name: &str) -> Element {
+    fn make_class_at(name: &str, line: u32) -> Element {
         Element::ClassDef(ClassDef {
             name: make_name(name),
             namespace: "".to_string(),
             package: "".to_string(),
             stereotypes: Vec::new(),
-            source_location: SourceLocation::new("test.puml", 1),
+            source_location: SourceLocation::new("test.puml", line),
             is_abstract: false,
             template_parameters: None,
             extends: vec![],
@@ -882,6 +901,18 @@ mod tests {
             type_aliases: vec![],
             methods: vec![],
         })
+    }
+
+    fn make_class(name: &str) -> Element {
+        make_class_at(name, 1)
+    }
+
+    fn make_aliased_class(internal: &str, alias: &str) -> Element {
+        let mut element = make_class(internal);
+        if let Element::ClassDef(def) = &mut element {
+            def.name.display = Some(alias.to_string());
+        }
+        element
     }
 
     fn make_enum(name: &str, items: Vec<&str>) -> Element {
@@ -914,31 +945,32 @@ mod tests {
     }
 
     // ----------------------------
-    // build_fqn
+    // resolve_entity_id
     // ----------------------------
     #[test]
-    fn test_build_fqn_root() {
+    fn test_resolve_entity_id_root() {
         let resolver = ClassResolver::new();
-        let fqn = resolver.build_fqn("User", &None);
-        assert_eq!(fqn, "User");
+        let id = resolver.resolve_entity_id("User", &InternalScope::default());
+        assert_eq!(id, "User");
     }
 
     #[test]
-    fn test_build_fqn_nested() {
+    fn test_resolve_entity_id_nested() {
         let resolver = ClassResolver::new();
-        let fqn = resolver.build_fqn("User", &Some("core".to_string()));
-        assert_eq!(fqn, "core.User");
+        let id = resolver.resolve_entity_id("User", &InternalScope::from_path("core"));
+        assert_eq!(id, "core.User");
     }
 
     #[test]
-    fn test_build_fqn_normalizes_namespace_separator() {
+    fn test_resolve_entity_id_normalizes_namespace_separator() {
         let resolver = ClassResolver::new();
 
-        let root_fqn = resolver.build_fqn("core::geometry", &None);
-        let nested_fqn = resolver.build_fqn("User", &Some("core::geometry".to_string()));
+        let root_id = resolver.resolve_entity_id("core::geometry", &InternalScope::default());
+        let nested_id =
+            resolver.resolve_entity_id("User", &InternalScope::from_path("core::geometry"));
 
-        assert_eq!(root_fqn, "core.geometry");
-        assert_eq!(nested_fqn, "core.geometry.User");
+        assert_eq!(root_id, "core.geometry");
+        assert_eq!(nested_id, "core.geometry.User");
     }
 
     // ----------------------------
@@ -947,7 +979,9 @@ mod tests {
     #[test]
     fn test_process_class() {
         let mut resolver = ClassResolver::new();
-        resolver.process_element(&make_class("User"), None);
+        resolver
+            .process_element(&make_class("User"), &InternalScope::default())
+            .unwrap();
         assert_eq!(resolver.logic.entities.len(), 1);
 
         let entity = &resolver.logic.entities[0];
@@ -956,13 +990,48 @@ mod tests {
         assert_eq!(entity.entity_type, EntityType::Class);
     }
 
+    #[test]
+    fn test_process_class_prefers_alias_for_id_leaf() {
+        let mut resolver = ClassResolver::new();
+        resolver
+            .process_element(
+                &make_aliased_class("Foo", "F"),
+                &InternalScope::from_path("pkg"),
+            )
+            .unwrap();
+
+        let entity = &resolver.logic.entities[0];
+        assert_eq!(entity.id, "pkg.F");
+        assert_eq!(entity.name, "F");
+    }
+
+    #[test]
+    fn test_duplicate_entity_ids_are_rejected() {
+        let mut resolver = ClassResolver::new();
+        resolver
+            .process_element(&make_class("User"), &InternalScope::default())
+            .unwrap();
+
+        let result = resolver.process_element(&make_class("User"), &InternalScope::default());
+
+        assert!(matches!(
+            result,
+            Err(ClassPumlResolverError::DuplicateEntity { ref entity_id, .. }) if entity_id == "User"
+        ));
+    }
+
     // ----------------------------
     // process_enum
     // ----------------------------
     #[test]
     fn test_process_enum() {
         let mut resolver = ClassResolver::new();
-        resolver.process_element(&make_enum("Color", vec!["Red", "Green", "Blue"]), None);
+        resolver
+            .process_element(
+                &make_enum("Color", vec!["Red", "Green", "Blue"]),
+                &InternalScope::default(),
+            )
+            .unwrap();
 
         assert_eq!(resolver.logic.entities.len(), 1);
 
@@ -973,33 +1042,143 @@ mod tests {
     }
 
     // ----------------------------
-    // resolve_name
+    // resolve_reference (Rule C)
     // ----------------------------
     #[test]
-    fn test_resolve_name_global() {
+    fn test_resolve_reference_direct_scope_hit() {
         let mut resolver = ClassResolver::new();
-        resolver.process_element(&make_class("User"), None);
+        let scope = InternalScope::from_path("core");
+        resolver
+            .process_element(&make_class("User"), &scope)
+            .unwrap();
 
-        let resolved = resolver.resolve_name("User", &None);
-        assert_eq!(resolved, Some("User".to_string()));
+        let resolved = resolver.resolve_reference("User", &scope, 100).unwrap();
+        assert_eq!(resolved, "core.User");
     }
 
     #[test]
-    fn test_resolve_name_namespace() {
+    fn test_resolve_reference_qualified_path_from_root() {
         let mut resolver = ClassResolver::new();
-        resolver.process_element(&make_class("User"), Some("core".to_string()));
+        resolver
+            .process_element(
+                &make_class("User"),
+                &InternalScope::from_path("core::geometry"),
+            )
+            .unwrap();
 
-        let resolved = resolver.resolve_name("User", &Some("core".to_string()));
-        assert_eq!(resolved, Some("core.User".to_string()));
+        let resolved = resolver
+            .resolve_reference("core::geometry::User", &InternalScope::default(), 100)
+            .unwrap();
+
+        assert_eq!(resolved, "core.geometry.User");
     }
 
     #[test]
-    fn test_resolve_name_normalizes_namespace_separator() {
-        let resolver = ClassResolver::new();
+    fn test_resolve_reference_falls_back_to_unique_leaf() {
+        let mut resolver = ClassResolver::new();
+        resolver
+            .process_element(&make_class("User"), &InternalScope::from_path("core"))
+            .unwrap();
 
-        let resolved = resolver.resolve_name("core::geometry::User", &None);
+        let resolved = resolver
+            .resolve_reference("User", &InternalScope::from_path("other"), 100)
+            .unwrap();
 
-        assert_eq!(resolved, Some("core.geometry.User".to_string()));
+        assert_eq!(resolved, "core.User");
+    }
+
+    #[test]
+    fn test_resolve_reference_several_leaves_is_ambiguous() {
+        let mut resolver = ClassResolver::new();
+        resolver
+            .process_element(&make_class("User"), &InternalScope::from_path("p"))
+            .unwrap();
+        resolver
+            .process_element(&make_class("User"), &InternalScope::from_path("q"))
+            .unwrap();
+
+        let result = resolver.resolve_reference("User", &InternalScope::default(), 100);
+
+        assert!(matches!(
+            result,
+            Err(ClassPumlResolverError::AmbiguousReference { ref candidates, .. })
+                if candidates == &["p.User".to_string(), "q.User".to_string()]
+        ));
+    }
+
+    #[test]
+    fn test_resolve_reference_only_sees_elements_declared_before_it() {
+        let mut resolver = ClassResolver::new();
+        resolver
+            .process_element(&make_class_at("User", 10), &InternalScope::from_path("p"))
+            .unwrap();
+
+        let too_early = resolver.resolve_reference("User", &InternalScope::default(), 5);
+        assert!(matches!(
+            too_early,
+            Err(ClassPumlResolverError::UnresolvedReference { .. })
+        ));
+
+        let resolved = resolver
+            .resolve_reference("User", &InternalScope::default(), 20)
+            .unwrap();
+        assert_eq!(resolved, "p.User");
+    }
+
+    #[test]
+    fn test_resolve_reference_direct_scope_hit_ignores_declaration_order() {
+        let mut resolver = ClassResolver::new();
+        let scope = InternalScope::from_path("p");
+        resolver
+            .process_element(&make_class_at("User", 10), &scope)
+            .unwrap();
+
+        let resolved = resolver.resolve_reference("User", &scope, 1).unwrap();
+        assert_eq!(resolved, "p.User");
+    }
+
+    #[test]
+    fn test_resolve_reference_root_marker_bypasses_scope() {
+        let mut resolver = ClassResolver::new();
+        resolver
+            .process_element(&make_class("X"), &InternalScope::default())
+            .unwrap();
+        resolver
+            .process_element(&make_class("X"), &InternalScope::from_path("a"))
+            .unwrap();
+
+        let resolved = resolver
+            .resolve_reference(".X", &InternalScope::from_path("a"), 100)
+            .unwrap();
+        assert_eq!(resolved, "X");
+    }
+
+    #[test]
+    fn test_root_anchor_prefixes_ids_and_rooted_refs() {
+        let mut resolver = ClassResolver::with_root_anchor(Some("score::mw"));
+        resolver
+            .process_element(&make_class("X"), &InternalScope::default())
+            .unwrap();
+        resolver
+            .process_element(&make_class("X"), &InternalScope::from_path("a"))
+            .unwrap();
+        resolver
+            .process_element(&make_class("C"), &InternalScope::from_path("a"))
+            .unwrap();
+
+        let ids: Vec<&str> = resolver
+            .logic
+            .entities
+            .iter()
+            .map(|e| e.id.as_str())
+            .collect();
+        assert!(ids.contains(&"score.mw.X"));
+        assert!(ids.contains(&"score.mw.a.X"));
+
+        let resolved = resolver
+            .resolve_reference(".X", &InternalScope::from_path("a"), 100)
+            .unwrap();
+        assert_eq!(resolved, "score.mw.X");
     }
 
     // ----------------------------
@@ -1097,8 +1276,12 @@ mod tests {
     fn test_process_relationship_inheritance() {
         let mut resolver = ClassResolver::new();
 
-        resolver.process_element(&make_class("A"), None);
-        resolver.process_element(&make_class("B"), None);
+        resolver
+            .process_element(&make_class("A"), &InternalScope::default())
+            .unwrap();
+        resolver
+            .process_element(&make_class("B"), &InternalScope::default())
+            .unwrap();
 
         let rel = ParserRelationship {
             left: "A".to_string(),
@@ -1110,7 +1293,9 @@ mod tests {
             source_location: SourceLocation::new("test.puml", 42),
         };
 
-        resolver.process_relationship(&rel, None).unwrap();
+        resolver
+            .process_relationship(&rel, &InternalScope::default())
+            .unwrap();
 
         let source_entity = resolver
             .logic
@@ -1141,7 +1326,7 @@ mod tests {
             source_location: SourceLocation::new("test.puml", 0),
         };
 
-        let result = resolver.process_relationship(&rel, None);
+        let result = resolver.process_relationship(&rel, &InternalScope::default());
 
         assert!(matches!(
             result,
@@ -1159,10 +1344,13 @@ mod tests {
         let ns = Namespace {
             name: make_name("core::geometry"),
             types: vec![make_class("User")],
+            relationships: vec![],
             namespaces: vec![],
         };
 
-        resolver.process_namespace(&ns, None).unwrap();
+        resolver
+            .process_namespace(&ns, &InternalScope::default())
+            .unwrap();
 
         assert_eq!(resolver.logic.entities.len(), 1);
 
@@ -1208,13 +1396,16 @@ mod tests {
             ClassUmlTopLevel::Namespace(Namespace {
                 name: make_name("ns"),
                 types: vec![],
+                relationships: vec![],
                 namespaces: vec![],
             }),
         ];
 
         for case in cases {
             let mut resolver = ClassResolver::new();
-            assert!(resolver.process_top_level(&case, None).is_ok());
+            assert!(resolver
+                .process_top_level(&case, &InternalScope::default())
+                .is_ok());
         }
     }
 }
