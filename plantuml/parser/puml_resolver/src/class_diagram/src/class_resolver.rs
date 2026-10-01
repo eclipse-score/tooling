@@ -328,6 +328,10 @@ impl ClassResolver {
             self.process_declared_relations_element(t, &nested)?;
         }
 
+        for rel in &ns.relationships {
+            self.process_relationship(rel, &nested)?;
+        }
+
         for sub in &ns.namespaces {
             self.process_namespace_declared_relations(sub, &nested)?;
         }
@@ -1346,6 +1350,7 @@ mod tests {
         let ns = Namespace {
             name: make_name("core::geometry"),
             types: vec![make_class("User")],
+            relationships: vec![],
             namespaces: vec![],
         };
 
@@ -1397,6 +1402,7 @@ mod tests {
             ClassUmlTopLevel::Namespace(Namespace {
                 name: make_name("ns"),
                 types: vec![],
+                relationships: vec![],
                 namespaces: vec![],
             }),
         ];

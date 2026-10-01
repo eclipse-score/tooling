@@ -221,3 +221,13 @@ fn test_relation_colon_qualified_endpoint() {
 fn test_relation_root_marker() {
     run_class_resolver_case("relation_root_marker");
 }
+
+#[test]
+fn test_namespace_relationship() {
+    run_class_resolver_case("namespace_relationship");
+}
+
+#[test]
+fn test_invalid_namespace_unresolved_relationship() {
+    run_class_resolver_case("invalid_namespace_unresolved_relationship");
+}

@@ -1,0 +1,45 @@
+{
+  "namespace_relationship.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "ns.A",
+        "name": "A",
+        "enclosing_namespace_id": "ns",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 16 }
+      },
+      {
+        "id": "ns.B",
+        "name": "B",
+        "enclosing_namespace_id": "ns",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "ns.B",
+            "target": "ns.A",
+            "relation_type": "Association",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 18 }
+          }
+        ],
+        "source_location": { "file": "", "line": 17 }
+      }
+    ],
+    "free_functions": []
+  }
+}
