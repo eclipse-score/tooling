@@ -1,0 +1,60 @@
+{
+    "empty_template_args.puml": {
+        "name": "empty_template_args",
+        "entities": [
+            {
+                "id": "Skeleton",
+                "name": "Skeleton",
+                "enclosing_namespace_id": null,
+                "entity_type": "Class",
+                "type_aliases": [],
+                "methods": [
+                    {
+                        "name": "OnFinished",
+                        "return_type": "Result<void>",
+                        "visibility": "public",
+                        "parameters": [
+                            {
+                                "name": "scope",
+                                "param_type": "const safecpp::Scope<>&",
+                                "is_variadic": false,
+                                "is_pack_expansion": false
+                            },
+                            {
+                                "name": "comparator",
+                                "param_type": "std::less<>",
+                                "is_variadic": false,
+                                "is_pack_expansion": false
+                            }
+                        ],
+                        "template_parameters": null,
+                        "modifiers": [],
+                        "source_location": {
+                            "file": "",
+                            "line": 16
+                        }
+                    }
+                ],
+                "template_parameters": null,
+                "enum_literals": [],
+                "variables": [
+                    {
+                        "name": "scope",
+                        "data_type": "safecpp::Scope<>",
+                        "visibility": "public",
+                        "is_static": false,
+                        "source_location": {
+                            "file": "",
+                            "line": 17
+                        }
+                    }
+                ],
+                "relationships": [],
+                "source_location": {
+                    "file": "plantuml/parser/integration_test/class_diagram/empty_template_args/empty_template_args.puml",
+                    "line": 15
+                }
+            }
+        ]
+    }
+}

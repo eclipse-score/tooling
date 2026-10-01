@@ -1335,6 +1335,71 @@ mod tests {
         assert_eq!(class_def.attributes[0].source_location.line, 3);
     }
 
+    fn parse_single_class_member_file(member: &str) -> Result<ClassUmlFile, ClassError> {
+        let input = format!("@startuml\nclass A {{\n    {member}\n}}\n@enduml\n");
+        let mut parser = PumlClassParser;
+        parser.parse_file(
+            &std::rc::Rc::new(std::path::PathBuf::from("test.puml")),
+            &input,
+            LogLevel::Info,
+        )
+    }
+
+    #[test]
+    fn test_parse_empty_template_args_in_types() {
+        let result = parse_single_class_member_file(
+            "+Run(const safecpp::Scope<>& scope, std::vector<Foo<>> items): Bar<>",
+        )
+        .unwrap();
+
+        let ClassUmlTopLevel::Types(Element::ClassDef(class_def)) = &result.elements[0] else {
+            panic!("expected class element");
+        };
+
+        let method = &class_def.methods[0];
+        assert_eq!(
+            method.params[0].param_type.as_deref(),
+            Some("const safecpp::Scope<>&")
+        );
+        assert_eq!(
+            method.params[1].param_type.as_deref(),
+            Some("std::vector<Foo<>>")
+        );
+        assert_eq!(method.r#type.as_deref(), Some("Bar<>"));
+    }
+
+    #[test]
+    fn test_parse_empty_template_args_in_attribute() {
+        let result = parse_single_class_member_file("+scope : safecpp::Scope<>").unwrap();
+
+        let ClassUmlTopLevel::Types(Element::ClassDef(class_def)) = &result.elements[0] else {
+            panic!("expected class element");
+        };
+
+        assert_eq!(
+            class_def.attributes[0].r#type.as_deref(),
+            Some("safecpp::Scope<>")
+        );
+    }
+
+    #[test]
+    fn test_parse_const_qualifier_after_empty_template_args() {
+        let result = parse_single_class_member_file("+Get(): Foo<> <<const>>").unwrap();
+
+        let ClassUmlTopLevel::Types(Element::ClassDef(class_def)) = &result.elements[0] else {
+            panic!("expected class element");
+        };
+
+        assert_eq!(class_def.methods[0].r#type.as_deref(), Some("Foo<>"));
+        assert_eq!(class_def.methods[0].modifiers, vec!["<<const>>"]);
+    }
+
+    #[test]
+    fn test_parse_malformed_template_args_rejected() {
+        assert!(parse_single_class_member_file("+f(Foo<int, > a)").is_err());
+        assert!(parse_single_class_member_file("+f(Foo<<int>> a)").is_err());
+    }
+
     #[test]
     fn test_parse_type_alias_source_location() {
         let input = r#"@startuml
