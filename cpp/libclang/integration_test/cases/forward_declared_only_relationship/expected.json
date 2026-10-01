@@ -1,0 +1,87 @@
+{
+    "types": {
+        "svc::Owner": {
+            "id": "svc::Owner",
+            "name": "Owner",
+            "enclosing_namespace_id": "svc",
+            "stereotypes": [],
+            "entity_type": "Class",
+            "type_aliases": [],
+            "variables": [
+                {
+                    "name": "peer",
+                    "data_type": "svc::Peer *",
+                    "visibility": "public",
+                    "is_static": false,
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_declared_only_relationship/owner.h",
+                        "line": 23
+                    }
+                },
+                {
+                    "name": "tag",
+                    "data_type": "svc::Tag *",
+                    "visibility": "public",
+                    "is_static": false,
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_declared_only_relationship/owner.h",
+                        "line": 24
+                    }
+                },
+                {
+                    "name": "box",
+                    "data_type": "svc::Box<int> *",
+                    "visibility": "public",
+                    "is_static": false,
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_declared_only_relationship/owner.h",
+                        "line": 25
+                    }
+                }
+            ],
+            "methods": [],
+            "template_parameters": null,
+            "enum_literals": [],
+            "relationships": [
+                {
+                    "source": "svc::Owner",
+                    "target": "svc::Peer",
+                    "relation_type": "Aggregation",
+                    "source_multiplicity": null,
+                    "target_multiplicity": null,
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_declared_only_relationship/owner.h",
+                        "line": 23
+                    }
+                },
+                {
+                    "source": "svc::Owner",
+                    "target": "svc::Tag",
+                    "relation_type": "Aggregation",
+                    "source_multiplicity": null,
+                    "target_multiplicity": null,
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_declared_only_relationship/owner.h",
+                        "line": 24
+                    }
+                },
+                {
+                    "source": "svc::Owner",
+                    "target": "svc::Box",
+                    "relation_type": "Aggregation",
+                    "source_multiplicity": null,
+                    "target_multiplicity": null,
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_declared_only_relationship/owner.h",
+                        "line": 25
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/forward_declared_only_relationship/owner.h",
+                "line": 21
+            }
+        }
+    },
+    "functions": []
+}

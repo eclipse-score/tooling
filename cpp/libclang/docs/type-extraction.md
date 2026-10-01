@@ -46,6 +46,11 @@ entities. Anonymous classes and structs are skipped because they have no stable
 name. Their resulting entity type is inferred from the cursor kind and member
 set as `Struct`, `Class`, `Interface`, or `AbstractClass`.
 
+Only definitions (`Entity::is_definition()`) become entities. A forward
+declaration (`class X;`) creates no entity; its id is only recorded in
+`VisitContext::declared_type_ids` so relationships to the declared type are
+still inferred.
+
 The classification rules are:
 
 - `Struct`: the source cursor is `StructDecl`;

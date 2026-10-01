@@ -1,0 +1,65 @@
+{
+    "types": {
+        "svc::EventBinding": {
+            "id": "svc::EventBinding",
+            "name": "EventBinding",
+            "enclosing_namespace_id": "svc",
+            "stereotypes": [],
+            "entity_type": "AbstractClass",
+            "type_aliases": [],
+            "variables": [],
+            "methods": [
+                {
+                    "name": "~EventBinding",
+                    "return_type": null,
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Destructor"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_decl_after_definition_same_tu/event_binding.h",
+                        "line": 19
+                    }
+                },
+                {
+                    "name": "Send",
+                    "return_type": "void",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [
+                        "Virtual",
+                        "Abstract"
+                    ],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_decl_after_definition_same_tu/event_binding.h",
+                        "line": 20
+                    }
+                },
+                {
+                    "name": "Count",
+                    "return_type": "int",
+                    "visibility": "public",
+                    "parameters": [],
+                    "template_parameters": null,
+                    "modifiers": [],
+                    "source_location": {
+                        "file": "cpp/libclang/integration_test/cases/forward_decl_after_definition_same_tu/event_binding.h",
+                        "line": 21
+                    }
+                }
+            ],
+            "template_parameters": null,
+            "enum_literals": [],
+            "relationships": [],
+            "source_location": {
+                "file": "cpp/libclang/integration_test/cases/forward_decl_after_definition_same_tu/event_binding.h",
+                "line": 17
+            }
+        }
+    },
+    "functions": []
+}

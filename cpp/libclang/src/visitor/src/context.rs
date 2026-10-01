@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
 
 use class_diagram::{FreeFunctionDecl, FunctionArgument, Method, SimpleEntity, SourceLocation};
@@ -104,6 +104,8 @@ pub struct ExtractedMethodDeclaration {
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct VisitContext {
     pub types: BTreeMap<String, SimpleEntity>,
+    /// Ids of non-definition class declarations (`class X;`); valid relationship targets.
+    pub declared_type_ids: HashSet<String>,
     pub parsed_class_info: HashMap<String, ParsedClassInfo>,
     pub free_function_declarations: Vec<ExtractedFreeFunctionDeclaration>,
     pub functions: Vec<ExtractedFunction>,

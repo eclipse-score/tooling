@@ -32,6 +32,19 @@ use crate::visitor::AstVisitor;
 pub struct ClassVisitor;
 impl AstVisitor for ClassVisitor {
     fn visit(ctx: &mut VisitContext, entity: Entity) {
+        let semantic_parent = semantic_parent_id(&entity);
+
+        if !entity.is_definition() {
+            if let Some(name) = entity.get_name() {
+                ctx.declared_type_ids.insert(class_entity_id(
+                    &entity,
+                    semantic_parent.as_deref(),
+                    &name,
+                ));
+            }
+            return;
+        }
+
         let template_params = match entity.get_kind() {
             EntityKind::ClassTemplate | EntityKind::ClassTemplatePartialSpecialization => {
                 parse_template_parameters(&entity)
@@ -40,7 +53,6 @@ impl AstVisitor for ClassVisitor {
         };
 
         let namespace = namespace_id(&entity);
-        let semantic_parent = semantic_parent_id(&entity);
 
         if let Some((builder, mut class_entity)) =
             Self::visit_class(&entity, semantic_parent.as_deref(), namespace.as_deref())
