@@ -221,6 +221,11 @@ fn test_param_templete() {
 }
 
 #[test]
+fn test_empty_template_args() {
+    run_class_diagram_parser_case("empty_template_args");
+}
+
+#[test]
 fn test_relationship_arrows() {
     run_class_diagram_parser_case("relationship_arrows");
 }

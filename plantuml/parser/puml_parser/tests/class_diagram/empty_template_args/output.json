@@ -1,0 +1,132 @@
+{
+  "empty_template_args.puml": {
+    "name": "empty_template_args",
+    "elements": [
+      {
+        "Types": {
+          "ClassDef": {
+            "name": {
+              "internal": "lola::SkeletonMethod",
+              "display": "lola_SkeletonMethod"
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
+            "is_abstract": false,
+            "type_aliases": [],
+            "attributes": [
+              {
+                "visibility": "Public",
+                "name": "scope",
+                "type": "safecpp::Scope<>",
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 21
+                }
+              }
+            ],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "OnProxyMethodSubscribeFinished",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": null,
+                    "param_type": "std::optional<span<std::byte>>"
+                  },
+                  {
+                    "name": null,
+                    "param_type": "const safecpp::Scope<>&"
+                  },
+                  {
+                    "name": "uid",
+                    "param_type": "uid_t"
+                  }
+                ],
+                "type": "Result<void>",
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "Compare",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": "comparator",
+                    "param_type": "std::less<>"
+                  }
+                ],
+                "type": null,
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 17
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "GetScope",
+                "template_parameters": null,
+                "params": [],
+                "type": "safecpp::Scope<>",
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 18
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "Wrap",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": "items",
+                    "param_type": "std::vector<Foo<>>"
+                  },
+                  {
+                    "name": "ptr",
+                    "param_type": "Bar<Baz<>, int>*"
+                  }
+                ],
+                "type": null,
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 19
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "Stop",
+                "template_parameters": null,
+                "params": [],
+                "type": null,
+                "modifiers": [
+                  "<<const>>"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 20
+                }
+              }
+            ],
+            "template_parameters": null,
+            "extends": [],
+            "implements": []
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

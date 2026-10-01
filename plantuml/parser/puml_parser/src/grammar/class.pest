@@ -30,7 +30,7 @@ type_expr = { brace_enclosed_type | const_prefix* ~ prefix_array_prefix* ~ quali
 
 qualified_type = @{ ("::")? ~ identifier ~ (("::" | (!".." ~ ".")) ~ identifier)* }
 
-generic_type_args = { "<" ~ !"<" ~ type_arg ~ ("," ~ type_arg)* ~ ">" }
+generic_type_args = { "<" ~ !"<" ~ (type_arg ~ ("," ~ type_arg)*)? ~ ">" }
 
 type_arg = { type_expr | NUMBER }
 type_expr_list = { type_expr ~ ("," ~ type_expr)* }
