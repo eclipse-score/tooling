@@ -3,7 +3,10 @@
     "safety_software_seooc_example": {
       "units": [],
       "components": [
-        "@//pkg:"
+        {
+          "label": "@//pkg:",
+          "design_name": ""
+        }
       ]
     }
   }

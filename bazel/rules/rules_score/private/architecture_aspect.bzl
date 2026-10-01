@@ -40,9 +40,9 @@ def _collect_current_architecture_aspect_impl(target, ctx):
 
             # Check if it's a unit or a component
             if UnitInfo in comp:
-                current_units.append(comp_label)
+                current_units.append({"label": comp_label, "design_name": comp[UnitInfo].design_name})
             elif ComponentInfo in comp:
-                current_components.append(comp_label)
+                current_components.append({"label": comp_label, "design_name": comp[ComponentInfo].design_name})
 
             if CurrentArchitectureProviderInfo in comp:
                 nested_info = comp[CurrentArchitectureProviderInfo]

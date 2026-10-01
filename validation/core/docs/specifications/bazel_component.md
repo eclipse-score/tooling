@@ -29,13 +29,15 @@ checks below operate on that merged view regardless of how many static files
 contributed to it. See the `architectural_design` rule reference for the
 cross-file merge rules.
 
-All comparisons are case-insensitive: both Bazel target short names and
-PlantUML aliases/IDs are normalized to lowercase before matching, so a Bazel
-target `Component_X` matches a PlantUML entity `as COMPONENT_X`. Names are
-derived from the PlantUML `alias` when present, otherwise from the `id`. On
-the Bazel side, IDs are generated from the target's short name (the part
-after the last `:` in the label), also lowercased. Parent aliases are
-lowercased the same way when resolving parent-child relationships.
+All comparisons are case-insensitive: both Bazel entity keys and PlantUML
+aliases/IDs are normalized to lowercase before matching, so a Bazel entity
+`Component_X` matches a PlantUML entity `as COMPONENT_X`. Names are derived
+from the PlantUML `alias` when present, otherwise from the `id`. On the
+Bazel side, each `unit`/`component` entry carries a `design_name` (the
+`design_name` attribute passed to the `unit`/`component` macro, defaulting
+to the target's short name) which is used as the entity key, also
+lowercased. Parent aliases are lowercased the same way when resolving
+parent-child relationships.
 
 ### Dependable Element Consistency
 
@@ -112,7 +114,9 @@ immediate enclosing component alias as parent.
 
 Every Bazel label must define a target name. A label such as `@//pkg:` (a
 colon with nothing following it) has no target name and is rejected with a
-`[Design]` error before any entity matching happens.
+`[Design]` error before any entity matching happens -- this check runs
+independently of `design_name`, so a malformed label is still rejected even
+though `design_name` is the actual match key.
 
 ### Duplicate Entity Detection
 

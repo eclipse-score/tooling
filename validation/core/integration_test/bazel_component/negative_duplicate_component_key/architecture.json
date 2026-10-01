@@ -3,8 +3,14 @@
     "safety_software_seooc_example": {
       "units": [],
       "components": [
-        "@//pkg_a:component_example",
-        "@//pkg_b:component_example"
+        {
+          "label": "@//pkg_a:component_example",
+          "design_name": "component_example"
+        },
+        {
+          "label": "@//pkg_b:component_example",
+          "design_name": "component_example"
+        }
       ]
     },
     "@//pkg_a:component_example": {

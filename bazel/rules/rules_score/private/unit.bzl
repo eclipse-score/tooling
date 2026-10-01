@@ -147,6 +147,7 @@ def _unit_impl(ctx):
         CertifiedScope(transitive_scopes = depset(ctx.attr.scope)),
         UnitInfo(
             name = ctx.label.name,
+            design_name = ctx.attr.design_name or ctx.label.name,
             unit_design = design_depset,
             unit_design_static_fbs = design_static_fbs_depset,
             unit_design_dynamic_fbs = design_dynamic_fbs_depset,
@@ -169,6 +170,10 @@ def _unit_impl(ctx):
 # ============================================================================
 
 _unit_attrs = {
+    "design_name": attr.string(
+        default = "",
+        doc = "Name matched against the PlantUML component-diagram alias; defaults to name.",
+    ),
     "unit_design": attr.label_list(
         default = [],
         providers = [UnitDesignInfo],
@@ -223,6 +228,7 @@ def unit(
         implementation,
         tests,
         scope = [],
+        design_name = None,
         testonly = True,
         **kwargs):
     """Define a software unit following S-CORE process guidelines.
@@ -243,6 +249,9 @@ def unit(
             but not explicitly named in the implementation list. Default is empty list.
         tests: List of labels to Bazel test targets (cc_test, rust_test, etc.)
             that verify the unit implementation.
+        design_name: Optional name matched against the PlantUML component-diagram
+            alias, decoupled from the Bazel target name (analogous to py_binary's
+            `main`). Defaults to name.
         testonly: If true, only testonly targets can depend on this unit. Set to true
             when the unit depends on testonly targets like tests.
         visibility: Bazel visibility specification for the unit target.
@@ -274,6 +283,7 @@ def unit(
         implementation = implementation,
         scope = scope,
         tests = tests,
+        design_name = design_name or "",
         testonly = testonly,
         **kwargs
     )

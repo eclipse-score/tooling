@@ -836,6 +836,49 @@ dependable_element(
     deps = [],
 )
 
+# Regression test for design_name: the unit's Bazel target name
+# ("design_name_unit_bazel_target") differs from the alias matched against
+# the PlantUML component diagram ("design_name_unit"), decoupled via the
+# design_name attribute.
+architectural_design(
+    name = "arch_design_design_name_example",
+    static = ["fixtures/design_name_example.puml"],
+)
+
+unit(
+    name = "design_name_unit_bazel_target",
+    testonly = True,
+    design_name = "design_name_unit",
+    scope = ["//:mock_lib1"],
+    tests = [],
+    unit_design = [":test_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "design_name_component",
+    testonly = True,
+    components = [":design_name_unit_bazel_target"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
+dependable_element(
+    name = "design_name_example_lib",
+    architectural_design = [":arch_design_design_name_example"],
+    assumptions_of_use = [":aous"],
+    components = [":design_name_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
 unit(
     name = "seooc_test_unit",
     testonly = True,
