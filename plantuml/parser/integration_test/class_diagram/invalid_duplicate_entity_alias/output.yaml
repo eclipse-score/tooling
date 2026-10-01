@@ -10,6 +10,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-# An aliased class's idmap id is its alias, not its label.
-diagram_types:
-  class_diagram.puml: class
+invalid_duplicate_entity_alias.puml:
+  error:
+    type: "DuplicateEntity"
+    fields:
+      entity_id: "X"
+      line: "3"

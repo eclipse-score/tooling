@@ -10,6 +10,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-# An aliased class's idmap id is its alias, not its label.
-diagram_types:
-  class_diagram.puml: class
+invalid_ambiguous_outer_reference.puml:
+  error:
+    type: "AmbiguousReference"
+    fields:
+      reference: "User"
+      candidates: "p.User, q.User"
