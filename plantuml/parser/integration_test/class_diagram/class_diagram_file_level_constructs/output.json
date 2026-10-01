@@ -70,7 +70,7 @@
         }
       },
       {
-        "id": "sample.file_level.<<template>>\\nTest<T>",
+        "id": "sample.file_level.TestTemplate",
         "name": "TestTemplate",
         "enclosing_namespace_id": "sample.file_level",
         "stereotypes": ["service"],

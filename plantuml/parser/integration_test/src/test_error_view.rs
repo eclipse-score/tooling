@@ -316,9 +316,19 @@ impl ErrorView for ClassPumlResolverError {
                     .with_field("reference", reference.clone())
             }
 
-            ClassPumlResolverError::DuplicateEntity { entity_id } => {
-                ProjectedError::new("DuplicateEntity").with_field("entity_id", entity_id.clone())
-            }
+            ClassPumlResolverError::DuplicateEntity {
+                entity_id,
+                source_location,
+            } => ProjectedError::new("DuplicateEntity")
+                .with_field("entity_id", entity_id.clone())
+                .with_field("line", source_location.line.to_string()),
+
+            ClassPumlResolverError::AmbiguousReference {
+                reference,
+                candidates,
+            } => ProjectedError::new("AmbiguousReference")
+                .with_field("reference", reference.clone())
+                .with_field("candidates", candidates.join(", ")),
 
             ClassPumlResolverError::UnknownEntityType { entity_type } => {
                 ProjectedError::new("UnknownEntityType")
