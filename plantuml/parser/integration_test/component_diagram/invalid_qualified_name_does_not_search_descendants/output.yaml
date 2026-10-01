@@ -10,9 +10,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-invalid_ambiguous_reference.puml:
+invalid_qualified_name_does_not_search_descendants.puml:
   error:
-    type: "AmbiguousReference"
+    type: "UnresolvedReference"
     fields:
-      reference: "p"
-      candidates: "Pkg.A.p, Pkg.B.p"
+      reference: "A.B"

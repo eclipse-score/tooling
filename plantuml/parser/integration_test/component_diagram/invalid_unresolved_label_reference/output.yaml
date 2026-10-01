@@ -10,9 +10,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-invalid_ambiguous_reference.puml:
+invalid_unresolved_label_reference.puml:
   error:
-    type: "AmbiguousReference"
+    type: "UnresolvedReference"
     fields:
-      reference: "p"
-      candidates: "Pkg.A.p, Pkg.B.p"
+      reference: "Foo"

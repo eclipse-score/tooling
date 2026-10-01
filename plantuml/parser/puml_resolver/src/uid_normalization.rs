@@ -92,6 +92,13 @@ pub fn resolve_explicit_path(root_anchor: &RootAnchor, path: &str) -> String {
     InternalScope::from_path(path).resolve(root_anchor)
 }
 
+/// Key for the leaf lookup in [`resolve_reference`]: the last id segment of `leaf`.
+pub fn leaf_key(leaf: &str) -> String {
+    normalized_segments(leaf)
+        .pop()
+        .unwrap_or_else(|| leaf.to_string())
+}
+
 /// Outcome of [`resolve_reference`].
 #[derive(Debug, Eq, PartialEq)]
 pub enum Resolution {
@@ -161,7 +168,20 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_explicit_path, resolve_reference, InternalScope, Resolution, RootAnchor};
+    use super::{
+        leaf_key, resolve_explicit_path, resolve_reference, InternalScope, Resolution, RootAnchor,
+    };
+
+    #[test]
+    fn leaf_key_is_the_last_segment() {
+        assert_eq!(leaf_key("Recorder"), "Recorder");
+        assert_eq!(leaf_key("core::geometry.Recorder"), "Recorder");
+    }
+
+    #[test]
+    fn leaf_key_falls_back_to_the_input_without_segments() {
+        assert_eq!(leaf_key("::"), "::");
+    }
 
     #[test]
     fn root_anchor_normalizes_and_retains_non_empty_values() {

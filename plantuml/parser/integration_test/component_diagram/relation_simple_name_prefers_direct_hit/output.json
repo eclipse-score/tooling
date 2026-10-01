@@ -1,0 +1,67 @@
+{
+  "relation_simple_name_prefers_direct_hit.puml": {
+    "X": {
+      "id": "X",
+      "name": "X",
+      "alias": "X",
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
+    },
+    "A": {
+      "id": "A",
+      "name": "A",
+      "alias": "A",
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
+    },
+    "A.X": {
+      "id": "A.X",
+      "name": "X",
+      "alias": "X",
+      "parent_id": "A",
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 17
+      }
+    },
+    "Y": {
+      "id": "Y",
+      "name": "Y",
+      "alias": "Y",
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "X",
+          "annotation": null,
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 21
+          }
+        }
+      ],
+      "source_location": {
+        "file": "",
+        "line": 19
+      }
+    }
+  }
+}

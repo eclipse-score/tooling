@@ -110,6 +110,11 @@ fn test_relation_quoted_name() {
 }
 
 #[test]
+fn test_relation_simple_name_prefers_direct_hit() {
+    run_component_resolver_case("relation_simple_name_prefers_direct_hit");
+}
+
+#[test]
 fn test_anonymous_frame() {
     run_component_resolver_case("anonymous_frame");
 }
@@ -127,6 +132,21 @@ fn test_invalid_ambiguous_reference() {
 #[test]
 fn test_invalid_ambiguous_reference_element_alias() {
     run_component_resolver_case("invalid_ambiguous_reference_element_alias");
+}
+
+#[test]
+fn test_invalid_ambiguous_nested_reference() {
+    run_component_resolver_case("invalid_ambiguous_nested_reference");
+}
+
+#[test]
+fn test_invalid_unresolved_label_reference() {
+    run_component_resolver_case("invalid_unresolved_label_reference");
+}
+
+#[test]
+fn test_invalid_qualified_name_does_not_search_descendants() {
+    run_component_resolver_case("invalid_qualified_name_does_not_search_descendants");
 }
 
 #[test]
