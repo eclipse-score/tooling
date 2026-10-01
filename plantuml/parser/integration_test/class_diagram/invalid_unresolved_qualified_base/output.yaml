@@ -10,8 +10,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-class_diagram.puml:
+invalid_unresolved_qualified_base.puml:
   error:
-    type: "ResolveError"
+    type: "UnresolvedReference"
     fields:
-      message: "Class Resolver: Unresolved reference: a"
+      reference: "ext::Base"

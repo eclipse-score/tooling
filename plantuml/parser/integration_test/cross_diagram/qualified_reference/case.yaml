@@ -10,10 +10,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-# Regression baseline for F3: the grammar truncates a `::`-qualified
-# relationship endpoint to its first segment, so `A --> a::B` looks up a bare
-# name `a` instead of resolving `a::B` as a path. This is expected to become a
-# passing case once the qualified_identifier grammar accepts `::` in
-# relationship endpoints.
+# The qualified_identifier grammar accepts `::` in relationship endpoints, so
+# `A --> a::B` resolves the full path instead of being truncated to its first
+# segment.
 diagram_types:
   class_diagram.puml: class

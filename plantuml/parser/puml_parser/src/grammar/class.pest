@@ -448,7 +448,10 @@ enum_value_literal = @{ (!("\n" | "}") ~ ANY)+ }
 // Relationship
 ///////////////////////////////////////////////////////////////
 
-qualified_identifier = @{ name_ref ~ ("." ~ name_ref)+ }
+qualified_identifier = @{
+    "." ~ name_ref ~ (("." | "::") ~ name_ref)*
+    | name_ref ~ (("." | "::") ~ name_ref)+
+}
 relationship_multiplicity = { STRING }
 
 relationship = {

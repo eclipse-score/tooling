@@ -15,4 +15,4 @@ invalid_duplicate_entity_alias.puml:
     type: "DuplicateEntity"
     fields:
       entity_id: "X"
-      line: "3"
+      line: "16"

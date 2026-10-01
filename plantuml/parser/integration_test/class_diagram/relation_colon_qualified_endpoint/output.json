@@ -1,0 +1,51 @@
+{
+  "relation_colon_qualified_endpoint.puml": {
+  "name": "relation_colon_qualified_endpoint",
+  "entities": [
+    {
+      "id": "ns.B",
+      "name": "B",
+      "enclosing_namespace_id": "ns",
+      "entity_type": "Class",
+      "type_aliases": [],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "variables": [],
+      "relationships": [],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
+    },
+    {
+      "id": "A",
+      "name": "A",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "type_aliases": [],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "variables": [],
+      "relationships": [
+        {
+          "source": "A",
+          "target": "ns.B",
+          "relation_type": "Association",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 20
+          }
+        }
+      ],
+      "source_location": {
+        "file": "",
+        "line": 19
+      }
+    }
+  ]
+  }
+}

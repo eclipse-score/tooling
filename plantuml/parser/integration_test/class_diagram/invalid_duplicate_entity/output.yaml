@@ -15,4 +15,4 @@ invalid_duplicate_entity.puml:
     type: "DuplicateEntity"
     fields:
       entity_id: "User"
-      line: "3"
+      line: "16"
