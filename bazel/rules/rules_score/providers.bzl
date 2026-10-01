@@ -129,16 +129,85 @@ AssumptionsOfUseInfo = provider(
     },
 )
 
-ForwardedAoUInfo = provider(
-    doc = """Carries AoU lobster files that dependees must satisfy.
+ReceivedAoUInfo = provider(
+    doc = """Carries AoU lobster files (and their underlying TRLC records) that dependees must satisfy.
 
     When a dependable element is listed in another element's `deps`, the
     dependee receives this element's AoUs and must either link them in its
     lobster traceability report or further-forward them.
+
+    In addition to the lobster-level fields (`own_aou_lobster`,
+    `chain_forwarded_lobster`), this provider also carries the raw TRLC
+    *source* records for the same AoUs (`own_aou_trlc`, `chain_forwarded_trlc`)
+    so that a dependee can list this dependable_element directly in a
+    `requirements()`-style target's `deps` and resolve a
+    `derived_from = [Pkg.SomeAoU@1]` cross-reference against an AoU it
+    received (own or chain-forwarded).
+
+    `own_aou_trlc` / `chain_forwarded_trlc` are each a
+    `struct(spec = depset, reqs = depset)` -- deliberately **without** a
+    `deps` field. Checked against the S-CORE requirements model
+    (`trlc/config/score_requirements_model.rsl`): `AoU` and `ReceivedAoU`
+    both extend `ControlMeasure`, which only adds a free-text `mitigates`
+    field -- neither has a typed cross-reference field (unlike e.g.
+    `CompReq.derived_from` or `FeatReq.derived_from`), so an AoU/ReceivedAoU
+    record never needs any other TRLC file in scope to resolve a symbol
+    within itself beyond the shared RSL spec (which is always merged in by
+    default). AoU forwarding therefore never needs to carry a `deps` depset
+    -- this is a permanent, model-derived restriction, not a temporary
+    limitation.
+
+    `chain_forwarded_trlc.reqs` never contains a verbatim copy of the
+    original `AoU` record, and neither does `own_aou_trlc.reqs`. A downstream
+    target can always resolve a `derived_from` reference to an AoU by
+    depending directly on the `assumptions_of_use` target that authored it
+    -- that gets the true, unmodified `ScoreReq.AoU` record and is the
+    normal, fully-linked way to consume an AoU. What must never happen is
+    that raw `AoU` record being re-exposed, verbatim, through a
+    *different* channel -- specifically, the aggregate `TrlcProviderInfo`
+    that a `dependable_element` itself provides (used by anything that
+    depends on the `dependable_element` label instead of the
+    `assumptions_of_use` target directly, precisely so it does not need to
+    know the AoU's true owner). Doing so verbatim would create the same
+    "dangling record with no linkage in this scope" problem
+    chain-forwarding retyping exists to avoid, from the perspective of
+    whatever tooling walks the *consumer's* requirements model. So every AoU
+    a `dependable_element` re-exposes through its own `TrlcProviderInfo`,
+    whether it is this element's own (first-hop exposure, `own_aou_trlc`,
+    via `expose_own_aou_trlc.py`) or one it received and is forwarding
+    further (`chain_forwarded_trlc`, via `filter_forwarded_trlc.py`), is
+    *retyped* to `ScoreReq.ReceivedAoU` (each carrying a `justification`
+    field -- a fixed generic notice for `own_aou_trlc`, or the
+    `aou_forwarding.yaml` entry's text for `chain_forwarded_trlc`) while
+    keeping the exact same package + record name, so `derived_from`
+    references written against the original identity keep resolving
+    unchanged no matter how many hops away from the original owner they
+    are. This avoids a raw duplicate `AoU` record being mistaken, by
+    tooling walking the requirements model, for a second, independently
+    authored assumption needing its own control-measure linkage, when it is
+    really just a forwarding/exposure placeholder.
+
+    Preserving identity across hops means the same AoU can legitimately
+    reach one TRLC parse via more than one path (a "diamond": e.g. a
+    consumer depends both on this AoU's original owner and on an
+    intermediate element that chain-forwards it) -- both
+    `dependable_element.bzl` (when collecting `received_aou_trlc_reqs_list`
+    from `processed_deps`) and `requirements.bzl` (when merging
+    `TrlcProviderInfo` across a `deps` list) run the diamond dedupe pass
+    (`aou_trlc_dedupe.bzl` / `dedupe_aou_trlc.py`) to collapse any such
+    duplicate identity down to a single kept declaration before it ever
+    reaches TRLC. Since a raw `ScoreReq.AoU` record is never re-exposed
+    verbatim through any `dependable_element`'s own `TrlcProviderInfo`,
+    every identity collision reachable that way is, by construction, always
+    the same original reached via a different path -- never two
+    independently-authored, unrelated AoUs that coincidentally share a
+    name.
     """,
     fields = {
         "own_aou_lobster": "Depset of .lobster files from this element's own assumptions_of_use (always forwarded to dependees).",
         "chain_forwarded_lobster": "Depset of .lobster files for received AoUs being further-forwarded (selected via aou_forwarding YAML).",
+        "own_aou_trlc": "struct(spec = depset, reqs = depset) of this element's own AoU TRLC source records (always forwarded to dependees). Records are retyped from ScoreReq.AoU to ScoreReq.ReceivedAoU with a fixed generic justification field (see expose_own_aou_trlc.py), same package + record name preserved -- this only affects what is re-exposed through the dependable_element's own TrlcProviderInfo; a target depending directly on the assumptions_of_use target still gets the true, unmodified AoU record. No `deps` field -- AoU records have no typed cross-reference fields to resolve (see provider doc).",
+        "chain_forwarded_trlc": "struct(spec = depset, reqs = depset) of TRLC source records for received AoUs being further-forwarded (selected via aou_forwarding YAML, same selection as chain_forwarded_lobster). Records are retyped to ScoreReq.ReceivedAoU with an injected justification field, same package + record name preserved. No `deps` field -- see provider doc.",
     },
 )
 

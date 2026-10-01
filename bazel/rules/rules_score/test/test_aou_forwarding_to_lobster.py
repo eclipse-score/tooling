@@ -14,8 +14,11 @@
 
 import tempfile
 import unittest
+from pathlib import Path
 
 import yaml
+from lobster.common.errors import Message_Handler
+from lobster.common.io import lobster_read, lobster_write
 from lobster.common.items import Requirement, Tracing_Tag
 from lobster.common.location import Void_Reference
 
@@ -210,19 +213,40 @@ class TestBuildForwardedMarkers(unittest.TestCase):
         self.assertEqual(len(markers), 2)
 
     def test_marker_has_distinct_tag_and_refs_original(self) -> None:
-        """The marker's tag must not collide with the original item's tag
-        (so it can coexist with the "Received AoUs" level in the same
-        report), but its refs must point at the original tag."""
+        """The marker's tag must not collide with the original item's tag,
+        but its refs must point at the original tag."""
         items = [_req("req Pkg.AoU1@1", "AoU1")]
         entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
         markers = build_forwarded_markers(entries, items, "aou_forwarding.yaml")
         marker = markers[0]
         self.assertNotEqual(str(marker.tag), "req Pkg.AoU1@1")
-        self.assertEqual(str(marker.tag), "req Pkg.AoU1__forwarded")
+        self.assertEqual(str(marker.tag), "aou_forwarding_marker Pkg.AoU1@1")
+        self.assertEqual(marker.tag.tag, "Pkg.AoU1")
         self.assertEqual(
             [str(ref) for ref in marker.unresolved_references],
             ["req Pkg.AoU1@1"],
         )
+
+    def test_marker_tag_survives_json_round_trip_without_colliding(self) -> None:
+        """Regression test: a marker built from a versioned original tag
+        must not collapse onto the original item's tag.key() after a
+        write-then-read-back round trip through actual .lobster JSON."""
+        items = [_req("req Pkg.AoU1@1", "AoU1")]
+        entries = [{"aou_id": "Pkg.AoU1@1", "justification": "reason"}]
+        markers = build_forwarded_markers(entries, items, "aou_forwarding.yaml")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            marker_path = Path(tmpdir) / "markers.lobster"
+            with open(marker_path, "w", encoding="utf-8") as f:
+                lobster_write(f, Requirement, "test", markers)
+
+            mh = Message_Handler()
+            reloaded: dict[str, Requirement] = {}
+            lobster_read(mh, str(marker_path), "test-level", reloaded)
+
+        self.assertEqual(len(reloaded), 1)
+        (reloaded_marker,) = reloaded.values()
+        self.assertNotEqual(reloaded_marker.tag.key(), items[0].tag.key())
 
     def test_marker_uses_justification_as_text(self) -> None:
         items = [_req("req Pkg.AoU1@1", "AoU1")]

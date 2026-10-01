@@ -22,6 +22,7 @@ public-facing macros.
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo", "subrule_trlc_image_stage")
 load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:aou_trlc_dedupe.bzl", "dedupe_aou_trlc_files")
 load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
 _DEFAULT_SPEC = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")
@@ -64,7 +65,20 @@ def _requirements_impl(ctx):
 
     own_spec_files = depset(transitive = [t[DefaultInfo].files for t in ctx.attr.spec])
     spec_depset = depset(transitive = [own_spec_files] + transitive_spec)
-    deps_depset = depset(transitive = transitive_reqs)
+
+    # Deduplicate before merging: an AoU's TRLC identity (package + record
+    # name) is deliberately preserved across chain-forwarding hops (see
+    # filter_forwarded_trlc.py / aou_trlc_dedupe.bzl), so a diamond shape --
+    # this target listing both an AoU's original owner and another dep that
+    # (transitively) chain-forwards that same AoU -- would otherwise merge
+    # two declarations of the same identity into one TRLC parse, which
+    # TRLC's own duplicate-definition check rejects.
+    deps_depset = depset(dedupe_aou_trlc_files(
+        ctx,
+        ctx.executable._dedupe_aou_trlc_tool,
+        depset(transitive = transitive_reqs).to_list(),
+        "deps_dedup",
+    ))
 
     # All files needed for TRLC parsing: own sources + spec RSL + transitive deps.
     # This matches DefaultInfo.files of an equivalent trlc_requirements target so
@@ -194,6 +208,12 @@ _score_requirements_rule = rule(
             executable = True,
             cfg = "exec",
             doc = "TRLC-to-RST renderer tool.",
+        ),
+        "_dedupe_aou_trlc_tool": attr.label(
+            default = Label("//bazel/rules/rules_score:dedupe_aou_trlc"),
+            executable = True,
+            cfg = "exec",
+            doc = "Tool for deduplicating AoU/ReceivedAoU TRLC records reachable via more than one deps entry (e.g. a diamond dependency on both an AoU's original owner and a forwarder of that same AoU).",
         ),
     },
     subrules = [subrule_lobster_trlc, subrule_trlc_image_stage],

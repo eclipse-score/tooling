@@ -44,6 +44,12 @@ from lobster.common.location import File_Reference
 
 GENERATOR = "aou_forwarding_to_lobster"
 
+# Tracing_Tag namespace for synthetic "Forwarded AoUs" marker items (see
+# build_forwarded_markers), distinct from "req" (used by the AoUs
+# themselves): Tracing_Tag.key() = namespace + " " + tag, so a distinct
+# namespace alone guarantees markers never collide with the real AoU tag.
+_MARKER_NAMESPACE = "aou_forwarding_marker"
+
 logger = logging.getLogger(__name__)
 
 _LEVEL_MAP = {
@@ -211,12 +217,18 @@ def build_forwarded_markers(
 ) -> list[Requirement]:
     """Build synthetic "Forwarded AoUs" marker items for the DE's own report.
 
-    Each marker is a distinct lobster item (its own tag, so it does not
-    collide with the "Received AoUs" level in the same report) carrying a
-    `refs` entry pointing at the original received AoU tag. This gives
-    LOBSTER a `trace to: "Received AoUs"` edge for AoUs that are being
-    chain-forwarded rather than handled locally. The forwarding
-    justification becomes the marker's descriptive text.
+    A marker is not a copy of the AoU: it is a distinct bookkeeping record
+    meaning "this dependable_element decided to forward AoU X onward
+    instead of handling it locally", carrying a `refs` entry that points
+    at the original received AoU's tag. This gives LOBSTER a
+    `trace to: "Received AoUs"` edge for AoUs that are being chain-
+    forwarded rather than handled locally. The forwarding justification
+    becomes the marker's descriptive text.
+
+    The marker's tag reuses the original AoU's tag text/version but under
+    a distinct ``_MARKER_NAMESPACE``, so ``Tracing_Tag.key()`` (namespace +
+    tag) never collides with the real AoU's tag despite both being loaded
+    into the same report.
 
     Args:
         forwarding_entries: Parsed YAML entries with 'aou_id' and
@@ -235,7 +247,7 @@ def build_forwarded_markers(
     for entry, item in _match_forwarded_entries(forwarding_entries, lobster_items):
         aou_id = entry["aou_id"]
         marker = Requirement(
-            tag=Tracing_Tag("req", f"{aou_id}__forwarded"),
+            tag=Tracing_Tag(_MARKER_NAMESPACE, item.tag.tag, item.tag.version),
             location=File_Reference(yaml_path, line=1),
             framework="AoUForwarding",
             kind="ForwardedAoU",

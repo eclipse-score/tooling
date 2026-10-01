@@ -34,13 +34,20 @@ feature_requirements(
 
 component_requirements(
     name = "component_requirements",
+    testonly = True,
     srcs = [
         "component_requirements.trlc",
     ],
     visibility = ["//visibility:public"],
     deps = [
         ":feature_requirements",
-        "@seooc//docs:sample_aous",
-        "@some_other_library//:other_library_aous",
+        # A single dep on the immediate dependable_element dependency is
+        # enough to resolve both AoU references below -- it aggregates its
+        # own AoU (SampleType.SampleAoU) and the AoU it chain-forwards from
+        # its own dependency (OtherLibrary.TimingConstraint) via
+        # TrlcProviderInfo. No direct visibility to
+        # @some_other_library//:other_library_aous (the AoU's ultimate
+        # origin, several `deps` hops away) is needed.
+        "@seooc//:safety_software_seooc_example",
     ],
 )

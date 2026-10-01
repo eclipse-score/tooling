@@ -78,14 +78,19 @@ type ControlMeasure "A design or operational measure that detects, prevents, or 
 type AoU "Assumption of Use — a safety-relevant condition that a user must fulfil." extends ControlMeasure {
 }
 
+type ReceivedAoU "A re-exposure, identical in identity (package + record name) to the original, of an AoU that a downstream target receives as an input from a dependable_element it depends on -- either the dependable_element's own directly authored AoU (first-hop exposure) or one it itself received from a further dependency and is chain-forwarding onward (or another ReceivedAoU, for a multi-hop chain), because it cannot satisfy the assumption locally. Distinguishing this from a directly declared AoU lets tooling (e.g. Lobster traceability extraction, safety analysis linkage) recognize a pass-through exposure/forwarding placeholder instead of mistaking it for a second, independently authored assumption that itself needs full control-measure linkage." extends ControlMeasure {
+    justification "Why this AoU is being exposed as an input to dependees this way: a fixed, generic notice for an element's own AoU (first-hop exposure), or -- for a chain-forwarded AoU -- why the forwarding element could not handle the AoU itself, carried over verbatim from the aou_forwarding.yaml entry that authorized the forward."
+                  String
+}
+
 tuple CompReqSourceId {
-    item    [FeatReq, AssumedSystemReq, AoU]
+    item    [FeatReq, AssumedSystemReq, AoU, ReceivedAoU]
     separator @
     version Integer
 }
 
 type CompReq "Component-level requirement allocated to a specific software component." extends RequirementSafety {
-    derived_from "Versioned references to the FeatReq, AssumedSystemReq, or received AoU items this component requirement is derived from. An AoU reference must come from a target listed directly in this target's deps (the dependable_element's own assumptions_of_use or one received/forwarded from its deps). Omit only for component-internal requirements with no feature-level parent."
+    derived_from "Versioned references to the FeatReq, AssumedSystemReq, or received/forwarded AoU items this component requirement is derived from. An AoU or ReceivedAoU reference must come from a target listed directly in this target's deps (the dependable_element's own assumptions_of_use or one received/chain-forwarded from its deps). Omit only for component-internal requirements with no feature-level parent."
                 CompReqSourceId[1 .. *]
 }
 

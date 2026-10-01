@@ -10,17 +10,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-# lobster-trlc configuration for Assumptions of Use records.
-inputs:
-  - .
-conversion-rules:
-  - package: ScoreReq
-    record-type: AoU
-    namespace: req
-    version-field: version
-    description-fields: description
-  - package: ScoreReq
-    record-type: ReceivedAoU
-    namespace: req
-    version-field: version
-    description-fields: description
+#
+# Test fixture: selects a single AoU received from ":test_dependable_element"
+# for chain-forwarding onward by ":test_dependable_element_aou_middle" -- used
+# to exercise both the lobster-level and the TRLC-level AoU chain-forwarding
+# paths (see filter_forwarded_trlc.py / aou_forwarding_to_lobster.py).
+forwarded_aous:
+  - aou_id: "AssumptionsOfUse.aou_req__seooc_test__operating_temperature_range@1"
+    justification: "Test fixture: exercises AoU chain-forwarding at both the lobster and TRLC level."
