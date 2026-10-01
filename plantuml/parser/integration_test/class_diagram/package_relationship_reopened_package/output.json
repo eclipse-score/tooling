@@ -14,7 +14,7 @@
         "template_parameters": null,
         "enum_literals": [],
         "relationships": [],
-        "source_location": { "file": "", "line": 3 }
+        "source_location": { "file": "", "line": 16 }
       },
       {
         "id": "pkg.B",
@@ -34,10 +34,10 @@
             "relation_type": "Association",
             "source_multiplicity": null,
             "target_multiplicity": null,
-            "source_location": { "file": "", "line": 7 }
+            "source_location": { "file": "", "line": 20 }
           }
         ],
-        "source_location": { "file": "", "line": 6 }
+        "source_location": { "file": "", "line": 19 }
       }
     ],
     "free_functions": []

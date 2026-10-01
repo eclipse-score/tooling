@@ -14,7 +14,7 @@
         "template_parameters": null,
         "enum_literals": [],
         "relationships": [],
-        "source_location": { "file": "", "line": 3 }
+        "source_location": { "file": "", "line": 16 }
       }
     ],
     "free_functions": []

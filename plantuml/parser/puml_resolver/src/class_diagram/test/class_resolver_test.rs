@@ -206,3 +206,18 @@ fn test_invalid_unresolved_qualified_reference() {
 fn test_invalid_unresolved_nested_qualified_reference() {
     run_class_resolver_case("invalid_unresolved_nested_qualified_reference");
 }
+
+#[test]
+fn test_invalid_unresolved_qualified_base() {
+    run_class_resolver_case("invalid_unresolved_qualified_base");
+}
+
+#[test]
+fn test_relation_colon_qualified_endpoint() {
+    run_class_resolver_case("relation_colon_qualified_endpoint");
+}
+
+#[test]
+fn test_relation_root_marker() {
+    run_class_resolver_case("relation_root_marker");
+}

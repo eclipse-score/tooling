@@ -10,10 +10,12 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-@startuml
-namespace a {
-  class B
+@startuml relation_colon_qualified_endpoint
+
+namespace ns {
+    class B
 }
+
 class A
-A --> a::B
+A --> ns::B
 @enduml

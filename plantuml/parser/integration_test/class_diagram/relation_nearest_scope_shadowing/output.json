@@ -14,7 +14,7 @@
         "template_parameters": null,
         "enum_literals": [],
         "relationships": [],
-        "source_location": { "file": "", "line": 2 }
+        "source_location": { "file": "", "line": 15 }
       },
       {
         "id": "p.X",
@@ -28,7 +28,7 @@
         "template_parameters": null,
         "enum_literals": [],
         "relationships": [],
-        "source_location": { "file": "", "line": 4 }
+        "source_location": { "file": "", "line": 17 }
       },
       {
         "id": "p.C",
@@ -48,10 +48,10 @@
             "relation_type": "Association",
             "source_multiplicity": null,
             "target_multiplicity": null,
-            "source_location": { "file": "", "line": 6 }
+            "source_location": { "file": "", "line": 19 }
           }
         ],
-        "source_location": { "file": "", "line": 5 }
+        "source_location": { "file": "", "line": 18 }
       }
     ],
     "free_functions": []

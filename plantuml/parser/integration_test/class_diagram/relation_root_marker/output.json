@@ -1,0 +1,67 @@
+{
+  "relation_root_marker.puml": {
+  "name": "relation_root_marker",
+  "entities": [
+    {
+      "id": "X",
+      "name": "X",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "type_aliases": [],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "variables": [],
+      "relationships": [],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
+    },
+    {
+      "id": "a.X",
+      "name": "X",
+      "enclosing_namespace_id": "a",
+      "entity_type": "Class",
+      "type_aliases": [],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "variables": [],
+      "relationships": [],
+      "source_location": {
+        "file": "",
+        "line": 18
+      }
+    },
+    {
+      "id": "a.C",
+      "name": "C",
+      "enclosing_namespace_id": "a",
+      "entity_type": "Class",
+      "type_aliases": [],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "variables": [],
+      "relationships": [
+        {
+          "source": "a.C",
+          "target": "X",
+          "relation_type": "Association",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "",
+            "line": 20
+          }
+        }
+      ],
+      "source_location": {
+        "file": "",
+        "line": 19
+      }
+    }
+  ]
+  }
+}

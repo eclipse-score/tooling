@@ -1445,6 +1445,59 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_relationship_colon_qualified_endpoint() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "A --> ns::B")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
+
+        assert_eq!(rel.left, "A");
+        assert_eq!(rel.right, "ns::B");
+    }
+
+    #[test]
+    fn test_parse_relationship_colon_qualified_endpoint_with_multiplicities() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "A \"1\" --> \"*\" ns::B")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
+
+        assert_eq!(rel.left, "A");
+        assert_eq!(rel.right, "ns::B");
+        assert_eq!(rel.left_multiplicity.as_deref(), Some("1"));
+        assert_eq!(rel.right_multiplicity.as_deref(), Some("*"));
+    }
+
+    #[test]
+    fn test_parse_relationship_label_is_not_mistaken_for_endpoint() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "A --> B : ns::x")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
+
+        assert_eq!(rel.right, "B");
+        assert_eq!(rel.label.as_deref(), Some("ns::x"));
+    }
+
+    #[test]
+    fn test_parse_relationship_root_marker_endpoint() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "A --> .B")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
+
+        assert_eq!(rel.right, ".B");
+    }
+
+    #[test]
     fn test_single_line_note_alias_registers_ignored_note() {
         let input = "note \"Synchronised access only\" as SyncNote";
         let normalized = normalize_multiline_member_signatures(input);

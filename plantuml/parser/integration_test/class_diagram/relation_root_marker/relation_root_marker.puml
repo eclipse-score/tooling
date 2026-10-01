@@ -10,10 +10,13 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-@startuml
-namespace a {
-  class B
+@startuml relation_root_marker
+
+class X
+
+package a {
+    class X
+    class C
+    C --> .X
 }
-class A
-A --> a::B
 @enduml

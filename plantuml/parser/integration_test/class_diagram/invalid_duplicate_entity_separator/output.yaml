@@ -15,4 +15,4 @@ invalid_duplicate_entity_separator.puml:
     type: "DuplicateEntity"
     fields:
       entity_id: "a.b"
-      line: "5"
+      line: "18"
