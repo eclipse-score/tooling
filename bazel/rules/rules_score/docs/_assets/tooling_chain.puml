@@ -43,7 +43,7 @@ rectangle "sphinx_module" <<rule>> as sphinx
 rectangle "**TRLC**\ntrlc parser + trlc_rst\n(.trlc/.rsl -> .rst; TRLCRST lib)" <<tool>> as trlc
 rectangle "**rst_to_trlc**\n(.rst -> .trlc)" <<own>> as r2t
 rectangle "**PlantUML Parser**\npuml_cli (Rust)\n(.puml -> .fbs.bin + .lobster + .idmap.json)" <<tool>> as puml
-rectangle "**puml_cli** (FTA mode)\ninline metamodel + extract\n(.puml -> inlined .puml +\nfta_events.trlc)" <<own>> as fta
+rectangle "**puml_cli** (FTA mode)\nextract root causes\n(.puml -> fta_events.trlc)" <<own>> as fta
 rectangle "**safety_analysis_assembler**\nTRLCRST page build\n(.trlc + fta_events.trlc -> safety_analysis.rst)" <<own>> as asm
 rectangle "**Lobster**\nlobster-trlc / -report /\n-ci-report / gtest_report" <<tool>> as lob
 rectangle "**Architecture Verifier**\nvalidation_cli\n(arch.json + .fbs.bin)" <<tool>> as verifier
@@ -64,7 +64,7 @@ asm  ..> trlc : TRLCRST lib
 safety_analysis --> lob  : lobster-trlc
 unit --> lob  : gtest_report
 
-da  --> lob   : lobster-report (FM+CM+FTA)
+da  --> lob   : lobster-report (FM+RC)
 de  --> verifier : conformance check
 de  --> lob   : lobster-ci-report (gate)
 de  --> sphinx : assemble docs

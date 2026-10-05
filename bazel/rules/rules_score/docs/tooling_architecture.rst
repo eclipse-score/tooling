@@ -106,8 +106,9 @@ are rendered under :doc:`tool_reference/index`.
      - Analysis only: parses the ``$FailureMode`` / ``$RootCause`` / gate macro
        calls of each root-cause FTA diagram and emits ``fta_events.trlc``, a
        generated stub file (imported as the ``<name>_fta`` package) containing
-       one ``FtaFailureMode`` record per ``$FailureMode`` call and one ``RootCause``
-       record per reachable ``$RootCause`` alias.  The authored
+       one ``RootCause`` record per reachable ``$RootCause`` alias; each
+       record lists the failure modes of the ``$FailureMode`` root it hangs
+       under.  The authored
        diagram keeps its ``!include fta_metamodel.puml``; the metamodel ships in
        the docs toolchain runfiles and is put on PlantUML's global include path
        (``-Dplantuml.include.path``) so the include resolves at render even under
@@ -120,10 +121,11 @@ are rendered under :doc:`tool_reference/index`.
      - ``safety_analysis``
      - Assembles the failure-mode-centric ``safety_analysis.rst`` from ``fta_events.trlc``
        plus the FailureMode / Mitigation / AoU / CompReq records in one
-       in-process TRLC
-       parse: an overview table, one section per failure mode (detail + inline
-       fault tree + that chain's measures), and trailing "Unlinked"
-       sections so nothing is dropped.
+       in-process TRLC parse: an overview table, one section per failure mode
+       (detail plus one card per root cause with the measures addressing it,
+       or a "No safety measure" flag), a section drawing every fault-tree
+       diagram once, and a list of all safety measures.  Links between records
+       are the typed TRLC references; coverage of them is checked by lobster.
    * - **Lobster**
      - ``@lobster//`` : ``lobster-trlc``, ``lobster-report``,
        ``lobster-ci-report``, ``lobster-html-report``, ``gtest_report``,
@@ -200,7 +202,7 @@ feed that pipeline:
   ``public_api.lobster`` (enables failure-mode-to-interface tracing).
 * **FMEA** (``failuremodes.trlc`` / ``safetymeasures.trlc``) → ``lobster-trlc``;
   **FTA** (``fta.puml``) → ``puml_cli`` (FTA mode) → ``fta_events.trlc`` →
-  ``lobster-trlc`` → ``fta_failure_modes.lobster`` / ``fta_root_causes.lobster``.
+  ``lobster-trlc`` → ``fta_root_causes.lobster``.
 * **Unit tests** (gtest) → ``gtest_report`` → ``<unit>.lobster``.
 
 Lobster report assembly (``dependable_element``)
@@ -338,18 +340,18 @@ consumed by Sphinx.
 The ``safety_analysis`` rule drives three actions, all reading the input artifacts above:
 
 #. **puml_cli (FTA mode)** parses each ``fta_*.puml`` directly (no rewriting)
-   and writes ``fta_events.trlc`` (the generated ``FtaFailureMode``/``RootCause``
-   stubs).  The diagrams keep their ``!include
+   and writes ``fta_events.trlc`` (the generated ``RootCause`` stubs).  The
+   diagrams keep their ``!include
    fta_metamodel.puml``; the metamodel is on PlantUML's global include path
    (shipped in the docs toolchain runfiles), so it resolves at render time.
 #. **safety_analysis_assembler** consumes ``fta_events.trlc`` and parses the FailureMode /
    Mitigation / AoU / CompReq ``.trlc`` records (with the ``.rsl`` spec for import
    resolution) in a single in-process ``TRLCRST`` pass, expanding
    ``safety_analysis.template.rst`` into ``safety_analysis.rst``.
-#. **lobster-trlc** (run four times) turns the FailureMode, Mitigation/AoU/CompReq,
-   and generated ``FtaFailureMode``/``RootCause`` records
+#. **lobster-trlc** (run three times) turns the FailureMode, Mitigation/AoU/CompReq,
+   and generated ``RootCause`` records
    into ``failuremodes.lobster`` / ``safetymeasures.lobster`` /
-   ``fta_failure_modes.lobster`` / ``fta_root_causes.lobster`` for the
+   ``fta_root_causes.lobster`` for the
    traceability report.
 
 ``SphinxSourcesInfo`` carries three depsets:
@@ -368,7 +370,7 @@ The ``safety_analysis`` rule drives three actions, all reading the input artifac
   path.)
 
 The lobster outputs travel separately on ``AnalysisInfo.lobster_files``
-(``failuremodes.lobster``, ``safetymeasures.lobster``, ``fta_failure_modes.lobster``,
+(``failuremodes.lobster``, ``safetymeasures.lobster``,
 ``fta_root_causes.lobster``)
 into the ``dependability_analysis`` traceability report.
 

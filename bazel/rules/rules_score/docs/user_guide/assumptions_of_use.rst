@@ -53,6 +53,47 @@ however, declare that it implements a received AoU by referencing it from its ow
        ...
    )
 
+Preventing a root cause
+-----------------------
+
+An own ``AoU`` closes a root cause of a ``safety_analysis`` fault tree by
+referencing the generated ``RootCause`` record in ``root_causes``:
+
+.. code-block:: text
+   :caption: aou.trlc
+
+    package SampleType
+
+    import ScoreReq
+    import sample_safety_analysis_fta
+
+    ScoreReq.AoU SampleAoU {
+        description = "The user shall provide a correct configuration"
+        safety      = ScoreReq.Asil.B
+        version     = 1
+        root_causes = [sample_safety_analysis_fta.UserProvidedWrongConfiguration]
+    }
+
+The generated ``<fta_package>`` package only exists as output of the
+``safety_analysis`` target, so two attributes must name that target:
+
+.. code-block:: starlark
+
+   safety_analysis(
+       name = "sample_safety_analysis",
+       safetymeasures = ["aou.trlc"],  # counts the AoU as a measure of the root cause
+       # ...
+   )
+
+   assumptions_of_use(
+       name = "sample_aous",
+       srcs = ["aou.trlc"],
+       deps = [":sample_safety_analysis"],  # resolves sample_safety_analysis_fta
+   )
+
+An own AoU is never a ``derived_from`` source of a ``CompReq``; only AoUs
+received from another dependable element are (see `AoU Forwarding`_).
+
 AoU Forwarding
 --------------
 

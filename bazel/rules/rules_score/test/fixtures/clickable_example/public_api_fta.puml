@@ -16,5 +16,7 @@
 !include fta_metamodel.puml
 
 $FailureMode("PublicInterface stops responding", "PublicApiExampleSafetyAnalysis.PublicInterfaceFailure")
+$OrGate("OG", "PublicApiExampleSafetyAnalysis.PublicInterfaceFailure")
+$RootCause("Provider process crashed", "ProviderProcessCrashed", "OG")
 
 @enduml

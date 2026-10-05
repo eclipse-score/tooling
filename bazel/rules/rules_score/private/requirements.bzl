@@ -21,7 +21,7 @@ public-facing macros.
 
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo", "subrule_trlc_image_stage")
-load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SafetyAnalysisProviderInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
 _DEFAULT_SPEC = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")
@@ -129,7 +129,9 @@ def _requirements_impl(ctx):
 
     transitive_sphinx = [sphinx_srcs]
     for dep in ctx.attr.deps:
-        if SphinxSourcesInfo in dep:
+        # safety_analysis deps only supply TRLC symbols; its docs belong to the
+        # dependability analysis section.
+        if SphinxSourcesInfo in dep and SafetyAnalysisProviderInfo not in dep:
             transitive_sphinx.append(dep[SphinxSourcesInfo].deps)
 
     return [

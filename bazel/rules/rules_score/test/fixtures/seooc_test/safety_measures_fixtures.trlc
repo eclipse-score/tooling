@@ -36,18 +36,11 @@ ScoreReq.FailureMode SomeFailureMode {
     version       = 1
 }
 
-ScoreReq.FtaFailureMode SomeFtaFailureMode {
-    title         = "Some failure mode"
+ScoreReq.RootCause SomeRootCause {
+    title         = "Some root cause"
     diagram       = "n/a"
     line          = 1
     failure_modes = [TestSafetyMeasures.SomeFailureMode]
-}
-
-ScoreReq.RootCause SomeRootCause {
-    title      = "Some root cause"
-    diagram    = "n/a"
-    line       = 2
-    failure_modes = [TestSafetyMeasures.SomeFtaFailureMode]
 }
 
 ScoreReq.Mitigation SomeMitigation {

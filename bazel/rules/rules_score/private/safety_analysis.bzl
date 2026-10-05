@@ -16,48 +16,44 @@ Safety analysis (FMEA – Failure Mode and Effects Analysis) build rules for S-C
 
 The rule generates a single, failure-mode-centric ``safety_analysis.rst`` page: an
 overview summary table followed by one section per failure mode.  Each section
-carries the full failure-mode safety attributes and one "Root Cause Analysis"
-block per fault tree (``FtaFailureMode``) that covers it: the diagram inline
-(``.. uml::``) and a "Safety Measures" subsection holding only the measures
-(``Mitigation``, ``AoU``, ``CompReq``) that address that tree's root causes.
-Failure modes not covered by any fault tree, and measures not referenced by
-any generated stub, are still rendered (with an empty root-cause /
-traceability section) so nothing is dropped.
+carries the full failure-mode safety attributes and one card per root cause
+(``RootCause``) listing the measures (``Mitigation``, ``AoU``, ``CompReq``) that
+address it.  A "Fault Trees" section shows every fault-tree diagram once
+(``.. uml::``).
+Failure modes not covered by any fault tree, and measures not referencing any
+generated root cause, are still rendered so nothing is dropped.
 
 Pipeline:
 
   1. **FTA** (``puml_cli`` in ``--fta-output-dir`` mode) – parses the
      ``$FailureMode``/``$RootCause``/gate macro calls straight from each
      ``root_causes`` diagram and emits ``fta_events.trlc`` — the generated
-     ``ScoreReq.FtaFailureMode`` / ``ScoreReq.RootCause`` stub records (see
-     ``puml_fta::render_trlc_stub``) that carry the fault-tree topology as
-     regular, strongly-typed TRLC references instead of alias-matching. Each
-     source diagram is staged (symlinked) alongside ``safety_analysis.rst``, unmodified,
-     so ``.. uml:: <basename>`` resolves in the Sphinx tree.
+     ``ScoreReq.RootCause`` records, each linking to the ``FailureMode``
+     records of its tree (see ``puml_fta::render_trlc_stub``). Each source
+     diagram is staged (symlinked) alongside ``safety_analysis.rst``,
+     unmodified, so ``.. uml:: <basename>`` resolves in the Sphinx tree.
   2. **Assembly** (``safety_analysis_assembler``) – a single in-process TRLC parse (via
      the extended ``TRLCRST`` library) over ``fta_events.trlc`` plus the
-     FailureMode / Mitigation records renders the overview table and every
-     chain section into ``safety_analysis.rst``.
-  3. **Lobster** (``lobster-trlc``) – FailureMode, Mitigation, FtaFailureMode and
-     RootCause traceability files, driven by real TRLC references
+     FailureMode / Mitigation / AoU records renders the overview table, the
+     root-cause cards and the fault-tree diagrams into ``safety_analysis.rst``.
+  3. **Lobster** (``lobster-trlc``) – FailureMode, safety-measure (Mitigation / AoU)
+     and RootCause traceability files, driven by real TRLC references
      (``failure_modes``, ``root_causes``) rather than
      alias-name matching.
 
-The metamodel-inlined ``.puml`` diagrams travel as ``aux_srcs`` so Sphinx can
+The ``.puml`` diagrams travel as ``aux_srcs`` so Sphinx can
 resolve ``.. uml::`` without adding them to the toctree.
 
 ``AnalysisInfo`` carries all lobster traceability files (failuremodes,
-safetymeasures, fta_failure_modes, fta_root_causes) as a ``lobster_files`` dict
-keyed by canonical filename.  ``SafetyAnalysisProviderInfo`` carries the raw TRLC
-source files (failuremodes, safetymeasures, fta_events, spec) so
-``dependability_analysis`` can combine them across every safety_analysis sub-target for
-its root-cause-coverage completeness check.  All Sphinx source files travel
+safetymeasures, fta_root_causes) as a ``lobster_files`` dict
+keyed by canonical filename.  ``SafetyAnalysisProviderInfo`` marks the target.  All Sphinx source files travel
 via ``SphinxSourcesInfo``.
 
 This is a **build-only** rule.  The combined traceability *test* is owned by the
 ``dependability_analysis`` rule which wraps this one.
 """
 
+load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "ArchitecturalDesignInfo", "SafetyAnalysisProviderInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
@@ -87,13 +83,12 @@ def _default_fta_package(name):
 # ============================================================================
 
 def _process_root_causes(ctx, fta_package):
-    """Extract the generated TRLC stub, and stage the diagrams for rendering.
+    """Extract the generated TRLC stub and stage the diagrams for rendering.
 
     ``puml_cli`` (FTA mode) parses the ``$FailureMode``/``$RootCause``/gate macro
-    calls straight from each diagram and emits, into ``{label}/``:
-
-      * ``fta_events.trlc`` (the generated ``FtaFailureMode``/``RootCause`` stub
-        records, package *fta_package*; see ``puml_fta::render_trlc_stub``).
+    calls straight from each diagram and emits ``fta_events.trlc`` into ``{label}/``
+    (the generated ``RootCause`` records, package *fta_package*; see
+    ``puml_fta::render_trlc_stub``).
 
     The diagrams are *not* rewritten: each source ``.puml`` is symlinked next to
     ``safety_analysis.rst`` so ``.. uml:: <basename>`` resolves to the authored diagram.
@@ -106,10 +101,10 @@ def _process_root_causes(ctx, fta_package):
         fta_package: TRLC package name for the generated ``fta_events.trlc``.
 
     Returns:
-        Tuple ``(diagram_aux_files, fta_events_trlc)``.  ``diagram_aux_files``
-        (the staged ``.puml`` diagrams) is empty when there are no PlantUML
-        inputs; ``fta_events_trlc`` is always a File (a stub package with zero
-        records when there are no diagrams).
+        Tuple ``(diagram_aux_files, fta_events_trlc)``.
+        ``diagram_aux_files`` (the staged ``.puml`` diagrams) is empty when
+        there are no PlantUML inputs; ``fta_events_trlc`` is always a File
+        (an empty stub package when there are no diagrams).
     """
     puml_inputs = [
         f
@@ -120,8 +115,8 @@ def _process_root_causes(ctx, fta_package):
     fta_events_trlc = ctx.actions.declare_file("{}/fta_events.trlc".format(ctx.label.name))
 
     if not puml_inputs:
-        # No fault trees: emit an empty stub artifact so the assembler still runs
-        # (rendering every failure mode without a root-cause analysis). No
+        # No fault trees: emit an empty stub so the assembler still runs
+        # (rendering every failure mode without root causes). No
         # "import ScoreReq" here: with zero records it would be flagged as an
         # unused import by TRLC.
         ctx.actions.write(
@@ -184,7 +179,7 @@ def _safety_analysis_impl(ctx):
 
     fta_package = ctx.attr.fta_package if ctx.attr.fta_package else _default_fta_package(ctx.label.name)
 
-    # 0. FTA: extract the generated TRLC stub, and stage diagrams for rendering.
+    # 0. FTA: extract the generated TRLC stub and stage diagrams for rendering.
     diagram_aux_files, fta_events_trlc = _process_root_causes(ctx, fta_package)
     output_files.extend(diagram_aux_files)
     has_root_causes = bool(diagram_aux_files)
@@ -197,7 +192,9 @@ def _safety_analysis_impl(ctx):
     args.add("--output", safety_analysis_rst.path)
     args.add("--template", ctx.file._template.path)
     args.add("--title", title)
+    args.add("--fta-package", fta_package)
     args.add("--fta-events", fta_events_trlc.path)
+    args.add_all("--diagrams", [f.basename for f in diagram_aux_files])
     args.add("--log-level", get_log_level(ctx))
     if ctx.files.failuremodes:
         args.add("--failuremodes")
@@ -222,10 +219,10 @@ def _safety_analysis_impl(ctx):
     )
     output_files.append(safety_analysis_rst)
 
-    # 2. lobster-trlc traceability for FailureMode / Mitigation / FtaFailureMode / RootCause records.
+    # 2. lobster-trlc traceability for FailureMode / Mitigation / RootCause records.
     #
     # fta_events.trlc always ``import``s every FailureMode package referenced by
-    # its FtaFailureMode records (regardless of which record a given invocation is
+    # its RootCause records (regardless of which record a given invocation is
     # actually converting), so ctx.files.failuremodes must travel alongside it
     # in every lobster-trlc input set, or TRLC parsing fails on the unresolved
     # import.
@@ -235,15 +232,8 @@ def _safety_analysis_impl(ctx):
     safetymeasures_trlc_files = ctx.files.safetymeasures + (fta_and_fm_files if ctx.files.safetymeasures else [])
     safetymeasures_lobster = _lobster_trlc(ctx, safetymeasures_trlc_files, ctx.file._safetymeasures_lobster_config, "safetymeasures.lobster")
 
-    fta_fm_lobster = None
     rc_lobster = None
     if has_root_causes:
-        fta_fm_lobster = _lobster_trlc(
-            ctx,
-            fta_and_fm_files,
-            ctx.file._fta_fm_lobster_config,
-            "fta_failure_modes.lobster",
-        )
         rc_lobster = _lobster_trlc(
             ctx,
             fta_and_fm_files,
@@ -257,12 +247,10 @@ def _safety_analysis_impl(ctx):
         lobster_files["failuremodes.lobster"] = fm_lobster
     if safetymeasures_lobster:
         lobster_files["safetymeasures.lobster"] = safetymeasures_lobster
-    if fta_fm_lobster:
-        lobster_files["fta_failure_modes.lobster"] = fta_fm_lobster
     if rc_lobster:
         lobster_files["fta_root_causes.lobster"] = rc_lobster
 
-    # The preprocessed .puml diagrams are referenced inline via ``.. uml::`` but
+    # The .puml diagrams are referenced inline via ``.. uml::`` but
     # must not be toctree documents, so they travel as aux_srcs (symlinked
     # alongside safety_analysis.rst by dependable_element without being indexed).
     sphinx_srcs = depset([safety_analysis_rst])
@@ -275,11 +263,15 @@ def _safety_analysis_impl(ctx):
             name = ctx.label.name,
             lobster_files = lobster_files,
         ),
-        SafetyAnalysisProviderInfo(
-            failuremodes = depset(ctx.files.failuremodes),
-            safetymeasures = depset(ctx.files.safetymeasures),
-            fta_events = depset([fta_events_trlc]),
+        SafetyAnalysisProviderInfo(),
+        # Lets requirement targets (assumptions_of_use, component_requirements)
+        # list this target in `deps` to resolve `<fta_package>.<RootCause>`.
+        # safetymeasures are excluded: they may define AoU/CompReq records that
+        # the depending target also owns, which would duplicate them.
+        TrlcProviderInfo(
             spec = depset(ctx.files.spec),
+            reqs = depset([fta_events_trlc] + ctx.files.failuremodes),
+            deps = depset(),
         ),
         SphinxSourcesInfo(
             srcs = sphinx_srcs,
@@ -294,9 +286,9 @@ def _safety_analysis_impl(ctx):
 
 _safety_analysis = rule(
     implementation = _safety_analysis_impl,
-    doc = "Renders a failure-mode-centric safety-analysis page (overview table + one chain " +
-          "section per failure mode) and lobster traceability files. " +
-          "Build-only rule; traceability testing is owned by dependability_analysis.",
+    doc = "Renders a failure-mode-centric safety-analysis page (overview table, one section per " +
+          "failure mode with its root causes and measures, and the fault-tree diagrams) and lobster " +
+          "traceability files. Build-only rule; traceability testing is owned by dependability_analysis.",
     attrs = dict(
         {
             "failuremodes": attr.label_list(
@@ -319,14 +311,13 @@ _safety_analysis = rule(
                 allow_files = [".puml", ".plantuml"],
                 mandatory = False,
                 doc = "Root cause FTA PlantUML diagram files.  " +
-                      "``fta_metamodel.puml`` is inlined automatically; " +
-                      "lobster items and the ``fta_events.trlc`` TRLC stub are generated from them.",
+                      "The ``fta_events.trlc`` TRLC stub is generated from them.",
             ),
             "fta_package": attr.string(
                 mandatory = False,
                 default = "",
                 doc = "TRLC package name for the generated ``fta_events.trlc`` stub file " +
-                      "(the ``FtaFailureMode``/``RootCause`` records generated from ``root_causes``). " +
+                      "(the ``RootCause`` records generated from ``root_causes``). " +
                       "Defaults to a sanitized form of the target name.",
             ),
             "arch_design": attr.label(
@@ -365,11 +356,6 @@ _safety_analysis = rule(
                 allow_single_file = True,
                 doc = "lobster-trlc YAML config for Mitigation records.",
             ),
-            "_fta_fm_lobster_config": attr.label(
-                default = Label("//bazel/rules/rules_score/lobster/config:fta_failure_modes_config"),
-                allow_single_file = True,
-                doc = "lobster-trlc YAML config for generated FtaFailureMode records.",
-            ),
             "_rc_lobster_config": attr.label(
                 default = Label("//bazel/rules/rules_score/lobster/config:fta_root_causes_config"),
                 allow_single_file = True,
@@ -401,18 +387,25 @@ def safety_analysis(
     """Define a safety analysis (FMEA - Failure Mode and Effects Analysis) following S-CORE process guidelines.
 
     Generates a single, failure-mode-centric ``safety_analysis.rst`` page: an overview
-    summary table followed by one section per failure mode (failure-mode detail,
-    one inline fault tree per covering ``FtaFailureMode``, and that tree's measures).
+    summary table followed by one section per failure mode (failure-mode detail and
+    one card per root cause with its measures), plus the fault-tree diagrams.
 
     FTA diagrams passed via ``root_causes`` are preprocessed to extract
-    fault-tree topology, emitted as strongly-typed TRLC ``FtaFailureMode``/
-    ``RootCause`` records (``fta_events.trlc``, package ``fta_package``) that
-    ``Mitigation``, ``AoU``, and ``CompReq`` records can reference (via
-    ``root_causes``/``derived_from``) as a measure addressing that root cause.
+    fault-tree topology, emitted as strongly-typed TRLC ``RootCause`` records
+    (``fta_events.trlc``, package ``fta_package``), each linking to the
+    ``FailureMode`` records of its tree. ``Mitigation``, ``AoU`` (own, preventive
+    measure) and ``CompReq`` (control measure) records reference a root cause via
+    ``root_causes``/``derived_from``.
+    The target emits ``TrlcProviderInfo`` (FTA stub + failure modes), so an
+    ``assumptions_of_use`` or ``component_requirements`` target referencing
+    these root causes lists it in its ``deps``. Pass the ``.trlc`` files holding
+    the measures as ``safetymeasures`` so they appear on the page and in the
+    traceability report.
 
     This is a **build-only** rule.  The combined traceability test
-    (FM + measures + FTA, including root-cause-coverage completeness) is
-    owned by the ``dependability_analysis`` that wraps this target.
+    (FM + FTA root causes) is owned by the ``dependability_analysis`` that wraps
+    this target; root-cause coverage by measures is checked by the
+    ``dependable_element`` traceability report.
 
     Args:
         name: Target name.

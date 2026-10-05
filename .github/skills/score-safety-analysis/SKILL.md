@@ -159,7 +159,7 @@ $RootCause("<Root cause label 2>", "<RootCauseAlias2>", "OG1")
 | `$TransferInGate(name, alias, connection)` | Link to sub-tree | parent alias |
 
 **Rules:**
-- `$RootCause` alias is a plain identifier; the `puml_cli` FTA parser auto-generates a `fta_events.trlc` stub (imported as `<name>_fta`) containing a `RootCause` record named after that alias — `Mitigation`/`CompReq`/`AoU` records reference it explicitly (e.g. `root_causes = [sample_safety_analysis_fta.JustBadLuck]`); there is no implicit name-matching.
+- `$RootCause` alias is a plain identifier; the `puml_cli` FTA parser auto-generates a `fta_events.trlc` stub (imported as `<name>_fta`) containing a `RootCause` record named after that alias (its `failure_modes` lists the `FailureMode`s of the tree's `$FailureMode` root) — `Mitigation`/`CompReq`/`AoU` records reference it explicitly (e.g. `root_causes = [sample_safety_analysis_fta.JustBadLuck]`); there is no implicit name-matching.
 - Build top-down in the file: `$FailureMode` first, then gates, then `$RootCause` leaves.
 - The same `$RootCause` alias may appear in multiple FTAs (shared root cause).
 - `$OrGate` is the default for independent root causes; use `$AndGate` only when all causes must co-occur.
@@ -181,10 +181,15 @@ ScoreReq.Mitigation <RecordName> {
 ```
 
 Other ways to close a root cause:
-- `ScoreReq.CompReq` — closes it via `derived_from`, referencing the `RootCause` stub alongside any `FeatReq`/`AssumedSystemReq`/`AoU` it also derives from
-- `ScoreReq.AoU` — assumption the caller must satisfy; does **not** extend `SafetyMeasure` and has its own independent, optional `root_causes` field (no `justification` required)
+- `ScoreReq.CompReq` — closes it via `derived_from`, referencing the `RootCause` stub alongside any `FeatReq`/`AssumedSystemReq` it also derives from. An `AoU` in `derived_from` is only for an AoU **received** from another dependable element; the element's own AoUs are never a `derived_from` source
+- `ScoreReq.AoU` — own assumption the caller must satisfy; does **not** extend `SafetyMeasure` and has its own independent, optional `root_causes` field (no `justification` required)
 
-**Rule:** every `$RootCause` alias must be referenced by at least one `Mitigation.root_causes`, `CompReq.derived_from`, or `AoU.root_causes` — this is validated by `bazel test` on the owning `dependability_analysis` target.
+**Rule:** every `$RootCause` alias must be referenced by at least one `Mitigation.root_causes`, `CompReq.derived_from`, or `AoU.root_causes`. This is checked by lobster in the traceability report of the enclosing `dependable_element` (Root Causes are covered via the Safety Measures level **or** the Component Requirements level; uncovered ones are reported as `missing reference to Component Requirements or Safety Measures`, and fail `bazel test <dependable_element>` with `maturity = "release"`). Only files passed as `safety_analysis.safetymeasures` form the Safety Measures level, so an AoU file with `root_causes` must be listed there **and** the `assumptions_of_use` target must list the `safety_analysis` target in `deps` (the generated `<fta_package>` package resolves only through it). Every AoU in a `safetymeasures` file must reference a root cause, otherwise it is reported as `missing up reference`; keep AoUs without `root_causes` in a separate file passed only to `assumptions_of_use`:
+
+```python
+safety_analysis(name = "sa", safetymeasures = ["aou.trlc"], ...)
+assumptions_of_use(name = "aous", srcs = ["aou.trlc"], deps = [":sa"])
+```
 
 ## Step 4 — Update BUILD
 
@@ -223,5 +228,7 @@ $RootCause alias      →  Mitigation.root_causes / CompReq.derived_from / AoU.r
 | `$FailureMode` fm1..fm8 argument does not match any TRLC record | Ensure `<Pkg>.<RecordName>` is spelled identically in both places |
 | A root cause (`$RootCause`) is not referenced by any `Mitigation`/`CompReq`/`AoU` | Add an explicit reference to the generated `<fta_package>.<Alias>` `RootCause` stub |
 | New `.puml` not in BUILD `fta_files` | Add the file path to the `srcs` list |
-| AoU added to `safetymeasures.trlc` | AoUs belong in `aous.trlc`; `AoU` does not extend `SafetyMeasure`, it has its own independent `root_causes` field |
+| AoU added to `safetymeasures.trlc` | AoUs belong in `aous.trlc`; `AoU` does not extend `SafetyMeasure`, it has its own independent `root_causes` field. If the AoU closes a root cause, pass `aous.trlc` as `safety_analysis.safetymeasures` (coverage) and add the `safety_analysis` target to `assumptions_of_use.deps` |
+| `CompReq.derived_from` references an own `AoU` | Only AoUs received from another dependable element belong there; own AoUs close root causes via `AoU.root_causes` |
+| Unknown symbol `<fta_package>` when parsing `aous.trlc` | Add the `safety_analysis` target to the `assumptions_of_use` `deps` |
 | Wrong RSL used for trlc validation   | Always pass the tooling RSL as the first directory argument |

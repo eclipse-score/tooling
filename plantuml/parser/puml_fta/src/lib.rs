@@ -16,10 +16,9 @@
 //! Consumes the procedure parser's [`ProcedureFile`] (the stream of
 //! `$FailureMode(...)` / `$RootCause(...)` / gate macro calls produced after
 //! `fta_metamodel.puml` has been inlined) and turns it into the generated
-//! `FailureMode`/`RootCause` TRLC stub records (`fta_events.trlc`, see
-//! [`render_trlc_stub`]) consumed by the `safety_analysis` rule.
+//! `RootCause` TRLC records (`fta_events.trlc`, see [`render_trlc_stub`]).
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use log::warn;
 use procedure_preprocessor::{Arg, MacroCallDef, ProcedureFile, Statement};
@@ -92,26 +91,41 @@ pub struct FtaModel {
     pub nodes: Vec<FtaNode>,
 }
 
-/// One record to emit into the generated TRLC stub package (see
-/// [`render_trlc_stub`]).  Produced per-diagram by [`FtaModel::stub_events`]
-/// and merged across every diagram of an `fta_package` by
-/// [`merge_stub_events`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct StubEvent {
-    /// `NodeKind::FailureMode` or `NodeKind::RootCause` — never any other kind.
-    pub kind: NodeKind,
-    /// TRLC record name within the generated `fta_package` (see [`stub_name`]).
-    pub stub_name: String,
+/// A root cause as seen in one fault tree of one diagram.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TreeRootCause {
+    /// TRLC identifier (the `$RootCause` alias).
+    pub name: String,
     pub title: String,
-    /// Basename of the source `.puml` diagram (first diagram, if merged).
-    pub diagram: String,
-    /// Source line in `diagram` (first diagram, if merged).
+    /// Source line of the `$RootCause` call.
     pub line: usize,
-    /// `FailureMode` only: fully-qualified names of the failure modes it covers.
+}
+
+/// One fault tree: a `$FailureMode` call plus the root causes reachable from
+/// it.  Produced per diagram by [`FtaModel::fault_trees`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FaultTree {
+    /// Basename of the source `.puml` diagram.
+    pub diagram: String,
+    /// TRLC fully-qualified names of the failure modes the top node covers.
     pub failure_modes: Vec<String>,
-    /// `RootCause` only: `stub_name`s of the failure modes it contributes to,
-    /// merged (order-preserving, de-duplicated) across every diagram.
-    pub fta_failure_modes: Vec<String>,
+    pub root_causes: Vec<TreeRootCause>,
+}
+
+/// One generated `RootCause` TRLC record (see [`render_trlc_stub`]), merged
+/// across every fault tree of an `fta_package` by [`merge_root_causes`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RootCauseStub {
+    /// TRLC record name within the generated `fta_package`.
+    pub name: String,
+    pub title: String,
+    /// Basename of the first source `.puml` diagram using this root cause.
+    pub diagram: String,
+    /// Source line in `diagram`.
+    pub line: usize,
+    /// Fully-qualified names of the failure modes of every tree the root cause
+    /// hangs under (order-preserving, de-duplicated).
+    pub failure_modes: Vec<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -135,22 +149,12 @@ pub enum FtaError {
         alias: String,
     },
     #[error(
-        "FTA stub {stub_name:?} is declared as both a FailureMode (in {first_diagram}) and a \
-         RootCause (in {second_diagram}); stub names must be unique across all diagrams \
-         sharing an fta_package"
-    )]
-    StubKindClash {
-        stub_name: String,
-        first_diagram: String,
-        second_diagram: String,
-    },
-    #[error(
-        "FTA stub {stub_name:?} has a different title in {first_diagram} ({first_title:?}) than \
+        "FTA root cause {name:?} has a different title in {first_diagram} ({first_title:?}) than \
          in {second_diagram} ({second_title:?}); use the same title everywhere the same root \
-         cause or failure mode is referenced"
+         cause is referenced"
     )]
-    StubTitleMismatch {
-        stub_name: String,
+    RootCauseTitleMismatch {
+        name: String,
         first_diagram: String,
         first_title: String,
         second_diagram: String,
@@ -174,13 +178,6 @@ fn is_valid_identifier(s: &str) -> bool {
     let mut chars = s.chars();
     let first_ok = matches!(chars.next(), Some(c) if c.is_ascii_alphabetic() || c == '_');
     first_ok && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
-}
-
-/// Derive the local TRLC stub identifier from a diagram alias: a legacy
-/// dotted alias (`Package.Name`) collapses to its last segment; any other
-/// alias (new-style diagrams) is used verbatim.
-fn stub_name(alias: &str) -> &str {
-    alias.rsplit('.').next().unwrap_or(alias)
 }
 
 fn string_arg(call: &MacroCallDef, index: usize) -> Result<String, FtaError> {
@@ -309,17 +306,21 @@ impl FtaModel {
         map
     }
 
-    /// Resolve the top-event (failure-mode) alias a node ultimately connects to
-    /// by walking the `connection` parent links upward.  Returns `None` when the
+    /// Resolve the top node (`$FailureMode`) a node ultimately connects to by
+    /// walking the `connection` parent links upward.  Returns `None` when the
     /// chain does not terminate at a known failure mode (dangling or cyclic
     /// diagram).  `by_alias` is the precomputed [`alias_index`], so each step is
     /// O(1).
-    fn root_for(&self, start: &FtaNode, by_alias: &HashMap<&str, &FtaNode>) -> Option<String> {
+    fn root_for<'a>(
+        &self,
+        start: &'a FtaNode,
+        by_alias: &HashMap<&str, &'a FtaNode>,
+    ) -> Option<&'a FtaNode> {
         let mut current = start;
         // Bound the walk by node count to defend against cyclic connections.
         for _ in 0..=self.nodes.len() {
             if current.kind == NodeKind::FailureMode {
-                return Some(current.alias.clone());
+                return Some(current);
             }
             let parent_alias = current.connection.as_deref()?;
             current = by_alias.get(parent_alias).copied()?;
@@ -327,116 +328,106 @@ impl FtaModel {
         None
     }
 
-    /// Assemble the [`StubEvent`]s this diagram contributes to the generated
-    /// TRLC stub package (see [`render_trlc_stub`]).  One entry per failure mode
-    /// (with its `failure_modes`) and one per root cause reachable from a top
-    /// event (with the `stub_name` of that failure mode); root causes that do
-    /// not connect to any failure mode are dropped with a `warn!` naming the
+    /// Assemble the fault trees of this diagram: one per `$FailureMode` call,
+    /// holding the root causes reachable from it.  Root causes that do not
+    /// connect to any failure mode are dropped with a `warn!` naming the
     /// alias, diagram and line so a malformed fault tree is visible in the
     /// build log rather than quietly losing a root cause from the safety
-    /// chain.
-    pub fn stub_events(&self, puml_basename: &str) -> Result<Vec<StubEvent>, FtaError> {
+    /// chain.  A tree left without any root cause also warns: its failure
+    /// modes stay uncovered in the traceability report.
+    pub fn fault_trees(&self, puml_basename: &str) -> Result<Vec<FaultTree>, FtaError> {
         let by_alias = self.alias_index();
-        let mut out = Vec::new();
-
-        for te in self.iter_kind(NodeKind::FailureMode) {
-            let line = te.line.unwrap_or(0);
-            // `te.alias` is `te.failure_modes[0]`, already validated as a TRLC
-            // fully-qualified name by `from_procedure_file`, so its last
-            // segment (see `stub_name`) is guaranteed to be a valid identifier.
-            let name = stub_name(&te.alias);
-            out.push(StubEvent {
-                kind: NodeKind::FailureMode,
-                stub_name: name.to_string(),
-                title: te.name.clone().unwrap_or_default(),
+        let tops: Vec<&FtaNode> = self.iter_kind(NodeKind::FailureMode).collect();
+        let mut trees: Vec<FaultTree> = tops
+            .iter()
+            .map(|top| FaultTree {
                 diagram: puml_basename.to_string(),
-                line,
-                failure_modes: te.failure_modes.clone(),
-                fta_failure_modes: Vec::new(),
-            });
-        }
+                failure_modes: top.failure_modes.clone(),
+                root_causes: Vec::new(),
+            })
+            .collect();
 
-        for be in self.iter_kind(NodeKind::RootCause) {
-            let line = be.line.unwrap_or(0);
-            if !is_valid_identifier(&be.alias) {
+        for rc in self.iter_kind(NodeKind::RootCause) {
+            let line = rc.line.unwrap_or(0);
+            if !is_valid_identifier(&rc.alias) {
                 return Err(FtaError::InvalidRootCauseAlias {
                     diagram: puml_basename.to_string(),
                     line,
-                    alias: be.alias.clone(),
+                    alias: rc.alias.clone(),
                 });
             }
-            let Some(root_alias) = self.root_for(be, &by_alias) else {
+            let Some(top) = self.root_for(rc, &by_alias) else {
                 warn!(
                     "FTA {}:{}: root cause {:?} does not connect to any failure mode; \
                      it is dropped from the generated TRLC stub",
-                    puml_basename, line, be.alias,
+                    puml_basename, line, rc.alias,
                 );
                 continue;
             };
-            out.push(StubEvent {
-                kind: NodeKind::RootCause,
-                stub_name: be.alias.clone(),
-                title: be.name.clone().unwrap_or_default(),
-                diagram: puml_basename.to_string(),
-                line,
-                failure_modes: Vec::new(),
-                fta_failure_modes: vec![stub_name(&root_alias).to_string()],
-            });
+            for (tree, tree_top) in trees.iter_mut().zip(&tops) {
+                if tree_top.alias == top.alias
+                    && !tree.root_causes.iter().any(|r| r.name == rc.alias)
+                {
+                    tree.root_causes.push(TreeRootCause {
+                        name: rc.alias.clone(),
+                        title: rc.name.clone().unwrap_or_default(),
+                        line,
+                    });
+                }
+            }
         }
 
-        Ok(out)
+        for tree in trees.iter().filter(|t| t.root_causes.is_empty()) {
+            warn!(
+                "FTA {}: failure mode(s) {:?} have no root cause; they stay uncovered \
+                 in the traceability report",
+                puml_basename, tree.failure_modes,
+            );
+        }
+
+        Ok(trees)
     }
 }
 
-/// Merge [`StubEvent`]s collected across every diagram of one `fta_package`
-/// into a single, deduplicated set (one entry per `stub_name`): a root cause
-/// shared by several diagrams keeps a single record with its `fta_failure_modes`
-/// merged. Returns an error when the same `stub_name` is used for both a top
-/// and a root cause, or with two different titles.
-pub fn merge_stub_events(events: Vec<StubEvent>) -> Result<Vec<StubEvent>, FtaError> {
-    let mut merged: HashMap<String, StubEvent> = HashMap::new();
-    for ev in events {
-        match merged.get_mut(&ev.stub_name) {
-            None => {
-                merged.insert(ev.stub_name.clone(), ev);
+/// Merge the root causes of every fault tree of one `fta_package` into a
+/// single, deduplicated set (one entry per root-cause name, sorted by name): a
+/// root cause shared by several trees keeps a single record with its
+/// `failure_modes` merged. Returns an error when the same root cause carries
+/// two different titles.
+pub fn merge_root_causes(trees: &[FaultTree]) -> Result<Vec<RootCauseStub>, FtaError> {
+    let mut merged: BTreeMap<String, RootCauseStub> = BTreeMap::new();
+    for tree in trees {
+        for rc in &tree.root_causes {
+            let Some(existing) = merged.get_mut(&rc.name) else {
+                merged.insert(
+                    rc.name.clone(),
+                    RootCauseStub {
+                        name: rc.name.clone(),
+                        title: rc.title.clone(),
+                        diagram: tree.diagram.clone(),
+                        line: rc.line,
+                        failure_modes: tree.failure_modes.clone(),
+                    },
+                );
+                continue;
+            };
+            if existing.title != rc.title {
+                return Err(FtaError::RootCauseTitleMismatch {
+                    name: rc.name.clone(),
+                    first_diagram: existing.diagram.clone(),
+                    first_title: existing.title.clone(),
+                    second_diagram: tree.diagram.clone(),
+                    second_title: rc.title.clone(),
+                });
             }
-            Some(existing) => {
-                if existing.kind != ev.kind {
-                    return Err(FtaError::StubKindClash {
-                        stub_name: ev.stub_name,
-                        first_diagram: existing.diagram.clone(),
-                        second_diagram: ev.diagram,
-                    });
-                }
-                if existing.title != ev.title {
-                    return Err(FtaError::StubTitleMismatch {
-                        stub_name: ev.stub_name,
-                        first_diagram: existing.diagram.clone(),
-                        first_title: existing.title.clone(),
-                        second_diagram: ev.diagram,
-                        second_title: ev.title,
-                    });
-                }
-                for fm in ev.failure_modes {
-                    if !existing.failure_modes.contains(&fm) {
-                        existing.failure_modes.push(fm);
-                    }
-                }
-                for te in ev.fta_failure_modes {
-                    if !existing.fta_failure_modes.contains(&te) {
-                        existing.fta_failure_modes.push(te);
-                    }
+            for fm in &tree.failure_modes {
+                if !existing.failure_modes.contains(fm) {
+                    existing.failure_modes.push(fm.clone());
                 }
             }
         }
     }
-
-    let mut result: Vec<StubEvent> = merged.into_values().collect();
-    result.sort_by(|a, b| {
-        let rank = |k: NodeKind| if k == NodeKind::FailureMode { 0 } else { 1 };
-        (rank(a.kind), &a.stub_name).cmp(&(rank(b.kind), &b.stub_name))
-    });
-    Ok(result)
+    Ok(merged.into_values().collect())
 }
 
 /// Escape a Rust string as a TRLC string literal (including the surrounding
@@ -456,15 +447,15 @@ fn trlc_string_literal(s: &str) -> String {
     out
 }
 
-/// Render merged [`StubEvent`]s (see [`merge_stub_events`]) as one TRLC file:
-/// a `FailureMode`/`RootCause` record per event, importing `ScoreReq` plus every
+/// Render merged [`RootCauseStub`]s (see [`merge_root_causes`]) as one TRLC
+/// file: a `RootCause` record per entry, importing `ScoreReq` plus every
 /// package referenced by a `failure_modes` fully-qualified name. Output order
-/// is deterministic (see [`merge_stub_events`]) and every record carries a
-/// `<diagram>:<line>` comment pointing back at its source macro call.
-pub fn render_trlc_stub(package: &str, events: &[StubEvent]) -> String {
+/// is deterministic and every record carries a `<diagram>:<line>` comment
+/// pointing back at its source macro call.
+pub fn render_trlc_stub(package: &str, root_causes: &[RootCauseStub]) -> String {
     let mut fm_packages: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
-    for ev in events {
-        for fm in &ev.failure_modes {
+    for rc in root_causes {
+        for fm in &rc.failure_modes {
             if let Some((pkg, _)) = fm.rsplit_once('.') {
                 fm_packages.insert(pkg);
             }
@@ -474,37 +465,25 @@ pub fn render_trlc_stub(package: &str, events: &[StubEvent]) -> String {
     let mut out = String::new();
     out.push_str("// GENERATED by puml_cli from FTA diagrams -- do not edit\n");
     out.push_str(&format!("package {}\n\n", package));
-    out.push_str("import ScoreReq\n");
+    // With zero records `import ScoreReq` would be flagged as unused by TRLC.
+    if !root_causes.is_empty() {
+        out.push_str("import ScoreReq\n");
+    }
     for pkg in fm_packages {
         out.push_str(&format!("import {}\n", pkg));
     }
     out.push('\n');
 
-    for ev in events {
-        out.push_str(&format!("// {}:{}\n", ev.diagram, ev.line));
-        match ev.kind {
-            NodeKind::FailureMode => {
-                out.push_str(&format!(
-                    "ScoreReq.FtaFailureMode {} {{\n  title = {}\n  diagram = {}\n  line = {}\n  failure_modes = [{}]\n}}\n\n",
-                    ev.stub_name,
-                    trlc_string_literal(&ev.title),
-                    trlc_string_literal(&ev.diagram),
-                    ev.line,
-                    ev.failure_modes.join(", "),
-                ));
-            }
-            NodeKind::RootCause => {
-                out.push_str(&format!(
-                    "ScoreReq.RootCause {} {{\n  title = {}\n  diagram = {}\n  line = {}\n  failure_modes = [{}]\n}}\n\n",
-                    ev.stub_name,
-                    trlc_string_literal(&ev.title),
-                    trlc_string_literal(&ev.diagram),
-                    ev.line,
-                    ev.fta_failure_modes.join(", "),
-                ));
-            }
-            _ => unreachable!("StubEvent::kind is always FailureMode or RootCause"),
-        }
+    for rc in root_causes {
+        out.push_str(&format!("// {}:{}\n", rc.diagram, rc.line));
+        out.push_str(&format!(
+            "ScoreReq.RootCause {} {{\n  title = {}\n  diagram = {}\n  line = {}\n  failure_modes = [{}]\n}}\n\n",
+            rc.name,
+            trlc_string_literal(&rc.title),
+            trlc_string_literal(&rc.diagram),
+            rc.line,
+            rc.failure_modes.join(", "),
+        ));
     }
     out
 }
@@ -575,23 +554,25 @@ $RootCause("No More Coffee", "NoMoreCoffee", "AG2")
     }
 
     #[test]
-    fn stub_events_groups_root_causes_under_failure_mode() {
+    fn fault_tree_groups_root_causes_under_failure_mode() {
         let model = model_from(SAMPLE);
-        let stubs = model.stub_events("sample_fta.puml").expect("stub events");
-        let mut root_causes: Vec<&str> = stubs
+        let trees = model.fault_trees("sample_fta.puml").expect("fault trees");
+        assert_eq!(trees.len(), 1);
+        assert_eq!(trees[0].diagram, "sample_fta.puml");
+        assert_eq!(
+            trees[0].failure_modes,
+            vec!["SampleLibrary.SampleFailureMode".to_string()]
+        );
+        let mut root_causes: Vec<&str> = trees[0]
+            .root_causes
             .iter()
-            .filter(|e| e.kind == NodeKind::RootCause)
-            .map(|e| e.stub_name.as_str())
+            .map(|r| r.name.as_str())
             .collect();
         root_causes.sort_unstable();
         assert_eq!(
             root_causes,
             vec!["JustBadLuck", "NoMoreCoffee", "NoMoreCookies"]
         );
-        assert!(stubs
-            .iter()
-            .filter(|e| e.kind == NodeKind::RootCause)
-            .all(|e| e.fta_failure_modes == vec!["SampleFailureMode".to_string()]));
     }
 
     #[test]
@@ -606,7 +587,7 @@ $RootCause("No More Coffee", "NoMoreCoffee", "AG2")
     }
 
     #[test]
-    fn multiple_fta_failure_modes_produce_independent_stub_entries() {
+    fn multiple_failure_modes_produce_independent_trees() {
         let model = model_from_stmts(vec![
             mk_call(FAILURE_MODE, &["FM one", "Lib.FmA"], 1),
             mk_call(OR_GATE, &["OGA", "Lib.FmA"], 2),
@@ -615,11 +596,14 @@ $RootCause("No More Coffee", "NoMoreCoffee", "AG2")
             mk_call(OR_GATE, &["OGB", "Lib.FmB"], 5),
             mk_call(ROOT_CAUSE, &["cm b", "CmB", "OGB"], 6),
         ]);
-        let stubs = model.stub_events("d.puml").expect("stub events");
-        let a = stubs.iter().find(|e| e.stub_name == "CmA").unwrap();
-        assert_eq!(a.fta_failure_modes, vec!["FmA".to_string()]);
-        let b = stubs.iter().find(|e| e.stub_name == "CmB").unwrap();
-        assert_eq!(b.fta_failure_modes, vec!["FmB".to_string()]);
+        let trees = model.fault_trees("d.puml").expect("fault trees");
+        assert_eq!(trees.len(), 2);
+        assert_eq!(trees[0].failure_modes, vec!["Lib.FmA".to_string()]);
+        assert_eq!(trees[0].root_causes.len(), 1);
+        assert_eq!(trees[0].root_causes[0].name, "CmA");
+        assert_eq!(trees[1].failure_modes, vec!["Lib.FmB".to_string()]);
+        assert_eq!(trees[1].root_causes.len(), 1);
+        assert_eq!(trees[1].root_causes[0].name, "CmB");
     }
 
     #[test]
@@ -631,8 +615,8 @@ $RootCause("No More Coffee", "NoMoreCoffee", "AG2")
             mk_call(OR_GATE, &["G2", "G1"], 2),
             mk_call(ROOT_CAUSE, &["cm", "Cm", "G1"], 3),
         ]);
-        let stubs = model.stub_events("d.puml").expect("stub events");
-        assert!(stubs.is_empty());
+        let trees = model.fault_trees("d.puml").expect("fault trees");
+        assert!(trees.is_empty());
     }
 
     #[test]
@@ -668,19 +652,13 @@ $RootCause("No More Coffee", "NoMoreCoffee", "AG2")
             mk_call(OR_GATE, &["OG", "Lib.Fm"], 3),
             mk_call(ROOT_CAUSE, &["cm", "Cm", "OG"], 4),
         ]);
-        let stubs = model.stub_events("d.puml").expect("stub events");
-        let top_names: Vec<&str> = stubs
-            .iter()
-            .filter(|e| e.kind == NodeKind::FailureMode)
-            .map(|e| e.stub_name.as_str())
-            .collect();
-        assert_eq!(top_names, vec!["Fm", "Fm"]);
-        let be = stubs
-            .iter()
-            .find(|e| e.kind == NodeKind::RootCause)
-            .unwrap();
-        assert_eq!(be.stub_name, "Cm");
-        assert_eq!(be.fta_failure_modes, vec!["Fm".to_string()]);
+        let trees = model.fault_trees("d.puml").expect("fault trees");
+        assert_eq!(trees.len(), 2);
+        for tree in &trees {
+            assert_eq!(tree.failure_modes, vec!["Lib.Fm".to_string()]);
+            assert_eq!(tree.root_causes.len(), 1);
+            assert_eq!(tree.root_causes[0].name, "Cm");
+        }
     }
 
     #[test]
@@ -719,50 +697,39 @@ $RootCause("No More Coffee", "NoMoreCoffee", "AG2")
     }
 
     #[test]
-    fn stub_events_collapses_failure_mode_alias_to_last_segment() {
+    fn fault_tree_keeps_failure_mode_fqn() {
         let model = model_from_stmts(vec![
             mk_call(FAILURE_MODE, &["FM", "Lib.Fm"], 1),
             mk_call(OR_GATE, &["OG", "Lib.Fm"], 2),
             mk_call(ROOT_CAUSE, &["cm", "Cm", "OG"], 3),
         ]);
-        let stubs = model.stub_events("d.puml").expect("stub events");
-        let te = stubs
-            .iter()
-            .find(|e| e.kind == NodeKind::FailureMode)
-            .unwrap();
-        assert_eq!(te.stub_name, "Fm");
-        assert_eq!(te.failure_modes, vec!["Lib.Fm".to_string()]);
-        let be = stubs
-            .iter()
-            .find(|e| e.kind == NodeKind::RootCause)
-            .unwrap();
-        assert_eq!(be.stub_name, "Cm");
-        assert_eq!(be.fta_failure_modes, vec!["Fm".to_string()]);
+        let trees = model.fault_trees("d.puml").expect("fault trees");
+        assert_eq!(trees.len(), 1);
+        assert_eq!(trees[0].failure_modes, vec!["Lib.Fm".to_string()]);
+        assert_eq!(
+            trees[0].root_causes,
+            vec![TreeRootCause {
+                name: "Cm".into(),
+                title: "cm".into(),
+                line: 3,
+            }]
+        );
     }
 
     #[test]
-    fn stub_events_new_style_diagram_uses_plain_names() {
+    fn fault_tree_covers_every_failure_mode_of_its_top_node() {
         let model = model_from_stmts(vec![
             mk_call(FAILURE_MODE, &["Top", "Lib.A", "Lib.B"], 1),
             mk_call(OR_GATE, &["OG", "Lib.A"], 4),
             mk_call(ROOT_CAUSE, &["Root", "TooBig", "OG"], 5),
         ]);
-        let stubs = model.stub_events("d.puml").expect("stub events");
-        let te = stubs
-            .iter()
-            .find(|e| e.kind == NodeKind::FailureMode)
-            .unwrap();
-        assert_eq!(te.stub_name, "A");
+        let trees = model.fault_trees("d.puml").expect("fault trees");
+        assert_eq!(trees.len(), 1);
         assert_eq!(
-            te.failure_modes,
+            trees[0].failure_modes,
             vec!["Lib.A".to_string(), "Lib.B".to_string()]
         );
-        let be = stubs
-            .iter()
-            .find(|e| e.kind == NodeKind::RootCause)
-            .unwrap();
-        assert_eq!(be.stub_name, "TooBig");
-        assert_eq!(be.fta_failure_modes, vec!["A".to_string()]);
+        assert_eq!(trees[0].root_causes[0].name, "TooBig");
     }
 
     #[test]
@@ -772,7 +739,7 @@ $RootCause("No More Coffee", "NoMoreCoffee", "AG2")
             mk_call(OR_GATE, &["OG", "Lib.Fm"], 2),
             mk_call(ROOT_CAUSE, &["cm", "Lib.Cm", "OG"], 3),
         ]);
-        let err = model.stub_events("d.puml").unwrap_err();
+        let err = model.fault_trees("d.puml").unwrap_err();
         assert!(matches!(
             err,
             FtaError::InvalidRootCauseAlias { line: 3, .. }
@@ -780,116 +747,94 @@ $RootCause("No More Coffee", "NoMoreCoffee", "AG2")
     }
 
     #[test]
-    fn stub_events_drops_dangling_root_cause_with_warning() {
+    fn fault_trees_drop_dangling_root_cause_with_warning() {
         let model = model_from_stmts(vec![
             mk_call(FAILURE_MODE, &["FM", "Lib.Fm"], 1),
             mk_call(ROOT_CAUSE, &["cm", "Cm", "MissingGate"], 2),
         ]);
-        let stubs = model.stub_events("d.puml").expect("stub events");
-        assert!(!stubs.iter().any(|e| e.kind == NodeKind::RootCause));
+        let trees = model.fault_trees("d.puml").expect("fault trees");
+        assert_eq!(trees.len(), 1);
+        assert!(trees[0].root_causes.is_empty());
+    }
+
+    fn tree(diagram: &str, fms: &[&str], rcs: &[(&str, &str, usize)]) -> FaultTree {
+        FaultTree {
+            diagram: diagram.into(),
+            failure_modes: fms.iter().map(|f| f.to_string()).collect(),
+            root_causes: rcs
+                .iter()
+                .map(|(name, title, line)| TreeRootCause {
+                    name: name.to_string(),
+                    title: title.to_string(),
+                    line: *line,
+                })
+                .collect(),
+        }
     }
 
     #[test]
-    fn merge_stub_events_unions_fta_failure_modes_for_shared_root_cause() {
-        let a = StubEvent {
-            kind: NodeKind::RootCause,
-            stub_name: "Shared".into(),
-            title: "shared root cause".into(),
-            diagram: "a.puml".into(),
-            line: 1,
-            failure_modes: vec![],
-            fta_failure_modes: vec!["TeA".into()],
-        };
-        let b = StubEvent {
-            fta_failure_modes: vec!["TeB".into()],
-            diagram: "b.puml".into(),
-            line: 2,
-            ..a.clone()
-        };
-        let merged = merge_stub_events(vec![a, b]).expect("merge");
+    fn merge_root_causes_unions_failure_modes_for_shared_root_cause() {
+        let a = tree(
+            "a.puml",
+            &["Lib.FmA"],
+            &[("Shared", "shared root cause", 1)],
+        );
+        let b = tree(
+            "b.puml",
+            &["Lib.FmB"],
+            &[("Shared", "shared root cause", 2)],
+        );
+        let merged = merge_root_causes(&[a, b]).expect("merge");
         assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].diagram, "a.puml");
+        assert_eq!(merged[0].line, 1);
         assert_eq!(
-            merged[0].fta_failure_modes,
-            vec!["TeA".to_string(), "TeB".to_string()]
+            merged[0].failure_modes,
+            vec!["Lib.FmA".to_string(), "Lib.FmB".to_string()]
         );
     }
 
     #[test]
-    fn merge_stub_events_errors_on_kind_clash() {
-        let te = StubEvent {
-            kind: NodeKind::FailureMode,
-            stub_name: "X".into(),
-            title: "t".into(),
-            diagram: "a.puml".into(),
-            line: 1,
-            failure_modes: vec!["Lib.Fm".into()],
-            fta_failure_modes: vec![],
-        };
-        let be = StubEvent {
-            kind: NodeKind::RootCause,
-            diagram: "b.puml".into(),
-            line: 2,
-            failure_modes: vec![],
-            fta_failure_modes: vec!["Other".into()],
-            ..te.clone()
-        };
-        let err = merge_stub_events(vec![te, be]).unwrap_err();
-        assert!(matches!(err, FtaError::StubKindClash { .. }));
+    fn merge_root_causes_sorts_by_name() {
+        let a = tree("a.puml", &["Lib.Fm"], &[("Zed", "z", 1), ("Alpha", "a", 2)]);
+        let merged = merge_root_causes(&[a]).expect("merge");
+        let names: Vec<&str> = merged.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(names, vec!["Alpha", "Zed"]);
     }
 
     #[test]
-    fn merge_stub_events_errors_on_title_mismatch() {
-        let a = StubEvent {
-            kind: NodeKind::RootCause,
-            stub_name: "X".into(),
-            title: "one title".into(),
-            diagram: "a.puml".into(),
-            line: 1,
-            failure_modes: vec![],
-            fta_failure_modes: vec!["Te".into()],
-        };
-        let b = StubEvent {
-            title: "different title".into(),
-            diagram: "b.puml".into(),
-            line: 2,
-            ..a.clone()
-        };
-        let err = merge_stub_events(vec![a, b]).unwrap_err();
-        assert!(matches!(err, FtaError::StubTitleMismatch { .. }));
+    fn merge_root_causes_errors_on_title_mismatch() {
+        let a = tree("a.puml", &["Lib.Fm"], &[("X", "one title", 1)]);
+        let b = tree("b.puml", &["Lib.Fm"], &[("X", "different title", 2)]);
+        let err = merge_root_causes(&[a, b]).unwrap_err();
+        assert!(matches!(err, FtaError::RootCauseTitleMismatch { .. }));
     }
 
     #[test]
     fn render_trlc_stub_emits_package_imports_and_records() {
-        let events = vec![
-            StubEvent {
-                kind: NodeKind::FailureMode,
-                stub_name: "TeOne".into(),
-                title: "top \"quoted\"".into(),
-                diagram: "d.puml".into(),
-                line: 4,
-                failure_modes: vec!["Lib.A".into(), "Other.B".into()],
-                fta_failure_modes: vec![],
-            },
-            StubEvent {
-                kind: NodeKind::RootCause,
-                stub_name: "BeOne".into(),
-                title: "root cause".into(),
-                diagram: "d.puml".into(),
-                line: 8,
-                failure_modes: vec![],
-                fta_failure_modes: vec!["TeOne".into()],
-            },
-        ];
-        let out = render_trlc_stub("MyFta", &events);
+        let root_causes = vec![RootCauseStub {
+            name: "BeOne".into(),
+            title: "root \"quoted\"".into(),
+            diagram: "d.puml".into(),
+            line: 8,
+            failure_modes: vec!["Lib.A".into(), "Other.B".into()],
+        }];
+        let out = render_trlc_stub("MyFta", &root_causes);
         assert!(out.contains("package MyFta"));
         assert!(out.contains("import ScoreReq"));
         assert!(out.contains("import Lib"));
         assert!(out.contains("import Other"));
-        assert!(out.contains("ScoreReq.FtaFailureMode TeOne {"));
-        assert!(out.contains("failure_modes = [Lib.A, Other.B]"));
-        assert!(out.contains("top \\\"quoted\\\""));
         assert!(out.contains("ScoreReq.RootCause BeOne {"));
-        assert!(out.contains("failure_modes = [TeOne]"));
-        assert!(out.contains("// d.puml:4"));
+        assert!(out.contains("failure_modes = [Lib.A, Other.B]"));
+        assert!(out.contains("root \\\"quoted\\\""));
+        assert!(out.contains("// d.puml:8"));
+        assert!(!out.contains("FtaFailureMode"));
+    }
+
+    #[test]
+    fn render_trlc_stub_without_root_causes_has_no_imports() {
+        let out = render_trlc_stub("MyFta", &[]);
+        assert!(out.contains("package MyFta"));
+        assert!(!out.contains("import"));
     }
 }

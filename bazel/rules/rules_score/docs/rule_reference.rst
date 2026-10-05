@@ -275,9 +275,10 @@ testable within that component.
 **Generated targets:** ``<name>`` (documentation), ``<name>_test`` (TRLC validation)
 
 A ``CompReq`` record's ``derived_from`` field (``CompReqSourceId``) may also
-reference an AoU that this requirement implements, alongside its usual
+reference an AoU *received* from another dependable element, alongside its usual
 ``FeatReq``/``AssumedSystemReq`` references (e.g. ``[SampleType.SampleAoU@1]``).
-This requires importing the AoU's package and listing the
+The element's own AoUs are never a ``derived_from`` source. This requires
+importing the AoU's package and listing the
 ``assumptions_of_use`` target that defines it directly in this target's
 ``deps`` — see :doc:`user_guide/assumptions_of_use`.
 
@@ -314,7 +315,7 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
    * - ``deps``
      - label list
      - no
-     - Other requirement targets (``TrlcProviderInfo``) needed for cross-reference parsing (default ``[]``)
+     - Other requirement targets (``TrlcProviderInfo``) needed for cross-reference parsing (default ``[]``). List the ``safety_analysis`` target when an ``AoU`` references its generated ``<fta_package>.<RootCause>`` records.
    * - ``ref_package``
      - string
      - no
@@ -574,7 +575,9 @@ documentation target.
      - string
      - no
      - TRLC package name for the generated ``fta_events.trlc`` stub (the
-       ``FtaFailureMode``/``RootCause`` records derived from ``root_causes``).
+       ``RootCause`` records derived from ``root_causes``). The target
+       exports it (plus ``failuremodes``) as ``TrlcProviderInfo``, so other
+       targets such as ``assumptions_of_use`` can list it in ``deps``.
        Defaults to a sanitized form of ``name`` with a ``_fta`` suffix.
    * - ``arch_design``
      - label
@@ -619,10 +622,6 @@ Running ``bazel test`` validates the full FMEA traceability chain.
      - label list
      - no
      - ``safety_analysis`` targets to include in this analysis (default ``[]``)
-   * - ``measures``
-     - label list
-     - no
-     - Additional ``Mitigation``/``AoU``/``CompReq`` ``.trlc`` files not scoped to a single ``safety_analysis`` target, considered for the root-cause-coverage completeness check (default ``[]``)
    * - ``arch_design``
      - label
      - no

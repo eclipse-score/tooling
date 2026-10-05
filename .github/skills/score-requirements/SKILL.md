@@ -159,7 +159,7 @@ Requirement          → description (Markup_String), version (Integer),
   RequirementSafety   → + safety (Asil)
     AssumedSystemReq  → + rationale (String)
     FeatReq           → + derived_from (AssumedSystemReqId[1..*])
-    CompReq           → + derived_from (CompReqSourceId[1..*])   # FeatReq or AssumedSystemReq
+    CompReq           → + derived_from (CompReqSourceId[1..*])   # FeatReq, AssumedSystemReq, received AoU, or RootCause (control measure)
 ```
 
 - `description` is a `Markup_String` — it may contain `:term:` references and embedded
