@@ -1,0 +1,15 @@
+{
+    "class_diagram.puml": {
+        "defines": {},
+        "references": {
+            "core::geometry::Circle": "outer.core.geometry.Circle"
+        }
+    },
+    "component_diagram.puml": {
+        "defines": {},
+        "references": {
+            "core.geometry.Circle": "outer.core.geometry.Circle",
+            "outer": "outer"
+        }
+    }
+}

@@ -704,4 +704,166 @@ mod dispatch_style_tests {
         assert_eq!(element.identity.alias.as_deref(), Some("ExampleAlias"));
         assert_eq!(element.identity.stereotype.as_deref(), Some("component"));
     }
+
+    fn parse_relation(line: &str) -> Relation {
+        let input = format!("@startuml\n{line}\n@enduml");
+        let mut parser = PumlComponentParser;
+        let doc = parser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), &input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        match doc.statements.into_iter().next() {
+            Some(Statement::Relation(relation)) => relation,
+            actual => panic!("expected a relation, got {actual:?}"),
+        }
+    }
+
+    #[test]
+    fn test_unquoted_qualified_right_endpoint() {
+        let relation = parse_relation("A --> ns::B");
+
+        assert_eq!(relation.lhs, "A");
+        assert_eq!(relation.rhs, "ns::B");
+        assert_eq!(relation.description, None);
+    }
+
+    #[test]
+    fn test_unquoted_qualified_left_endpoint() {
+        let relation = parse_relation("ns::A --> B");
+
+        assert_eq!(relation.lhs, "ns::A");
+        assert_eq!(relation.rhs, "B");
+    }
+
+    #[test]
+    fn test_unquoted_qualified_endpoint_with_description() {
+        let relation = parse_relation("A --> ns::B : text");
+
+        assert_eq!(relation.rhs, "ns::B");
+        assert_eq!(relation.description.as_deref(), Some("text"));
+    }
+
+    #[test]
+    fn test_unquoted_qualified_endpoint_after_actor() {
+        let relation = parse_relation(":actor: --> ns::B");
+
+        assert_eq!(relation.rhs, "ns::B");
+    }
+
+    #[test]
+    fn test_colon_separator_stays_a_description_separator() {
+        let spaced = parse_relation("A --> B : text");
+        let tight = parse_relation("A --> B: text");
+
+        assert_eq!(spaced.rhs, "B");
+        assert_eq!(spaced.description.as_deref(), Some("text"));
+        assert_eq!(tight.rhs, "B");
+        assert_eq!(tight.description.as_deref(), Some("text"));
+    }
+
+    const NAME_SPELLINGS: [&str; 6] = ["a.b.C", "a::b::C", "a.b::C", ".a.C", "::a::C", "::a.C"];
+
+    fn parse_body(body: &str) -> Result<CompPumlDocument, ComponentError> {
+        let input = format!("@startuml\n{body}\n@enduml");
+        PumlComponentParser.parse_file(&Rc::new(PathBuf::from("t.puml")), &input, LogLevel::Info)
+    }
+
+    fn first_element(body: &str) -> Element {
+        match parse_body(body)
+            .unwrap_or_else(|error| panic!("`{body}` must parse: {error:?}"))
+            .statements
+            .into_iter()
+            .next()
+        {
+            Some(Statement::Element(element)) => element,
+            actual => panic!("`{body}`: expected an element, got {actual:?}"),
+        }
+    }
+
+    #[test]
+    fn test_declaration_names_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            for kind in ["component", "interface", "package", "node", "usecase"] {
+                let element = first_element(&format!("{kind} {spelling}"));
+                assert_eq!(
+                    element.identity.name.as_deref(),
+                    Some(spelling),
+                    "`{kind} {spelling}`"
+                );
+                assert_eq!(element.identity.alias, None);
+            }
+        }
+    }
+
+    #[test]
+    fn test_short_interface_name_accepts_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            let element = first_element(&format!("() {spelling}"));
+            assert_eq!(element.identity.name.as_deref(), Some(spelling));
+            assert_eq!(element.identity.element_kind, "interface");
+        }
+    }
+
+    #[test]
+    fn test_port_names_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            for keyword in ["port", "portin", "portout"] {
+                let outer = first_element(&format!("component outer {{\n{keyword} {spelling}\n}}"));
+                match outer.statements.as_slice() {
+                    [Statement::Port(port)] => assert_eq!(port.name, spelling),
+                    actual => panic!("`{keyword} {spelling}`: expected one port, got {actual:?}"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_relation_endpoints_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            let relation = parse_relation(&format!("{spelling} --> {spelling}"));
+            assert_eq!(relation.lhs, spelling);
+            assert_eq!(relation.rhs, spelling);
+            assert_eq!(relation.description, None);
+        }
+    }
+
+    #[test]
+    fn test_alias_is_not_a_path() {
+        let element = first_element("component a::b::C as D");
+
+        assert_eq!(element.identity.name.as_deref(), Some("a::b::C"));
+        assert_eq!(element.identity.alias.as_deref(), Some("D"));
+    }
+
+    #[test]
+    fn test_tight_double_colon_before_text_is_a_qualified_endpoint() {
+        let relation = parse_relation("A --> B::text");
+
+        assert_eq!(relation.rhs, "B::text");
+        assert_eq!(relation.description, None);
+    }
+
+    #[test]
+    fn test_spaced_double_colon_after_endpoint_starts_a_description() {
+        for line in ["A --> B:: text", "A --> B ::text"] {
+            let relation = parse_relation(line);
+
+            assert_eq!(relation.rhs, "B", "{line}");
+            assert!(relation.description.is_some(), "{line}");
+        }
+    }
+
+    #[test]
+    fn test_malformed_qualified_names_are_rejected() {
+        for spelling in ["::", "a::", "a:::b"] {
+            for body in [
+                format!("component {spelling}"),
+                format!("component outer {{\nport {spelling}\n}}"),
+                format!("() {spelling}"),
+            ] {
+                let result = parse_body(&body);
+                assert!(result.is_err(), "`{body}` must not parse: {result:?}");
+            }
+        }
+    }
 }

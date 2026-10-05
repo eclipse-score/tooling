@@ -64,6 +64,23 @@ impl InternalScope {
         Self(parts)
     }
 
+    /// Scope of a declaration named `name`: a leading `.` or `::` is rooted,
+    /// anything else nests under this scope.
+    pub fn declare(&self, name: &str) -> Self {
+        if has_root_marker(name) {
+            Self::from_path(name)
+        } else {
+            self.child(name)
+        }
+    }
+
+    /// All segments but the last.
+    pub fn parent(&self) -> Self {
+        let mut parts = self.0.clone();
+        parts.pop();
+        Self(parts)
+    }
+
     pub fn resolve_with_leaf(&self, root_anchor: &RootAnchor, leaf: &str) -> String {
         let mut parts = Vec::with_capacity(self.0.len() + 2);
 
@@ -85,6 +102,18 @@ impl InternalScope {
                 .chain(self.0.iter().map(String::as_str)),
         )
     }
+}
+
+/// A leading `.` or `::` anchors a name at the root anchor.
+fn has_root_marker(name: &str) -> bool {
+    name.starts_with('.') || name.starts_with("::")
+}
+
+/// `name` without its leading root marker (`.` or `::`).
+pub fn strip_root_marker(name: &str) -> &str {
+    name.strip_prefix("::")
+        .or_else(|| name.strip_prefix('.'))
+        .unwrap_or(name)
 }
 
 /// `path` below `root_anchor`; the anchor is never stripped from `path`.
@@ -123,7 +152,7 @@ where
     B: Fn(&str) -> bool,
     L: FnOnce(&str) -> Vec<String>,
 {
-    if raw.starts_with('.') || raw.starts_with("::") {
+    if has_root_marker(raw) {
         let rooted = resolve_explicit_path(root_anchor, raw);
         return if rooted_exists(&rooted) {
             Resolution::Resolved(rooted)
@@ -169,8 +198,23 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        leaf_key, resolve_explicit_path, resolve_reference, InternalScope, Resolution, RootAnchor,
+        leaf_key, resolve_explicit_path, resolve_reference, strip_root_marker, InternalScope,
+        Resolution, RootAnchor,
     };
+
+    #[test]
+    fn strip_root_marker_removes_one_leading_marker() {
+        assert_eq!(strip_root_marker("::a::X"), "a::X");
+        assert_eq!(strip_root_marker(".a.X"), "a.X");
+        assert_eq!(strip_root_marker("::X"), "X");
+    }
+
+    #[test]
+    fn strip_root_marker_keeps_relative_names() {
+        assert_eq!(strip_root_marker("a::X"), "a::X");
+        assert_eq!(strip_root_marker("a.X"), "a.X");
+        assert_eq!(strip_root_marker("X"), "X");
+    }
 
     #[test]
     fn leaf_key_is_the_last_segment() {
@@ -240,6 +284,49 @@ mod tests {
         let scope = InternalScope::from_path("core").child("geometry::shapes");
 
         assert_eq!(scope, InternalScope::from_path("core.geometry.shapes"));
+    }
+
+    #[test]
+    fn declare_plain_name_nests_under_the_scope() {
+        let scope = InternalScope::from_path("outer");
+
+        assert_eq!(
+            scope.declare("Circle"),
+            InternalScope::from_path("outer.Circle")
+        );
+    }
+
+    #[test]
+    fn declare_qualified_name_nests_under_the_scope() {
+        let scope = InternalScope::from_path("outer");
+
+        assert_eq!(
+            scope.declare("core::geometry::Circle"),
+            InternalScope::from_path("outer.core.geometry.Circle")
+        );
+        assert_eq!(
+            scope.declare("core.geometry"),
+            InternalScope::from_path("outer.core.geometry")
+        );
+    }
+
+    #[test]
+    fn declare_leading_root_marker_replaces_the_scope() {
+        let scope = InternalScope::from_path("outer");
+
+        assert_eq!(scope.declare(".X"), InternalScope::from_path("X"));
+        assert_eq!(scope.declare("::X"), InternalScope::from_path("X"));
+        assert_eq!(scope.declare("::a::X"), InternalScope::from_path("a.X"));
+    }
+
+    #[test]
+    fn parent_drops_the_last_segment() {
+        assert_eq!(
+            InternalScope::from_path("a.b.C").parent(),
+            InternalScope::from_path("a.b")
+        );
+        assert!(InternalScope::from_path("C").parent().is_empty());
+        assert!(InternalScope::default().parent().is_empty());
     }
 
     #[test]

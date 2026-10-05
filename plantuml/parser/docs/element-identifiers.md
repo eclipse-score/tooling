@@ -39,16 +39,17 @@ that suite's goldens change with it.
 | Topic | Today (`main`) | Target (this guide) | Test case |
 |-------|----------------|----------------------|-----------|
 | Root anchor ([§1](#1-the-three-inputs), [Rule D](#rule-d)) | **not implemented** — identifiers have no Bazel-package prefix | `ctx.label.package` prepended to every identifier | — |
-| Component id leaf ([§2](#2-component-diagrams), [Rule A](#rule-a)) | implemented — alias when present, else name | (same) | `component_nesting` |
-| Class id leaf ([§3](#3-class-diagrams), [Rule A](#rule-a)) | implemented — alias when present, else name | (same) | `class_alias_wins` |
-| Class/component reference resolution ([§5](#referring-to-another-element), [Rule C](#rule-c)) | class and component: implemented per Rule C (class: declaration-order visibility; component: whole diagram, ports resolve to their owner; ambiguity is an error) | one lookup for both: `S.r`, else the unique leaf; qualified: `S.r` or the root path; leading `.` = root (class diagrams); class references see earlier declarations only; ambiguity is an error | `qualified_reference`, `relation_simple_name_prefers_direct_hit` |
+| Component id leaf ([§2](#2-component-diagrams), [Rule A](#rule-a)) | implemented — alias when present, else name | alias when present, else name | `component_nesting` |
+| Class id leaf ([§3](#3-class-diagrams), [Rule A](#rule-a)) | implemented — alias when present, else name | alias when present, else name | `class_alias_wins` |
+| `name` field of a class/component entity ([Rule A](#rule-a)) | implemented — the written name with its spelling kept and one leading root marker removed; a component with an alias keeps its `name` verbatim (display text) | same | `rooted_declaration_in_package` |
+| Class/component reference resolution ([§5](#referring-to-another-element), [Rule C](#rule-c)) | class and component: implemented per Rule C (class: declaration-order visibility; component: whole diagram, ports resolve to their owner; ambiguity is an error) | one lookup for both: `S.r`, else the unique leaf; qualified: `S.r` or the root path; leading `.` or `::` = root; class references see earlier declarations only; ambiguity is an error | `qualified_reference`, `relation_simple_name_prefers_direct_hit` |
 | Sequence participant identity ([§4](#4-sequence-diagrams), [Rule B](#rule-b)) | **not implemented** — identity is the alias, else the display name, verbatim (none of the label forms are parsed) | `uid` derived from the label per the label forms | `sequence_forms`, `prose_without_alias` |
 | Sequence ↔ component/class linking ([§5](#5-linking-the-three-diagrams)) | works only by coincidence when both sides use a plain, un-nested alias | component/class id == participant uid | `linking_three_diagrams`, `component_nesting` |
 | `ExternalEndpoint` marker ([§6](#6-special-cases), [Rule E](#rule-e)) | **not implemented** — no such reserved participant exists | emitted verbatim, never anchored | — |
 | Errors in [§7](#7-errors-you-may-hit) (`free-text participant display names require an alias…`, `multiple standalone ':' separators…`, `Duplicate entity id`, `Ambiguous reference`, `Unresolved reference`, `duplicate sequence participant id`) | **partially implemented** — `Duplicate entity id`, `Ambiguous reference` and `Unresolved reference` exist for class entities; the sequence/participant diagnostics don't exist yet | as described | `prose_without_alias` |
-| Id normalization (`::` / `.` equivalence, [Definitions](#definitions)) | implemented for class and component ids, scope paths and relationship endpoints (incl. `extends`/`implements`); class diagrams also take the leading `.` root marker; the component grammar still rejects an unquoted `A --> ns::B` (write `"ns::B"`); sequence participants don't normalize yet | works everywhere an identifier is read or written | `namespace_and_package`, `qualified_reference`, `relation_quoted_name` |
+| Id normalization (`::` / `.` equivalence, [Definitions](#definitions)) | implemented for class and component ids, scope paths, ports and relationship endpoints (incl. `extends`/`implements`); both diagram parsers accept `.`, `::` and the leading root marker in every name position ([Separators and root markers](#separators-and-root-markers)); the component merge compares names after normalization; sequence participants don't normalize yet | works everywhere an identifier is read or written, sequence included | `namespace_and_package`, `qualified_reference`, `relation_quoted_name`, `separator_equivalence` |
 | Label markup stripping (creole tags in labels) | implemented for activity diagram labels only | also strips markup from sequence participant labels before Rule B derivation | — |
-| Qualified name inside a nested declaration ([§9](#9-current-limitations)) | **bug** — appended to the enclosing scope instead of replacing it | replaces the enclosing scope | — |
+| Qualified name inside a nested declaration ([Rule C](#rule-c)) | implemented — nests under the enclosing scope; a leading `.` or `::` is rooted (class and component diagrams); the parent is the id minus its last segment, whether or not it is declared in this diagram | nests under the enclosing scope; a leading `.` or `::` roots it | `qualified_in_nested_scope`, `rooted_declaration_in_package`, `rooted_dotted_declaration`, `qualified_interface_top_level`, `qualified_port_owner` |
 | Cross-diagram hyperlinks (`idmap`) for sequence participants ([§9](#9-current-limitations)) | not identifier-based; links from a sequence participant may not resolve | identifier-based, same as component/class | — |
 
 ---
@@ -82,6 +83,34 @@ package prefix.
 
 All examples in this guide assume the owning target lives in Bazel package
 `score/mw/log`, so the root anchor is `score.mw.log`.
+
+### Separators and root markers
+
+`.` and `::` spell the same name, and a leading `.` or `::` roots it
+([Rule C](#rule-c)). `a.b.X`, `a::b::X` and `a.b::X` are one identifier;
+`.a.X` and `::a::X` ignore the enclosing scope. The parser accepts every
+spelling wherever a name is written: declarations, `package` / `namespace`
+names, ports, `extends` / `implements` targets and relationship endpoints.
+Malformed paths (`a..b`, `a::`, `a:::b`, a lone `::`) are parse errors.
+
+| Spelling | Class diagram | Component diagram | Sequence diagram |
+|----------|---------------|-------------------|------------------|
+| `a.b.X`, `.a.X` | parsed and rendered by PlantUML | parsed and rendered by PlantUML | not yet |
+| `a::b::X` in a declaration, port or `() a::I` | parsed and rendered | parsed, **not rendered** by PlantUML | not yet |
+| `A --> a::X` (endpoint) | parsed and rendered | parsed and rendered | not yet |
+| `::a::X` (rooted, any position) | parsed and rendered | parsed, **not rendered** by PlantUML | not yet |
+
+The parser is deliberately more permissive than PlantUML in component
+diagrams. Write `.` in component diagrams if the diagram must also render; the
+identifier is the same.
+
+Two spellings in component diagrams need care:
+
+- `component .a.C` declares `a.C`. A lone `.` between two endpoints stays
+  PlantUML's dotted arrow.
+- In a relation, `A --> B::text` is the qualified endpoint `B::text`, while
+  `A --> B:: text` and `A --> B ::text` are endpoint `B` with a description.
+  Write the label separator as ` : ` with spaces.
 
 ---
 
@@ -150,6 +179,17 @@ enum "Event Level" as EventLevel
 The same holds for a qualified label: `class "ns::X" as X` is
 `score.mw.log.X`, not `score.mw.log.ns.X`. To get the nested identifier, declare
 the class inside `namespace ns { … }` or write `class ns::X` without an alias.
+
+A qualified name in a nested declaration is appended to the enclosing scope,
+like a relative name in C++. A leading `::` (or `.`) roots it at the root
+anchor, like a leading `::` in C++:
+
+```text
+package outer {
+    class core::Circle      ' → score.mw.log.outer.core.Circle
+    class ::core::Square    ' → score.mw.log.core.Square
+}
+```
 
 ---
 
@@ -281,7 +321,7 @@ the scope `S` it is written in ([Rule C](#rule-c)):
 |-----------|-------------|
 | simple name `r` | `S.r` if it exists, else the only element in the diagram whose leaf is `r` |
 | qualified name `a.r` or `a::r` | `S.a.r` or `a.r` from the root anchor; exactly one of them must exist |
-| `.r` or `.a.r` (class diagrams) | `r` or `a.r` from the root anchor, even if `S` has its own `r` |
+| `.r`, `.a.r`, `::r` or `::a::r` | `r` or `a.r` from the root anchor, even if `S` has its own `r` |
 
 No match, several matches, or both paths of a qualified name existing is an
 error. The label of an aliased element is not a name: after
@@ -377,7 +417,7 @@ carry no identifiers at all.
 | `multiple standalone ':' separators are not allowed` | e.g. `participant "a : b : c"` | Use at most one `:` — `"instance : Qualified::Type"` |
 | `standalone ':' must have a non-empty right-hand side` | e.g. `participant "backend :"` | Write the type after the `:` |
 | `Duplicate entity id: <id>` | Two elements resolve to the same identifier | Rename one — note `core::User` and `core.User` are the *same* identifier ([Rule F](#rule-f)) |
-| `Ambiguous reference: <ref> -> <candidates>` | A reference matches more than one declared entity | Qualify the reference, or start it with `.` for the root path (class diagrams) |
+| `Ambiguous reference: <ref> -> <candidates>` | A reference matches more than one declared entity | Qualify the reference, or start it with `.` for the root path |
 | `Unresolved reference: <ref>` | A reference matches no element: an aliased element's label, a path that does not exist, or (class diagrams) an element declared further down in another scope | Refer to the element by its alias or leaf, qualify the path, or declare the element first |
 | `duplicate sequence participant id <uid>` | Two participants resolve to the same identifier | Same as above |
 
@@ -408,14 +448,11 @@ participant "Display Service" as DisplayService
    `"instance : package::Component::Unit"`. Use the alias only for arrows.
 4. **Mirror the nesting** between component and class diagrams — the scope
    segments must be identical on both sides.
-5. **Do not mix nesting with qualified names.** Either nest the element in
-   `package`/`namespace` blocks, or declare it at top level with a qualified
-   name — not both (see limitations below).
-6. **Use `ExternalEndpoint` verbatim** for out-of-scope actors.
-7. **Treat identifiers as derived, not authored.** If you need a different
+5. **Use `ExternalEndpoint` verbatim** for out-of-scope actors.
+6. **Treat identifiers as derived, not authored.** If you need a different
    identifier, change the structure (nesting, alias, or owning Bazel package) —
    there is no override.
-8. **Make references unambiguous.** If a name exists in several scopes,
+7. **Make references unambiguous.** If a name exists in several scopes,
    qualify the reference (`core.User`) or anchor it at the root (`.User`).
    Keep aliases unique within a component diagram. In class diagrams, declare
    an element before referring to it from another scope
@@ -426,14 +463,9 @@ participant "Display Service" as DisplayService
 ## 9. Current limitations
 
 See the [implementation status table](#0-implementation-status) for what is and
-isn't implemented yet. The two rows below are bugs rather than pending work —
-they have no planned test case and no target-design row of their own:
+isn't implemented yet. The item below is a bug rather than pending work —
+it has no planned test case and no target-design row of its own:
 
-- **A qualified name used in a *declaration* inside a block is appended to the
-  enclosing scope instead of replacing it.** For example
-  `package outer { class core::geometry::Circle }` yields
-  `score.mw.log.outer.core.geometry.Circle`, whereas the rule would call for
-  `score.mw.log.core.geometry.Circle`. Avoid this combination (best practice 5).
 - **Cross-diagram hyperlinks (`idmap`) are not yet identifier-based for
   sequence diagrams**, so clickable links from a sequence participant to its
   component may not resolve.
@@ -470,6 +502,11 @@ standalone CLI runs).
 - *Sequence:* both are derived from the label ([Rule B](#rule-b)); participant
   nesting does not exist.
 
+The `name` field of a class or component is not part of the identifier. It is
+the written name with its spelling kept (`a::b::C` stays `a::b::C`) and one
+leading root marker removed. A component with an alias keeps its `name`
+verbatim, because it is display text (`component ".NET" as dotnet`).
+
 ### Rule B
 
 **Sequence label (`type_text`).** Take the first non-empty line of the display
@@ -488,11 +525,18 @@ than one standalone `:`, or a `:` with an empty right-hand side, is an error.
 ### Rule C
 
 **Explicit scope path.** If the name selected by [Rule A](#rule-a) /
-[Rule B](#rule-b) contains `.` or `::`, it is an explicit scope path expressed
-*relative to* `root_anchor`, never an absolute identifier:
-`uid = join(root_anchor, normalize(name))`. The explicit path replaces the
-enclosing internal scope; it is not appended to it. This applies to
-declarations and to sequence participants.
+[Rule B](#rule-b) contains `.` or `::`, it is a qualified name. A declaration
+nests it under the enclosing internal scope:
+`uid = join(root_anchor, internal_scope, normalize(name))`. A name with a
+leading `.` or `::` is rooted instead: `uid = join(root_anchor, normalize(name))`,
+the enclosing scope is ignored. The parent / enclosing
+namespace of a declaration is all segments of the resulting identifier except
+the leaf. It is a path derived from the identifier, not a reference: the parent
+need not be declared in this diagram (it may be declared in another diagram or
+nowhere). A qualified port or interface `a::I` therefore has parent `a`; a
+top-level one still has a parent, so it counts as internal API. Sequence
+participants have no enclosing scope, so their path is
+always below the root anchor.
 
 **References.** A reference `r` written in internal scope `S` (class
 relationship endpoint, `extends`, `implements`, component relation endpoint)
@@ -500,7 +544,7 @@ resolves to an existing element. Let
 `local = join(root_anchor, S, normalize(r))` and
 `rooted = join(root_anchor, normalize(r))`.
 
-1. `r` starts with `.` (class diagrams): `rooted`.
+1. `r` starts with `.` or `::`: `rooted`.
 2. `r` contains no `.` or `::`: `local` if it exists, else the unique element
    whose leaf ([Rule A](#rule-a)) is `r` — or, when that leaf itself has
    separators (an unaliased qualified declaration), whose leaf's last segment
@@ -535,4 +579,6 @@ elements), and the reserved sequence participant `ExternalEndpoint`.
 **Uniqueness.** Within one diagram, two elements resolving to the same
 identifier is an error. Across diagrams, an identical identifier means "the same
 architecture element", which is exactly what cross-diagram consistency
-validation compares.
+validation compares. When component diagrams are merged, declarations of one
+identifier merge, and two names compare equal if they are the same identifier
+path in either spelling (`a::b::C` and `a.b.C`).

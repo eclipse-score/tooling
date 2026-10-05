@@ -171,7 +171,7 @@ impl ClassParseSession<'_> {
                         *internal = Some(strip_quotes(&raw));
                     }
                 }
-                Rule::STRING | Rule::class_qualified_name => {
+                Rule::STRING | Rule::class_name_path => {
                     if internal.is_none() {
                         *internal = Some(strip_quotes(pair.as_str()));
                     }
@@ -591,10 +591,7 @@ impl ClassParseSession<'_> {
                 match pair.as_rule() {
                     Rule::extends_clause => {
                         for inner in pair.into_inner() {
-                            if matches!(
-                                inner.as_rule(),
-                                Rule::extends_target | Rule::class_qualified_name
-                            ) {
+                            if inner.as_rule() == Rule::extends_target {
                                 targets.push(inner.as_str().to_string());
                             }
                         }
@@ -617,10 +614,7 @@ impl ClassParseSession<'_> {
                 match pair.as_rule() {
                     Rule::implements_clause => {
                         for inner in pair.into_inner() {
-                            if matches!(
-                                inner.as_rule(),
-                                Rule::implements_target | Rule::class_qualified_name
-                            ) {
+                            if inner.as_rule() == Rule::implements_target {
                                 targets.push(inner.as_str().to_string());
                             }
                         }
@@ -1515,6 +1509,117 @@ mod tests {
         let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
 
         assert_eq!(rel.right, ".B");
+    }
+
+    #[test]
+    fn test_parse_relationship_double_colon_root_marker_endpoint() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "::a::A --> ::b::B")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
+
+        assert_eq!(rel.left, "::a::A");
+        assert_eq!(rel.right, "::b::B");
+    }
+
+    fn parse_class_diagram_body(body: &str) -> Result<ClassUmlFile, ClassError> {
+        let input = format!("@startuml\n{body}\n@enduml\n");
+        PumlClassParser.parse_file(
+            &std::rc::Rc::new(std::path::PathBuf::from("test.puml")),
+            &input,
+            LogLevel::Info,
+        )
+    }
+
+    /// Both separators and both root markers, for every qualified position.
+    const NAME_SPELLINGS: [&str; 6] = ["a.b.C", "a::b::C", "a.b::C", ".a.C", "::a::C", "::a.C"];
+
+    #[test]
+    fn test_declaration_names_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            for keyword in ["class", "struct", "interface", "abstract class"] {
+                let file = parse_class_diagram_body(&format!("{keyword} {spelling}"))
+                    .unwrap_or_else(|error| panic!("`{keyword} {spelling}`: {error:?}"));
+                let ClassUmlTopLevel::Types(element) = &file.elements[0] else {
+                    panic!("`{keyword} {spelling}`: expected a type element");
+                };
+                let name = match element {
+                    Element::ClassDef(def) => &def.name,
+                    Element::StructDef(def) => &def.name,
+                    Element::InterfaceDef(def) => &def.name,
+                    Element::EnumDef(def) => &def.name,
+                };
+                assert_eq!(name.internal, spelling, "`{keyword} {spelling}`");
+            }
+
+            let file = parse_class_diagram_body(&format!("enum {spelling}"))
+                .unwrap_or_else(|error| panic!("`enum {spelling}`: {error:?}"));
+            let ClassUmlTopLevel::Enum(def) = &file.elements[0] else {
+                panic!("`enum {spelling}`: expected an enum");
+            };
+            assert_eq!(def.name.internal, spelling);
+        }
+    }
+
+    #[test]
+    fn test_package_and_namespace_names_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            let file = parse_class_diagram_body(&format!("package {spelling} {{\n}}"))
+                .unwrap_or_else(|error| panic!("`package {spelling}`: {error:?}"));
+            let ClassUmlTopLevel::Package(package) = &file.elements[0] else {
+                panic!("`package {spelling}`: expected a package");
+            };
+            assert_eq!(package.name.internal, spelling);
+
+            let file = parse_class_diagram_body(&format!("namespace {spelling} {{\n}}"))
+                .unwrap_or_else(|error| panic!("`namespace {spelling}`: {error:?}"));
+            let ClassUmlTopLevel::Namespace(namespace) = &file.elements[0] else {
+                panic!("`namespace {spelling}`: expected a namespace");
+            };
+            assert_eq!(namespace.name.internal, spelling);
+        }
+    }
+
+    #[test]
+    fn test_extends_and_implements_targets_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            let file = parse_class_diagram_body(&format!(
+                "class X extends {spelling}, Y implements {spelling}, Z"
+            ))
+            .unwrap_or_else(|error| panic!("{spelling}: {error:?}"));
+            let ClassUmlTopLevel::Types(Element::ClassDef(def)) = &file.elements[0] else {
+                panic!("{spelling}: expected a class");
+            };
+            assert_eq!(def.extends, [spelling, "Y"], "{spelling}");
+            assert_eq!(def.implements, [spelling, "Z"], "{spelling}");
+        }
+    }
+
+    #[test]
+    fn test_relationship_endpoints_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            let file = parse_class_diagram_body(&format!("{spelling} --> {spelling}"))
+                .unwrap_or_else(|error| panic!("{spelling}: {error:?}"));
+            assert_eq!(file.relationships.len(), 1, "{spelling}");
+            assert_eq!(file.relationships[0].left, spelling);
+            assert_eq!(file.relationships[0].right, spelling);
+        }
+    }
+
+    #[test]
+    fn test_malformed_qualified_names_are_rejected() {
+        for spelling in ["a..b", "a::", "a:::b", "::", ".", "a.", "a.::b"] {
+            for body in [
+                format!("class {spelling}"),
+                format!("package {spelling} {{\n}}"),
+                format!("class X extends {spelling}"),
+            ] {
+                let result = parse_class_diagram_body(&body);
+                assert!(result.is_err(), "`{body}` must not parse: {result:?}");
+            }
+        }
     }
 
     #[test]
