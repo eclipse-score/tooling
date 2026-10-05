@@ -1,45 +1,54 @@
 {
-  "relation_leaf_of_qualified_declaration.puml": {
-    "name": "",
-    "entities": [
-      {
-        "id": "a.b.Y",
-        "name": "a::b::Y",
-        "enclosing_namespace_id": null,
-        "stereotypes": [],
-        "entity_type": "Class",
-        "type_aliases": [],
-        "variables": [],
-        "methods": [],
-        "template_parameters": null,
-        "enum_literals": [],
-        "relationships": [],
-        "source_location": { "file": "", "line": 15 }
-      },
-      {
-        "id": "C",
-        "name": "C",
-        "enclosing_namespace_id": null,
-        "stereotypes": [],
-        "entity_type": "Class",
-        "type_aliases": [],
-        "variables": [],
-        "methods": [],
-        "template_parameters": null,
-        "enum_literals": [],
-        "relationships": [
-          {
-            "source": "C",
-            "target": "a.b.Y",
-            "relation_type": "Association",
-            "source_multiplicity": null,
-            "target_multiplicity": null,
-            "source_location": { "file": "", "line": 17 }
-          }
+    "relation_leaf_of_qualified_declaration.puml": {
+        "name": "",
+        "entities": [
+            {
+                "id": "a.b.Y",
+                "name": "a::b::Y",
+                "enclosing_namespace_id": "a.b",
+                "stereotypes": [],
+                "entity_type": "Class",
+                "type_aliases": [],
+                "variables": [],
+                "methods": [],
+                "template_parameters": null,
+                "enum_literals": [],
+                "relationships": [],
+                "source_location": {
+                    "file": "",
+                    "line": 15
+                }
+            },
+            {
+                "id": "C",
+                "name": "C",
+                "enclosing_namespace_id": null,
+                "stereotypes": [],
+                "entity_type": "Class",
+                "type_aliases": [],
+                "variables": [],
+                "methods": [],
+                "template_parameters": null,
+                "enum_literals": [],
+                "relationships": [
+                    {
+                        "source": "C",
+                        "target": "a.b.Y",
+                        "relation_type": "Association",
+                        "source_multiplicity": null,
+                        "target_multiplicity": null,
+                        "source_location": {
+                            "file": "",
+                            "line": 17
+                        }
+                    }
+                ],
+                "source_location": {
+                    "file": "",
+                    "line": 16
+                }
+            }
         ],
-        "source_location": { "file": "", "line": 16 }
-      }
-    ],
-    "free_functions": []
-  }
+        "free_functions": []
+    }
 }

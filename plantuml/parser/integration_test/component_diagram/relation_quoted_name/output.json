@@ -28,7 +28,7 @@
       "id": "score.mw.log",
       "name": "score::mw::log",
       "alias": null,
-      "parent_id": null,
+      "parent_id": "score.mw",
       "comp_type": "Component",
       "stereotype": null,
       "relations": [],

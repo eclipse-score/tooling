@@ -23,7 +23,7 @@ use class_parser::{
 use parser_core::common_ast::Arrow;
 use resolver_traits::DiagramResolver;
 use thiserror::Error;
-use uid_normalization::{leaf_key, InternalScope, Resolution, RootAnchor};
+use uid_normalization::{leaf_key, strip_root_marker, InternalScope, Resolution, RootAnchor};
 
 #[derive(Debug, Error)]
 pub enum ClassPumlResolverError {
@@ -132,13 +132,13 @@ impl ClassResolver {
         name.display.as_deref().unwrap_or(&name.internal)
     }
 
-    /// Nesting scope path, without root anchor.
-    fn enclosing_namespace_id(scope: &InternalScope) -> Option<String> {
-        (!scope.is_empty()).then(|| scope.resolve(&RootAnchor::default()))
+    fn enclosing_namespace_id(&self, declared: &InternalScope) -> Option<String> {
+        let parent = declared.parent();
+        (!parent.is_empty()).then(|| parent.resolve(&self.root_anchor))
     }
 
     fn resolve_entity_id(&self, leaf: &str, scope: &InternalScope) -> String {
-        scope.resolve_with_leaf(&self.root_anchor, leaf)
+        scope.declare(leaf).resolve(&self.root_anchor)
     }
 
     fn declared_before(&self, id: &str, reference_line: u32) -> bool {
@@ -259,7 +259,7 @@ impl ClassResolver {
         pkg: &Package,
         scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let nested = scope.child(Self::id_leaf(&pkg.name));
+        let nested = scope.declare(Self::id_leaf(&pkg.name));
 
         for t in &pkg.types {
             self.process_element(t, &nested)?;
@@ -277,7 +277,7 @@ impl ClassResolver {
         ns: &Namespace,
         scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let nested = scope.child(Self::id_leaf(&ns.name));
+        let nested = scope.declare(Self::id_leaf(&ns.name));
 
         for t in &ns.types {
             self.process_element(t, &nested)?;
@@ -296,7 +296,7 @@ impl ClassResolver {
         pkg: &Package,
         scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let nested = scope.child(Self::id_leaf(&pkg.name));
+        let nested = scope.declare(Self::id_leaf(&pkg.name));
 
         for t in &pkg.types {
             self.process_declared_relations_element(t, &nested)?;
@@ -318,7 +318,7 @@ impl ClassResolver {
         ns: &Namespace,
         scope: &InternalScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let nested = scope.child(Self::id_leaf(&ns.name));
+        let nested = scope.declare(Self::id_leaf(&ns.name));
 
         for t in &ns.types {
             self.process_declared_relations_element(t, &nested)?;
@@ -478,8 +478,8 @@ impl ClassResolver {
 
         let entity = SimpleEntity {
             id: id.clone(),
-            name: leaf.to_string(),
-            enclosing_namespace_id: Self::enclosing_namespace_id(scope),
+            name: strip_root_marker(leaf).to_string(),
+            enclosing_namespace_id: self.enclosing_namespace_id(&scope.declare(leaf)),
             stereotypes: stereotypes.clone(),
             entity_type,
             type_aliases: type_aliases.iter().map(Self::convert_type_alias).collect(),
@@ -698,8 +698,8 @@ impl ClassResolver {
 
         let entity = SimpleEntity {
             id: id.clone(),
-            name: leaf.to_string(),
-            enclosing_namespace_id: Self::enclosing_namespace_id(scope),
+            name: strip_root_marker(leaf).to_string(),
+            enclosing_namespace_id: self.enclosing_namespace_id(&scope.declare(leaf)),
             stereotypes: def.stereotypes.clone(),
             entity_type: EntityType::Enum,
             type_aliases: vec![],

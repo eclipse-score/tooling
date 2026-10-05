@@ -20,7 +20,9 @@ use component_diagram::{
 };
 use component_parser::{Arrow, CompPumlDocument, Element, Port, PortType, Relation, Statement};
 use resolver_traits::DiagramResolver;
-use uid_normalization::{leaf_key, resolve_reference, InternalScope, Resolution, RootAnchor};
+use uid_normalization::{
+    leaf_key, resolve_reference, strip_root_marker, InternalScope, Resolution, RootAnchor,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ComponentResolverError {
@@ -507,9 +509,11 @@ impl ComponentResolver {
 impl ComponentResolver {
     fn visit_port(&mut self, port: &Port) {
         let local_id = port.alias.as_deref().unwrap_or(&port.name);
-        let fqn = self.scope.resolve_with_leaf(&self.root_anchor, local_id);
+        let declared = self.scope.declare(local_id);
+        let fqn = declared.resolve(&self.root_anchor);
 
-        if self.scope.is_empty() {
+        let parent = declared.parent();
+        if parent.is_empty() {
             // Top-level ports are pure connectors/aliases, not entities — ignore them.
             // Use `interface` to declare a top-level interface as a first-class entity.
         } else {
@@ -520,7 +524,7 @@ impl ComponentResolver {
                 .or_default()
                 .push(fqn.clone());
             self.port_parents
-                .insert(fqn, self.scope.resolve(&self.root_anchor));
+                .insert(fqn, parent.resolve(&self.root_anchor));
         }
     }
 
@@ -534,16 +538,22 @@ impl ComponentResolver {
                 source_location: element.identity.source_location.clone(),
             })?;
 
-        let fqn = self.scope.resolve_with_leaf(&self.root_anchor, local_id);
+        let declared = self.scope.declare(local_id);
+        let fqn = declared.resolve(&self.root_anchor);
         if self.elements.contains_key(&fqn) {
             return Err(ComponentResolverError::DuplicateElement { element_id: fqn });
         }
 
-        let parent_id = (!self.scope.is_empty()).then(|| self.scope.resolve(&self.root_anchor));
+        let parent = declared.parent();
+        let parent_id = (!parent.is_empty()).then(|| parent.resolve(&self.root_anchor));
 
         let logic = LogicComponent {
             id: fqn.clone(),
-            name: element.identity.name.clone(),
+            name: element
+                .identity
+                .name
+                .as_deref()
+                .map(|name| strip_root_marker(name).to_string()),
             alias: element.identity.alias.clone(),
             source_location: element.identity.source_location.clone(),
             parent_id,
@@ -558,8 +568,7 @@ impl ComponentResolver {
             .or_default()
             .push(fqn);
 
-        let nested = self.scope.child(local_id);
-        let outer = std::mem::replace(&mut self.scope, nested);
+        let outer = std::mem::replace(&mut self.scope, declared);
 
         for stmt in &element.statements {
             self.visit_statement(stmt)?;

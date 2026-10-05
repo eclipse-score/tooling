@@ -42,14 +42,11 @@ pub(super) fn merge_relations(existing: &mut LogicComponent, incoming: &LogicCom
 /// Returns the first field on which two same-id declarations disagree, or
 /// `None` if they may be merged.
 ///
-/// `alias`/`parent` aren't compared: the same `id` already implies both match.
+/// `name`/`alias`/`parent` aren't compared: the same `id` already implies both match.
 pub(super) fn conflicting_declaration_field(
     prev: &LogicComponent,
     entity: &LogicComponent,
 ) -> Option<&'static str> {
-    if prev.name != entity.name {
-        return Some("display name");
-    }
     if prev.stereotype != entity.stereotype {
         return Some("stereotype");
     }
@@ -375,46 +372,6 @@ mod tests {
                 .iter()
                 .any(|message| message.contains("is re-declared with a conflicting stereotype")),
             "Expected conflicting stereotype error, got: {:?}",
-            result.failures
-        );
-    }
-
-    #[test]
-    fn reports_conflicting_display_name() {
-        let mut first = entity_in_file(
-            "comp_a",
-            Some("comp_a"),
-            None,
-            ComponentType::Component,
-            Some("component"),
-            Vec::new(),
-            "detail.puml",
-        );
-        first.name = Some("Component A".to_string());
-        let mut second = entity_in_file(
-            "comp_a",
-            Some("comp_a"),
-            None,
-            ComponentType::Component,
-            Some("component"),
-            Vec::new(),
-            "overview.puml",
-        );
-        second.name = Some("Component A (renamed)".to_string());
-
-        let inputs = ComponentDiagramInputs {
-            entities: vec![first, second],
-        };
-
-        let mut result = ValidationResult::default();
-        let _architecture = inputs.to_diagram_architecture(&mut result);
-
-        assert!(
-            result
-                .failures
-                .iter()
-                .any(|message| message.contains("is re-declared with a conflicting display name")),
-            "Expected conflicting display name error, got: {:?}",
             result.failures
         );
     }

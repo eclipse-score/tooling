@@ -1,0 +1,41 @@
+{
+    "qualified_interface_top_level.puml": {
+        "a.b.I": {
+            "id": "a.b.I",
+            "name": "a.b.I",
+            "alias": null,
+            "parent_id": "a.b",
+            "comp_type": "Interface",
+            "stereotype": null,
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 15
+            }
+        },
+        "C": {
+            "id": "C",
+            "name": "C",
+            "alias": null,
+            "parent_id": null,
+            "comp_type": "Component",
+            "stereotype": null,
+            "relations": [
+                {
+                    "target": "a.b.I",
+                    "annotation": null,
+                    "relation_type": "Dependency",
+                    "source_role": "None",
+                    "source_location": {
+                        "file": "",
+                        "line": 17
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "",
+                "line": 16
+            }
+        }
+    }
+}

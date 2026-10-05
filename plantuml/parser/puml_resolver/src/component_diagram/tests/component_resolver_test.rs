@@ -110,6 +110,36 @@ fn test_relation_quoted_name() {
 }
 
 #[test]
+fn test_qualified_component_in_component() {
+    run_component_resolver_case("qualified_component_in_component");
+}
+
+#[test]
+fn test_unquoted_qualified_endpoint() {
+    run_component_resolver_case("unquoted_qualified_endpoint");
+}
+
+#[test]
+fn test_qualified_interface_top_level() {
+    run_component_resolver_case("qualified_interface_top_level");
+}
+
+#[test]
+fn test_qualified_port_owner() {
+    run_component_resolver_case("qualified_port_owner");
+}
+
+#[test]
+fn test_invalid_qualified_port_owner_missing() {
+    run_component_resolver_case("invalid_qualified_port_owner_missing");
+}
+
+#[test]
+fn test_separator_equivalence() {
+    run_component_resolver_case("separator_equivalence");
+}
+
+#[test]
 fn test_relation_simple_name_prefers_direct_hit() {
     run_component_resolver_case("relation_simple_name_prefers_direct_hit");
 }

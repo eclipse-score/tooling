@@ -1,0 +1,42 @@
+{
+    "rooted_dotted_declaration.puml": {
+        "name": "",
+        "entities": [
+            {
+                "id": "core.Circle",
+                "name": "core.Circle",
+                "enclosing_namespace_id": "core",
+                "stereotypes": [],
+                "entity_type": "Class",
+                "type_aliases": [],
+                "variables": [],
+                "methods": [],
+                "template_parameters": null,
+                "enum_literals": [],
+                "relationships": [],
+                "source_location": {
+                    "file": "",
+                    "line": 16
+                }
+            },
+            {
+                "id": "outer.core.Square",
+                "name": "core.Square",
+                "enclosing_namespace_id": "outer.core",
+                "stereotypes": [],
+                "entity_type": "Class",
+                "type_aliases": [],
+                "variables": [],
+                "methods": [],
+                "template_parameters": null,
+                "enum_literals": [],
+                "relationships": [],
+                "source_location": {
+                    "file": "",
+                    "line": 17
+                }
+            }
+        ],
+        "free_functions": []
+    }
+}

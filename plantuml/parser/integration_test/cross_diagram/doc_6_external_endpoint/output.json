@@ -1,0 +1,15 @@
+{
+    "component_diagram.puml": {
+        "defines": {},
+        "references": {
+            "Backend": "Backend"
+        }
+    },
+    "sequence_diagram.puml": {
+        "defines": {},
+        "references": {
+            "Backend": "Backend",
+            "ExternalEndpoint": "ExternalEndpoint"
+        }
+    }
+}

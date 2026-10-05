@@ -143,6 +143,36 @@ fn test_relation_leaf_of_qualified_declaration() {
 }
 
 #[test]
+fn test_qualified_declaration_in_package() {
+    run_class_resolver_case("qualified_declaration_in_package");
+}
+
+#[test]
+fn test_rooted_declaration_in_package() {
+    run_class_resolver_case("rooted_declaration_in_package");
+}
+
+#[test]
+fn test_rooted_dotted_declaration() {
+    run_class_resolver_case("rooted_dotted_declaration");
+}
+
+#[test]
+fn test_separator_equivalence() {
+    run_class_resolver_case("separator_equivalence");
+}
+
+#[test]
+fn test_qualified_container_in_package() {
+    run_class_resolver_case("qualified_container_in_package");
+}
+
+#[test]
+fn test_invalid_qualified_declaration_duplicate() {
+    run_class_resolver_case("qualified_declaration_duplicate");
+}
+
+#[test]
 fn test_package_relationship_reopened_package() {
     run_class_resolver_case("package_relationship_reopened_package");
 }

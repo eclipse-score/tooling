@@ -1,0 +1,18 @@
+{
+    "package_a.puml": {
+        "defines": {
+            "logging": "logging"
+        },
+        "references": {
+            "Backend": "logging.Backend"
+        }
+    },
+    "package_b.puml": {
+        "defines": {
+            "logging": "logging"
+        },
+        "references": {
+            "Backend": "logging.Backend"
+        }
+    }
+}

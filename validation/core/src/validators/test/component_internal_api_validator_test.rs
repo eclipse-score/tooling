@@ -165,3 +165,20 @@ fn ignores_component_interface_without_parent_id() {
 
     assert!(validation_result.failures.is_empty());
 }
+
+#[test]
+fn treats_top_level_qualified_interface_as_internal_api() {
+    // `interface a.b.I` at top level has parent `a.b` and is internal API.
+    let component_diagrams = component_diagram(vec![
+        unit("u1", &["a.b.I"], &[]),
+        interface_with_parent_id("I", "a.b"),
+    ]);
+    let internal_api = internal_api_index(vec![]);
+
+    let validation_result = validate(component_diagrams, &internal_api);
+
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0].contains(
+        "Component interface(s) \"a.b.I\" from the component diagram not found in the internal API diagram."
+    ));
+}

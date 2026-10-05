@@ -421,6 +421,75 @@ mod tests {
     }
 
     #[test]
+    fn resolves_qualified_parent_declared_elsewhere_in_the_merged_inputs() {
+        let inputs = ComponentDiagramInputs {
+            entities: vec![
+                entity(
+                    "a.b",
+                    None,
+                    Some("a"),
+                    ComponentType::Component,
+                    Some("component"),
+                    Vec::new(),
+                ),
+                entity(
+                    "a",
+                    None,
+                    None,
+                    ComponentType::Package,
+                    Some("SEooC"),
+                    Vec::new(),
+                ),
+                entity(
+                    "a.b.C",
+                    None,
+                    Some("a.b"),
+                    ComponentType::Component,
+                    Some("unit"),
+                    Vec::new(),
+                ),
+            ],
+        };
+
+        let mut result = ValidationResult::default();
+        let architecture = inputs.to_diagram_architecture(&mut result);
+
+        assert!(
+            result.is_empty(),
+            "unexpected failures: {:?}",
+            result.failures
+        );
+        assert!(architecture
+            .unit_set
+            .contains_key(&("a.b.c".to_string(), Some("a.b".to_string()))));
+    }
+
+    #[test]
+    fn reports_qualified_component_whose_prefix_parent_is_declared_nowhere() {
+        let inputs = ComponentDiagramInputs {
+            entities: vec![entity(
+                "a.b.C",
+                None,
+                Some("a.b"),
+                ComponentType::Component,
+                Some("component"),
+                Vec::new(),
+            )],
+        };
+
+        let mut result = ValidationResult::default();
+        let _architecture = inputs.to_diagram_architecture(&mut result);
+
+        assert!(
+            result.failures.iter().any(|message| message.contains(
+                "Component \"a.b.c\" references a parent that is not defined in the component diagram."
+            )),
+            "Expected unresolved parent error, got: {:?}",
+            result.failures
+        );
+    }
+
+    #[test]
     fn reports_unresolved_parent_id() {
         let inputs = ComponentDiagramInputs {
             entities: vec![
