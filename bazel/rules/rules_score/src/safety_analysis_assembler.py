@@ -14,31 +14,25 @@
 
 The page is pivoted around the safety chain: an overview summary table followed
 by one section per failure mode, each containing the failure-mode detail and one
-"Root Cause Analysis" block per fault tree (``FtaFailureMode``) that covers it — the
-diagram inline plus a "Safety Measures" subsection holding only the measures
-(``Mitigation``, ``AoU``, ``CompReq``) that address that tree's root causes.
-Failure modes not covered by any fault tree, and measures not referenced by
-any generated stub, still render (with an empty root-cause / measures part)
-so nothing is dropped.
+card per root cause (``RootCause``) of that failure mode, holding the measures
+(``Mitigation``, ``AoU``, ``CompReq``) that address it.  A "Fault Trees" section
+shows every fault-tree diagram once.  Failure modes without a root cause and
+measures not referencing any generated root cause still render, so nothing is
+dropped.
 
-A fault-tree root cause (``RootCause``) is addressed by any of three measure
-kinds: a ``Mitigation`` or ``AoU`` referencing it directly via their
-``root_causes`` field, or a ``CompReq`` referencing it as one item in its
-``derived_from`` (a control measure).  ``--uncovered-root-causes-output``
-emits the set of ``RootCause`` fqns addressed by none of the three, so
-``dependability_analysis`` can fail (or warn) on incomplete coverage.
+A fault-tree root cause is addressed by any of three measure kinds: a
+``Mitigation`` or ``AoU`` referencing it directly via their ``root_causes``
+field, or a ``CompReq`` referencing it as one item in its ``derived_from`` (a
+control measure).
 
-The fault-tree topology (``FtaFailureMode``/``RootCause`` -> ``FailureMode``/
-measures) is carried entirely by regular, strongly-typed TRLC references (see
-``puml_fta::render_trlc_stub``) rather than an external alias-matched
-``fta_chains.json``, so a single in-process TRLC parse (via the extended
-``TRLCRST`` library) backs the whole page — no per-record Bazel actions and
-no ``.inc`` splitting.
+All links (``RootCause`` -> ``FailureMode``, measure -> ``RootCause``) are
+regular, strongly-typed TRLC references (see ``puml_fta::render_trlc_stub``), so
+a single in-process TRLC parse (via the extended ``TRLCRST`` library) backs the
+whole page.  Coverage of the links is checked by lobster, not here.
 """
 
 import argparse
 import dataclasses
-import json
 import logging
 import re
 import sys
@@ -63,8 +57,9 @@ _FM_TABLE_COLUMNS = {
 
 _OVERVIEW_TITLE = "Overview"
 _FAILURE_MODES_TITLE = "Failure Modes"
+_FAULT_TREES_TITLE = "Fault Trees"
 _SAFETY_MEASURES_TITLE = "Safety Measures"
-_ROOT_CAUSE_TITLE = "Root Cause Analysis"
+_ROOT_CAUSES_TITLE = "Root Causes"
 
 # TRLC record types that count as a measure addressing a fault-tree root
 # cause (RootCause): Mitigation/AoU via their own root_causes field, CompReq
@@ -110,7 +105,21 @@ def _anchor(fqn: str) -> str:
 
 
 def _ref(fqn: str, name: str) -> str:
-    return f":ref:`{name} <{_anchor(fqn)}>`"
+    return _ref_text(_anchor(fqn), name)
+
+
+def _ref_text(anchor: str, name: str) -> str:
+    return f":ref:`{name} <{anchor}>`"
+
+
+def _diagram_anchor(fta_package: str, diagram: str) -> str:
+    """Label for a fault-tree diagram; scoped by package so equal basenames never clash."""
+    return _anchor(f"{fta_package} diagram {diagram}")
+
+
+def _escape(text: str) -> str:
+    """Escape RST inline-markup characters in free text (e.g. a root-cause title)."""
+    return re.sub(r"([\\*`_|])", r"\\\1", text)
 
 
 @dataclasses.dataclass
@@ -230,36 +239,42 @@ def _measures_grid(renderer: TRLCRST, obj_map: dict, measures: list[str]) -> _Di
     return _grid(cards, columns=1) if cards else None
 
 
-def _fm_dropdown(renderer: TRLCRST, fqn: str, obj: object, chains: list[dict]) -> _Directive:
+def _root_cause_card(renderer: TRLCRST, obj_map: dict, rc_fqn: str, diagrams: dict[str, str]) -> _Directive:
+    """One root-cause card: title, source diagram/line, and the measures addressing it."""
+    fields = obj_map[rc_fqn].to_python_dict()
+    diagram = fields.get("diagram", "")
+    source = _ref_text(diagrams[diagram], diagram) if diagram in diagrams else _escape(diagram)
+    body: list = [f"Source: {source}, line {fields.get('line')}"]
+    measures = _measures_grid(renderer, obj_map, _measures_for_root_cause(obj_map, rc_fqn))
+    body.append(measures if measures is not None else _badge("bdg-danger", "No safety measure"))
+    return _card(_escape(fields.get("title", "")), body)
+
+
+def _root_causes_for_failure_mode(obj_map: dict, fm_fqn: str) -> list[str]:
+    """``RootCause`` fqns whose ``failure_modes`` contain *fm_fqn*."""
+    return [
+        fqn
+        for fqn, obj in obj_map.items()
+        if obj.n_typ.name == "RootCause" and fm_fqn in (obj.to_python_dict().get("failure_modes") or [])
+    ]
+
+
+def _fm_dropdown(renderer: TRLCRST, obj_map: dict, fqn: str, diagrams: dict[str, str]) -> _Directive:
     """One collapsible failure-mode dropdown.
 
-    *chains* holds one entry per fault tree (``FtaFailureMode``) covering this
-    failure mode; it is empty for an orphan failure mode (no fault tree), in
-    which case the Root Cause Analysis / Safety Measures parts are omitted.
+    The Root Causes part is omitted for a failure mode no fault tree covers.
     """
-    body = [_attr_grid(obj), _description_card(renderer, fqn)]
-    for chain in chains:
-        body.append(_Directive("rubric", _ROOT_CAUSE_TITLE))
-        body.append(_Directive("uml", chain["puml"]))
-        measures = _measures_grid(renderer, renderer.objects_by_fqn(), chain["measures"])
-        if measures is not None:
-            body.append(_Directive("rubric", _SAFETY_MEASURES_TITLE))
-            body.append(measures)
+    body = [_attr_grid(obj_map[fqn]), _description_card(renderer, fqn)]
+    cards = [_root_cause_card(renderer, obj_map, rc, diagrams) for rc in _root_causes_for_failure_mode(obj_map, fqn)]
+    if cards:
+        body.append(_Directive("rubric", _ROOT_CAUSES_TITLE))
+        body.append(_grid(cards, columns=1))
     return _Directive("dropdown", fqn, {"name": _anchor(fqn)}, body)
 
 
 # ---------------------------------------------------------------------------
 # Section renderers — top-level page sections (return RST strings)
 # ---------------------------------------------------------------------------
-
-
-def _root_causes_for_fta_failure_mode(obj_map: dict, ffm_fqn: str) -> list[str]:
-    """RootCause fqns whose ``failure_modes`` field references *ffm_fqn*."""
-    return [
-        fqn
-        for fqn, obj in obj_map.items()
-        if obj.n_typ.name == "RootCause" and ffm_fqn in (obj.to_python_dict().get("failure_modes") or [])
-    ]
 
 
 def _measures_for_root_cause(obj_map: dict, rc_fqn: str) -> list[str]:
@@ -285,37 +300,6 @@ def _measures_for_root_cause(obj_map: dict, rc_fqn: str) -> list[str]:
     return result
 
 
-def _uncovered_root_causes(obj_map: dict) -> list[str]:
-    """``RootCause`` fqns addressed by no Mitigation, AoU, or CompReq."""
-    rc_fqns = [fqn for fqn, obj in obj_map.items() if obj.n_typ.name == "RootCause"]
-    return sorted(fqn for fqn in rc_fqns if not _measures_for_root_cause(obj_map, fqn))
-
-
-def _chains_for_failure_mode(obj_map: dict, fm_fqn: str) -> list[dict]:
-    """One chain entry per ``FtaFailureMode`` covering *fm_fqn*: its diagram plus the
-    measures attached (via ``root_causes``/``derived_from``) to its root
-    causes."""
-    chains = []
-    for ffm_fqn, ffm_obj in obj_map.items():
-        if ffm_obj.n_typ.name != "FtaFailureMode":
-            continue
-        if fm_fqn not in (ffm_obj.to_python_dict().get("failure_modes") or []):
-            continue
-        measures = []
-        for rc_fqn in _root_causes_for_fta_failure_mode(obj_map, ffm_fqn):
-            for measure_fqn in _measures_for_root_cause(obj_map, rc_fqn):
-                if measure_fqn not in measures:
-                    measures.append(measure_fqn)
-        chains.append(
-            {
-                "ffm_fqn": ffm_fqn,
-                "puml": ffm_obj.to_python_dict()["diagram"],
-                "measures": measures,
-            }
-        )
-    return chains
-
-
 def _render_overview(renderer: TRLCRST, fm_fqns: list[str]) -> str:
     if not fm_fqns:
         return ""
@@ -323,10 +307,20 @@ def _render_overview(renderer: TRLCRST, fm_fqns: list[str]) -> str:
     return _heading(_OVERVIEW_TITLE, "-") + "\n" + table
 
 
-def _render_failure_modes(renderer: TRLCRST, obj_map: dict, fm_fqns: list[str]) -> str:
-    dropdowns = [_fm_dropdown(renderer, fqn, obj_map[fqn], _chains_for_failure_mode(obj_map, fqn)) for fqn in fm_fqns]
+def _render_failure_modes(renderer: TRLCRST, obj_map: dict, fm_fqns: list[str], diagrams: dict[str, str]) -> str:
+    dropdowns = [_fm_dropdown(renderer, obj_map, fqn, diagrams) for fqn in fm_fqns]
     body = "\n\n".join(d.render() for d in dropdowns)
     return _heading(_FAILURE_MODES_TITLE, "-") + "\n" + body + "\n"
+
+
+def _render_fault_trees(diagrams: dict[str, str]) -> str:
+    if not diagrams:
+        return ""
+    parts = [_heading(_FAULT_TREES_TITLE, "-")]
+    for diagram, anchor in diagrams.items():
+        label = f".. _{anchor}:"
+        parts.append(f"{label}\n\n{_heading(diagram, '~')}\n{_Directive('uml', diagram).render()}\n")
+    return "\n".join(parts)
 
 
 def _render_measures(renderer: TRLCRST, obj_map: dict, measure_fqns: list[str]) -> str:
@@ -337,15 +331,17 @@ def _render_measures(renderer: TRLCRST, obj_map: dict, measure_fqns: list[str]) 
     return _heading(_SAFETY_MEASURES_TITLE, "-") + "\n" + body + "\n"
 
 
-def _build_body(renderer: TRLCRST, title: str) -> str:
+def _build_body(renderer: TRLCRST, title: str, fta_package: str, diagram_names: list[str]) -> str:
     obj_map = renderer.objects_by_fqn()
     fm_fqns = [fqn for fqn, obj in obj_map.items() if obj.n_typ.name == "FailureMode"]
     measure_fqns = [fqn for fqn, obj in obj_map.items() if obj.n_typ.name in _MEASURE_KINDS]
+    diagrams = {name: _diagram_anchor(fta_package, name) for name in sorted(set(diagram_names))}
 
     sections = [
         _heading(title, "="),
         _render_overview(renderer, fm_fqns),
-        _render_failure_modes(renderer, obj_map, fm_fqns),
+        _render_failure_modes(renderer, obj_map, fm_fqns, diagrams),
+        _render_fault_trees(diagrams),
         _render_measures(renderer, obj_map, measure_fqns),
     ]
     return "\n".join(s for s in sections if s)
@@ -353,19 +349,26 @@ def _build_body(renderer: TRLCRST, title: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", required=True, help="Output safety_analysis.rst path.")
+    parser.add_argument("--template", required=True, help="RST template path (must contain a '{body}' placeholder).")
+    parser.add_argument("--title", required=True, help="Page title.")
     parser.add_argument(
-        "--output", default=None, help="Output safety_analysis.rst path (omit for a coverage-check-only run)."
+        "--fta-package",
+        required=True,
+        dest="fta_package",
+        help="TRLC package of the generated RootCause records; scopes the diagram labels.",
     )
-    parser.add_argument("--template", default=None, help="RST template path (required together with --output).")
-    parser.add_argument("--title", default="", help="Page title (required together with --output).")
     parser.add_argument(
         "--fta-events",
-        nargs="+",
         required=True,
         dest="fta_events",
-        help="One or more fta_events.trlc files produced by puml_cli FTA mode (generated "
-        "FtaFailureMode/RootCause stubs) -- one per safety_analysis target when combining several for a "
-        "dependability_analysis-wide coverage check.",
+        help="fta_events.trlc produced by puml_cli FTA mode (the generated RootCause records).",
+    )
+    parser.add_argument(
+        "--diagrams",
+        nargs="*",
+        default=[],
+        help="Basenames of the fault-tree .puml diagrams staged next to the page; each is shown once.",
     )
     parser.add_argument("--failuremodes", nargs="*", default=[], help="FailureMode .trlc files.")
     parser.add_argument(
@@ -375,32 +378,10 @@ def main() -> None:
         help="Mitigation/AoU/CompReq .trlc files scoped to this safety_analysis target.",
     )
     parser.add_argument(
-        "--measures",
-        nargs="*",
-        default=[],
-        help="Additional Mitigation/AoU/CompReq .trlc files not scoped to a single safety_analysis target "
-        "(e.g. from a dependability_analysis's own 'measures' attribute).",
-    )
-    parser.add_argument(
-        "--dep-files",
-        nargs="*",
-        default=[],
-        dest="dep_files",
-        help="Extra .trlc files needed only for reference resolution (e.g. FeatReq/AssumedSystemReq "
-        "records referenced by a CompReq's derived_from) -- not rendered on the page themselves.",
-    )
-    parser.add_argument(
         "--spec",
         nargs="*",
         default=[],
         help="TRLC .rsl/.trlc spec files for import resolution.",
-    )
-    parser.add_argument(
-        "--uncovered-root-causes-output",
-        dest="uncovered_root_causes_output",
-        default=None,
-        help="Optional path to write a JSON array of RootCause fqns addressed by no "
-        "Mitigation, AoU, or CompReq (root-cause coverage completeness check).",
     )
     parser.add_argument(
         "--log-level",
@@ -413,14 +394,11 @@ def main() -> None:
 
     logging.basicConfig(level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s")
 
-    if bool(args.output) != bool(args.template):
-        parser.error("--output and --template must be given together")
-
-    source_files = list(args.failuremodes) + list(args.safetymeasures) + list(args.measures) + list(args.fta_events)
+    source_files = list(args.failuremodes) + list(args.safetymeasures) + [args.fta_events]
     renderer = TRLCRST(
         input_directory=None,
         source_files=source_files,
-        dep_files=list(args.spec) + list(args.dep_files),
+        dep_files=list(args.spec),
     )
     try:
         renderer.parse_trlc_files()
@@ -428,24 +406,17 @@ def main() -> None:
         logger.error("TRLC parse error: %s", exc)
         sys.exit(1)
 
-    if args.output:
-        body = _build_body(renderer, args.title)
+    body = _build_body(renderer, args.title, args.fta_package, args.diagrams)
 
-        with open(args.template, encoding="utf-8", newline="") as fh:
-            template = fh.read()
-        if "{body}" not in template:
-            logger.error("Template %r does not contain a '{body}' placeholder", args.template)
-            sys.exit(1)
-        rendered = template.replace("{body}", body)
+    with open(args.template, encoding="utf-8", newline="") as fh:
+        template = fh.read()
+    if "{body}" not in template:
+        logger.error("Template %r does not contain a '{body}' placeholder", args.template)
+        sys.exit(1)
+    rendered = template.replace("{body}", body)
 
-        with open(args.output, "w", newline="", encoding="utf-8") as fh:
-            fh.write(rendered)
-
-    if args.uncovered_root_causes_output:
-        uncovered = _uncovered_root_causes(renderer.objects_by_fqn())
-        with open(args.uncovered_root_causes_output, "w", encoding="utf-8") as fh:
-            json.dump(uncovered, fh, indent=2)
-            fh.write("\n")
+    with open(args.output, "w", newline="", encoding="utf-8") as fh:
+        fh.write(rendered)
 
 
 if __name__ == "__main__":

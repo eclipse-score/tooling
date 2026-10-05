@@ -123,20 +123,13 @@ AnalysisInfo = provider(
 )
 
 SafetyAnalysisProviderInfo = provider(
-    doc = """Provider carrying a safety_analysis target's raw TRLC source files.
+    doc = """Marker provider on safety_analysis targets.
 
-    Consumed by ``dependability_analysis`` to combine every safety_analysis sub-target's
-    fault-tree topology (RootCause root causes) with its own ``measures``
-    attribute into a single root-cause-coverage completeness check (every
-    RootCause addressed by at least one Mitigation, AoU, or CompReq),
-    without re-rendering each safety_analysis target's own ``safety_analysis.rst`` page.
+    Requirement targets that list a safety_analysis target in ``deps`` (only to
+    resolve its TRLC symbols) use it to leave that target's docs out of their
+    own Sphinx tree.
     """,
-    fields = {
-        "failuremodes": "Depset of FailureMode .trlc source files.",
-        "safetymeasures": "Depset of Mitigation/AoU/CompReq .trlc source files.",
-        "fta_events": "Depset containing the single generated fta_events.trlc stub file.",
-        "spec": "Depset of .rsl/.trlc model spec files needed for import resolution.",
-    },
+    fields = {},
 )
 
 AssumptionsOfUseInfo = provider(

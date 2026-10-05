@@ -173,7 +173,7 @@ Traceability (test)
 ``bazel test`` runs ``lobster-ci-report`` over the merged requirement /
 architecture / test / safety-analysis graph — assumed-system and feature
 requirements, component requirements, architecture, public API, unit tests,
-failure modes, control measures, root causes, and AoUs — and fails if any item
+failure modes, safety measures, root causes, and AoUs — and fails if any item
 lacks full up/down traceability.
 
 .. graphviz::
@@ -197,12 +197,13 @@ lacks full up/down traceability.
       "Forwarded AoUs" -> "Received AoUs";
       "Component Requirements" -> "Feature Requirements";
       "Component Requirements" -> "Received AoUs";
+      "Component Requirements" -> "Root Causes";
       "Unit Test" -> "Component Requirements";
       "Test Case Coverage" -> "Component Requirements";
       "Architecture" -> "Component Requirements";
       "Failure Modes" -> "Public API";
       "Root Causes" -> "Failure Modes";
-      "Root Causes" -> "Safety Measures";
+      "Safety Measures" -> "Root Causes";
    }
 
 Execution Overview (Current Behavior)

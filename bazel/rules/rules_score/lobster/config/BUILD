@@ -45,12 +45,6 @@ filegroup(
 )
 
 filegroup(
-    name = "fta_failure_modes_config",
-    srcs = ["lobster_fta_failure_modes.yaml"],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
     name = "fta_root_causes_config",
     srcs = ["lobster_fta_root_causes.yaml"],
     visibility = ["//visibility:public"],

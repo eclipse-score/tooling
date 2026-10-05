@@ -27,7 +27,7 @@ use class_serializer::ClassSerializer;
 use component_serializer::ComponentSerializer;
 use sequence_serializer::SequenceSerializer;
 
-use puml_fta::{merge_stub_events, render_trlc_stub, FtaModel, StubEvent};
+use puml_fta::{merge_root_causes, render_trlc_stub, FaultTree, FtaModel};
 use puml_idmap::{write_empty_idmap_to_file, write_idmap_to_file, IdMapModel};
 use puml_lobster::{write_lobster_to_file, LobsterModel};
 use puml_parser::{
@@ -103,12 +103,10 @@ struct Args {
     lobster_output_dir: Option<String>,
 
     /// Output directory for Fault-Tree-Analysis artifacts (optional).
-    /// When set, every input diagram is treated as an FTA: its
-    /// ``fta_metamodel.puml`` include is inlined and the metamodel-inlined
-    /// ``.puml`` is written to this directory, alongside ``fta_events.trlc``
-    /// (the generated ``FailureMode``/``RootCause`` stub records; see
-    /// ``--fta-package``).  No FlatBuffers / component processing is
-    /// performed in this mode.
+    /// When set, every input diagram is treated as an FTA and
+    /// ``fta_events.trlc`` (the generated ``RootCause`` records; see
+    /// ``--fta-package``) is written to this directory.  No
+    /// FlatBuffers / component processing is performed in this mode.
     #[arg(long)]
     fta_output_dir: Option<String>,
 
@@ -367,8 +365,8 @@ fn run_fta(
     let mut sorted: Vec<Rc<PathBuf>> = inputs.into_iter().collect();
     sorted.sort();
 
-    let mut all_stub_events: Vec<StubEvent> = Vec::new();
-    // Stub events reference each diagram by basename; two inputs sharing a
+    let mut all_trees: Vec<FaultTree> = Vec::new();
+    // Fault trees reference each diagram by basename; two inputs sharing a
     // basename (in different directories) would be indistinguishable downstream.
     let mut seen_basenames: HashSet<String> = HashSet::new();
     // Mirrors the collision guard in the main resolve path: two input files
@@ -411,7 +409,7 @@ fn run_fta(
         let source = fs::read_to_string(file.as_path())?;
         let parsed = ProcedureParserService.parse_file(file, &source, log_level)?;
         let model = FtaModel::from_procedure_file(&parsed)?;
-        all_stub_events.extend(model.stub_events(basename)?);
+        all_trees.extend(model.fault_trees(basename)?);
 
         if let Some(ref idir_str) = args.idmap_output_dir {
             let idir = PathBuf::from(idir_str);
@@ -439,10 +437,10 @@ fn run_fta(
         debug!("Processed FTA diagram: {}", file.display());
     }
 
-    let merged_stub_events = merge_stub_events(all_stub_events)?;
+    let root_causes = merge_root_causes(&all_trees)?;
     fs::write(
         out.join("fta_events.trlc"),
-        render_trlc_stub(fta_package, &merged_stub_events),
+        render_trlc_stub(fta_package, &root_causes),
     )?;
     Ok(())
 }
@@ -970,14 +968,13 @@ mod fta_pipeline_tests {
         // via the global include path).
         assert!(!out.join("a.puml").exists());
 
-        // TRLC stub: the failure mode's alias collapses to its last segment.
+        // TRLC stub: one RootCause record linking straight to the failure mode.
         let trlc = fs::read_to_string(out.join("fta_events.trlc")).unwrap();
         assert!(trlc.contains("package TestFta"));
         assert!(trlc.contains("import Lib"));
-        assert!(trlc.contains("ScoreReq.FtaFailureMode FmA {"));
-        assert!(trlc.contains("failure_modes = [Lib.FmA]"));
         assert!(trlc.contains("ScoreReq.RootCause CmA {"));
-        assert!(trlc.contains("failure_modes = [FmA]"));
+        assert!(trlc.contains("failure_modes = [Lib.FmA]"));
+        assert!(!trlc.contains("FtaFailureMode"));
 
         fs::remove_dir_all(&dir).ok();
     }
@@ -996,8 +993,10 @@ mod fta_pipeline_tests {
         run_fta(&args, out.to_str().unwrap(), "TestFta", LogLevel::Warn).expect("run_fta");
 
         let trlc = fs::read_to_string(out.join("fta_events.trlc")).unwrap();
-        assert!(trlc.contains("ScoreReq.FtaFailureMode FmA {"));
-        assert!(trlc.contains("ScoreReq.FtaFailureMode FmB {"));
+        assert!(trlc.contains("ScoreReq.RootCause CmA {"));
+        assert!(trlc.contains("failure_modes = [Lib.FmA]"));
+        assert!(trlc.contains("ScoreReq.RootCause CmB {"));
+        assert!(trlc.contains("failure_modes = [Lib.FmB]"));
 
         fs::remove_dir_all(&dir).ok();
     }

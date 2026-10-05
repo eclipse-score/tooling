@@ -149,9 +149,10 @@ safety_analysis(
 )
 ```
 
-**`bazel build`** — generates `safety_analysis.rst` (merged FM / Safety Measures / FTA sections),
+**`bazel build`** — generates `safety_analysis.rst` (failure modes with their root causes and measures, fault trees, safety measures),
 runs `lobster-trlc` on TRLC inputs, and extracts FTA events from `.puml`
-diagrams into `fta_events.trlc`. Build-only; traceability validation is done
+diagrams into `fta_events.trlc` (generated `RootCause` records, usable via the
+target's `TrlcProviderInfo`). Build-only; traceability validation is done
 by the wrapping `dependability_analysis` test.
 
 ---

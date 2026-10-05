@@ -586,7 +586,7 @@ dependability_analysis(
 # Regression fixture for the `$FailureMode(name, fm1, fm2, fm3)` multi-argument
 # link syntax: one $FailureMode covers three failure modes via three fm
 # arguments (N:1), proving puml_fta resolves and de-duplicates the links and
-# lobster-trlc accepts the resulting FtaFailureMode.failure_modes fan-out. Reuses
+# lobster-trlc accepts the resulting RootCause.failure_modes fan-out. Reuses
 # :arch_design_public_api_example so the failure modes' `interface` field has
 # a real public_api item to trace up to (see :public_api_example_safety_analysis above).
 safety_analysis(
@@ -600,6 +600,32 @@ dependability_analysis(
     name = "multi_failure_mode_example_dependability_analysis",
     arch_design = ":arch_design_public_api_example",
     safety_analysis = [":multi_failure_mode_example_safety_analysis"],
+)
+
+# Regression fixture: an AoU referencing a generated fault-tree root cause
+# (`AouRootCauseFta.UserProvidedWrongConfiguration`). The AoU file is parsed
+# standalone by assumptions_of_use, so the safety_analysis target must be in its
+# `deps` to make the generated package resolvable; passing the same file as
+# `safetymeasures` makes the AoU count towards root-cause coverage.
+safety_analysis(
+    name = "aou_root_cause_safety_analysis",
+    arch_design = ":arch_design_public_api_example",
+    failuremodes = ["fixtures/aou_root_cause/failure_modes.trlc"],
+    fta_package = "AouRootCauseFta",
+    root_causes = ["fixtures/aou_root_cause/fta.puml"],
+    safetymeasures = ["fixtures/aou_root_cause/aou.trlc"],
+)
+
+assumptions_of_use(
+    name = "aou_root_cause_aous",
+    srcs = ["fixtures/aou_root_cause/aou.trlc"],
+    deps = [":aou_root_cause_safety_analysis"],
+)
+
+dependability_analysis(
+    name = "aou_root_cause_dependability_analysis",
+    arch_design = ":arch_design_public_api_example",
+    safety_analysis = [":aou_root_cause_safety_analysis"],
 )
 
 dependable_element(
@@ -617,6 +643,22 @@ dependable_element(
     requirements = [":feat_req"],
     tests = [],
     deps = [],
+)
+
+# Regression fixture: component requirements and root causes in one element.
+# The DE lobster config lets "Component Requirements" trace to "Root Causes";
+# lobster rejects that unless "Root Causes" is declared first.
+dependable_element(
+    name = "comp_req_root_cause_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_public_api_example"],
+    assumptions_of_use = [":aous"],
+    components = [":test_component"],
+    dependability_analysis = [":public_api_example_dependability_analysis"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
 )
 
 # Live example of clickable_plantuml's "unit to class diagram" linking chain:

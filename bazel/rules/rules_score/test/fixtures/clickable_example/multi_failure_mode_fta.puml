@@ -16,5 +16,7 @@
 !include fta_metamodel.puml
 
 $FailureMode("Message lost, incomplete, or corrupted during IPC transmission", "MultiFailureModeExampleSafetyAnalysis.MessageLost", "MultiFailureModeExampleSafetyAnalysis.MessagePartiallyDelivered", "MultiFailureModeExampleSafetyAnalysis.MessageCorrupted")
+$OrGate("OG", "MultiFailureModeExampleSafetyAnalysis.MessageLost")
+$RootCause("IPC channel is faulty", "IpcChannelFaulty", "OG")
 
 @enduml

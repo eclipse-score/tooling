@@ -41,7 +41,7 @@ rectangle "Unit tests\n(cc_test / gtest)" <<src>> as test_in
 rectangle "requirements.lobster" <<lob>> as reqs_lob
 rectangle "public_api.lobster" <<lob>> as api_lob
 rectangle "failuremodes.lobster\nsafetymeasures.lobster" <<lob>> as fmcm_lob
-rectangle "fta_failure_modes.lobster\nfta_root_causes.lobster" <<lob>> as rc_lob
+rectangle "fta_root_causes.lobster" <<lob>> as rc_lob
 rectangle "<unit>.lobster\n(test results)" <<lob>> as test_lob
 
 ' ── Aggregation + gate ────────────────────────────────────────────────────────

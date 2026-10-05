@@ -15,8 +15,8 @@
 
 !include fta_metamodel.puml
 
-$FailureMode("TaskInterface stops responding", "DynamicExampleSafetyAnalysis.TaskInterfaceFailure")
-$OrGate("OG", "DynamicExampleSafetyAnalysis.TaskInterfaceFailure")
-$RootCause("Dispatcher process crashed", "DispatcherProcessCrashed", "OG")
+$FailureMode("PublicInterface misbehaves because of a wrong configuration", "AouRootCauseSafetyAnalysis.ConfigurationWrong")
+$OrGate("OG", "AouRootCauseSafetyAnalysis.ConfigurationWrong")
+$RootCause("User provided a wrong configuration", "UserProvidedWrongConfiguration", "OG")
 
 @enduml
