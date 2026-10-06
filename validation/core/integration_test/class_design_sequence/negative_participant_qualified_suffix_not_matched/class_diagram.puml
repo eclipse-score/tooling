@@ -13,6 +13,12 @@
 
 @startuml class_diagram
 
-class Runtime
+namespace outer {
+    namespace unit_1 {
+        class Process {
+            + Execute() : void
+        }
+    }
+}
 
 @enduml

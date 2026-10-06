@@ -16,9 +16,21 @@ diagram_types:
   duplicate_alias.puml: sequence
   undeclared_lifecycle.puml: sequence
   undeclared_ref.puml: sequence
+  malformed_path_without_alias.puml: sequence
+  display_name_in_lifecycle.puml: sequence
+  display_name_in_create.puml: sequence
 errors:
   free_text_without_alias.puml:
     - "free-text participant display names require an alias"
+  malformed_path_without_alias.puml:
+    - "invalid sequence participant `my-pkg::unit`"
+    - "participant name is not a valid qualified path"
+  display_name_in_lifecycle.puml:
+    - "invalid sequence participant `Display`"
+    - "is the display name of an aliased participant"
+  display_name_in_create.puml:
+    - "invalid sequence participant `Display Service`"
+    - "is the display name of an aliased participant"
   duplicate_uid.puml:
     - "duplicate sequence participant id"
   duplicate_alias.puml:

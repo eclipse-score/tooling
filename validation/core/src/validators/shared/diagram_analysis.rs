@@ -16,12 +16,14 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use source_location::SourceLocation;
+use uid_utils::{resolve_uid, UidMatch};
 
 use crate::models::{
-    ComponentDiagramArchitecture, ComponentRelationType, EndpointRole, LogicComponentExt,
-    ObservedSequenceCall,
+    is_external_endpoint, ComponentDiagramArchitecture, ComponentRelationType, EndpointRole,
+    LogicComponentExt, ObservedSequenceCall,
 };
 
+/// Unit interface bindings keyed by component id.
 pub(in crate::validators) type UnitBindings = BTreeMap<String, UnitInterfaces>;
 
 #[derive(Clone, Default)]
@@ -32,17 +34,19 @@ pub(in crate::validators) struct UnitInterfaces {
     pub(in crate::validators) provided_interfaces: BTreeSet<String>,
 }
 
+/// One sequence call with caller and callee mapped to unit ids. A participant
+/// that does not resolve to exactly one unit keeps its uid.
 #[derive(Clone)]
-pub(in crate::validators) struct SequenceCallContext<'a> {
-    pub(in crate::validators) caller_unit: &'a str,
-    pub(in crate::validators) callee_unit: &'a str,
-    pub(in crate::validators) method: &'a str,
-    pub(in crate::validators) source_location: &'a SourceLocation,
+pub(in crate::validators) struct SequenceCallContext {
+    pub(in crate::validators) caller_unit: String,
+    pub(in crate::validators) callee_unit: String,
+    pub(in crate::validators) method: String,
+    pub(in crate::validators) source_location: SourceLocation,
     pub(in crate::validators) caller_interfaces: BTreeSet<String>,
     pub(in crate::validators) callee_interfaces: BTreeSet<String>,
 }
 
-impl SequenceCallContext<'_> {
+impl SequenceCallContext {
     pub(in crate::validators) fn has_shared_interfaces(&self) -> bool {
         !self.caller_interfaces.is_disjoint(&self.callee_interfaces)
     }
@@ -59,13 +63,9 @@ pub(in crate::validators) fn build_unit_bindings(
         .collect();
     let mut unit_bindings = BTreeMap::new();
 
-    // `unit_set` is already merged and keyed by (alias, parent), so units
-    // sharing an alias under different parents stay distinct.
+    // `unit_set` is already merged, so units sharing an alias under different
+    // parents stay distinct by id.
     for entity in component_diagram.unit_set.values() {
-        let Some(alias) = entity.alias.clone() else {
-            continue;
-        };
-
         let mut bindings = UnitInterfaces {
             source_location: Some(entity.source_location.clone()),
             ..UnitInterfaces::default()
@@ -93,39 +93,55 @@ pub(in crate::validators) fn build_unit_bindings(
             }
         }
 
-        unit_bindings.insert(alias, bindings);
+        unit_bindings.insert(entity.id.clone(), bindings);
     }
 
     unit_bindings
 }
 
-pub(in crate::validators) fn all_interfaces_for_alias(
-    unit_bindings: &UnitBindings,
-    alias: &str,
-) -> BTreeSet<String> {
+/// Matches a sequence participant uid against the unit ids.
+pub(in crate::validators) fn resolve_unit<'a>(
+    unit_bindings: &'a UnitBindings,
+    uid: &str,
+) -> UidMatch<'a> {
+    resolve_uid(uid, None, unit_bindings.keys().map(String::as_str))
+}
+
+fn all_interfaces_for_unit(unit_bindings: &UnitBindings, unit_id: &str) -> BTreeSet<String> {
     unit_bindings
-        .get(alias)
+        .get(unit_id)
         .map(|bindings| bindings.all_interfaces.clone())
         .unwrap_or_default()
 }
 
-pub(in crate::validators) fn build_observed_call_contexts<'a>(
-    observed_calls: &'a [ObservedSequenceCall],
+fn unit_id_for_participant(unit_bindings: &UnitBindings, uid: &str) -> String {
+    if is_external_endpoint(uid) {
+        return uid.to_string();
+    }
+
+    match resolve_unit(unit_bindings, uid) {
+        UidMatch::Resolved(unit_id) => unit_id.to_string(),
+        UidMatch::Ambiguous(_) | UidMatch::Unresolved => uid.to_string(),
+    }
+}
+
+pub(in crate::validators) fn build_observed_call_contexts(
+    observed_calls: &[ObservedSequenceCall],
     unit_bindings: &UnitBindings,
-) -> Vec<SequenceCallContext<'a>> {
+) -> Vec<SequenceCallContext> {
     observed_calls
         .iter()
         .map(|call| {
-            let caller_interfaces = all_interfaces_for_alias(unit_bindings, &call.caller);
-            let callee_interfaces = all_interfaces_for_alias(unit_bindings, &call.callee);
+            let caller_unit = unit_id_for_participant(unit_bindings, &call.caller);
+            let callee_unit = unit_id_for_participant(unit_bindings, &call.callee);
 
             SequenceCallContext {
-                caller_unit: call.caller.as_str(),
-                callee_unit: call.callee.as_str(),
-                method: call.method.as_str(),
-                caller_interfaces,
-                callee_interfaces,
-                source_location: &call.source_location,
+                caller_interfaces: all_interfaces_for_unit(unit_bindings, &caller_unit),
+                callee_interfaces: all_interfaces_for_unit(unit_bindings, &callee_unit),
+                caller_unit,
+                callee_unit,
+                method: call.method.clone(),
+                source_location: call.source_location.clone(),
             }
         })
         .collect()
@@ -168,8 +184,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn units_sharing_an_alias_under_different_parents_are_not_merged() {
+    fn two_parents_with_unit_x() -> ComponentDiagramArchitecture {
         let entities = vec![
             entity(
                 "comp_a",
@@ -219,6 +234,14 @@ mod tests {
                 Some("unit"),
                 vec![interface_binding("iface_b", EndpointRole::Required)],
             ),
+            entity(
+                "comp_b.unit_y",
+                "unit_y",
+                Some("comp_b"),
+                ComponentType::Component,
+                Some("unit"),
+                Vec::new(),
+            ),
         ];
 
         let mut result = ValidationResult::default();
@@ -228,18 +251,67 @@ mod tests {
             "expected no failures, got {:?}",
             result.failures
         );
+        architecture
+    }
 
-        // Different parents -> distinct `unit_set` entries.
-        assert_eq!(architecture.unit_set.len(), 2);
+    fn observed_call(caller: &str, callee: &str) -> ObservedSequenceCall {
+        ObservedSequenceCall {
+            caller: caller.to_string(),
+            callee: callee.to_string(),
+            method: "Call()".to_string(),
+            source_location: dummy_source_location(),
+        }
+    }
 
-        let bindings = build_unit_bindings(&architecture);
-        let unit_x = bindings.get("unit_x").expect("expected a unit_x entry");
-        // Bare-alias collision resolves to one entry; it must reflect only one unit's interfaces.
-        assert!(
-            unit_x.all_interfaces == BTreeSet::from(["iface_a".to_string()])
-                || unit_x.all_interfaces == BTreeSet::from(["iface_b".to_string()]),
-            "expected exactly one unit's interfaces, got {:?}",
-            unit_x.all_interfaces
+    #[test]
+    fn units_sharing_an_alias_under_different_parents_keep_distinct_id_bindings() {
+        let bindings = build_unit_bindings(&two_parents_with_unit_x());
+
+        assert_eq!(
+            bindings.keys().map(String::as_str).collect::<Vec<_>>(),
+            vec!["comp_a.unit_x", "comp_b.unit_x", "comp_b.unit_y"]
         );
+        assert_eq!(
+            bindings["comp_a.unit_x"].all_interfaces,
+            BTreeSet::from(["iface_a".to_string()])
+        );
+        assert_eq!(
+            bindings["comp_b.unit_x"].all_interfaces,
+            BTreeSet::from(["iface_b".to_string()])
+        );
+    }
+
+    #[test]
+    fn call_contexts_map_qualified_and_leaf_uids_to_unit_ids() {
+        let bindings = build_unit_bindings(&two_parents_with_unit_x());
+
+        let contexts =
+            build_observed_call_contexts(&[observed_call("comp_a.unit_x", "unit_y")], &bindings);
+
+        assert_eq!(contexts[0].caller_unit, "comp_a.unit_x");
+        assert_eq!(contexts[0].callee_unit, "comp_b.unit_y");
+        assert_eq!(
+            contexts[0].caller_interfaces,
+            BTreeSet::from(["iface_a".to_string()])
+        );
+    }
+
+    #[test]
+    fn call_contexts_keep_ambiguous_unresolved_and_external_uids() {
+        let bindings = build_unit_bindings(&two_parents_with_unit_x());
+
+        let contexts = build_observed_call_contexts(
+            &[
+                observed_call("unit_x", "missing"),
+                observed_call("ExternalEndpoint", "unit_y"),
+            ],
+            &bindings,
+        );
+
+        assert_eq!(contexts[0].caller_unit, "unit_x");
+        assert!(contexts[0].caller_interfaces.is_empty());
+        assert_eq!(contexts[0].callee_unit, "missing");
+        assert_eq!(contexts[1].caller_unit, "ExternalEndpoint");
+        assert_eq!(contexts[1].callee_unit, "comp_b.unit_y");
     }
 }

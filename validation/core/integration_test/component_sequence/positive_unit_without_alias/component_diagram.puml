@@ -11,8 +11,17 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml sequence_diagram
+@startuml component_diagram
 
-participant "singletonInstance:score::mw::com::impl::Runtime"
+package "Package A" as package_a {
+    component "Component A" as component_a <<component>> {
+        component Unit1 <<unit>>
+        component Unit2 <<unit>>
+    }
+
+    interface "InternalInterface" as InternalInterface
+    Unit1 -( InternalInterface
+    Unit2 )- InternalInterface
+}
 
 @enduml

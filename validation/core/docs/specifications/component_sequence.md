@@ -26,18 +26,32 @@ It shall make sure that Architectural Elements are consistently named and relate
 
 All comparisons are case-sensitive.
 
-### Alias Consistency
+### Identifier Consistency
 
-Unit aliases from the component diagram must exactly match the set of
-participant aliases used across all sequence diagrams.
-*(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceAliasConsistency`)*
+Every unit id from the component diagram must be referenced by a participant
+uid in the sequence diagrams, and every participant uid must reference a unit
+id.
+*(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceIdentifierConsistency`)*
 
-Component-diagram units without an explicit alias are ignored by this
-validator and are not required to appear as sequence participants. The
-special participant name `ExternalEndpoint` represents an external
-caller/callee outside the modeled units; it is exempt from Alias Consistency
-and may appear in sequence diagrams without a matching component-diagram
-unit.
+A participant uid is matched against unit ids as follows:
+
+- A qualified uid (containing `.` or `::`) must equal a unit id exactly.
+- A single-segment uid is a leaf reference: it matches the unit whose id ends
+  in that segment. It must match exactly one unit; several matches are
+  reported as an ambiguous participant. Write the qualified path as the
+  participant label to disambiguate, for example
+  `participant "component_a.unit_1" as unit_1`.
+
+Units are identified by id alone: a unit without an alias takes part in the
+check like any other unit.
+
+The participant uid is the qualified label path when the label is one, else the
+alias, else the declared name (`plantuml/parser/docs/element-identifiers.md`,
+Rule B).
+The special participant name `ExternalEndpoint` represents an external
+caller/callee outside the modeled units; it is exempt from Identifier
+Consistency and may appear in sequence diagrams without a matching
+component-diagram unit.
 
 ```text
 ' component diagram
@@ -93,8 +107,9 @@ component in the component diagram.
 
 | Failure case | Validation rule |
 |---|---|
-| Missing sequence participant | Alias Consistency |
-| Unexpected sequence participant | Alias Consistency |
+| Missing sequence participant | Identifier Consistency |
+| Unexpected sequence participant | Identifier Consistency |
+| Sequence participant matches multiple units ambiguously | Identifier Consistency |
 | Missing sequence interaction for interface-connected units | Interface-Connection Consistency |
 | Missing interface connection for sequence-connected units | Interface-Connection Consistency |
 
@@ -102,7 +117,7 @@ component in the component diagram.
 
 The validator emits debug output containing:
 
-- expected unit aliases
+- unit ids derived from the component diagram
 - observed participants
 - observed sequence calls (`caller -> callee : method`)
 - unit interface targets derived from the component diagram

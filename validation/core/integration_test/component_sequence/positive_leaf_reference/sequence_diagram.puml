@@ -13,6 +13,10 @@
 
 @startuml sequence_diagram
 
-participant ":OS"
+participant unit_1
+participant unit_2
+
+unit_1 -> unit_2 : SendSignal
+unit_2 --> unit_1 : Ack
 
 @enduml

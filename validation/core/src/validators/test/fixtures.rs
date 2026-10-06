@@ -73,6 +73,26 @@ pub(super) fn unit_without_interfaces(alias: &str) -> LogicComponent {
     unit(alias, &[], &[])
 }
 
+pub(super) fn component(alias: &str) -> LogicComponent {
+    logic_component(
+        alias,
+        None,
+        ComponentType::Component,
+        Some("component"),
+        Vec::new(),
+    )
+}
+
+pub(super) fn unit_with_parent_id(alias: &str, parent_id: &str) -> LogicComponent {
+    logic_component(
+        alias,
+        Some(parent_id),
+        ComponentType::Component,
+        Some("unit"),
+        Vec::new(),
+    )
+}
+
 pub(super) fn interface(alias: &str) -> LogicComponent {
     interface_entity(alias, None)
 }

@@ -238,9 +238,9 @@ fn read_entity_relationships(
 
 fn read_entity(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<SimpleEntity, String> {
     Ok(SimpleEntity {
-        id: entity.id().to_string(),
+        id: uid_utils::normalize(entity.id()),
         name: entity.name().to_string(),
-        enclosing_namespace_id: entity.enclosing_namespace_id().map(|s| s.to_string()),
+        enclosing_namespace_id: entity.enclosing_namespace_id().map(uid_utils::normalize),
         stereotypes: entity
             .stereotypes()
             .map(|values| values.iter().map(|value| value.to_string()).collect())
@@ -285,8 +285,8 @@ fn read_relationship(
     context: &str,
 ) -> Result<Relationship, String> {
     Ok(Relationship {
-        source: rel.source().to_string(),
-        target: rel.target().to_string(),
+        source: uid_utils::normalize(rel.source()),
+        target: uid_utils::normalize(rel.target()),
         relation_type: map_relation_type(rel.relation_type(), context)?,
         source_multiplicity: rel.source_multiplicity().map(|s| s.to_string()),
         target_multiplicity: rel.target_multiplicity().map(|s| s.to_string()),

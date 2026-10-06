@@ -11,10 +11,9 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml sequence_diagram
-
-participant ":Process/nara::com user" as help
-
-help -> help : Execute()
-
+@startuml
+participant "comp::A" as a
+participant "Display Service" as ds
+create "Display Service"
+a -> ds : make
 @enduml

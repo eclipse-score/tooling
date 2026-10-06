@@ -272,6 +272,11 @@ relationship source/target identifiers alike. cv-qualifiers such as `const`
 and `volatile`, and the pointer/reference decorators `*`/`&`, are preserved
 (only the spacing around them is normalized).
 
+The class diagram reader already rewrites `::` to `.` in class/entity IDs,
+enclosing namespace IDs, and relationship endpoints of both inputs, so
+sequence validators and this validator compare IDs in the same form. Type
+names are read as written and normalized only here.
+
 ## Failure Cases
 
 | Failure case | Validation rule |

@@ -44,9 +44,9 @@ that suite's goldens change with it.
 | `name` field of a class/component entity ([Rule A](#rule-a)) | implemented — the written name with its spelling kept and one leading root marker removed; a component with an alias keeps its `name` verbatim (display text) | same | `rooted_declaration_in_package` |
 | Class/component reference resolution ([§5](#referring-to-another-element), [Rule C](#rule-c)) | class and component: implemented per Rule C (class: declaration-order visibility; component: whole diagram, ports resolve to their owner; ambiguity is an error) | one lookup for both: `S.r`, else the unique leaf; qualified: `S.r` or the root path; leading `.` or `::` = root; class references see earlier declarations only; ambiguity is an error | `qualified_reference`, `relation_simple_name_prefers_direct_hit` |
 | Sequence participant identity ([§4](#4-sequence-diagrams), [Rule B](#rule-b)) | implemented — `uid` is the qualified label, else the alias, else the bare name; without a root anchor | same, plus the root anchor | `sequence_forms`, `prose_without_alias`, `uid_*` resolver cases |
-| Sequence ↔ component/class linking ([§5](#5-linking-the-three-diagrams)) | partly implemented — the resolvers emit component/class id == participant uid (idmap links); the validators still compare aliases and display names | component/class id == participant uid in the resolvers and the validators | `linking_three_diagrams`, `component_nesting` |
+| Sequence ↔ component/class linking ([§5](#5-linking-the-three-diagrams)) | implemented — component/class id == participant uid (validators match the exact id; a single-segment uid is a leaf reference that must match exactly one id) | component/class id == participant uid | `linking_three_diagrams`, `component_nesting` |
 | `ExternalEndpoint` marker ([§6](#6-special-cases), [Rule E](#rule-e)) | implemented — emitted verbatim | emitted verbatim, never anchored | `doc_6_external_endpoint` |
-| Errors in [§7](#7-errors-you-may-hit) (`free-text participant display names require an alias…`, `is the display name of an aliased participant…`, `Duplicate entity id`, `Ambiguous reference`, `Unresolved reference`, `duplicate sequence participant id`, `duplicate sequence participant name`, `unknown sequence participant`) | implemented | as described | `prose_without_alias`, `errors_participants` |
+| Errors in [§7](#7-errors-you-may-hit) (`free-text participant display names require an alias…`, `participant name is not a valid qualified path…`, `is the display name of an aliased participant…`, `Duplicate entity id`, `Ambiguous reference`, `Unresolved reference`, `duplicate sequence participant id`, `duplicate sequence participant name`, `unknown sequence participant`) | implemented | as described | `prose_without_alias`, `errors_participants` |
 | Id normalization (`::` / `.` equivalence, [Definitions](#definitions)) | implemented for class and component ids, scope paths, ports and relationship endpoints (incl. `extends`/`implements`); both diagram parsers accept `.`, `::` and the leading root marker in every name position ([Separators and root markers](#separators-and-root-markers)); the component merge compares names after normalization; sequence participant uids are normalized the same way | works everywhere an identifier is read or written, sequence included | `namespace_and_package`, `qualified_reference`, `relation_quoted_name`, `separator_equivalence` |
 | Label markup stripping (creole tags in labels) | implemented for activity diagram labels and sequence participant labels (before Rule B derivation) | same | — |
 | Qualified name inside a nested declaration ([Rule C](#rule-c)) | implemented — nests under the enclosing scope; a leading `.` or `::` is rooted (class and component diagrams); the parent is the id minus its last segment, whether or not it is declared in this diagram | nests under the enclosing scope; a leading `.` or `::` roots it | `qualified_in_nested_scope`, `rooted_declaration_in_package`, `rooted_dotted_declaration`, `qualified_interface_top_level`, `qualified_port_owner` |
@@ -236,7 +236,8 @@ If the component diagram declares that unit as
 `score.mw.log.logging.Recorder.Backend`, these do not match. There is no parse
 error — you only find out when cross-diagram validation reports a mismatch,
 which is the intended behaviour: a different identifier means a different
-element ([Rule F](#rule-f)).
+element ([Rule F](#rule-f)). The validators report the uid (here `Client`), not
+the label: a "not found" report names the alias.
 
 ### Migration pattern
 
@@ -427,12 +428,13 @@ carry no identifiers at all.
 | Message | Cause | Fix |
 |---------|-------|-----|
 | `free-text participant display names require an alias for uid derivation` | A quoted, prose participant label with no `as` alias, declared or used as a message endpoint | Add an alias, or write a qualified label |
+| `participant name is not a valid qualified path …` | A participant name with `.` or `::` and no alias that is not a valid path: empty segment (`a..b`, `a.`), or characters other than letters, digits and `_` (`my-pkg::unit`) | Fix the path, or add an alias |
 | `Duplicate entity id: <id>` | Two elements resolve to the same identifier | Rename one — note `core::User` and `core.User` are the *same* identifier ([Rule F](#rule-f)) |
 | `Ambiguous reference: <ref> -> <candidates>` | A reference matches more than one declared entity | Qualify the reference, or start it with `.` for the root path |
 | `Unresolved reference: <ref>` | A reference matches no element: an aliased element's label, a path that does not exist, or (class diagrams) an element declared further down in another scope | Refer to the element by its alias or leaf, qualify the path, or declare the element first |
 | `duplicate sequence participant id <uid>` | Two participants resolve to the same identifier | Rename one, or change its label or alias |
 | `duplicate sequence participant name <name>` | Two participants share a reference name (an alias, or a declared name without alias) | Rename one of the aliases |
-| `is the display name of an aliased participant, refer to it by its alias` | A message names the display name of an aliased participant | Use the alias |
+| `is the display name of an aliased participant, refer to it by its alias` | A message, `create`, `activate`, `deactivate`, `destroy` or `ref over` names the display name of an aliased participant | Use the alias |
 | `unknown sequence participant <name>` | `activate`, `deactivate`, `destroy` or `ref over` names a participant that is not declared | Declare it first, and name it by its alias |
 
 Two forms that PlantUML accepts but this toolchain now rejects:
@@ -527,8 +529,9 @@ in order:
    the path, even when an alias exists;
 2. otherwise `text` = the alias;
 3. no alias → `text` = the line, if it is a plain identifier (letters, digits,
-   `_`, `-`, `@`, `.`);
-4. otherwise (free-text label without alias) → error.
+   `_`, `-`, `@`);
+4. otherwise → error: a single token with a `.` or `::` that is not a valid
+   qualified path (empty segment, other characters), else a free-text label.
 
 Then `uid = join(root_anchor, normalize(text))`, with a leading root marker
 dropped; `ExternalEndpoint` is emitted verbatim ([Rule E](#rule-e)). A label

@@ -12,13 +12,15 @@
 // *******************************************************************************
 
 //! Validation: compare component-diagram unit IDs and interface connections
-//! with sequence-diagram participants and function-call connections.
+//! with sequence-diagram participant uids and function-call connections.
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use uid_utils::UidMatch;
+
 use super::shared::{
-    best_string_suggestion, build_observed_call_contexts, build_unit_bindings, format_name_list,
-    intersect_interfaces, SequenceCallContext, UnitBindings,
+    best_id_suggestion, build_observed_call_contexts, build_unit_bindings, format_name_list,
+    intersect_interfaces, resolve_unit, SequenceCallContext, UnitBindings,
 };
 use crate::models::{
     is_external_endpoint, ComponentDiagramArchitecture, SequenceDiagramIndex,
@@ -39,26 +41,26 @@ type ConnectedUnitPairs = BTreeMap<(String, String), BTreeSet<String>>;
 
 struct ComponentSequenceValidator<'a> {
     participants: &'a BTreeMap<String, SequenceParticipantInfo>,
-    observed_call_contexts: Vec<SequenceCallContext<'a>>,
+    observed_call_contexts: Vec<SequenceCallContext>,
     connected_unit_pairs: ConnectedUnitPairs,
     unit_bindings: UnitBindings,
     result: ValidationResult,
 }
 
-impl SequenceCallContext<'_> {
+impl SequenceCallContext {
     fn normalized_left_unit(&self) -> &str {
         if self.caller_unit <= self.callee_unit {
-            self.caller_unit
+            &self.caller_unit
         } else {
-            self.callee_unit
+            &self.callee_unit
         }
     }
 
     fn normalized_right_unit(&self) -> &str {
         if self.caller_unit <= self.callee_unit {
-            self.callee_unit
+            &self.callee_unit
         } else {
-            self.caller_unit
+            &self.caller_unit
         }
     }
 
@@ -116,74 +118,101 @@ impl<'a> ComponentSequenceValidator<'a> {
     }
 
     fn check_participant_aliases(&mut self) {
-        for alias in self
+        let mut linked_units = BTreeSet::new();
+        let mut participant_errors = Vec::new();
+
+        for (participant, info) in self
+            .participants
+            .iter()
+            .filter(|(participant, _)| !is_external_endpoint(participant))
+        {
+            match resolve_unit(&self.unit_bindings, participant) {
+                UidMatch::Resolved(unit_id) => {
+                    linked_units.insert(unit_id);
+                }
+                UidMatch::Ambiguous(unit_ids) => {
+                    linked_units.extend(unit_ids.iter().copied());
+                    participant_errors.push(ambiguous_participant_error(
+                        participant,
+                        info,
+                        &unit_ids,
+                    ));
+                }
+                UidMatch::Unresolved => {
+                    participant_errors.push(self.unknown_participant_error(participant, info));
+                }
+            }
+        }
+
+        let missing_unit_errors: Vec<String> = self
             .unit_bindings
             .keys()
-            .filter(|alias| !self.participants.contains_key(*alias))
+            .filter(|unit_id| !linked_units.contains(unit_id.as_str()))
+            .map(|unit_id| self.missing_participant_error(unit_id))
+            .collect();
+
+        for error in missing_unit_errors.into_iter().chain(participant_errors) {
+            self.result.add_failure(error);
+        }
+    }
+
+    fn missing_participant_error(&self, unit_id: &str) -> String {
+        let (source_file, source_line) = unit_source(&self.unit_bindings, unit_id);
+
+        let error = ErrorBuilder::new(ErrorCategory::Naming)
+            .title(format!(
+                "alias \"{unit_id}\" from the component diagram not found in the sequence diagram"
+            ))
+            .field("alias", format!("\"{unit_id}\""))
+            .field("component source file", format!("\"{source_file}\""))
+            .field("component source line", source_line.to_string())
+            .fix(format!(
+                "add sequence participant \"{unit_id}\" in the sequence diagram, or remove it from the component diagram"
+            ));
+
+        if let Some(suggested_name) = best_id_suggestion(
+            unit_id,
+            self.participants
+                .keys()
+                .filter(|participant| !is_external_endpoint(participant))
+                .map(String::as_str),
+        )
+        .as_deref()
         {
-            let (source_file, source_line) = self
-                .unit_bindings
-                .get(alias)
-                .and_then(|bindings| bindings.source_location.as_ref())
-                .map(|source_location| source_location.display())
-                .unwrap_or_default();
-
-            let error = ErrorBuilder::new(ErrorCategory::Naming)
-                .title(format!(
-                    "alias \"{alias}\" from the component diagram not found in the sequence diagram"
-                ))
-                .field("alias", format!("\"{alias}\""))
-                .field("component source file", format!("\"{source_file}\""))
-                .field("component source line", source_line.to_string())
-                .fix(format!(
-                    "add sequence participant \"{alias}\" in the sequence diagram, or remove it from the component diagram"
-                ));
-
-            let error = if let Some(suggested_name) = best_string_suggestion(
-                alias,
-                self.participants
-                    .keys()
-                    .filter(|participant| !is_external_endpoint(participant))
-                    .map(String::as_str),
-            )
-            .as_deref()
-            {
-                error.suggest(alias, None, suggested_name)
-            } else {
-                error
-            };
-
-            self.result.add_failure(error.build());
+            error.suggest(unit_id, None, suggested_name)
+        } else {
+            error
         }
+        .build()
+    }
 
-        for participant in self.participants.keys().filter(|participant| {
-            !is_external_endpoint(participant) && !self.unit_bindings.contains_key(*participant)
-        }) {
-            let (source_file, source_line) =
-                self.participants[participant].source_location.display();
+    fn unknown_participant_error(
+        &self,
+        participant: &str,
+        info: &SequenceParticipantInfo,
+    ) -> String {
+        let (source_file, source_line) = info.source_location.display();
 
-            let error = ErrorBuilder::new(ErrorCategory::Naming)
-                .title(format!(
-                    "participant \"{participant}\" from the sequence diagram not found in the component diagram"
-                ))
-                .field("participant", format!("\"{participant}\""))
-                .field("sequence source file", format!("\"{source_file}\""))
-                .field("sequence source line", source_line.to_string())
-                .fix(format!(
-                    "add component unit alias \"{participant}\" in the component diagram, or remove it from the sequence diagram"
-                ));
+        let error = ErrorBuilder::new(ErrorCategory::Naming)
+            .title(format!(
+                "participant \"{participant}\" from the sequence diagram not found in the component diagram"
+            ))
+            .field("participant", format!("\"{participant}\""))
+            .field("sequence source file", format!("\"{source_file}\""))
+            .field("sequence source line", source_line.to_string())
+            .fix(format!(
+                "add component unit alias \"{participant}\" in the component diagram, or remove it from the sequence diagram"
+            ));
 
-            let error = if let Some(suggested_name) =
-                best_string_suggestion(participant, self.unit_bindings.keys().map(String::as_str))
-                    .as_deref()
-            {
-                error.suggest(participant, None, suggested_name)
-            } else {
-                error
-            };
-
-            self.result.add_failure(error.build());
+        if let Some(suggested_name) =
+            best_id_suggestion(participant, self.unit_bindings.keys().map(String::as_str))
+                .as_deref()
+        {
+            error.suggest(participant, None, suggested_name)
+        } else {
+            error
         }
+        .build()
     }
 
     fn check_interface_connected_units_have_sequence_calls(&mut self) {
@@ -293,20 +322,48 @@ impl<'a> ComponentSequenceValidator<'a> {
     }
 }
 
-fn call_involves_external_endpoint(call_context: &SequenceCallContext<'_>) -> bool {
-    is_external_endpoint(call_context.caller_unit) || is_external_endpoint(call_context.callee_unit)
+fn ambiguous_participant_error(
+    participant: &str,
+    info: &SequenceParticipantInfo,
+    unit_ids: &[&str],
+) -> String {
+    let (source_file, source_line) = info.source_location.display();
+    let matching_units = unit_ids
+        .iter()
+        .map(|unit_id| format!("\"{unit_id}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let example = unit_ids.first().copied().unwrap_or(participant);
+
+    ErrorBuilder::new(ErrorCategory::Naming)
+        .title(format!(
+            "participant \"{participant}\" from the sequence diagram matches multiple units in the component diagram"
+        ))
+        .field("participant", format!("\"{participant}\""))
+        .field("matching units", matching_units)
+        .field("sequence source file", format!("\"{source_file}\""))
+        .field("sequence source line", source_line.to_string())
+        .fix(format!(
+            "write the qualified id of the intended unit as the label of participant \"{participant}\" in the sequence diagram, for example participant \"{example}\" as {participant}, or rename one of the matching units in the component diagram"
+        ))
+        .build()
+}
+
+fn call_involves_external_endpoint(call_context: &SequenceCallContext) -> bool {
+    is_external_endpoint(&call_context.caller_unit)
+        || is_external_endpoint(&call_context.callee_unit)
 }
 
 fn append_debug_log<'a>(
     diagnostics: &mut Diagnostics,
     observed_participants: impl Iterator<Item = &'a String>,
-    observed_call_contexts: &[SequenceCallContext<'_>],
+    observed_call_contexts: &[SequenceCallContext],
     unit_bindings: &UnitBindings,
     connected_unit_pairs: &BTreeMap<(String, String), BTreeSet<String>>,
 ) {
-    diagnostics.debug(|| "Expected unit aliases from component diagrams:".to_string());
-    for alias in unit_bindings.keys() {
-        diagnostics.debug(|| format!("  {alias}"));
+    diagnostics.debug(|| "Expected unit ids from component diagrams:".to_string());
+    for unit_id in unit_bindings.keys() {
+        diagnostics.debug(|| format!("  {unit_id}"));
     }
 
     diagnostics.debug(|| "Observed participants from sequence diagrams:".to_string());
@@ -325,10 +382,10 @@ fn append_debug_log<'a>(
     }
 
     diagnostics.debug(|| "Unit interface targets from component diagrams:".to_string());
-    for (unit_alias, bindings) in unit_bindings {
+    for (unit_id, bindings) in unit_bindings {
         diagnostics.debug(|| {
             format!(
-                "  {unit_alias} -> {}",
+                "  {unit_id} -> {}",
                 format_name_list(&bindings.all_interfaces)
             )
         });
@@ -344,14 +401,14 @@ fn build_connected_unit_pairs(
     unit_bindings: &UnitBindings,
 ) -> BTreeMap<(String, String), BTreeSet<String>> {
     let mut connected_unit_pairs = BTreeMap::new();
-    let aliases: Vec<&String> = unit_bindings.keys().collect();
+    let unit_ids: Vec<&String> = unit_bindings.keys().collect();
 
-    for index in 0..aliases.len() {
-        for other_index in (index + 1)..aliases.len() {
-            let left_alias = aliases[index];
-            let right_alias = aliases[other_index];
-            let left_bindings = &unit_bindings[left_alias];
-            let right_bindings = &unit_bindings[right_alias];
+    for index in 0..unit_ids.len() {
+        for other_index in (index + 1)..unit_ids.len() {
+            let left_id = unit_ids[index];
+            let right_id = unit_ids[other_index];
+            let left_bindings = &unit_bindings[left_id];
+            let right_bindings = &unit_bindings[right_id];
             let mut shared_interfaces = intersect_interfaces(
                 &left_bindings.required_interfaces,
                 &right_bindings.provided_interfaces,
@@ -365,23 +422,22 @@ fn build_connected_unit_pairs(
                 continue;
             }
 
-            connected_unit_pairs
-                .insert((left_alias.clone(), right_alias.clone()), shared_interfaces);
+            connected_unit_pairs.insert((left_id.clone(), right_id.clone()), shared_interfaces);
         }
     }
 
     connected_unit_pairs
 }
 
-fn unit_source(unit_bindings: &UnitBindings, unit_alias: &str) -> (String, u32) {
+fn unit_source(unit_bindings: &UnitBindings, unit_id: &str) -> (String, u32) {
     unit_bindings
-        .get(unit_alias)
+        .get(unit_id)
         .and_then(|bindings| bindings.source_location.as_ref())
         .map(|source_location| source_location.display())
         .unwrap_or_default()
 }
 
-fn sequence_call_source(call_context: &SequenceCallContext<'_>) -> (String, u32) {
+fn sequence_call_source(call_context: &SequenceCallContext) -> (String, u32) {
     call_context.source_location.display()
 }
 

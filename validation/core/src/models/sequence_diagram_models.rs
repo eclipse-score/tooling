@@ -15,9 +15,9 @@
 
 use std::collections::BTreeMap;
 
-use sequence_logic::{Block, Interaction, Node, SequenceTree, SourceLocation};
+use sequence_logic::{Block, Interaction, Node, SequenceParticipant, SequenceTree, SourceLocation};
 
-use crate::ValidationResult;
+use crate::{ErrorBuilder, ErrorCategory, ValidationResult};
 
 /// Collection of sequence diagrams loaded from one or more FlatBuffer files.
 pub struct SequenceDiagramInputs {
@@ -38,64 +38,10 @@ pub struct ObservedSequenceCall {
     pub source_location: SourceLocation,
 }
 
-/// Validation-only participant metadata keyed by the participant reference name
-/// used in sequence interactions.
+/// Validation-only participant metadata keyed by the participant uid used in
+/// sequence interactions.
 pub struct SequenceParticipantInfo {
-    pub display_name: String,
     pub source_location: SourceLocation,
-}
-
-impl SequenceParticipantInfo {
-    // TODO: Remove this normalization once class diagram identifiers also use
-    // `::` namespaces directly instead of `.`.
-    pub fn normalize_qualified_name(reference: &str) -> String {
-        reference.replace("::", ".")
-    }
-}
-
-fn strip_supported_html_style_tags(text: &str) -> String {
-    let mut normalized = String::new();
-    let mut index = 0;
-
-    while index < text.len() {
-        let remaining = &text[index..];
-
-        if let Some(tag_len) = supported_html_style_tag_length(remaining) {
-            index += tag_len;
-            continue;
-        }
-
-        let ch = remaining.chars().next().expect("remaining is non-empty");
-        normalized.push(ch);
-        index += ch.len_utf8();
-    }
-
-    normalized
-}
-
-fn supported_html_style_tag_length(text: &str) -> Option<usize> {
-    if !text.starts_with('<') {
-        return None;
-    }
-
-    let end = text.find('>')?;
-    let tag = text[1..end].trim().to_ascii_lowercase();
-
-    let known_tags = [
-        "b", "/b", "i", "/i", "u", "/u", "s", "/s", "w", "/w", "img", "/img", "font", "/font",
-    ];
-    let styled_tags = ["color", "back", "size"];
-
-    let is_known_tag = known_tags.contains(&tag.as_str());
-    let is_styled_tag = styled_tags.iter().any(|styled_tag| {
-        tag == format!("/{styled_tag}") || tag.starts_with(&format!("{styled_tag}:"))
-    });
-
-    if is_known_tag || is_styled_tag {
-        Some(end + 1)
-    } else {
-        None
-    }
 }
 
 impl SequenceDiagramInputs {
@@ -118,18 +64,16 @@ impl SequenceDiagramIndex {
 
         for diagram in diagrams {
             for participant in &diagram.participants {
-                let reference_name = participant
-                    .alias
-                    .as_deref()
-                    .unwrap_or(&participant.display_name)
-                    .to_string();
+                if participant.uid.is_empty() {
+                    result.add_failure(empty_uid_error(participant));
+                    continue;
+                }
 
                 // Keep the first declaration location when a participant is
                 // declared in more than one input diagram.
                 participants
-                    .entry(reference_name)
+                    .entry(participant.uid.clone())
                     .or_insert_with(|| SequenceParticipantInfo {
-                        display_name: strip_supported_html_style_tags(&participant.display_name),
                         source_location: participant.source_location.clone(),
                     });
             }
@@ -151,13 +95,23 @@ impl SequenceDiagramIndex {
         self.participants.keys().map(String::as_str)
     }
 
-    pub fn participant_info(&self, participant: &str) -> Option<&SequenceParticipantInfo> {
-        self.participants.get(participant)
-    }
-
     pub fn observed_calls(&self) -> &[ObservedSequenceCall] {
         &self.observed_calls
     }
+}
+
+fn empty_uid_error(participant: &SequenceParticipant) -> String {
+    let (source_file, source_line) = participant.source_location.display();
+
+    ErrorBuilder::new(ErrorCategory::Naming)
+        .title(format!(
+            "sequence participant \"{}\" has an empty uid",
+            participant.display_name
+        ))
+        .field("sequence source file", format!("\"{source_file}\""))
+        .field("sequence source line", source_line.to_string())
+        .fix("regenerate the sequence diagram so that every participant carries a uid")
+        .build()
 }
 
 fn collect_block_data(
@@ -222,7 +176,7 @@ fn observe_interaction(interaction: &Interaction) -> ObservedSequenceCall {
 mod tests {
     use super::*;
     use crate::validators::fixtures::dummy_source_location;
-    use sequence_logic::{Branch, BranchCase, Interaction};
+    use sequence_logic::{Branch, BranchCase, Interaction, ParticipantType};
 
     fn interaction(caller: Option<&str>, callee: Option<&str>, method: &str) -> Node {
         Node::Interaction(Interaction {
@@ -273,6 +227,58 @@ mod tests {
         assert_eq!(index.observed_calls()[1].caller, "unit_2");
         assert_eq!(index.observed_calls()[1].callee, "unit_3");
         assert_eq!(index.observed_calls()[1].method, "Forward()");
+    }
+
+    fn participant(display_name: &str, alias: Option<&str>, uid: &str) -> SequenceParticipant {
+        SequenceParticipant {
+            display_name: display_name.to_string(),
+            alias: alias.map(str::to_string),
+            uid: uid.to_string(),
+            participant_type: ParticipantType::Participant,
+            source_location: dummy_source_location(),
+            stereotype: None,
+        }
+    }
+
+    #[test]
+    fn sequence_index_keys_participants_by_uid() {
+        let inputs = SequenceDiagramInputs {
+            diagrams: vec![SequenceTree {
+                name: Some("seq".to_string()),
+                participants: vec![
+                    participant("Unit 1", Some("unit_1"), "unit_1"),
+                    participant("comp::unit_2", Some("u2"), "comp.unit_2"),
+                ],
+                root: Block::default(),
+            }],
+        };
+
+        let mut result = ValidationResult::default();
+        let index = inputs.to_sequence_diagram_index(&mut result);
+
+        assert!(result.is_empty());
+        assert_eq!(
+            index.declared_participants().collect::<Vec<_>>(),
+            vec!["comp.unit_2", "unit_1"]
+        );
+    }
+
+    #[test]
+    fn sequence_index_reports_participant_with_empty_uid() {
+        let inputs = SequenceDiagramInputs {
+            diagrams: vec![SequenceTree {
+                name: Some("seq".to_string()),
+                participants: vec![participant("Unit 1", Some("unit_1"), "")],
+                root: Block::default(),
+            }],
+        };
+
+        let mut result = ValidationResult::default();
+        let index = inputs.to_sequence_diagram_index(&mut result);
+
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0].contains("has an empty uid"));
+        assert_eq!(index.declared_participants().count(), 0);
     }
 
     #[test]

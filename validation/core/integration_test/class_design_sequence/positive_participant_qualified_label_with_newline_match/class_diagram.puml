@@ -13,14 +13,10 @@
 
 @startuml class_diagram
 
-namespace score {
-	namespace mw {
-		namespace com {
-			namespace impl {
-				class Runtime
-			}
-		}
-	}
+namespace unit_1 {
+    class Process {
+        + Execute() : void
+    }
 }
 
 @enduml
