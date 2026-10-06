@@ -856,9 +856,10 @@ unit(
 )
 
 component(
-    name = "design_name_component",
+    name = "design_name_component_bazel_target",
     testonly = True,
     components = [":design_name_unit_bazel_target"],
+    design_name = "design_name_component",
     requirements = [
         ":comp_req",
         ":feat_req",
@@ -870,7 +871,7 @@ dependable_element(
     name = "design_name_example_lib",
     architectural_design = [":arch_design_design_name_example"],
     assumptions_of_use = [":aous"],
-    components = [":design_name_component"],
+    components = [":design_name_component_bazel_target"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
     maturity = "development",
