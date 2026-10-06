@@ -1,0 +1,14 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+diff --git a/src/extensions/score_metamodel/BUILD b/src/extensions/score_metamodel/BUILD
+--- a/src/extensions/score_metamodel/BUILD
++++ b/src/extensions/score_metamodel/BUILD
+@@ -37,4 +37,5 @@
+ filegroup(
+     name = "metamodel_yaml",
+     srcs = ["metamodel.yaml"],
++    visibility = ["//visibility:public"],
+ )
