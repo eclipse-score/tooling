@@ -24,8 +24,10 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+from typing import NamedTuple
 
 from lobster.common.errors import LOBSTER_Error, Message_Handler
 from lobster.common.io import lobster_read
@@ -42,22 +44,115 @@ class TestRecord:
 
     uid: str  # "Suite:TestName" (gtest tag without "gtest " prefix)
     lobster_traces: list[str] = field(default_factory=list)  # requirement IDs
-    given: str = ""  # :Given: text from RecordProperty annotation
-    when: str = ""  # :When: text
-    then: str = ""  # :Then: text
+    given: str = ""  # :Given: text from RecordProperty annotation, or derived from the test name
+    when: str = ""  # :When: text, or derived from the test name
+    then: str = ""  # :Then: text, or derived from the test name
     gtest_tag: str = ""  # raw, unprefixed "Suite:TestName" tag — survives the
     # package-prefixing done to `uid` in scan_gtest_lobster, so it always
     # matches the Tracing_Tag("gtest", ...) of the underlying gtest item.
 
 
-_GWT_KEYS: tuple[tuple[str, str], ...] = (
-    ("given", ":Given:"),
-    ("when", ":When:"),
-    ("then", ":Then:"),
+class _GwtComponent(NamedTuple):
+    """One Given-When-Then component and the ways it can be spelled."""
+
+    name: str  # component name, matching the TestRecord field
+    annotation_key: str  # line prefix in the lobster text, e.g. ":Given:"
+    name_prefixes: tuple[str, ...]  # accepted prefixes in a gtest test case name
+
+
+# Single source of truth for the three components. lobster-gtest capitalises
+# RecordProperty keys, hence the ":Given:" style annotation keys; gtest test case names
+# follow the convention "(<MemberFunction>_)?Given<Context>(_When<Condition>)_Expect<Result>".
+# The result part is commonly spelled either "Expect<Result>" or "Then<Result>", so both
+# prefixes are accepted; the first matching prefix of a component wins.
+_GWT_COMPONENTS: tuple[_GwtComponent, ...] = (
+    _GwtComponent("given", ":Given:", ("Given",)),
+    _GwtComponent("when", ":When:", ("When",)),
+    _GwtComponent("then", ":Then:", ("Expect", "Then")),
 )
 
+# A test case name is split at "_", which separates the parts of the name itself, and at
+# "/", which separates the name from the name of a test parameter.
+_TEST_CASE_NAME_SEPARATORS = re.compile(r"[_/]")
 
-def _parse_gwt(text: str) -> tuple[str, str, str]:
+
+def _empty_components() -> dict[str, str]:
+    """Return a mapping of every component name to an empty value."""
+    return {component.name: "" for component in _GWT_COMPONENTS}
+
+
+def _as_triple(values: dict[str, str]) -> tuple[str, str, str]:
+    """Return the component values in ``(given, when, then)`` order."""
+    given, when, then = (values[component.name] for component in _GWT_COMPONENTS)
+    return given, when, then
+
+
+def _match_name_prefix(part: str) -> tuple[str, str] | None:
+    """Match one part of a test case name against the known component prefixes.
+
+    Returns ``(component_name, remainder)`` for the first matching prefix, or ``None``
+    if the part belongs to no component (e.g. a leading ``<MemberFunction>`` part or an
+    uninformative test parameter name).
+    """
+    for component in _GWT_COMPONENTS:
+        for prefix in component.name_prefixes:
+            if part.startswith(prefix):
+                return component.name, part[len(prefix) :]
+    return None
+
+
+def _camel_case_to_sentence(camel_case: str) -> str:
+    """Convert a CamelCase identifier into a lower-case, space separated sentence.
+
+    ``"KernelLargerThanSignal"`` becomes ``"kernel larger than signal"``.  A word
+    boundary is detected at every upper-case character that either follows a
+    lower-case character or is followed by one, which keeps acronyms together:
+    ``"ValidPMRAllocator"`` becomes ``"valid pmr allocator"``.
+    """
+    characters: list[str] = []
+    for index, character in enumerate(camel_case):
+        follows_lower = index > 0 and camel_case[index - 1].islower()
+        precedes_lower = (index + 1) < len(camel_case) and camel_case[index + 1].islower()
+        if character.isupper() and index > 0 and (follows_lower or precedes_lower):
+            characters.append(" ")
+        characters.append(character.lower())
+    return "".join(characters)
+
+
+def _parse_test_case_name(test_case_name: str) -> tuple[str, str, str]:
+    """Derive ``(given, when, then)`` from a gtest test case name.
+
+    The name is expected to follow the naming convention
+    ``(<MemberFunction>_)?Given<Context>(_When<Condition>)_Expect<Result>``, where
+    each part is written in CamelCase.
+
+    For a value-parameterized test, gtest appends the name of the test parameter,
+    separated by ``/``.  The parameter name is treated as a further part, which
+    supports both an uninformative parameter name
+    (``"GivenKernelEmpty_ExpectNoResult/0"``) and the convention being carried by the
+    parameter name itself (``"CheckValidMass/GivenMassBelowZero_ExpectContractViolated"``).
+
+    The result part may be spelled either ``Expect<Result>`` or ``Then<Result>``.
+
+    Any part that does not start with a known prefix is ignored, which covers a leading
+    ``<MemberFunction>`` part as well as an uninformative parameter name.  Parts that
+    are absent from the name yield an empty string.
+    """
+    values = _empty_components()
+    for part in _TEST_CASE_NAME_SEPARATORS.split(test_case_name):
+        match = _match_name_prefix(part)
+        if match is not None:
+            component_name, remainder = match
+            values[component_name] = _camel_case_to_sentence(remainder)
+    return _as_triple(values)
+
+
+def _gtest_case_name_from_uid(uid: str) -> str:
+    """Extract the gtest test case name from a ``"Suite:TestName"`` lobster uid."""
+    return uid.rsplit(":", 1)[-1]
+
+
+def _parse_gwt(text: str, test_case_name: str = "") -> tuple[str, str, str]:
     """Parse a ``:Given:/:When:/:Then:`` text field into its three components.
 
     lobster-gtest capitalises RecordProperty keys, so the expected format is::
@@ -73,24 +168,37 @@ def _parse_gwt(text: str) -> tuple[str, str, str]:
     * A value that wraps onto following lines is joined (space-separated)
       until the next recognised key or the end of the text.
     * If a key appears more than once, the last occurrence wins.
+
+    If *test_case_name* is given, any component that no RecordProperty annotation
+    provides is derived from the test case name instead (see
+    :func:`_parse_test_case_name`).  Components that neither the annotations nor the
+    name provide stay empty, so a test that follows neither convention behaves
+    exactly as before.
     """
-    values = {"given": "", "when": "", "then": ""}
+    values = _empty_components()
     current: str | None = None
     for raw_line in text.splitlines():
         line = raw_line.strip()
         if not line:
             continue
         matched_key = None
-        for key, prefix in _GWT_KEYS:
-            if line.startswith(prefix):
-                values[key] = line[len(prefix) :].strip()
-                matched_key = key
+        for component in _GWT_COMPONENTS:
+            if line.startswith(component.annotation_key):
+                values[component.name] = line[len(component.annotation_key) :].strip()
+                matched_key = component.name
                 break
         if matched_key is not None:
             current = matched_key
         elif current is not None:
             values[current] = f"{values[current]} {line}".strip()
-    return values["given"], values["when"], values["then"]
+
+    if test_case_name:
+        derived = _parse_test_case_name(test_case_name)
+        for component, value in zip(_GWT_COMPONENTS, derived):
+            if not values[component.name]:
+                values[component.name] = value
+
+    return _as_triple(values)
 
 
 def read_gtest_lobster(lobster_path: Path) -> list[TestRecord]:
@@ -124,7 +232,7 @@ def read_gtest_lobster(lobster_path: Path) -> list[TestRecord]:
         if not refs:
             continue
 
-        gwt = _parse_gwt(item.text or "")
+        gwt = _parse_gwt(item.text or "", _gtest_case_name_from_uid(item.tag.tag))
         records.append(
             TestRecord(
                 uid=item.tag.tag,
