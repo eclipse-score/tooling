@@ -153,6 +153,12 @@ class MetamodelDriftTest(unittest.TestCase):
         self.assertFalse(self._findings(self._analyze(), "MAPPED_OPTION_NOT_IN_NEED"))
         self.assertFalse(self._findings(self._analyze(), "MAPPED_LINK_NOT_IN_NEED"))
 
+    def test_content_mapping_is_builtin_even_when_not_declared_in_metamodel(self) -> None:
+        mapping = _config("mapping.yaml")
+        mapping["types"]["Feature"]["options"]["extra"] = "content"
+        report = self._analyze(mapping=mapping)
+        self.assertFalse(self._findings(report, "MAPPED_OPTION_NOT_IN_NEED"))
+
     def test_base_options_are_merged_into_every_need_type(self) -> None:
         report = self._analyze()
         missing_base_options = [

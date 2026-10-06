@@ -30,6 +30,7 @@ from trlc.trlc import Source_Manager
 
 _SEVERITY = {"info": 1, "warning": 2, "error": 3}
 _SEVERITIES = ("error", "warning", "info")
+_BUILTIN_NEED_FIELDS = frozenset({"content"})
 
 
 @dataclasses.dataclass(frozen=True)
@@ -384,7 +385,7 @@ def _check_mapping(
             if source in known_fields and isinstance(destination, str)
         }
         for source_field, option_name in sorted(valid_option_fields.items()):
-            if option_name not in need_options:
+            if option_name not in need_options and option_name not in _BUILTIN_NEED_FIELDS:
                 _new_finding(
                     findings,
                     "MAPPED_OPTION_NOT_IN_NEED",
