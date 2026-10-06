@@ -5,6 +5,7 @@
       {
         "display_name": "A",
         "alias": null,
+        "uid": "A",
         "participant_type": "Participant",
         "source_location": {
           "file": "",
@@ -15,6 +16,7 @@
       {
         "display_name": "B",
         "alias": null,
+        "uid": "B",
         "participant_type": "Participant",
         "source_location": {
           "file": "",

@@ -10,11 +10,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-# Regression baseline for the two "Not yet implemented" notes in
-# sequence-diagram.md: a prose participant label with no alias is accepted
-# (id == the label text), and referring to a declared participant by its
-# display name instead of its alias silently creates a second, separate
-# implicit participant. Once identity is derived per the label forms, this
-# becomes an `errors` case for both.
+# A prose participant label needs an alias, and the display name of an
+# aliased participant is not a reference: naming it in a message is rejected.
 diagram_types:
+  declared_prose.puml: sequence
   sequence_diagram.puml: sequence
+errors:
+  declared_prose.puml:
+    - "free-text participant display names require an alias"
+  sequence_diagram.puml:
+    - "is the display name of an aliased participant, refer to it by its alias"

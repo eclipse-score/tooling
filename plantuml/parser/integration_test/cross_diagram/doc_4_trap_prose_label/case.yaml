@@ -13,3 +13,6 @@
 diagram_types:
   component_diagram.puml: component
   sequence_diagram.puml: sequence
+# A prose label does not link: the uid comes from the alias, not the label.
+distinct:
+  - ["component_diagram.puml#Backend", "sequence_diagram.puml#Backend"]

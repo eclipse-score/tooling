@@ -1,0 +1,44 @@
+{
+  "uid_bare_name.puml": {
+    "name": "uid_bare_name",
+    "participants": [
+      {
+        "display_name": "Client",
+        "alias": null,
+        "uid": "Client",
+        "participant_type": "Actor",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Foo",
+        "alias": "F",
+        "uid": "F",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "Client",
+            "receiver": "F",
+            "message": "call()",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        }
+      ]
+    }
+  }
+}

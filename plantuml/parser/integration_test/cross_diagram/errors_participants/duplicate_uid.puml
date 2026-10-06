@@ -12,6 +12,6 @@
 ' *******************************************************************************
 
 @startuml
-participant "a : X" as a
-participant "b : X" as b
+participant "comp::X" as a
+participant "comp::X" as b
 @enduml

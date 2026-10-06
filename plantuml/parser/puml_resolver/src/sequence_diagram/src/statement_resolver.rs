@@ -11,19 +11,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use std::sync::Arc;
-
 use parser_core::format_arrow;
 use sequence_logic::{
     Block, Interaction, LifecycleAction, Node, ParticipantId, ParticipantLifecycle, Reference,
     SourceLocation,
 };
-use sequence_parser::{
-    GroupCmd, Message, MessageEndpoint, MessageSuffix, ParticipantRef, RefCmd, Statement,
-};
+use sequence_parser::{GroupCmd, Message, MessageEndpoint, MessageSuffix, RefCmd, Statement};
 
 use crate::error::SequenceResolverError;
-use crate::participant_table::participant_reference_name;
+use crate::participant_table::ParticipantTable;
 use crate::sequence_tree_builder::SequenceTreeBuilder;
 
 #[derive(Debug, Clone, Copy)]
@@ -40,11 +36,12 @@ enum LifecycleTarget {
 
 pub(crate) fn build_sequence_tree(
     statements: &[Statement],
+    table: &ParticipantTable,
 ) -> Result<Block, SequenceResolverError> {
     let mut builder = SequenceTreeBuilder::new();
 
     for statement in statements {
-        consume_statement(&mut builder, statement)?;
+        consume_statement(&mut builder, statement, table)?;
     }
 
     builder.finish()
@@ -53,10 +50,11 @@ pub(crate) fn build_sequence_tree(
 fn consume_statement(
     builder: &mut SequenceTreeBuilder,
     statement: &Statement,
+    table: &ParticipantTable,
 ) -> Result<(), SequenceResolverError> {
     match statement {
         Statement::Message(message) => {
-            for node in message_nodes(message)? {
+            for node in message_nodes(message, table)? {
                 builder.push(node);
             }
         }
@@ -65,33 +63,33 @@ fn consume_statement(
         Statement::GroupCmd(GroupCmd::End(end)) => builder.end_group(end)?,
         Statement::CreateCmd(create_cmd) => {
             builder.push(lifecycle_node(
-                Arc::<str>::from(participant_reference_name(&create_cmd.identifier)),
+                table.uid_of_identifier(&create_cmd.identifier, &create_cmd.source_location)?,
                 LifecycleAction::Create,
                 create_cmd.source_location.clone(),
             ));
         }
         Statement::DestroyCmd(destroy_cmd) => {
             builder.push(lifecycle_node(
-                participant_ref_name(&destroy_cmd.participant),
+                table.uid_of_ref(&destroy_cmd.participant, &destroy_cmd.source_location)?,
                 LifecycleAction::Destroy,
                 destroy_cmd.source_location.clone(),
             ));
         }
         Statement::ActivateCmd(activate_cmd) => {
             builder.push(lifecycle_node(
-                participant_ref_name(&activate_cmd.participant),
+                table.uid_of_ref(&activate_cmd.participant, &activate_cmd.source_location)?,
                 LifecycleAction::Activate,
                 activate_cmd.source_location.clone(),
             ));
         }
         Statement::DeactivateCmd(deactivate_cmd) => {
             builder.push(lifecycle_node(
-                participant_ref_name(&deactivate_cmd.participant),
+                table.uid_of_ref(&deactivate_cmd.participant, &deactivate_cmd.source_location)?,
                 LifecycleAction::Deactivate,
                 deactivate_cmd.source_location.clone(),
             ));
         }
-        Statement::RefCmd(ref_cmd) => builder.push(reference_node(ref_cmd)),
+        Statement::RefCmd(ref_cmd) => builder.push(reference_node(ref_cmd, table)?),
         Statement::ParticipantDef(_) => {}
         // `return` has no sender or receiver. Modeling it requires a call stack
         // to resolve the matching invocation, which the resolver does not yet maintain.
@@ -101,11 +99,14 @@ fn consume_statement(
     Ok(())
 }
 
-fn message_nodes(message: &Message) -> Result<Vec<Node>, SequenceResolverError> {
+fn message_nodes(
+    message: &Message,
+    table: &ParticipantTable,
+) -> Result<Vec<Node>, SequenceResolverError> {
     let (sender, receiver) = directed_endpoints(message)?;
 
-    let sender_name = endpoint_name(sender);
-    let receiver_name = endpoint_name(receiver);
+    let sender_name = endpoint_uid(sender, table, &message.source_location)?;
+    let receiver_name = endpoint_uid(receiver, table, &message.source_location)?;
 
     let lifecycle_ops = collect_message_lifecycle_ops(message.suffix.as_ref());
 
@@ -207,16 +208,21 @@ fn suffix_to_lifecycle(suffix: &MessageSuffix) -> LifecycleOp {
     }
 }
 
-fn reference_node(ref_cmd: &RefCmd) -> Node {
-    Node::Reference(Reference {
-        participants: ref_cmd
-            .participants
-            .iter()
-            .map(participant_ref_name)
-            .collect(),
+fn reference_node(
+    ref_cmd: &RefCmd,
+    table: &ParticipantTable,
+) -> Result<Node, SequenceResolverError> {
+    let participants = ref_cmd
+        .participants
+        .iter()
+        .map(|participant| table.uid_of_ref(participant, &ref_cmd.source_location))
+        .collect::<Result<_, _>>()?;
+
+    Ok(Node::Reference(Reference {
+        participants,
         text: ref_cmd.text.clone(),
         source_location: ref_cmd.source_location.clone(),
-    })
+    }))
 }
 
 fn lifecycle_node(
@@ -231,17 +237,17 @@ fn lifecycle_node(
     })
 }
 
-fn endpoint_name(endpoint: &MessageEndpoint) -> Option<ParticipantId> {
+fn endpoint_uid(
+    endpoint: &MessageEndpoint,
+    table: &ParticipantTable,
+    source_location: &SourceLocation,
+) -> Result<Option<ParticipantId>, SequenceResolverError> {
     match endpoint {
-        MessageEndpoint::Participant(identifier) => {
-            Some(Arc::<str>::from(participant_reference_name(identifier)))
-        }
-        MessageEndpoint::LostFound(_) => None,
+        MessageEndpoint::Participant(identifier) => table
+            .uid_of_identifier(identifier, source_location)
+            .map(Some),
+        MessageEndpoint::LostFound(_) => Ok(None),
     }
-}
-
-fn participant_ref_name(participant: &ParticipantRef) -> ParticipantId {
-    Arc::<str>::from(participant.identifier.as_str())
 }
 
 fn directed_endpoints(
@@ -272,8 +278,19 @@ fn directed_endpoints(
 #[cfg(test)]
 mod message_arrow_tests {
     use super::*;
+    use crate::participant_table::build_participant_table;
     use parser_core::common_ast::{Arrow, ArrowDecor, ArrowLine};
     use sequence_parser::ParticipantIdentifier;
+    use uid_normalization::RootAnchor;
+
+    fn table_for(statements: &[Statement]) -> ParticipantTable {
+        build_participant_table(statements, &RootAnchor::default()).expect("table must build")
+    }
+
+    fn resolve_message(message: &Message) -> Result<Vec<Node>, SequenceResolverError> {
+        let table = table_for(&[Statement::Message(message.clone())]);
+        message_nodes(message, &table)
+    }
 
     fn arrow(line: &str, right: Option<&str>) -> Arrow {
         Arrow {
@@ -321,7 +338,7 @@ mod message_arrow_tests {
     #[test]
     fn test_solid_directed_arrow_produces_interaction() {
         assert_eq!(
-            message_nodes(&message(arrow("-", Some(">"))))
+            resolve_message(&message(arrow("-", Some(">"))))
                 .expect("must resolve a directed arrow")
                 .len(),
             1
@@ -331,7 +348,7 @@ mod message_arrow_tests {
     #[test]
     fn test_dashed_directed_arrow_produces_interaction() {
         assert_eq!(
-            message_nodes(&message(arrow("--", Some(">"))))
+            resolve_message(&message(arrow("--", Some(">"))))
                 .expect("must resolve a directed arrow")
                 .len(),
             1
@@ -376,7 +393,7 @@ mod message_arrow_tests {
             let mut suffixed_message = message(arrow("-", Some(">")));
             suffixed_message.suffix = Some(suffix);
 
-            let nodes = message_nodes(&suffixed_message).expect("suffix must resolve");
+            let nodes = resolve_message(&suffixed_message).expect("suffix must resolve");
             let lifecycle_matches = |lifecycle: &ParticipantLifecycle| {
                 lifecycle.participant.as_ref() == participant && lifecycle.action == action
             };
@@ -410,9 +427,9 @@ mod message_arrow_tests {
         let mut return_message = message(arrow("--", Some(">")));
         return_message.source_location = return_location.clone();
 
-        let root =
-            build_sequence_tree(&[Statement::Message(call), Statement::Message(return_message)])
-                .expect("messages must resolve");
+        let statements = [Statement::Message(call), Statement::Message(return_message)];
+        let root = build_sequence_tree(&statements, &table_for(&statements))
+            .expect("messages must resolve");
 
         assert_eq!(root.items.len(), 2);
         let Node::Interaction(interaction) = &root.items[0] else {
@@ -434,7 +451,7 @@ mod message_arrow_tests {
             MessageSuffix::Activate,
         ]));
 
-        let nodes = message_nodes(&combined_message).expect("combined suffix must resolve");
+        let nodes = resolve_message(&combined_message).expect("combined suffix must resolve");
         assert!(matches!(
             nodes.as_slice(),
             [
@@ -458,7 +475,7 @@ mod message_arrow_tests {
             MessageSuffix::Activate,
         ]));
 
-        let nodes = message_nodes(&combined_message).expect("combined suffix must resolve");
+        let nodes = resolve_message(&combined_message).expect("combined suffix must resolve");
         assert!(matches!(
             nodes.as_slice(),
             [
@@ -469,6 +486,66 @@ mod message_arrow_tests {
                 && create.action == LifecycleAction::Create
                 && activate.participant.as_ref() == "B"
                 && activate.action == LifecycleAction::Activate
+        ));
+    }
+
+    fn aliased_participant(display_name: &str, alias: &str) -> Statement {
+        Statement::ParticipantDef(sequence_parser::sequence_ast::ParticipantDef {
+            participant_type: sequence_parser::ParticipantType::Participant,
+            identifier: ParticipantIdentifier {
+                display_name: display_name.to_string(),
+                alias: Some(alias.to_string()),
+            },
+            stereotype: None,
+            source_location: SourceLocation::new("", 0),
+        })
+    }
+
+    fn participant_ref(identifier: &str) -> sequence_parser::ParticipantRef {
+        sequence_parser::ParticipantRef {
+            identifier: identifier.to_string(),
+        }
+    }
+
+    #[test]
+    fn test_lifecycle_and_ref_statements_resolve_aliases_to_uids() {
+        let statements = [
+            aliased_participant("comp::unit", "u"),
+            Statement::ActivateCmd(sequence_parser::ActivateCmd {
+                participant: participant_ref("u"),
+                source_location: SourceLocation::new("", 1),
+            }),
+            Statement::RefCmd(RefCmd {
+                participants: vec![participant_ref("u")],
+                text: None,
+                source_location: SourceLocation::new("", 2),
+            }),
+        ];
+
+        let root = build_sequence_tree(&statements, &table_for(&statements))
+            .expect("statements must resolve");
+
+        assert!(matches!(
+            root.items.as_slice(),
+            [Node::Lifecycle(activate), Node::Reference(reference)]
+                if activate.participant.as_ref() == "comp.unit"
+                    && reference.participants.iter().map(|p| p.as_ref()).eq(["comp.unit"])
+        ));
+    }
+
+    #[test]
+    fn test_unknown_lifecycle_participant_is_rejected() {
+        let statements = [Statement::ActivateCmd(sequence_parser::ActivateCmd {
+            participant: participant_ref("Ghost"),
+            source_location: SourceLocation::new("", 7),
+        })];
+
+        let err = build_sequence_tree(&statements, &table_for(&statements))
+            .expect_err("unknown participant must be rejected");
+
+        assert!(matches!(
+            err,
+            SequenceResolverError::UnknownParticipant { reference, .. } if reference == "Ghost"
         ));
     }
 }

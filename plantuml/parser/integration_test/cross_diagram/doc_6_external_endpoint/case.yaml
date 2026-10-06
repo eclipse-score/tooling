@@ -13,3 +13,8 @@
 diagram_types:
   component_diagram.puml: component
   sequence_diagram.puml: sequence
+# `ExternalEndpoint` is its own uid and never matches an architecture element.
+links:
+  - ["component_diagram.puml#Backend", "sequence_diagram.puml#Backend"]
+distinct:
+  - ["component_diagram.puml#Backend", "sequence_diagram.puml#ExternalEndpoint"]

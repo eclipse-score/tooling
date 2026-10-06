@@ -168,6 +168,7 @@ fn sequence_participant(participant: &str) -> SequenceParticipant {
     SequenceParticipant {
         display_name: participant.to_string(),
         alias: None,
+        uid: participant.to_string(),
         participant_type: ParticipantType::Participant,
         source_location: dummy_source_location(),
         stereotype: None,

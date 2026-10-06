@@ -10,7 +10,7 @@
 '
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
-
 @startuml
-participant "backend :" as b
+participant "Order Service"
+Caller -> "Order Service" : call()
 @enduml

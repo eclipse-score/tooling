@@ -13,7 +13,17 @@
 diagram_types:
   free_text_without_alias.puml: sequence
   duplicate_uid.puml: sequence
-  multiple_colons.puml: sequence
-  empty_type.puml: sequence
+  duplicate_alias.puml: sequence
   undeclared_lifecycle.puml: sequence
   undeclared_ref.puml: sequence
+errors:
+  free_text_without_alias.puml:
+    - "free-text participant display names require an alias"
+  duplicate_uid.puml:
+    - "duplicate sequence participant id"
+  duplicate_alias.puml:
+    - "duplicate sequence participant name `a`"
+  undeclared_lifecycle.puml:
+    - "unknown sequence participant `Ghost`"
+  undeclared_ref.puml:
+    - "unknown sequence participant `Ghost`"

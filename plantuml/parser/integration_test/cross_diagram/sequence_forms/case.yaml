@@ -10,9 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-# Baseline for today's sequence participant identity: every participant is a
-# "reference" (never a "define"), and its id is always exactly its alias,
-# whether declared with an explicit `as` clause or bare. This is expected to
-# change once Rule B (participant uid derivation) lands in a later PR.
+# Participant uid per Rule B: a qualified label is the identity, otherwise the
+# alias, otherwise the bare name. Every participant is a "reference".
 diagram_types:
   sequence_diagram.puml: sequence

@@ -322,23 +322,29 @@ joined: `unit_1.docs.logging.Recorder.Backend`. `::` and `.` are equivalent sepa
 dotted/`::`-qualified reference (an interface binding, a class relationship, …) is always read
 **relative to the root anchor**, never as an absolute path.
 
-**Sequence diagrams are the exception**: a participant has no nesting to draw scope from, so its
-identifier is read out of the **quoted label**, not the alias — the alias is only a local shortcut
-for drawing arrows.
+**Sequence diagrams are the exception**: a participant has no nesting to draw scope from, so a
+**quoted label that is a qualified path** is its identifier, even when an alias exists — the alias
+is only a local shortcut for drawing arrows. Any other label is prose, and the identifier is the
+alias.
 
 | What you write | Identifier comes from |
 |-----------------|-----------------------|
-| `participant "backend : logging::Recorder::Backend" as Backend` | text right of the `:` |
-| `participant "Unit 1" as unit_1` | falls back to the **alias** (`unit_1`) |
+| `participant "logging::Recorder::Backend" as Backend` | the label (`logging.Recorder.Backend`) |
+| `participant "Unit 1" as unit_1` | label is prose → the **alias** (`unit_1`) |
+| `participant "backend : logging::Recorder::Backend" as Backend` | spaces or `:` make it prose → the **alias** (`Backend`) |
+| `actor Client` | the bare name |
 
 If a participant represents a nested unit, write the full qualified label —
-`"instance : Component::Unit"` — so the identifier matches the `static` diagram. A bare prose
-label still parses, but if it doesn't resolve to the same identifier as the component diagram
-there is no parse error, only a **cross-diagram validation mismatch** (see **Active validations**,
-`component_sequence.md`).
+`"Component::Unit"` — so the identifier matches the `static` diagram. A prose label without an
+alias is an error, and a prose label with an alias that doesn't resolve to the same identifier as
+the component diagram is a **cross-diagram validation mismatch** (see **Active validations**,
+`component_sequence.md`). Messages, `activate`, `deactivate`, `destroy`, `create` and `ref over`
+name a participant by its alias (or bare name); the display name of an aliased participant is not
+a reference.
 
 `ExternalEndpoint` is a reserved participant name for an actor outside the described architecture;
 it is emitted verbatim (no root anchor, no scope) so it always matches itself across diagrams.
+Declare it as `participant ExternalEndpoint` (or with that alias), at most once per diagram.
 
 **Best practices**:
 - Give every architecture-relevant element an explicit `as` alias; never rely on a prose label.
@@ -346,9 +352,9 @@ it is emitted verbatim (no root anchor, no scope) so it always matches itself ac
   package — different packages get different root anchors, and their identifiers can never match.
 - Mirror the nesting between the `static` and `unit_design` diagrams; scope segments must be
   identical on both sides.
-- In sequence diagrams, write the full qualified label (`"instance : Component::Unit"`) once
-  nesting is involved; use the bare alias only when the unit is top-level. Use the alias for arrows
-  either way.
+- In sequence diagrams, write the full qualified label (`"Component::Unit"`) once nesting is
+  involved; use the bare alias only when the unit is top-level. Use the alias for arrows either
+  way.
 - Use `ExternalEndpoint` verbatim for out-of-scope actors.
 - Treat identifiers as derived, not authored — to change one, change the nesting, alias, or owning
   Bazel package, not the identifier itself.

@@ -43,14 +43,14 @@ that suite's goldens change with it.
 | Class id leaf ([§3](#3-class-diagrams), [Rule A](#rule-a)) | implemented — alias when present, else name | alias when present, else name | `class_alias_wins` |
 | `name` field of a class/component entity ([Rule A](#rule-a)) | implemented — the written name with its spelling kept and one leading root marker removed; a component with an alias keeps its `name` verbatim (display text) | same | `rooted_declaration_in_package` |
 | Class/component reference resolution ([§5](#referring-to-another-element), [Rule C](#rule-c)) | class and component: implemented per Rule C (class: declaration-order visibility; component: whole diagram, ports resolve to their owner; ambiguity is an error) | one lookup for both: `S.r`, else the unique leaf; qualified: `S.r` or the root path; leading `.` or `::` = root; class references see earlier declarations only; ambiguity is an error | `qualified_reference`, `relation_simple_name_prefers_direct_hit` |
-| Sequence participant identity ([§4](#4-sequence-diagrams), [Rule B](#rule-b)) | **not implemented** — identity is the alias, else the display name, verbatim (none of the label forms are parsed) | `uid` derived from the label per the label forms | `sequence_forms`, `prose_without_alias` |
-| Sequence ↔ component/class linking ([§5](#5-linking-the-three-diagrams)) | works only by coincidence when both sides use a plain, un-nested alias | component/class id == participant uid | `linking_three_diagrams`, `component_nesting` |
-| `ExternalEndpoint` marker ([§6](#6-special-cases), [Rule E](#rule-e)) | **not implemented** — no such reserved participant exists | emitted verbatim, never anchored | — |
-| Errors in [§7](#7-errors-you-may-hit) (`free-text participant display names require an alias…`, `multiple standalone ':' separators…`, `Duplicate entity id`, `Ambiguous reference`, `Unresolved reference`, `duplicate sequence participant id`) | **partially implemented** — `Duplicate entity id`, `Ambiguous reference` and `Unresolved reference` exist for class entities; the sequence/participant diagnostics don't exist yet | as described | `prose_without_alias` |
-| Id normalization (`::` / `.` equivalence, [Definitions](#definitions)) | implemented for class and component ids, scope paths, ports and relationship endpoints (incl. `extends`/`implements`); both diagram parsers accept `.`, `::` and the leading root marker in every name position ([Separators and root markers](#separators-and-root-markers)); the component merge compares names after normalization; sequence participants don't normalize yet | works everywhere an identifier is read or written, sequence included | `namespace_and_package`, `qualified_reference`, `relation_quoted_name`, `separator_equivalence` |
-| Label markup stripping (creole tags in labels) | implemented for activity diagram labels only | also strips markup from sequence participant labels before Rule B derivation | — |
+| Sequence participant identity ([§4](#4-sequence-diagrams), [Rule B](#rule-b)) | implemented — `uid` is the qualified label, else the alias, else the bare name; without a root anchor | same, plus the root anchor | `sequence_forms`, `prose_without_alias`, `uid_*` resolver cases |
+| Sequence ↔ component/class linking ([§5](#5-linking-the-three-diagrams)) | partly implemented — the resolvers emit component/class id == participant uid (idmap links); the validators still compare aliases and display names | component/class id == participant uid in the resolvers and the validators | `linking_three_diagrams`, `component_nesting` |
+| `ExternalEndpoint` marker ([§6](#6-special-cases), [Rule E](#rule-e)) | implemented — emitted verbatim | emitted verbatim, never anchored | `doc_6_external_endpoint` |
+| Errors in [§7](#7-errors-you-may-hit) (`free-text participant display names require an alias…`, `is the display name of an aliased participant…`, `Duplicate entity id`, `Ambiguous reference`, `Unresolved reference`, `duplicate sequence participant id`, `duplicate sequence participant name`, `unknown sequence participant`) | implemented | as described | `prose_without_alias`, `errors_participants` |
+| Id normalization (`::` / `.` equivalence, [Definitions](#definitions)) | implemented for class and component ids, scope paths, ports and relationship endpoints (incl. `extends`/`implements`); both diagram parsers accept `.`, `::` and the leading root marker in every name position ([Separators and root markers](#separators-and-root-markers)); the component merge compares names after normalization; sequence participant uids are normalized the same way | works everywhere an identifier is read or written, sequence included | `namespace_and_package`, `qualified_reference`, `relation_quoted_name`, `separator_equivalence` |
+| Label markup stripping (creole tags in labels) | implemented for activity diagram labels and sequence participant labels (before Rule B derivation) | same | — |
 | Qualified name inside a nested declaration ([Rule C](#rule-c)) | implemented — nests under the enclosing scope; a leading `.` or `::` is rooted (class and component diagrams); the parent is the id minus its last segment, whether or not it is declared in this diagram | nests under the enclosing scope; a leading `.` or `::` roots it | `qualified_in_nested_scope`, `rooted_declaration_in_package`, `rooted_dotted_declaration`, `qualified_interface_top_level`, `qualified_port_owner` |
-| Cross-diagram hyperlinks (`idmap`) for sequence participants ([§9](#9-current-limitations)) | not identifier-based; links from a sequence participant may not resolve | identifier-based, same as component/class | — |
+| Cross-diagram hyperlinks (`idmap`) for sequence participants | implemented — identifier-based, same as component/class | same | `linking_three_diagrams` |
 
 ---
 
@@ -198,9 +198,10 @@ package outer {
 This is the one that behaves differently, and the one most likely to trip you
 up.
 
-> **In a sequence diagram the alias is not the identity.** The alias is a local
-> shortcut for drawing arrows. The identity is read out of the **quoted label**
-> ([Rule B](#rule-b)).
+> **In a sequence diagram the alias is not the identity when the label is a
+> qualified name.** The alias is a local shortcut for drawing arrows. The
+> identity is read out of the **quoted label** if that is a qualified path, else
+> out of the alias ([Rule B](#rule-b)).
 
 Sequence diagrams have no nesting, so the whole scope has to be written into
 the label.
@@ -209,18 +210,23 @@ the label.
 
 | What you write | Identity is taken from | Resulting identifier |
 |----------------|------------------------|----------------------|
-| `participant "backend : logging::Recorder::Backend" as Backend` | text right of the single `:` | `score.mw.log.logging.Recorder.Backend` |
-| `participant ":logging::IBackend" as IBackend` | same, instance name omitted | `score.mw.log.logging.IBackend` |
-| `participant "logging::IBackend" as IBackend` | the whole label (no spaces → treated as a qualified name) | `score.mw.log.logging.IBackend` |
-| `participant "Log Client" as Client` | label is prose → falls back to the **alias** | `score.mw.log.Client` |
+| `participant "logging::Recorder::Backend" as Backend` | the label (a qualified path wins over the alias) | `score.mw.log.logging.Recorder.Backend` |
+| `participant "logging.IBackend" as IBackend` | the label, `.` and `::` are equivalent | `score.mw.log.logging.IBackend` |
+| `participant "Log Client" as Client` | label is prose → the **alias** | `score.mw.log.Client` |
+| `participant "backend : logging::Recorder::Backend" as Backend` | a label with spaces or `:` is prose → the **alias** | `score.mw.log.Backend` |
 | `actor Client` | the bare name | `score.mw.log.Client` |
 
 All participant kinds behave identically — `participant`, `actor`, `boundary`,
 `control`, `entity`, `queue`, `database`, `collections`.
 
+Messages, `activate`, `deactivate`, `destroy`, `create` and `ref over` name a
+participant by its alias, or by its declared name when it has no alias. The
+display name of an aliased participant is not a name: after
+`participant "Display Service" as DisplayService`, write `DisplayService`.
+
 ### The trap
 
-The last form is the old habit, and it is the one that silently fails to link:
+The prose form is the old habit, and it is the one that silently fails to link:
 
 ```text
 participant "Log Client" as Client        ' → score.mw.log.Client
@@ -243,11 +249,12 @@ participant "Unit 1" as unit_1 <<unit>>
 as
 
 ```text
-participant "Unit 1 : package_a::component_a::unit_1" as unit_1 <<unit>>
+participant "package_a::component_a::unit_1" as unit_1 <<unit>>
 ```
 
-You keep the readable label, the arrows still use the short alias, and the
-identifier now matches the component diagram.
+The arrows still use the short alias and the identifier now matches the
+component diagram. The label carries the path, so it is no longer free to hold
+readable prose.
 
 ---
 
@@ -292,8 +299,8 @@ package logging {
 
 ```text
 @startuml sequence_diagram
-participant "backend : logging::Recorder::Backend" as Backend
-participant ":logging::IBackend" as IBackend
+participant "logging::Recorder::Backend" as Backend
+participant "logging::IBackend" as IBackend
 Backend -> IBackend : Write()
 @enduml
 ```
@@ -402,6 +409,12 @@ ExternalEndpoint -> Backend : Notify()
 → `ExternalEndpoint`, in every diagram and every Bazel package, so it always
 matches itself.
 
+Only the alias or the bare declared name counts: `participant ExternalEndpoint`
+and `participant "Outside" as ExternalEndpoint` are the marker, while
+`participant "ExternalEndpoint" as ext` is an ordinary participant with uid
+`ext`. Participant uids are unique, so a diagram declares the marker at most
+once.
+
 **FTA diagrams** — node aliases that are TRLC fully-qualified names
 (`Package.Record`) address TRLC safety records, not architecture elements. They
 are emitted verbatim and never anchored ([Rule E](#rule-e)). Activity diagrams
@@ -413,13 +426,14 @@ carry no identifiers at all.
 
 | Message | Cause | Fix |
 |---------|-------|-----|
-| `free-text participant display names require an alias for uid derivation` | A quoted, prose participant label with no `as` alias | Add an alias, or write a qualified label |
-| `multiple standalone ':' separators are not allowed` | e.g. `participant "a : b : c"` | Use at most one `:` — `"instance : Qualified::Type"` |
-| `standalone ':' must have a non-empty right-hand side` | e.g. `participant "backend :"` | Write the type after the `:` |
+| `free-text participant display names require an alias for uid derivation` | A quoted, prose participant label with no `as` alias, declared or used as a message endpoint | Add an alias, or write a qualified label |
 | `Duplicate entity id: <id>` | Two elements resolve to the same identifier | Rename one — note `core::User` and `core.User` are the *same* identifier ([Rule F](#rule-f)) |
 | `Ambiguous reference: <ref> -> <candidates>` | A reference matches more than one declared entity | Qualify the reference, or start it with `.` for the root path |
 | `Unresolved reference: <ref>` | A reference matches no element: an aliased element's label, a path that does not exist, or (class diagrams) an element declared further down in another scope | Refer to the element by its alias or leaf, qualify the path, or declare the element first |
-| `duplicate sequence participant id <uid>` | Two participants resolve to the same identifier | Same as above |
+| `duplicate sequence participant id <uid>` | Two participants resolve to the same identifier | Rename one, or change its label or alias |
+| `duplicate sequence participant name <name>` | Two participants share a reference name (an alias, or a declared name without alias) | Rename one of the aliases |
+| `is the display name of an aliased participant, refer to it by its alias` | A message names the display name of an aliased participant | Use the alias |
+| `unknown sequence participant <name>` | `activate`, `deactivate`, `destroy` or `ref over` names a participant that is not declared | Declare it first, and name it by its alias |
 
 Two forms that PlantUML accepts but this toolchain now rejects:
 
@@ -431,7 +445,7 @@ Caller -> "Display Service" : call()     ' ✗ implicit participant by display n
 Declare them explicitly instead:
 
 ```text
-participant "Order Service : orders::OrderService" as OrderService
+participant "orders::OrderService" as OrderService
 participant "Display Service" as DisplayService
 ```
 
@@ -445,7 +459,7 @@ participant "Display Service" as DisplayService
    make it a valid identifier (letters, digits, `_`). Never rely on a prose
    label.
 3. **In sequence diagrams, always write the full path in the label**:
-   `"instance : package::Component::Unit"`. Use the alias only for arrows.
+   `"package::Component::Unit"`. Use the alias only for arrows.
 4. **Mirror the nesting** between component and class diagrams — the scope
    segments must be identical on both sides.
 5. **Use `ExternalEndpoint` verbatim** for out-of-scope actors.
@@ -463,12 +477,7 @@ participant "Display Service" as DisplayService
 ## 9. Current limitations
 
 See the [implementation status table](#0-implementation-status) for what is and
-isn't implemented yet. The item below is a bug rather than pending work —
-it has no planned test case and no target-design row of its own:
-
-- **Cross-diagram hyperlinks (`idmap`) are not yet identifier-based for
-  sequence diagrams**, so clickable links from a sequence participant to its
-  component may not resolve.
+isn't implemented yet.
 
 ---
 
@@ -499,8 +508,8 @@ standalone CLI runs).
   `leaf` = alias, else name (error if both absent).
 - *Class:* `internal_scope` = the enclosing namespace/package chain, each
   segment its alias, else its name; `leaf` = alias, else name.
-- *Sequence:* both are derived from the label ([Rule B](#rule-b)); participant
-  nesting does not exist.
+- *Sequence:* the identity is derived from the display name and the alias
+  ([Rule B](#rule-b)); participant nesting does not exist.
 
 The `name` field of a class or component is not part of the identifier. It is
 the written name with its spelling kept (`a::b::C` stays `a::b::C`) and one
@@ -509,18 +518,27 @@ verbatim, because it is display text (`component ".NET" as dotnet`).
 
 ### Rule B
 
-**Sequence label (`type_text`).** Take the first non-empty line of the display
-name, then, in order:
+**Participant uid.** Take the first non-empty line of the display name, with
+label markup stripped (only the literal `\n` splits lines; `/n` is text). Then,
+in order:
 
-1. exactly one standalone `:` → `type_text` = the text right of it;
-2. no standalone `:` and a bare qualified identifier (no spaces) → `type_text`
-   = the whole line;
-3. otherwise (free-text label) → `type_text` = the alias.
+1. the line is a qualified path — segments of letters, digits and `_`,
+   separated by `.` or `::`, with an optional leading root marker → `text` =
+   the path, even when an alias exists;
+2. otherwise `text` = the alias;
+3. no alias → `text` = the line, if it is a plain identifier (letters, digits,
+   `_`, `-`, `@`, `.`);
+4. otherwise (free-text label without alias) → error.
 
-Then `internal_scope` = all segments of `normalize(type_text)` except the last,
-and `leaf` = the last segment. The alias is a local reference key used to bind
-messages to participants; it contributes to the identifier only in case 3. More
-than one standalone `:`, or a `:` with an empty right-hand side, is an error.
+Then `uid = join(root_anchor, normalize(text))`, with a leading root marker
+dropped; `ExternalEndpoint` is emitted verbatim ([Rule E](#rule-e)). A label
+with spaces or a `:` is prose, there is no `instance : Type` form. The alias is
+the local reference key that binds messages to participants. A participant is
+referred to by its alias, else by its declared name; the display name of an
+aliased participant is not a reference, naming it in a message is an error. Two
+participants with the same reference name or the same uid are an error, as is an
+`activate`, `deactivate`, `destroy` or `ref over` on a name no participant
+declares.
 
 ### Rule C
 

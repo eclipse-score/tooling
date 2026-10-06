@@ -3,7 +3,9 @@
         "defines": {},
         "references": {
             "Frontend": "Frontend",
-            "Backend": "Backend"
+            "Backend": "Backend",
+            "Sink": "logging.Recorder.Sink",
+            "Client": "Client"
         }
     }
 }

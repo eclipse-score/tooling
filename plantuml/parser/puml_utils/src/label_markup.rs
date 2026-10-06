@@ -82,8 +82,7 @@ pub fn decode_newline_escapes(text: &str) -> String {
 }
 
 /// Identity-label cleanup: decode `\n` escapes into line breaks and strip
-/// inline style markup, so the result is ready for first-line/`:`-based
-/// inspection.
+/// inline style markup, so the result is ready for first-line inspection.
 pub fn normalize_identity_label(text: &str) -> String {
     strip_style_markup(&decode_newline_escapes(text))
 }

@@ -287,23 +287,21 @@ fn class_model_to_idmap(model: &ClassDiagram, source: &str) -> IdMapFile {
     }
 }
 
-/// Collect the unique participant names from a sequence tree.
-fn collect_participants(tree: &SequenceTree) -> HashSet<String> {
-    tree.participant_reference_names().collect()
-}
-
 /// Produce an [`IdMapFile`] from a resolved sequence diagram.
 ///
 /// Sequence diagrams have no "definition" elements — all participants are
 /// references (each participant links away to the component diagram that
-/// elaborates it).
+/// elaborates it). The id is the participant uid.
 fn sequence_model_to_idmap(model: &SequenceTree, source: &str) -> IdMapFile {
-    let participants = collect_participants(model);
-    let mut references: Vec<IdMapEntry> = participants
-        .into_iter()
-        .map(|name| IdMapEntry {
-            alias: name.clone(),
-            id: name,
+    let mut references: Vec<IdMapEntry> = model
+        .participants
+        .iter()
+        .map(|participant| IdMapEntry {
+            alias: participant
+                .alias
+                .clone()
+                .unwrap_or_else(|| participant.display_name.clone()),
+            id: participant.uid.clone(),
         })
         .collect();
     references.sort_by(|a, b| a.id.cmp(&b.id));
@@ -504,6 +502,7 @@ mod tests {
         SequenceParticipant {
             display_name: name.to_string(),
             alias: None,
+            uid: name.to_string(),
             participant_type: ParticipantType::Participant,
             source_location: SourceLocation::new("test.puml", 0),
             stereotype: None,
@@ -1288,6 +1287,27 @@ mod tests {
         assert!(idmap.defines.is_empty());
         let ids: Vec<&str> = idmap.references.iter().map(|e| e.id.as_str()).collect();
         assert_eq!(ids, ["A", "B", "Deep", "Nested"]);
+    }
+
+    #[test]
+    fn sequence_participant_reference_uses_uid_as_id_and_alias_as_alias() {
+        let mut participant = sequence_participant("comp::unit");
+        participant.alias = Some("u".to_string());
+        participant.uid = "comp.unit".to_string();
+        let tree = SequenceTree {
+            name: None,
+            participants: vec![participant, sequence_participant("Bare")],
+            root: Block::default(),
+        };
+
+        let idmap = sequence_model_to_idmap(&tree, "pkg/seq.puml");
+
+        let entries: Vec<(&str, &str)> = idmap
+            .references
+            .iter()
+            .map(|e| (e.id.as_str(), e.alias.as_str()))
+            .collect();
+        assert_eq!(entries, [("Bare", "Bare"), ("comp.unit", "u")]);
     }
 
     #[test]

@@ -5,6 +5,7 @@
       {
         "display_name": "Display Service",
         "alias": "Service",
+        "uid": "Service",
         "participant_type": "Participant",
         "source_location": {
           "file": "",
@@ -15,20 +16,11 @@
       {
         "display_name": "Caller",
         "alias": null,
+        "uid": "Caller",
         "participant_type": "Participant",
         "source_location": {
           "file": "",
           "line": 17
-        },
-        "stereotype": null
-      },
-      {
-        "display_name": "Display Service",
-        "alias": null,
-        "participant_type": "Participant",
-        "source_location": {
-          "file": "",
-          "line": 22
         },
         "stereotype": null
       }
@@ -43,17 +35,6 @@
             "source_location": {
               "file": "",
               "line": 19
-            }
-          }
-        },
-        {
-          "Interaction": {
-            "sender": "Service",
-            "receiver": "Display Service",
-            "message": "callByDisplayName()",
-            "source_location": {
-              "file": "",
-              "line": 22
             }
           }
         }

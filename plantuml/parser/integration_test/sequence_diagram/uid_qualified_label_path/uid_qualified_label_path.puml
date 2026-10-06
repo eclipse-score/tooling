@@ -11,6 +11,11 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml
-participant "a : b : c" as x
+@startuml uid_qualified_label_path
+
+participant "comp::unit_1" as u1
+participant Client
+
+Client -> u1 : call()
+
 @enduml

@@ -14,6 +14,7 @@
 mod error;
 mod lifecycle_validator;
 mod participant_table;
+mod participant_uid;
 mod sequence_resolver;
 mod sequence_tree_builder;
 mod statement_resolver;

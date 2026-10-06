@@ -15,6 +15,31 @@ use sequence_logic::SourceLocation;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum SequenceResolverError {
+    #[error("invalid sequence participant `{participant}` at {source_location}: {reason}")]
+    InvalidParticipantIdentifier {
+        participant: String,
+        reason: String,
+        source_location: SourceLocation,
+    },
+
+    #[error("duplicate sequence participant id {participant_id} at {source_location}")]
+    DuplicateParticipantId {
+        participant_id: String,
+        source_location: SourceLocation,
+    },
+
+    #[error("duplicate sequence participant name `{reference}` at {source_location}")]
+    DuplicateParticipantReference {
+        reference: String,
+        source_location: SourceLocation,
+    },
+
+    #[error("unknown sequence participant `{reference}` at {source_location}")]
+    UnknownParticipant {
+        reference: String,
+        source_location: SourceLocation,
+    },
+
     #[error("participant `{participant}` is used after destroy at {source_location}")]
     DestroyedParticipantUse {
         participant: String,
