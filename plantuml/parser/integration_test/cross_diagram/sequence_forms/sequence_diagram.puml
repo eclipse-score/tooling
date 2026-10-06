@@ -13,6 +13,10 @@
 @startuml
 participant "Front End" as Frontend
 participant Backend
+participant "logging::Recorder::Sink" as Sink
+actor Client
 Frontend -> Backend : Request()
 Backend --> Frontend : Response()
+Backend -> Sink : Write()
+Client -> Frontend : Click()
 @enduml

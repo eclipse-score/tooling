@@ -15,8 +15,8 @@ use serde::{Deserialize, Serialize};
 pub use source_location::SourceLocation;
 use std::sync::Arc;
 
-/// For a PlantUML sequence diagram, this is the resolved participant identifier
-/// (typically the alias if present, otherwise the display name).
+/// For a PlantUML sequence diagram, this is the `uid` of the participant
+/// ([`SequenceParticipant::uid`]).
 ///
 /// For C++ code, this is typically the object/class identifier resolved from
 /// the call site.
@@ -165,6 +165,9 @@ pub enum ParticipantType {
 pub struct SequenceParticipant {
     pub display_name: String,
     pub alias: Option<String>,
+    /// Identifier of the participant: a qualified label path, else the alias
+    /// (or bare name), below the root anchor. See `element-identifiers.md`, Rule B.
+    pub uid: String,
     pub participant_type: ParticipantType,
     pub source_location: SourceLocation,
     pub stereotype: Option<String>,
@@ -177,22 +180,4 @@ pub struct SequenceTree {
     #[serde(default)]
     pub participants: Vec<SequenceParticipant>,
     pub root: Block,
-}
-
-impl SequenceTree {
-    /// Return owned names used to reference this tree's participants.
-    ///
-    /// PlantUML references a participant by its alias when one exists;
-    /// otherwise it uses the participant's display name. Callers choose their
-    /// own collection type so they can preserve the ordering and deduplication
-    /// semantics needed by their use case.
-    pub fn participant_reference_names(&self) -> impl Iterator<Item = String> + '_ {
-        self.participants.iter().map(|participant| {
-            participant
-                .alias
-                .as_deref()
-                .unwrap_or(&participant.display_name)
-                .to_string()
-        })
-    }
 }

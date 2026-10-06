@@ -12,6 +12,6 @@
 ' *******************************************************************************
 
 @startuml
-participant "a : comp::A" as a
+participant "comp::A" as a
 activate Ghost
 @enduml

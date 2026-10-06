@@ -11,5 +11,9 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 @startuml
-component "Backend" as Backend
+package "logging" as logging {
+  component "Recorder" as Recorder {
+    component "Backend" as Backend
+  }
+}
 @enduml

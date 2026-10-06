@@ -5,6 +5,7 @@
       {
         "display_name": "Client",
         "alias": null,
+        "uid": "Client",
         "participant_type": "Participant",
         "source_location": {
           "file": "",
@@ -15,6 +16,7 @@
       {
         "display_name": "Service",
         "alias": null,
+        "uid": "Service",
         "participant_type": "Participant",
         "source_location": {
           "file": "",

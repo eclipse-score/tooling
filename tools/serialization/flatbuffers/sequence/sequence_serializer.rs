@@ -73,6 +73,7 @@ impl SequenceSerializer {
             .alias
             .as_deref()
             .map(|value| builder.create_string(value));
+        let uid = builder.create_string(&participant.uid);
         let stereotype = participant
             .stereotype
             .as_deref()
@@ -91,6 +92,7 @@ impl SequenceSerializer {
             &fb::SequenceParticipantArgs {
                 display_name: Some(display_name),
                 alias,
+                uid: Some(uid),
                 participant_type: map_participant_type(&participant.participant_type),
                 source_location: Some(source_location),
                 stereotype,

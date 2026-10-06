@@ -5,6 +5,7 @@
       {
         "display_name": "Service",
         "alias": null,
+        "uid": "Service",
         "participant_type": "Participant",
         "source_location": { "file": "", "line": 16 },
         "stereotype": null
@@ -12,6 +13,7 @@
       {
         "display_name": "Client1",
         "alias": null,
+        "uid": "Client1",
         "participant_type": "Participant",
         "source_location": { "file": "", "line": 17 },
         "stereotype": null
@@ -19,6 +21,7 @@
       {
         "display_name": "Client2",
         "alias": null,
+        "uid": "Client2",
         "participant_type": "Participant",
         "source_location": { "file": "", "line": 18 },
         "stereotype": null

@@ -764,9 +764,14 @@ impl PumlSequenceParser {
 
     // Helper functions
     fn extract_quoted_string(s: &str) -> String {
-        s.trim()
-            .trim_start_matches('"')
-            .trim_end_matches('"')
+        let s = s.trim();
+        s.strip_prefix('"')
+            .and_then(|inner| inner.strip_suffix('"'))
+            .or_else(|| {
+                s.strip_prefix('«')
+                    .and_then(|inner| inner.strip_suffix('»'))
+            })
+            .unwrap_or(s)
             .to_string()
     }
 
@@ -786,7 +791,7 @@ impl PumlSequenceParser {
                     .map(Self::extract_participant_ref)
                     .unwrap_or(fallback)
             }
-            Rule::CNAME => pair.as_str().trim().to_string(),
+            Rule::CNAME => Self::extract_quoted_string(pair.as_str()),
             _ => pair.as_str().trim().to_string(),
         }
     }
@@ -912,6 +917,23 @@ mod error_handling_tests {
 }
 
 #[cfg(test)]
+mod quoted_name_tests {
+    use super::*;
+
+    #[test]
+    fn extract_quoted_string_strips_one_balanced_quote_pair() {
+        assert_eq!(PumlSequenceParser::extract_quoted_string("\"A B\""), "A B");
+        assert_eq!(PumlSequenceParser::extract_quoted_string("«A B»"), "A B");
+        assert_eq!(PumlSequenceParser::extract_quoted_string("  \"\"  "), "");
+    }
+
+    #[test]
+    fn extract_quoted_string_keeps_unquoted_text() {
+        assert_eq!(PumlSequenceParser::extract_quoted_string(" A "), "A");
+    }
+}
+
+#[cfg(test)]
 mod dispatch_style_tests {
     use super::*;
     use parser_core::DiagramParser;
@@ -993,6 +1015,33 @@ mod dispatch_style_tests {
         for (location, expected_line) in source_locations.iter().zip([2, 3, 4]) {
             assert_eq!(location.line, expected_line);
             assert_eq!(location.file.as_ref(), expected_file.as_str());
+        }
+    }
+
+    #[test]
+    fn test_quoted_participant_references_drop_their_quotes() {
+        let input = "@startuml\nactivate \"Display Service\"\nref over \"Display Service\", Bob\n  text\nend ref\n@enduml";
+        let mut parser = PumlSequenceParser;
+        let doc = parser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("quoted references must parse");
+
+        match &doc.statements[0] {
+            Statement::ActivateCmd(command) => {
+                assert_eq!(command.participant.identifier, "Display Service");
+            }
+            actual => panic!("expected activate, got {:?}", actual),
+        }
+        match &doc.statements[1] {
+            Statement::RefCmd(command) => {
+                let identifiers: Vec<_> = command
+                    .participants
+                    .iter()
+                    .map(|participant| participant.identifier.as_str())
+                    .collect();
+                assert_eq!(identifiers, ["Display Service", "Bob"]);
+            }
+            actual => panic!("expected ref, got {:?}", actual),
         }
     }
 

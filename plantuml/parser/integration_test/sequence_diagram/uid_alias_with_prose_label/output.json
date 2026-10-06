@@ -1,0 +1,44 @@
+{
+  "uid_alias_with_prose_label.puml": {
+    "name": "uid_alias_with_prose_label",
+    "participants": [
+      {
+        "display_name": "Unit 1",
+        "alias": "unit_1",
+        "uid": "unit_1",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Client",
+        "alias": null,
+        "uid": "Client",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "Client",
+            "receiver": "unit_1",
+            "message": "call()",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        }
+      ]
+    }
+  }
+}

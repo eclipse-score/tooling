@@ -11,8 +11,6 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 @startuml
-participant "Order Service"
 participant "Display Service" as DisplayService
-Caller -> "Order Service" : call()
 Caller -> "Display Service" : notify()
 @enduml

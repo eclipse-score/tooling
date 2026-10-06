@@ -1,0 +1,44 @@
+{
+  "uid_slash_n_is_text.puml": {
+    "name": "uid_slash_n_is_text",
+    "participants": [
+      {
+        "display_name": "comp::a/nextra",
+        "alias": "x",
+        "uid": "x",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "comp::b\\nextra",
+        "alias": "y",
+        "uid": "comp.b",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "x",
+            "receiver": "comp.b",
+            "message": "call()",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        }
+      ]
+    }
+  }
+}

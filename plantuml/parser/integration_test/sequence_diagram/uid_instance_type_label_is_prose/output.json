@@ -1,0 +1,44 @@
+{
+  "uid_instance_type_label_is_prose.puml": {
+    "name": "uid_instance_type_label_is_prose",
+    "participants": [
+      {
+        "display_name": "backend : logging::Recorder::Backend",
+        "alias": "Backend",
+        "uid": "Backend",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Client",
+        "alias": null,
+        "uid": "Client",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "Client",
+            "receiver": "Backend",
+            "message": "record()",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        }
+      ]
+    }
+  }
+}
