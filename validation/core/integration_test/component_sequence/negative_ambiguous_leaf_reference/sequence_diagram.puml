@@ -11,10 +11,10 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml class_diagram
+@startuml sequence_diagram
 
-class Process {
-	+ Execute() : void
-}
+participant unit_1
+
+unit_1 -> unit_1 : SelfCall
 
 @enduml

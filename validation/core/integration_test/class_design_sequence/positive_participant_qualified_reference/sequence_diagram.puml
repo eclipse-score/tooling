@@ -11,8 +11,10 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml class_diagram
+@startuml sequence_diagram
 
-class OS
+participant "unit_2::Controller" as controller
+
+controller -> controller : Execute()
 
 @enduml

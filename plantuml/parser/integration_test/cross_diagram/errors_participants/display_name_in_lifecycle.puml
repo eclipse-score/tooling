@@ -11,8 +11,7 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml sequence_diagram
-
-participant "singletonInstance:Runtime"
-
+@startuml
+participant "Display" as ds
+activate Display
 @enduml

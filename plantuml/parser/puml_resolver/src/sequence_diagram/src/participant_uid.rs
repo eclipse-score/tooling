@@ -24,6 +24,10 @@ pub(crate) const EXTERNAL_ENDPOINT: &str = "ExternalEndpoint";
 pub(crate) const FREE_TEXT_REASON: &str =
     "free-text participant display names require an alias for uid derivation";
 
+pub(crate) const MALFORMED_PATH_REASON: &str = "participant name is not a valid qualified path \
+     (non-empty segments of letters, digits and `_` separated by `.` or `::`), \
+     fix the path or add an alias";
+
 /// Derives the uid of a participant, or the reason it has none.
 ///
 /// The first non-empty line of the display name is the identity when it is a
@@ -47,6 +51,8 @@ pub(crate) fn participant_uid(
         alias
     } else if is_plain_identifier(first_line) {
         first_line
+    } else if is_path_like(first_line) {
+        return Err(MALFORMED_PATH_REASON);
     } else {
         return Err(FREE_TEXT_REASON);
     };
@@ -85,7 +91,12 @@ fn is_plain_identifier(text: &str) -> bool {
     !text.is_empty()
         && text
             .chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '@' | '.'))
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '@'))
+}
+
+/// A single token with a path separator, so the author meant a path.
+fn is_path_like(text: &str) -> bool {
+    is_identifier_path(text) && !text.chars().any(char::is_whitespace)
 }
 
 #[cfg(test)]
@@ -150,6 +161,13 @@ mod tests {
         assert_eq!(uid("Order Service", None), Err(FREE_TEXT_REASON));
         assert_eq!(uid("", None), Err(FREE_TEXT_REASON));
         assert_eq!(uid("backend : a::B", None), Err(FREE_TEXT_REASON));
+    }
+
+    #[test]
+    fn malformed_path_without_alias_is_rejected() {
+        for label in ["a.", "a..b", "a::", "a:::b", "my-pkg::unit", ":logging::I"] {
+            assert_eq!(uid(label, None), Err(MALFORMED_PATH_REASON), "{label}");
+        }
     }
 
     #[test]

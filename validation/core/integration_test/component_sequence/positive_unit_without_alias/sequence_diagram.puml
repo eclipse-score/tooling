@@ -11,16 +11,12 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml class_diagram
+@startuml sequence_diagram
 
-namespace score {
-    namespace mw {
-        namespace com {
-            namespace impl {
-                class Runtime
-            }
-        }
-    }
-}
+participant Unit1
+participant Unit2
+
+Unit1 -> Unit2 : SendSignal
+Unit2 --> Unit1 : Ack
 
 @enduml

@@ -11,20 +11,21 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("//bazel/rules/rules_score:rules_score.bzl", "unit_design")
+load("//bazel/rules/rules_score:rules_score.bzl", "architectural_design")
 load("//validation/core/integration_test:puml_fixture.bzl", "provider_fbs_fixture_bundle")
 
-unit_design(
-    name = "unit_design",
+architectural_design(
+    name = "design",
     dynamic = ["sequence_diagram.puml"],
-    static = ["class_diagram.puml"],
+    maturity = "development",
+    static = ["component_diagram.puml"],
     visibility = ["//visibility:private"],
 )
 
 provider_fbs_fixture_bundle(
     name = "fbs",
-    visibility = ["//visibility:private"],
-    deps = [":unit_design"],
+    visibility = ["//visibility:public"],
+    deps = [":design"],
 )
 
 filegroup(
@@ -33,5 +34,5 @@ filegroup(
         "expected.yaml",
         ":fbs",
     ],
-    visibility = ["//validation/core/integration_test:__subpackages__"],
+    visibility = ["//visibility:public"],
 )

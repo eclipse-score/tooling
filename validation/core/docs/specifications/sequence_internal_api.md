@@ -35,6 +35,11 @@ are validated. Return/response interactions (dashed arrows, e.g.
 `unit_2 --> unit_1 : Ack`) are not checked against the internal API and do not
 contribute to interface coverage.
 
+Participants are linked to component-diagram units by uid: a qualified uid
+equals a unit id, a single-segment uid matches the unique unit whose id ends in
+that segment. A participant that does not resolve to exactly one unit has no
+interface context; the Component Sequence validator reports it.
+
 Method names are extracted by taking the text before the first `(` and
 trimming whitespace, so a sequence call `GetData(d: Data*)` is compared
 against an internal API method declared as `GetData()` using the same name

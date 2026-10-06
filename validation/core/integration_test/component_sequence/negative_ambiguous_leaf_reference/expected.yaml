@@ -12,9 +12,9 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  [Class] Sequence participant "Controller" matches multiple classes in the class diagram.
-    Participant          : "Controller"
-    Matching classes     : "unit_1.Controller", "unit_2.Controller"
-    Sequence source file : "validation/core/integration_test/class_design_sequence/negative_participant_ambiguous_short_name/sequence_diagram.puml"
+  [Naming] Participant "unit_1" from the sequence diagram matches multiple units in the component diagram.
+    Participant          : "unit_1"
+    Matching units       : "package_a.component_a.unit_1", "package_a.component_b.unit_1"
+    Sequence source file : "validation/core/integration_test/component_sequence/negative_ambiguous_leaf_reference/sequence_diagram.puml"
     Sequence source line : 16
-    Fix                  : Write the qualified id of the intended class as the label of participant "Controller" in the sequence diagram, for example participant "unit_1.Controller" as Controller, or rename one of the matching classes in the class diagram.
+    Fix                  : Write the qualified id of the intended unit as the label of participant "unit_1" in the sequence diagram, for example participant "package_a.component_a.unit_1" as unit_1, or rename one of the matching units in the component diagram.

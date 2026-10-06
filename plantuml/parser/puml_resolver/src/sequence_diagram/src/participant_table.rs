@@ -61,13 +61,18 @@ impl ParticipantTable {
         reference_name: &str,
         source_location: &SourceLocation,
     ) -> Result<ParticipantId, SequenceResolverError> {
-        self.uid_by_reference
-            .get(reference_name)
-            .cloned()
-            .ok_or_else(|| SequenceResolverError::UnknownParticipant {
-                reference: reference_name.to_string(),
-                source_location: source_location.clone(),
-            })
+        if let Some(uid) = self.uid_by_reference.get(reference_name) {
+            return Ok(uid.clone());
+        }
+
+        if self.is_display_name_of_aliased(reference_name) {
+            return Err(display_name_error(reference_name, source_location));
+        }
+
+        Err(SequenceResolverError::UnknownParticipant {
+            reference: reference_name.to_string(),
+            source_location: source_location.clone(),
+        })
     }
 
     fn has_reference(&self, reference_name: &str) -> bool {
@@ -122,7 +127,7 @@ fn add_implicit_participants(
                 add_endpoint_participant(table, root_anchor, &msg.right, &msg.source_location)?;
             }
             Statement::CreateCmd(create_cmd) => {
-                add_participant_once(table, root_anchor, created_participant(create_cmd))?;
+                add_referenced_participant(table, root_anchor, created_participant(create_cmd))?;
             }
             // Lifecycle and `ref over` statements do not declare participants.
             _ => {}
@@ -133,16 +138,20 @@ fn add_implicit_participants(
 }
 
 /// Adds `participant` unless its reference name is already in the table.
-fn add_participant_once(
+/// The display name of an aliased participant is not a reference name.
+fn add_referenced_participant(
     table: &mut ParticipantTable,
     root_anchor: &RootAnchor,
     participant: SequenceParticipant,
 ) -> Result<(), SequenceResolverError> {
-    if table.has_reference(reference_name(
-        &participant.display_name,
-        participant.alias.as_deref(),
-    )) {
+    let reference = reference_name(&participant.display_name, participant.alias.as_deref());
+
+    if table.has_reference(reference) {
         return Ok(());
+    }
+
+    if table.is_display_name_of_aliased(reference) {
+        return Err(display_name_error(reference, &participant.source_location));
     }
 
     add_participant(table, root_anchor, participant)
@@ -199,21 +208,7 @@ fn add_endpoint_participant(
     source_location: &SourceLocation,
 ) -> Result<(), SequenceResolverError> {
     if let MessageEndpoint::Participant(identifier) = endpoint {
-        let reference = reference_name(&identifier.display_name, identifier.alias.as_deref());
-
-        if table.has_reference(reference) {
-            return Ok(());
-        }
-
-        if table.is_display_name_of_aliased(reference) {
-            return Err(SequenceResolverError::InvalidParticipantIdentifier {
-                participant: reference.to_string(),
-                reason: DISPLAY_NAME_REASON.to_string(),
-                source_location: source_location.clone(),
-            });
-        }
-
-        add_participant(
+        add_referenced_participant(
             table,
             root_anchor,
             implicit_participant(identifier, source_location),
@@ -221,6 +216,14 @@ fn add_endpoint_participant(
     }
 
     Ok(())
+}
+
+fn display_name_error(name: &str, source_location: &SourceLocation) -> SequenceResolverError {
+    SequenceResolverError::InvalidParticipantIdentifier {
+        participant: name.to_string(),
+        reason: DISPLAY_NAME_REASON.to_string(),
+        source_location: source_location.clone(),
+    }
 }
 
 fn explicit_participant(participant_def: &ParticipantDef) -> SequenceParticipant {
@@ -515,7 +518,44 @@ mod participant_table_tests {
 
         assert!(matches!(
             table.uid_of_reference("Display", &source(4)),
-            Err(SequenceResolverError::UnknownParticipant { reference, .. }) if reference == "Display"
+            Err(SequenceResolverError::InvalidParticipantIdentifier { participant, reason, source_location })
+                if participant == "Display"
+                    && reason == DISPLAY_NAME_REASON
+                    && source_location == source(4)
+        ));
+    }
+
+    #[test]
+    fn undeclared_reference_is_unknown() {
+        let table = build(&[participant("A")]);
+
+        assert!(matches!(
+            table.uid_of_reference("Ghost", &source(4)),
+            Err(SequenceResolverError::UnknownParticipant { reference, .. }) if reference == "Ghost"
+        ));
+    }
+
+    #[test]
+    fn create_with_display_name_of_aliased_participant_is_rejected() {
+        let statements = vec![
+            participant_with_alias("Display", "d"),
+            Statement::CreateCmd(CreateCmd {
+                participant_type: SyntaxParticipantType::Participant,
+                identifier: ParticipantIdentifier {
+                    display_name: "Display".to_string(),
+                    alias: None,
+                },
+                stereotype: None,
+                source_location: source(2),
+            }),
+        ];
+
+        assert!(matches!(
+            build_err(&statements),
+            SequenceResolverError::InvalidParticipantIdentifier { participant, reason, source_location }
+                if participant == "Display"
+                    && reason == DISPLAY_NAME_REASON
+                    && source_location == source(2)
         ));
     }
 

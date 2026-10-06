@@ -89,7 +89,7 @@ fn reports_sequence_participant_missing_with_fuzzy_class_suggestion() {
 #[test]
 fn matches_sequence_participant_against_fully_qualified_class_id() {
     let design_classes = class_diagrams(vec![class_entity("Controller", Some("unit_1"))]);
-    let sequence_diagrams = sequence_diagrams(&["unit_1::Controller"]);
+    let sequence_diagrams = sequence_diagrams(&["unit_1.Controller"]);
 
     let validation_result = validate(design_classes, sequence_diagrams);
 
@@ -97,7 +97,20 @@ fn matches_sequence_participant_against_fully_qualified_class_id() {
 }
 
 #[test]
-fn matches_sequence_participant_against_unique_short_name() {
+fn does_not_match_qualified_sequence_participant_by_suffix() {
+    let design_classes = class_diagrams(vec![class_entity("Controller", Some("unit_1.core"))]);
+    let sequence_diagrams = sequence_diagrams(&["core.Controller"]);
+
+    let validation_result = validate(design_classes, sequence_diagrams);
+
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0].contains(
+        "[Class] Sequence participant \"core.Controller\" has no matching class in the class diagram."
+    ));
+}
+
+#[test]
+fn matches_sequence_participant_against_unique_leaf_reference() {
     let design_classes = class_diagrams(vec![class_entity("Controller", Some("unit_1"))]);
     let sequence_diagrams = sequence_diagrams(&["Controller"]);
 
@@ -191,29 +204,6 @@ fn passes_when_sequence_self_call_targets_existing_method() {
     let validation_result = validate(design_classes, sequence_diagrams);
 
     assert!(validation_result.failures.is_empty());
-}
-
-#[test]
-fn extracts_ignored_special_display_suffix() {
-    let mut sequence_diagrams = sequence_diagrams(&["help"]);
-    sequence_diagrams.diagrams[0].participants[0].display_name =
-        ":Process/nara::com user".to_string();
-    sequence_diagrams.diagrams[0].participants[0].alias = Some("help".to_string());
-
-    let mut setup_result = ValidationResult::default();
-    let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
-    assert!(
-        setup_result.is_empty(),
-        "test fixture setup failed: {:?}",
-        setup_result.failures
-    );
-
-    let participant_info = sequence_index.participant_info("help").unwrap();
-
-    assert_eq!(
-        ignored_special_display_suffix(participant_info),
-        Some("ara::com user".to_string())
-    );
 }
 
 fn relationship(source: &str, target: &str, relation_type: RelationType) -> Relationship {

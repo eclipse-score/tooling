@@ -17,13 +17,13 @@ error_contains:
       Participant             : "unit_3"
       Sequence source file    : "validation/core/integration_test/component_sequence/negative_orphan_participant/sequence_diagram.puml"
       Sequence source line    : 17
-      Suggestion for "unit_3" : Did you mean "unit_1"?
+      Suggestion for "unit_3" : Did you mean "package_a.component_a.unit_1"?
       Fix                     : Add component unit alias "unit_3" in the component diagram, or remove it from the sequence diagram.
   - |
-    [Interface] Sequence-connected units "unit_1" and "unit_3" have no corresponding shared interface connection in the component diagram.
-      Unit pair               : "unit_1" <-> "unit_3"
-      Sequence source file    : "validation/core/integration_test/component_sequence/negative_orphan_participant/sequence_diagram.puml"
-      Sequence source line    : 19
-      Interfaces for "unit_1" : <none>
-      Interfaces for "unit_3" : <none>
-      Fix                     : Add a shared interface connection between "unit_1" and "unit_3" in the component diagram, or remove that function-call from the sequence diagram.
+    [Interface] Sequence-connected units "package_a.component_a.unit_1" and "unit_3" have no corresponding shared interface connection in the component diagram.
+      Unit pair                                     : "package_a.component_a.unit_1" <-> "unit_3"
+      Sequence source file                          : "validation/core/integration_test/component_sequence/negative_orphan_participant/sequence_diagram.puml"
+      Sequence source line                          : 19
+      Interfaces for "package_a.component_a.unit_1" : <none>
+      Interfaces for "unit_3"                       : <none>
+      Fix                                           : Add a shared interface connection between "package_a.component_a.unit_1" and "unit_3" in the component diagram, or remove that function-call from the sequence diagram.
