@@ -13,12 +13,12 @@
 
 @startuml test_dependable_element_nested
 
-package "Test Dependable Element Nested" as test_dependable_element_nested <<SEooC>> {
-    component "Test Parent Component" as test_parent_component <<component>> {
-        component "Test Nested Component" as test_nested_component <<component>> {
-            component "Test Unit 2" as test_unit2 <<unit>>
+package test_dependable_element_nested <<SEooC>> {
+    component test_parent_component <<component>> {
+        component test_nested_component <<component>> {
+            component test_unit2 <<unit>>
         }
-        component "Test Unit" as test_unit <<unit>>
+        component test_unit <<unit>>
     }
 }
 

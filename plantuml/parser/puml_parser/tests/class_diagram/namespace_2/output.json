@@ -6,7 +6,11 @@
         "Namespace": {
           "name": {
             "internal": "App",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 15
           },
           "types": [],
           "relationships": [],
@@ -14,14 +18,18 @@
             {
               "name": {
                 "internal": "UI",
-                "display": null
+                "alias": null
+              },
+              "source_location": {
+                "file": "",
+                "line": 16
               },
               "types": [
                 {
                   "ClassDef": {
                     "name": {
                       "internal": "Button",
-                      "display": null
+                      "alias": null
                     },
                     "namespace": "UI",
                     "package": "",

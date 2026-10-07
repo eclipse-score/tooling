@@ -1,0 +1,22 @@
+{
+  "name_wins_over_alias.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "Pkg.Foo",
+        "name": "F",
+        "enclosing_namespace_id": "Pkg",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 16 }
+      }
+    ],
+    "free_functions": []
+  }
+}

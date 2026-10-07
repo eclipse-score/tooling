@@ -13,27 +13,111 @@
 
 //! Id construction and reference lookup (spec `element-identifiers.md`, Rule C).
 
+use puml_utils::normalize_identity_label;
+
 pub use uid_utils::{is_identifier_path, join, normalize, normalized_segments};
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct RootAnchor(Option<String>);
+/// Kind of element a name belongs to.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum IdentityKind {
+    /// class, abstract class, interface, enum, struct: a trailing template
+    /// argument list is not part of the name.
+    ClassLike,
+    Other,
+}
+
+/// Why a written name is not an identifier path.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum IdentityError {
+    FreeText,
+    MalformedPath,
+}
+
+impl IdentityError {
+    pub fn reason(self) -> &'static str {
+        match self {
+            Self::FreeText => {
+                "name is free text, expected an identifier path (segments of letters, \
+                 digits and `_` separated by `.` or `::`)"
+            }
+            Self::MalformedPath => {
+                "name is not a valid identifier path (non-empty segments of letters, \
+                 digits and `_` separated by `.` or `::`)"
+            }
+        }
+    }
+}
+
+/// Identity text of a written name (spec `element-identifiers.md`, Rule A').
+///
+/// The first non-empty line after markup removal, without a trailing template
+/// argument list for class-like kinds. It must be an identifier path; a
+/// leading root marker is kept.
+pub fn identity_name(label: &str, kind: IdentityKind) -> Result<String, IdentityError> {
+    let normalized = normalize_identity_label(label);
+    let first_line = normalized
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .unwrap_or_default();
+    let text = match kind {
+        IdentityKind::ClassLike => strip_template_arguments(first_line),
+        IdentityKind::Other => first_line,
+    };
+
+    if is_valid_path(text) {
+        Ok(text.to_string())
+    } else if is_path_like(text) {
+        Err(IdentityError::MalformedPath)
+    } else {
+        Err(IdentityError::FreeText)
+    }
+}
+
+/// `text` without one trailing balanced `<...>` group.
+fn strip_template_arguments(text: &str) -> &str {
+    let Some(inner) = text.strip_suffix('>') else {
+        return text;
+    };
+
+    let mut depth = 1usize;
+    for (index, ch) in inner.char_indices().rev() {
+        match ch {
+            '>' => depth += 1,
+            '<' => {
+                depth -= 1;
+                if depth == 0 {
+                    return inner[..index].trim_end();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    text
+}
+
+/// Segments of letters, digits and `_`, separated by `.` or `::`, with an
+/// optional leading root marker.
+fn is_valid_path(text: &str) -> bool {
+    strip_root_marker(text)
+        .replace("::", ".")
+        .split('.')
+        .all(|segment| {
+            !segment.is_empty()
+                && segment
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        })
+}
+
+/// A single token with a path separator, so the author meant a path.
+fn is_path_like(text: &str) -> bool {
+    is_identifier_path(text) && !text.chars().any(char::is_whitespace)
+}
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct InternalScope(Vec<String>);
-
-impl RootAnchor {
-    pub fn new(value: Option<&str>) -> Self {
-        Self(
-            value
-                .map(normalize)
-                .filter(|normalized| !normalized.is_empty()),
-        )
-    }
-
-    pub fn as_deref(&self) -> Option<&str> {
-        self.0.as_deref()
-    }
-}
 
 impl InternalScope {
     pub fn new<I, S>(parts: I) -> Self
@@ -81,30 +165,47 @@ impl InternalScope {
         Self(parts)
     }
 
-    pub fn resolve_with_leaf(&self, root_anchor: &RootAnchor, leaf: &str) -> String {
-        let mut parts = Vec::with_capacity(self.0.len() + 2);
-
-        if let Some(root_anchor) = root_anchor.as_deref() {
-            parts.push(root_anchor.to_string());
-        }
-
-        parts.extend(self.0.iter().cloned());
-        parts.push(normalize(leaf));
-
-        join(parts)
+    /// Id of this scope.
+    pub fn id(&self) -> String {
+        join(self.0.iter().map(String::as_str))
     }
 
-    pub fn resolve(&self, root_anchor: &RootAnchor) -> String {
-        join(
-            root_anchor
-                .as_deref()
-                .into_iter()
-                .chain(self.0.iter().map(String::as_str)),
-        )
+    /// Id of `leaf` below this scope; `leaf` must be one segment (no `.` or `::`).
+    pub fn id_with_leaf(&self, leaf: &str) -> String {
+        debug_assert!(!is_identifier_path(leaf));
+        join(self.0.iter().cloned().chain([normalize(leaf)]))
     }
 }
 
-/// A leading `.` or `::` anchors a name at the root anchor.
+/// Where a declaration sits: its id path (what it is) and its reference path
+/// (what Rule C resolves against). They differ below an alias: the id path
+/// uses the name, the reference path the alias.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct DeclarationScope {
+    pub id: InternalScope,
+    pub reference: InternalScope,
+}
+
+impl DeclarationScope {
+    /// Scope whose id and reference paths are both `path`.
+    pub fn from_path(path: &str) -> Self {
+        Self {
+            id: InternalScope::from_path(path),
+            reference: InternalScope::from_path(path),
+        }
+    }
+
+    /// Scope of a declaration `name` with an optional `alias`: the id path
+    /// follows the name, the reference path the alias (else the name).
+    pub fn declare(&self, name: &str, alias: Option<&str>) -> Self {
+        Self {
+            id: self.id.declare(name),
+            reference: self.reference.declare(alias.unwrap_or(name)),
+        }
+    }
+}
+
+/// A leading `.` or `::` roots a name.
 fn has_root_marker(name: &str) -> bool {
     name.starts_with('.') || name.starts_with("::")
 }
@@ -114,11 +215,6 @@ pub fn strip_root_marker(name: &str) -> &str {
     name.strip_prefix("::")
         .or_else(|| name.strip_prefix('.'))
         .unwrap_or(name)
-}
-
-/// `path` below `root_anchor`; the anchor is never stripped from `path`.
-pub fn resolve_explicit_path(root_anchor: &RootAnchor, path: &str) -> String {
-    InternalScope::from_path(path).resolve(root_anchor)
 }
 
 /// Key for the leaf lookup in [`resolve_reference`]: the last id segment of `leaf`.
@@ -141,7 +237,6 @@ pub enum Resolution {
 /// visibility filter (e.g. declaration order).
 pub fn resolve_reference<A, B, L>(
     scope: &InternalScope,
-    root_anchor: &RootAnchor,
     raw: &str,
     local_exists: A,
     rooted_exists: B,
@@ -153,7 +248,7 @@ where
     L: FnOnce(&str) -> Vec<String>,
 {
     if has_root_marker(raw) {
-        let rooted = resolve_explicit_path(root_anchor, raw);
+        let rooted = InternalScope::from_path(raw).id();
         return if rooted_exists(&rooted) {
             Resolution::Resolved(rooted)
         } else {
@@ -162,7 +257,7 @@ where
     }
 
     if !is_identifier_path(raw) {
-        let local = scope.resolve_with_leaf(root_anchor, raw);
+        let local = scope.id_with_leaf(raw);
         if local_exists(&local) {
             return Resolution::Resolved(local);
         }
@@ -178,8 +273,8 @@ where
         };
     }
 
-    let local = scope.child(raw).resolve(root_anchor);
-    let rooted = resolve_explicit_path(root_anchor, raw);
+    let local = scope.child(raw).id();
+    let rooted = InternalScope::from_path(raw).id();
     let local_hit = local_exists(&local).then_some(local);
     let rooted_hit = rooted_exists(&rooted).then_some(rooted);
 
@@ -198,9 +293,114 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        leaf_key, resolve_explicit_path, resolve_reference, strip_root_marker, InternalScope,
-        Resolution, RootAnchor,
+        identity_name, leaf_key, resolve_reference, strip_root_marker, DeclarationScope,
+        IdentityError, IdentityKind, InternalScope, Resolution,
     };
+
+    fn class_like(label: &str) -> Result<String, IdentityError> {
+        identity_name(label, IdentityKind::ClassLike)
+    }
+
+    fn other(label: &str) -> Result<String, IdentityError> {
+        identity_name(label, IdentityKind::Other)
+    }
+
+    #[test]
+    fn identity_name_accepts_identifier_paths() {
+        assert_eq!(other("Client").as_deref(), Ok("Client"));
+        assert_eq!(other("a.b.C").as_deref(), Ok("a.b.C"));
+        assert_eq!(other("a::b::C").as_deref(), Ok("a::b::C"));
+        assert_eq!(other("a::b.C").as_deref(), Ok("a::b.C"));
+        assert_eq!(other("snake_case_1").as_deref(), Ok("snake_case_1"));
+    }
+
+    #[test]
+    fn identity_name_keeps_the_root_marker() {
+        assert_eq!(other("::a::X").as_deref(), Ok("::a::X"));
+        assert_eq!(other(".a.X").as_deref(), Ok(".a.X"));
+        assert_eq!(other("::X").as_deref(), Ok("::X"));
+    }
+
+    #[test]
+    fn identity_name_strips_markup() {
+        assert_eq!(other("<b>comp::unit</b>").as_deref(), Ok("comp::unit"));
+        assert_eq!(other("<color:red>Client</color>").as_deref(), Ok("Client"));
+    }
+
+    #[test]
+    fn identity_name_uses_the_first_line() {
+        assert_eq!(other("comp::b\\nextra").as_deref(), Ok("comp::b"));
+        assert_eq!(other("\\ncomp::b").as_deref(), Ok("comp::b"));
+        assert_eq!(
+            class_like("DummySkeleton\\n{{generated}}").as_deref(),
+            Ok("DummySkeleton")
+        );
+    }
+
+    #[test]
+    fn identity_name_slash_n_is_text() {
+        assert_eq!(other("comp::a/nextra"), Err(IdentityError::MalformedPath));
+        assert_eq!(other("comp a/nextra"), Err(IdentityError::FreeText));
+    }
+
+    #[test]
+    fn identity_name_class_like_drops_a_trailing_template_list() {
+        assert_eq!(
+            class_like("ProxyContainer<ProxySpec...>").as_deref(),
+            Ok("ProxyContainer")
+        );
+        assert_eq!(class_like("a::B<C<D>>").as_deref(), Ok("a::B"));
+        assert_eq!(class_like("Foo <T>").as_deref(), Ok("Foo"));
+    }
+
+    #[test]
+    fn identity_name_other_kinds_keep_template_text() {
+        assert_eq!(other("Foo<T>"), Err(IdentityError::FreeText));
+    }
+
+    #[test]
+    fn identity_name_class_like_rejects_unbalanced_templates() {
+        assert_eq!(class_like("Foo<T"), Err(IdentityError::FreeText));
+        assert_eq!(class_like("Foo>"), Err(IdentityError::FreeText));
+        assert_eq!(class_like("<T>"), Err(IdentityError::FreeText));
+    }
+
+    #[test]
+    fn identity_name_prose_is_free_text() {
+        assert_eq!(other("Unit 1"), Err(IdentityError::FreeText));
+        assert_eq!(
+            class_like("Generated <Name>Proxy"),
+            Err(IdentityError::FreeText)
+        );
+        assert_eq!(
+            other("backend : logging::Recorder::Backend"),
+            Err(IdentityError::FreeText)
+        );
+        assert_eq!(
+            other(":logging::IBackend"),
+            Err(IdentityError::MalformedPath)
+        );
+    }
+
+    #[test]
+    fn identity_name_dash_and_at_are_free_text() {
+        assert_eq!(other("my-service"), Err(IdentityError::FreeText));
+        assert_eq!(other("user@host"), Err(IdentityError::FreeText));
+    }
+
+    #[test]
+    fn identity_name_empty_is_free_text() {
+        assert_eq!(other(""), Err(IdentityError::FreeText));
+        assert_eq!(other("   "), Err(IdentityError::FreeText));
+        assert_eq!(other("<b></b>"), Err(IdentityError::FreeText));
+    }
+
+    #[test]
+    fn identity_name_malformed_paths_are_reported() {
+        for label in ["a.", "a..b", "a::", "a:::b", "my-pkg::unit", "::"] {
+            assert_eq!(other(label), Err(IdentityError::MalformedPath), "{label}");
+        }
+    }
 
     #[test]
     fn strip_root_marker_removes_one_leading_marker() {
@@ -228,20 +428,6 @@ mod tests {
     }
 
     #[test]
-    fn root_anchor_normalizes_and_retains_non_empty_values() {
-        assert_eq!(
-            RootAnchor::new(Some("score::logging")).as_deref(),
-            Some("score.logging")
-        );
-    }
-
-    #[test]
-    fn root_anchor_drops_empty_values_after_normalization() {
-        assert_eq!(RootAnchor::new(Some("::")).as_deref(), None);
-        assert_eq!(RootAnchor::new(None).as_deref(), None);
-    }
-
-    #[test]
     fn internal_scope_normalizes_each_segment() {
         let scope = InternalScope::new(["score::logging", "", ".core."]);
 
@@ -249,33 +435,13 @@ mod tests {
     }
 
     #[test]
-    fn internal_scope_resolves_with_leaf_and_root_anchor() {
-        let root_anchor = RootAnchor::new(Some("score::logging"));
+    fn internal_scope_id_with_leaf_appends_one_segment() {
         let scope = InternalScope::new(["component", "subsystem"]);
 
+        assert_eq!(scope.id(), "component.subsystem");
         assert_eq!(
-            scope.resolve_with_leaf(&root_anchor, "Recorder"),
-            "score.logging.component.subsystem.Recorder"
-        );
-    }
-
-    #[test]
-    fn resolve_explicit_path_prefixes_root_anchor() {
-        let root_anchor = RootAnchor::new(Some("score::logging"));
-
-        assert_eq!(
-            resolve_explicit_path(&root_anchor, "core::Recorder"),
-            "score.logging.core.Recorder"
-        );
-    }
-
-    #[test]
-    fn resolve_explicit_path_never_strips_a_pre_existing_anchor_prefix() {
-        let root_anchor = RootAnchor::new(Some("score::logging"));
-
-        assert_eq!(
-            resolve_explicit_path(&root_anchor, "score::logging::Recorder"),
-            "score.logging.score.logging.Recorder"
+            scope.id_with_leaf("Recorder"),
+            "component.subsystem.Recorder"
         );
     }
 
@@ -330,6 +496,30 @@ mod tests {
     }
 
     #[test]
+    fn declaration_scope_without_alias_uses_the_name_for_both_paths() {
+        let scope = DeclarationScope::from_path("outer").declare("core::Circle", None);
+
+        assert_eq!(scope, DeclarationScope::from_path("outer.core.Circle"));
+    }
+
+    #[test]
+    fn declaration_scope_alias_only_changes_the_reference_path() {
+        let scope = DeclarationScope::from_path("outer").declare("score::x::Y", Some("Y"));
+
+        assert_eq!(scope.id, InternalScope::from_path("outer.score.x.Y"));
+        assert_eq!(scope.reference, InternalScope::from_path("outer.Y"));
+    }
+
+    #[test]
+    fn declaration_scope_nests_both_paths() {
+        let outer = DeclarationScope::from_path("").declare("pkg::Outer", Some("O"));
+        let inner = outer.declare("Inner", None);
+
+        assert_eq!(inner.id, InternalScope::from_path("pkg.Outer.Inner"));
+        assert_eq!(inner.reference, InternalScope::from_path("O.Inner"));
+    }
+
+    #[test]
     fn internal_scope_is_empty_reflects_segment_count() {
         assert!(InternalScope::default().is_empty());
         assert!(!InternalScope::from_path("core").is_empty());
@@ -338,11 +528,9 @@ mod tests {
     #[test]
     fn resolve_reference_simple_name_prefers_local_scope() {
         let scope = InternalScope::from_path("a");
-        let root_anchor = RootAnchor::default();
 
         let resolution = resolve_reference(
             &scope,
-            &root_anchor,
             "X",
             |id| id == "a.X" || id == "X",
             |id| id == "a.X" || id == "X",
@@ -355,11 +543,9 @@ mod tests {
     #[test]
     fn resolve_reference_simple_name_falls_back_to_unique_leaf() {
         let scope = InternalScope::from_path("a");
-        let root_anchor = RootAnchor::default();
 
         let resolution = resolve_reference(
             &scope,
-            &root_anchor,
             "X",
             |id| id == "p.X",
             |id| id == "p.X",
@@ -372,11 +558,9 @@ mod tests {
     #[test]
     fn resolve_reference_simple_name_several_leaves_is_ambiguous() {
         let scope = InternalScope::default();
-        let root_anchor = RootAnchor::default();
 
         let resolution = resolve_reference(
             &scope,
-            &root_anchor,
             "X",
             |_| false,
             |_| false,
@@ -392,11 +576,9 @@ mod tests {
     #[test]
     fn resolve_reference_qualified_name_ambiguous_between_local_and_rooted() {
         let scope = InternalScope::from_path("core");
-        let root_anchor = RootAnchor::default();
 
         let resolution = resolve_reference(
             &scope,
-            &root_anchor,
             "geometry::User",
             |id| id == "core.geometry.User" || id == "geometry.User",
             |id| id == "core.geometry.User" || id == "geometry.User",
@@ -415,11 +597,9 @@ mod tests {
     #[test]
     fn resolve_reference_root_marker_bypasses_local_scope() {
         let scope = InternalScope::from_path("a");
-        let root_anchor = RootAnchor::default();
 
         let resolution = resolve_reference(
             &scope,
-            &root_anchor,
             ".X",
             |id| id == "X",
             |id| id == "X",
@@ -432,10 +612,8 @@ mod tests {
     #[test]
     fn resolve_reference_root_marker_unresolved_when_missing() {
         let scope = InternalScope::from_path("a");
-        let root_anchor = RootAnchor::default();
 
-        let resolution =
-            resolve_reference(&scope, &root_anchor, ".X", |_| false, |_| false, |_| vec![]);
+        let resolution = resolve_reference(&scope, ".X", |_| false, |_| false, |_| vec![]);
 
         assert_eq!(resolution, Resolution::Unresolved);
     }
@@ -443,11 +621,9 @@ mod tests {
     #[test]
     fn resolve_reference_double_colon_root_marker_bypasses_local_scope() {
         let scope = InternalScope::from_path("a");
-        let root_anchor = RootAnchor::default();
 
         let resolution = resolve_reference(
             &scope,
-            &root_anchor,
             "::X",
             |id| id == "X",
             |id| id == "X",
@@ -460,16 +636,8 @@ mod tests {
     #[test]
     fn resolve_reference_double_colon_root_marker_unresolved_when_missing() {
         let scope = InternalScope::from_path("a");
-        let root_anchor = RootAnchor::default();
 
-        let resolution = resolve_reference(
-            &scope,
-            &root_anchor,
-            "::X",
-            |_| false,
-            |_| false,
-            |_| vec![],
-        );
+        let resolution = resolve_reference(&scope, "::X", |_| false, |_| false, |_| vec![]);
 
         assert_eq!(resolution, Resolution::Unresolved);
     }

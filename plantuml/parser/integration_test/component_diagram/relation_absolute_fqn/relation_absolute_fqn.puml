@@ -12,13 +12,13 @@
 ' *******************************************************************************
 @startuml "Relation with Absolute FQN"
 
-package "Package A" as PkgA {
-    component "Component A" as ComponentA <<component>> {
+package PkgA {
+    component ComponentA <<component>> {
     }
 }
 
-package "Package B" as PkgB {
-    component "Component B" as ComponentB <<component>> {
+package PkgB {
+    component ComponentB <<component>> {
     }
 
     ComponentB --> PkgA.ComponentA : uses

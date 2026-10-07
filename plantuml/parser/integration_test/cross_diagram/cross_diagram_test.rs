@@ -23,8 +23,7 @@
 //! `puml_cli` per file (`DiagramProcessor`), and [`CrossDiagramChecker`]
 //! adds the `links`/`distinct` cross-file id assertions on top of the
 //! framework's default per-file checks (`ExpectationChecker::check_case`).
-//! `root_anchor` / `anchors` select the `--root-anchor` per file; files listed
-//! under `errors` must fail with the given error substrings and are left out
+//! Files listed under `errors` must fail with the given error substrings and are left out
 //! of the golden.
 //!
 //! Goldens document *current* behavior; they are updated by the changes that
@@ -55,10 +54,6 @@ struct CaseConfig {
     /// Groups of `file.puml#Alias` references that must resolve to pairwise
     /// distinct idmap ids.
     distinct: Vec<Vec<String>>,
-    /// Root anchor passed to `puml_cli --root-anchor` for every file.
-    root_anchor: Option<String>,
-    /// Per-file root anchor, overriding `root_anchor`.
-    anchors: HashMap<String, String>,
     /// Files that must fail, with substrings their error must contain. Such
     /// files produce no idmap output.
     errors: HashMap<String, Vec<String>>,
@@ -189,7 +184,6 @@ fn run_file(
     case_name: &str,
     path: &Path,
     diagram_type: Option<&str>,
-    root_anchor: Option<&str>,
 ) -> Result<IdMapSections, PumlCliError> {
     let stem = path
         .file_stem()
@@ -201,9 +195,6 @@ fn run_file(
     cmd.arg("--file").arg(path);
     if let Some(diagram_type) = diagram_type {
         cmd.arg("--diagram-type").arg(diagram_type);
-    }
-    if let Some(root_anchor) = root_anchor {
-        cmd.arg("--root-anchor").arg(root_anchor);
     }
     cmd.arg("--idmap-output-dir").arg(&out_dir);
 
@@ -290,12 +281,7 @@ impl DiagramProcessor for PumlCliIdmapRunner {
                 .unwrap_or_default()
                 .to_string();
             let diagram_type = config.diagram_types.get(&file_name).map(String::as_str);
-            let root_anchor = config
-                .anchors
-                .get(&file_name)
-                .or(config.root_anchor.as_ref())
-                .map(String::as_str);
-            let outcome = run_file(&case_name, path, diagram_type, root_anchor);
+            let outcome = run_file(&case_name, path, diagram_type);
 
             match (outcome, config.errors.get(&file_name)) {
                 (Ok(idmap), None) => {
@@ -359,11 +345,7 @@ fn resolve_ref(
 /// `errors` entries that assert nothing, `links`/`distinct` groups too small
 /// to assert anything, and references to files that produce no idmap.
 fn validate_case_config(case_name: &str, file_names: &BTreeSet<String>, config: &CaseConfig) {
-    let configured_files = config
-        .diagram_types
-        .keys()
-        .chain(config.anchors.keys())
-        .chain(config.errors.keys());
+    let configured_files = config.diagram_types.keys().chain(config.errors.keys());
     for file_name in configured_files {
         assert!(
             file_names.contains(file_name),
@@ -539,10 +521,11 @@ macro_rules! cross_diagram_cases {
 
 cross_diagram_cases!(
     component_nesting,
-    class_alias_wins,
+    class_name_wins,
+    alias_is_local_key,
     namespace_and_package,
     sequence_forms,
-    prose_without_alias,
+    prose_names,
     linking_three_diagrams,
     qualified_reference,
     qualified_in_nested_scope,
@@ -551,6 +534,5 @@ cross_diagram_cases!(
     errors_participants,
     errors_listed_file,
     unit_to_class_link,
-    cross_package_no_link,
     separator_equivalence,
 );

@@ -1,0 +1,22 @@
+{
+  "multiline_label.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "DummySkeleton",
+        "name": "D",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 15 }
+      }
+    ],
+    "free_functions": []
+  }
+}

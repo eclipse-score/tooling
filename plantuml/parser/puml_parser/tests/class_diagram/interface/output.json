@@ -7,7 +7,7 @@
           "InterfaceDef": {
             "name": {
               "internal": "J",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",

@@ -7,7 +7,7 @@
           "ClassDef": {
             "name": {
               "internal": "A",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",

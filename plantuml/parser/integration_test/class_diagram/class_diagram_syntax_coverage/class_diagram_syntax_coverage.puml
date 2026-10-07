@@ -108,7 +108,7 @@ package sample::newline #Lavender
 
     note right of ServiceImpl : inline note coverage
 
-    class "<<template>>\nTest<T>" as TestTemplate <<service>> #Khaki {
+    class TestTemplate<T> <<service>> #Khaki {
         + Bind()
     }
 }

@@ -31,7 +31,7 @@ The following example uses only structures that are fully modeled and can be use
 @startuml OrderFlow
 
 actor Client
-participant "Order Service" as OrderService <<service>>
+participant OrderService <<service>>
 database Orders
 
 Client -> OrderService : submit(order)
@@ -57,26 +57,23 @@ The following participant declaration forms are supported:
 
 ```text
 participant Service
-participant "Order Service" as OrderService
-participant OrderService as "Order Service"  // not recommended
-participant "Order Service" as OrderService <<service>>
+participant OrderService <<service>>
 participant "orders::OrderService" as OrderService
+participant "ExternalEndpoint" as ext
 ```
 
-The alias form is recommended. Although `participant OrderService as "Order Service"` is supported by the current grammar, the consistent form should be `"Display Name" as Alias` to avoid confusing display names with reference names.
-
-A quoted free-text display name **requires** an alias — `participant "Order Service"` on its own is rejected, because the resolver cannot derive an identifier from it. See [Element Identifiers](element-identifiers.md) for how the identifier is built from the display name and why the qualified form
-`"package::Component::Unit"` is preferred for diagrams that must link to a
+The written name is the participant identity and must be an identifier path (letters, digits and `_`, separated by `.` or `::`). A free-text name such as `participant "Order Service" as OrderService` is rejected. The alias is only a local reference key; use it, or the declared name when there is no alias, in messages. See [Element Identifiers](element-identifiers.md) for how the identifier is built from the name and why the qualified form
+`"package::Component::Unit"` is needed for diagrams that must link to a
 component or class diagram.
 
-The display name, alias, `uid`, participant type, and stereotype are written to the logical model.
+The name, alias, `uid`, participant type, and stereotype are written to the logical model.
 
 ```text
-participant "Order Service" as OrderService
+participant "orders::OrderService" as OrderService
 Client -> OrderService : correct()
 ```
 
-After declaring an alias, subsequent messages, lifecycle commands, and `ref` blocks must use that alias consistently. Referring to the quoted display name instead is rejected.
+After declaring an alias, subsequent messages, lifecycle commands, and `ref` blocks must use that alias consistently. Referring to the name of an aliased participant instead is rejected.
 
 Undeclared message endpoints are automatically created as regular `participant` instances. This is convenient for short diagrams, but explicit declarations are recommended for production diagrams to preserve participant type, stereotype, and stable source locations.
 
@@ -150,7 +147,7 @@ Message suffixes apply as follows:
 
 Standalone `create`, `activate`, `deactivate`, and `destroy` commands are recommended. Message suffixes are suitable when the action is strictly bound to a single message.
 
-The `create` command may also specify a participant type, display name, alias, and stereotype, for example `create database "Event Store" as EventStore <<storage>>`. These participant properties are preserved in the participant model.
+The `create` command may also specify a participant type, name, alias, and stereotype, for example `create database "event_store::Events" as Events <<storage>>`. These participant properties are preserved in the participant model.
 
 Combined suffixes are supported. The resolver creates lifecycle nodes in the source-code order of the suffixes. `**` creates the participant before the message interaction; other actions are created after the interaction. For example:
 
@@ -285,7 +282,7 @@ These errors usually include the source file and line number. The repository als
 Use the following checklist when submitting a sequence diagram:
 
 1. The file starts with `@startuml` and ends with `@enduml`.
-2. Important participants are declared explicitly, with stable aliases for names containing spaces or complex display names.
+2. Important participants are declared explicitly, with identifier-path names (an alias only for long or qualified names).
 3. Once an alias is declared, references use that alias consistently to avoid creating a separate implicit participant.
 4. Every message has exactly one arrowhead. Use `return` only for responses shown in the diagram; use an explicit reverse message when the response must enter the logical model.
 5. Combined message suffixes have clear semantics and order. `--` applies to the sender, `++` and `!!` apply to the receiver, and `**` creates the receiver before the interaction.

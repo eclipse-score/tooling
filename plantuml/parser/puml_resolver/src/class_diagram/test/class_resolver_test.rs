@@ -133,8 +133,58 @@ fn test_empty_template_args() {
 }
 
 #[test]
-fn test_class_alias_id_leaf() {
-    run_class_resolver_case("class_alias_id_leaf");
+fn test_name_wins_over_alias() {
+    run_class_resolver_case("name_wins_over_alias");
+}
+
+#[test]
+fn test_qualified_label_in_package() {
+    run_class_resolver_case("qualified_label_in_package");
+}
+
+#[test]
+fn test_template_label() {
+    run_class_resolver_case("template_label");
+}
+
+#[test]
+fn test_multiline_label() {
+    run_class_resolver_case("multiline_label");
+}
+
+#[test]
+fn test_reversed_alias_form() {
+    run_class_resolver_case("reversed_alias_form");
+}
+
+#[test]
+fn test_constructor_of_aliased_class() {
+    run_class_resolver_case("constructor_of_aliased_class");
+}
+
+#[test]
+fn test_invalid_prose_label() {
+    run_class_resolver_case("invalid_prose_label");
+}
+
+#[test]
+fn test_invalid_prose_package() {
+    run_class_resolver_case("invalid_prose_package");
+}
+
+#[test]
+fn test_invalid_malformed_label() {
+    run_class_resolver_case("invalid_malformed_label");
+}
+
+#[test]
+fn test_invalid_reference_by_label() {
+    run_class_resolver_case("invalid_reference_by_label");
+}
+
+#[test]
+fn test_invalid_duplicate_label() {
+    run_class_resolver_case("invalid_duplicate_label");
 }
 
 #[test]
@@ -188,13 +238,18 @@ fn test_extends_root_marker() {
 }
 
 #[test]
+fn test_extends_root_marker_quoted_name() {
+    run_class_resolver_case("extends_root_marker_quoted_name");
+}
+
+#[test]
 fn test_invalid_duplicate_entity() {
     run_class_resolver_case("invalid_duplicate_entity");
 }
 
 #[test]
-fn test_invalid_duplicate_entity_alias() {
-    run_class_resolver_case("invalid_duplicate_entity_alias");
+fn test_invalid_duplicate_alias() {
+    run_class_resolver_case("invalid_duplicate_alias");
 }
 
 #[test]

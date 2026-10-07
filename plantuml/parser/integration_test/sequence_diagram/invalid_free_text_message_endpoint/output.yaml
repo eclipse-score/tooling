@@ -15,5 +15,5 @@ invalid_free_text_message_endpoint.puml:
     type: "InvalidParticipantIdentifier"
     fields:
       participant: "Display Service"
-      reason: "free-text participant display names require an alias for uid derivation"
+      reason: "name is free text, expected an identifier path (segments of letters, digits and `_` separated by `.` or `::`)"
       line: "18"

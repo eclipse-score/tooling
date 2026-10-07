@@ -6,14 +6,18 @@
         "Namespace": {
           "name": {
             "internal": "Core",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 15
           },
           "types": [
             {
               "ClassDef": {
                 "name": {
                   "internal": "A",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "Core",
                 "package": "",
@@ -34,7 +38,7 @@
               "ClassDef": {
                 "name": {
                   "internal": "B",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "Core",
                 "package": "",
@@ -55,7 +59,7 @@
               "EnumDef": {
                 "name": {
                   "internal": "C",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "Core",
                 "package": "",

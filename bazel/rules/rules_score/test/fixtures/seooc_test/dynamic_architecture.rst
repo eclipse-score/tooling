@@ -29,9 +29,9 @@ This file contains the dynamic architectural design for the SEooC test component
    .. uml::
 
       @startuml
-      participant "Client" as client
-      participant "SEooC Test Component" as main
-      participant "Data Processor" as processor
+      participant client
+      participant main
+      participant processor
 
       client -> main : processData(input)
       main -> processor : process(input)
@@ -51,9 +51,9 @@ This file contains the dynamic architectural design for the SEooC test component
    .. uml::
 
       @startuml
-      participant "Main Component" as main
-      participant "Fault Handler" as fault
-      participant "Safe State Manager" as safe
+      participant main
+      participant fault
+      participant safe
 
       main -> fault : checkHealth()
       alt fault detected

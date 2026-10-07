@@ -13,9 +13,9 @@
 
 @startuml namespace_unit_overview
 
-package "Package NS" as package_ns {
-    component "Component NS" as component_ns <<component>> {
-        component "NS Unit" as ns_unit <<unit>>
+package package_ns {
+    component component_ns <<component>> {
+        component ns_unit <<unit>>
     }
 }
 

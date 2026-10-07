@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-# Participant uid per Rule B: a qualified label is the identity, otherwise the
-# alias, otherwise the bare name. Every participant is a "reference".
+# Participant uid: the name is the identity (a qualified path or a bare
+# name); the alias is only the local key. Every participant is a "reference".
 diagram_types:
   sequence_diagram.puml: sequence

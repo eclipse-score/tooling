@@ -773,6 +773,64 @@ sh_test(
     data = [":namespace_unit_example_lib_index"],
 )
 
+# Seooc-shaped unit link (unit id package_lf.component_lf.unit_x, class
+# namespace id unit_x; the ids differ). The link is the clickable fallback on
+# the shared last segment, the unit name.
+unit_design(
+    name = "leaf_unit_design",
+    static = ["fixtures/clickable_example/leaf_unit_class_detail.puml"],
+)
+
+unit(
+    name = "leaf_unit",
+    testonly = True,
+    maturity = "development",
+    tests = [":test_unit_tests"],
+    unit_design = [":leaf_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "leaf_unit_component",
+    testonly = True,
+    components = [":leaf_unit"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
+architectural_design(
+    name = "arch_design_leaf_unit_example",
+    static = ["fixtures/clickable_example/leaf_unit_overview.puml"],
+)
+
+dependable_element(
+    name = "leaf_unit_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_leaf_unit_example"],
+    assumptions_of_use = [":aous"],
+    components = [":leaf_unit_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+sh_test(
+    name = "leaf_unit_example_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "--alias",
+        "unit_x",
+        "$(rootpaths :leaf_unit_example_lib_index)",
+    ],
+    data = [":leaf_unit_example_lib_index"],
+)
+
 # Live example of clickable_plantuml's "dynamic to static" linking chain: the
 # *dynamic* architecture (dynamic_overview.puml, a sequence diagram) shows
 # participants `Dispatcher` and `Worker` - both references, since sequence

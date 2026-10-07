@@ -12,7 +12,7 @@
 ' *******************************************************************************
 @startuml
 package "score.mw.log" as logging {
-  component "Log Recorder" as Recorder {
+  component "LogRecorder" as Recorder {
     component "Backend" as Backend
     component Frontend
   }

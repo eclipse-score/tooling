@@ -13,9 +13,9 @@
 
 @startuml
 
-package "Other SeooC" as other_seooc <<SEooC>> {
-    component "ComponentExample" as component_example <<component>> {
-        component "ABC" as abc <<unit>>
+package other_seooc <<SEooC>> {
+    component component_example <<component>> {
+        component abc <<unit>>
     }
 }
 

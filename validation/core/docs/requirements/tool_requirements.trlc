@@ -55,7 +55,7 @@ section "Tool Requirements" {
             ToolQualification.ToolRequirement BazelComponentNameCaseInsensitive {
                 description = '''The validator shall match element names
                 between Bazel and PlantUML case-insensitively, using the
-                PlantUML alias when present, otherwise the PlantUML id, and
+                PlantUML name (the last segment of the entity id), and
                 the Bazel target name on the Bazel side.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier

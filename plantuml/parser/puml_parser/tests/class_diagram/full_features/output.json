@@ -6,14 +6,18 @@
         "Package": {
           "name": {
             "internal": "pkg1",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 15
           },
           "types": [
             {
               "ClassDef": {
                 "name": {
                   "internal": "AInternal",
-                  "display": "A"
+                  "alias": "A"
                 },
                 "namespace": "",
                 "package": "pkg1",
@@ -101,7 +105,7 @@
               "StructDef": {
                 "name": {
                   "internal": "B",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "",
                 "package": "pkg1",
@@ -130,7 +134,7 @@
               "InterfaceDef": {
                 "name": {
                   "internal": "I",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "",
                 "package": "pkg1",
@@ -162,7 +166,7 @@
               "EnumDef": {
                 "name": {
                   "internal": "E",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "",
                 "package": "pkg1",

@@ -13,8 +13,8 @@
 
 @startuml component_diagram
 
-package "Sample Seooc" as safety_software_seooc_example <<SEooC>> {
-    component "Component Example" as component_example <<component>>
+package safety_software_seooc_example <<SEooC>> {
+    component component_example <<component>>
 }
 
 @enduml

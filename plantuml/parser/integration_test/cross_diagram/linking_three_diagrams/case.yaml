@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 # A sequence participant links to a component and to a class through its
-# qualified label; the alias is only the local arrow name.
+# qualified name; the alias is only the local arrow name.
 diagram_types:
   component_diagram.puml: component
   class_diagram.puml: class

@@ -265,7 +265,7 @@ impl<'a> ClassDesignSequenceValidator<'a> {
         let design_classes: &'a ClassEntityIndex = self.design_classes;
         let class_ids = design_classes.entities().map(|entity| entity.id.as_str());
 
-        match resolve_uid(participant, None, class_ids) {
+        match resolve_uid(participant, class_ids) {
             UidMatch::Resolved(class_id) => design_classes.find_by_id(class_id).map_or(
                 ParticipantResolution::Missing,
                 ParticipantResolution::Matched,

@@ -7,7 +7,7 @@
           "ClassDef": {
             "name": {
               "internal": "A",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -30,7 +30,7 @@
           "ClassDef": {
             "name": {
               "internal": "B",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -53,7 +53,7 @@
           "ClassDef": {
             "name": {
               "internal": "C",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",

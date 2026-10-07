@@ -104,7 +104,7 @@ pub(in crate::validators) fn resolve_unit<'a>(
     unit_bindings: &'a UnitBindings,
     uid: &str,
 ) -> UidMatch<'a> {
-    resolve_uid(uid, None, unit_bindings.keys().map(String::as_str))
+    resolve_uid(uid, unit_bindings.keys().map(String::as_str))
 }
 
 fn all_interfaces_for_unit(unit_bindings: &UnitBindings, unit_id: &str) -> BTreeSet<String> {

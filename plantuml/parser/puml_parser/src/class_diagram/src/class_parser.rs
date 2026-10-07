@@ -84,7 +84,7 @@ impl IgnoredObjectRegistry {
         self.ids.insert(Self::build_fqn(&name.internal, parent));
         self.names.insert(name.internal.clone());
 
-        if let Some(alias) = &name.display {
+        if let Some(alias) = &name.alias {
             self.names.insert(alias.clone());
         }
     }
@@ -141,59 +141,71 @@ impl ClassParseSession<'_> {
         vis
     }
 
+    /// A quoted alias (`X as "Label"`) is the name, the bare side the alias.
     fn parse_named(pair: pest::iterators::Pair<Rule>, name: &mut Name) {
-        let mut internal: Option<String> = None;
-        let mut display: Option<String> = None;
+        #[derive(Default)]
+        struct Parts {
+            internal: Option<String>,
+            alias: Option<String>,
+            alias_quoted: bool,
+        }
+
+        fn is_quoted(s: &str) -> bool {
+            s.starts_with('"') && s.ends_with('"') && s.len() >= 2
+        }
 
         fn strip_quotes(s: &str) -> String {
-            if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
+            if is_quoted(s) {
                 s[1..s.len() - 1].to_string()
             } else {
                 s.to_string()
             }
         }
 
-        fn walk(
-            pair: pest::iterators::Pair<Rule>,
-            internal: &mut Option<String>,
-            display: &mut Option<String>,
-        ) {
+        fn walk(pair: pest::iterators::Pair<Rule>, parts: &mut Parts) {
             match pair.as_rule() {
                 Rule::internal_name => {
                     let raw = pair.as_str().to_string();
                     let saw_inner = pair.clone().into_inner().next().is_some();
 
                     for inner in pair.into_inner() {
-                        walk(inner, internal, display);
+                        walk(inner, parts);
                     }
 
                     if !saw_inner {
-                        *internal = Some(strip_quotes(&raw));
+                        parts.internal = Some(strip_quotes(&raw));
                     }
                 }
                 Rule::STRING | Rule::class_name_path => {
-                    if internal.is_none() {
-                        *internal = Some(strip_quotes(pair.as_str()));
+                    if parts.internal.is_none() {
+                        parts.internal = Some(strip_quotes(pair.as_str()));
                     }
                 }
                 Rule::alias_clause => {
                     let mut inner = pair.into_inner();
                     if let Some(target) = inner.next() {
-                        *display = Some(strip_quotes(target.as_str()));
+                        parts.alias = Some(strip_quotes(target.as_str()));
+                        parts.alias_quoted = is_quoted(target.as_str());
                     }
                 }
                 _ => {
                     for inner in pair.into_inner() {
-                        walk(inner, internal, display);
+                        walk(inner, parts);
                     }
                 }
             }
         }
 
-        walk(pair, &mut internal, &mut display);
+        let mut parts = Parts::default();
+        walk(pair, &mut parts);
 
-        if let Some(internal) = internal {
-            name.write_name(&internal, display.as_deref());
+        if let Some(internal) = parts.internal {
+            match parts.alias {
+                Some(alias) if parts.alias_quoted => {
+                    name.write_name(alias, Some(internal));
+                }
+                alias => name.write_name(&internal, alias.as_deref()),
+            }
         }
     }
 
@@ -719,7 +731,7 @@ impl ClassParseSession<'_> {
             raw_type_def: &str,
         ) -> Option<Vec<String>> {
             explicit.or_else(|| {
-                name.display
+                name.alias
                     .as_deref()
                     .and_then(infer_template_parameters_from_template_string)
                     .or_else(|| infer_template_parameters_from_template_string(&name.internal))
@@ -907,7 +919,10 @@ impl ClassParseSession<'_> {
         &mut self,
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<(Namespace, IgnoredObjectRegistry), ClassError> {
-        let mut namespace = Namespace::default();
+        let mut namespace = Namespace {
+            source_location: self.original_source_location(&pair),
+            ..Namespace::default()
+        };
         let mut ignored_objects = IgnoredObjectRegistry::default();
         let mut relationships = Vec::new();
 
@@ -980,7 +995,10 @@ impl ClassParseSession<'_> {
         &mut self,
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<(Package, IgnoredObjectRegistry), ClassError> {
-        let mut package = Package::default();
+        let mut package = Package {
+            source_location: self.original_source_location(&pair),
+            ..Package::default()
+        };
         let mut ignored_objects = IgnoredObjectRegistry::default();
         let mut relationships = Vec::new();
 
@@ -1620,6 +1638,46 @@ mod tests {
                 assert!(result.is_err(), "`{body}` must not parse: {result:?}");
             }
         }
+    }
+
+    #[test]
+    fn test_quoted_alias_is_the_name() {
+        let file = parse_class_diagram_body("class F as \"a::Foo\"\npackage p as \"b::q\" {\n}")
+            .expect("must parse");
+
+        let ClassUmlTopLevel::Types(Element::ClassDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+        assert_eq!(def.name.internal, "a::Foo");
+        assert_eq!(def.name.alias.as_deref(), Some("F"));
+
+        let ClassUmlTopLevel::Package(package) = &file.elements[1] else {
+            panic!("expected a package");
+        };
+        assert_eq!(package.name.internal, "b::q");
+        assert_eq!(package.name.alias.as_deref(), Some("p"));
+    }
+
+    #[test]
+    fn test_quoted_name_with_bare_alias_keeps_roles() {
+        let file = parse_class_diagram_body("class \"a::Foo\" as F").expect("must parse");
+
+        let ClassUmlTopLevel::Types(Element::ClassDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+        assert_eq!(def.name.internal, "a::Foo");
+        assert_eq!(def.name.alias.as_deref(), Some("F"));
+    }
+
+    #[test]
+    fn test_quoted_alias_is_the_name_even_when_the_name_is_quoted() {
+        let file = parse_class_diagram_body("class \"A\" as \"b::B\"").expect("must parse");
+
+        let ClassUmlTopLevel::Types(Element::ClassDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+        assert_eq!(def.name.internal, "b::B");
+        assert_eq!(def.name.alias.as_deref(), Some("A"));
     }
 
     #[test]

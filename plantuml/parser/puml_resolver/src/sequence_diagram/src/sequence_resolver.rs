@@ -14,7 +14,6 @@
 use resolver_traits::DiagramResolver;
 use sequence_logic::SequenceTree;
 use sequence_parser::SeqPumlDocument;
-use uid_normalization::RootAnchor;
 
 use crate::error::SequenceResolverError;
 use crate::lifecycle_validator::validate_lifecycle_consistency;
@@ -35,7 +34,7 @@ impl DiagramResolver for SequenceResolver {
     type Error = SequenceResolverError;
 
     fn resolve(&mut self, document: &SeqPumlDocument) -> Result<SequenceTree, Self::Error> {
-        let table = build_participant_table(&document.statements, &RootAnchor::default())?;
+        let table = build_participant_table(&document.statements)?;
         let root = build_sequence_tree(&document.statements, &table)?;
         validate_lifecycle_consistency(&root)?;
 

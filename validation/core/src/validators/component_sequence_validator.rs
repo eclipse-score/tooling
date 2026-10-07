@@ -112,12 +112,12 @@ impl<'a> ComponentSequenceValidator<'a> {
     }
 
     fn check_consistency(&mut self) {
-        self.check_participant_aliases();
+        self.check_participant_units();
         self.check_interface_connected_units_have_sequence_calls();
         self.check_sequence_calls_have_interface_connections();
     }
 
-    fn check_participant_aliases(&mut self) {
+    fn check_participant_units(&mut self) {
         let mut linked_units = BTreeSet::new();
         let mut participant_errors = Vec::new();
 
@@ -161,9 +161,9 @@ impl<'a> ComponentSequenceValidator<'a> {
 
         let error = ErrorBuilder::new(ErrorCategory::Naming)
             .title(format!(
-                "alias \"{unit_id}\" from the component diagram not found in the sequence diagram"
+                "unit id \"{unit_id}\" from the component diagram not found in the sequence diagram"
             ))
-            .field("alias", format!("\"{unit_id}\""))
+            .field("unit id", format!("\"{unit_id}\""))
             .field("component source file", format!("\"{source_file}\""))
             .field("component source line", source_line.to_string())
             .fix(format!(
@@ -201,7 +201,7 @@ impl<'a> ComponentSequenceValidator<'a> {
             .field("sequence source file", format!("\"{source_file}\""))
             .field("sequence source line", source_line.to_string())
             .fix(format!(
-                "add component unit alias \"{participant}\" in the component diagram, or remove it from the sequence diagram"
+                "add component unit \"{participant}\" in the component diagram, or remove it from the sequence diagram"
             ));
 
         if let Some(suggested_name) =

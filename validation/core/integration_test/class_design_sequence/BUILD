@@ -16,8 +16,8 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 filegroup(
     name = "class_design_sequence_test_data",
     srcs = [
+        "//validation/core/integration_test/class_design_sequence/negative_participant_alias_not_matched:case_data",
         "//validation/core/integration_test/class_design_sequence/negative_participant_ambiguous_short_name:case_data",
-        "//validation/core/integration_test/class_design_sequence/negative_participant_display_name_not_matched:case_data",
         "//validation/core/integration_test/class_design_sequence/negative_participant_method_missing:case_data",
         "//validation/core/integration_test/class_design_sequence/negative_participant_method_missing_with_suggestion:case_data",
         "//validation/core/integration_test/class_design_sequence/negative_participant_missing:case_data",

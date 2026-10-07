@@ -45,24 +45,6 @@ pub fn is_identifier_path(value: &str) -> bool {
     value.contains('.') || value.contains("::")
 }
 
-/// Strips a leading `anchor` prefix from `value`, returning the remainder
-/// (with any leading separator removed). If `anchor` is `None`, empty, or is
-/// not a prefix of `value`, the normalized `value` is returned unchanged.
-pub fn strip_anchor(value: &str, anchor: Option<&str>) -> String {
-    let normalized_value = normalize(value);
-    let Some(anchor) = anchor.filter(|anchor| !anchor.is_empty()) else {
-        return normalized_value;
-    };
-    let value_segments = normalized_segments(value);
-    let anchor_segments = normalized_segments(anchor);
-
-    if !value_segments.starts_with(&anchor_segments) {
-        return normalized_value;
-    }
-
-    join(&value_segments[anchor_segments.len()..])
-}
-
 /// Outcome of matching a uid against a set of element ids.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UidMatch<'a> {
@@ -74,24 +56,17 @@ pub enum UidMatch<'a> {
     Unresolved,
 }
 
-/// Matches `uid` against `ids` after stripping `anchor` from both. An id equal
-/// to the uid wins. Otherwise a single-segment uid is a leaf reference to every
-/// id whose last segment equals it. A qualified uid never matches by suffix.
-pub fn resolve_uid<'a>(
-    uid: &str,
-    anchor: Option<&str>,
-    ids: impl IntoIterator<Item = &'a str>,
-) -> UidMatch<'a> {
-    let uid = strip_anchor(uid, anchor);
+/// Matches `uid` against `ids`. An id equal to the uid wins. Otherwise a
+/// single-segment uid is a leaf reference to every id whose last segment
+/// equals it. A qualified uid never matches by suffix.
+pub fn resolve_uid<'a>(uid: &str, ids: impl IntoIterator<Item = &'a str>) -> UidMatch<'a> {
+    let uid = normalize(uid);
 
     if uid.is_empty() {
         return UidMatch::Unresolved;
     }
 
-    let ids: Vec<(&str, String)> = ids
-        .into_iter()
-        .map(|id| (id, strip_anchor(id, anchor)))
-        .collect();
+    let ids: Vec<(&str, String)> = ids.into_iter().map(|id| (id, normalize(id))).collect();
 
     if let Some((id, _)) = ids.iter().find(|(_, local)| *local == uid) {
         return UidMatch::Resolved(id);
@@ -118,10 +93,7 @@ pub fn resolve_uid<'a>(
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        is_identifier_path, join, normalize, normalized_segments, resolve_uid, strip_anchor,
-        UidMatch,
-    };
+    use super::{is_identifier_path, join, normalize, normalized_segments, resolve_uid, UidMatch};
 
     #[test]
     fn normalize_treats_cpp_and_dot_separators_equally() {
@@ -165,55 +137,14 @@ mod tests {
     }
 
     #[test]
-    fn strip_anchor_strips_matching_prefix() {
-        assert_eq!(
-            strip_anchor(
-                "score.logging.package_a.InternalInterface",
-                Some("score::logging")
-            ),
-            "package_a.InternalInterface"
-        );
-    }
-
-    #[test]
-    fn strip_anchor_returns_empty_string_when_value_equals_anchor() {
-        assert_eq!(strip_anchor("score::logging", Some("score.logging")), "");
-    }
-
-    #[test]
-    fn strip_anchor_keeps_unrooted_values_unchanged() {
-        assert_eq!(
-            strip_anchor("package_a.InternalInterface", Some("score::logging")),
-            "package_a.InternalInterface"
-        );
-        assert_eq!(
-            strip_anchor("score.logginging.Component", Some("score::logging")),
-            "score.logginging.Component"
-        );
-    }
-
-    #[test]
-    fn strip_anchor_skips_interior_empty_segments() {
-        assert_eq!(strip_anchor("score.logging..x", Some("score.logging")), "x");
-    }
-
-    #[test]
-    fn strip_anchor_returns_normalized_value_when_anchor_is_absent() {
-        assert_eq!(
-            strip_anchor("score::logging::Recorder", None),
-            "score.logging.Recorder"
-        );
-    }
-
-    #[test]
     fn resolve_uid_matches_qualified_uid_exactly() {
         let ids = ["unit_1.Controller", "unit_2.Controller"];
         assert_eq!(
-            resolve_uid("unit_2.Controller", None, ids),
+            resolve_uid("unit_2.Controller", ids),
             UidMatch::Resolved("unit_2.Controller")
         );
         assert_eq!(
-            resolve_uid("unit_2::Controller", None, ids),
+            resolve_uid("unit_2::Controller", ids),
             UidMatch::Resolved("unit_2.Controller")
         );
     }
@@ -221,7 +152,7 @@ mod tests {
     #[test]
     fn resolve_uid_does_not_match_qualified_uid_by_suffix() {
         assert_eq!(
-            resolve_uid("b.Controller", None, ["a.b.Controller"]),
+            resolve_uid("b.Controller", ["a.b.Controller"]),
             UidMatch::Unresolved
         );
     }
@@ -229,11 +160,7 @@ mod tests {
     #[test]
     fn resolve_uid_links_unique_leaf_reference() {
         assert_eq!(
-            resolve_uid(
-                "Controller",
-                None,
-                ["unit_1.Controller", "unit_1.Repository"]
-            ),
+            resolve_uid("Controller", ["unit_1.Controller", "unit_1.Repository"]),
             UidMatch::Resolved("unit_1.Controller")
         );
     }
@@ -241,11 +168,7 @@ mod tests {
     #[test]
     fn resolve_uid_reports_ambiguous_leaf_reference_sorted() {
         assert_eq!(
-            resolve_uid(
-                "Controller",
-                None,
-                ["unit_2.Controller", "unit_1.Controller"]
-            ),
+            resolve_uid("Controller", ["unit_2.Controller", "unit_1.Controller"]),
             UidMatch::Ambiguous(vec!["unit_1.Controller", "unit_2.Controller"])
         );
     }
@@ -253,7 +176,7 @@ mod tests {
     #[test]
     fn resolve_uid_prefers_exact_id_over_leaf_matches() {
         assert_eq!(
-            resolve_uid("Controller", None, ["unit_1.Controller", "Controller"]),
+            resolve_uid("Controller", ["unit_1.Controller", "Controller"]),
             UidMatch::Resolved("Controller")
         );
     }
@@ -261,45 +184,9 @@ mod tests {
     #[test]
     fn resolve_uid_reports_unresolved_when_nothing_matches() {
         assert_eq!(
-            resolve_uid("Missing", None, ["unit_1.Controller"]),
+            resolve_uid("Missing", ["unit_1.Controller"]),
             UidMatch::Unresolved
         );
-        assert_eq!(
-            resolve_uid("", None, ["unit_1.Controller"]),
-            UidMatch::Unresolved
-        );
-    }
-
-    #[test]
-    fn resolve_uid_strips_anchor_from_uid_and_ids() {
-        let ids = ["score.mw.unit_1.Controller", "score.mw.unit_2.Controller"];
-        assert_eq!(
-            resolve_uid("unit_2.Controller", Some("score::mw"), ids),
-            UidMatch::Resolved("score.mw.unit_2.Controller")
-        );
-        assert_eq!(
-            resolve_uid("score.mw.unit_2.Controller", Some("score.mw"), ids),
-            UidMatch::Resolved("score.mw.unit_2.Controller")
-        );
-    }
-
-    #[test]
-    fn resolve_uid_treats_anchor_stripped_single_segment_as_leaf() {
-        assert_eq!(
-            resolve_uid(
-                "score.mw.Controller",
-                Some("score.mw"),
-                ["score.mw.a.Controller"]
-            ),
-            UidMatch::Resolved("score.mw.a.Controller")
-        );
-    }
-
-    #[test]
-    fn resolve_uid_reports_unresolved_for_the_anchor_itself() {
-        assert_eq!(
-            resolve_uid("score.mw", Some("score.mw"), ["score.mw.Controller"]),
-            UidMatch::Unresolved
-        );
+        assert_eq!(resolve_uid("", ["unit_1.Controller"]), UidMatch::Unresolved);
     }
 }

@@ -48,6 +48,12 @@ impl ErrorLocation for ComponentError {
 
 pub struct PumlComponentParser;
 
+/// Target of an `as` clause.
+struct AliasClause {
+    text: String,
+    quoted: bool,
+}
+
 // lobster-trace: Tools.ArchitectureModelingSyntax
 // lobster-trace: Tools.ArchitectureModelingComponentContentComponent
 // lobster-trace: Tools.ArchitectureModelingComponentContentSEooC
@@ -90,7 +96,7 @@ impl PumlComponentParser {
                     )?)]);
                 }
                 Rule::port_declaration => {
-                    return Ok(vec![Statement::Port(Self::parse_port(inner)?)]);
+                    return Ok(vec![Statement::Port(Self::parse_port(inner, source_file)?)]);
                 }
                 Rule::together_block => {
                     // Flatten children into the enclosing scope (drop the wrapper)
@@ -107,7 +113,11 @@ impl PumlComponentParser {
         Ok(vec![])
     }
 
-    fn parse_port(pair: pest::iterators::Pair<Rule>) -> Result<Port, ComponentError> {
+    fn parse_port(
+        pair: pest::iterators::Pair<Rule>,
+        source_file: &str,
+    ) -> Result<Port, ComponentError> {
+        let source_location = SourceLocation::new(source_file, pair.line_col().0 as u32);
         let mut port_type = PortType::Port;
         let mut name = String::new();
         let mut alias = None;
@@ -122,10 +132,16 @@ impl PumlComponentParser {
                     };
                 }
                 Rule::port_name => {
-                    name = inner.as_str().to_string();
+                    name = Self::strip_wrapping_quotes(inner.as_str());
                 }
                 Rule::alias_clause => {
-                    alias = Self::extract_alias(inner);
+                    if let Some(clause) = Self::extract_alias_clause(inner) {
+                        alias = Some(if clause.quoted {
+                            std::mem::replace(&mut name, clause.text)
+                        } else {
+                            clause.text
+                        });
+                    }
                 }
                 _ => {}
             }
@@ -135,6 +151,7 @@ impl PumlComponentParser {
             port_type,
             name,
             alias,
+            source_location,
         })
     }
 
@@ -223,7 +240,9 @@ impl PumlComponentParser {
                     kind = "usecase".to_string();
                 }
                 Rule::alias_clause => {
-                    alias = Self::extract_alias(inner);
+                    if let Some(clause) = Self::extract_alias_clause(inner) {
+                        Self::apply_alias_clause(clause, &mut name, &mut alias);
+                    }
                 }
                 Rule::stereotype => {
                     stereotype = Self::extract_stereotype(inner);
@@ -232,7 +251,9 @@ impl PumlComponentParser {
                     for modifier in inner.into_inner() {
                         match modifier.as_rule() {
                             Rule::alias_clause => {
-                                alias = Self::extract_alias(modifier);
+                                if let Some(clause) = Self::extract_alias_clause(modifier) {
+                                    Self::apply_alias_clause(clause, &mut name, &mut alias);
+                                }
                             }
                             Rule::stereotype => {
                                 stereotype = Self::extract_stereotype(modifier);
@@ -344,10 +365,31 @@ impl PumlComponentParser {
             .unwrap_or_default()
     }
 
-    fn extract_alias(pair: pest::iterators::Pair<Rule>) -> Option<String> {
-        pair.into_inner()
-            .find(|inner| inner.as_rule() == Rule::ALIAS_ID)
-            .map(|inner| inner.as_str().to_string())
+    fn extract_alias_clause(pair: pest::iterators::Pair<Rule>) -> Option<AliasClause> {
+        pair.into_inner().find_map(|inner| match inner.as_rule() {
+            Rule::ALIAS_ID => Some(AliasClause {
+                text: inner.as_str().to_string(),
+                quoted: false,
+            }),
+            Rule::quoted_string => Some(AliasClause {
+                text: Self::strip_wrapping_quotes(inner.as_str()),
+                quoted: true,
+            }),
+            _ => None,
+        })
+    }
+
+    /// `X as "Label"`: the quoted side is the name, the bare side the alias.
+    fn apply_alias_clause(
+        clause: AliasClause,
+        name: &mut Option<String>,
+        alias: &mut Option<String>,
+    ) {
+        if clause.quoted {
+            *alias = name.replace(clause.text);
+        } else {
+            *alias = Some(clause.text);
+        }
     }
 
     fn extract_stereotype(pair: pest::iterators::Pair<Rule>) -> Option<String> {
@@ -625,6 +667,76 @@ mod dispatch_style_tests {
             relation.source_location.file.as_ref(),
             expected_file.as_str()
         );
+    }
+
+    #[test]
+    fn test_quoted_alias_is_the_name() {
+        let input = "@startuml\ncomponent c as \"a.Comp\" {\nportin p as \"p_in\"\n}\n@enduml";
+        let doc = PumlComponentParser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        let Statement::Element(element) = &doc.statements[0] else {
+            panic!("expected an element");
+        };
+        assert_eq!(element.identity.name.as_deref(), Some("a.Comp"));
+        assert_eq!(element.identity.alias.as_deref(), Some("c"));
+
+        let Statement::Port(port) = &element.statements[0] else {
+            panic!("expected a port");
+        };
+        assert_eq!(port.name, "p_in");
+        assert_eq!(port.alias.as_deref(), Some("p"));
+    }
+
+    #[test]
+    fn test_quoted_alias_is_the_name_even_when_the_name_is_quoted() {
+        let input = "@startuml\ncomponent \"A\" as \"b.B\"\n@enduml";
+        let doc = PumlComponentParser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        let Statement::Element(element) = &doc.statements[0] else {
+            panic!("expected an element");
+        };
+        assert_eq!(element.identity.name.as_deref(), Some("b.B"));
+        assert_eq!(element.identity.alias.as_deref(), Some("A"));
+    }
+
+    #[test]
+    fn test_port_source_location_is_its_line() {
+        let input = "@startuml\ncomponent c {\nportin p\n}\n@enduml";
+        let doc = PumlComponentParser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        let Statement::Element(element) = &doc.statements[0] else {
+            panic!("expected an element");
+        };
+        let Statement::Port(port) = &element.statements[0] else {
+            panic!("expected a port");
+        };
+        assert_eq!(port.source_location.line, 3);
+    }
+
+    #[test]
+    fn test_quoted_name_with_bare_alias_keeps_roles() {
+        let input = "@startuml\ncomponent \"a.Comp\" as c\nportin \"p_in\" as p\n@enduml";
+        let doc = PumlComponentParser
+            .parse_file(&Rc::new(PathBuf::from("t.puml")), input, LogLevel::Info)
+            .expect("valid input must parse");
+
+        let Statement::Element(element) = &doc.statements[0] else {
+            panic!("expected an element");
+        };
+        assert_eq!(element.identity.name.as_deref(), Some("a.Comp"));
+        assert_eq!(element.identity.alias.as_deref(), Some("c"));
+
+        let Statement::Port(port) = &doc.statements[1] else {
+            panic!("expected a port");
+        };
+        assert_eq!(port.name, "p_in");
+        assert_eq!(port.alias.as_deref(), Some("p"));
     }
 
     #[test]

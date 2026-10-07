@@ -59,9 +59,8 @@ Participant resolution matches the participant uid against class ids:
   participant label to disambiguate, for example
   `participant "unit_2::Controller" as controller`.
 
-The display name of a participant does not take part in matching. The uid is the
-qualified label path when the label is one, else the alias, else the declared
-name.
+The alias of a participant does not take part in matching. The uid is the
+participant's name as an identifier path.
 
 ```text
 ' class diagram

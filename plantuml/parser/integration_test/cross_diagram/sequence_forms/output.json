@@ -2,7 +2,7 @@
     "sequence_diagram.puml": {
         "defines": {},
         "references": {
-            "Frontend": "Frontend",
+            "Frontend": "FrontEnd",
             "Backend": "Backend",
             "Sink": "logging.Recorder.Sink",
             "Client": "Client"

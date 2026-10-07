@@ -281,10 +281,9 @@ mod message_arrow_tests {
     use crate::participant_table::build_participant_table;
     use parser_core::common_ast::{Arrow, ArrowDecor, ArrowLine};
     use sequence_parser::ParticipantIdentifier;
-    use uid_normalization::RootAnchor;
 
     fn table_for(statements: &[Statement]) -> ParticipantTable {
-        build_participant_table(statements, &RootAnchor::default()).expect("table must build")
+        build_participant_table(statements).expect("table must build")
     }
 
     fn resolve_message(message: &Message) -> Result<Vec<Node>, SequenceResolverError> {

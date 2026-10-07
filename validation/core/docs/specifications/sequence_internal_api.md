@@ -74,21 +74,21 @@ because another validator is responsible for reporting the root cause:
 
 ```text
 ' component diagram
-component "Unit 1" as unit_1 <<unit>>
-component "Unit 2" as unit_2 <<unit>>
-interface "IData" as IData
+component unit_1 <<unit>>
+component unit_2 <<unit>>
+interface IData
 unit_1 -( IData
 unit_2 )- IData
 ```
 
 ```
 ' sequence diagram
-participant "Unit 1" as unit_1
-participant "Unit 2" as unit_2
+participant unit_1
+participant unit_2
 unit_1 -> unit_2 : GetData()
 
 ' internal_api diagram
-interface "IData" as IData <<interface>> {
+interface IData <<interface>> {
   {abstract} GetData(): Data*
 }
 ```
@@ -106,23 +106,23 @@ this check.
 
 ```text
 ' component diagram
-component "Unit 1" as unit_1 <<unit>>
-component "Unit 2" as unit_2 <<unit>>
-interface "IData" as IData
+component unit_1 <<unit>>
+component unit_2 <<unit>>
+interface IData
 unit_1 -( IData
 unit_2 )- IData
 ```
 
 ```text
 ' sequence diagram
-participant "Unit 1" as unit_1
-participant "Unit 2" as unit_2
+participant unit_1
+participant unit_2
 unit_1 -> unit_2 : GetData()
 ```
 
 ```text
 ' internal_api diagram
-interface "IData" as IData <<interface>> {
+interface IData <<interface>> {
   {abstract} GetData(): Data*
 }
 ```
@@ -141,7 +141,7 @@ the same method are only counted once.
 
 ```text
 ' internal_api diagram
-interface "IData" as IData <<interface>> {
+interface IData <<interface>> {
   {abstract} GetData(): Data*
   {abstract} SetData(d: Data*): void
 }
@@ -149,8 +149,8 @@ interface "IData" as IData <<interface>> {
 
 ```text
 ' sequence diagram
-participant "Unit 1" as unit_1
-participant "Unit 2" as unit_2
+participant unit_1
+participant unit_2
 unit_1 -> unit_2 : GetData()
 unit_1 -> unit_2 : SetData(d)
 ```

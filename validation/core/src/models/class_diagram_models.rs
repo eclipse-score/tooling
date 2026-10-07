@@ -137,13 +137,13 @@ impl InternalApiIndex {
 
 /// Indexed public-API data prepared for component/public-API validators.
 pub struct PublicApiIndex {
-    api_index: BTreeMap<String, String>, // <interface name, interface id>
+    api_names: BTreeSet<String>, // interface id leaves
 }
 
 impl PublicApiIndex {
     /// Build a [`PublicApiIndex`] from public-API class diagram inputs.
     pub fn build_index(diagrams: &[ClassDiagramInput]) -> Self {
-        let mut api_index: BTreeMap<String, String> = BTreeMap::new();
+        let mut api_names: BTreeSet<String> = BTreeSet::new();
 
         for diagram in diagrams {
             for entity in &diagram.entities {
@@ -151,15 +151,16 @@ impl PublicApiIndex {
                     continue;
                 }
 
-                api_index.insert(entity.name.clone(), entity.id.clone());
+                let leaf = entity.id.rsplit('.').next().unwrap_or(&entity.id);
+                api_names.insert(leaf.to_string());
             }
         }
 
-        Self { api_index }
+        Self { api_names }
     }
 
     pub fn api_names(&self) -> impl Iterator<Item = &String> + '_ {
-        self.api_index.keys()
+        self.api_names.iter()
     }
 }
 

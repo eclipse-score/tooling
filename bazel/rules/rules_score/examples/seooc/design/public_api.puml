@@ -14,7 +14,7 @@
 @startuml
 
 namespace safety_software_seooc_example {
-    interface "SampleLibraryAPI" as SampleLibraryAPI {
+    interface SampleLibraryAPI {
         + GetNumber(): int
     }
 }
