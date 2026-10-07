@@ -17,7 +17,10 @@ import pytest
 
 from test_case_coverage.read_gtest_lobster import (
     TestRecord,
+    _camel_case_to_sentence,
+    _gtest_case_name_from_uid,
     _parse_gwt,
+    _parse_test_case_name,
     read_gtest_lobster,
     read_req_metadata_from_lobster_files,
     resolve_path,
@@ -249,6 +252,179 @@ def test_parse_gwt_empty_text():
 def test_parse_gwt_text_before_any_key_ignored():
     text = "preamble noise\n:Given: g\n:When: w\n:Then: t"
     assert _parse_gwt(text) == ("g", "w", "t")
+
+
+# ---------------------------------------------------------------------------
+# _camel_case_to_sentence / _parse_test_case_name
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("camel_case", "expected"),
+    [
+        ("KernelLargerThanSignal", "kernel larger than signal"),
+        ("Prototype", "prototype"),
+        ("ValidPMRAllocator", "valid pmr allocator"),  # acronym stays one word
+        ("ABC", "abc"),  # pure acronym stays one word
+        ("Base64Encoded", "base64 encoded"),  # digits do not start a word
+        ("", ""),
+    ],
+)
+def test_camel_case_to_sentence(camel_case, expected):
+    assert _camel_case_to_sentence(camel_case) == expected
+
+
+def test_parse_test_case_name_with_given_when_and_expect():
+    name = "GivenEmptySignal_WhenCorrelationIsComputed_ExpectNoOutput"
+    assert _parse_test_case_name(name) == ("empty signal", "correlation is computed", "no output")
+
+
+def test_parse_test_case_name_without_when_part():
+    assert _parse_test_case_name("GivenEmptySignal_ExpectNoOutput") == ("empty signal", "", "no output")
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "GivenEmptySignal_WhenCorrelationIsComputed_ExpectNoOutput",
+        "GivenEmptySignal_WhenCorrelationIsComputed_ThenNoOutput",
+    ],
+)
+def test_parse_test_case_name_accepts_expect_and_then_spelling(name):
+    """The result part may be spelled either ``Expect<Result>`` or ``Then<Result>``."""
+    assert _parse_test_case_name(name) == ("empty signal", "correlation is computed", "no output")
+
+
+def test_parse_test_case_name_then_spelling_without_when_part():
+    assert _parse_test_case_name("GivenEmptySignal_ThenNoOutput") == ("empty signal", "", "no output")
+
+
+def test_parse_test_case_name_then_spelling_in_parameter_name():
+    name = "CheckValidMass/GivenEvidenceStructValueStaticBelowZero_ThenContractViolated"
+    assert _parse_test_case_name(name) == ("evidence struct value static below zero", "", "contract violated")
+
+
+def test_parse_test_case_name_last_matching_part_wins_across_spellings():
+    """A name using both spellings keeps the last one, as for any repeated part."""
+    assert _parse_test_case_name("GivenX_ExpectFirst_ThenSecond") == ("x", "", "second")
+
+
+def test_parse_gwt_falls_back_to_then_spelling_of_test_case_name():
+    assert _parse_gwt("", "GivenEmptySignal_ThenNoOutput") == ("empty signal", "", "no output")
+
+
+def test_parse_test_case_name_leading_member_function_ignored():
+    name = "Reset_GivenRunningTimer_ExpectTimerStopped"
+    assert _parse_test_case_name(name) == ("running timer", "", "timer stopped")
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "GivenRangeOfValues_ExpectCorrectMedian/0",  # default index suffix
+        "GivenRangeOfValues_ExpectCorrectMedian/FirstParameter",  # custom name generator
+    ],
+)
+def test_parse_test_case_name_parameter_suffix_ignored(name):
+    assert _parse_test_case_name(name) == ("range of values", "", "correct median")
+
+
+def test_parse_test_case_name_specification_carried_by_parameter_name():
+    """Value-parameterized tests may put the specification into the parameter name.
+
+    The test case name is then just the member function under test, and the
+    Given/Expect parts are built up per parameter by a custom name generator.
+    """
+    name = "CheckValidMass/GivenEvidenceStructValueStaticBelowZero_ExpectContractViolated"
+    assert _parse_test_case_name(name) == ("evidence struct value static below zero", "", "contract violated")
+
+
+def test_parse_test_case_name_specification_with_when_part_in_parameter_name():
+    name = "CheckValidMass/GivenEvidenceStructSumExceedsInterval_WhenValidityIsChecked_ExpectContractViolated"
+    assert _parse_test_case_name(name) == (
+        "evidence struct sum exceeds interval",
+        "validity is checked",
+        "contract violated",
+    )
+
+
+@pytest.mark.parametrize("name", ["SomeLegacyTestName", "", "CheckValidMass/0"])
+def test_parse_test_case_name_without_any_known_part(name):
+    assert _parse_test_case_name(name) == ("", "", "")
+
+
+# ---------------------------------------------------------------------------
+# _parse_gwt — fallback to the test case name
+# ---------------------------------------------------------------------------
+
+
+def test_parse_gwt_falls_back_to_test_case_name_when_no_annotations():
+    assert _parse_gwt("", "GivenEmptySignal_WhenItIsCorrelated_ExpectNoOutput") == (
+        "empty signal",
+        "it is correlated",
+        "no output",
+    )
+
+
+def test_parse_gwt_annotations_take_precedence_over_test_case_name():
+    text = ":Given: annotated g\n:When: annotated w\n:Then: annotated t"
+    assert _parse_gwt(text, "GivenEmptySignal_WhenItIsCorrelated_ExpectNoOutput") == (
+        "annotated g",
+        "annotated w",
+        "annotated t",
+    )
+
+
+def test_parse_gwt_fills_only_the_missing_components_from_test_case_name():
+    """A partially annotated test keeps its annotations and derives the rest."""
+    assert _parse_gwt(":When: annotated w", "GivenEmptySignal_ExpectNoOutput") == (
+        "empty signal",
+        "annotated w",
+        "no output",
+    )
+
+
+def test_parse_gwt_without_annotations_and_without_convention_stays_empty():
+    """Neither convention followed — behaves exactly as the previous version."""
+    assert _parse_gwt("", "SomeLegacyTestName") == ("", "", "")
+
+
+@pytest.mark.parametrize(
+    ("uid", "expected"),
+    [
+        ("Suite:GivenX_ExpectY", "GivenX_ExpectY"),
+        ("GivenX_ExpectY", "GivenX_ExpectY"),
+        ("Inst/Suite:CheckValidMass/GivenX_ExpectY", "CheckValidMass/GivenX_ExpectY"),
+    ],
+)
+def test_gtest_case_name_from_uid(uid, expected):
+    assert _gtest_case_name_from_uid(uid) == expected
+
+
+def test_read_gtest_lobster_derives_gwt_from_test_name_when_text_is_absent(tmp_path):
+    p = _write_gtest_lobster(
+        tmp_path,
+        [("Suite:GivenEmptySignal_WhenItIsCorrelated_ExpectNoOutput", ["Req.A"], "")],
+    )
+    record = read_gtest_lobster(p)[0]
+    assert record.given == "empty signal"
+    assert record.when == "it is correlated"
+    assert record.then == "no output"
+
+
+def test_read_gtest_lobster_keeps_annotations_over_test_name(tmp_path):
+    p = _write_gtest_lobster(
+        tmp_path,
+        [
+            (
+                "Suite:GivenEmptySignal_ExpectNoOutput",
+                ["Req.A"],
+                ":Given: g\n:When: w\n:Then: t",
+            )
+        ],
+    )
+    record = read_gtest_lobster(p)[0]
+    assert (record.given, record.when, record.then) == ("g", "w", "t")
 
 
 # ---------------------------------------------------------------------------
