@@ -13,7 +13,7 @@
 should_pass: false
 error_contains: |
   [Naming] Unit "unit_2" from Bazel not found in the PlantUML component diagram.
-    Alias                   : "unit_2"
+    Name                    : "unit_2"
     Parent                  : component_example
     Stereotype              : <<unit>>
     Bazel label             : @//bazel/rules/rules_score/examples/seooc/unit_2:unit_2

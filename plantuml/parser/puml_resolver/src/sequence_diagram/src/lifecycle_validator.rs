@@ -14,92 +14,118 @@
 use std::collections::HashSet;
 
 use crate::error::SequenceResolverError;
-use sequence_logic::{Block, LifecycleAction, Node, ParticipantId, SourceLocation};
+use crate::participant_table::reference_of_uid;
+use sequence_logic::{
+    Block, LifecycleAction, Node, ParticipantId, SequenceParticipant, SourceLocation,
+};
 
-pub(crate) fn validate_lifecycle_consistency(root: &Block) -> Result<(), SequenceResolverError> {
+pub(crate) fn validate_lifecycle_consistency(
+    root: &Block,
+    participants: &[SequenceParticipant],
+) -> Result<(), SequenceResolverError> {
     let mut destroyed = HashSet::new();
-    validate_block(root, &mut destroyed)
+    LifecycleCheck { participants }.validate_block(root, &mut destroyed)
 }
 
-fn validate_block(
-    block: &Block,
-    destroyed: &mut HashSet<ParticipantId>,
-) -> Result<(), SequenceResolverError> {
-    for node in &block.items {
-        match node {
-            Node::Interaction(interaction) => {
-                if let Some(sender) = &interaction.sender {
-                    ensure_not_destroyed(sender, &interaction.source_location, destroyed)?;
+struct LifecycleCheck<'a> {
+    participants: &'a [SequenceParticipant],
+}
+
+impl LifecycleCheck<'_> {
+    fn validate_block(
+        &self,
+        block: &Block,
+        destroyed: &mut HashSet<ParticipantId>,
+    ) -> Result<(), SequenceResolverError> {
+        for node in &block.items {
+            match node {
+                Node::Interaction(interaction) => {
+                    if let Some(sender) = &interaction.sender {
+                        self.ensure_not_destroyed(sender, &interaction.source_location, destroyed)?;
+                    }
+                    if let Some(receiver) = &interaction.receiver {
+                        self.ensure_not_destroyed(
+                            receiver,
+                            &interaction.source_location,
+                            destroyed,
+                        )?;
+                    }
                 }
-                if let Some(receiver) = &interaction.receiver {
-                    ensure_not_destroyed(receiver, &interaction.source_location, destroyed)?;
+                Node::Reference(reference) => {
+                    for participant in &reference.participants {
+                        self.ensure_not_destroyed(
+                            participant,
+                            &reference.source_location,
+                            destroyed,
+                        )?;
+                    }
+                }
+                Node::Lifecycle(lifecycle) => match lifecycle.action {
+                    LifecycleAction::Create => {
+                        destroyed.remove(&lifecycle.participant);
+                    }
+                    LifecycleAction::Destroy => {
+                        destroyed.insert(lifecycle.participant.clone());
+                    }
+                    LifecycleAction::Activate | LifecycleAction::Deactivate => {
+                        self.ensure_not_destroyed(
+                            &lifecycle.participant,
+                            &lifecycle.source_location,
+                            destroyed,
+                        )?;
+                    }
+                },
+                Node::Branch(branch) => {
+                    for case in &branch.cases {
+                        self.validate_child_block(&case.block, destroyed)?;
+                    }
+                }
+                Node::Loop(loop_node) => self.validate_child_block(&loop_node.block, destroyed)?,
+                Node::Parallel(parallel) => {
+                    for branch in &parallel.branches {
+                        self.validate_child_block(&branch.block, destroyed)?;
+                    }
+                }
+                Node::EarlyExit(early_exit) => {
+                    self.validate_child_block(&early_exit.block, destroyed)?
                 }
             }
-            Node::Reference(reference) => {
-                for participant in &reference.participants {
-                    ensure_not_destroyed(participant, &reference.source_location, destroyed)?;
-                }
-            }
-            Node::Lifecycle(lifecycle) => match lifecycle.action {
-                LifecycleAction::Create => {
-                    destroyed.remove(&lifecycle.participant);
-                }
-                LifecycleAction::Destroy => {
-                    destroyed.insert(lifecycle.participant.clone());
-                }
-                LifecycleAction::Activate | LifecycleAction::Deactivate => {
-                    ensure_not_destroyed(
-                        &lifecycle.participant,
-                        &lifecycle.source_location,
-                        destroyed,
-                    )?;
-                }
-            },
-            Node::Branch(branch) => {
-                for case in &branch.cases {
-                    validate_child_block(&case.block, destroyed)?;
-                }
-            }
-            Node::Loop(loop_node) => validate_child_block(&loop_node.block, destroyed)?,
-            Node::Parallel(parallel) => {
-                for branch in &parallel.branches {
-                    validate_child_block(&branch.block, destroyed)?;
-                }
-            }
-            Node::EarlyExit(early_exit) => validate_child_block(&early_exit.block, destroyed)?,
         }
+
+        Ok(())
     }
 
-    Ok(())
-}
-
-fn validate_child_block(
-    block: &Block,
-    destroyed: &HashSet<ParticipantId>,
-) -> Result<(), SequenceResolverError> {
-    let mut scoped_destroyed = destroyed.clone();
-    validate_block(block, &mut scoped_destroyed)
-}
-
-fn ensure_not_destroyed(
-    participant: &str,
-    source_location: &SourceLocation,
-    destroyed: &HashSet<ParticipantId>,
-) -> Result<(), SequenceResolverError> {
-    if destroyed.contains(participant) {
-        return Err(SequenceResolverError::DestroyedParticipantUse {
-            participant: participant.to_string(),
-            source_location: source_location.clone(),
-        });
+    fn validate_child_block(
+        &self,
+        block: &Block,
+        destroyed: &HashSet<ParticipantId>,
+    ) -> Result<(), SequenceResolverError> {
+        let mut scoped_destroyed = destroyed.clone();
+        self.validate_block(block, &mut scoped_destroyed)
     }
 
-    Ok(())
+    fn ensure_not_destroyed(
+        &self,
+        uid: &str,
+        source_location: &SourceLocation,
+        destroyed: &HashSet<ParticipantId>,
+    ) -> Result<(), SequenceResolverError> {
+        if destroyed.contains(uid) {
+            return Err(SequenceResolverError::DestroyedParticipantUse {
+                participant: reference_of_uid(self.participants, uid).to_string(),
+                uid: uid.to_string(),
+                source_location: source_location.clone(),
+            });
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod lifecycle_validator_tests {
     use super::*;
-    use sequence_logic::{Block, Interaction, ParticipantLifecycle};
+    use sequence_logic::{Interaction, ParticipantLifecycle, ParticipantType};
 
     fn dummy_source_location() -> SourceLocation {
         SourceLocation::new("test.puml", 0)
@@ -122,6 +148,17 @@ mod lifecycle_validator_tests {
         })
     }
 
+    fn participant(display_name: &str, alias: Option<&str>, uid: &str) -> SequenceParticipant {
+        SequenceParticipant {
+            display_name: display_name.to_string(),
+            alias: alias.map(str::to_string),
+            uid: uid.to_string(),
+            participant_type: ParticipantType::Participant,
+            source_location: dummy_source_location(),
+            stereotype: None,
+        }
+    }
+
     #[test]
     fn test_destroyed_participant_cannot_be_used_later() {
         let block = Block {
@@ -132,12 +169,38 @@ mod lifecycle_validator_tests {
             ],
         };
 
-        let err = validate_lifecycle_consistency(&block)
+        let err = validate_lifecycle_consistency(&block, &[])
             .expect_err("destroyed participant use must fail");
         assert_eq!(
             err,
             SequenceResolverError::DestroyedParticipantUse {
                 participant: "B".to_string(),
+                uid: "B".to_string(),
+                source_location: dummy_source_location(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_destroyed_participant_error_names_the_written_reference() {
+        let participants = [
+            participant("a::B", Some("b"), "a.B"),
+            participant("A", None, "A"),
+        ];
+        let block = Block {
+            items: vec![
+                lifecycle("a.B", LifecycleAction::Destroy),
+                interaction("A", "a.B"),
+            ],
+        };
+
+        let err = validate_lifecycle_consistency(&block, &participants)
+            .expect_err("destroyed participant use must fail");
+        assert_eq!(
+            err,
+            SequenceResolverError::DestroyedParticipantUse {
+                participant: "b".to_string(),
+                uid: "a.B".to_string(),
                 source_location: dummy_source_location(),
             }
         );
@@ -154,6 +217,6 @@ mod lifecycle_validator_tests {
             ],
         };
 
-        validate_lifecycle_consistency(&block).expect("create makes participant usable again");
+        validate_lifecycle_consistency(&block, &[]).expect("create makes participant usable again");
     }
 }

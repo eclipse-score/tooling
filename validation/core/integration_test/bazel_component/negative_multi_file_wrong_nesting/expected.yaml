@@ -19,7 +19,7 @@ error_contains:
   - "FAILED (1 error(s)):"
   - |
     [Naming] Unit "unit_1" from the PlantUML component diagram not found in Bazel.
-      Alias                 : "unit_1"
+      Name                  : "unit_1"
       Parent                : safety_software_seooc_example
       Component source file : "validation/core/integration_test/bazel_component/negative_multi_file_wrong_nesting/overview_diagram.puml"
       Component source line : 25

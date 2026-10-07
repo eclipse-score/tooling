@@ -13,7 +13,7 @@
 should_pass: false
 error_contains: |
   [Design] Unit "unit_1" is defined more than once in Bazel.
-    Alias              : "unit_1"
+    Name               : "unit_1"
     Parent             : component_example
     First bazel label  : @//pkg_a/unit_1:unit_1
     Second bazel label : @//pkg_b/unit_1:unit_1

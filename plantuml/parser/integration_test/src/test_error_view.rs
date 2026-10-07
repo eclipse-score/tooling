@@ -442,9 +442,11 @@ impl ErrorView for SequenceResolverError {
                 .with_field("line", source_location.line.to_string()),
             SequenceResolverError::DestroyedParticipantUse {
                 participant,
+                uid,
                 source_location,
             } => ProjectedError::new("DestroyedParticipantUse")
                 .with_field("participant", participant.clone())
+                .with_field("uid", uid.clone())
                 .with_field("line", source_location.line.to_string()),
             SequenceResolverError::InvalidMessageDirection {
                 arrow,

@@ -162,6 +162,11 @@ fn test_invalid_destroyed_participant_use_is_rejected() {
 }
 
 #[test]
+fn test_invalid_destroyed_aliased_participant_use_names_the_alias() {
+    run_sequence_resolver_case("invalid_destroyed_aliased_participant_use");
+}
+
+#[test]
 fn test_recreate_destroyed_participant_is_allowed() {
     run_sequence_resolver_case("recreate_destroyed_participant");
 }
