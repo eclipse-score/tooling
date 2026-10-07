@@ -25,11 +25,18 @@ records two roles for the elements in one ``.puml`` diagram:
   ``[Proxy]`` box in an overview is a reference that should link to the
   diagram that defines it.
 
+The ``alias`` of an entry is the PlantUML code of the element in its own
+diagram.  It is only used for the ``url of`` injection and is never matched
+across diagrams; identity is the ``id``.
+
 The matching algorithm:
 
-1. Build a *definition index*: ``{alias|id → [source_paths]}``.
-2. For each reference ``(alias, id)`` in a diagram, look up the index (FQN
-   ``id`` first, then ``alias``) to find candidate definer diagrams.
+1. Build a *definition index* ``{id → [source_paths]}`` and a *name index*
+   ``{last id segment → [source_paths]}``.  Only idmaps with
+   ``"match_by_name": true`` feed the name index.
+2. For each reference ``id`` in a diagram, look up the definition index; if
+   nothing is found and the referencing idmap has ``match_by_name``, look up
+   the last segment of the ``id`` in the name index.
 3. If exactly one definer: emit the link.
 4. If multiple definers: pick the one sharing the longest common workspace-
    relative path prefix with the source diagram (proximity tiebreak).
@@ -65,8 +72,10 @@ logger = logging.getLogger(__name__)
 
 # {normalized_source_path: raw_idmap_dict} — loaded once in builder-inited.
 _ENV_IDMAP_BY_SOURCE = "clickable_plantuml_idmap_by_source"
-# {alias_or_id: [source_path, ...]} — definition index built in builder-inited.
+# {id: [source_path, ...]} — definition index built in builder-inited.
 _ENV_DEF_INDEX = "clickable_plantuml_def_index"
+# {last id segment: [source_path, ...]} — name index built in builder-inited.
+_ENV_NAME_INDEX = "clickable_plantuml_name_index"
 # {normalized_source_path: (docname, anchor_or_None)} — populated in doctree-read.
 _ENV_PUML_DOCNAMES = "clickable_plantuml_puml_docnames"
 # Absolute prefix to strip from PlantUML node paths to obtain canonical source keys.
@@ -156,6 +165,11 @@ def _proximity_score(source: str, candidate: str) -> int:
     return _common_prefix_length(source, candidate)
 
 
+def _id_leaf(identifier: str) -> str:
+    """Return the last ``.``-separated segment of *identifier*."""
+    return identifier.rsplit(".", 1)[-1]
+
+
 def _descendant_count(idmap_by_source: dict[str, Any], source_key: str, fqn: str) -> int:
     """Count *source_key*'s idmap entries nested under *fqn* (id starts with ``f"{fqn}."``).
 
@@ -171,21 +185,23 @@ def _descendant_count(idmap_by_source: dict[str, Any], source_key: str, fqn: str
 
 
 def _resolve_definer(
-    alias: str,
     fqn: str,
     source_key: str,
     definition_index: dict[str, list[str]],
+    name_index: dict[str, list[str]],
     idmap_by_source: dict[str, Any] | None = None,
+    *,
+    by_name: bool = True,
 ) -> str | None:
     """Return the definer source key for one reference, or ``None``.
 
     Resolution rules:
 
-    * FQN (``id``) lookup takes precedence over the ``alias`` lookup — but
-      only when it yields a definer *other than* the diagram itself; if the
-      only FQN match is a self-link, the ``alias`` lookup is still tried
-      rather than giving up (a diagram may re-declare its own top-level FQN
-      while a distinct diagram elaborates it under a shared alias).
+    * The exact id (``fqn``) is looked up in *definition_index*. Only when
+      that yields no definer *other than* the diagram itself, and *by_name*
+      is set, the last segment of the id is looked up in *name_index* (a
+      sequence/component diagram writes a bare name where the defining
+      diagram has a package-qualified id).
     * A diagram never links to itself (self-links are dropped from both
       lookups).
     * A single remaining candidate wins outright. Multiple candidates go
@@ -194,13 +210,15 @@ def _resolve_definer(
     """
     _assert_canonical_source_key(source_key)
 
-    def _candidates_for(key: str) -> list[str]:
-        raw = definition_index.get(key, [])
+    def _candidates_for(index: dict[str, list[str]], key: str) -> list[str]:
+        raw = index.get(key, [])
         for candidate in raw:
             _assert_canonical_source_key(candidate)
         return [c for c in raw if c != source_key]
 
-    candidates = _candidates_for(fqn) or _candidates_for(alias)
+    candidates = _candidates_for(definition_index, fqn)
+    if not candidates and by_name:
+        candidates = _candidates_for(name_index, _id_leaf(fqn))
     if not candidates:
         return None
     if len(candidates) == 1:
@@ -219,7 +237,7 @@ def _resolve_definer(
     if target is None:
         logger.warning(
             "clickable_plantuml: ambiguous definition for '%s' in '%s' — tied candidates %s; no link emitted",
-            alias,
+            fqn,
             source_key,
             candidates,
         )
@@ -279,7 +297,7 @@ def _escape_plantuml_url(url: str) -> str:
 
 def _load_idmap_files(
     source_dir: Path,
-) -> tuple[dict[str, Any], dict[str, list[str]]]:
+) -> tuple[dict[str, Any], dict[str, list[str]], dict[str, list[str]]]:
     """Scan *source_dir* for ``*.idmap.json`` and build the lookup indices.
 
     The canonical key is the workspace-relative POSIX path stored in each
@@ -289,13 +307,21 @@ def _load_idmap_files(
 
     Returns:
         idmap_by_source:   ``{canonical_source_key → raw idmap dict}``
-        definition_index:  ``{alias_or_fqn_id → [canonical_source_keys]}``
+        definition_index:  ``{id → [canonical_source_keys]}``
+        name_index:        ``{last id segment → [canonical_source_keys]}``,
+                           fed only by idmaps with ``match_by_name``.
 
     Raises:
         ExtensionError: when two idmaps normalise to the same canonical key.
     """
     idmap_by_source: dict[str, Any] = {}
     definition_index: dict[str, list[str]] = {}
+    name_index: dict[str, list[str]] = {}
+
+    def _add(index: dict[str, list[str]], key: str, source_key: str) -> None:
+        sources = index.setdefault(key, [])
+        if source_key not in sources:
+            sources.append(source_key)
 
     for json_path in sorted(source_dir.rglob("*.idmap.json")):
         try:
@@ -323,29 +349,41 @@ def _load_idmap_files(
         idmap_by_source[source_key] = data
 
         for entry in data.get("defines", []):
-            alias = entry.get("alias", "")
             fqn = entry.get("id", "")
-            if alias and source_key not in definition_index.setdefault(alias, []):
-                definition_index[alias].append(source_key)
-            if fqn and fqn != alias and source_key not in definition_index.setdefault(fqn, []):
-                definition_index[fqn].append(source_key)
+            if not fqn:
+                continue
+            _add(definition_index, fqn, source_key)
+            if data.get("match_by_name"):
+                _add(name_index, _id_leaf(fqn), source_key)
 
     logger.info(
         "clickable_plantuml: loaded %d idmap file(s), %d unique definition keys",
         len(idmap_by_source),
         len(definition_index),
     )
-    return idmap_by_source, definition_index
+    return idmap_by_source, definition_index, name_index
 
 
 # ---------------------------------------------------------------------------
 # UML injection
 # ---------------------------------------------------------------------------
 
-# Characters allowed in a PlantUML alias identifier.
+# Characters allowed in a bare (unquoted) PlantUML alias identifier.
 _ALIAS_SAFE_RE = re.compile(r"^[\w.\-]+$")
+# Any other code is written quoted; a quote or line break cannot be quoted.
+_ALIAS_QUOTABLE_RE = re.compile(r'^[^"\r\n]+$')
 # Matches the @enduml terminator line (used to inject url directives before it).
 _ENDUML_RE = re.compile(r"^\s*@enduml\s*$", re.MULTILINE)
+
+
+def _url_directive(alias: str, url: str) -> str | None:
+    """Return the ``url of`` directive for *alias*, or ``None`` if it cannot be written."""
+    if _ALIAS_SAFE_RE.match(alias):
+        return f"url of {alias} is [[{url}]]"
+    if _ALIAS_QUOTABLE_RE.match(alias):
+        return f'url of "{alias}" is [[{url}]]'
+    logger.warning("clickable_plantuml: alias %r cannot be written in a url directive — no link emitted", alias)
+    return None
 
 
 def _inject_links_into_uml(uml_content: str, links: dict[str, str]) -> str:
@@ -353,7 +391,7 @@ def _inject_links_into_uml(uml_content: str, links: dict[str, str]) -> str:
     if not links:
         return uml_content
 
-    directives = [f"url of {alias} is [[{url}]]" for alias, url in links.items() if _ALIAS_SAFE_RE.match(alias)]
+    directives = [d for alias, url in links.items() if (d := _url_directive(alias, url)) is not None]
     if not directives:
         return uml_content
 
@@ -514,7 +552,7 @@ def on_builder_inited(app: Sphinx) -> None:
         logger.info("clickable_plantuml: srcdir does not exist — no idmaps loaded")
         return
 
-    idmap_by_source, definition_index = _load_idmap_files(source_dir)
+    idmap_by_source, definition_index, name_index = _load_idmap_files(source_dir)
     if not idmap_by_source:
         logger.info("clickable_plantuml: no *.idmap.json files found")
         return
@@ -523,6 +561,7 @@ def on_builder_inited(app: Sphinx) -> None:
     setattr(app.env, _ENV_WORKSPACE_OFFSET, workspace_offset)
     setattr(app.env, _ENV_IDMAP_BY_SOURCE, idmap_by_source)
     setattr(app.env, _ENV_DEF_INDEX, definition_index)
+    setattr(app.env, _ENV_NAME_INDEX, name_index)
     setattr(app.env, _ENV_SOURCE_KEYS, frozenset(idmap_by_source))
     setattr(app.env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
 
@@ -615,6 +654,7 @@ def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> N
     """
     idmap_by_source: dict[str, Any] = getattr(app.env, _ENV_IDMAP_BY_SOURCE, {})
     definition_index: dict[str, list[str]] = getattr(app.env, _ENV_DEF_INDEX, {})
+    name_index: dict[str, list[str]] = getattr(app.env, _ENV_NAME_INDEX, {})
     if app.builder.format != "html" or not idmap_by_source:
         return
 
@@ -640,6 +680,7 @@ def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> N
         if idmap is None:
             continue
 
+        by_name = bool(idmap.get("match_by_name"))
         resolved_links: dict[str, str] = {}
         seen_aliases_in_node: set[str] = set()
         for ref in idmap.get("references", []):
@@ -648,7 +689,9 @@ def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> N
             if not alias or alias in seen_aliases_in_node:
                 continue
 
-            target_source = _resolve_definer(alias, fqn, source_key, definition_index, idmap_by_source)
+            target_source = _resolve_definer(
+                fqn, source_key, definition_index, name_index, idmap_by_source, by_name=by_name
+            )
             if target_source is None:
                 continue
 

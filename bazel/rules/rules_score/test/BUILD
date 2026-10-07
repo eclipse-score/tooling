@@ -824,7 +824,7 @@ sh_test(
     name = "leaf_unit_example_link_rendered_test",
     srcs = ["check_idmap_link.sh"],
     args = [
-        "--alias",
+        "--leaf",
         "unit_x",
         "$(rootpaths :leaf_unit_example_lib_index)",
     ],
