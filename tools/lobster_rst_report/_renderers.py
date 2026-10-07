@@ -101,6 +101,65 @@ class ItemCardBuilder:
         self._report = report
         self._source_root = source_root
 
+    def _render_test_spec_text(self, item, body, sep, has_content):
+        """Render a TestSpec item's text as separate Attributes/Description sections.
+
+        TestSpec.text is a flattened "field: value" blob (one paragraph per
+        field, joined by blank lines). Short scalar fields (priority, status,
+        etc.) are listed under "Attributes", one per line. The narrative
+        fields (preconditions, test_steps, ...) are listed under
+        "Description", each under its own sub-heading. RST line blocks
+        ("| ...") keep every line (e.g. each numbered step) on its own line
+        instead of being merged into a single wrapped paragraph.
+
+        Returns:
+            The updated ``has_content`` flag.
+        """
+        e = RstUtils.escape
+        metadata_fields = (
+            "derivation_technique", "security", "test_type",
+            "testspec_status", "priority", "test_environment", "author",
+        )
+        metadata_lines = []
+        narrative_paragraphs = []
+        for para in item.text.split("\n\n"):
+            field, sep_found, _ = para.partition(":")
+            if sep_found and field.strip() in metadata_fields:
+                metadata_lines.append(para)
+            else:
+                narrative_paragraphs.append(para)
+
+        if metadata_lines:
+            body("**Attributes:**")
+            body("")
+            for line in metadata_lines:
+                field, _, value = line.partition(":")
+                body(f"| {e(field.strip())}: {e(value.strip())}")
+            body("")
+            has_content = True
+
+        if narrative_paragraphs:
+            if has_content:
+                sep()
+            body("**Description:**")
+            body("")
+            for para in narrative_paragraphs:
+                lines = [line.strip() for line in para.splitlines()]
+                if not lines:
+                    continue
+                field, sep_found, first_value = lines[0].partition(":")
+                if sep_found:
+                    body(f"**{e(field.strip())}:**")
+                    body("")
+                    lines = [first_value.strip()] + lines[1:]
+                for text_line in lines:
+                    if text_line:
+                        body(f"| {e(text_line)}")
+                body("")
+            has_content = True
+
+        return has_content
+
     def build(self) -> list:
         """Return RST lines for the item dropdown.
 
@@ -171,15 +230,18 @@ class ItemCardBuilder:
 
         # Description / specification text
         if isinstance(item, (Requirement, Activity)) and item.text:
-            body(".. pull-quote::")
-            out.append("")
-            for text_line in item.text.splitlines():
-                # Requirement text originates from external sources — escape RST
-                # special chars. Activity text is author-controlled and may
-                # contain intentional RST markup — render as-is.
-                nested(e(text_line) if isinstance(item, Requirement) else text_line)
-            out.append("")
-            has_content = True
+            if getattr(item, "kind", None) == "TestSpec":
+                has_content = self._render_test_spec_text(item, body, sep, has_content)
+            else:
+                body(".. pull-quote::")
+                out.append("")
+                for text_line in item.text.splitlines():
+                    # Requirement text originates from external sources — escape
+                    # RST special chars. Activity text is author-controlled and
+                    # may contain intentional RST markup — render as-is.
+                    nested(e(text_line) if isinstance(item, Requirement) else text_line)
+                out.append("")
+                has_content = True
 
         # lobster-trace: UseCases.List_Requirements_to_Tests
         # lobster-trace: UseCases.List_Tests_to_Requirements
@@ -205,7 +267,10 @@ class ItemCardBuilder:
         if has_up:
             if has_content:
                 sep()
-            body("**Derived from:**")
+            # TestSpec.verifies traces up to Feature Requirements; every other
+            # requirement kind keeps the generic "Derived from" wording.
+            up_label = "Verifies" if getattr(item, "kind", None) == "TestSpec" else "Derived from"
+            body(f"**{up_label}:**")
             out.append("")
             for ref_str in self._resolve_refs(item.ref_up):
                 body(f"* {ref_str}")

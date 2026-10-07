@@ -44,6 +44,7 @@ load(
     "SphinxModuleInfo",
     "SphinxNeedsInfo",
     "SphinxSourcesInfo",
+    "TestSpecificationsInfo",
     "UnitInfo",
 )
 load(
@@ -1405,6 +1406,26 @@ def _dependable_element_index_impl(ctx):
 
     feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)
 
+    # Collect test specification .lobster files from test_specifications
+    # targets (TestSpecificationsInfo). These trace up to Feature Requirements
+    # via the TestSpec.verifies field.
+    test_spec_lobster_files = []
+    for req_target in ctx.attr.test_specifications:
+        if TestSpecificationsInfo in req_target:
+            test_spec_lobster_files.append(req_target[TestSpecificationsInfo].srcs)
+
+    test_spec_lobster_depset = depset(transitive = test_spec_lobster_files)
+
+    # Collect python test-case .lobster files from `tests` targets exposing an
+    # OutputGroupInfo "lobster" output group (py_lobster_trace()). These trace
+    # up to Test Specifications via the pytest verifies-mark.
+    py_test_lobster_files = []
+    for test_target in ctx.attr.tests:
+        if OutputGroupInfo in test_target and hasattr(test_target[OutputGroupInfo], "lobster"):
+            py_test_lobster_files.append(test_target[OutputGroupInfo].lobster)
+
+    py_test_lobster_depset = depset(transitive = py_test_lobster_files)
+
     comp_req_lobster_files = []
     comp_test_lobster_files = []
     comp_arch_lobster_files = []
@@ -1505,6 +1526,8 @@ def _dependable_element_index_impl(ctx):
 
     # Build the DE-level lobster report if feature and component traces exist
     feat_req_list = feat_req_lobster_depset.to_list()
+    test_spec_list = test_spec_lobster_depset.to_list()
+    py_test_list = py_test_lobster_depset.to_list()
 
     comp_req_list = comp_req_lobster_depset.to_list()
     comp_test_list = comp_test_lobster_depset.to_list()
@@ -1579,6 +1602,8 @@ def _dependable_element_index_impl(ctx):
     # reference" issues for levels a given dependable element does not use.
     has_any_lobster_input = any([
         feat_req_list,
+        test_spec_list,
+        py_test_list,
         received_aou_list,
         comp_req_list,
         comp_test_list,
@@ -1637,6 +1662,22 @@ def _dependable_element_index_impl(ctx):
             output = lobster_config,
             substitutions = {
                 "{FEAT_REQ_BLOCK}": format_lobster_block("requirements", "Feature Requirements", feat_req_list),
+                # Test Specifications intentionally does not `trace to:` Feature
+                # Requirements: doing so would require every Feature Requirement
+                # to be covered by a test specification as soon as a single one
+                # exists. Each TestSpec.verifies reference is instead resolved
+                # individually against Feature Requirements via the normal
+                # per-item up-reference check.
+                "{TEST_SPEC_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Test Specifications",
+                    test_spec_list,
+                ),
+                "{TEST_CASE_BLOCK}": format_lobster_block(
+                    "activity",
+                    "Test Cases",
+                    py_test_list,
+                ),
                 # Target level: every item here must be covered, either by a
                 # Component Requirement (`derived_from`) or by being
                 # further chain-forwarded (Forwarded AoUs, below). Without the
@@ -1736,7 +1777,7 @@ def _dependable_element_index_impl(ctx):
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + rc_list + safetymeasures_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
+        all_lobster_inputs = feat_req_list + test_spec_list + py_test_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + rc_list + safetymeasures_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_files = [lobster_config, lobster_report_file]
 
@@ -1758,7 +1799,11 @@ def _dependable_element_index_impl(ctx):
         if not source_root:
             package = ctx.label.package
             package_depth = len(package.split("/")) if package else 0
-            source_root = "/".join([".." for _ in range(package_depth + 2)]) + "/"
+            # +3: escape "traceability_report/", "html/" and "<name>_doc/"
+            # (the multi-page report nests item pages one level deeper than
+            # "<name>_doc/html/", inside "<name>_doc/html/traceability_report/").
+            # +1: escape the "bazel-bin" convenience symlink itself.
+            source_root = "/".join([".." for _ in range(package_depth + 4)]) + "/"
         rst_args = ctx.actions.args()
         rst_args.add(lobster_report_file.path)
         rst_args.add_all(["--out-dir", lobster_rst_dir.path])
@@ -1851,6 +1896,11 @@ def _dependable_element_index_attrs():
             mandatory = True,
             providers = [[FeatureRequirementsInfo], [AssumedSystemRequirementsInfo]],
             doc = "Feature or assumed system requirements targets.",
+        ),
+        "test_specifications": attr.label_list(
+            default = [],
+            providers = [[TestSpecificationsInfo]],
+            doc = "Test specification targets tracing to feature requirements via TestSpec.verifies, used for LOBSTER traceability.",
         ),
         "architectural_design": attr.label_list(
             mandatory = True,
@@ -2096,6 +2146,7 @@ def dependable_element(
         checklists = [],
         glossary = [],
         deps = [],
+        test_specifications = [],
         aou_forwarding = None,
         maturity = "release",
         generate_html_report = False,
@@ -2136,6 +2187,9 @@ def dependable_element(
             terminology and definitions for the dependable element.
         deps: Optional list of other module targets this element depends on.
             Cross-references will work automatically.
+        test_specifications: Optional list of labels to test_specifications
+            targets tracing to feature requirements via TestSpec.verifies,
+            used for LOBSTER traceability.
         aou_forwarding: Optional label to a YAML file listing received AoU IDs
             to further-forward to this element's own dependees. Only needed for
             chain-forwarding received AoUs that this element cannot handle.
@@ -2193,6 +2247,7 @@ def dependable_element(
         glossary = glossary,
         tests = tests,
         deps = deps,
+        test_specifications = test_specifications,
         processed_deps = processed_deps,
         aou_forwarding = aou_forwarding,
         integrity_level = integrity_level,

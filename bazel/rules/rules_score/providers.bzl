@@ -105,6 +105,14 @@ ComponentRequirementsInfo = provider(
     },
 )
 
+TestSpecificationsInfo = provider(
+    doc = "Provider for test specification artifacts.",
+    fields = {
+        "srcs": "Depset of .lobster traceability files generated from TRLC test specification sources.",
+        "name": "Name of the test specifications target.",
+    },
+)
+
 AssumedSystemRequirementsInfo = provider(
     doc = "Provider for assumed system requirements artifacts.",
     fields = {

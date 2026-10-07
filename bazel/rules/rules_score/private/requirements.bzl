@@ -21,7 +21,7 @@ public-facing macros.
 
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo", "subrule_trlc_image_stage")
-load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SafetyAnalysisProviderInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SafetyAnalysisProviderInfo", "SphinxSourcesInfo", "TestSpecificationsInfo")
 load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
 _DEFAULT_SPEC = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")
@@ -34,6 +34,7 @@ _REQ_KIND_TITLES = {
     "component": "Component Requirements",
     "assumed_system": "Assumed System Requirements",
     "aou": "Assumptions of Use",
+    "test_spec": "Test Specifications",
 }
 
 # ============================================================================
@@ -117,6 +118,11 @@ def _requirements_impl(ctx):
             aou_lobster = depset([lobster_file]),
             name = ctx.label.name,
         )
+    elif ctx.attr.req_kind == "test_spec":
+        req_provider = TestSpecificationsInfo(
+            srcs = depset([lobster_file]),
+            name = ctx.label.name,
+        )
     else:  # assumed_system
         req_provider = AssumedSystemRequirementsInfo(
             srcs = depset([lobster_file]),
@@ -173,7 +179,7 @@ _score_requirements_rule = rule(
             doc = "Other requirement targets whose TRLC records are needed for cross-reference parsing.",
         ),
         "req_kind": attr.string(
-            values = ["feature", "component", "assumed_system", "aou"],
+            values = ["feature", "component", "assumed_system", "aou", "test_spec"],
             mandatory = True,
             doc = "Kind of requirements; determines which domain provider is emitted.",
         ),
