@@ -40,9 +40,13 @@ pub enum SequenceResolverError {
         source_location: SourceLocation,
     },
 
-    #[error("participant `{participant}` is used after destroy at {source_location}")]
+    #[error(
+        "participant `{participant}` (uid `{uid}`) is used after destroy at {source_location}"
+    )]
     DestroyedParticipantUse {
+        /// Reference name the author wrote: the alias, else the name.
         participant: String,
+        uid: String,
         source_location: SourceLocation,
     },
 

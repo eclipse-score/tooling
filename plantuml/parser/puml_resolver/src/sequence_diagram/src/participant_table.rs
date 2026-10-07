@@ -263,6 +263,19 @@ fn reference_name<'a>(display_name: &'a str, alias: Option<&'a str>) -> &'a str 
     alias.unwrap_or(display_name)
 }
 
+/// Reference name of the participant with `uid`; falls back to the uid.
+pub(crate) fn reference_of_uid<'a>(
+    participants: &'a [SequenceParticipant],
+    uid: &'a str,
+) -> &'a str {
+    participants
+        .iter()
+        .find(|participant| participant.uid == uid)
+        .map_or(uid, |participant| {
+            reference_name(&participant.display_name, participant.alias.as_deref())
+        })
+}
+
 #[cfg(test)]
 mod participant_table_tests {
     use super::*;

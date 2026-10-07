@@ -36,7 +36,7 @@ impl DiagramResolver for SequenceResolver {
     fn resolve(&mut self, document: &SeqPumlDocument) -> Result<SequenceTree, Self::Error> {
         let table = build_participant_table(&document.statements)?;
         let root = build_sequence_tree(&document.statements, &table)?;
-        validate_lifecycle_consistency(&root)?;
+        validate_lifecycle_consistency(&root, &table.participants)?;
 
         Ok(SequenceTree {
             name: document.name.clone(),

@@ -13,7 +13,7 @@
 should_pass: false
 error_contains: |
   [Design] Component "component_example" is defined more than once in Bazel.
-    Alias              : "component_example"
+    Name               : "component_example"
     Parent             : safety_software_seooc_example
     First bazel label  : @//pkg_a:component_example
     Second bazel label : @//pkg_b:component_example

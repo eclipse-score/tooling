@@ -13,4 +13,4 @@
 should_pass: false
 error_contains:
   - "Empty component in Bazel build graph"
-  - 'Alias          : "component_example"'
+  - 'Name           : "component_example"'

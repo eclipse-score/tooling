@@ -129,7 +129,7 @@ pub struct BazelInputEntry {
 }
 
 /// A nested unit/component reference: the real Bazel label (for diagnostics
-/// and uniqueness) plus the design_name matched against the PlantUML alias.
+/// and uniqueness) plus the design_name matched against the PlantUML name.
 #[derive(Debug, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct BazelEntityRef {
@@ -147,22 +147,22 @@ pub struct BazelArchitecture {
     pub seooc_set: BTreeMap<EntityKey, String>,
     /// Nested components (`<<component>>`), keyed with `parent = Some(..)`.
     pub comp_set: BTreeMap<EntityKey, String>,
-    /// Nested units (`<<unit>>`), keyed with the enclosing component alias.
+    /// Nested units (`<<unit>>`), keyed with the enclosing component name.
     pub unit_set: BTreeMap<EntityKey, String>,
 }
 
 fn duplicate_bazel_entity_error(
     kind: &str,
-    alias: &str,
+    name: &str,
     parent: Option<&str>,
     first_label: &str,
     second_label: &str,
 ) -> String {
     let mut error = ErrorBuilder::new(ErrorCategory::Design)
         .title(format!(
-            "{kind} \"{alias}\" is defined more than once in Bazel."
+            "{kind} \"{name}\" is defined more than once in Bazel."
         ))
-        .field("alias", format!("\"{alias}\""));
+        .field("name", format!("\"{name}\""));
 
     if let Some(parent) = parent {
         error = error.field("parent", parent);
@@ -170,10 +170,10 @@ fn duplicate_bazel_entity_error(
 
     let fix = match parent {
         Some(parent) => format!(
-            "keep only one Bazel {kind} definition for \"{alias}\" under \"{parent}\", or rename one of the duplicate Bazel targets"
+            "keep only one Bazel {kind} definition for \"{name}\" under \"{parent}\", or rename one of the duplicate Bazel targets"
         ),
         None => format!(
-            "keep only one Bazel {kind} definition for \"{alias}\", or rename one of the duplicate Bazel targets"
+            "keep only one Bazel {kind} definition for \"{name}\", or rename one of the duplicate Bazel targets"
         ),
     };
 

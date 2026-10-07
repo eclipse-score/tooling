@@ -82,13 +82,12 @@ ComponentA --> ComponentB : uses
 ```text
 === Parse Tree ===
 Rule::startuml -> "@startuml"
-    Rule::statement -> "package \"Sample SEooC\" ..."
+    Rule::statement -> "package SampleSEooC ..."
         Rule::element
-            Rule::nested_element -> "package \"Sample SEooC\""
+            Rule::nested_element -> "package SampleSEooC"
                 Rule::default_element
                     Rule::element_kind   -> "package"
-                    Rule::default_element_name -> "\"Sample SEooC\""
-            Rule::alias          -> "as SampleSEooC"
+                    Rule::default_element_name -> "SampleSEooC"
             Rule::element_style -> "#LightBlue"
             Rule::statement_block -> "{ ... }"
     Rule::relation -> "ComponentA --> ComponentB : uses"
@@ -104,8 +103,8 @@ Rule::enduml
 
 ```
 Component(
-    name: "<name>"
-    id: "<alias>"
+    name: "<name, last segment of the id>"
+    id: "<fully qualified name, e.g. SampleSEooC.ComponentA>"
     parent: "<id of parent element>"
     stereotype: "<stereotype>"
     type: "<SEooC/Component/Unit>"
@@ -119,7 +118,7 @@ Relation(
 
 Interface(
     name: "<name>"
-    id: "<alias>"
+    id: "<fully qualified name>"
 )
 ```
 

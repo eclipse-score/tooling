@@ -13,7 +13,7 @@
 should_pass: false
 error_contains: |
   [Naming] Component "component_example" from Bazel not found in the PlantUML component diagram.
-    Alias       : "component_example"
+    Name        : "component_example"
     Parent      : safety_software_seooc_example
     Stereotype  : <<component>>
     Bazel label : @//bazel/rules/rules_score/examples/seooc:component_example

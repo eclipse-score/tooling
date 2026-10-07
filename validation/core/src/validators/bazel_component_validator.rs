@@ -94,7 +94,7 @@ impl BazelComponentValidator {
             if !diagram_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = Self::parent_display(parent, default_parent);
-                let suggested_alias = best_string_suggestion(
+                let suggested_name = best_string_suggestion(
                     name,
                     diagram_set
                         .keys()
@@ -107,7 +107,7 @@ impl BazelComponentValidator {
                     name,
                     &parent_str,
                     label,
-                    suggested_alias.as_deref(),
+                    suggested_name.as_deref(),
                 ));
             }
         }
@@ -117,7 +117,7 @@ impl BazelComponentValidator {
             if !bazel_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = Self::parent_display(parent, default_parent);
-                let suggested_alias = best_string_suggestion(
+                let suggested_name = best_string_suggestion(
                     name,
                     bazel_set
                         .keys()
@@ -129,7 +129,7 @@ impl BazelComponentValidator {
                     name,
                     &parent_str,
                     entity,
-                    suggested_alias.as_deref(),
+                    suggested_name.as_deref(),
                 ));
             }
         }
@@ -181,7 +181,7 @@ impl BazelComponentValidator {
     fn format_empty(display_type: &str, name: &str, label: &str) -> String {
         format!(
             "Empty {display_type} in Bazel build graph:\n\
-               Alias          : \"{name}\"\n\
+               Name           : \"{name}\"\n\
                Bazel label    : {label}\n\
                Required       : A {display_type} must decompose into at least one nested unit or component; add one or remove the empty {display_type}",
         )
@@ -193,19 +193,19 @@ impl BazelComponentValidator {
         name: &str,
         parent_str: &str,
         label: &str,
-        suggested_alias: Option<&str>,
+        suggested_name: Option<&str>,
     ) -> String {
         let error = ErrorBuilder::new(ErrorCategory::Naming)
             .title(format!(
                 "{display_type} \"{name}\" from Bazel not found in the PlantUML component diagram"
             ))
-            .field("alias", format!("\"{name}\""))
+            .field("name", format!("\"{name}\""))
             .field("parent", parent_str)
             .field("stereotype", format!("<<{stereotype}>>"))
             .field("bazel label", label);
 
-        let error = if let Some(suggested_alias) = suggested_alias {
-            error.suggest(name, Some(display_type), suggested_alias)
+        let error = if let Some(suggested_name) = suggested_name {
+            error.suggest(name, Some(display_type), suggested_name)
         } else {
             error
         };
@@ -222,7 +222,7 @@ impl BazelComponentValidator {
         name: &str,
         parent_str: &str,
         entity: &LogicComponent,
-        suggested_alias: Option<&str>,
+        suggested_name: Option<&str>,
     ) -> String {
         let (source_file, source_line) = entity.source_location.display();
 
@@ -230,13 +230,13 @@ impl BazelComponentValidator {
             .title(format!(
                 "{entity_type} \"{name}\" from the PlantUML component diagram not found in Bazel"
             ))
-            .field("alias", format!("\"{name}\""))
+            .field("name", format!("\"{name}\""))
             .field("parent", parent_str)
             .field("component source file", format!("\"{source_file}\""))
             .field("component source line", source_line.to_string());
 
-        let error = if let Some(suggested_alias) = suggested_alias {
-            error.suggest(name, Some(entity_type), suggested_alias)
+        let error = if let Some(suggested_name) = suggested_name {
+            error.suggest(name, Some(entity_type), suggested_name)
         } else {
             error
         };
