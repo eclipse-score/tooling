@@ -13,9 +13,9 @@
 
 @startuml seooc_test_lib
 
-package "SEooC Test Library" as seooc_test_lib <<SEooC>> {
-    component "SEooC Test Component" as seooc_test_component <<component>> {
-        component "SEooC Test Unit" as seooc_test_unit <<unit>>
+package seooc_test_lib <<SEooC>> {
+    component seooc_test_component <<component>> {
+        component seooc_test_unit <<unit>>
     }
 }
 

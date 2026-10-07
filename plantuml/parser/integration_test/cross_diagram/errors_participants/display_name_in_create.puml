@@ -13,7 +13,7 @@
 
 @startuml
 participant "comp::A" as a
-participant "Display Service" as ds
-create "Display Service"
+participant "DisplayService" as ds
+create "DisplayService"
 a -> ds : make
 @enduml

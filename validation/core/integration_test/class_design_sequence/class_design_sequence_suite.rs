@@ -92,8 +92,8 @@ fn negative_participant_qualified_suffix_not_matched_suite_case() {
 }
 
 #[test]
-fn negative_participant_display_name_not_matched_suite_case() {
-    assert_case("negative_participant_display_name_not_matched");
+fn negative_participant_alias_not_matched_suite_case() {
+    assert_case("negative_participant_alias_not_matched");
 }
 
 #[test]

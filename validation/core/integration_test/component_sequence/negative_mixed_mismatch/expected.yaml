@@ -13,8 +13,8 @@
 should_pass: false
 error_contains:
   - |
-    [Naming] Alias "package_a.component_a.unit_1" from the component diagram not found in the sequence diagram.
-      Alias                                         : "package_a.component_a.unit_1"
+    [Naming] Unit id "package_a.component_a.unit_1" from the component diagram not found in the sequence diagram.
+      Unit id                                       : "package_a.component_a.unit_1"
       Component source file                         : "validation/core/integration_test/component_sequence/negative_mixed_mismatch/component_diagram.puml"
       Component source line                         : 18
       Suggestion for "package_a.component_a.unit_1" : Did you mean "unit_2"?
@@ -25,7 +25,7 @@ error_contains:
       Sequence source file    : "validation/core/integration_test/component_sequence/negative_mixed_mismatch/sequence_diagram.puml"
       Sequence source line    : 17
       Suggestion for "unit_3" : Did you mean "package_a.component_a.unit_1"?
-      Fix                     : Add component unit alias "unit_3" in the component diagram, or remove it from the sequence diagram.
+      Fix                     : Add component unit "unit_3" in the component diagram, or remove it from the sequence diagram.
   - |
     [Interface] Sequence-connected units "package_a.component_a.unit_2" and "unit_3" have no corresponding shared interface connection in the component diagram.
       Unit pair                                     : "package_a.component_a.unit_2" <-> "unit_3"

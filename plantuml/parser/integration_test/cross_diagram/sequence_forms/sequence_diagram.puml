@@ -11,7 +11,7 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 @startuml
-participant "Front End" as Frontend
+participant "FrontEnd" as Frontend
 participant Backend
 participant "logging::Recorder::Sink" as Sink
 actor Client

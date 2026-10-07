@@ -64,21 +64,21 @@ pub(super) fn format_conflicting_declaration_error(
     // Order by source location so the message is stable regardless of file order.
     let (first, second) = ordered_declarations(prev, entity);
     let kind = entity_kind_name(first);
-    let alias = first.match_key();
+    let name = first.match_key();
     let (source_file, source_line) = first.source_location.display();
     let (conflicting_file, conflicting_line) = second.source_location.display();
     ErrorBuilder::new(ErrorCategory::Design)
         .title(format!(
-            "{kind} \"{alias}\" is re-declared with a conflicting {field} in another component diagram file"
+            "{kind} \"{name}\" is re-declared with a conflicting {field} in another component diagram file"
         ))
-        .field(kind, format!("\"{alias}\""))
+        .field(kind, format!("\"{name}\""))
         .field("conflicting field", field)
         .field("component source file", format!("\"{source_file}\""))
         .field("component source line", source_line.to_string())
         .field("conflicting source file", format!("\"{conflicting_file}\""))
         .field("conflicting source line", conflicting_line.to_string())
         .fix(format!(
-            "make every declaration of \"{alias}\" across all static diagrams agree on {field}, or rename one of the conflicting entities"
+            "make every declaration of \"{name}\" across all static diagrams agree on {field}, or rename one of the conflicting entities"
         ))
         .build()
 }
@@ -129,7 +129,7 @@ pub(super) fn check_single_home_decomposition(
             continue;
         }
 
-        let parent_alias = entities
+        let parent_name = entities
             .iter()
             .find(|entity| entity.id.to_lowercase() == *parent_key)
             .map(LogicComponentExt::match_key)
@@ -138,9 +138,9 @@ pub(super) fn check_single_home_decomposition(
         // Report per file so a benign subset re-declaration isn't shown as a duplicate.
         let mut error = ErrorBuilder::new(ErrorCategory::Design)
             .title(format!(
-                "entity \"{parent_alias}\" has children declared across more than one component diagram file, with no single file containing all of them"
+                "entity \"{parent_name}\" has children declared across more than one component diagram file, with no single file containing all of them"
             ))
-            .field("entity", format!("\"{parent_alias}\""));
+            .field("entity", format!("\"{parent_name}\""));
         for (file, children) in by_file {
             let children_display = children
                 .values()
@@ -152,7 +152,7 @@ pub(super) fn check_single_home_decomposition(
         result.add_failure(
             error
                 .fix(format!(
-                    "declare the full decomposition of \"{parent_alias}\" in a single file; other files may re-declare \"{parent_alias}\" with a subset of its already-declared children (or none), but must not add children missing from every other file"
+                    "declare the full decomposition of \"{parent_name}\" in a single file; other files may re-declare \"{parent_name}\" with a subset of its already-declared children (or none), but must not add children missing from every other file"
                 ))
                 .build(),
         );

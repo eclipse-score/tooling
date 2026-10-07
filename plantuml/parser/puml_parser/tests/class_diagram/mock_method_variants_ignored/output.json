@@ -7,7 +7,7 @@
           "ClassDef": {
             "name": {
               "internal": "MockOutput",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",

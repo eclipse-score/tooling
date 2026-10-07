@@ -15,9 +15,9 @@
 package aaa{
     actor Driver
 
-    node "ECU1 (Provider)" as ECU1 {
+    node ECU1 {
 
-        boundary "SOME/IP Service Interface" as someip
+        boundary someip
 
         control SpeedService
 
@@ -25,7 +25,7 @@ package aaa{
 
     }
 
-    node "ECU2 (Consumer)" as ECU2 {
+    node ECU2 {
 
         control DisplayService
 

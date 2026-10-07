@@ -13,7 +13,7 @@
 
 @startuml sequence_diagram
 
-participant "Unit 2" as unit_2 <<unit>>
+participant unit_2 <<unit>>
 
 -> unit_2 : GetData()
 

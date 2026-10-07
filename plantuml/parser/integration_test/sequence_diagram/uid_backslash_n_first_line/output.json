@@ -1,0 +1,44 @@
+{
+  "uid_backslash_n_first_line.puml": {
+    "name": "uid_backslash_n_first_line",
+    "participants": [
+      {
+        "display_name": "comp::a",
+        "alias": "x",
+        "uid": "comp.a",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "comp::b\\nextra",
+        "alias": "y",
+        "uid": "comp.b",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "comp.a",
+            "receiver": "comp.b",
+            "message": "call()",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        }
+      ]
+    }
+  }
+}

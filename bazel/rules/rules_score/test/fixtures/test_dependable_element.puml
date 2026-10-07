@@ -13,10 +13,10 @@
 
 @startuml test_dependable_element
 
-package "Test Dependable Element" as test_dependable_element <<SEooC>> {
-    component "Test Component" as test_component <<component>> {
-        component "Test Unit" as test_unit <<unit>>
-        component "Test Binary Unit" as test_binary_unit <<unit>>
+package test_dependable_element <<SEooC>> {
+    component test_component <<component>> {
+        component test_unit <<unit>>
+        component test_binary_unit <<unit>>
     }
 }
 

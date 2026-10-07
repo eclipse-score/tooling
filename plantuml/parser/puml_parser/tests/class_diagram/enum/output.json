@@ -6,7 +6,7 @@
         "Enum": {
           "name": {
             "internal": "Status",
-            "display": null
+            "alias": null
           },
           "namespace": "",
           "package": "",
@@ -22,7 +22,7 @@
         "Enum": {
           "name": {
             "internal": "Response",
-            "display": null
+            "alias": null
           },
           "namespace": "",
           "package": "",
@@ -63,7 +63,7 @@
         "Enum": {
           "name": {
             "internal": "State",
-            "display": null
+            "alias": null
           },
           "namespace": "",
           "package": "",
@@ -110,7 +110,7 @@
         "Enum": {
           "name": {
             "internal": "CAN",
-            "display": null
+            "alias": null
           },
           "namespace": "",
           "package": "",

@@ -16,7 +16,7 @@
       {
         "display_name": "Foo",
         "alias": "F",
-        "uid": "F",
+        "uid": "Foo",
         "participant_type": "Participant",
         "source_location": {
           "file": "",
@@ -30,7 +30,7 @@
         {
           "Interaction": {
             "sender": "Client",
-            "receiver": "F",
+            "receiver": "Foo",
             "message": "call()",
             "source_location": {
               "file": "",

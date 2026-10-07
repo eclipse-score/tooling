@@ -165,8 +165,8 @@ pub enum ParticipantType {
 pub struct SequenceParticipant {
     pub display_name: String,
     pub alias: Option<String>,
-    /// Identifier of the participant: a qualified label path, else the alias
-    /// (or bare name), below the root anchor. See `element-identifiers.md`, Rule B.
+    /// Identifier of the participant: its name as an identifier path.
+    /// See `element-identifiers.md`, Rule A.
     pub uid: String,
     pub participant_type: ParticipantType,
     pub source_location: SourceLocation,

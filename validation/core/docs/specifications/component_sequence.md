@@ -42,12 +42,9 @@ A participant uid is matched against unit ids as follows:
   participant label to disambiguate, for example
   `participant "component_a.unit_1" as unit_1`.
 
-Units are identified by id alone: a unit without an alias takes part in the
-check like any other unit.
-
-The participant uid is the qualified label path when the label is one, else the
-alias, else the declared name (`plantuml/parser/docs/element-identifiers.md`,
-Rule B).
+A participant uid is the participant's name as an identifier path; an `as`
+alias is a local key for messages and does not take part in the check
+(`plantuml/parser/docs/element-identifiers.md`, Rule A′).
 The special participant name `ExternalEndpoint` represents an external
 caller/callee outside the modeled units; it is exempt from Identifier
 Consistency and may appear in sequence diagrams without a matching
@@ -55,14 +52,14 @@ component-diagram unit.
 
 ```text
 ' component diagram
-component "Unit 1" as unit_1 <<unit>>
-component "Unit 2" as unit_2 <<unit>>
+component unit_1 <<unit>>
+component unit_2 <<unit>>
 ```
 
 ```text
 ' sequence diagram
-participant "Unit 1" as unit_1
-participant "Unit 2" as unit_2
+participant unit_1
+participant unit_2
 ```
 
 ### Interface-Connection Consistency
@@ -85,17 +82,17 @@ units are not required and do not produce additional errors.
 
 ```text
 ' component diagram
-component "Unit 1" as unit_1 <<unit>>
-component "Unit 2" as unit_2 <<unit>>
-interface "IData" as IData
+component unit_1 <<unit>>
+component unit_2 <<unit>>
+interface IData
 unit_1 -( IData
 unit_2 )- IData
 ```
 
 ```text
 ' sequence diagram
-participant "Unit 1" as unit_1
-participant "Unit 2" as unit_2
+participant unit_1
+participant unit_2
 unit_1 -> unit_2 : GetData()
 ```
 

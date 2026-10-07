@@ -243,7 +243,7 @@ impl ErrorView for ComponentResolverError {
                     .with_field("reference", reference.clone())
             }
 
-            ComponentResolverError::DuplicateElement { element_id } => {
+            ComponentResolverError::DuplicateElement { element_id, .. } => {
                 ProjectedError::new("DuplicateComponent")
                     .with_field("component_id", element_id.clone())
             }
@@ -271,6 +271,31 @@ impl ErrorView for ComponentResolverError {
                 ProjectedError::new("MissingElementIdentity")
                     .with_field("source_location", format!("{:?}", source_location))
             }
+
+            ComponentResolverError::NameOfAliasedElement { reference, alias } => {
+                ProjectedError::new("NameOfAliasedElement")
+                    .with_field("reference", reference.clone())
+                    .with_field("alias", alias.clone())
+            }
+
+            ComponentResolverError::DuplicateAlias { alias, .. } => {
+                ProjectedError::new("DuplicateAlias").with_field("alias", alias.clone())
+            }
+
+            ComponentResolverError::InvalidIdentifier {
+                name,
+                reason,
+                source_location,
+            } => ProjectedError::new("InvalidIdentifier")
+                .with_field("name", name.clone())
+                .with_field("reason", reason.clone())
+                .with_field(
+                    "line",
+                    source_location
+                        .as_ref()
+                        .map(|location| location.line.to_string())
+                        .unwrap_or_default(),
+                ),
         }
     }
 }
@@ -322,6 +347,34 @@ impl ErrorView for ClassPumlResolverError {
             } => ProjectedError::new("DuplicateEntity")
                 .with_field("entity_id", entity_id.clone())
                 .with_field("line", source_location.line.to_string()),
+
+            ClassPumlResolverError::NameOfAliasedElement { reference, alias } => {
+                ProjectedError::new("NameOfAliasedElement")
+                    .with_field("reference", reference.clone())
+                    .with_field("alias", alias.clone())
+            }
+
+            ClassPumlResolverError::DuplicateAlias {
+                alias,
+                source_location,
+            } => ProjectedError::new("DuplicateAlias")
+                .with_field("alias", alias.clone())
+                .with_field("line", source_location.line.to_string()),
+
+            ClassPumlResolverError::InvalidIdentifier {
+                name,
+                reason,
+                source_location,
+            } => ProjectedError::new("InvalidIdentifier")
+                .with_field("name", name.clone())
+                .with_field("reason", reason.clone())
+                .with_field(
+                    "line",
+                    source_location
+                        .as_ref()
+                        .map(|location| location.line.to_string())
+                        .unwrap_or_default(),
+                ),
 
             ClassPumlResolverError::AmbiguousReference {
                 reference,

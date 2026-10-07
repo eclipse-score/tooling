@@ -15,7 +15,7 @@
 
 namespace safety_software_seooc_example {
   namespace component_example {
-    interface "InternalInterface" as InternalInterface <<interface>>{
+    interface InternalInterface <<interface>>{
       {abstract} GetData()
     }
   }

@@ -13,12 +13,12 @@
 
 @startuml dynamic_component_detail
 
-component "Dispatcher" as Dispatcher <<unit>>
-component "Worker" as Worker <<unit>>
+component Dispatcher <<unit>>
+component Worker <<unit>>
 
-package "Dynamic Example" as dynamic_example_seooc <<SEooC>>
+package dynamic_example_seooc <<SEooC>>
 
-interface "TaskInterface" as TaskInterface
+interface TaskInterface
 Dispatcher -( TaskInterface
 Worker )- TaskInterface
 dynamic_example_seooc -( TaskInterface

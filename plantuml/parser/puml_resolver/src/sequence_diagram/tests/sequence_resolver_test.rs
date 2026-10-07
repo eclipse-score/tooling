@@ -172,13 +172,8 @@ fn test_uid_qualified_label_path() {
 }
 
 #[test]
-fn test_uid_alias_with_prose_label() {
-    run_sequence_resolver_case("uid_alias_with_prose_label");
-}
-
-#[test]
-fn test_uid_instance_type_label_is_prose() {
-    run_sequence_resolver_case("uid_instance_type_label_is_prose");
+fn test_uid_label_wins() {
+    run_sequence_resolver_case("uid_label_wins");
 }
 
 #[test]
@@ -192,13 +187,28 @@ fn test_uid_external_endpoint() {
 }
 
 #[test]
-fn test_uid_slash_n_is_text() {
-    run_sequence_resolver_case("uid_slash_n_is_text");
+fn test_uid_external_endpoint_aliased() {
+    run_sequence_resolver_case("uid_external_endpoint_aliased");
 }
 
 #[test]
-fn test_invalid_free_text_without_alias() {
-    run_sequence_resolver_case("invalid_free_text_without_alias");
+fn test_uid_backslash_n_first_line() {
+    run_sequence_resolver_case("uid_backslash_n_first_line");
+}
+
+#[test]
+fn test_invalid_prose_label() {
+    run_sequence_resolver_case("invalid_prose_label");
+}
+
+#[test]
+fn test_invalid_external_endpoint_alias() {
+    run_sequence_resolver_case("invalid_external_endpoint_alias");
+}
+
+#[test]
+fn test_invalid_dash_name() {
+    run_sequence_resolver_case("invalid_dash_name");
 }
 
 #[test]

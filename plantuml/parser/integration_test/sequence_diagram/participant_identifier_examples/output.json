@@ -3,9 +3,9 @@
     "name": "participant_identifier_examples",
     "participants": [
       {
-        "display_name": "Display Service",
+        "display_name": "DisplayService",
         "alias": "Service",
-        "uid": "Service",
+        "uid": "DisplayService",
         "participant_type": "Participant",
         "source_location": {
           "file": "",
@@ -30,7 +30,7 @@
         {
           "Interaction": {
             "sender": "Caller",
-            "receiver": "Service",
+            "receiver": "DisplayService",
             "message": "callByAlias()",
             "source_location": {
               "file": "",

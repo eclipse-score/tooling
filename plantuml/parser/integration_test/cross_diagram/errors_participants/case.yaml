@@ -11,25 +11,25 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 diagram_types:
-  free_text_without_alias.puml: sequence
+  free_text.puml: sequence
   duplicate_uid.puml: sequence
   duplicate_alias.puml: sequence
   undeclared_lifecycle.puml: sequence
   undeclared_ref.puml: sequence
-  malformed_path_without_alias.puml: sequence
+  malformed_path.puml: sequence
   display_name_in_lifecycle.puml: sequence
   display_name_in_create.puml: sequence
 errors:
-  free_text_without_alias.puml:
-    - "free-text participant display names require an alias"
-  malformed_path_without_alias.puml:
+  free_text.puml:
+    - "name is free text"
+  malformed_path.puml:
     - "invalid sequence participant `my-pkg::unit`"
-    - "participant name is not a valid qualified path"
+    - "name is not a valid identifier path"
   display_name_in_lifecycle.puml:
     - "invalid sequence participant `Display`"
     - "is the display name of an aliased participant"
   display_name_in_create.puml:
-    - "invalid sequence participant `Display Service`"
+    - "invalid sequence participant `DisplayService`"
     - "is the display name of an aliased participant"
   duplicate_uid.puml:
     - "duplicate sequence participant id"

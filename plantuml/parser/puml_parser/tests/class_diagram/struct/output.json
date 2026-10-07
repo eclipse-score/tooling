@@ -6,14 +6,18 @@
         "Namespace": {
           "name": {
             "internal": "aaa",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 15
           },
           "types": [
             {
               "StructDef": {
                 "name": {
                   "internal": "Packet",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "aaa",
                 "package": "",
@@ -37,7 +41,7 @@
           "StructDef": {
             "name": {
               "internal": "Message",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -78,7 +82,7 @@
           "StructDef": {
             "name": {
               "internal": "Node",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",

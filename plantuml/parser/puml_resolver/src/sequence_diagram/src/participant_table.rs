@@ -20,7 +20,6 @@ use sequence_parser::sequence_ast::{
     CreateCmd, MessageEndpoint, ParticipantDef, ParticipantIdentifier, ParticipantRef,
     ParticipantType as SyntaxParticipantType, Statement,
 };
-use uid_normalization::RootAnchor;
 
 use crate::error::SequenceResolverError;
 use crate::participant_uid::participant_uid;
@@ -88,27 +87,25 @@ impl ParticipantTable {
 
 pub(crate) fn build_participant_table(
     statements: &[Statement],
-    root_anchor: &RootAnchor,
 ) -> Result<ParticipantTable, SequenceResolverError> {
     let mut table = ParticipantTable::default();
 
-    add_explicit_participants(statements, root_anchor, &mut table)?;
+    add_explicit_participants(statements, &mut table)?;
 
     // Message endpoints and create commands must share the ordered pass so the
     // first participant reference keeps its source location.
-    add_implicit_participants(statements, root_anchor, &mut table)?;
+    add_implicit_participants(statements, &mut table)?;
 
     Ok(table)
 }
 
 fn add_explicit_participants(
     statements: &[Statement],
-    root_anchor: &RootAnchor,
     table: &mut ParticipantTable,
 ) -> Result<(), SequenceResolverError> {
     for stmt in statements {
         if let Statement::ParticipantDef(participant_def) = stmt {
-            add_participant(table, root_anchor, explicit_participant(participant_def))?;
+            add_participant(table, explicit_participant(participant_def))?;
         }
     }
 
@@ -117,17 +114,16 @@ fn add_explicit_participants(
 
 fn add_implicit_participants(
     statements: &[Statement],
-    root_anchor: &RootAnchor,
     table: &mut ParticipantTable,
 ) -> Result<(), SequenceResolverError> {
     for stmt in statements {
         match stmt {
             Statement::Message(msg) => {
-                add_endpoint_participant(table, root_anchor, &msg.left, &msg.source_location)?;
-                add_endpoint_participant(table, root_anchor, &msg.right, &msg.source_location)?;
+                add_endpoint_participant(table, &msg.left, &msg.source_location)?;
+                add_endpoint_participant(table, &msg.right, &msg.source_location)?;
             }
             Statement::CreateCmd(create_cmd) => {
-                add_referenced_participant(table, root_anchor, created_participant(create_cmd))?;
+                add_referenced_participant(table, created_participant(create_cmd))?;
             }
             // Lifecycle and `ref over` statements do not declare participants.
             _ => {}
@@ -141,7 +137,6 @@ fn add_implicit_participants(
 /// The display name of an aliased participant is not a reference name.
 fn add_referenced_participant(
     table: &mut ParticipantTable,
-    root_anchor: &RootAnchor,
     participant: SequenceParticipant,
 ) -> Result<(), SequenceResolverError> {
     let reference = reference_name(&participant.display_name, participant.alias.as_deref());
@@ -154,13 +149,12 @@ fn add_referenced_participant(
         return Err(display_name_error(reference, &participant.source_location));
     }
 
-    add_participant(table, root_anchor, participant)
+    add_participant(table, participant)
 }
 
 /// Adds `participant`; its reference name and uid must both be unused.
 fn add_participant(
     table: &mut ParticipantTable,
-    root_anchor: &RootAnchor,
     mut participant: SequenceParticipant,
 ) -> Result<(), SequenceResolverError> {
     let reference =
@@ -173,18 +167,13 @@ fn add_participant(
         });
     }
 
-    participant.uid = participant_uid(
-        &participant.display_name,
-        participant.alias.as_deref(),
-        root_anchor,
-    )
-    .map_err(
-        |reason| SequenceResolverError::InvalidParticipantIdentifier {
+    participant.uid = participant_uid(&participant.display_name).map_err(|reason| {
+        SequenceResolverError::InvalidParticipantIdentifier {
             participant: participant.display_name.clone(),
             reason: reason.to_string(),
             source_location: participant.source_location.clone(),
-        },
-    )?;
+        }
+    })?;
 
     if !table.uids.insert(participant.uid.clone()) {
         return Err(SequenceResolverError::DuplicateParticipantId {
@@ -203,16 +192,11 @@ fn add_participant(
 
 fn add_endpoint_participant(
     table: &mut ParticipantTable,
-    root_anchor: &RootAnchor,
     endpoint: &MessageEndpoint,
     source_location: &SourceLocation,
 ) -> Result<(), SequenceResolverError> {
     if let MessageEndpoint::Participant(identifier) = endpoint {
-        add_referenced_participant(
-            table,
-            root_anchor,
-            implicit_participant(identifier, source_location),
-        )?;
+        add_referenced_participant(table, implicit_participant(identifier, source_location))?;
     }
 
     Ok(())
@@ -286,11 +270,11 @@ mod participant_table_tests {
     use sequence_parser::sequence_ast::{DestroyCmd, Message, ParticipantRef};
 
     fn build(statements: &[Statement]) -> ParticipantTable {
-        build_participant_table(statements, &RootAnchor::default()).unwrap()
+        build_participant_table(statements).unwrap()
     }
 
     fn build_err(statements: &[Statement]) -> SequenceResolverError {
-        build_participant_table(statements, &RootAnchor::default()).unwrap_err()
+        build_participant_table(statements).unwrap_err()
     }
 
     fn source(line: u32) -> SourceLocation {
@@ -370,24 +354,24 @@ mod participant_table_tests {
     fn aliased_participant_reference_does_not_create_duplicate() {
         let statements = vec![
             participant("A"),
-            participant_with_alias("Display B", "B"),
+            participant_with_alias("DisplayB", "B"),
             message("A", "B", source(1)),
         ];
 
         let participants = build(&statements).participants;
 
         assert_eq!(participants.len(), 2);
-        assert_eq!(participants[1].display_name, "Display B");
+        assert_eq!(participants[1].display_name, "DisplayB");
         assert_eq!(participants[1].alias.as_deref(), Some("B"));
-        assert_eq!(participants[1].uid, "B");
+        assert_eq!(participants[1].uid, "DisplayB");
     }
 
     #[test]
     fn aliased_participant_display_name_reference_is_rejected() {
         let statements = vec![
             participant("A"),
-            participant_with_alias("Display B", "B"),
-            message("A", "Display B", source(1)),
+            participant_with_alias("DisplayB", "B"),
+            message("A", "DisplayB", source(1)),
         ];
 
         match build_err(&statements) {
@@ -396,7 +380,7 @@ mod participant_table_tests {
                 reason,
                 source_location,
             } => {
-                assert_eq!(participant, "Display B");
+                assert_eq!(participant, "DisplayB");
                 assert_eq!(reason, DISPLAY_NAME_REASON);
                 assert_eq!(source_location, source(1));
             }
@@ -419,14 +403,28 @@ mod participant_table_tests {
     }
 
     #[test]
-    fn declared_name_equal_to_an_aliased_display_name_is_not_rejected() {
+    fn aliased_participants_with_the_same_name_are_duplicates() {
         let statements = vec![
             participant_with_alias("Display", "d"),
             participant("Display"),
-            message("d", "Display", source(2)),
         ];
 
-        assert_eq!(build(&statements).participants.len(), 2);
+        assert!(matches!(
+            build_err(&statements),
+            SequenceResolverError::DuplicateParticipantId { participant_id, .. }
+                if participant_id == "Display"
+        ));
+    }
+
+    #[test]
+    fn prose_name_is_rejected_even_with_an_alias() {
+        let statements = vec![participant_with_alias("Prose label", "p")];
+
+        assert!(matches!(
+            build_err(&statements),
+            SequenceResolverError::InvalidParticipantIdentifier { participant, .. }
+                if participant == "Prose label"
+        ));
     }
 
     #[test]
@@ -481,17 +479,17 @@ mod participant_table_tests {
     }
 
     #[test]
-    fn uid_follows_rule_b() {
+    fn uid_is_the_name_not_the_alias() {
         let statements = vec![
             participant_with_alias("comp::unit", "u"),
-            participant_with_alias("Prose label", "p"),
+            participant_with_alias("name", "p"),
             participant("Bare"),
         ];
 
         let table = build(&statements);
         let uids: Vec<_> = table.participants.iter().map(|p| p.uid.as_str()).collect();
 
-        assert_eq!(uids, ["comp.unit", "p", "Bare"]);
+        assert_eq!(uids, ["comp.unit", "name", "Bare"]);
     }
 
     #[test]
@@ -630,16 +628,5 @@ mod participant_table_tests {
         ];
 
         assert_eq!(build(&statements).participants.len(), 1);
-    }
-
-    #[test]
-    fn root_anchor_prefixes_participant_uids() {
-        let table = build_participant_table(
-            &[participant_with_alias("comp::unit", "u")],
-            &RootAnchor::new(Some("score::mw")),
-        )
-        .unwrap();
-
-        assert_eq!(table.participants[0].uid, "score.mw.comp.unit");
     }
 }

@@ -13,7 +13,7 @@
 @startuml relation_generic_lollipop_provided_to_component.puml
 
 package "Pkg" as Pkg {
-    component "Component A" as ComponentA <<component>>
+    component ComponentA <<component>>
     interface "IService" as IService
 
     ComponentA --() IService : provides

@@ -71,6 +71,7 @@ rust_library(
     crate_root = "src/uid_normalization.rs",
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
+        "//plantuml/parser/puml_utils",
         "//tools/metamodel/common:uid_utils",
     ],
 )

@@ -13,7 +13,7 @@
 
 @startuml TaskInterface
 
-interface "TaskInterface" as TaskInterface {
+interface TaskInterface {
     + AssignTask()
 }
 

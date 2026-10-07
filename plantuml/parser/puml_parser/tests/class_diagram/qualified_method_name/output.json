@@ -7,7 +7,7 @@
           "ClassDef": {
             "name": {
               "internal": "Logger",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",

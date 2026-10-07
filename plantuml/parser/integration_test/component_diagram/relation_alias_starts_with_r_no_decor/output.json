@@ -22,7 +22,7 @@
       "stereotype": "component",
       "relations": [
         {
-          "target": "Pkg.ratst_",
+          "target": "Pkg.Labeled",
           "annotation": "uses",
           "relation_type": "Association",
           "source_role": "None",
@@ -37,8 +37,8 @@
         "line": 17
       }
     },
-    "Pkg.ratst_": {
-      "id": "Pkg.ratst_",
+    "Pkg.Labeled": {
+      "id": "Pkg.Labeled",
       "name": "Labeled",
       "alias": "ratst_",
       "parent_id": "Pkg",

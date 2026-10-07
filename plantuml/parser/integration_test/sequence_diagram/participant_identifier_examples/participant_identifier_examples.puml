@@ -13,7 +13,7 @@
 
 @startuml participant_identifier_examples
 
-participant "Display Service" as Service <<component>>
+participant "DisplayService" as Service <<component>>
 participant Caller
 
 Caller -> Service : callByAlias()

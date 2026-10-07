@@ -2,8 +2,8 @@
   "relation_relative_name.puml": {
     "SampleSEooC.ComponentB.UnitB": {
       "id": "SampleSEooC.ComponentB.UnitB",
-      "name": "Unit B",
-      "alias": "UnitB",
+      "name": "UnitB",
+      "alias": null,
       "parent_id": "SampleSEooC.ComponentB",
       "comp_type": "Component",
       "stereotype": "unit",
@@ -15,8 +15,8 @@
     },
     "SampleSEooC": {
       "id": "SampleSEooC",
-      "name": "Sample SEooC",
-      "alias": "SampleSEooC",
+      "name": "SampleSEooC",
+      "alias": null,
       "parent_id": null,
       "comp_type": "Package",
       "stereotype": null,
@@ -28,8 +28,8 @@
     },
     "SampleSEooC.ComponentA.UnitA": {
       "id": "SampleSEooC.ComponentA.UnitA",
-      "name": "Unit A",
-      "alias": "UnitA",
+      "name": "UnitA",
+      "alias": null,
       "parent_id": "SampleSEooC.ComponentA",
       "comp_type": "Component",
       "stereotype": "unit",
@@ -52,8 +52,8 @@
     },
     "SampleSEooC.ComponentB": {
       "id": "SampleSEooC.ComponentB",
-      "name": "Component B",
-      "alias": "ComponentB",
+      "name": "ComponentB",
+      "alias": null,
       "parent_id": "SampleSEooC",
       "comp_type": "Component",
       "stereotype": "component",
@@ -65,8 +65,8 @@
     },
     "SampleSEooC.ComponentA": {
       "id": "SampleSEooC.ComponentA",
-      "name": "Component A",
-      "alias": "ComponentA",
+      "name": "ComponentA",
+      "alias": null,
       "parent_id": "SampleSEooC",
       "comp_type": "Component",
       "stereotype": "component",

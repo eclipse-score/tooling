@@ -13,9 +13,9 @@
 
 @startuml dep_seooc_lib
 
-package "Dependency SEooC Library" as dep_seooc_lib <<SEooC>> {
-    component "Dep Component" as dep_component <<component>> {
-        component "Dep Unit" as dep_unit <<unit>>
+package dep_seooc_lib <<SEooC>> {
+    component dep_component <<component>> {
+        component dep_unit <<unit>>
     }
 }
 

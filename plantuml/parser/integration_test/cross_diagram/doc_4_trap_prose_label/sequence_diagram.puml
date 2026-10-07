@@ -13,6 +13,6 @@
 
 @startuml
 participant "Unit 1" as Backend
-participant "Log Client" as Client
+participant Client
 Client -> Backend : Write()
 @enduml

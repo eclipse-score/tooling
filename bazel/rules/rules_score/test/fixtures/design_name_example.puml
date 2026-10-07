@@ -13,9 +13,9 @@
 
 @startuml design_name_example
 
-package "Design Name Example" as design_name_example_lib <<SEooC>> {
-    component "Design Name Component" as design_name_component <<component>> {
-        component "Design Name Unit" as design_name_unit <<unit>>
+package design_name_example_lib <<SEooC>> {
+    component design_name_component <<component>> {
+        component design_name_unit <<unit>>
     }
 }
 

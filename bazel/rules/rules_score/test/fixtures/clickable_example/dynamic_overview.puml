@@ -13,8 +13,8 @@
 
 @startuml dynamic_overview
 
-participant "Dispatcher" as Dispatcher <<unit>>
-participant "Worker" as Worker <<unit>>
+participant Dispatcher <<unit>>
+participant Worker <<unit>>
 
 Dispatcher -> Worker : Assign
 Worker --> Dispatcher : Done

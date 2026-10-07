@@ -19,70 +19,46 @@ element* exactly when their identifiers are equal — that is how the validators
 link a component to its detailed design, and a sequence participant to the unit
 it represents.
 
-This guide explains how that identifier is built from what you write, and how
-to author diagrams so that the links actually resolve.
-
 > You never write an identifier yourself. The parser never invents one either —
-> it is computed during resolution from your diagram structure
-> ([Rule 0](#rule-0)).
+> it is computed during resolution from the nesting and the written name.
+
+The [cross-diagram test suite](../integration_test/cross_diagram/) pins the
+behaviour described here with executable goldens.
 
 ---
 
-## 0. Implementation status
+## 0. Status
 
-This guide describes the target design. As of this writing, only part of it is
-implemented on `main`; the rest lands incrementally. The
-[cross-diagram test suite](../integration_test/cross_diagram/) pins down
-exactly what is true today with executable goldens — when a row below changes,
-that suite's goldens change with it.
-
-| Topic | Today (`main`) | Target (this guide) | Test case |
-|-------|----------------|----------------------|-----------|
-| Root anchor ([§1](#1-the-three-inputs), [Rule D](#rule-d)) | **not implemented** — identifiers have no Bazel-package prefix | `ctx.label.package` prepended to every identifier | — |
-| Component id leaf ([§2](#2-component-diagrams), [Rule A](#rule-a)) | implemented — alias when present, else name | alias when present, else name | `component_nesting` |
-| Class id leaf ([§3](#3-class-diagrams), [Rule A](#rule-a)) | implemented — alias when present, else name | alias when present, else name | `class_alias_wins` |
-| `name` field of a class/component entity ([Rule A](#rule-a)) | implemented — the written name with its spelling kept and one leading root marker removed; a component with an alias keeps its `name` verbatim (display text) | same | `rooted_declaration_in_package` |
-| Class/component reference resolution ([§5](#referring-to-another-element), [Rule C](#rule-c)) | class and component: implemented per Rule C (class: declaration-order visibility; component: whole diagram, ports resolve to their owner; ambiguity is an error) | one lookup for both: `S.r`, else the unique leaf; qualified: `S.r` or the root path; leading `.` or `::` = root; class references see earlier declarations only; ambiguity is an error | `qualified_reference`, `relation_simple_name_prefers_direct_hit` |
-| Sequence participant identity ([§4](#4-sequence-diagrams), [Rule B](#rule-b)) | implemented — `uid` is the qualified label, else the alias, else the bare name; without a root anchor | same, plus the root anchor | `sequence_forms`, `prose_without_alias`, `uid_*` resolver cases |
-| Sequence ↔ component/class linking ([§5](#5-linking-the-three-diagrams)) | implemented — component/class id == participant uid (validators match the exact id; a single-segment uid is a leaf reference that must match exactly one id) | component/class id == participant uid | `linking_three_diagrams`, `component_nesting` |
-| `ExternalEndpoint` marker ([§6](#6-special-cases), [Rule E](#rule-e)) | implemented — emitted verbatim | emitted verbatim, never anchored | `doc_6_external_endpoint` |
-| Errors in [§7](#7-errors-you-may-hit) (`free-text participant display names require an alias…`, `participant name is not a valid qualified path…`, `is the display name of an aliased participant…`, `Duplicate entity id`, `Ambiguous reference`, `Unresolved reference`, `duplicate sequence participant id`, `duplicate sequence participant name`, `unknown sequence participant`) | implemented | as described | `prose_without_alias`, `errors_participants` |
-| Id normalization (`::` / `.` equivalence, [Definitions](#definitions)) | implemented for class and component ids, scope paths, ports and relationship endpoints (incl. `extends`/`implements`); both diagram parsers accept `.`, `::` and the leading root marker in every name position ([Separators and root markers](#separators-and-root-markers)); the component merge compares names after normalization; sequence participant uids are normalized the same way | works everywhere an identifier is read or written, sequence included | `namespace_and_package`, `qualified_reference`, `relation_quoted_name`, `separator_equivalence` |
-| Label markup stripping (creole tags in labels) | implemented for activity diagram labels and sequence participant labels (before Rule B derivation) | same | — |
-| Qualified name inside a nested declaration ([Rule C](#rule-c)) | implemented — nests under the enclosing scope; a leading `.` or `::` is rooted (class and component diagrams); the parent is the id minus its last segment, whether or not it is declared in this diagram | nests under the enclosing scope; a leading `.` or `::` roots it | `qualified_in_nested_scope`, `rooted_declaration_in_package`, `rooted_dotted_declaration`, `qualified_interface_top_level`, `qualified_port_owner` |
-| Cross-diagram hyperlinks (`idmap`) for sequence participants | implemented — identifier-based, same as component/class | same | `linking_three_diagrams` |
+| Topic | State | Test case |
+|-------|-------|-----------|
+| The written name is the id leaf (component, class, interface, enum, struct, port, package, namespace, participant) | implemented | `component_nesting`, `class_name_wins`, `alias_is_local_key` |
+| Name must be an identifier path; prose is an error | implemented | `prose_names`, `invalid_prose_label` cases |
+| Alias is a local reference key; names of aliased elements are not references | implemented | `invalid_reference_by_label` cases |
+| Reference resolution (`S.r`, else unique leaf; leading `.`/`::` roots) | implemented | `qualified_reference`, `relation_simple_name_prefers_direct_hit` |
+| `ExternalEndpoint` matched on the name | implemented | `doc_6_external_endpoint` |
+| Root anchor (Bazel-package prefix) | not implemented; ids are unique per dependable element | — |
 
 ---
 
-## 1. The three inputs
-
-An identifier is assembled from exactly three things:
+## 1. What an identifier is built from
 
 | # | Input | Where it comes from | Example |
 |---|-------|---------------------|---------|
-| 1 | **Root anchor** | The Bazel package of the `architectural_design` / `unit_design` target that owns the `.puml` file — **not** the file path | `score/mw/log` → `score.mw.log` |
-| 2 | **Internal scope** | The `package` / `component` / `namespace` blocks you nest the element in | `logging.Recorder` |
-| 3 | **Leaf** | The element's alias (`as X`), or its name when there is no alias | `Backend` |
+| 1 | **Internal scope** | The `package` / `component` / `namespace` blocks you nest the element in | `logging.Recorder` |
+| 2 | **Name** | The name written in the declaration | `Backend` |
 
 They are joined with `.`:
 
 ```text
-score.mw.log  .  logging.Recorder  .  Backend
-└─ root anchor ┘ └ internal scope ┘   └ leaf ┘
+logging.Recorder  .  Backend
+└ internal scope ┘   └ name ┘
 ```
 
-Two normalization rules apply everywhere ([Definitions](#definitions)):
+Normalization applies everywhere:
 
 - `::` and `.` are **equivalent** separators — `logging::Recorder` and
   `logging.Recorder` produce the identical identifier.
 - Leading and trailing dots and empty segments are dropped.
-
-The root anchor is always prepended, also for nested elements
-([Rule D](#rule-d)). An element in a `package` block does **not** lose the
-package prefix.
-
-All examples in this guide assume the owning target lives in Bazel package
-`score/mw/log`, so the root anchor is `score.mw.log`.
 
 ### Separators and root markers
 
@@ -91,18 +67,11 @@ All examples in this guide assume the owning target lives in Bazel package
 `.a.X` and `::a::X` ignore the enclosing scope. The parser accepts every
 spelling wherever a name is written: declarations, `package` / `namespace`
 names, ports, `extends` / `implements` targets and relationship endpoints.
-Malformed paths (`a..b`, `a::`, `a:::b`, a lone `::`) are parse errors.
-
-| Spelling | Class diagram | Component diagram | Sequence diagram |
-|----------|---------------|-------------------|------------------|
-| `a.b.X`, `.a.X` | parsed and rendered by PlantUML | parsed and rendered by PlantUML | not yet |
-| `a::b::X` in a declaration, port or `() a::I` | parsed and rendered | parsed, **not rendered** by PlantUML | not yet |
-| `A --> a::X` (endpoint) | parsed and rendered | parsed and rendered | not yet |
-| `::a::X` (rooted, any position) | parsed and rendered | parsed, **not rendered** by PlantUML | not yet |
+Malformed paths (`a..b`, `a::`, `a:::b`, a lone `::`) are errors.
 
 The parser is deliberately more permissive than PlantUML in component
-diagrams. Write `.` in component diagrams if the diagram must also render; the
-identifier is the same.
+diagrams: `a::b::X` and `::a::X` parse but are not rendered by PlantUML there.
+Write `.` if the diagram must also render; the identifier is the same.
 
 Two spellings in component diagrams need care:
 
@@ -114,15 +83,31 @@ Two spellings in component diagrams need care:
 
 ---
 
-## 2. Component diagrams
+## 2. The name is the identity
 
-The identifier is the nesting chain plus the alias ([Rule A](#rule-a)).
+The name of an element is its identity. The quoted label of a declaration is
+the name, not display text. It must be an identifier path: segments of letters,
+digits and `_`, separated by `.` or `::` ([Rule A′](#rule-a)).
+
+```text
+component unit_1 <<unit>>                     ' id: unit_1
+class "score::mw::com::Proxy" as Proxy        ' id: score.mw.com.Proxy, key: Proxy
+component "Unit 1" as unit_1 <<unit>>         ' error: free-text name
+```
+
+The alias (`as X`) is a local reference key. It never takes part in the id.
+Prose belongs in a note, a stereotype or a relation description, not in a
+name. The rule covers every element kind of the component grammar (`node`,
+`cloud`, `database`, `actor`, `usecase`, `rectangle`, `frame`, …), so
+`node "ECU1 (Provider)"` is an error too.
+
+### Component diagrams
 
 ```text
 @startuml component_diagram
-package "logging" as logging {
-    component "Recorder" as Recorder <<component>> {
-        component "Backend" as Backend <<unit>>
+package logging {
+    component Recorder <<component>> {
+        component Backend <<unit>>
     }
 }
 @enduml
@@ -130,155 +115,80 @@ package "logging" as logging {
 
 | Element | Identifier |
 |---------|-----------|
-| `logging` | `score.mw.log.logging` |
-| `Recorder` | `score.mw.log.logging.Recorder` |
-| `Backend` | `score.mw.log.logging.Recorder.Backend` |
+| `logging` | `logging` |
+| `Recorder` | `logging.Recorder` |
+| `Backend` | `logging.Recorder.Backend` |
 
-The quoted label is display text only. `component "Recorder" as Recorder`
-and `component "The Log Recorder" as Recorder` produce the same identifier.
+`<<SEooC>>` package, `<<component>>` and `<<unit>>` names match the Bazel
+target names (case-insensitive).
 
----
+### Class diagrams
 
-## 3. Class diagrams
-
-Same principle — `package` and `namespace` blocks both contribute scope
-([Rule A](#rule-a)).
+`package` and `namespace` blocks both contribute scope.
 
 ```text
 @startuml class_diagram
 package logging {
-    interface "IBackend" as IBackend {
+    interface IBackend {
         + Write() : void
     }
 }
 @enduml
 ```
 
-→ `score.mw.log.logging.IBackend`
-
-```text
-@startuml class_diagram
-namespace logging {
-    class Recorder
-}
-@enduml
-```
-
-→ `score.mw.log.logging.Recorder`
-
-**The alias wins over the label**, including for enums:
-
-```text
-class "Sample Library API" as SampleLibraryAPI
-enum "Event Level" as EventLevel
-```
-
-→ `score.mw.log.SampleLibraryAPI` and `score.mw.log.EventLevel` —
-*not* `score.mw.log.Sample Library API`.
-
-The same holds for a qualified label: `class "ns::X" as X` is
-`score.mw.log.X`, not `score.mw.log.ns.X`. To get the nested identifier, declare
-the class inside `namespace ns { … }` or write `class ns::X` without an alias.
+→ `logging.IBackend`
 
 A qualified name in a nested declaration is appended to the enclosing scope,
-like a relative name in C++. A leading `::` (or `.`) roots it at the root
-anchor, like a leading `::` in C++:
+like a relative name in C++. A leading `::` (or `.`) roots it:
 
 ```text
 package outer {
-    class core::Circle      ' → score.mw.log.outer.core.Circle
-    class ::core::Square    ' → score.mw.log.core.Square
+    class core::Circle      ' → outer.core.Circle
+    class ::core::Square    ' → core.Square
 }
 ```
 
----
+A class-like name drops one trailing template argument list:
+`class "ProxyContainer<ProxySpec...>" as P` is `ProxyContainer`. Only the first
+line of a label counts (literal `\n`), and label markup is stripped.
 
-## 4. Sequence diagrams
+`X as "Label"` follows PlantUML: the quoted side is the name, the bare side the
+alias.
 
-This is the one that behaves differently, and the one most likely to trip you
-up.
+### Sequence diagrams
 
-> **In a sequence diagram the alias is not the identity when the label is a
-> qualified name.** The alias is a local shortcut for drawing arrows. The
-> identity is read out of the **quoted label** if that is a qualified path, else
-> out of the alias ([Rule B](#rule-b)).
+A participant has no nesting, so the whole path is written into the name:
 
-Sequence diagrams have no nesting, so the whole scope has to be written into
-the label.
-
-### The label forms
-
-| What you write | Identity is taken from | Resulting identifier |
-|----------------|------------------------|----------------------|
-| `participant "logging::Recorder::Backend" as Backend` | the label (a qualified path wins over the alias) | `score.mw.log.logging.Recorder.Backend` |
-| `participant "logging.IBackend" as IBackend` | the label, `.` and `::` are equivalent | `score.mw.log.logging.IBackend` |
-| `participant "Log Client" as Client` | label is prose → the **alias** | `score.mw.log.Client` |
-| `participant "backend : logging::Recorder::Backend" as Backend` | a label with spaces or `:` is prose → the **alias** | `score.mw.log.Backend` |
-| `actor Client` | the bare name | `score.mw.log.Client` |
+| What you write | Identifier | Reference key |
+|----------------|-----------|---------------|
+| `participant Backend` | `Backend` | `Backend` |
+| `participant "logging::Recorder::Backend" as Backend` | `logging.Recorder.Backend` | `Backend` |
+| `participant "logging.IBackend" as IBackend` | `logging.IBackend` | `IBackend` |
+| `actor Client` | `Client` | `Client` |
+| `participant "Log Client" as Client` | error: free-text name | — |
 
 All participant kinds behave identically — `participant`, `actor`, `boundary`,
 `control`, `entity`, `queue`, `database`, `collections`.
 
 Messages, `activate`, `deactivate`, `destroy`, `create` and `ref over` name a
 participant by its alias, or by its declared name when it has no alias. The
-display name of an aliased participant is not a name: after
-`participant "Display Service" as DisplayService`, write `DisplayService`.
-
-### The trap
-
-The prose form is the old habit, and it is the one that silently fails to link:
-
-```text
-participant "Log Client" as Client        ' → score.mw.log.Client
-```
-
-If the component diagram declares that unit as
-`score.mw.log.logging.Recorder.Backend`, these do not match. There is no parse
-error — you only find out when cross-diagram validation reports a mismatch,
-which is the intended behaviour: a different identifier means a different
-element ([Rule F](#rule-f)). The validators report the uid (here `Client`), not
-the label: a "not found" report names the alias.
-
-### Migration pattern
-
-Rewrite
-
-```text
-participant "Unit 1" as unit_1 <<unit>>
-```
-
-as
-
-```text
-participant "package_a::component_a::unit_1" as unit_1 <<unit>>
-```
-
-The arrows still use the short alias and the identifier now matches the
-component diagram. The label carries the path, so it is no longer free to hold
-readable prose.
+name of an aliased participant is not a reference: after
+`participant "orders::OrderService" as os`, write `os`.
 
 ---
 
-## 5. Linking the three diagrams
+## 3. Linking the three diagrams
 
 To link an architecture design to its detailed design, both must resolve to the
-same identifier. In practice that means three things must line up: **same Bazel
-package**, **same nesting path**, **same leaf name**.
-
-```text
-score/mw/log/BUILD
-├── architectural_design(static = component_diagram.puml,
-│                        dynamic = sequence_diagram.puml)
-└── unit_design(static = class_diagram.puml)
-```
+same identifier: **same nesting path**, **same name**.
 
 **component_diagram.puml**
 
 ```text
 @startuml component_diagram
-package "logging" as logging {
-    component "Recorder" as Recorder <<component>> {
-        component "Backend" as Backend <<unit>>
+package logging {
+    component Recorder <<component>> {
+        component Backend <<unit>>
     }
 }
 @enduml
@@ -289,7 +199,7 @@ package "logging" as logging {
 ```text
 @startuml class_diagram
 package logging {
-    interface "IBackend" as IBackend {
+    interface IBackend {
         + Write() : void
     }
 }
@@ -306,34 +216,33 @@ Backend -> IBackend : Write()
 @enduml
 ```
 
-Resulting identifiers:
-
 | Diagram | Element | Identifier | Links to |
 |---------|---------|-----------|----------|
-| component | `Backend` | `score.mw.log.logging.Recorder.Backend` | ← sequence `Backend` |
-| sequence | `Backend` | `score.mw.log.logging.Recorder.Backend` | ✅ |
-| class | `IBackend` | `score.mw.log.logging.IBackend` | ← sequence `IBackend` |
-| sequence | `IBackend` | `score.mw.log.logging.IBackend` | ✅ |
+| component | `Backend` | `logging.Recorder.Backend` | ← sequence `Backend` |
+| sequence | `Backend` | `logging.Recorder.Backend` | ✅ |
+| class | `IBackend` | `logging.IBackend` | ← sequence `IBackend` |
+| sequence | `IBackend` | `logging.IBackend` | ✅ |
 
-> **Put the `architectural_design` and the `unit_design` for one subsystem in
-> the same Bazel package.** Different packages mean different root anchors, and
-> their identifiers can never match.
+A different identifier means a different element ([Rule F](#rule-f)): there is
+no parse error, cross-diagram validation reports the mismatch.
 
 ### Referring to another element
 
-Relationship endpoints, `extends` / `implements` targets and component
-relation endpoints refer to other elements by name. The name is looked up from
-the scope `S` it is written in ([Rule C](#rule-c)):
+Relationship endpoints, `extends` / `implements` targets, port owners and
+component relation endpoints refer to other elements by **reference path**:
+the alias when there is one, else the name. The reference is looked up from the
+scope `S` it is written in ([Rule C](#rule-c)):
 
 | You write | Resolves to |
 |-----------|-------------|
-| simple name `r` | `S.r` if it exists, else the only element in the diagram whose leaf is `r` |
-| qualified name `a.r` or `a::r` | `S.a.r` or `a.r` from the root anchor; exactly one of them must exist |
-| `.r`, `.a.r`, `::r` or `::a::r` | `r` or `a.r` from the root anchor, even if `S` has its own `r` |
+| simple key `r` | `S.r` if it exists, else the only element in the diagram whose key leaf is `r` |
+| qualified key `a.r` or `a::r` | `S.a.r` or `a.r`; exactly one of them must exist |
+| `.r`, `.a.r`, `::r` or `::a::r` | `r` or `a.r` from the root, even if `S` has its own `r` |
 
-No match, several matches, or both paths of a qualified name existing is an
-error. The label of an aliased element is not a name: after
-`class "Foo" as F`, write `F`. In class diagrams a reference only sees elements
+No match, several matches, or both paths of a qualified key existing is an
+error. The name of an aliased element is not a reference: after
+`class "a::Foo" as F`, write `F`; `a::Foo` is a
+`NameOfAliasedElement` error. In class diagrams a reference only sees elements
 declared above it; only `S.r` may also be declared below.
 
 ```text
@@ -346,7 +255,7 @@ Recorder --> logging::IBackend
 @enduml
 ```
 
-The reference `logging::IBackend` resolves to `score.mw.log.logging.IBackend`.
+The reference `logging::IBackend` resolves to `logging.IBackend`.
 
 **How this compares.** The lookup follows PlantUML: a reference resolves to the
 element PlantUML draws the arrow to. Where PlantUML would create a new, empty
@@ -354,14 +263,11 @@ element instead, or where its choice depends on declaration order, the resolver
 reports an error. This differs from C++ name lookup, which walks outwards
 through the enclosing scopes. `package` and `namespace` behave the same.
 
-In the table below:
-
-- Examples use class syntax: `a { … }` is a package or namespace, a bare name
-  such as `X` declares a class, and `C` is a class declared next to the
-  reference.
-- Identifiers are shown without the root anchor.
-- The PlantUML column was observed with PlantUML 1.2025.9. "New element"
-  means PlantUML draws the arrow to a newly created, empty element.
+In the table below, examples use class syntax: `a { … }` is a package or
+namespace, a bare name such as `X` declares a class, and `C` is a class
+declared next to the reference. The PlantUML column was observed with PlantUML
+1.2025.9; "new element" means PlantUML draws the arrow to a newly created,
+empty element.
 
 | # | Example | C++ | PlantUML | Resolver |
 |---|---------|-----|----------|----------|
@@ -379,7 +285,7 @@ In the table below:
 | 12 | `a { x { Y }; b { C --> x.Y } }` | `a.x.Y` | new element | error: unresolved |
 | 13 | `p { x { Y } }`; `C --> x.Y` | error | new element | error: unresolved |
 | 14 | `X`; `a { X; C --> .X }` | `X` (written `::X`) | `X` | `X` |
-| 15 | `class "Foo" as F`; `C --> Foo` | — | new element | error: unresolved |
+| 15 | `class "Foo" as F`; `C --> Foo` | — | new element | error: the name of aliased element `F` |
 | 16 | `a { C --> Y }`; then `b { Y }` | error | new element | error: unresolved |
 
 - The resolver never picks a different element than PlantUML.
@@ -391,105 +297,84 @@ In the table below:
 
 **Component diagrams.** PlantUML keeps one flat name space per component
 diagram: two `component X` in different packages are drawn as one box. Give
-every element of a component diagram a unique alias, and refer to it by that
-alias.
+every element of a component diagram a unique name, and refer to it by that
+name.
 
 ---
 
-## 6. Special cases
+## 4. Special cases
 
 **`ExternalEndpoint`** — the reserved marker for an actor outside the described
-architecture. It is emitted verbatim: no root anchor, no scope
+architecture. It is matched on the name and emitted verbatim, with no scope
 ([Rule E](#rule-e)).
 
 ```text
 participant ExternalEndpoint
+participant "ExternalEndpoint" as ext
 ExternalEndpoint -> Backend : Notify()
 ```
 
-→ `ExternalEndpoint`, in every diagram and every Bazel package, so it always
-matches itself.
-
-Only the alias or the bare declared name counts: `participant ExternalEndpoint`
-and `participant "Outside" as ExternalEndpoint` are the marker, while
-`participant "ExternalEndpoint" as ext` is an ordinary participant with uid
-`ext`. Participant uids are unique, so a diagram declares the marker at most
-once.
+→ `ExternalEndpoint`, in every diagram, so it always matches itself.
+`participant "Outside World" as ExternalEndpoint` is a free-text error.
+Participant uids are unique, so a diagram declares the marker at most once.
 
 **FTA diagrams** — node aliases that are TRLC fully-qualified names
 (`Package.Record`) address TRLC safety records, not architecture elements. They
-are emitted verbatim and never anchored ([Rule E](#rule-e)). Activity diagrams
-carry no identifiers at all.
+are emitted verbatim ([Rule E](#rule-e)). Activity diagrams carry no
+identifiers at all.
+
+**Implicit participants** — PlantUML accepts a message to an undeclared quoted
+participant (`Caller -> "Display Service" : call()`); this toolchain rejects
+it. Declare the participant explicitly.
 
 ---
 
-## 7. Errors you may hit
+## 5. Errors you may hit
 
 | Message | Cause | Fix |
 |---------|-------|-----|
-| `free-text participant display names require an alias for uid derivation` | A quoted, prose participant label with no `as` alias, declared or used as a message endpoint | Add an alias, or write a qualified label |
-| `participant name is not a valid qualified path …` | A participant name with `.` or `::` and no alias that is not a valid path: empty segment (`a..b`, `a.`), or characters other than letters, digits and `_` (`my-pkg::unit`) | Fix the path, or add an alias |
-| `Duplicate entity id: <id>` | Two elements resolve to the same identifier | Rename one — note `core::User` and `core.User` are the *same* identifier ([Rule F](#rule-f)) |
-| `Ambiguous reference: <ref> -> <candidates>` | A reference matches more than one declared entity | Qualify the reference, or start it with `.` for the root path |
-| `Unresolved reference: <ref>` | A reference matches no element: an aliased element's label, a path that does not exist, or (class diagrams) an element declared further down in another scope | Refer to the element by its alias or leaf, qualify the path, or declare the element first |
-| `duplicate sequence participant id <uid>` | Two participants resolve to the same identifier | Rename one, or change its label or alias |
-| `duplicate sequence participant name <name>` | Two participants share a reference name (an alias, or a declared name without alias) | Rename one of the aliases |
-| `is the display name of an aliased participant, refer to it by its alias` | A message, `create`, `activate`, `deactivate`, `destroy` or `ref over` names the display name of an aliased participant | Use the alias |
+| `Invalid identifier: <text>: name is free text, expected an identifier path …` | A name with spaces or other characters outside letters, digits, `_` and the separators | Use an identifier path; move prose into a note or stereotype |
+| `… is not a valid qualified path …` | A name with `.` or `::` and an empty segment or other characters (`a..b`, `my-pkg::unit`) | Fix the path |
+| `Duplicate entity id: <id>` | Two elements resolve to the same identifier, also with different aliases | Rename one — `core::User` and `core.User` are the *same* identifier ([Rule F](#rule-f)) |
+| `DuplicateAlias` | Two declarations share a reference key in one scope | Rename one alias |
+| `Ambiguous reference: <ref> -> <candidates>` | A reference matches more than one declared entity | Qualify the reference, or start it with `.` |
+| `Unresolved reference: <ref>` | A reference matches no element: a path that does not exist, or (class diagrams) an element declared further down in another scope | Qualify the path, or declare the element first |
+| `NameOfAliasedElement` | A reference uses the name of an element that has an alias | Refer to the element by its alias |
+| `duplicate sequence participant id <uid>` | Two participants resolve to the same identifier | Rename one |
+| `duplicate sequence participant name <name>` | Two participants share a reference key | Rename one of the aliases |
 | `unknown sequence participant <name>` | `activate`, `deactivate`, `destroy` or `ref over` names a participant that is not declared | Declare it first, and name it by its alias |
 
-Two forms that PlantUML accepts but this toolchain now rejects:
-
-```text
-participant "Order Service"              ' ✗ prose label, no alias
-Caller -> "Display Service" : call()     ' ✗ implicit participant by display name
-```
-
-Declare them explicitly instead:
-
-```text
-participant "orders::OrderService" as OrderService
-participant "Display Service" as DisplayService
-```
-
 ---
 
-## 8. Best practices
+## 6. Best practices
 
-1. **Same Bazel package** for the `architectural_design` and `unit_design` of
-   one subsystem.
-2. **Always give an explicit `as` alias** to architecture-relevant elements, and
-   make it a valid identifier (letters, digits, `_`). Never rely on a prose
-   label.
-3. **In sequence diagrams, always write the full path in the label**:
-   `"package::Component::Unit"`. Use the alias only for arrows.
-4. **Mirror the nesting** between component and class diagrams — the scope
+1. **Name elements as in Bazel and C++.** `<<SEooC>>`, `<<component>>` and
+   `<<unit>>` names equal the Bazel target names; class names equal the C++
+   names.
+2. **Skip the alias unless needed.** Use one for long or qualified names
+   (`class "score::mw::com::Proxy" as Proxy`).
+3. **Keep prose out of names.** Use a note, a stereotype or a relation
+   description.
+4. **In sequence diagrams, write the full path as the name** when the unit is
+   nested: `participant "package::Component::Unit" as unit`.
+5. **Mirror the nesting** between component and class diagrams — the scope
    segments must be identical on both sides.
-5. **Use `ExternalEndpoint` verbatim** for out-of-scope actors.
-6. **Treat identifiers as derived, not authored.** If you need a different
-   identifier, change the structure (nesting, alias, or owning Bazel package) —
-   there is no override.
-7. **Make references unambiguous.** If a name exists in several scopes,
-   qualify the reference (`core.User`) or anchor it at the root (`.User`).
-   Keep aliases unique within a component diagram. In class diagrams, declare
-   an element before referring to it from another scope
-   ([§5](#referring-to-another-element)).
-
----
-
-## 9. Current limitations
-
-See the [implementation status table](#0-implementation-status) for what is and
-isn't implemented yet.
+6. **Use `ExternalEndpoint` verbatim** for out-of-scope actors.
+7. **Treat identifiers as derived, not authored.** To change one, change the
+   structure (nesting or name) — there is no override.
+8. **Make references unambiguous.** If a name exists in several scopes, qualify
+   the reference (`core.User`) or anchor it at the root (`.User`). Keep names
+   unique within a component diagram. In class diagrams, declare an element
+   before referring to it from another scope.
 
 ---
 
 ## Appendix — the formal rules
 
-The normative rules the resolvers implement for ID Generation. The parser never derives an identifier. It records
-only alias, display name, and the enclosing scope as written. All identifier
-construction happens in the resolver. The resulting field is
-`LogicComponent.id` for components, `SimpleEntity.id` for classes, and
-`SequenceParticipant.uid` for sequence participants.
+The parser never derives an identifier. It records the written name, the alias
+and the enclosing scope. All identifier construction happens in the resolver.
+The resulting field is `LogicComponent.id` for components, `SimpleEntity.id`
+for classes, and `SequenceParticipant.uid` for sequence participants.
 
 ### Definitions
 
@@ -498,108 +383,91 @@ separators and there are no leading or trailing dots.
 
 `join(a, b, …)` = the non-empty arguments joined with `.`.
 
-`root_anchor` = `normalize(ctx.label.package)` of the owning `unit_design` /
-`architectural_design` target, and `""` when not supplied (unit tests and
-standalone CLI runs).
-
 ### Rule A
 
-**Leaf and internal scope, per diagram kind.**
+**Identity text** (Rule A′) for class, interface, enum, struct, component, port,
+package, namespace, every other component-grammar element (`node`, `cloud`,
+`database`, `actor`, `usecase`, `rectangle`, …) and sequence participant:
 
-- *Component:* `internal_scope` = the enclosing package/component nesting;
-  `leaf` = alias, else name (error if both absent).
-- *Class:* `internal_scope` = the enclosing namespace/package chain, each
-  segment its alias, else its name; `leaf` = alias, else name.
-- *Sequence:* the identity is derived from the display name and the alias
-  ([Rule B](#rule-b)); participant nesting does not exist.
+1. Text = the written name with label markup stripped, first non-empty line
+   (only the literal `\n` splits lines; `/n` is text).
+2. Class-like kinds: strip one trailing balanced template argument list.
+3. The text must be an identifier path — segments of letters, digits and `_`,
+   separated by `.` or `::`, with an optional leading root marker. A single
+   token with a separator that is not a valid path (`a..b`, `a.`,
+   `my-pkg::unit`) is a malformed-path error; anything else is a free-text
+   error.
 
-The `name` field of a class or component is not part of the identifier. It is
-the written name with its spelling kept (`a::b::C` stays `a::b::C`) and one
-leading root marker removed. A component with an alias keeps its `name`
-verbatim, because it is display text (`component ".NET" as dotnet`).
+`uid = join(internal_scope, normalize(text))`, with a leading root marker
+dropped. A participant has no internal scope.
 
 ### Rule B
 
-**Participant uid.** Take the first non-empty line of the display name, with
-label markup stripped (only the literal `\n` splits lines; `/n` is text). Then,
-in order:
-
-1. the line is a qualified path — segments of letters, digits and `_`,
-   separated by `.` or `::`, with an optional leading root marker → `text` =
-   the path, even when an alias exists;
-2. otherwise `text` = the alias;
-3. no alias → `text` = the line, if it is a plain identifier (letters, digits,
-   `_`, `-`, `@`);
-4. otherwise → error: a single token with a `.` or `::` that is not a valid
-   qualified path (empty segment, other characters), else a free-text label.
-
-Then `uid = join(root_anchor, normalize(text))`, with a leading root marker
-dropped; `ExternalEndpoint` is emitted verbatim ([Rule E](#rule-e)). A label
-with spaces or a `:` is prose, there is no `instance : Type` form. The alias is
-the local reference key that binds messages to participants. A participant is
-referred to by its alias, else by its declared name; the display name of an
-aliased participant is not a reference, naming it in a message is an error. Two
-participants with the same reference name or the same uid are an error, as is an
+**Participant reference key.** A participant is referred to by its alias, else
+by its declared name. The name of an aliased participant is not a reference.
+Two participants with the same key or the same uid are an error, as is an
 `activate`, `deactivate`, `destroy` or `ref over` on a name no participant
 declares.
 
 ### Rule C
 
-**Explicit scope path.** If the name selected by [Rule A](#rule-a) /
-[Rule B](#rule-b) contains `.` or `::`, it is a qualified name. A declaration
-nests it under the enclosing internal scope:
-`uid = join(root_anchor, internal_scope, normalize(name))`. A name with a
-leading `.` or `::` is rooted instead: `uid = join(root_anchor, normalize(name))`,
-the enclosing scope is ignored. The parent / enclosing
-namespace of a declaration is all segments of the resulting identifier except
-the leaf. It is a path derived from the identifier, not a reference: the parent
-need not be declared in this diagram (it may be declared in another diagram or
-nowhere). A qualified port or interface `a::I` therefore has parent `a`; a
-top-level one still has a parent, so it counts as internal API. Sequence
-participants have no enclosing scope, so their path is
-always below the root anchor.
+**Explicit scope path.** A name containing `.` or `::` is a qualified name. A
+declaration nests it under the enclosing internal scope:
+`uid = join(internal_scope, normalize(name))`. A name with a leading `.` or
+`::` is rooted instead: `uid = join(normalize(name))`, the enclosing scope is
+ignored. The parent of a declaration is all segments of the resulting
+identifier except the last. It is a path derived from the identifier, not a
+reference: the parent need not be declared in this diagram. A qualified port or
+interface `a::I` therefore has parent `a`; a top-level one still has a parent,
+so it counts as internal API.
 
-**References.** A reference `r` written in internal scope `S` (class
-relationship endpoint, `extends`, `implements`, component relation endpoint)
-resolves to an existing element. Let
-`local = join(root_anchor, S, normalize(r))` and
-`rooted = join(root_anchor, normalize(r))`.
+**Reference paths.** Every declaration has two paths:
+
+| Path | Built from | Used for |
+|------|------------|----------|
+| id path | enclosing id path + name segments; a root marker roots | ids, `parent_id`, output |
+| reference path | enclosing reference path + key; key = alias, else the name segments | reference lookup |
+
+Without aliases both paths are equal. With an alias, only the element's own
+last segment differs: `package p { class "score::x::Y" as Y }` has id
+`p.score.x.Y` and reference path `p.Y`.
+
+**References.** A reference `r` written in internal scope `S` resolves to an
+existing element. Let `local = join(S, normalize(r))` and
+`rooted = normalize(r)`, both over reference paths.
 
 1. `r` starts with `.` or `::`: `rooted`.
 2. `r` contains no `.` or `::`: `local` if it exists, else the unique element
-   whose leaf ([Rule A](#rule-a)) is `r` — or, when that leaf itself has
-   separators (an unaliased qualified declaration), whose leaf's last segment
-   is `r`.
+   whose reference leaf is `r`.
 3. Otherwise: `local` or `rooted`, whichever exists.
 4. Component diagrams: if no element matches, steps 2 and 3 apply to ports,
    and a match resolves to the port's owning component.
 
-No candidate is an unresolved reference. Two different candidates in step 2 or
-3 are an ambiguous reference. In class diagrams only elements declared before
-the reference count, plus `local` declared after it. Component diagrams
-consider the whole diagram. [§5](#referring-to-another-element) compares the
-result with C++ and PlantUML.
+The hit maps to its id. No candidate is an unresolved reference; if a lookup
+over the id paths of aliased declarations finds one, it is
+`NameOfAliasedElement`. Two different candidates in step 2 or 3 are an
+ambiguous reference. In class diagrams only elements declared before the
+reference count, plus `local` declared after it. Component diagrams consider
+the whole diagram.
 
 ### Rule D
 
-**Root anchor, applied unconditionally.** For every element not covered by
-[Rule C](#rule-c): `uid = join(root_anchor, internal_scope, leaf)`. The root
-anchor is a prefix, not a fallback — it is prepended whether or not the internal
-scope is empty. Because `join()` drops empty parts, a build with no root anchor
-yields the bare `internal_scope + leaf`, which is why unit tests observe
-identifiers such as `domain_b.Controller`.
+**Root anchor.** Not applied. Ids are unique per dependable element. A root
+prefix for aggregated builds is parked; the intended shape is explicit roots
+(the `<<SEooC>>` name is the first segment, class ids are the C++ names).
 
 ### Rule E
 
-**Exemptions.** Emitted verbatim, with no root anchor and no scope: FTA node
-aliases that are valid TRLC FQNs (they address TRLC records, not architecture
-elements), and the reserved sequence participant `ExternalEndpoint`.
+**Exemptions.** Emitted verbatim, with no scope: FTA node aliases that are
+valid TRLC FQNs (they address TRLC records, not architecture elements), and the
+reserved sequence participant `ExternalEndpoint`, matched on its name.
 
 ### Rule F
 
 **Uniqueness.** Within one diagram, two elements resolving to the same
-identifier is an error. Across diagrams, an identical identifier means "the same
-architecture element", which is exactly what cross-diagram consistency
-validation compares. When component diagrams are merged, declarations of one
-identifier merge, and two names compare equal if they are the same identifier
-path in either spelling (`a::b::C` and `a.b.C`).
+identifier is an error, also when their aliases differ. Equal reference paths
+in one scope are `DuplicateAlias`. Across diagrams, an identical identifier
+means "the same architecture element", which is exactly what cross-diagram
+consistency validation compares. When component diagrams are merged,
+declarations of one identifier merge, and two names compare equal if they are
+the same identifier path in either spelling (`a::b::C` and `a.b.C`).

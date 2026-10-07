@@ -13,10 +13,10 @@
 
 @startuml component_diagram
 
-package "Seooc A" as seooc_a <<SEooC>> {
-    interface "Internal Interface" as iface_a
+package seooc_a <<SEooC>> {
+    interface iface_a
 }
 
-package "Seooc A Shadow" as SEOOC_A <<SEooC>>
+package SEOOC_A <<SEooC>>
 
 @enduml

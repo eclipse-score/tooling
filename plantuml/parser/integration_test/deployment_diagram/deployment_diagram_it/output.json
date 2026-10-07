@@ -39,8 +39,8 @@
     },
     "aaa.ECU1": {
       "id": "aaa.ECU1",
-      "name": "ECU1 (Provider)",
-      "alias": "ECU1",
+      "name": "ECU1",
+      "alias": null,
       "parent_id": "aaa",
       "comp_type": "Node",
       "stereotype": null,
@@ -52,8 +52,8 @@
     },
     "aaa.ECU1.someip": {
       "id": "aaa.ECU1.someip",
-      "name": "SOME/IP Service Interface",
-      "alias": "someip",
+      "name": "someip",
+      "alias": null,
       "parent_id": "aaa.ECU1",
       "comp_type": "Boundary",
       "stereotype": null,
@@ -113,8 +113,8 @@
     },
     "aaa.ECU2": {
       "id": "aaa.ECU2",
-      "name": "ECU2 (Consumer)",
-      "alias": "ECU2",
+      "name": "ECU2",
+      "alias": null,
       "parent_id": "aaa",
       "comp_type": "Node",
       "stereotype": null,
