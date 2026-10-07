@@ -13,6 +13,11 @@
 
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test", "trlc_specification")
 
+exports_files([
+    "metamodel_mapping.yaml",
+    "score_requirements_model.rsl",
+])
+
 trlc_specification(
     name = "score_requirements_model",
     srcs = [
