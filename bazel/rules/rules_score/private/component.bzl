@@ -21,7 +21,7 @@ with associated requirements and tests.
 
 load("@lobster//:lobster.bzl", "subrule_lobster_gtest", "subrule_lobster_html_report", "subrule_lobster_report")
 load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "CertifiedScope", "ComponentInfo", "ComponentRequirementsInfo", "ComponentTestCaseCoverageInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo", "UnitInfo")
-load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_sources")
+load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_block", "format_lobster_sources")
 
 # ============================================================================
 # Private Rule Implementation: Component .update target
@@ -186,10 +186,12 @@ def _component_impl(ctx):
     req_lobster_files = []
     req_lobster_transitive_files = []
     feat_req_lobster_files = []
+    root_cause_lobster_files = []
     for req_target in ctx.attr.requirements:
         if ComponentRequirementsInfo in req_target:
             req_lobster_files.append(req_target[ComponentRequirementsInfo].srcs)
             req_lobster_transitive_files.append(req_target[ComponentRequirementsInfo].srcs)
+            root_cause_lobster_files.append(req_target[ComponentRequirementsInfo].root_causes)
         if FeatureRequirementsInfo in req_target:
             feat_req_lobster_files.append(req_target[FeatureRequirementsInfo].srcs)
         if AssumedSystemRequirementsInfo in req_target:
@@ -274,7 +276,8 @@ def _component_impl(ctx):
     # -------------------------------------------------------------------------
     comp_req_lobster_files = req_lobster_depset.to_list()
     feat_req_lobster_files_list = feat_req_lobster_depset.to_list()
-    all_lobster_inputs = list(comp_req_lobster_files) + feat_req_lobster_files_list
+    root_cause_lobster_files_list = depset(transitive = root_cause_lobster_files).to_list()
+    all_lobster_inputs = list(comp_req_lobster_files) + feat_req_lobster_files_list + root_cause_lobster_files_list
 
     if arch_lobster_file:
         all_lobster_inputs.append(arch_lobster_file)
@@ -287,6 +290,7 @@ def _component_impl(ctx):
         output = lobster_config,
         substitutions = {
             "{FEAT_REQ_SOURCES}": format_lobster_sources(feat_req_lobster_files_list),
+            "{ROOT_CAUSE_BLOCK}": format_lobster_block("activity", "Root Causes", root_cause_lobster_files_list),
             "{COMP_REQ_SOURCES}": format_lobster_sources(comp_req_lobster_files),
             "{ARCH_SOURCES}": format_lobster_sources([arch_lobster_file] if arch_lobster_file else []),
             "{UNIT_TEST_SOURCES}": format_lobster_sources([gtest_lobster_file]),

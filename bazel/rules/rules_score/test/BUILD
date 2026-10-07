@@ -622,6 +622,29 @@ assumptions_of_use(
     deps = [":aou_root_cause_safety_analysis"],
 )
 
+# Regression fixture: a CompReq whose `derived_from` names a generated
+# fault-tree root cause. Listing the safety_analysis target in `deps` serves two
+# purposes here: it makes the generated package resolvable for TRLC parsing, and
+# it makes component_requirements emit the "Root Causes" lobster level that the
+# component report needs to resolve that reference.
+component_requirements(
+    name = "comp_req_generated_root_cause",
+    srcs = ["fixtures/aou_root_cause/component_requirements.trlc"],
+    deps = [
+        ":aou_root_cause_safety_analysis",
+        ":feat_req",
+    ],
+)
+
+component(
+    name = "component_generated_root_cause",
+    components = [":test_unit"],
+    requirements = [
+        ":comp_req_generated_root_cause",
+        ":feat_req",
+    ],
+)
+
 dependability_analysis(
     name = "aou_root_cause_dependability_analysis",
     arch_design = ":arch_design_public_api_example",

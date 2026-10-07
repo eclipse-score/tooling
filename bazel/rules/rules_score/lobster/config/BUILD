@@ -21,6 +21,12 @@ filegroup(
 )
 
 filegroup(
+    name = "component_root_causes_config",
+    srcs = ["lobster_comp_root_causes.yaml"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
     name = "feature_requirement",
     srcs = ["lobster_feat_req.yaml"],
     visibility = ["//visibility:public"],
