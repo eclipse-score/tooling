@@ -52,7 +52,9 @@ def component_requirements(
             parsing. Also list any assumptions_of_use target(s) here (this
             element's own, or one received/forwarded from a dependable_element
             dependency) to resolve AoU references in `derived_from`
-            (CompReqSourceId). These targets must provide TrlcProviderInfo.
+            (CompReqSourceId). List safety_analysis targets here to resolve
+            generated RootCause references in TRLC and component LOBSTER reports.
+            These targets must provide TrlcProviderInfo.
         spec: TRLC specification target(s) providing RSL type definitions.
             Accepts a single label or a list of labels; all are merged into the
             spec passed to TRLC.  Defaults to the S-CORE requirements model

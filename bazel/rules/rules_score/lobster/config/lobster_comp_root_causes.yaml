@@ -1,0 +1,23 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+# lobster-trlc configuration for FTA-generated RootCause records referenced by
+# component requirements. Unlike lobster_fta_root_causes.yaml this omits the
+# `failure_modes` tag: a component report has no "Failure Modes" level for
+# those references to resolve against.
+inputs:
+  - .
+conversion-rules:
+  - package: ScoreReq
+    record-type: RootCause
+    namespace: req
+    description-fields: title

@@ -203,6 +203,11 @@ feed that pipeline:
 * **FMEA** (``failuremodes.trlc`` / ``safetymeasures.trlc``) → ``lobster-trlc``;
   **FTA** (``fta.puml``) → ``puml_cli`` (FTA mode) → ``fta_events.trlc`` →
   ``lobster-trlc`` → ``fta_root_causes.lobster``.
+* **Generated RootCause stubs referenced by a** ``CompReq`` → ``lobster-trlc``
+  (in ``component_requirements``, only when a ``safety_analysis`` target with
+  root causes is in its ``deps``) → ``<name>_root_causes.lobster``, which gives
+  the component-level report a "Root Causes" level for those ``derived_from``
+  entries to resolve against.
 * **Unit tests** (gtest) → ``gtest_report`` → ``<unit>.lobster``.
 
 Lobster report assembly (``dependable_element``)

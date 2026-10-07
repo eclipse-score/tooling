@@ -102,6 +102,7 @@ ComponentRequirementsInfo = provider(
     fields = {
         "srcs": "Depset of .lobster traceability files generated from TRLC requirement sources. Includes `derived_from` as a tracing target, including any AoU references within it.",
         "name": "Name of the requirements target.",
+        "root_causes": "Depset holding at most one .lobster file with the FTA-generated RootCause records that `derived_from` entries reference; empty unless a safety_analysis target with root causes is in `deps`.",
     },
 )
 

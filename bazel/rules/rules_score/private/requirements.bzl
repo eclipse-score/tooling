@@ -21,7 +21,7 @@ public-facing macros.
 
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo", "subrule_trlc_image_stage")
-load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SafetyAnalysisProviderInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SafetyAnalysisProviderInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
 _DEFAULT_SPEC = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")
@@ -100,6 +100,35 @@ def _requirements_impl(ctx):
     lobster_file, _ = subrule_lobster_trlc(all_trlc_files.to_list(), ctx.file.lobster_config)
 
     # -------------------------------------------------------------------------
+    # Component requirements may list a safety_analysis target in `deps` to
+    # reference its FTA-generated RootCause records from `derived_from`. Extract
+    # those records separately so the component-level report can resolve them;
+    # the safety_analysis' own fta_root_causes.lobster is unusable here because
+    # it additionally traces to failure modes, which a component report has no
+    # level for.
+    # -------------------------------------------------------------------------
+    root_cause_lobster_files = []
+    has_root_causes = any([
+        "fta_root_causes.lobster" in dep[AnalysisInfo].lobster_files
+        for dep in ctx.attr.deps
+        if AnalysisInfo in dep
+    ])
+    if ctx.attr.req_kind == "component" and has_root_causes:
+        root_cause_lobster = ctx.actions.declare_file("{}_root_causes.lobster".format(ctx.attr.name))
+        root_cause_args = ctx.actions.args()
+        root_cause_args.add("--config", ctx.file._root_cause_lobster_config)
+        root_cause_args.add("--out", root_cause_lobster)
+        ctx.actions.run(
+            inputs = depset([ctx.file._root_cause_lobster_config], transitive = [all_trlc_files]),
+            outputs = [root_cause_lobster],
+            executable = ctx.executable._lobster_trlc,
+            arguments = [root_cause_args],
+            progress_message = "Extracting RootCause references for %s" % ctx.label,
+            mnemonic = "LobsterTrlcRootCause",
+        )
+        root_cause_lobster_files.append(root_cause_lobster)
+
+    # -------------------------------------------------------------------------
     # Build the kind-specific domain provider.
     # -------------------------------------------------------------------------
     if ctx.attr.req_kind == "feature":
@@ -111,6 +140,7 @@ def _requirements_impl(ctx):
         req_provider = ComponentRequirementsInfo(
             srcs = depset([lobster_file]),
             name = ctx.label.name,
+            root_causes = depset(root_cause_lobster_files),
         )
     elif ctx.attr.req_kind == "aou":
         req_provider = AssumptionsOfUseInfo(
@@ -181,6 +211,17 @@ _score_requirements_rule = rule(
             allow_single_file = True,
             mandatory = True,
             doc = "Lobster YAML configuration file for traceability extraction.",
+        ),
+        "_root_cause_lobster_config": attr.label(
+            default = Label("//bazel/rules/rules_score/lobster/config:component_root_causes_config"),
+            allow_single_file = True,
+            doc = "Lobster YAML configuration used to extract FTA-generated RootCause records referenced by component requirements.",
+        ),
+        "_lobster_trlc": attr.label(
+            default = Label("@lobster//:lobster-trlc"),
+            executable = True,
+            cfg = "exec",
+            doc = "lobster-trlc executable used for the RootCause extraction.",
         ),
         "spec": attr.label_list(
             default = [_DEFAULT_SPEC],
