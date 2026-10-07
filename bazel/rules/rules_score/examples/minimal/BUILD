@@ -94,7 +94,6 @@ component(
 dependable_element(
     name = "my_element",
     architectural_design = [":my_arch"],
-    assumptions_of_use = [],
     components = [":MyComponent"],
     dependability_analysis = [],
     integrity_level = "B",

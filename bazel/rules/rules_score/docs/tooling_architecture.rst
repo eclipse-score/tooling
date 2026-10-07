@@ -28,11 +28,13 @@ Three layers
 build wires layers 2 and 3 automatically.
 
 #. **Macros / rules** (Starlark, ``private/*.bzl``) — the public work-product
-   declarations (``feature_requirements``, ``architectural_design``, ``safety_analysis``,
+   declarations (``feature_requirements``, ``architectural_design``, ``failure_modes``,
+   ``fault_trees``, ``safety_analysis``,
    ``unit``, ``component``, ``dependability_analysis``, ``dependable_element``,
    …). Each one declares actions and emits **providers**.
 #. **Providers** (``providers.bzl``) — the typed contracts that carry data
    between rules (e.g. ``ArchitecturalDesignInfo``, ``AnalysisInfo``,
+   ``FailureModesInfo``, ``FaultTreesInfo``,
    ``SphinxSourcesInfo``). The provider graph is the "API" between rules; see
    :doc:`overview` for the provider-flow diagram.
 #. **Tools** — the executables each action runs. Some are vendored third-party
@@ -79,7 +81,7 @@ are rendered under :doc:`tool_reference/index`.
      - ``@trlc//tools/trlc_rst:trlc_rst`` + TRLC parser;
        ``trlc_requirements_test``
      - ``feature_requirements``, ``component_requirements``,
-       ``assumed_system_requirements``, ``safety_analysis``
+       ``assumed_system_requirements``, ``failure_modes``, ``safety_analysis``
      - Parses and type-checks requirement / FMEA records against the ``.rsl``
        metamodel and renders them to ``.rst``.  ``trlc_rst`` also ships a
        reusable ``TRLCRST`` library that ``safety_analysis_assembler`` links directly to
@@ -102,10 +104,10 @@ are rendered under :doc:`tool_reference/index`.
    * - **puml_cli (FTA mode)**
      - ``//plantuml/parser/puml_cli`` ``--fta-output-dir`` (Rust; FTA model in
        the ``puml_fta`` crate)
-     - ``safety_analysis``
+     - ``fault_trees``
      - Analysis only: parses the ``$FailureMode`` / ``$RootCause`` / gate macro
        calls of each root-cause FTA diagram and emits ``fta_events.trlc``, a
-       generated stub file (imported as the ``<name>_fta`` package) containing
+       generated stub file (imported as the ``<fta_package>`` package) containing
        one ``RootCause`` record per reachable ``$RootCause`` alias; each
        record lists the failure modes of the ``$FailureMode`` root it hangs
        under.  The authored
@@ -130,7 +132,7 @@ are rendered under :doc:`tool_reference/index`.
      - ``@lobster//`` : ``lobster-trlc``, ``lobster-report``,
        ``lobster-ci-report``, ``lobster-html-report``, ``gtest_report``,
        ``lobster-rst-report``
-     - ``*_requirements``, ``safety_analysis``, ``unit``, ``dependability_analysis``,
+     - ``*_requirements``, ``failure_modes``, ``fault_trees``, ``safety_analysis``, ``unit``, ``dependability_analysis``,
        ``dependable_element``
      - The traceability backbone. ``lobster-trlc`` extracts ``.lobster`` items
        from TRLC; ``gtest_report`` turns test results into ``.lobster``;
@@ -200,7 +202,7 @@ feed that pipeline:
 * **Requirements** (``.trlc``) → ``lobster-trlc`` → ``requirements.lobster``.
 * **Public API diagrams** (``public_api.puml``) → PlantUML parser →
   ``public_api.lobster`` (enables failure-mode-to-interface tracing).
-* **FMEA** (``failuremodes.trlc`` / ``safetymeasures.trlc``) → ``lobster-trlc``;
+* **FMEA** (``failure_modes`` / ``mitigations.trlc``) → ``lobster-trlc``;
   **FTA** (``fta.puml``) → ``puml_cli`` (FTA mode) → ``fta_events.trlc`` →
   ``lobster-trlc`` → ``fta_root_causes.lobster``.
 * **Unit tests** (gtest) → ``gtest_report`` → ``<unit>.lobster``.
@@ -325,8 +327,8 @@ Safety analysis document pipeline
 The component diagram below shows how the FMEA **input artifacts** — authored
 ``.trlc`` records and ``fta_*.puml`` diagrams plus the tooling defaults
 (``ScoreReq`` ``.rsl`` spec, ``fta_metamodel.puml``, ``safety_analysis.template.rst`` and
-the lobster configs) — flow through the three in-process tool actions of the
-``safety_analysis`` rule into the generated files, the providers, and finally the Sphinx
+the lobster configs) — flow through the in-process tool actions of the
+``fault_trees`` and ``safety_analysis`` rules (with the ``failure_modes`` target as input) into the generated files, the providers, and finally the Sphinx
 staging tree.  Blue boxes are authored sources, light-blue are tooling defaults,
 green components are the tool actions, orange boxes are generated files, yellow
 boxes are the provider payloads, and the purple box is the staging directory
@@ -337,24 +339,37 @@ consumed by Sphinx.
    :alt: Safety analysis document pipeline
    :width: 100%
 
-The ``safety_analysis`` rule drives three actions, all reading the input artifacts above:
+The analysis is split in three rules so the measures that reference root causes
+(``assumptions_of_use``, ``component_requirements``) can depend on the generated
+``RootCause`` records without a dependency cycle: ``failure_modes`` holds the
+``FailureMode`` records, ``fault_trees`` (``deps = [failure_modes]``) produces the
+root causes, the measures list it in ``deps``, and ``safety_analysis`` consumes the
+failure modes, the fault trees and the measures (``safety_measures``).
+
+``failure_modes`` runs ``lobster-trlc`` over its records into
+``<name>.lobster``; it provides ``FailureModesInfo`` and ``TrlcProviderInfo``.
+
+The ``fault_trees`` rule drives two actions:
 
 #. **puml_cli (FTA mode)** parses each ``fta_*.puml`` directly (no rewriting)
    and writes ``fta_events.trlc`` (the generated ``RootCause`` stubs).  The
    diagrams keep their ``!include
    fta_metamodel.puml``; the metamodel is on PlantUML's global include path
    (shipped in the docs toolchain runfiles), so it resolves at render time.
+#. **lobster-trlc** turns the generated ``RootCause`` records into
+   ``fta_root_causes.lobster``. The ``failure_modes`` files travel as inputs, so the
+   ``import``s of ``fta_events.trlc`` resolve.
+
+The ``safety_analysis`` rule drives two actions:
+
 #. **safety_analysis_assembler** consumes ``fta_events.trlc`` and parses the FailureMode /
    Mitigation / AoU / CompReq ``.trlc`` records (with the ``.rsl`` spec for import
    resolution) in a single in-process ``TRLCRST`` pass, expanding
    ``safety_analysis.template.rst`` into ``safety_analysis.rst``.
-#. **lobster-trlc** (run three times) turns the FailureMode, Mitigation/AoU/CompReq,
-   and generated ``RootCause`` records
-   into ``failuremodes.lobster`` / ``safetymeasures.lobster`` /
-   ``fta_root_causes.lobster`` for the
-   traceability report.
+#. **lobster-trlc** turns the Mitigation and AoU records into
+   ``safetymeasures.lobster``; a ``CompReq`` measure is traced at its own level.
 
-``SphinxSourcesInfo`` carries three depsets:
+``SphinxSourcesInfo`` of ``safety_analysis`` carries three depsets:
 
 - **srcs** — files that become top-level toctree entries in the enclosing
   document section.  ``safety_analysis`` emits exactly one: ``safety_analysis.rst``.
@@ -363,16 +378,24 @@ The ``safety_analysis`` rule drives three actions, all reading the input artifac
   (failure modes and control measures are rendered inline, not pulled in via
   ``.. include::``).
 - **aux_srcs** — files to symlink alongside ``srcs``/``deps`` but **not** added
-  to any toctree.  ``safety_analysis`` uses this for the authored ``fta_*.puml`` diagrams,
+  to any toctree.  ``safety_analysis`` uses this for the authored ``fta_*.puml`` diagrams
+  (staged next to ``safety_analysis.rst`` from the ``fault_trees`` target),
   which ``safety_analysis.rst`` references inline via ``.. uml::`` and which must therefore
   sit beside it in the staging tree without being indexed as documents.  (The
   metamodel is not staged here — it resolves via PlantUML's global include
   path.)
 
-The lobster outputs travel separately on ``AnalysisInfo.lobster_files``
-(``failuremodes.lobster``, ``safetymeasures.lobster``,
-``fta_root_causes.lobster``)
-into the ``dependability_analysis`` traceability report.
+The lobster outputs travel separately on ``AnalysisInfo.lobster_files`` (one
+``AnalysisInfo`` per ``safety_analysis``: ``failuremodes.lobster``,
+``safetymeasures.lobster``, ``fta_root_causes.lobster``)
+into the ``dependability_analysis`` traceability report.  The AoU targets passed
+as ``safety_measures`` travel on ``SafetyAnalysisProviderInfo.aou_targets``; the
+``dependable_element`` derives its own AoUs from them (deduplicated by label),
+forwards them to dependees, and merges them with the received AoUs.
+``merge_lobster_items`` collapses an item defined by several lobster files
+(the same AoU or measure reached via several safety analyses, dependability
+analyses or dependencies): identical definitions collapse, conflicting
+definitions fail the build.
 
 .. _hermetic-tool-path-resolution:
 

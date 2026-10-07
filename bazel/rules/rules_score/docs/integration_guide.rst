@@ -189,8 +189,8 @@ Complete Example
    load("@score_tooling//bazel/rules/rules_score:rules_score.bzl",
         "architectural_design", "assumed_system_requirements",
         "assumptions_of_use", "component", "component_requirements",
-        "dependability_analysis", "dependable_element",
-        "feature_requirements", "safety_analysis", "unit")
+        "dependability_analysis", "dependable_element", "failure_modes",
+        "fault_trees", "feature_requirements", "safety_analysis", "unit")
 
    # Requirements
    assumed_system_requirements(name = "sys_req", srcs = ["docs/sys_req.trlc"])
@@ -199,7 +199,7 @@ Complete Example
    component_requirements(name = "reqs", srcs = ["docs/reqs.trlc"],
                           deps = [":features"])
    assumptions_of_use(name = "aous", srcs = ["docs/aous.trlc"],
-                      requirements = [":features"])
+                      deps = [":my_fault_trees"])
 
    # Architecture
    architectural_design(name = "arch",
@@ -208,10 +208,14 @@ Complete Example
                         public_api = ["docs/public_api.puml"])
 
    # Safety analysis
+   failure_modes(name = "my_failure_modes", srcs = ["docs/failures.trlc"])
+   fault_trees(name = "my_fault_trees",
+        srcs = ["docs/fta.puml"],
+        deps = [":my_failure_modes"])
    safety_analysis(name = "my_safety_analysis", arch_design = ":arch",
-        safetymeasures  = ["docs/safetymeasures.trlc"],
-        failuremodes    = ["docs/failures.trlc"],
-        root_causes     = ["docs/fta.puml"])
+        failure_modes   = [":my_failure_modes"],
+        fault_trees     = ":my_fault_trees",
+        safety_measures = [":aous", "docs/mitigations.trlc"])
    dependability_analysis(name = "analysis", safety_analysis = [":my_safety_analysis"])
 
    # Implementation
@@ -228,7 +232,6 @@ Complete Example
    dependable_element(
        name                   = "persistency_kvs",
        integrity_level        = "B",
-       assumptions_of_use     = [":aous"],
        requirements           = [":reqs"],
        architectural_design   = [":arch"],
        dependability_analysis = [":analysis"],

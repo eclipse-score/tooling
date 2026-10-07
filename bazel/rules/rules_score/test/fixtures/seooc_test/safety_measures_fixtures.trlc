@@ -15,12 +15,11 @@
 // CompReq): every fault-tree root cause (RootCause) must be addressed by at
 // least one concrete measure.
 // - SafetyMeasure: abstract, never instantiated directly; only exists so
-//   Mitigation can inherit the mandatory ``root_causes`` field.
+//   Mitigation and AoU inherit the mandatory ``root_causes`` field.
 // - Mitigation: extends SafetyMeasure, adds a mandatory ``justification``
 //   explaining why the root cause does not apply in this context.
-// - AoU: independent type (does not extend SafetyMeasure); its
-//   ``root_causes`` field is optional -- an AoU acts as a preventive measure
-//   only when it addresses a fault-tree root cause.
+// - AoU: extends SafetyMeasure; its ``root_causes`` field is mandatory -- an
+//   AoU is a preventive measure for the fault-tree root causes it addresses.
 // - CompReq (elsewhere): acts as a control measure when its ``derived_from``
 //   references a fault-tree RootCause.
 

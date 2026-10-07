@@ -80,7 +80,7 @@ unit_r --> comp_r2 : components
 safety_analysis_r --> da_r : safety_analysis
 
 arch_r --> de_r : architectural_design
-aou_r --> de_r : assumptions_of_use
+aou_r --> safety_analysis_r : measures
 comp_r2 --> de_r : components
 da_r --> de_r : dependability_analysis
 

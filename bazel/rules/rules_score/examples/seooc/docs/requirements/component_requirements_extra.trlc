@@ -14,6 +14,7 @@ package SampleComponentExtra
 
 import ScoreReq
 import SampleSEooC
+import OtherLibrary
 
 ScoreReq.CompReq REQ_COMP_EXTRA_001 {
     description = "The numeric value management interface shall return a fixed, well-defined value immediately upon construction, without requiring any prior initialization calls"
@@ -26,5 +27,12 @@ ScoreReq.CompReq REQ_COMP_EXTRA_002 {
     description = "The numeric value management interface shall guarantee that the stored value is never modified after construction"
     safety = ScoreReq.Asil.B
     derived_from = [SampleSEooC.FEAT_002@1]
+    version = 1
+}
+
+ScoreReq.CompReq REQ_COMP_EXTRA_003 {
+    description = "The numeric value management interface shall keep its memory footprint within the 10 MB budget imposed by the underlying other_seooc dependency"
+    safety = ScoreReq.Asil.B
+    derived_from = [SampleSEooC.FEAT_002@1, OtherLibrary.SpaceConstraint@1]
     version = 1
 }

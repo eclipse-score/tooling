@@ -25,6 +25,8 @@
 #   integrator_seooc (this target)
 #       - receives SampleType.SampleAoU          (auto-forwarded from seooc)
 #       - receives OtherLibrary.TimingConstraint  (chain-forwarded through seooc)
+#       - also depends on other_seooc directly, so TimingConstraint arrives a
+#         second time; it is merged into one received AoU
 #       - HANDLES both locally: COMP_INT_001 and COMP_INT_002
 #
 
@@ -76,7 +78,6 @@ component(
 dependable_element(
     name = "integrator_seooc",
     architectural_design = [":integrator_design"],
-    assumptions_of_use = [],
     components = [":integrator_component"],
     dependability_analysis = [],
     integrity_level = "B",
@@ -85,5 +86,8 @@ dependable_element(
         "//docs/requirements:feature_requirements",
     ],
     tests = [],
-    deps = ["@seooc//:safety_software_seooc_example"],
+    deps = [
+        "@seooc//:safety_software_seooc_example",
+        "@some_other_library//:other_seooc",
+    ],
 )

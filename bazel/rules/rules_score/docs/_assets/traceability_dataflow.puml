@@ -33,7 +33,7 @@ skinparam rectangle {
 ' ── Sources ───────────────────────────────────────────────────────────────────
 rectangle "Assumed System Req\nFeature Req\nComponent Req\n(.trlc)" <<src>> as reqs_in
 rectangle "public_api.puml\n(architectural_design)" <<src>> as api_in
-rectangle "failuremodes.trlc\nsafetymeasures.trlc" <<src>> as fmcm_in
+rectangle "failuremodes.trlc\nmitigations.trlc\naous.trlc" <<src>> as fmcm_in
 rectangle "fta.puml" <<src>> as fta_in
 rectangle "Unit tests\n(cc_test / gtest)" <<src>> as test_in
 

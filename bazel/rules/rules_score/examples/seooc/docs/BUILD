@@ -24,6 +24,7 @@ assumptions_of_use(
         "aous.trlc",
     ],
     visibility = ["//visibility:public"],
+    deps = ["//safety_analysis:sample_fault_trees"],
 )
 
 trlc_requirements_test(

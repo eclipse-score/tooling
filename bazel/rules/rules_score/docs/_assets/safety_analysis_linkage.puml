@@ -62,7 +62,7 @@ RootCause "1..*" --> FailureMode : failure_modes
 
 ' ── Safety measures: every RootCause needs at least one ─────────────────────
 Mitigation "1..*" --> RootCause : root_causes\n(+ justification)
-OwnAoU "0..*" --> RootCause : root_causes\n(preventive measure)
+OwnAoU "1..*" --> RootCause : root_causes\n(preventive measure)
 CompReq "0..*" --> RootCause : derived_from\n(control measure)
 
 ' ── Requirement chain ───────────────────────────────────────────────────────

@@ -262,7 +262,7 @@ testable within that component.
    * - ``deps``
      - label list
      - no
-     - ``feature_requirements`` or ``assumed_system_requirements`` targets for ``derived_from`` resolution (default ``[]``)
+     - ``feature_requirements`` or ``assumed_system_requirements`` targets for ``derived_from`` resolution. Also list the ``assumptions_of_use`` target of a *received* AoU and the ``fault_trees`` target of referenced ``<fta_package>.<RootCause>`` records (default ``[]``)
    * - ``image_srcs``
      - label list
      - no
@@ -311,11 +311,11 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
    * - ``srcs``
      - label list
      - yes
-     - ``.trlc`` files (containing ``AoU`` records), ``.rst`` files, or labels to existing ``TrlcProviderInfo``-providing targets
+     - ``.trlc`` files (containing ``AoU`` records), ``.rst`` files, or labels to existing ``TrlcProviderInfo``-providing targets. Every ``aou_req`` directive of an ``.rst`` source needs ``:root_causes: <fta_package>.<RootCause>, ...``; a missing or unqualified value fails the conversion
    * - ``deps``
      - label list
      - no
-     - Other requirement targets (``TrlcProviderInfo``) needed for cross-reference parsing (default ``[]``). List the ``safety_analysis`` target when an ``AoU`` references its generated ``<fta_package>.<RootCause>`` records.
+     - Other requirement targets (``TrlcProviderInfo``) needed for cross-reference parsing (default ``[]``). List the ``fault_trees`` target: every ``AoU`` references the generated ``<fta_package>.<RootCause>`` records it addresses (``root_causes``, mandatory). Other ``assumptions_of_use`` targets are rejected here, as their AoUs would be extracted as own AoUs.
    * - ``ref_package``
      - string
      - no
@@ -529,22 +529,20 @@ implementation.
 
 **Generated targets:** ``<name>`` (no standalone test; diagrams are consumed by the parent ``unit``)
 
-.. _rule-safety-analysis:
+.. _rule-failure-modes:
 
-safety_analysis
-~~~~~~~~~~~~~~~
+failure_modes
+~~~~~~~~~~~~~
 
-Bundles failure modes, safety measures, and FTA diagrams into a single FMEA
-documentation target.
+Stage 1 of the safety analysis: the ``FailureMode`` records. The
+``fault_trees`` diagrams reference them as tree top events (list the target in
+``fault_trees.deps``); ``safety_analysis`` renders and traces them.
 
 .. code-block:: python
 
-   safety_analysis(
-       name            = "my_safety_analysis",
-       failuremodes    = ["docs/failuremodes.trlc"],
-       root_causes     = ["docs/fta.puml"],
-       safetymeasures  = ["docs/safetymeasures.trlc"],
-       arch_design     = ":arch",
+   failure_modes(
+       name = "my_failure_modes",
+       srcs = ["docs/failure_modes.trlc"],
    )
 
 .. list-table::
@@ -559,30 +557,131 @@ documentation target.
      - string
      - yes
      - Target name
-   * - ``failuremodes``
+   * - ``srcs``
+     - label list
+     - yes
+     - ``.trlc`` files containing ``FailureMode`` records
+   * - ``deps``
      - label list
      - no
-     - ``.trlc`` files containing ``FailureMode`` records (default ``[]``)
-   * - ``safetymeasures``
-     - label list
+     - Targets providing ``TrlcProviderInfo`` needed to parse the records (default ``[]``)
+   * - ``lobster_config``
+     - label
      - no
-     - ``.trlc`` files containing ``Mitigation``/``AoU``/``CompReq`` records (default ``[]``)
-   * - ``root_causes``
+     - lobster-trlc configuration for ``FailureMode`` extraction (default: the S-CORE failure mode config)
+   * - ``visibility``
+     - —
+     - no
+     - Bazel visibility
+
+**Generated targets:** ``<name>``, ``<name>_test`` (TRLC validation)
+
+.. _rule-fault-trees:
+
+fault_trees
+~~~~~~~~~~~
+
+Stage 2 of the safety analysis: the fault-tree root causes. Requirement
+targets (``assumptions_of_use``, ``component_requirements``) list it in
+``deps`` to reference the generated ``<fta_package>.<RootCause>`` records,
+which breaks the dependency cycle between measures and analysis.
+
+.. code-block:: python
+
+   fault_trees(
+       name = "my_fault_trees",
+       srcs = ["docs/fta.puml"],
+       deps = [":my_failure_modes"],
+   )
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``name``
+     - string
+     - yes
+     - Target name
+   * - ``srcs``
      - label list
      - no
      - FTA PlantUML diagram files (``.puml`` / ``.plantuml``) (default ``[]``)
+   * - ``deps``
+     - label list
+     - no
+     - ``failure_modes`` targets holding the failure modes the diagrams reference (default ``[]``)
    * - ``fta_package``
      - string
      - no
      - TRLC package name for the generated ``fta_events.trlc`` stub (the
-       ``RootCause`` records derived from ``root_causes``). The target
-       exports it (plus ``failuremodes``) as ``TrlcProviderInfo``, so other
-       targets such as ``assumptions_of_use`` can list it in ``deps``.
-       Defaults to a sanitized form of ``name`` with a ``_fta`` suffix.
+       ``RootCause`` records derived from ``srcs``). The target
+       exports it (with the failure modes as context) as ``TrlcProviderInfo``.
+       Defaults to a sanitized form of the target's package and name with a
+       ``_fta`` suffix (e.g. ``pkg_sub__name_fta``), so equally named targets
+       of different packages do not collide. The repository is not part of
+       it; set ``fta_package`` explicitly when equally named targets of
+       different repositories meet in one build, when package names differ
+       only in case or underscores (TRLC rejects those as too similar, e.g.
+       ``pkg/fta:y`` and ``pkg:fta_y``), and to get a stable, readable
+       name for ``<fta_package>.<RootCause>`` references.
+   * - ``visibility``
+     - —
+     - no
+     - Bazel visibility
+
+**Generated targets:** ``<name>`` (generated ``fta_events.trlc`` and the root-cause lobster file; no standalone test)
+
+.. _rule-safety-analysis:
+
+safety_analysis
+~~~~~~~~~~~~~~~
+
+Stage 3 of the safety analysis: renders the FMEA page from the
+``failure_modes``, a ``fault_trees`` target and the measures that address the
+root causes.
+
+.. code-block:: python
+
+   safety_analysis(
+       name            = "my_safety_analysis",
+       arch_design     = ":arch",
+       failure_modes   = [":my_failure_modes"],
+       fault_trees     = ":my_fault_trees",
+       safety_measures = [":aous", "docs/mitigations.trlc"],
+   )
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``name``
+     - string
+     - yes
+     - Target name
+   * - ``failure_modes``
+     - label list
+     - no
+     - ``failure_modes`` targets whose records are rendered and traced (default ``[]``). Every failure mode a root cause references must be listed; the assembler fails otherwise.
+   * - ``fault_trees``
+     - label
+     - yes
+     - ``fault_trees`` target providing the root causes
+   * - ``safety_measures``
+     - label list
+     - no
+     - Measures addressing the root causes (default ``[]``): ``assumptions_of_use`` / ``component_requirements`` targets and ``.trlc`` files containing ``Mitigation`` records (any other record type in such a file is rejected). Only the records of these entries are rendered and traced; the targets in their ``deps`` are used to resolve references only. The ``assumptions_of_use`` targets listed here are the *own* AoUs of the ``dependable_element`` whose ``dependability_analysis`` includes this target: they are rendered in the safety analysis, forwarded to dependees, and shown once however many safety analyses list them. An ``assumptions_of_use`` target that no ``safety_analysis`` lists here is neither rendered nor forwarded.
    * - ``arch_design``
      - label
-     - no
-     - ``architectural_design`` target for interface traceability (default ``None``)
+     - yes
+     - ``architectural_design`` target
    * - ``visibility``
      - —
      - no
@@ -621,7 +720,7 @@ Running ``bazel test`` validates the full FMEA traceability chain.
    * - ``safety_analysis``
      - label list
      - no
-     - ``safety_analysis`` targets to include in this analysis (default ``[]``)
+     - ``safety_analysis`` targets to include in this analysis (default ``[]``). A ``dependable_element`` stages the pages of each ``dependability_analysis`` under the analysis name as ``safety_analysis.rst`` / ``fta.puml``, so list one ``safety_analysis`` per ``dependability_analysis`` and use several ``dependability_analysis`` targets for several safety analyses.
    * - ``arch_design``
      - label
      - no
@@ -775,7 +874,6 @@ and scope checks at build/test time.
    dependable_element(
        name                   = "my_seooc",
        integrity_level        = "B",
-       assumptions_of_use     = [":aous"],
        requirements           = [":features"],
        architectural_design   = [":arch"],
        dependability_analysis = [":analysis"],
@@ -799,10 +897,6 @@ and scope checks at build/test time.
      - string
      - yes
      - ``"A"``, ``"B"``, ``"C"``, or ``"D"`` (D is highest: D > C > B > A)
-   * - ``assumptions_of_use``
-     - label list
-     - yes
-     - ``assumptions_of_use`` targets
    * - ``requirements``
      - label list
      - yes
@@ -838,12 +932,12 @@ and scope checks at build/test time.
    * - ``aou_forwarding``
      - label
      - no
-     - Optional YAML file that selects which *received* AoUs to chain-forward to elements that depend on this one. Own AoUs (declared in ``assumptions_of_use``) are always forwarded automatically — no file needed. Schema:
+     - Optional YAML file that selects which *received* AoUs to chain-forward to elements that depend on this one. Own AoUs (the ``assumptions_of_use`` targets consumed as ``safety_measures`` by the element's safety analyses) are always forwarded automatically — no file needed. Every entry names the AoU with its version (``Package.AOU_ID@<version>``), so a justification is reviewed again when the AoU changes; unknown IDs, mismatching versions and duplicate entries fail the build. An AoU that reaches the element along several paths is received once; differing definitions fail the build. Schema:
 
        .. code-block:: yaml
 
           forwarded_aous:
-            - aou_id: "Package.AOU_ID"
+            - aou_id: "Package.AOU_ID@1"
               justification: >
                 Reason why this element cannot handle the AoU itself
                 and must forward it to its own integrators.

@@ -13,9 +13,11 @@
 package SampleType
 
 import ScoreReq
+import sample_safety_analysis_fta
 
 ScoreReq.AoU SampleAoU {
     description = "It shall be made sure that shared memory segments are never created with the wrong name (ShmemCreatedWrongName)"
     safety = ScoreReq.Asil.B
     version = 1
+    root_causes = [sample_safety_analysis_fta.ShmemCreatedWrongName]
 }

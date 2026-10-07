@@ -163,7 +163,7 @@ type RootCause "A fault-tree root cause (leaf node), generated from a $RootCause
 // concrete measure: a CompReq (control measure, via derived_from), an AoU
 // (preventive measure, via root_causes) or a Mitigation (via root_causes,
 // arguing the root cause does not apply). SafetyMeasure itself is never
-// instantiated directly -- it only exists so Mitigation can inherit the
+// instantiated directly -- it only exists so Mitigation and AoU inherit the
 // mandatory root_causes field.
 
 abstract type SafetyMeasure "Base type for measures that address one or more fault-tree root causes." extends RequirementSafety {
@@ -176,9 +176,7 @@ type Mitigation "Argues that a fault-tree root cause does not apply in this cont
                   String
 }
 
-type AoU "Assumption of Use — a safety-relevant condition that a user must fulfil. Acts as a preventive measure when it addresses a fault-tree root cause." extends RequirementSafety {
-    root_causes  "Fault-tree root causes that this assumption of use prevents."
-                 optional RootCause[1 .. *]
+type AoU "Assumption of Use — a safety-relevant condition that a user must fulfil. Acts as a preventive measure for the fault-tree root causes it addresses." extends SafetyMeasure {
 }
 
 ///////////////////////////////

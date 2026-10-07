@@ -86,3 +86,11 @@ requirements:
         given: a const Foo instance
         when: GetNumber is called multiple times
         then: the same value is returned on each call
+  - id: SampleComponentExtra.REQ_COMP_EXTRA_003
+    version: '1'
+    description: The numeric value management interface shall keep its memory footprint within the 10 MB budget imposed by the underlying other_seooc dependency
+    test_cases:
+      - uid: //Foo:FootprintWithinBudget
+        given: the Foo class definition
+        when: querying the size of Foo
+        then: it stays far below the 10 MB budget

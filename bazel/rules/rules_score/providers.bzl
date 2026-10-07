@@ -123,13 +123,28 @@ AnalysisInfo = provider(
 )
 
 SafetyAnalysisProviderInfo = provider(
-    doc = """Marker provider on safety_analysis targets.
+    doc = "Provider on safety_analysis targets: the AoU targets the analysis consumes as safety measures.",
+    fields = {
+        "aou_targets": "List of the assumptions_of_use Targets passed as `safety_measures`; a dependable_element derives its own AoUs from them.",
+    },
+)
 
-    Requirement targets that list a safety_analysis target in ``deps`` (only to
-    resolve its TRLC symbols) use it to leave that target's docs out of their
-    own Sphinx tree.
-    """,
-    fields = {},
+FailureModesInfo = provider(
+    doc = "Provider on failure_modes targets: the FailureMode records and their traceability file.",
+    fields = {
+        "srcs": "Depset of .lobster traceability files generated from the FailureMode TRLC sources.",
+        "name": "Name of the failure_modes target.",
+    },
+)
+
+FaultTreesInfo = provider(
+    doc = "Provider on fault_trees targets: the root causes generated from the fault-tree diagrams.",
+    fields = {
+        "fta_package": "TRLC package name of the generated fta_events.trlc.",
+        "fta_events": "File: generated fta_events.trlc (RootCause records).",
+        "diagrams": "List of authored fault-tree .puml Files.",
+        "lobster_files": "Dict mapping the canonical lobster file name ('fta_root_causes.lobster') to its File.",
+    },
 )
 
 AssumptionsOfUseInfo = provider(
@@ -245,7 +260,8 @@ DependabilityAnalysisInfo = provider(
         "dfa": "Depset of DFA documentation files (placeholder).",
         "arch_design": "ArchitecturalDesignInfo from the linked architectural design (placeholder).",
         "name": "Name of the dependability analysis target.",
-        "lobster_files": "Dict mapping canonical lobster file names to File objects collected from sub-analyses only (FM, CM, RC).",
+        "lobster_files": "Dict mapping canonical lobster file names to lists of File objects collected from all sub-analyses (FM, CM, RC).",
+        "aou_targets": "List of the assumptions_of_use Targets consumed by the safety_analysis targets, deduplicated by label.",
     },
 )
 
