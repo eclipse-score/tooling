@@ -96,3 +96,14 @@ TEST(Foo, ValueConsistentAcrossReads) {
                                   "the same value is returned on each call");
   EXPECT_EQ(unit.GetNumber(), unit.GetNumber());
 }
+
+TEST(Foo, FootprintWithinBudget) {
+  ::testing::Test::RecordProperty("lobster-tracing",
+                                  "SampleComponentExtra.REQ_COMP_EXTRA_003");
+
+  ::testing::Test::RecordProperty("given", "the Foo class definition");
+  ::testing::Test::RecordProperty("when", "querying the size of Foo");
+  ::testing::Test::RecordProperty("then",
+                                  "it stays far below the 10 MB budget");
+  EXPECT_LT(sizeof(unit_1::Foo), 10u * 1024u * 1024u);
+}

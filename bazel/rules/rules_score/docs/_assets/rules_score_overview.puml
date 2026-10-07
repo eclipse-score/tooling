@@ -45,6 +45,8 @@ component "unit" <<implementation>> as unit
 component "component" <<implementation>> as comp
 
 ' ── Safety Analysis rules ─────────────────────────────────────────────────────
+component "failure_modes" <<analysis>> as failure_modes
+component "fault_trees" <<analysis>> as fault_trees
 component "safety_analysis" <<analysis>> as safety_analysis
 component "dependability_analysis" <<analysis>> as da
 
@@ -65,10 +67,15 @@ feat_req  -->  de   : <<FeatureRequirementsInfo>>
 comp_req  -->  comp  : <<ComponentRequirementsInfo>>
 comp_req  -->  aou   : <<ComponentRequirementsInfo>>
 
-safety_analysis  -->  da  : <<AnalysisInfo>>
+failure_modes  -->  fault_trees  : <<TrlcProviderInfo>>
+failure_modes  -->  safety_analysis  : <<FailureModesInfo>>
+fault_trees  -->  safety_analysis  : <<FaultTreesInfo>>
+fault_trees  -->  aou  : <<TrlcProviderInfo>>
+fault_trees  -->  comp_req  : <<TrlcProviderInfo>>
+safety_analysis  -->  da  : <<AnalysisInfo>>\n<<SafetyAnalysisProviderInfo>>
 da    -->  de  : <<DependabilityAnalysisInfo>>
 
-aou   -->  de  : <<AssumptionsOfUseInfo>>
+aou   -->  safety_analysis  : <<AssumptionsOfUseInfo>>
 unit  -->  comp : <<UnitInfo>>
 comp  -->  de   : <<ComponentInfo>>
 

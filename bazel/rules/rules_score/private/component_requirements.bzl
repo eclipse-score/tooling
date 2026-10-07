@@ -49,10 +49,12 @@ def component_requirements(
             in the S-CORE requirements model.
         deps: Optional list of requirement targets (e.g. assumed_system_requirements,
             feature_requirements) whose TRLC records are needed for cross-reference
-            parsing. Also list any assumptions_of_use target(s) here (this
-            element's own, or one received/forwarded from a dependable_element
-            dependency) to resolve AoU references in `derived_from`
-            (CompReqSourceId). These targets must provide TrlcProviderInfo.
+            parsing. Also list the assumptions_of_use target of an AoU
+            received/forwarded from a dependable_element dependency here to
+            resolve AoU references in `derived_from`
+            (CompReqSourceId). List the fault_trees target here to resolve
+            `<fta_package>.<RootCause>` references in `derived_from`.
+            These targets must provide TrlcProviderInfo.
         spec: TRLC specification target(s) providing RSL type definitions.
             Accepts a single label or a list of labels; all are merged into the
             spec passed to TRLC.  Defaults to the S-CORE requirements model

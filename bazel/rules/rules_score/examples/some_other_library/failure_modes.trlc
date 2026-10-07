@@ -1,4 +1,4 @@
-/********************************************************************************
+/*******************************************************************************
  * Copyright (c) 2026 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
@@ -10,21 +10,15 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
-package OtherLibrary
+package OtherLibraryFmea
 
 import ScoreReq
-import other_library_fta
 
-ScoreReq.AoU TimingConstraint {
-    description = "The caller shall ensure that invocations do not exceed 10ms cycle time"
-    safety = ScoreReq.Asil.B
+ScoreReq.FailureMode ComputeOverloaded {
+    guidewords = [ScoreReq.Guideword.TooLate]
+    description = "Compute is invoked beyond the supported load"
+    failureeffect = "Results are delivered late or not at all"
     version = 1
-    root_causes = [other_library_fta.CycleTimeExceeded]
-}
-
-ScoreReq.AoU SpaceConstraint {
-    description = "The caller shall ensure that invocations do not exceed 10 MB"
     safety = ScoreReq.Asil.B
-    version = 1
-    root_causes = [other_library_fta.MemoryBudgetExceeded]
+    interface = "other_seooc.OtherLibraryAPI.Compute"
 }

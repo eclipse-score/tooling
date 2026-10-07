@@ -531,7 +531,6 @@ dependable_element(
     name                   = "safety_software_seooc_example",
     architectural_design   = ["//design:sample_seooc_design"],
     requirements           = ["//docs/requirements:feature_requirements"],   # FeatReq targets
-    assumptions_of_use     = ["//docs:sample_aous"],
     dependability_analysis = [":sample_dependability_analysis"],
     components             = [":component_example"],
     tests                  = [],

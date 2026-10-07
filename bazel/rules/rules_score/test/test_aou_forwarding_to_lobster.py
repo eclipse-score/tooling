@@ -12,6 +12,7 @@
 # *******************************************************************************
 """Tests for aou_forwarding_to_lobster."""
 
+import os
 import tempfile
 import unittest
 
@@ -20,6 +21,7 @@ from lobster.common.items import Requirement, Tracing_Tag
 from lobster.common.location import Void_Reference
 
 from aou_forwarding_to_lobster import (
+    ForwardingEntry,
     build_forwarded_markers,
     filter_forwarded_aous,
     load_lobster_items,
@@ -44,6 +46,7 @@ class TestParseForwardingYaml(unittest.TestCase):
 
     def _write_yaml(self, data: dict) -> str:
         f = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
+        self.addCleanup(os.unlink, f.name)
         yaml.dump(data, f)
         f.close()
         return f.name
@@ -52,14 +55,14 @@ class TestParseForwardingYaml(unittest.TestCase):
         path = self._write_yaml(
             {
                 "forwarded_aous": [
-                    {"aou_id": "Pkg.AoU1", "justification": "reason"},
+                    {"aou_id": "Pkg.AoU1@1", "justification": "reason"},
                 ]
             }
         )
         result = parse_forwarding_yaml(path)
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["aou_id"], "Pkg.AoU1")
-        self.assertEqual(result[0]["justification"], "reason")
+        self.assertEqual(result[0].aou_id, "Pkg.AoU1@1")
+        self.assertEqual(result[0].justification, "reason")
 
     def test_missing_forwarded_aous_key(self) -> None:
         path = self._write_yaml({"wrong_key": []})
@@ -80,13 +83,51 @@ class TestParseForwardingYaml(unittest.TestCase):
         path = self._write_yaml(
             {
                 "forwarded_aous": [
-                    {"aou_id": "A.B", "justification": "r1"},
-                    {"aou_id": "C.D", "justification": "r2"},
+                    {"aou_id": "A.B@1", "justification": "r1"},
+                    {"aou_id": "C.D@2", "justification": "r2"},
                 ]
             }
         )
         result = parse_forwarding_yaml(path)
         self.assertEqual(len(result), 2)
+
+    def test_unversioned_aou_id_is_rejected(self) -> None:
+        path = self._write_yaml({"forwarded_aous": [{"aou_id": "Pkg.AoU1", "justification": "r"}]})
+        with self.assertRaises(SystemExit) as ctx:
+            parse_forwarding_yaml(path)
+        self.assertIn("must name the AoU version", str(ctx.exception))
+
+    def test_non_numeric_version_is_rejected(self) -> None:
+        path = self._write_yaml({"forwarded_aous": [{"aou_id": "Pkg.AoU1@x", "justification": "r"}]})
+        with self.assertRaises(SystemExit):
+            parse_forwarding_yaml(path)
+
+    def test_duplicate_aou_id_is_rejected(self) -> None:
+        path = self._write_yaml(
+            {
+                "forwarded_aous": [
+                    {"aou_id": "Pkg.AoU1@1", "justification": "r1"},
+                    {"aou_id": "Pkg.AoU1@1", "justification": "r2"},
+                ]
+            }
+        )
+        with self.assertRaises(SystemExit) as ctx:
+            parse_forwarding_yaml(path)
+        self.assertIn("'Pkg.AoU1@1' is listed in entries 0 and 1", str(ctx.exception))
+
+    def test_entry_lines_are_recorded(self) -> None:
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
+        self.addCleanup(os.unlink, f.name)
+        f.write(
+            "# comment\n"
+            "forwarded_aous:\n"
+            "  - aou_id: A.B@1\n"
+            "    justification: r1\n"
+            "  - aou_id: C.D@1\n"
+            "    justification: r2\n"
+        )
+        f.close()
+        self.assertEqual([e.line for e in parse_forwarding_yaml(f.name)], [3, 5])
 
 
 class TestLoadLobsterItems(unittest.TestCase):
@@ -97,6 +138,7 @@ class TestLoadLobsterItems(unittest.TestCase):
 
         items = [_req(tag, tag.split(" ", 1)[1].split("@")[0]) for tag in tags]
         f = tempfile.NamedTemporaryFile(mode="w", suffix=".lobster", delete=False)
+        self.addCleanup(os.unlink, f.name)
         lobster_write(f, Requirement, "test", items)
         f.close()
         return f.name
@@ -123,76 +165,60 @@ class TestFilterForwardedAous(unittest.TestCase):
     """Tests for filter_forwarded_aous."""
 
     def test_filters_correctly(self) -> None:
-        items = [_req("req Pkg.AoU1", "AoU1"), _req("req Pkg.AoU2", "AoU2")]
-        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
+        items = [_req("req Pkg.AoU1@1", "AoU1"), _req("req Pkg.AoU2@1", "AoU2")]
+        entries = [ForwardingEntry("Pkg.AoU1@1", "reason")]
         filtered = filter_forwarded_aous(entries, items)
         self.assertEqual(len(filtered), 1)
-        self.assertEqual(str(filtered[0].tag), "req Pkg.AoU1")
+        self.assertEqual(str(filtered[0].tag), "req Pkg.AoU1@1")
 
     def test_multiple_filters(self) -> None:
         items = [
-            _req("req A.B", "B"),
-            _req("req C.D", "D"),
-            _req("req E.F", "F"),
+            _req("req A.B@1", "B"),
+            _req("req C.D@1", "D"),
+            _req("req E.F@1", "F"),
         ]
         entries = [
-            {"aou_id": "A.B", "justification": "r1"},
-            {"aou_id": "E.F", "justification": "r2"},
+            ForwardingEntry("A.B@1", "r1"),
+            ForwardingEntry("E.F@1", "r2"),
         ]
         filtered = filter_forwarded_aous(entries, items)
         self.assertEqual(len(filtered), 2)
 
     def test_nonexistent_aou_id_raises(self) -> None:
-        items = [_req("req Pkg.AoU1", "AoU1")]
-        entries = [{"aou_id": "NonExistent.Foo", "justification": "reason"}]
+        items = [_req("req Pkg.AoU1@1", "AoU1")]
+        entries = [ForwardingEntry("NonExistent.Foo@1", "reason")]
         with self.assertRaises(SystemExit):
             filter_forwarded_aous(entries, items)
 
-    def test_versioned_tag_matches_base_id(self) -> None:
-        """lobster-trlc generates versioned tags like 'req Pkg.Name@1'."""
-        items = [
-            _req("req Pkg.AoU1@1", "AoU1"),
-            _req("req Pkg.AoU2@3", "AoU2"),
-        ]
-        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
-        filtered = filter_forwarded_aous(entries, items)
-        self.assertEqual(len(filtered), 1)
-        self.assertEqual(str(filtered[0].tag), "req Pkg.AoU1@1")
+    def test_no_received_items_raises(self) -> None:
+        entries = [ForwardingEntry("Pkg.AoU1@1", "reason")]
+        with self.assertRaises(SystemExit) as ctx:
+            filter_forwarded_aous(entries, [])
+        self.assertIn("Available IDs: (none)", str(ctx.exception))
 
-    def test_versioned_tag_matches_full_id(self) -> None:
-        """Full versioned ID should also work."""
+    def test_no_entries_and_no_items_is_fine(self) -> None:
+        self.assertEqual(filter_forwarded_aous([], []), [])
+
+    def test_version_mismatch_raises_with_hint(self) -> None:
         items = [_req("req Pkg.AoU1@2", "AoU1")]
-        entries = [{"aou_id": "Pkg.AoU1@2", "justification": "reason"}]
-        filtered = filter_forwarded_aous(entries, items)
-        self.assertEqual(len(filtered), 1)
-
-    def test_ambiguous_base_id_requires_version(self) -> None:
-        """Two different versions sharing a base ID must not silently pick one."""
-        items = [
-            _req("req Pkg.AoU1@1", "AoU1"),
-            _req("req Pkg.AoU1@2", "AoU1"),
-        ]
-        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
-        with self.assertRaises(SystemExit):
+        entries = [ForwardingEntry("Pkg.AoU1@1", "reason")]
+        with self.assertRaises(SystemExit) as ctx:
             filter_forwarded_aous(entries, items)
+        self.assertIn("received version(s): 2", str(ctx.exception))
 
-    def test_ambiguous_base_id_still_resolves_with_explicit_version(self) -> None:
-        items = [
-            _req("req Pkg.AoU1@1", "AoU1"),
-            _req("req Pkg.AoU1@2", "AoU1"),
-        ]
-        entries = [{"aou_id": "Pkg.AoU1@2", "justification": "reason"}]
-        filtered = filter_forwarded_aous(entries, items)
-        self.assertEqual(len(filtered), 1)
-        self.assertEqual(str(filtered[0].tag), "req Pkg.AoU1@2")
+    def test_version_mismatch_hint_lists_all_received_versions(self) -> None:
+        items = [_req("req Pkg.AoU1@2", "AoU1"), _req("req Pkg.AoU1@3", "AoU1")]
+        entries = [ForwardingEntry("Pkg.AoU1@1", "reason")]
+        with self.assertRaises(SystemExit) as ctx:
+            filter_forwarded_aous(entries, items)
+        self.assertIn("received version(s): 2, 3", str(ctx.exception))
 
-    def test_duplicate_identical_item_is_not_ambiguous(self) -> None:
-        """The same AoU loaded twice (e.g. via two overlapping input files) is not a conflict."""
+    def test_duplicate_identical_item_matches_once(self) -> None:
         items = [
             _req("req Pkg.AoU1@1", "AoU1"),
             _req("req Pkg.AoU1@1", "AoU1"),
         ]
-        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
+        entries = [ForwardingEntry("Pkg.AoU1@1", "reason")]
         filtered = filter_forwarded_aous(entries, items)
         self.assertEqual(len(filtered), 1)
 
@@ -203,8 +229,8 @@ class TestBuildForwardedMarkers(unittest.TestCase):
     def test_builds_one_marker_per_entry(self) -> None:
         items = [_req("req Pkg.AoU1@1", "AoU1"), _req("req Pkg.AoU2@1", "AoU2")]
         entries = [
-            {"aou_id": "Pkg.AoU1", "justification": "reason 1"},
-            {"aou_id": "Pkg.AoU2", "justification": "reason 2"},
+            ForwardingEntry("Pkg.AoU1@1", "reason 1"),
+            ForwardingEntry("Pkg.AoU2@1", "reason 2"),
         ]
         markers = build_forwarded_markers(entries, items, "aou_forwarding.yaml")
         self.assertEqual(len(markers), 2)
@@ -214,38 +240,45 @@ class TestBuildForwardedMarkers(unittest.TestCase):
         (so it can coexist with the "Received AoUs" level in the same
         report), but its refs must point at the original tag."""
         items = [_req("req Pkg.AoU1@1", "AoU1")]
-        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
+        entries = [ForwardingEntry("Pkg.AoU1@1", "reason")]
         markers = build_forwarded_markers(entries, items, "aou_forwarding.yaml")
         marker = markers[0]
-        self.assertNotEqual(str(marker.tag), "req Pkg.AoU1@1")
         self.assertEqual(str(marker.tag), "req Pkg.AoU1__forwarded")
         self.assertEqual(
             [str(ref) for ref in marker.unresolved_references],
             ["req Pkg.AoU1@1"],
         )
 
+    def test_marker_tag_survives_lobster_round_trip(self) -> None:
+        items = [_req("req Pkg.AoU1@1", "AoU1")]
+        markers = build_forwarded_markers([ForwardingEntry("Pkg.AoU1@1", "reason")], items, "aou_forwarding.yaml")
+        reread = Tracing_Tag.from_json(str(markers[0].tag))
+        self.assertEqual(reread.tag, "Pkg.AoU1__forwarded")
+        self.assertIsNone(reread.version)
+
     def test_marker_uses_justification_as_text(self) -> None:
         items = [_req("req Pkg.AoU1@1", "AoU1")]
-        entries = [{"aou_id": "Pkg.AoU1", "justification": "must be handled downstream"}]
+        entries = [ForwardingEntry("Pkg.AoU1@1", "must be handled downstream")]
         markers = build_forwarded_markers(entries, items, "aou_forwarding.yaml")
         self.assertEqual(markers[0].text, "must be handled downstream")
 
     def test_marker_kind_and_framework(self) -> None:
         items = [_req("req Pkg.AoU1@1", "AoU1")]
-        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
+        entries = [ForwardingEntry("Pkg.AoU1@1", "reason")]
         markers = build_forwarded_markers(entries, items, "aou_forwarding.yaml")
         self.assertEqual(markers[0].kind, "ForwardedAoU")
         self.assertEqual(markers[0].framework, "AoUForwarding")
 
-    def test_marker_location_uses_yaml_path(self) -> None:
+    def test_marker_location_uses_yaml_path_and_entry_line(self) -> None:
         items = [_req("req Pkg.AoU1@1", "AoU1")]
-        entries = [{"aou_id": "Pkg.AoU1", "justification": "reason"}]
+        entries = [ForwardingEntry("Pkg.AoU1@1", "reason", line=7)]
         markers = build_forwarded_markers(entries, items, "some/path/aou_forwarding.yaml")
         self.assertEqual(markers[0].location.filename, "some/path/aou_forwarding.yaml")
+        self.assertEqual(markers[0].location.line, 7)
 
     def test_nonexistent_aou_id_raises(self) -> None:
         items = [_req("req Pkg.AoU1@1", "AoU1")]
-        entries = [{"aou_id": "NonExistent.Foo", "justification": "reason"}]
+        entries = [ForwardingEntry("NonExistent.Foo@1", "reason")]
         with self.assertRaises(SystemExit):
             build_forwarded_markers(entries, items, "aou_forwarding.yaml")
 

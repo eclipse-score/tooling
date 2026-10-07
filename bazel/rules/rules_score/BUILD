@@ -114,6 +114,16 @@ py_binary(
     ],
 )
 
+# Merges lobster files, collapsing the same item arriving via several paths
+py_binary(
+    name = "merge_lobster_items",
+    srcs = ["src/merge_lobster_items.py"],
+    imports = ["src"],
+    main = "src/merge_lobster_items.py",
+    visibility = ["//visibility:public"],
+    deps = ["@lobster//lobster/common"],
+)
+
 # HTML merge tool
 py_library(
     name = "sphinx_html_merge_lib",

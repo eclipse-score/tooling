@@ -1,0 +1,19 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+#
+# Forwards the AoU of aou_derived_example_lib, which the diamond fixture
+# receives a second time directly.
+#
+forwarded_aous:
+  - aou_id: "AouRootCauseAous.ConfigurationIsCorrect@1"
+    justification: "Handled by the dependee of this element."

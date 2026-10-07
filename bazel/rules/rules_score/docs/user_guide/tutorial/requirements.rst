@@ -68,7 +68,6 @@ BUILD
        name = "my_element",
        integrity_level = "B",
        requirements = [":feature_requirements"],
-       assumptions_of_use = [],
        architectural_design = [],
        components = [],
        dependability_analysis = [],
