@@ -61,13 +61,13 @@ while the FlatBuffers schemas and serializers live under `tools/serialization/fl
 ```plantuml
 @startuml
 
-package "Sample SEooC" as SampleSEooC #LightBlue {
-    component "Component A" as ComponentA <<component>> {
-        component "Unit A" as UnitA <<unit>> {
+package SampleSEooC #LightBlue {
+    component ComponentA <<component>> {
+        component UnitA <<unit>> {
         }
     }
-    component "Component B" as ComponentB <<component>> {
-        component "Unit B" as UnitB <<unit>> {
+    component ComponentB <<component>> {
+        component UnitB <<unit>> {
         }
     }
 }

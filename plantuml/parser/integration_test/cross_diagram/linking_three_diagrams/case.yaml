@@ -10,11 +10,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-# Today, a root-level (non-nested) component and a class with no alias both
-# get an idmap id equal to their plain name, which is also how a sequence
-# participant's id is derived. This lets a sequence diagram link to both a
-# component and a class purely by matching alias text, without any explicit
-# root-anchor/qualification mechanism (that lands in a later PR).
+# A sequence participant links to a component and to a class through its
+# qualified name; the alias is only the local arrow name.
 diagram_types:
   component_diagram.puml: component
   class_diagram.puml: class

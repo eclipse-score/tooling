@@ -13,10 +13,10 @@
 
 @startuml component_diagram
 
-package "Sample Seooc" as SAFETY_SOFTWARE_SEOOC_EXAMPLE <<SEooC>> {
-    component "Component Example" as COMPONENT_EXAMPLE <<component>> {
-        component "Unit 1" as UNIT_1 <<unit>>
-        component "Unit 2" as UNIT_2 <<unit>>
+package SAFETY_SOFTWARE_SEOOC_EXAMPLE <<SEooC>> {
+    component COMPONENT_EXAMPLE <<component>> {
+        component UNIT_1 <<unit>>
+        component UNIT_2 <<unit>>
     }
 }
 

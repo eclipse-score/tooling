@@ -7,7 +7,7 @@
           "ClassDef": {
             "name": {
               "internal": "User",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -55,7 +55,7 @@
           "StructDef": {
             "name": {
               "internal": "Config",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -87,7 +87,7 @@
           "InterfaceDef": {
             "name": {
               "internal": "AbstractService",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -121,7 +121,7 @@
         "Enum": {
           "name": {
             "internal": "Gender",
-            "display": null
+            "alias": null
           },
           "namespace": "",
           "package": "",

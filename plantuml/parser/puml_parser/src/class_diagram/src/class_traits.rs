@@ -21,5 +21,5 @@ pub trait TypeDef {
 }
 
 pub trait WritableName {
-    fn write_name(&mut self, internal: impl Into<String>, display: Option<impl Into<String>>);
+    fn write_name(&mut self, internal: impl Into<String>, alias: Option<impl Into<String>>);
 }

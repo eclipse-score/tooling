@@ -13,8 +13,8 @@
 
 @startuml sequence_diagram
 
-participant "Unit 1" as unit_1 <<unit>>
-participant "Unit 3" as unit_3 <<unit>>
+participant unit_1 <<unit>>
+participant unit_3 <<unit>>
 
 unit_1 -> unit_3 : UnknownCall
 

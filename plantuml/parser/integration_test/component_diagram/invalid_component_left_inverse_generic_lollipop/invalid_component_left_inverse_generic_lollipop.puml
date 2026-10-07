@@ -13,7 +13,7 @@
 @startuml invalid_component_left_inverse_generic_lollipop.puml
 
 package "Pkg" as Pkg {
-    component "Component A" as ComponentA <<component>>
+    component ComponentA <<component>>
     interface "IService" as IService
 
     ComponentA ()-- IService : invalid

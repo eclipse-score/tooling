@@ -62,11 +62,6 @@ fn positive_participant_multilevel_inherited_method_match_suite_case() {
 }
 
 #[test]
-fn positive_participant_alias_display_name_class_name_match_suite_case() {
-    assert_case("positive_participant_alias_display_name_class_name_match");
-}
-
-#[test]
 fn positive_participant_alias_display_name_namespace_match_suite_case() {
     assert_case("positive_participant_alias_display_name_namespace_match");
 }
@@ -82,23 +77,23 @@ fn positive_participant_short_name_namespace_match_suite_case() {
 }
 
 #[test]
-fn positive_participant_special_display_leading_colon_short_name_match_suite_case() {
-    assert_case("positive_participant_special_display_leading_colon_short_name_match");
+fn positive_participant_qualified_label_with_newline_match_suite_case() {
+    assert_case("positive_participant_qualified_label_with_newline_match");
 }
 
 #[test]
-fn positive_participant_special_display_qualified_type_match_suite_case() {
-    assert_case("positive_participant_special_display_qualified_type_match");
+fn positive_participant_qualified_reference_suite_case() {
+    assert_case("positive_participant_qualified_reference");
 }
 
 #[test]
-fn positive_participant_special_display_short_type_match_suite_case() {
-    assert_case("positive_participant_special_display_short_type_match");
+fn negative_participant_qualified_suffix_not_matched_suite_case() {
+    assert_case("negative_participant_qualified_suffix_not_matched");
 }
 
 #[test]
-fn positive_participant_special_display_encoded_newline_match_suite_case() {
-    assert_case("positive_participant_special_display_encoded_newline_match");
+fn negative_participant_alias_not_matched_suite_case() {
+    assert_case("negative_participant_alias_not_matched");
 }
 
 #[test]
@@ -129,14 +124,4 @@ fn negative_participant_private_inherited_method_suite_case() {
 #[test]
 fn negative_participant_missing_with_suggestion_suite_case() {
     assert_case("negative_participant_missing_with_suggestion");
-}
-
-#[test]
-fn negative_participant_special_display_multiple_colons_suite_case() {
-    assert_case("negative_participant_special_display_multiple_colons");
-}
-
-#[test]
-fn negative_participant_special_display_empty_suffix_suite_case() {
-    assert_case("negative_participant_special_display_empty_suffix");
 }

@@ -55,7 +55,7 @@ section "Tool Requirements" {
             ToolQualification.ToolRequirement BazelComponentNameCaseInsensitive {
                 description = '''The validator shall match element names
                 between Bazel and PlantUML case-insensitively, using the
-                PlantUML alias when present, otherwise the PlantUML id, and
+                PlantUML name (the last segment of the entity id), and
                 the Bazel target name on the Bazel side.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
@@ -109,12 +109,13 @@ section "Tool Requirements" {
 
         section "Component Sequence Validator" {
 
-            ToolQualification.ToolRequirement ComponentSequenceAliasConsistency {
+            ToolQualification.ToolRequirement ComponentSequenceIdentifierConsistency {
                 description = '''The validator shall report an error when a
-                unit alias defined in the component diagram does not appear
-                among the participants in any sequence diagram, or when a
-                participant alias in a sequence diagram does not match any
-                unit alias in the component diagram.'''
+                unit defined in the component diagram is not referenced by
+                any participant in the sequence diagrams, when a participant
+                uid in a sequence diagram does not match any unit id in the
+                component diagram, or when a participant uid matches multiple
+                unit ids ambiguously.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }

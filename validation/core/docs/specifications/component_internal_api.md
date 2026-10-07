@@ -39,17 +39,17 @@ component/package) has no parent and is silently ignored by this validator.
 
 ```text
 ' PlantUML component diagram
-component "Unit 1" as unit_1 <<unit>>
-package "Package A" as package_a {
-  interface "IData" as IData
+component unit_1 <<unit>>
+package package_a {
+  interface IData
 }
 unit_1 -( IData
 ```
 
 ```text
 ' PlantUML internal_api diagram
-package "Package A" as package_a {
-  interface "IData" as IData <<interface>> {
+package package_a {
+  interface IData <<interface>> {
     {abstract} GetData(): Data*
   }
 }

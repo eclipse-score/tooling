@@ -1323,9 +1323,9 @@ mod idmap_wiring_tests {
     #[test]
     fn component_reference_and_class_define_share_fqn_for_same_package_interface() {
         let component_content = "@startuml\n\
-             package \"Package A\" as package_a {\n\
-                 component \"Component A\" as component_a <<component>> {\n\
-                     component \"Unit 1\" as unit_1 <<unit>>\n\
+             package package_a {\n\
+                 component component_a <<component>> {\n\
+                     component unit_1 <<unit>>\n\
                  }\n\
                  interface \"InternalInterface\" as InternalInterface\n\
                  unit_1 -( InternalInterface\n\

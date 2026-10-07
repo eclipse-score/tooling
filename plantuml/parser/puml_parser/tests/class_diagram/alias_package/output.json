@@ -7,7 +7,7 @@
           "StructDef": {
             "name": {
               "internal": "TestResult",
-              "display": "TR"
+              "alias": "TR"
             },
             "namespace": "",
             "package": "",
@@ -26,14 +26,18 @@
         "Package": {
           "name": {
             "internal": "diag",
-            "display": "mwdiag"
+            "alias": "mwdiag"
+          },
+          "source_location": {
+            "file": "",
+            "line": 17
           },
           "types": [
             {
               "ClassDef": {
                 "name": {
                   "internal": "A",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "",
                 "package": "diag",
@@ -54,7 +58,7 @@
               "ClassDef": {
                 "name": {
                   "internal": "B",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "",
                 "package": "diag",
@@ -80,14 +84,18 @@
         "Package": {
           "name": {
             "internal": "activate",
-            "display": "act"
+            "alias": "act"
+          },
+          "source_location": {
+            "file": "",
+            "line": 22
           },
           "types": [
             {
               "StructDef": {
                 "name": {
                   "internal": "StartResponsePayload",
-                  "display": "SRP"
+                  "alias": "SRP"
                 },
                 "namespace": "",
                 "package": "activate",
@@ -105,7 +113,7 @@
               "EnumDef": {
                 "name": {
                   "internal": "ErrorInfo",
-                  "display": "ERR"
+                  "alias": "ERR"
                 },
                 "namespace": "",
                 "package": "activate",

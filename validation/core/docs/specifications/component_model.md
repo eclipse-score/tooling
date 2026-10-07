@@ -25,7 +25,7 @@ operates on, and enforces that the merge itself is unambiguous.
 ## What is Validated
 
 Entities are matched across files by id — the full dot-path of parent
-aliases — not by bare alias, so two entities that share an alias under
+names — not by bare name, so two entities that share a name under
 different parents are never conflated.
 
 ### Cross-File Declaration Consistency
@@ -46,9 +46,9 @@ an entity that a detail file elaborates further.
 [Design] Component "shared_thing" is re-declared with a conflicting element type in another component diagram file.
 ```
 
-Declarations of the same entity are compared by name/alias/id only through
-the id itself — since two declarations sharing the exact same id are
-guaranteed to share the same alias and immediate parent, disagreement is only
+Declarations of the same entity are compared through the id itself — since
+two declarations sharing the exact same id are guaranteed to share the same
+name and immediate parent, disagreement is only
 possible on stereotype or element type. Re-nesting an entity under a
 *different* parent in another file is not detected here: a different parent
 means a different id, hence a different entity. That mistake instead surfaces

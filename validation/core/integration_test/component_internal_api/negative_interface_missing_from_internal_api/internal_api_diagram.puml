@@ -13,7 +13,7 @@
 
 @startuml
 
-interface "OtherInterface" as OtherInterface {
+interface OtherInterface {
     + GetData()
 }
 

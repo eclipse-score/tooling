@@ -13,12 +13,9 @@
 
 @startuml participant_identifier_examples
 
-participant "Display Service" as Service <<component>>
+participant "DisplayService" as Service <<component>>
 participant Caller
 
 Caller -> Service : callByAlias()
-' Note: "Display Service" is a new participant that is implicitly created by
-'       the message endpoint resolution(confirmed by Plantuml Preview).
-Service -> "Display Service" : callByDisplayName()
 
 @enduml

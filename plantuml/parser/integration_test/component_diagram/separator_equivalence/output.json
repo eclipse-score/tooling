@@ -1,0 +1,137 @@
+{
+    "separator_equivalence.puml": {
+        "outer": {
+            "id": "outer",
+            "name": "outer",
+            "alias": null,
+            "parent_id": null,
+            "comp_type": "Component",
+            "stereotype": null,
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 15
+            }
+        },
+        "outer.a.b.C": {
+            "id": "outer.a.b.C",
+            "name": "a::b::C",
+            "alias": null,
+            "parent_id": "outer.a.b",
+            "comp_type": "Component",
+            "stereotype": null,
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 16
+            }
+        },
+        "a.D": {
+            "id": "a.D",
+            "name": "a.D",
+            "alias": null,
+            "parent_id": "a",
+            "comp_type": "Component",
+            "stereotype": null,
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 17
+            }
+        },
+        "a.E": {
+            "id": "a.E",
+            "name": "a::E",
+            "alias": null,
+            "parent_id": "a",
+            "comp_type": "Component",
+            "stereotype": null,
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 18
+            }
+        },
+        "outer.a.I": {
+            "id": "outer.a.I",
+            "name": "a::I",
+            "alias": null,
+            "parent_id": "outer.a",
+            "comp_type": "Interface",
+            "stereotype": null,
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 19
+            }
+        },
+        "F": {
+            "id": "F",
+            "name": "F",
+            "alias": null,
+            "parent_id": null,
+            "comp_type": "Component",
+            "stereotype": null,
+            "relations": [
+                {
+                    "target": "a.E",
+                    "annotation": null,
+                    "relation_type": "Dependency",
+                    "source_role": "None",
+                    "source_location": {
+                        "file": "",
+                        "line": 23
+                    }
+                },
+                {
+                    "target": "a.D",
+                    "annotation": null,
+                    "relation_type": "Dependency",
+                    "source_role": "None",
+                    "source_location": {
+                        "file": "",
+                        "line": 24
+                    }
+                },
+                {
+                    "target": "outer.a.b.C",
+                    "annotation": null,
+                    "relation_type": "Dependency",
+                    "source_role": "None",
+                    "source_location": {
+                        "file": "",
+                        "line": 25
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "",
+                "line": 21
+            }
+        },
+        "G": {
+            "id": "G",
+            "name": "G",
+            "alias": null,
+            "parent_id": null,
+            "comp_type": "Component",
+            "stereotype": null,
+            "relations": [
+                {
+                    "target": "outer.a.b.C",
+                    "annotation": null,
+                    "relation_type": "Dependency",
+                    "source_role": "None",
+                    "source_location": {
+                        "file": "",
+                        "line": 26
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "",
+                "line": 22
+            }
+        }
+    }
+}

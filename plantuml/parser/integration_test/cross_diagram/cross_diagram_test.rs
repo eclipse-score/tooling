@@ -23,6 +23,8 @@
 //! `puml_cli` per file (`DiagramProcessor`), and [`CrossDiagramChecker`]
 //! adds the `links`/`distinct` cross-file id assertions on top of the
 //! framework's default per-file checks (`ExpectationChecker::check_case`).
+//! Files listed under `errors` must fail with the given error substrings and are left out
+//! of the golden.
 //!
 //! Goldens document *current* behavior; they are updated by the changes that
 //! implement the target design in `plantuml/parser/docs/element-identifiers.md`.
@@ -52,6 +54,9 @@ struct CaseConfig {
     /// Groups of `file.puml#Alias` references that must resolve to pairwise
     /// distinct idmap ids.
     distinct: Vec<Vec<String>>,
+    /// Files that must fail, with substrings their error must contain. Such
+    /// files produce no idmap output.
+    errors: HashMap<String, Vec<String>>,
 }
 
 /// One or more idmap ids sharing a single alias, e.g. two same-named classes
@@ -276,8 +281,26 @@ impl DiagramProcessor for PumlCliIdmapRunner {
                 .unwrap_or_default()
                 .to_string();
             let diagram_type = config.diagram_types.get(&file_name).map(String::as_str);
-            let idmap = run_file(&case_name, path, diagram_type)?;
-            results.insert(Rc::clone(path), idmap);
+            let outcome = run_file(&case_name, path, diagram_type);
+
+            match (outcome, config.errors.get(&file_name)) {
+                (Ok(idmap), None) => {
+                    results.insert(Rc::clone(path), idmap);
+                }
+                (Err(error), None) => return Err(error),
+                (Err(error), Some(substrings)) => {
+                    for substring in substrings {
+                        assert!(
+                            error.message.contains(substring.as_str()),
+                            "{case_name}: error for {file_name} must contain {substring:?}, got {:?}",
+                            error.message
+                        );
+                    }
+                }
+                (Ok(_), Some(_)) => {
+                    panic!("{case_name}: {file_name} is listed in `errors` but succeeded")
+                }
+            }
         }
         Ok(results)
     }
@@ -319,12 +342,21 @@ fn resolve_ref(
 }
 
 /// Catches typos in `case.yaml`: file names that don't exist in this case,
-/// and `links`/`distinct` groups too small to assert anything.
+/// `errors` entries that assert nothing, `links`/`distinct` groups too small
+/// to assert anything, and references to files that produce no idmap.
 fn validate_case_config(case_name: &str, file_names: &BTreeSet<String>, config: &CaseConfig) {
-    for file_name in config.diagram_types.keys() {
+    let configured_files = config.diagram_types.keys().chain(config.errors.keys());
+    for file_name in configured_files {
         assert!(
             file_names.contains(file_name),
             "{case_name}: case.yaml names {file_name:?}, which is not a .puml file in this case"
+        );
+    }
+
+    for (file_name, substrings) in &config.errors {
+        assert!(
+            !substrings.is_empty(),
+            "{case_name}: `errors` entry for {file_name:?} needs at least one error substring"
         );
     }
 
@@ -340,6 +372,10 @@ fn validate_case_config(case_name: &str, file_names: &BTreeSet<String>, config: 
             assert!(
                 file_names.contains(file_name),
                 "{case_name}: reference {reference:?} names a file that is not in this case"
+            );
+            assert!(
+                !config.errors.contains_key(file_name),
+                "{case_name}: reference {reference:?} names a file listed in `errors`, which produces no idmap"
             );
         }
     }
@@ -374,8 +410,8 @@ impl ExpectationChecker<PumlCliError, IdMapSections> for CrossDiagramChecker {
             .unwrap_or("cross_diagram_case");
         let config = load_case_config(dir);
 
-        let file_names: BTreeSet<String> = outputs
-            .keys()
+        let file_names: BTreeSet<String> = puml_files(dir)
+            .iter()
             .map(|path| {
                 path.file_name()
                     .and_then(|n| n.to_str())
@@ -485,10 +521,18 @@ macro_rules! cross_diagram_cases {
 
 cross_diagram_cases!(
     component_nesting,
-    class_alias_wins,
+    class_name_wins,
+    alias_is_local_key,
     namespace_and_package,
     sequence_forms,
-    prose_without_alias,
+    prose_names,
     linking_three_diagrams,
     qualified_reference,
+    qualified_in_nested_scope,
+    doc_4_trap_prose_label,
+    doc_6_external_endpoint,
+    errors_participants,
+    errors_listed_file,
+    unit_to_class_link,
+    separator_equivalence,
 );

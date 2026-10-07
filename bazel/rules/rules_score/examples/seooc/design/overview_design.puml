@@ -16,11 +16,11 @@
 ' Boundary overview: the SEooC and its public API only. Internals are
 ' elaborated in static_design.puml; every entity here is also declared there.
 
-package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
-    component "ComponentExample" as component_example <<component>>
+package safety_software_seooc_example <<SEooC>> {
+    component component_example <<component>>
 }
 
-interface "SampleLibraryAPI" as SampleLibraryAPI
+interface SampleLibraryAPI
 
 safety_software_seooc_example )-d- SampleLibraryAPI
 

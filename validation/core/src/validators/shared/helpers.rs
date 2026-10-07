@@ -96,9 +96,32 @@ pub(in crate::validators) fn best_string_suggestion<'a>(
     best_candidate.map(str::to_string)
 }
 
+fn id_leaf(id: &str) -> &str {
+    id.rsplit('.').next().unwrap_or(id)
+}
+
+/// Like [`best_string_suggestion`] for dotted ids: compares last segments and
+/// returns the full candidate id.
+pub(in crate::validators) fn best_id_suggestion<'a>(
+    id: &str,
+    candidates: impl IntoIterator<Item = &'a str>,
+) -> Option<String> {
+    let candidates: Vec<&str> = candidates.into_iter().collect();
+    let suggested_leaf =
+        best_string_suggestion(id_leaf(id), candidates.iter().copied().map(id_leaf))?;
+
+    candidates
+        .into_iter()
+        .find(|candidate| id_leaf(candidate) == suggested_leaf)
+        .map(str::to_string)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{best_string_suggestion, earliest_source_by_id, DEFAULT_SUGGESTION_THRESHOLD};
+    use super::{
+        best_id_suggestion, best_string_suggestion, earliest_source_by_id,
+        DEFAULT_SUGGESTION_THRESHOLD,
+    };
     use source_location::SourceLocation;
     use strsim::jaro_winkler;
 
@@ -124,6 +147,19 @@ mod tests {
         assert!(score < DEFAULT_SUGGESTION_THRESHOLD);
 
         assert_eq!(best_string_suggestion("abc", ["xyz"]), None);
+    }
+
+    #[test]
+    fn best_id_suggestion_compares_last_segments_and_returns_full_id() {
+        assert_eq!(
+            best_id_suggestion("unit_3", ["pkg.comp.unit_1", "pkg.comp.other"]),
+            Some("pkg.comp.unit_1".to_string())
+        );
+        assert_eq!(
+            best_id_suggestion("pkg.comp.unit_3", ["unit_1"]),
+            Some("unit_1".to_string())
+        );
+        assert_eq!(best_id_suggestion("abc", ["pkg.xyz"]), None);
     }
 
     #[test]

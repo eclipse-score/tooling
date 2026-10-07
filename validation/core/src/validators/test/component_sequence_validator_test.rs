@@ -69,7 +69,7 @@ fn reports_missing_and_extra() {
 }
 
 #[test]
-fn units_without_alias_are_ignored() {
+fn units_without_alias_are_matched_by_id() {
     let component_diagrams = ComponentDiagramInputs {
         entities: vec![LogicComponent {
             id: "module_a.unit_1".to_string(),
@@ -82,10 +82,73 @@ fn units_without_alias_are_ignored() {
             source_location: dummy_source_location(),
         }],
     };
-    let sequence_diagrams = sequence_diagrams(&[]);
+    let sequence_diagrams = sequence_diagrams(&["module_a.unit_1"]);
 
     let validation_result = validate(component_diagrams, sequence_diagrams);
     assert!(validation_result.is_empty());
+}
+
+#[test]
+fn links_qualified_participant_to_nested_unit_by_exact_id() {
+    let component_diagrams = component_diagram(vec![
+        component("comp_a"),
+        unit_with_parent_id("unit_1", "comp_a"),
+    ]);
+    let sequence_diagrams = sequence_diagrams(&["comp_a.unit_1"]);
+
+    let validation_result = validate(component_diagrams, sequence_diagrams);
+    assert!(validation_result.is_empty());
+}
+
+#[test]
+fn links_leaf_participant_to_unique_nested_unit() {
+    let component_diagrams = component_diagram(vec![
+        component("comp_a"),
+        unit_with_parent_id("unit_1", "comp_a"),
+    ]);
+    let sequence_diagrams = sequence_diagrams(&["unit_1"]);
+
+    let validation_result = validate(component_diagrams, sequence_diagrams);
+    assert!(validation_result.is_empty());
+}
+
+#[test]
+fn does_not_link_qualified_participant_by_suffix() {
+    let component_diagrams = component_diagram(vec![
+        component("comp_a"),
+        component("comp_b"),
+        unit_with_parent_id("unit_1", "comp_a"),
+    ]);
+    let sequence_diagrams = sequence_diagrams(&["comp_b.unit_1"]);
+
+    let validation_result = validate(component_diagrams, sequence_diagrams);
+
+    assert_eq!(validation_result.failures.len(), 2);
+    assert!(validation_result.failures.iter().any(|message| {
+        message.contains("\"comp_a.unit_1\" from the component diagram not found")
+    }));
+    assert!(validation_result.failures.iter().any(|message| {
+        message.contains("Participant \"comp_b.unit_1\" from the sequence diagram not found")
+    }));
+}
+
+#[test]
+fn reports_ambiguous_leaf_participant_once() {
+    let component_diagrams = component_diagram(vec![
+        component("comp_a"),
+        component("comp_b"),
+        unit_with_parent_id("unit_1", "comp_a"),
+        unit_with_parent_id("unit_1", "comp_b"),
+    ]);
+    let sequence_diagrams = sequence_diagrams(&["unit_1"]);
+
+    let validation_result = validate(component_diagrams, sequence_diagrams);
+
+    assert_eq!(validation_result.failures.len(), 1);
+    assert!(validation_result.failures[0].contains(
+        "[Naming] Participant \"unit_1\" from the sequence diagram matches multiple units in the component diagram."
+    ));
+    assert!(validation_result.failures[0].contains("\"comp_a.unit_1\", \"comp_b.unit_1\""));
 }
 
 #[test]

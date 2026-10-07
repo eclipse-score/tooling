@@ -13,11 +13,11 @@
 
 @startuml component_diagram
 
-package "Package A" as package_a {
-    component "Component A" as component_a <<component>>
-    component "Component A Shadow" as COMPONENT_A <<component>>
+package package_a {
+    component component_a <<component>>
+    component COMPONENT_A <<component>>
 
-    interface "Internal Interface" as iface_a
+    interface iface_a
 }
 
 @enduml

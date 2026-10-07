@@ -46,12 +46,16 @@ pointer_suffix = { "*" }
 
 class_qualified_name = @{ ("::")? ~ identifier ~ ("::" ~ identifier)* }
 
+// `.` and `::` are interchangeable separators; a leading one roots the name.
+// Declarations and `extends`/`implements` targets use this spelling.
+class_name_path = @{ ("." | "::")? ~ identifier ~ (("." | "::") ~ identifier)* }
+
 // reference
 name_ref = @{ identifier }
 
 // definition
-internal_name = { STRING | generic_decl_name | class_qualified_name }
-generic_decl_name = { class_qualified_name ~ type_generic_param_list }
+internal_name = { STRING | generic_decl_name | class_name_path }
+generic_decl_name = { class_name_path ~ type_generic_param_list }
 
 // name_decl = { internal_name ~ ("as" ~ display_name)? }
 name_decl = { internal_name ~ alias_clause? }
@@ -142,9 +146,9 @@ template_param_list = _{ "<" ~ template_param ~ ("," ~ template_param)* ~ ">" }
 type_generic_param_list = { template_param_list }
 
 extends_clause = { "extends" ~ extends_target ~ ("," ~ extends_target)* }
-extends_target = { class_qualified_name }
+extends_target = { class_name_path }
 implements_clause = { "implements" ~ implements_target ~ ("," ~ implements_target)* }
-implements_target = { class_qualified_name }
+implements_target = { class_name_path }
 
 type_def_with_body = { type_def_decl ~ &(EOL* ~ "{") ~ EOL* ~ class_body ~ ";"? }
 object_def_with_body = { object_def_decl ~ &(EOL* ~ "{") ~ EOL* ~ class_body ~ ";"? }
@@ -449,7 +453,7 @@ enum_value_literal = @{ (!("\n" | "}") ~ ANY)+ }
 ///////////////////////////////////////////////////////////////
 
 qualified_identifier = @{
-    "." ~ name_ref ~ (("." | "::") ~ name_ref)*
+    ("." | "::") ~ name_ref ~ (("." | "::") ~ name_ref)*
     | name_ref ~ (("." | "::") ~ name_ref)+
 }
 relationship_multiplicity = { STRING }

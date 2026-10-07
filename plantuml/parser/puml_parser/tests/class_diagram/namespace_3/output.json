@@ -7,7 +7,7 @@
           "ClassDef": {
             "name": {
               "internal": "GlobalClass",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -29,14 +29,18 @@
         "Namespace": {
           "name": {
             "internal": "Data",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 17
           },
           "types": [
             {
               "ClassDef": {
                 "name": {
                   "internal": "DB",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "Data",
                 "package": "",

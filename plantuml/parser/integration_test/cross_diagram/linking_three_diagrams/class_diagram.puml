@@ -11,7 +11,9 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 @startuml
-interface IBackend {
-  +StartListening() : void
+package logging {
+  interface IBackend {
+    +StartListening() : void
+  }
 }
 @enduml

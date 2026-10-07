@@ -42,12 +42,12 @@ pub fn validate_sequence_internal_api(
 struct SequenceInternalApiValidator<'a> {
     sequence_diagram: &'a SequenceDiagramIndex,
     internal_api_interfaces_by_id: BTreeMap<String, &'a InternalApiInterface>,
-    component_context: Option<ComponentContext<'a>>,
+    component_context: Option<ComponentContext>,
     result: ValidationResult,
 }
 
-struct ComponentContext<'a> {
-    observed_call_contexts: Vec<SequenceCallContext<'a>>,
+struct ComponentContext {
+    observed_call_contexts: Vec<SequenceCallContext>,
     unit_bindings: UnitBindings,
     all_interfaces: BTreeSet<String>,
 }
@@ -100,14 +100,14 @@ impl<'a> SequenceInternalApiValidator<'a> {
         for call_context in &component_context.observed_call_contexts {
             let is_self_call = call_context.caller_unit == call_context.callee_unit;
 
-            let method_name = extract_method_name(call_context.method);
+            let method_name = extract_method_name(&call_context.method);
             if method_name.is_empty() {
                 continue;
             }
 
             let call_key = (
-                call_context.caller_unit.to_string(),
-                call_context.callee_unit.to_string(),
+                call_context.caller_unit.clone(),
+                call_context.callee_unit.clone(),
                 method_name.to_string(),
             );
             if !seen_calls.insert(call_key) {
@@ -146,8 +146,8 @@ impl<'a> SequenceInternalApiValidator<'a> {
 
     fn check_method_exists_in_internal_api(
         &self,
-        component_context: &ComponentContext<'_>,
-        call_context: &SequenceCallContext<'_>,
+        component_context: &ComponentContext,
+        call_context: &SequenceCallContext,
         method_name: &str,
     ) -> Option<String> {
         let matching_interfaces = matching_interfaces_with_method(
@@ -178,9 +178,9 @@ impl<'a> SequenceInternalApiValidator<'a> {
 
     fn check_cross_unit_call_consistency(
         &self,
-        component_context: &ComponentContext<'_>,
+        component_context: &ComponentContext,
         units_with_missing_internal_api_interfaces: &BTreeSet<String>,
-        call_context: &SequenceCallContext<'_>,
+        call_context: &SequenceCallContext,
         method_name: &str,
     ) -> Option<String> {
         if !call_context.has_shared_interfaces() {
@@ -188,8 +188,8 @@ impl<'a> SequenceInternalApiValidator<'a> {
             return None;
         }
 
-        if units_with_missing_internal_api_interfaces.contains(call_context.caller_unit)
-            || units_with_missing_internal_api_interfaces.contains(call_context.callee_unit)
+        if units_with_missing_internal_api_interfaces.contains(&call_context.caller_unit)
+            || units_with_missing_internal_api_interfaces.contains(&call_context.callee_unit)
         {
             // The component-internal-api validator reports missing interface declarations first.
             return None;
@@ -240,17 +240,17 @@ impl<'a> SequenceInternalApiValidator<'a> {
 
     fn check_cross_unit_call_role_consistency(
         &self,
-        component_context: &ComponentContext<'_>,
-        call_context: &SequenceCallContext<'_>,
+        component_context: &ComponentContext,
+        call_context: &SequenceCallContext,
         method_name: &str,
         shared_method_interfaces: &BTreeSet<String>,
     ) -> Option<String> {
         let caller_bindings = component_context
             .unit_bindings
-            .get(call_context.caller_unit)?;
+            .get(&call_context.caller_unit)?;
         let callee_bindings = component_context
             .unit_bindings
-            .get(call_context.callee_unit)?;
+            .get(&call_context.callee_unit)?;
 
         let caller_method_role_interfaces =
             intersect_interfaces(shared_method_interfaces, &role_interfaces(caller_bindings));
@@ -322,7 +322,7 @@ impl<'a> SequenceInternalApiValidator<'a> {
 
 fn append_debug_log(
     diagnostics: &mut Diagnostics,
-    component_context: &Option<ComponentContext<'_>>,
+    component_context: &Option<ComponentContext>,
     sequence_diagram: &SequenceDiagramIndex,
     internal_api_interfaces_by_id: &BTreeMap<String, &InternalApiInterface>,
 ) {
@@ -340,10 +340,10 @@ fn append_debug_log(
         }
 
         diagnostics.debug(|| "Unit interface targets from component diagrams:".to_string());
-        for (unit_alias, bindings) in &component_context.unit_bindings {
+        for (unit_id, bindings) in &component_context.unit_bindings {
             diagnostics.debug(|| {
                 format!(
-                    "  {unit_alias} -> {}",
+                    "  {unit_id} -> {}",
                     format_name_list(&bindings.all_interfaces)
                 )
             });
@@ -371,11 +371,11 @@ fn append_debug_log(
     }
 }
 
-fn build_component_context<'a>(
+fn build_component_context(
     component_diagram: &ComponentDiagramArchitecture,
-    sequence_diagram: &'a SequenceDiagramIndex,
+    sequence_diagram: &SequenceDiagramIndex,
     internal_api_diagram: &InternalApiIndex,
-) -> ComponentContext<'a> {
+) -> ComponentContext {
     let unit_bindings = build_unit_bindings(component_diagram);
     let all_interfaces = build_all_interfaces(component_diagram, internal_api_diagram);
     let observed_call_contexts =
@@ -437,7 +437,7 @@ fn collect_method_candidates_for_interfaces(
 
 fn collect_shared_internal_api_interface_ids(
     internal_api_interfaces_by_id: &BTreeMap<String, &InternalApiInterface>,
-    call_context: &SequenceCallContext<'_>,
+    call_context: &SequenceCallContext,
 ) -> BTreeSet<String> {
     intersect_interfaces(
         &call_context.caller_interfaces,
@@ -479,7 +479,7 @@ fn collect_units_with_missing_internal_api_interfaces(
                 !internal_api_interfaces_by_id.contains_key(interface_id.as_str())
             })
         })
-        .map(|(unit_alias, _)| unit_alias.clone())
+        .map(|(unit_id, _)| unit_id.clone())
         .collect()
 }
 
@@ -522,14 +522,14 @@ fn format_interface_method_coverage_error(
 }
 
 fn format_sequence_method_consistency_error(
-    call_context: &SequenceCallContext<'_>,
+    call_context: &SequenceCallContext,
     method_name: &str,
     description: &str,
     suggested_method: Option<&str>,
 ) -> String {
     let sequence_call = format_sequence_call(
-        call_context.caller_unit,
-        call_context.callee_unit,
+        &call_context.caller_unit,
+        &call_context.callee_unit,
         method_name,
     );
     let (source_file, source_line) = call_context.source_location.display();
@@ -555,13 +555,13 @@ fn format_sequence_method_consistency_error(
 }
 
 fn format_sequence_role_consistency_error(
-    call_context: &SequenceCallContext<'_>,
+    call_context: &SequenceCallContext,
     method_name: &str,
     expected_interfaces: &BTreeSet<String>,
 ) -> String {
     let sequence_call = format_sequence_call(
-        call_context.caller_unit,
-        call_context.callee_unit,
+        &call_context.caller_unit,
+        &call_context.callee_unit,
         method_name,
     );
 

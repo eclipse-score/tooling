@@ -13,7 +13,7 @@
 
 @startuml public_api
 
-class "Sample Library API" as SampleLibraryAPI {
+class SampleLibraryAPI {
     +GetNumber(): int
 }
 

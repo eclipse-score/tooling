@@ -1,0 +1,122 @@
+{
+    "separator_equivalence.puml": {
+        "name": "",
+        "entities": [
+            {
+                "id": "a.b.C",
+                "name": "C",
+                "enclosing_namespace_id": "a.b",
+                "stereotypes": [],
+                "entity_type": "Class",
+                "type_aliases": [],
+                "variables": [],
+                "methods": [],
+                "template_parameters": null,
+                "enum_literals": [],
+                "relationships": [],
+                "source_location": {
+                    "file": "",
+                    "line": 16
+                }
+            },
+            {
+                "id": "a.b.I",
+                "name": "I",
+                "enclosing_namespace_id": "a.b",
+                "stereotypes": [],
+                "entity_type": "Interface",
+                "type_aliases": [],
+                "variables": [],
+                "methods": [],
+                "template_parameters": null,
+                "enum_literals": [],
+                "relationships": [],
+                "source_location": {
+                    "file": "",
+                    "line": 17
+                }
+            },
+            {
+                "id": "a.b.D",
+                "name": "a::b::D",
+                "enclosing_namespace_id": "a.b",
+                "stereotypes": [],
+                "entity_type": "Class",
+                "type_aliases": [],
+                "variables": [],
+                "methods": [],
+                "template_parameters": null,
+                "enum_literals": [],
+                "relationships": [
+                    {
+                        "source": "a.b.D",
+                        "target": "a.b.C",
+                        "relation_type": "Inheritance",
+                        "source_multiplicity": null,
+                        "target_multiplicity": null,
+                        "source_location": {
+                            "file": "",
+                            "line": 19
+                        }
+                    },
+                    {
+                        "source": "a.b.D",
+                        "target": "a.b.I",
+                        "relation_type": "Implementation",
+                        "source_multiplicity": null,
+                        "target_multiplicity": null,
+                        "source_location": {
+                            "file": "",
+                            "line": 19
+                        }
+                    }
+                ],
+                "source_location": {
+                    "file": "",
+                    "line": 19
+                }
+            },
+            {
+                "id": "E",
+                "name": "E",
+                "enclosing_namespace_id": null,
+                "stereotypes": [],
+                "entity_type": "Class",
+                "type_aliases": [],
+                "variables": [],
+                "methods": [],
+                "template_parameters": null,
+                "enum_literals": [],
+                "relationships": [
+                    {
+                        "source": "E",
+                        "target": "a.b.D",
+                        "relation_type": "Association",
+                        "source_multiplicity": null,
+                        "target_multiplicity": null,
+                        "source_location": {
+                            "file": "",
+                            "line": 21
+                        }
+                    },
+                    {
+                        "source": "E",
+                        "target": "a.b.C",
+                        "relation_type": "Association",
+                        "source_multiplicity": null,
+                        "target_multiplicity": null,
+                        "source_location": {
+                            "file": "",
+                            "line": 22
+                        }
+                    }
+                ],
+                "source_location": {
+                    "file": "",
+                    "line": 20
+                }
+            }
+        ],
+        "free_functions": []
+    }
+}

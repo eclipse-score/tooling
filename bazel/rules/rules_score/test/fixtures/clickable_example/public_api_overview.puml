@@ -13,12 +13,12 @@
 
 @startuml public_api_overview
 
-package "Package Pub" as package_pub {
-    component "Component Pub" as component_pub <<component>> {
-        component "Unit Pub" as unit_pub <<unit>>
+package package_pub {
+    component component_pub <<component>> {
+        component unit_pub <<unit>>
     }
 
-    interface "PublicInterface" as PublicInterface
+    interface PublicInterface
     unit_pub -( PublicInterface
 }
 

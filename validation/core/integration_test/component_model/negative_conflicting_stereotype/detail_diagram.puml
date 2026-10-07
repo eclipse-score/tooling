@@ -13,9 +13,9 @@
 
 @startuml detail_diagram
 
-package "Package A" as package_a <<SEooC>> {
-    component "Component A" as component_a <<component>> {
-        component "Shared Thing" as shared_thing <<unit>>
+package package_a <<SEooC>> {
+    component component_a <<component>> {
+        component shared_thing <<unit>>
     }
 }
 

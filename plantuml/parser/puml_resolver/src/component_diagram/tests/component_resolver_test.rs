@@ -110,6 +110,36 @@ fn test_relation_quoted_name() {
 }
 
 #[test]
+fn test_qualified_component_in_component() {
+    run_component_resolver_case("qualified_component_in_component");
+}
+
+#[test]
+fn test_unquoted_qualified_endpoint() {
+    run_component_resolver_case("unquoted_qualified_endpoint");
+}
+
+#[test]
+fn test_qualified_interface_top_level() {
+    run_component_resolver_case("qualified_interface_top_level");
+}
+
+#[test]
+fn test_qualified_port_owner() {
+    run_component_resolver_case("qualified_port_owner");
+}
+
+#[test]
+fn test_invalid_qualified_port_owner_missing() {
+    run_component_resolver_case("invalid_qualified_port_owner_missing");
+}
+
+#[test]
+fn test_separator_equivalence() {
+    run_component_resolver_case("separator_equivalence");
+}
+
+#[test]
 fn test_relation_simple_name_prefers_direct_hit() {
     run_component_resolver_case("relation_simple_name_prefers_direct_hit");
 }
@@ -142,6 +172,36 @@ fn test_invalid_ambiguous_nested_reference() {
 #[test]
 fn test_invalid_unresolved_label_reference() {
     run_component_resolver_case("invalid_unresolved_label_reference");
+}
+
+#[test]
+fn test_name_wins_over_alias() {
+    run_component_resolver_case("name_wins_over_alias");
+}
+
+#[test]
+fn test_invalid_prose_label() {
+    run_component_resolver_case("invalid_prose_label");
+}
+
+#[test]
+fn test_invalid_duplicate_alias() {
+    run_component_resolver_case("invalid_duplicate_alias");
+}
+
+#[test]
+fn test_invalid_prose_port() {
+    run_component_resolver_case("invalid_prose_port");
+}
+
+#[test]
+fn test_invalid_duplicate_port() {
+    run_component_resolver_case("invalid_duplicate_port");
+}
+
+#[test]
+fn test_invalid_port_reference_by_name() {
+    run_component_resolver_case("invalid_port_reference_by_name");
 }
 
 #[test]
@@ -360,7 +420,7 @@ fn test_nested_elements() {
 }
 
 #[test]
-fn test_root_anchor_prefixes_ids_and_resolves_references() {
+fn test_nested_ids_and_references() {
     let source = "@startuml\n\
         component C\n\
         component D\n\
@@ -374,35 +434,23 @@ fn test_root_anchor_prefixes_ids_and_resolves_references() {
         C --> P.A\n\
         D --> p\n\
         @enduml\n";
-    let path = Rc::new(PathBuf::from("anchor.puml"));
+    let path = Rc::new(PathBuf::from("nested.puml"));
     let document = PumlComponentParser
         .parse_file(&path, source, LogLevel::Error)
         .expect("source must parse");
 
-    let mut resolver = ComponentResolver::with_root_anchor(Some("score::mw"));
+    let mut resolver = ComponentResolver::new();
     let logic = resolver.resolve(&document).expect("document must resolve");
 
     let mut ids: Vec<&str> = logic.keys().map(String::as_str).collect();
     ids.sort();
-    assert_eq!(
-        ids,
-        [
-            "score.mw.C",
-            "score.mw.D",
-            "score.mw.P",
-            "score.mw.P.A",
-            "score.mw.P.B"
-        ]
-    );
+    assert_eq!(ids, ["C", "D", "P", "P.A", "P.B"]);
 
-    assert_eq!(logic["score.mw.C"].parent_id, None);
-    assert_eq!(
-        logic["score.mw.P.A"].parent_id.as_deref(),
-        Some("score.mw.P")
-    );
-    assert_eq!(logic["score.mw.C"].relations[0].target, "score.mw.P.A");
-    assert_eq!(logic["score.mw.D"].relations[0].target, "score.mw.P.A");
-    assert_eq!(logic["score.mw.P.A"].relations[0].target, "score.mw.P.B");
+    assert_eq!(logic["C"].parent_id, None);
+    assert_eq!(logic["P.A"].parent_id.as_deref(), Some("P"));
+    assert_eq!(logic["C"].relations[0].target, "P.A");
+    assert_eq!(logic["D"].relations[0].target, "P.A");
+    assert_eq!(logic["P.A"].relations[0].target, "P.B");
 }
 
 #[test]

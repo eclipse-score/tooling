@@ -1,0 +1,25 @@
+{
+    "rooted_declaration_in_package.puml": {
+        "name": "",
+        "entities": [
+            {
+                "id": "core.geometry.Circle",
+                "name": "core::geometry::Circle",
+                "enclosing_namespace_id": "core.geometry",
+                "stereotypes": [],
+                "entity_type": "Class",
+                "type_aliases": [],
+                "variables": [],
+                "methods": [],
+                "template_parameters": null,
+                "enum_literals": [],
+                "relationships": [],
+                "source_location": {
+                    "file": "",
+                    "line": 16
+                }
+            }
+        ],
+        "free_functions": []
+    }
+}

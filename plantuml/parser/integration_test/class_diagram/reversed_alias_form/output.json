@@ -1,0 +1,22 @@
+{
+  "reversed_alias_form.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "a.Foo",
+        "name": "F",
+        "enclosing_namespace_id": "a",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 15 }
+      }
+    ],
+    "free_functions": []
+  }
+}

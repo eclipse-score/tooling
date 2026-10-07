@@ -30,13 +30,14 @@ contributed to it. See the `architectural_design` rule reference for the
 cross-file merge rules.
 
 All comparisons are case-insensitive: both Bazel entity keys and PlantUML
-aliases/IDs are normalized to lowercase before matching, so a Bazel entity
-`Component_X` matches a PlantUML entity `as COMPONENT_X`. Names are derived
-from the PlantUML `alias` when present, otherwise from the `id`. On the
+names are normalized to lowercase before matching, so a Bazel entity
+`Component_X` matches a PlantUML entity `COMPONENT_X`. The PlantUML name is
+the last segment of the entity id; an `as` alias is a local key for
+relations and does not take part in matching. On the
 Bazel side, each `unit`/`component` entry carries a `design_name` (the
 `design_name` attribute passed to the `unit`/`component` macro, defaulting
 to the target's short name) which is used as the entity key, also
-lowercased. Parent aliases are lowercased the same way when resolving
+lowercased. Parent names are lowercased the same way when resolving
 parent-child relationships.
 
 ### Dependable Element Consistency
@@ -53,7 +54,7 @@ dependable_element(
 ```
 
 ```text
-package "Sample Seooc" as safety_software_seooc_example <<SEooC>> {
+package safety_software_seooc_example <<SEooC>> {
 }
 ```
 
@@ -74,8 +75,8 @@ component(
 ```
 
 ```text
-package "Sample Seooc" as safety_software_seooc_example <<SEooC>> {
-    component "Component Example" as component_example <<component>> {
+package safety_software_seooc_example <<SEooC>> {
+    component component_example <<component>> {
     }
 }
 ```
@@ -97,17 +98,17 @@ unit(
 ```
 
 ```text
-component "Component Example" as component_example <<component>> {
-    component "Unit 1" as unit_1 <<unit>>
-    component "Unit 2" as unit_2 <<unit>>
+component component_example <<component>> {
+    component unit_1 <<unit>>
+    component unit_2 <<unit>>
 }
 ```
 
 ### Parent Context
 
 In the common case, components nested directly under the dependable element use
-the dependable element alias as parent. More deeply nested components use their
-immediate enclosing component alias as parent.
+the dependable element name as parent. More deeply nested components use their
+immediate enclosing component name as parent.
 *(Requirements: {requirement:downstream-ref}`Tools.BazelComponentNameCaseInsensitive`, {requirement:downstream-ref}`Tools.BazelComponentParentContext`)*
 
 ### Bazel Label Format Validation

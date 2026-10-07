@@ -1,0 +1,11 @@
+{
+    "component_diagram.puml": {
+        "defines": {
+            "logging": "logging",
+            "Recorder": "logging.Recorder"
+        },
+        "references": {
+            "Backend": "logging.Recorder.Backend"
+        }
+    }
+}

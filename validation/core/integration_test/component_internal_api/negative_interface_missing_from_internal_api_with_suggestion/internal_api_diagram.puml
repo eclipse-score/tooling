@@ -14,7 +14,7 @@
 @startuml
 
 package package_a {
-    interface "internal_interface" as internal_interface {
+    interface internal_interface {
         + GetData()
     }
 }

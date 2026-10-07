@@ -1,0 +1,14 @@
+{
+    "component_diagram.puml": {
+        "defines": {},
+        "references": {
+            "a.b.Worker": "a.b.Worker"
+        }
+    },
+    "class_diagram.puml": {
+        "defines": {},
+        "references": {
+            "a::b::Worker": "a.b.Worker"
+        }
+    }
+}

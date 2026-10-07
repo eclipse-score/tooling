@@ -6,14 +6,18 @@
         "Package": {
           "name": {
             "internal": "Core",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 15
           },
           "types": [
             {
               "ClassDef": {
                 "name": {
                   "internal": "A",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "",
                 "package": "Core",
@@ -34,7 +38,7 @@
               "ClassDef": {
                 "name": {
                   "internal": "B",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "",
                 "package": "Core",
@@ -60,7 +64,11 @@
         "Package": {
           "name": {
             "internal": "App",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 20
           },
           "types": [],
           "relationships": [],
@@ -68,14 +76,18 @@
             {
               "name": {
                 "internal": "UI",
-                "display": null
+                "alias": null
+              },
+              "source_location": {
+                "file": "",
+                "line": 21
               },
               "types": [
                 {
                   "ClassDef": {
                     "name": {
                       "internal": "Button",
-                      "display": null
+                      "alias": null
                     },
                     "namespace": "",
                     "package": "UI",

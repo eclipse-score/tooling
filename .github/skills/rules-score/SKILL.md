@@ -160,8 +160,8 @@ dependable_element(
 )
 ```
 
-Note how the diagram alias must equal the target name — `docs/static_design.puml` declares
-`package "my_element" ... { component "MyComponent" { component "MyUnit" } }`, matching
+Note how the diagram name must equal the target name — `docs/static_design.puml` declares
+`package my_element ... { component MyComponent { component MyUnit } }`, matching
 `dependable_element(name = "my_element")`, `component(name = "MyComponent")`, and
 `unit(name = "MyUnit")`. This is enforced by the `bazel_component` validator (see
 **score-architecture**).
@@ -213,7 +213,7 @@ warnings while a design is in progress; switch to `"release"` before certificati
 - **ASIL vs. integrity_level**: requirement records use `ScoreReq.Asil` = `QM`/`B`/`D` only;
   `dependable_element.integrity_level` uses `A`/`B`/`C`/`D` (D > C > B > A) for the element
   hierarchy.
-- **Naming**: diagram aliases must equal Bazel target names. `bazel_component` is case-insensitive;
+- **Naming**: diagram names must equal Bazel target names. `bazel_component` is case-insensitive;
   all other validators are case-sensitive.
 - **Traceability spine**: `AssumedSystemReq → FeatReq → CompReq` (version-pinned `@`) →
   `lobster-tracing` in tests → `test_case_coverage.lock.yaml`; `FailureMode.interface` links safety

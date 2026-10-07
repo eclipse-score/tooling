@@ -165,3 +165,78 @@ fn test_invalid_destroyed_participant_use_is_rejected() {
 fn test_recreate_destroyed_participant_is_allowed() {
     run_sequence_resolver_case("recreate_destroyed_participant");
 }
+
+#[test]
+fn test_uid_qualified_label_path() {
+    run_sequence_resolver_case("uid_qualified_label_path");
+}
+
+#[test]
+fn test_uid_label_wins() {
+    run_sequence_resolver_case("uid_label_wins");
+}
+
+#[test]
+fn test_uid_bare_name() {
+    run_sequence_resolver_case("uid_bare_name");
+}
+
+#[test]
+fn test_uid_external_endpoint() {
+    run_sequence_resolver_case("uid_external_endpoint");
+}
+
+#[test]
+fn test_uid_external_endpoint_aliased() {
+    run_sequence_resolver_case("uid_external_endpoint_aliased");
+}
+
+#[test]
+fn test_uid_backslash_n_first_line() {
+    run_sequence_resolver_case("uid_backslash_n_first_line");
+}
+
+#[test]
+fn test_invalid_prose_label() {
+    run_sequence_resolver_case("invalid_prose_label");
+}
+
+#[test]
+fn test_invalid_external_endpoint_alias() {
+    run_sequence_resolver_case("invalid_external_endpoint_alias");
+}
+
+#[test]
+fn test_invalid_dash_name() {
+    run_sequence_resolver_case("invalid_dash_name");
+}
+
+#[test]
+fn test_invalid_free_text_message_endpoint() {
+    run_sequence_resolver_case("invalid_free_text_message_endpoint");
+}
+
+#[test]
+fn test_invalid_duplicate_participant_uid() {
+    run_sequence_resolver_case("invalid_duplicate_participant_uid");
+}
+
+#[test]
+fn test_invalid_duplicate_reference_name() {
+    run_sequence_resolver_case("invalid_duplicate_reference_name");
+}
+
+#[test]
+fn test_invalid_display_name_reference() {
+    run_sequence_resolver_case("invalid_display_name_reference");
+}
+
+#[test]
+fn test_invalid_unknown_lifecycle_participant() {
+    run_sequence_resolver_case("invalid_unknown_lifecycle_participant");
+}
+
+#[test]
+fn test_invalid_unknown_ref_participant() {
+    run_sequence_resolver_case("invalid_unknown_ref_participant");
+}

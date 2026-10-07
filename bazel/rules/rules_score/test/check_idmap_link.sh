@@ -15,7 +15,7 @@ set -euo pipefail
 
 # Generic regression-test helper for clickable_plantuml example fixtures.
 #
-# Usage: check_idmap_link.sh <expected_id> <idmap.json rootpath>...
+# Usage: check_idmap_link.sh [--alias] <expected_id> <idmap.json rootpath>...
 #
 # Asserts that, among the given `*.idmap.json` files (real Bazel-built
 # artifacts produced by puml_cli/puml_idmap), `<expected_id>` appears in at
@@ -23,7 +23,16 @@ set -euo pipefail
 # list - i.e. that clickable_plantuml has exactly what it needs (a reference
 # plus a matching definer) to make that element clickable, regardless of
 # which diagram type (component, class, interface, ...) produced each file.
+#
+# With --alias, the match is on the entry's "alias" instead of its "id": the
+# clickable fallback when a unit id (pkg.comp.unit_x) differs from the class
+# namespace id (unit_x) but both end in the same name.
 
+match_key=id
+if [[ "$1" == "--alias" ]]; then
+    match_key=alias
+    shift
+fi
 expected_id="$1"
 shift
 
@@ -44,23 +53,24 @@ python3 -c "
 import json, sys
 
 expected_id = sys.argv[1]
-paths = sys.argv[2:]
+key = sys.argv[2]
+paths = sys.argv[3:]
 
 has_define = False
 has_reference = False
 for p in paths:
     with open(p) as f:
         data = json.load(f)
-    if any(e['id'] == expected_id for e in data.get('defines', [])):
+    if any(e[key] == expected_id for e in data.get('defines', [])):
         has_define = True
-    if any(e['id'] == expected_id for e in data.get('references', [])):
+    if any(e[key] == expected_id for e in data.get('references', [])):
         has_reference = True
 
 if not has_define:
-    print(f'Error: no idmap.json defines id {expected_id!r}', file=sys.stderr)
+    print(f'Error: no idmap.json defines {key} {expected_id!r}', file=sys.stderr)
     sys.exit(1)
 if not has_reference:
-    print(f'Error: no idmap.json references id {expected_id!r}', file=sys.stderr)
+    print(f'Error: no idmap.json references {key} {expected_id!r}', file=sys.stderr)
     sys.exit(1)
 print('ok')
-" "${expected_id}" "${idmap_paths[@]}"
+" "${expected_id}" "${match_key}" "${idmap_paths[@]}"

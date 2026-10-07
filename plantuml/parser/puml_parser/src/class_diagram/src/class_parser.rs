@@ -84,7 +84,7 @@ impl IgnoredObjectRegistry {
         self.ids.insert(Self::build_fqn(&name.internal, parent));
         self.names.insert(name.internal.clone());
 
-        if let Some(alias) = &name.display {
+        if let Some(alias) = &name.alias {
             self.names.insert(alias.clone());
         }
     }
@@ -141,59 +141,71 @@ impl ClassParseSession<'_> {
         vis
     }
 
+    /// A quoted alias (`X as "Label"`) is the name, the bare side the alias.
     fn parse_named(pair: pest::iterators::Pair<Rule>, name: &mut Name) {
-        let mut internal: Option<String> = None;
-        let mut display: Option<String> = None;
+        #[derive(Default)]
+        struct Parts {
+            internal: Option<String>,
+            alias: Option<String>,
+            alias_quoted: bool,
+        }
+
+        fn is_quoted(s: &str) -> bool {
+            s.starts_with('"') && s.ends_with('"') && s.len() >= 2
+        }
 
         fn strip_quotes(s: &str) -> String {
-            if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
+            if is_quoted(s) {
                 s[1..s.len() - 1].to_string()
             } else {
                 s.to_string()
             }
         }
 
-        fn walk(
-            pair: pest::iterators::Pair<Rule>,
-            internal: &mut Option<String>,
-            display: &mut Option<String>,
-        ) {
+        fn walk(pair: pest::iterators::Pair<Rule>, parts: &mut Parts) {
             match pair.as_rule() {
                 Rule::internal_name => {
                     let raw = pair.as_str().to_string();
                     let saw_inner = pair.clone().into_inner().next().is_some();
 
                     for inner in pair.into_inner() {
-                        walk(inner, internal, display);
+                        walk(inner, parts);
                     }
 
                     if !saw_inner {
-                        *internal = Some(strip_quotes(&raw));
+                        parts.internal = Some(strip_quotes(&raw));
                     }
                 }
-                Rule::STRING | Rule::class_qualified_name => {
-                    if internal.is_none() {
-                        *internal = Some(strip_quotes(pair.as_str()));
+                Rule::STRING | Rule::class_name_path => {
+                    if parts.internal.is_none() {
+                        parts.internal = Some(strip_quotes(pair.as_str()));
                     }
                 }
                 Rule::alias_clause => {
                     let mut inner = pair.into_inner();
                     if let Some(target) = inner.next() {
-                        *display = Some(strip_quotes(target.as_str()));
+                        parts.alias = Some(strip_quotes(target.as_str()));
+                        parts.alias_quoted = is_quoted(target.as_str());
                     }
                 }
                 _ => {
                     for inner in pair.into_inner() {
-                        walk(inner, internal, display);
+                        walk(inner, parts);
                     }
                 }
             }
         }
 
-        walk(pair, &mut internal, &mut display);
+        let mut parts = Parts::default();
+        walk(pair, &mut parts);
 
-        if let Some(internal) = internal {
-            name.write_name(&internal, display.as_deref());
+        if let Some(internal) = parts.internal {
+            match parts.alias {
+                Some(alias) if parts.alias_quoted => {
+                    name.write_name(alias, Some(internal));
+                }
+                alias => name.write_name(&internal, alias.as_deref()),
+            }
         }
     }
 
@@ -591,10 +603,7 @@ impl ClassParseSession<'_> {
                 match pair.as_rule() {
                     Rule::extends_clause => {
                         for inner in pair.into_inner() {
-                            if matches!(
-                                inner.as_rule(),
-                                Rule::extends_target | Rule::class_qualified_name
-                            ) {
+                            if inner.as_rule() == Rule::extends_target {
                                 targets.push(inner.as_str().to_string());
                             }
                         }
@@ -617,10 +626,7 @@ impl ClassParseSession<'_> {
                 match pair.as_rule() {
                     Rule::implements_clause => {
                         for inner in pair.into_inner() {
-                            if matches!(
-                                inner.as_rule(),
-                                Rule::implements_target | Rule::class_qualified_name
-                            ) {
+                            if inner.as_rule() == Rule::implements_target {
                                 targets.push(inner.as_str().to_string());
                             }
                         }
@@ -725,7 +731,7 @@ impl ClassParseSession<'_> {
             raw_type_def: &str,
         ) -> Option<Vec<String>> {
             explicit.or_else(|| {
-                name.display
+                name.alias
                     .as_deref()
                     .and_then(infer_template_parameters_from_template_string)
                     .or_else(|| infer_template_parameters_from_template_string(&name.internal))
@@ -913,7 +919,10 @@ impl ClassParseSession<'_> {
         &mut self,
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<(Namespace, IgnoredObjectRegistry), ClassError> {
-        let mut namespace = Namespace::default();
+        let mut namespace = Namespace {
+            source_location: self.original_source_location(&pair),
+            ..Namespace::default()
+        };
         let mut ignored_objects = IgnoredObjectRegistry::default();
         let mut relationships = Vec::new();
 
@@ -986,7 +995,10 @@ impl ClassParseSession<'_> {
         &mut self,
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<(Package, IgnoredObjectRegistry), ClassError> {
-        let mut package = Package::default();
+        let mut package = Package {
+            source_location: self.original_source_location(&pair),
+            ..Package::default()
+        };
         let mut ignored_objects = IgnoredObjectRegistry::default();
         let mut relationships = Vec::new();
 
@@ -1515,6 +1527,157 @@ mod tests {
         let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
 
         assert_eq!(rel.right, ".B");
+    }
+
+    #[test]
+    fn test_parse_relationship_double_colon_root_marker_endpoint() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "::a::A --> ::b::B")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
+
+        assert_eq!(rel.left, "::a::A");
+        assert_eq!(rel.right, "::b::B");
+    }
+
+    fn parse_class_diagram_body(body: &str) -> Result<ClassUmlFile, ClassError> {
+        let input = format!("@startuml\n{body}\n@enduml\n");
+        PumlClassParser.parse_file(
+            &std::rc::Rc::new(std::path::PathBuf::from("test.puml")),
+            &input,
+            LogLevel::Info,
+        )
+    }
+
+    /// Both separators and both root markers, for every qualified position.
+    const NAME_SPELLINGS: [&str; 6] = ["a.b.C", "a::b::C", "a.b::C", ".a.C", "::a::C", "::a.C"];
+
+    #[test]
+    fn test_declaration_names_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            for keyword in ["class", "struct", "interface", "abstract class"] {
+                let file = parse_class_diagram_body(&format!("{keyword} {spelling}"))
+                    .unwrap_or_else(|error| panic!("`{keyword} {spelling}`: {error:?}"));
+                let ClassUmlTopLevel::Types(element) = &file.elements[0] else {
+                    panic!("`{keyword} {spelling}`: expected a type element");
+                };
+                let name = match element {
+                    Element::ClassDef(def) => &def.name,
+                    Element::StructDef(def) => &def.name,
+                    Element::InterfaceDef(def) => &def.name,
+                    Element::EnumDef(def) => &def.name,
+                };
+                assert_eq!(name.internal, spelling, "`{keyword} {spelling}`");
+            }
+
+            let file = parse_class_diagram_body(&format!("enum {spelling}"))
+                .unwrap_or_else(|error| panic!("`enum {spelling}`: {error:?}"));
+            let ClassUmlTopLevel::Enum(def) = &file.elements[0] else {
+                panic!("`enum {spelling}`: expected an enum");
+            };
+            assert_eq!(def.name.internal, spelling);
+        }
+    }
+
+    #[test]
+    fn test_package_and_namespace_names_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            let file = parse_class_diagram_body(&format!("package {spelling} {{\n}}"))
+                .unwrap_or_else(|error| panic!("`package {spelling}`: {error:?}"));
+            let ClassUmlTopLevel::Package(package) = &file.elements[0] else {
+                panic!("`package {spelling}`: expected a package");
+            };
+            assert_eq!(package.name.internal, spelling);
+
+            let file = parse_class_diagram_body(&format!("namespace {spelling} {{\n}}"))
+                .unwrap_or_else(|error| panic!("`namespace {spelling}`: {error:?}"));
+            let ClassUmlTopLevel::Namespace(namespace) = &file.elements[0] else {
+                panic!("`namespace {spelling}`: expected a namespace");
+            };
+            assert_eq!(namespace.name.internal, spelling);
+        }
+    }
+
+    #[test]
+    fn test_extends_and_implements_targets_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            let file = parse_class_diagram_body(&format!(
+                "class X extends {spelling}, Y implements {spelling}, Z"
+            ))
+            .unwrap_or_else(|error| panic!("{spelling}: {error:?}"));
+            let ClassUmlTopLevel::Types(Element::ClassDef(def)) = &file.elements[0] else {
+                panic!("{spelling}: expected a class");
+            };
+            assert_eq!(def.extends, [spelling, "Y"], "{spelling}");
+            assert_eq!(def.implements, [spelling, "Z"], "{spelling}");
+        }
+    }
+
+    #[test]
+    fn test_relationship_endpoints_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            let file = parse_class_diagram_body(&format!("{spelling} --> {spelling}"))
+                .unwrap_or_else(|error| panic!("{spelling}: {error:?}"));
+            assert_eq!(file.relationships.len(), 1, "{spelling}");
+            assert_eq!(file.relationships[0].left, spelling);
+            assert_eq!(file.relationships[0].right, spelling);
+        }
+    }
+
+    #[test]
+    fn test_malformed_qualified_names_are_rejected() {
+        for spelling in ["a..b", "a::", "a:::b", "::", ".", "a.", "a.::b"] {
+            for body in [
+                format!("class {spelling}"),
+                format!("package {spelling} {{\n}}"),
+                format!("class X extends {spelling}"),
+            ] {
+                let result = parse_class_diagram_body(&body);
+                assert!(result.is_err(), "`{body}` must not parse: {result:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_quoted_alias_is_the_name() {
+        let file = parse_class_diagram_body("class F as \"a::Foo\"\npackage p as \"b::q\" {\n}")
+            .expect("must parse");
+
+        let ClassUmlTopLevel::Types(Element::ClassDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+        assert_eq!(def.name.internal, "a::Foo");
+        assert_eq!(def.name.alias.as_deref(), Some("F"));
+
+        let ClassUmlTopLevel::Package(package) = &file.elements[1] else {
+            panic!("expected a package");
+        };
+        assert_eq!(package.name.internal, "b::q");
+        assert_eq!(package.name.alias.as_deref(), Some("p"));
+    }
+
+    #[test]
+    fn test_quoted_name_with_bare_alias_keeps_roles() {
+        let file = parse_class_diagram_body("class \"a::Foo\" as F").expect("must parse");
+
+        let ClassUmlTopLevel::Types(Element::ClassDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+        assert_eq!(def.name.internal, "a::Foo");
+        assert_eq!(def.name.alias.as_deref(), Some("F"));
+    }
+
+    #[test]
+    fn test_quoted_alias_is_the_name_even_when_the_name_is_quoted() {
+        let file = parse_class_diagram_body("class \"A\" as \"b::B\"").expect("must parse");
+
+        let ClassUmlTopLevel::Types(Element::ClassDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+        assert_eq!(def.name.internal, "b::B");
+        assert_eq!(def.name.alias.as_deref(), Some("A"));
     }
 
     #[test]

@@ -68,12 +68,12 @@ pub enum EnumValue {
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Name {
     pub internal: String,
-    pub display: Option<String>,
+    pub alias: Option<String>,
 }
 impl WritableName for Name {
-    fn write_name(&mut self, internal: impl Into<String>, display: Option<impl Into<String>>) {
+    fn write_name(&mut self, internal: impl Into<String>, alias: Option<impl Into<String>>) {
         self.internal = internal.into();
-        self.display = display.map(|d| d.into());
+        self.alias = alias.map(|d| d.into());
     }
 }
 
@@ -289,6 +289,7 @@ pub struct EnumItem {
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Namespace {
     pub name: Name,
+    pub source_location: SourceLocation,
     pub types: Vec<Element>,
     pub relationships: Vec<Relationship>,
     pub namespaces: Vec<Namespace>,
@@ -297,6 +298,7 @@ pub struct Namespace {
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Package {
     pub name: Name,
+    pub source_location: SourceLocation,
     pub types: Vec<Element>,
     pub relationships: Vec<Relationship>,
     pub packages: Vec<Package>,
@@ -345,20 +347,20 @@ mod tests {
     fn test_name_write() {
         let mut name = Name::default();
 
-        name.write_name("InternalName", Some("DisplayName"));
+        name.write_name("InternalName", Some("AliasName"));
 
         assert_eq!(name.internal, "InternalName");
-        assert_eq!(name.display, Some("DisplayName".to_string()));
+        assert_eq!(name.alias, Some("AliasName".to_string()));
     }
 
     #[test]
-    fn test_name_write_without_display() {
+    fn test_name_write_without_alias() {
         let mut name = Name::default();
 
         name.write_name("OnlyInternal", None::<String>);
 
         assert_eq!(name.internal, "OnlyInternal");
-        assert_eq!(name.display, None);
+        assert_eq!(name.alias, None);
     }
 
     #[test]
@@ -724,19 +726,19 @@ mod tests {
 
         name.write_name("abc", None::<String>);
         assert_eq!(name.internal, "abc");
-        assert_eq!(name.display, None);
+        assert_eq!(name.alias, None);
 
         name.write_name("abc", Some("ABC"));
         assert_eq!(name.internal, "abc");
-        assert_eq!(name.display, Some("ABC".to_string()));
+        assert_eq!(name.alias, Some("ABC".to_string()));
 
         let internal = String::from("xyz");
-        let display = String::from("XYZ");
+        let alias = String::from("XYZ");
 
-        name.write_name(internal, Some(display));
+        name.write_name(internal, Some(alias));
 
         assert_eq!(name.internal, "xyz");
-        assert_eq!(name.display, Some("XYZ".to_string()));
+        assert_eq!(name.alias, Some("XYZ".to_string()));
     }
 
     #[test]
@@ -769,19 +771,19 @@ mod tests {
 
         name.write_name("abc", None::<String>);
         assert_eq!(name.internal, "abc");
-        assert_eq!(name.display, None);
+        assert_eq!(name.alias, None);
 
         name.write_name("abc", Some(String::from("x")));
         assert_eq!(name.internal, "abc");
-        assert_eq!(name.display, Some("x".to_string()));
+        assert_eq!(name.alias, Some("x".to_string()));
 
         name.write_name("abc", None::<&str>);
         assert_eq!(name.internal, "abc");
-        assert_eq!(name.display, None);
+        assert_eq!(name.alias, None);
 
         name.write_name("abc", Some("x"));
         assert_eq!(name.internal, "abc");
-        assert_eq!(name.display, Some("x".to_string()));
+        assert_eq!(name.alias, Some("x".to_string()));
 
         let mut s = StructDef::default();
         s.methods_mut().push(Method {

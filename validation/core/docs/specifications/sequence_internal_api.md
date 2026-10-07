@@ -35,6 +35,11 @@ are validated. Return/response interactions (dashed arrows, e.g.
 `unit_2 --> unit_1 : Ack`) are not checked against the internal API and do not
 contribute to interface coverage.
 
+Participants are linked to component-diagram units by uid: a qualified uid
+equals a unit id, a single-segment uid matches the unique unit whose id ends in
+that segment. A participant that does not resolve to exactly one unit has no
+interface context; the Component Sequence validator reports it.
+
 Method names are extracted by taking the text before the first `(` and
 trimming whitespace, so a sequence call `GetData(d: Data*)` is compared
 against an internal API method declared as `GetData()` using the same name
@@ -69,21 +74,21 @@ because another validator is responsible for reporting the root cause:
 
 ```text
 ' component diagram
-component "Unit 1" as unit_1 <<unit>>
-component "Unit 2" as unit_2 <<unit>>
-interface "IData" as IData
+component unit_1 <<unit>>
+component unit_2 <<unit>>
+interface IData
 unit_1 -( IData
 unit_2 )- IData
 ```
 
 ```
 ' sequence diagram
-participant "Unit 1" as unit_1
-participant "Unit 2" as unit_2
+participant unit_1
+participant unit_2
 unit_1 -> unit_2 : GetData()
 
 ' internal_api diagram
-interface "IData" as IData <<interface>> {
+interface IData <<interface>> {
   {abstract} GetData(): Data*
 }
 ```
@@ -101,23 +106,23 @@ this check.
 
 ```text
 ' component diagram
-component "Unit 1" as unit_1 <<unit>>
-component "Unit 2" as unit_2 <<unit>>
-interface "IData" as IData
+component unit_1 <<unit>>
+component unit_2 <<unit>>
+interface IData
 unit_1 -( IData
 unit_2 )- IData
 ```
 
 ```text
 ' sequence diagram
-participant "Unit 1" as unit_1
-participant "Unit 2" as unit_2
+participant unit_1
+participant unit_2
 unit_1 -> unit_2 : GetData()
 ```
 
 ```text
 ' internal_api diagram
-interface "IData" as IData <<interface>> {
+interface IData <<interface>> {
   {abstract} GetData(): Data*
 }
 ```
@@ -136,7 +141,7 @@ the same method are only counted once.
 
 ```text
 ' internal_api diagram
-interface "IData" as IData <<interface>> {
+interface IData <<interface>> {
   {abstract} GetData(): Data*
   {abstract} SetData(d: Data*): void
 }
@@ -144,8 +149,8 @@ interface "IData" as IData <<interface>> {
 
 ```text
 ' sequence diagram
-participant "Unit 1" as unit_1
-participant "Unit 2" as unit_2
+participant unit_1
+participant unit_2
 unit_1 -> unit_2 : GetData()
 unit_1 -> unit_2 : SetData(d)
 ```

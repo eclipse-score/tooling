@@ -270,19 +270,19 @@ Any component-type element (``<<SEooC>>``, ``<<component>>``, or ``<<unit>>``) c
 
     @startuml static_design
 
-    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
-        component "ComponentExample" as component_example <<component>> {
-            component "Unit 1" as unit_1 <<unit>>
-            component "Unit 2" as unit_2 <<unit>>
-            component "Sub Component Example" as sub_component_example <<component>>
+    package safety_software_seooc_example <<SEooC>> {
+        component component_example <<component>> {
+            component unit_1 <<unit>>
+            component unit_2 <<unit>>
+            component sub_component_example <<component>>
 
-            interface "InternalInterface" as InternalInterface
+            interface InternalInterface
             unit_1 -l-( InternalInterface
             unit_2 -r- InternalInterface
         }
     }
 
-    interface "SampleLibraryAPI" as SampleLibraryAPI
+    interface SampleLibraryAPI
 
     safety_software_seooc_example )-d- SampleLibraryAPI
 
@@ -297,17 +297,17 @@ When an element needs an explicitly named, standalone binding point — for exam
 
     @startuml SeoocExample_StaticDesign
 
-    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
-        component "ComponentExample" as component_example <<component>> {
-            component "Unit 1" as unit_1 <<unit>>
+    package safety_software_seooc_example <<SEooC>> {
+        component component_example <<component>> {
+            component unit_1 <<unit>>
         }
 
-        portin  " " as p_required   ' required interface port
-        portout " " as p_public     ' provided interface port
+        portin  p_required   ' required interface port
+        portout p_public     ' provided interface port
     }
 
-    interface "RequiredInterface"  as RequiredInterface
-    interface "SampleLibraryAPI"   as SampleLibraryAPI
+    interface RequiredInterface
+    interface SampleLibraryAPI
 
     p_required -( RequiredInterface : requires
     p_public   )- SampleLibraryAPI : provides
@@ -330,11 +330,11 @@ the same component can appear in both without repeating its full contents:
     ' overview_design.puml
     @startuml overview_design
 
-    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
-        component "ComponentExample" as component_example <<component>>
+    package safety_software_seooc_example <<SEooC>> {
+        component component_example <<component>>
     }
 
-    interface "SampleLibraryAPI" as SampleLibraryAPI
+    interface SampleLibraryAPI
     safety_software_seooc_example )-d- SampleLibraryAPI
 
     @enduml
@@ -344,10 +344,10 @@ the same component can appear in both without repeating its full contents:
     ' static_design.puml
     @startuml static_design
 
-    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
-        component "ComponentExample" as component_example <<component>> {
-            component "Unit 1" as unit_1 <<unit>>
-            component "Unit 2" as unit_2 <<unit>>
+    package safety_software_seooc_example <<SEooC>> {
+        component component_example <<component>> {
+            component unit_1 <<unit>>
+            component unit_2 <<unit>>
         }
     }
 

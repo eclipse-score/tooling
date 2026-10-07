@@ -13,9 +13,9 @@
 
 @startuml component_diagram
 
-package "Package A" as package_a {
-    interface "Internal Interface" as iface_a
-    interface "Internal Interface Shadow" as IFACE_A
+package package_a {
+    interface iface_a
+    interface IFACE_A
 }
 
 @enduml
