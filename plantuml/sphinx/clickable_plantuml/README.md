@@ -47,7 +47,8 @@ artifacts) shows the three stages summarized below. Its source is stored in
 3. **Sphinx consumption** — `clickable_plantuml.py` (this directory) never
    touches `.puml` source or FlatBuffers output. At `builder-inited` it scans
    the source tree for every `*.idmap.json`, builds a global
-   `{alias|id → [definer source paths]}` index, and at `doctree-resolved` uses
+   `{id → [definer source paths]}` index (plus a `{last id segment → …}` name
+   index), and at `doctree-resolved` uses
    that index to rewrite each diagram's `uml` text with
    `url of <alias> is [[<link>]]` directives *before* handing it off to
    `sphinxcontrib-plantuml`'s own renderer, which does the actual PlantUML →
@@ -69,8 +70,9 @@ Sphinx build lifecycle                   clickable_plantuml hooks
   builder-inited                   ───► on_builder_inited()
   │  (one-time setup)                     Load all *.idmap.json files from
   │                                       srcdir (recursive).
-  │                                       Build definition index:
-  │                                       {alias|id → [definer source paths]}.
+  │                                       Build definition index
+  │                                       {id → [definer source paths]} and
+  │                                       name index {last id segment → [...]}.
   │
   ├─ READ PHASE ──────────────────────────────────────────────────────────────
   │  for each document:
@@ -98,7 +100,9 @@ Sphinx build lifecycle                   clickable_plantuml hooks
   │    doctree-resolved            ───► on_doctree_resolved()
   │       (per document)                 For each plantuml node, load its idmap.
   │                                      For each reference entry, look up the
-  │                                      definition index (FQN first, then alias).
+  │                                      definition index by id; if none and the
+  │                                      idmap has match_by_name, look up the
+  │                                      last id segment in the name index.
   │                                      Apply proximity, then descendant-count
   │                                      tiebreak on ambiguity.
   │                                      Build the URL (relative to _images/ in
@@ -116,7 +120,10 @@ Sphinx build lifecycle                   clickable_plantuml hooks
    the Sphinx source directory.  Each sidecar records *defines* (elements
    elaborated in that diagram, i.e. with children/members) and *references*
    (leaf mentions and relation endpoints).  A global definition index maps
-   each alias/FQN to the set of diagrams that elaborate it.
+   each id to the set of diagrams that elaborate it; a name index maps the
+   last id segment of every define from a `match_by_name` idmap likewise.
+   The `alias` of an entry is the PlantUML code in its own diagram: it is
+   only used for `url of` injection and never matched across diagrams.
 
 2. **Diagram location mapping** (`doctree-read`) – Records which `docname`
   contains which `.puml` diagram, keyed by the canonical workspace-relative
@@ -131,7 +138,10 @@ Sphinx build lifecycle                   clickable_plantuml hooks
   remain distinct.
 
 3. **URL resolution & link injection** (`doctree-resolved`) – For each
-   reference in a diagram's idmap, resolves the unique definer via the index.
+   reference in a diagram's idmap, resolves the unique definer via the index
+   (exact id first; then, for `match_by_name` idmaps, the last id segment —
+   a bare `unit_1` in a sequence/component diagram finds the diagram that
+   defines `pkg.comp.unit_1`).
    When multiple diagrams define the same element, a *proximity tiebreak*
    selects the definer sharing the longest common path prefix with the source
    diagram (this is the case for a reference resolved across multiple
@@ -143,7 +153,10 @@ Sphinx build lifecycle                   clickable_plantuml hooks
    proximity tie always meant no link. On a genuine tie after both stages, no
    link is emitted (safe over wrong). URLs are built relative to `_images/`
    in `svg_obj` mode (else page-relative via `app.builder.get_relative_uri()`)
-   and percent-encoded before injection.
+   and percent-encoded before injection.  An alias that is not a plain
+   identifier is written quoted (`url of "a::b" is [[url]]`); one that
+   contains a double quote or a line break cannot be written and is reported
+   with a warning.
 
 4. **Incremental / parallel support** – `env-purge-doc` removes stale entries
    when a document is re-read; `env-merge-info` merges state from parallel
@@ -171,8 +184,8 @@ Given the resolved model of one `.puml` diagram:
 1. **defines** – An element is a *define* when any of the following hold:
    - At least one other element lists it as its `parent_id` (component diagrams).
    - It has member variables or methods (class diagrams).
-   - The diagram's `@startuml <name>` matches its alias or display name
-     (component and class diagrams).
+   - The diagram's `@startuml <name>` matches its alias, display name or the
+     last segment of its id (component and class diagrams).
    - It is a `$FailureMode` node — the tree root whose `connection` is `None`,
      never used as a relation source (FTA diagrams).
 2. **references** – Elements that link away to another diagram:
@@ -202,6 +215,7 @@ package Proxy { [RequestHandler] }
 `proxy_detail.idmap.json`:
 ```json
 { "source": "score/mw/com/proxy_detail.puml",
+  "match_by_name": true,
   "defines":    [{ "alias": "Proxy",          "id": "Proxy" }],
   "references": [{ "alias": "RequestHandler", "id": "Proxy.RequestHandler" }] }
 ```
@@ -209,6 +223,7 @@ package Proxy { [RequestHandler] }
 `overview.idmap.json`:
 ```json
 { "source": "score/overview.puml",
+  "match_by_name": true,
   "defines":    [],
   "references": [{ "alias": "Gateway", "id": "Gateway" },
                  { "alias": "Proxy",   "id": "Proxy"   }] }
@@ -225,6 +240,7 @@ They are not intended to be authored manually.
 ```json
 {
   "source": "path/to/diagram.puml",
+  "match_by_name": true,
   "defines": [
     { "alias": "ComponentName", "id": "fully.qualified.Name" }
   ],
@@ -233,6 +249,10 @@ They are not intended to be authored manually.
   ]
 }
 ```
+
+`match_by_name` (default `false`) is `true` for component, class and sequence
+diagrams, whose ids may be matched by their last segment, and `false` for FTA
+diagrams, whose id is a complete TRLC `Package.Record`.
 
 ## End-to-End Clickable Diagram Example
 

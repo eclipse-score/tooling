@@ -28,6 +28,7 @@ import clickable_plantuml as clickable_plantuml_module
 from clickable_plantuml import (
     _ENV_DEF_INDEX,
     _ENV_IDMAP_BY_SOURCE,
+    _ENV_NAME_INDEX,
     _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC,
     _ENV_PUML_DOCNAMES,
     _ENV_SOURCE_KEYS,
@@ -53,6 +54,7 @@ def _write_idmap(
     source: str,
     defines: list[dict[str, str]] | None = None,
     references: list[dict[str, str]] | None = None,
+    match_by_name: bool = False,
 ) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     (directory / name).write_text(
@@ -61,6 +63,7 @@ def _write_idmap(
                 "source": source,
                 "defines": defines or [],
                 "references": references or [],
+                "match_by_name": match_by_name,
             }
         ),
         encoding="utf-8",
@@ -78,6 +81,7 @@ def test_load_idmap_builds_source_and_definition_indices(tmp_path: Path) -> None
         "proxy.idmap.json",
         "/pkg/a/proxy.puml",
         defines=[{"alias": "Proxy", "id": "pkg.Proxy"}],
+        match_by_name=True,
     )
     _write_idmap(
         tmp_path / "b",
@@ -86,19 +90,33 @@ def test_load_idmap_builds_source_and_definition_indices(tmp_path: Path) -> None
         references=[{"alias": "Proxy", "id": "pkg.Proxy"}],
     )
 
-    idmap_by_source, definition_index = _load_idmap_files(tmp_path)
+    idmap_by_source, definition_index, name_index = _load_idmap_files(tmp_path)
 
     assert set(idmap_by_source) == {"pkg/a/proxy.puml", "pkg/b/overview.puml"}
-    # Both the alias and the FQN point at the definer.
-    assert definition_index["Proxy"] == ["pkg/a/proxy.puml"]
-    assert definition_index["pkg.Proxy"] == ["pkg/a/proxy.puml"]
+    # Identity is the id; the alias (local PlantUML code) is not indexed.
+    assert definition_index == {"pkg.Proxy": ["pkg/a/proxy.puml"]}
+    assert name_index == {"Proxy": ["pkg/a/proxy.puml"]}
+
+
+def test_load_idmap_skips_name_index_without_match_by_name(tmp_path: Path) -> None:
+    _write_idmap(
+        tmp_path,
+        "fta.idmap.json",
+        "pkg/fta.puml",
+        defines=[{"alias": "pkg.Top", "id": "pkg.Top"}],
+    )
+
+    _, definition_index, name_index = _load_idmap_files(tmp_path)
+
+    assert definition_index == {"pkg.Top": ["pkg/fta.puml"]}
+    assert name_index == {}
 
 
 def test_same_basename_in_different_dirs_are_distinct_keys(tmp_path: Path) -> None:
     _write_idmap(tmp_path / "a", "proxy.idmap.json", "pkg/a/proxy.puml")
     _write_idmap(tmp_path / "b", "proxy.idmap.json", "pkg/b/proxy.puml")
 
-    idmap_by_source, _ = _load_idmap_files(tmp_path)
+    idmap_by_source, _, _ = _load_idmap_files(tmp_path)
 
     # No basename collapse: two proxy.puml remain independently keyed.
     assert set(idmap_by_source) == {"pkg/a/proxy.puml", "pkg/b/proxy.puml"}
@@ -337,9 +355,14 @@ def test_env_merge_info_merges_no_idmap_counts_from_parallel_workers() -> None:
     assert getattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC) == {"a": 1, "b": 4}
 
 
-def test_doctree_resolved_injects_link_directives(
+def _resolve_overview_uml(
     monkeypatch: pytest.MonkeyPatch,
-) -> None:
+    overview_idmap: dict[str, object],
+    definition_index: dict[str, list[str]],
+    name_index: dict[str, list[str]] | None = None,
+) -> str:
+    """Run ``on_doctree_resolved`` for ``pkg/overview.puml`` and return the injected UML."""
+
     class _FakePlantumlNode(nodes.Element):
         pass
 
@@ -358,16 +381,9 @@ def test_doctree_resolved_injects_link_directives(
     doctree += node
 
     env = SimpleNamespace()
-    setattr(
-        env,
-        _ENV_IDMAP_BY_SOURCE,
-        {
-            "pkg/overview.puml": {
-                "references": [{"alias": "Proxy", "id": "pkg.Proxy"}],
-            }
-        },
-    )
-    setattr(env, _ENV_DEF_INDEX, {"pkg.Proxy": ["pkg/proxy.puml"]})
+    setattr(env, _ENV_IDMAP_BY_SOURCE, {"pkg/overview.puml": overview_idmap})
+    setattr(env, _ENV_DEF_INDEX, definition_index)
+    setattr(env, _ENV_NAME_INDEX, name_index or {})
     setattr(env, _ENV_SOURCE_KEYS, frozenset({"pkg/overview.puml", "pkg/proxy.puml"}))
     setattr(env, _ENV_WORKSPACE_OFFSET, "/workspace")
     setattr(env, _ENV_PUML_DOCNAMES, {"pkg/proxy.puml": ("design/proxy", "proxy-section")})
@@ -389,7 +405,60 @@ def test_doctree_resolved_injects_link_directives(
 
     on_doctree_resolved(app, doctree, "index")
 
-    assert "url of Proxy is [[design/proxy.html#proxy-section]]" in node["uml"]
+    return node["uml"]
+
+
+def test_doctree_resolved_injects_link_directives(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    uml = _resolve_overview_uml(
+        monkeypatch,
+        {"references": [{"alias": "Proxy", "id": "pkg.Proxy"}]},
+        {"pkg.Proxy": ["pkg/proxy.puml"]},
+    )
+
+    assert "url of Proxy is [[design/proxy.html#proxy-section]]" in uml
+
+
+def test_doctree_resolved_links_bare_reference_through_name_index(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    uml = _resolve_overview_uml(
+        monkeypatch,
+        {"match_by_name": True, "references": [{"alias": "Proxy", "id": "Proxy"}]},
+        {"pkg.Proxy": ["pkg/proxy.puml"]},
+        {"Proxy": ["pkg/proxy.puml"]},
+    )
+
+    assert "url of Proxy is [[design/proxy.html#proxy-section]]" in uml
+
+
+def test_doctree_resolved_ignores_name_index_without_match_by_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    uml = _resolve_overview_uml(
+        monkeypatch,
+        {"references": [{"alias": "Proxy", "id": "Proxy"}]},
+        {"pkg.Proxy": ["pkg/proxy.puml"]},
+        {"Proxy": ["pkg/proxy.puml"]},
+    )
+
+    assert "url of" not in uml
+
+
+def test_doctree_resolved_does_not_link_by_alias(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The local alias equals the leaf of an unrelated definition, but the id
+    # points elsewhere: the alias must not act as a cross-diagram identity.
+    uml = _resolve_overview_uml(
+        monkeypatch,
+        {"match_by_name": True, "references": [{"alias": "Proxy", "id": "other.Beta"}]},
+        {"pkg.Proxy": ["pkg/proxy.puml"]},
+        {"Proxy": ["pkg/proxy.puml"]},
+    )
+
+    assert "url of" not in uml
 
 
 # ---------------------------------------------------------------------------
@@ -397,47 +466,55 @@ def test_doctree_resolved_injects_link_directives(
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_definer_prefers_fqn_over_alias() -> None:
-    definition_index = {
-        "Proxy": ["pkg/alias_hit.puml"],
-        "pkg.Proxy": ["pkg/fqn_hit.puml"],
-    }
+def test_resolve_definer_matches_exact_id() -> None:
+    definition_index = {"pkg.Proxy": ["pkg/fqn_hit.puml"]}
+    name_index = {"Proxy": ["pkg/name_hit.puml"]}
 
-    target = _resolve_definer("Proxy", "pkg.Proxy", "pkg/src.puml", definition_index)
+    target = _resolve_definer("pkg.Proxy", "pkg/src.puml", definition_index, name_index)
 
     assert target == "pkg/fqn_hit.puml"
 
 
-def test_resolve_definer_falls_back_to_alias_when_fqn_missing() -> None:
-    definition_index = {
-        "Proxy": ["pkg/alias_hit.puml"],
-    }
+def test_resolve_definer_falls_back_to_id_leaf_when_id_missing() -> None:
+    name_index = {"Proxy": ["pkg/name_hit.puml"]}
 
-    target = _resolve_definer("Proxy", "pkg.Proxy", "pkg/src.puml", definition_index)
+    target = _resolve_definer("Proxy", "pkg/src.puml", {}, name_index)
 
-    assert target == "pkg/alias_hit.puml"
+    assert target == "pkg/name_hit.puml"
 
 
-def test_resolve_definer_falls_back_to_alias_when_fqn_hit_is_only_self() -> None:
-    # The FQN index has an entry, but it's *only* a self-link (the diagram
-    # re-declares its own FQN); a distinct alias-based definer must still be
-    # found rather than giving up after the FQN lookup is filtered to empty.
-    definition_index = {
-        "pkg.Proxy": ["pkg/src.puml"],
-        "Proxy": ["pkg/alias_hit.puml"],
-    }
+def test_resolve_definer_leaf_fallback_uses_last_segment_of_qualified_id() -> None:
+    name_index = {"Proxy": ["pkg/name_hit.puml"]}
 
-    target = _resolve_definer("Proxy", "pkg.Proxy", "pkg/src.puml", definition_index)
+    target = _resolve_definer("other.Proxy", "pkg/src.puml", {}, name_index)
 
-    assert target == "pkg/alias_hit.puml"
+    assert target == "pkg/name_hit.puml"
+
+
+def test_resolve_definer_skips_leaf_fallback_when_by_name_disabled() -> None:
+    name_index = {"Proxy": ["pkg/name_hit.puml"]}
+
+    target = _resolve_definer("Proxy", "pkg/src.puml", {}, name_index, by_name=False)
+
+    assert target is None
+
+
+def test_resolve_definer_falls_back_to_id_leaf_when_id_hit_is_only_self() -> None:
+    # The id index has an entry, but it's *only* a self-link (the diagram
+    # re-declares its own id); a distinct name-based definer must still be
+    # found rather than giving up after the id lookup is filtered to empty.
+    definition_index = {"pkg.Proxy": ["pkg/src.puml"]}
+    name_index = {"Proxy": ["pkg/name_hit.puml"]}
+
+    target = _resolve_definer("pkg.Proxy", "pkg/src.puml", definition_index, name_index)
+
+    assert target == "pkg/name_hit.puml"
 
 
 def test_resolve_definer_skips_self_link() -> None:
-    definition_index = {
-        "Proxy": ["pkg/src.puml"],
-    }
+    definition_index = {"Proxy": ["pkg/src.puml"]}
 
-    target = _resolve_definer("Proxy", "Proxy", "pkg/src.puml", definition_index)
+    target = _resolve_definer("Proxy", "pkg/src.puml", definition_index, {})
 
     assert target is None
 
@@ -450,7 +527,7 @@ def test_resolve_definer_tie_returns_none_and_warns(
     }
 
     caplog.set_level(logging.WARNING)
-    target = _resolve_definer("Proxy", "Proxy", "pkg/src.puml", definition_index)
+    target = _resolve_definer("Proxy", "pkg/src.puml", definition_index, {})
 
     assert target is None
     assert "ambiguous definition" in caplog.text
@@ -483,10 +560,10 @@ def test_resolve_definer_same_directory_tie_broken_by_descendant_count() -> None
     }
 
     target = _resolve_definer(
-        "component_example",
         "pkg.component_example",
         "design/overview_design.puml",
         definition_index,
+        {},
         idmap_by_source,
     )
 
@@ -505,7 +582,7 @@ def test_resolve_definer_same_directory_tie_with_equal_descendant_counts_still_w
     }
 
     caplog.set_level(logging.WARNING)
-    target = _resolve_definer("Proxy", "pkg.Proxy", "design/overview.puml", definition_index, idmap_by_source)
+    target = _resolve_definer("pkg.Proxy", "design/overview.puml", definition_index, {}, idmap_by_source)
 
     assert target is None
     assert "ambiguous definition" in caplog.text
@@ -596,12 +673,25 @@ def test_inject_links_inserts_directive_before_enduml() -> None:
     assert result.index("url of A") < result.index("@enduml")
 
 
-def test_inject_links_skips_unsafe_alias() -> None:
+def test_inject_links_quotes_alias_with_special_characters() -> None:
     uml = "@startuml\n@enduml\n"
 
-    result = _inject_links_into_uml(uml, {"bad alias!": "x.html"})
+    result = _inject_links_into_uml(uml, {"bad alias!": "x.html", "a::b::E": "e.html"})
+
+    assert 'url of "bad alias!" is [[x.html]]' in result
+    assert 'url of "a::b::E" is [[e.html]]' in result
+
+
+def test_inject_links_warns_and_skips_alias_that_cannot_be_quoted(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    uml = "@startuml\n@enduml\n"
+
+    caplog.set_level(logging.WARNING)
+    result = _inject_links_into_uml(uml, {'say "hi"': "x.html", "two\nlines": "y.html"})
 
     assert "url of" not in result
+    assert "cannot be written in a url directive" in caplog.text
 
 
 def test_inject_links_appends_directives_when_enduml_missing() -> None:
