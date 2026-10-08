@@ -22,6 +22,7 @@ exports_files(
 filegroup(
     name = "specifications",
     srcs = [
+        "docs/specifications/architectural_unit_class_design.md",
         "docs/specifications/bazel_component.md",
         "docs/specifications/class_design_implementation.md",
         "docs/specifications/class_design_sequence.md",
