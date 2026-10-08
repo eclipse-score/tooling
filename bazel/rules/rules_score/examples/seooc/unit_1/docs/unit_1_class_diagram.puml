@@ -13,11 +13,15 @@
 
 @startuml unit_1_class_diagram
 
-namespace unit_1 {
-    class Foo {
+namespace safety_software_seooc_example {
+    namespace component_example {
+        namespace unit_1 {
+            class Foo {
 
-        + GetNumber() : uint8_t
-        + SetNumber(value : uint8_t) : void
+                + GetNumber() : uint8_t
+                + SetNumber(value : uint8_t) : void
+            }
+        }
     }
 }
 

@@ -22,6 +22,7 @@ load(
     "fault_trees",
     "safety_analysis",
     "unit",
+    "unit_design",
 )
 
 architectural_design(
@@ -71,10 +72,15 @@ unit(
     name = "abc",
     scope = ["//:__pkg__"],
     tests = [],
-    unit_design = [],
+    unit_design = [":abc_design"],
     implementation = [
         ":some_other_library",
     ],
+)
+
+unit_design(
+    name = "abc_design",
+    static = ["abc_class_design.puml"],
 )
 
 component(
