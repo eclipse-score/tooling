@@ -13,15 +13,15 @@
 
 #include <gtest/gtest.h>
 
-#include "src/my_unit.h"
+#include "my_unit.h"
 
 TEST(MyUnitTest, ConfigureAndGet) {
   ::testing::Test::RecordProperty(
-      "lobster-tracing", "MinimalExample.FEAT_001 MinimalExample.FEAT_002");
+      "lobster-tracing", "MinimalExample.FEAT_001,MinimalExample.FEAT_002");
 
   ::testing::Test::RecordProperty("given",
-                                  "a default-constructed MyUnit instance");
-  MyUnit unit{};
+                                  "a default-constructed MyUnit::KeyValueStore instance");
+  my_element::MyComponent::MyUnit::KeyValueStore unit{};
 
   ::testing::Test::RecordProperty(
       "when",
@@ -36,8 +36,8 @@ TEST(MyUnitTest, MissingKeyReturnsEmpty) {
   ::testing::Test::RecordProperty("lobster-tracing", "MinimalExample.FEAT_002");
 
   ::testing::Test::RecordProperty("given",
-                                  "a default-constructed MyUnit instance");
-  MyUnit unit{};
+                                  "a default-constructed MyUnit::KeyValueStore instance");
+  my_element::MyComponent::MyUnit::KeyValueStore unit{};
 
   ::testing::Test::RecordProperty(
       "when", "When get is called with a key that hasn't been configured yet");

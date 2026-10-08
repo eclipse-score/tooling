@@ -22,5 +22,6 @@ pub(in crate::validators) use diagram_analysis::{
 };
 pub(in crate::validators) use helpers::{
     best_id_suggestion, best_string_suggestion, earliest_source_by_id, extract_method_name,
-    format_name_list, format_sequence_call, intersect_interfaces,
+    format_name_list, format_sequence_call, format_source_file, format_source_line,
+    intersect_interfaces,
 };

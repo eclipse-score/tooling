@@ -13,11 +13,18 @@
 
 #include "unit_3/formatter.h"
 
+namespace safety_software_seooc_example {
+namespace component_example {
+namespace sub_component_example {
 namespace unit_3 {
 
 // trace: SampleComponent.REQ_COMP_006
-std::string Formatter::Format(const unit_1::Foo &foo) const {
+std::string Formatter::Format(
+    const safety_software_seooc_example::component_example::unit_1::Foo &foo) const {
   return std::to_string(foo.GetNumber());
 }
 
 } // namespace unit_3
+} // namespace sub_component_example
+} // namespace component_example
+} // namespace safety_software_seooc_example

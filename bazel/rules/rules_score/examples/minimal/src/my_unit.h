@@ -16,7 +16,11 @@
 #include <string>
 #include <unordered_map>
 
-class MyUnit {
+namespace my_element {
+namespace MyComponent {
+namespace MyUnit {
+
+class KeyValueStore {
 public:
   // trace: MinimalExample.FEAT_001
   void configure(const std::string &key, const std::string &value);
@@ -27,3 +31,7 @@ public:
 private:
   std::unordered_map<std::string, std::string> store_;
 };
+
+} // namespace MyUnit
+} // namespace MyComponent
+} // namespace my_element

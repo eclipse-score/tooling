@@ -17,12 +17,16 @@
 ' All classes are references (no body); `Bar` is elaborated in
 ' unit_2_class_diagram.puml, `Foo` is owned and elaborated by unit_1.
 
-namespace unit_1 {
-    class Foo <<final>>
-}
+namespace safety_software_seooc_example {
+    namespace component_example {
+        namespace unit_1 {
+            class Foo <<final>>
+        }
 
-namespace unit_2 {
-    class Bar <<final>>
+        namespace unit_2 {
+            class Bar <<final>>
+        }
+    }
 }
 
 Bar --> Foo : uses

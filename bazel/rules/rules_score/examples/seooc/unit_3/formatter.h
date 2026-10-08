@@ -18,14 +18,21 @@
 
 #include <string>
 
+namespace safety_software_seooc_example {
+namespace component_example {
+namespace sub_component_example {
 namespace unit_3 {
 
 class Formatter final {
 public:
   // trace: SampleComponent.REQ_COMP_006
-  std::string Format(const unit_1::Foo &foo) const;
+  std::string Format(
+      const safety_software_seooc_example::component_example::unit_1::Foo &foo) const;
 };
 
 } // namespace unit_3
+} // namespace sub_component_example
+} // namespace component_example
+} // namespace safety_software_seooc_example
 
 #endif // FORMATTER_H

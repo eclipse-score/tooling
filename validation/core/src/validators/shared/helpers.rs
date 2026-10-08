@@ -20,6 +20,24 @@ use strsim::jaro_winkler;
 
 pub(in crate::validators) const DEFAULT_SUGGESTION_THRESHOLD: f64 = 0.75;
 
+pub(in crate::validators) fn format_source_file(source_location: &SourceLocation) -> String {
+    let (file, _) = source_location.display();
+    if file.is_empty() {
+        "<unknown>".to_string()
+    } else {
+        file
+    }
+}
+
+pub(in crate::validators) fn format_source_line(source_location: &SourceLocation) -> String {
+    let (_, line) = source_location.display();
+    if line == 0 {
+        "<unknown>".to_string()
+    } else {
+        line.to_string()
+    }
+}
+
 pub(in crate::validators) fn format_name_list(names: &BTreeSet<String>) -> String {
     if names.is_empty() {
         return "<none>".to_string();
