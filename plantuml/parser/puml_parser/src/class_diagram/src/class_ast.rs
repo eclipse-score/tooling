@@ -29,24 +29,27 @@ pub enum Visibility {
 pub enum Element {
     ClassDef(ClassDef),
     StructDef(StructDef),
-    EnumDef(EnumDef),
     InterfaceDef(InterfaceDef),
+    EntityDef(EntityDef),
+    EnumDef(EnumDef),
 }
 impl Element {
     pub fn set_namespace(&mut self, ns: String) {
         match self {
             Element::ClassDef(def) => def.namespace = ns,
             Element::StructDef(def) => def.namespace = ns,
-            Element::EnumDef(def) => def.namespace = ns,
             Element::InterfaceDef(def) => def.namespace = ns,
+            Element::EntityDef(def) => def.namespace = ns,
+            Element::EnumDef(def) => def.namespace = ns,
         }
     }
     pub fn set_package(&mut self, ns: String) {
         match self {
             Element::ClassDef(def) => def.package = ns,
             Element::StructDef(def) => def.package = ns,
-            Element::EnumDef(def) => def.package = ns,
             Element::InterfaceDef(def) => def.package = ns,
+            Element::EntityDef(def) => def.package = ns,
+            Element::EnumDef(def) => def.package = ns,
         }
     }
 }
@@ -269,6 +272,17 @@ impl TypeDef for InterfaceDef {
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+pub struct EntityDef {
+    pub name: Name,
+    pub namespace: String,
+    pub package: String,
+    #[serde(default)]
+    pub stereotypes: Vec<String>,
+    pub methods: Vec<Method>,
+    pub source_location: SourceLocation,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct EnumDef {
     pub name: Name,
     pub namespace: String,
@@ -481,6 +495,7 @@ mod tests {
             Element::StructDef(StructDef::default()),
             Element::EnumDef(EnumDef::default()),
             Element::InterfaceDef(InterfaceDef::default()),
+            Element::EntityDef(EntityDef::default()),
         ];
 
         for el in elements.iter_mut() {
@@ -493,6 +508,7 @@ mod tests {
                 Element::StructDef(d) => assert_eq!(d.namespace, "test_ns"),
                 Element::EnumDef(d) => assert_eq!(d.namespace, "test_ns"),
                 Element::InterfaceDef(d) => assert_eq!(d.namespace, "test_ns"),
+                Element::EntityDef(d) => assert_eq!(d.namespace, "test_ns"),
             }
         }
     }

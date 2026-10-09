@@ -582,6 +582,10 @@ impl ClassResolver {
     ) -> Result<(), ClassPumlResolverError> {
         match element {
             Element::EnumDef(def) => self.process_enum(def, scope),
+            Element::EntityDef(def) if self.is_function_entity(def) => {
+                self.process_free_function_entity(def, scope)
+            }
+            Element::EntityDef(_) => Ok(()),
             _ => {
                 let entity_type = match element {
                     Element::ClassDef(def) if def.is_abstract => EntityType::AbstractClass,
@@ -593,6 +597,42 @@ impl ClassResolver {
                 self.process_class(element, scope, entity_type)
             }
         }
+    }
+
+    fn is_function_entity(&self, def: &class_parser::EntityDef) -> bool {
+        def.stereotypes
+            .iter()
+            .any(|stereotype| stereotype.eq_ignore_ascii_case("function"))
+    }
+
+    fn process_free_function_entity(
+        &mut self,
+        def: &class_parser::EntityDef,
+        scope: &DeclarationScope,
+    ) -> Result<(), ClassPumlResolverError> {
+        let (declared, _) = Self::declare(
+            &def.name,
+            IdentityKind::ClassLike,
+            scope,
+            Some(&def.source_location),
+        )?;
+        let enclosing_namespace_id = self.enclosing_namespace_id(&declared);
+
+        self.logic
+            .free_functions
+            .extend(def.methods.iter().map(|method| FreeFunctionDecl {
+                name: method.name.clone(),
+                enclosing_namespace_id: enclosing_namespace_id.clone(),
+                return_type: method.r#type.clone(),
+                parameters: method.params.iter().map(Self::convert_param).collect(),
+                template_parameters: Self::convert_template_parameters_with_pack_expansions(
+                    &method.template_parameters,
+                    &method.params,
+                ),
+                source_location: method.source_location.clone(),
+            }));
+
+        Ok(())
     }
 
     fn process_class(
@@ -637,6 +677,9 @@ impl ClassResolver {
                 &i.template_parameters,
                 &i.source_location,
             ),
+            Element::EntityDef(_) => {
+                unreachable!("EntityDef should not be passed to process_class")
+            }
             Element::EnumDef(_) => {
                 unreachable!("EnumDef should not be passed to process_class")
             }

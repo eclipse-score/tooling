@@ -1,0 +1,81 @@
+{
+  "free_function_entity.puml": {
+    "name": "free_function_entity",
+    "entities": [],
+    "free_functions": [
+      {
+        "name": "clamp",
+        "enclosing_namespace_id": "amp.algorithm",
+        "return_type": null,
+        "parameters": [
+          {
+            "name": "value",
+            "param_type": null,
+            "is_variadic": false
+          },
+          {
+            "name": "min",
+            "param_type": null,
+            "is_variadic": false
+          },
+          {
+            "name": "max",
+            "param_type": null,
+            "is_variadic": false
+          }
+        ],
+        "template_parameters": null,
+        "source_location": {
+          "file": "",
+          "line": 19
+        }
+      },
+      {
+        "name": "Submit",
+        "enclosing_namespace_id": "amp.algorithm",
+        "return_type": null,
+        "parameters": [
+          {
+            "name": "callable",
+            "param_type": null,
+            "is_variadic": false
+          },
+          {
+            "name": "arguments",
+            "param_type": null,
+            "is_variadic": false
+          }
+        ],
+        "template_parameters": [
+          {
+            "Type": {
+              "name": "CallableType",
+              "is_pack": false
+            }
+          },
+          {
+            "Type": {
+              "name": "ArgumentTypes",
+              "is_pack": true
+            }
+          }
+        ],
+        "source_location": {
+          "file": "",
+          "line": 20
+        }
+      },
+      {
+        "name": "qualified",
+        "enclosing_namespace_id": "amp.algorithm",
+        "return_type": null,
+        "parameters": [],
+        "template_parameters": null,
+        "source_location": {
+          "file": "",
+          "line": 26
+        }
+      }
+    ]
+  }
+}
