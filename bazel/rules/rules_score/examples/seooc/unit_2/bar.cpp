@@ -19,10 +19,13 @@ namespace {
 std::uint8_t kExpectedNumber = 42u;
 }
 
+namespace safety_software_seooc_example {
+namespace component_example {
 namespace unit_2 {
 
 // trace: SampleComponent.REQ_COMP_004 SampleComponent.REQ_COMP_005
-Bar::Bar(std::unique_ptr<unit_1::Foo> foo) : foo_{std::move(foo)} {}
+Bar::Bar(std::unique_ptr<safety_software_seooc_example::component_example::unit_1::Foo> foo)
+  : foo_{std::move(foo)} {}
 
 // trace: SampleComponent.REQ_COMP_003
 bool Bar::AssertNumber() const {
@@ -35,4 +38,7 @@ std::string Bar::Format() const {
   assert(foo_ != nullptr);
   return std::to_string(foo_->GetNumber());
 }
+
 } // namespace unit_2
+} // namespace component_example
+} // namespace safety_software_seooc_example

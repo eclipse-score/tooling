@@ -20,7 +20,8 @@ architectural component diagram and the static class diagram of the
 `unit_design` bound to that unit.
 
 It shall make sure that each architectural unit is refined by at least one
-class owned by that unit in its detailed design.
+class, struct, interface, or abstract class owned by that unit in its detailed
+design. Enums alone do not satisfy this refinement requirement.
 
 ## What is Validated
 
@@ -29,7 +30,7 @@ The validator compares two inputs associated through the Bazel `unit` target:
 | Input | Source | Meaning |
 |---|---|---|
 | Architectural unit | `architectural_design.static` component diagram | A `<<unit>>` entity and its canonical identifier |
-| Detailed class design | `unit_design.static` class diagram bound to that Bazel `unit` | The class entities that refine the unit |
+| Detailed class design | `unit_design.static` class diagram bound to that Bazel `unit` | Class, struct, interface, and abstract-class entities that refine the unit |
 
 The existing Bazel-component validation establishes the mapping from an
 architectural `<<unit>>` to its Bazel `unit` target. This validator then uses
@@ -38,16 +39,18 @@ compare. It does not validate the Bazel-to-component mapping itself.
 
 ### Unit-Class Refinement Consistency
 
-For every architectural `<<unit>>`, the static class diagram of the
-`unit_design` bound to its Bazel `unit` target must declare at least one class
-whose canonical identifier has the architectural unit identifier as a complete
-path prefix, followed by at least one additional class-name segment.
+For every architectural `<<unit>>`, the static class diagrams bound to its
+corresponding Bazel `unit` target must declare at least one class, struct,
+interface, or abstract class in that unit's canonical identifier path. Matching
+uses the full architectural unit ID as a complete path prefix, followed by at
+least one entity-name segment. An enum does not satisfy this requirement.
 
 *(Requirement: {requirement:downstream-ref}`Tools.ArchitecturalUnitClassDesignConsistency`)*
 
 For example, `Filter` is an architectural unit with canonical identifier
-`system.control.Filter`. The unit design bound to `Filter` refines it when it
-declares a class such as `system.control.Filter.FilterService`.
+`system.control.Filter`. Its Bazel target has design name `Filter`; the unit
+design bound to that target refines it when it declares an entity such as
+`system.control.Filter.FilterService`.
 
 ```text
 ' architectural component diagram
@@ -59,39 +62,46 @@ package system {
 ```
 
 ```text
-' static class diagram in Filter's unit_design
-package system {
-    package control {
-        package Filter {
-            class FilterService
-        }
+@startuml
+namespace system {
+  namespace control {
+    namespace Filter {
+      class FilterService
     }
+  }
 }
+@enduml
 ```
 
-The following does not refine `system.control.Filter`, because the only class
-belongs to a different architectural unit:
+The following does not refine `system.control.Filter`, because it has the same
+leaf name under a different parent path:
 
 ```text
-package system {
-    package sensor {
-        package Sensor {
-            class SensorDriver
-        }
+@startuml
+namespace system {
+  namespace sensor {
+    namespace Filter {
+  class SensorDriver
     }
+  }
 }
+@enduml
 ```
 
-References to external classes are permitted, but do not satisfy this rule.
+Class diagrams are evaluated only within the class-diagram files bound to the
+matching Bazel unit. A collaborator stub in another unit's namespace does not
+refine the current unit.
+
+References to external entities are permitted, but do not satisfy this rule.
 For example, a relationship from `FilterService` to
-`system.sensor.Sensor.SensorDriver` is an external reference; only
-`FilterService` can serve as the required class owned by `Filter`.
+`system.sensor.Sensor.SensorDriver` is an external reference; only an eligible
+entity declared in `Filter`'s unit design can satisfy the requirement.
 
 ### Identifier Matching
 
-Identifiers are compared as canonical identifier paths. The class identifier
-must have the architectural unit identifier as a complete path prefix, followed
-by at least one additional class-name segment. A bare prefix match is not
+Identifiers are compared as canonical identifier paths. The eligible entity
+identifier must begin with the full architectural unit ID followed by `.` and
+at least one additional entity-name segment. A bare or lexical prefix match is not
 sufficient: `system.control.Filtering.Service` does not refine
 `system.control.Filter`.
 
@@ -114,9 +124,9 @@ This validator does not validate:
 
 | Failure case | Validation rule |
 |---|---|
-| The bound static unit-design class diagrams declare no class below the architectural unit identifier | Unit-Class Refinement Consistency |
-| The bound static unit-design class diagrams only declare classes below another unit identifier | Unit-Class Refinement Consistency |
-| The bound static unit-design class diagrams only reference external classes | Unit-Class Refinement Consistency |
+| The bound static unit-design class diagrams declare no eligible entity below the full architectural unit ID | Unit-Class Refinement Consistency |
+| The bound static unit-design class diagrams only declare eligible entities below another architectural unit ID | Unit-Class Refinement Consistency |
+| The bound static unit-design class diagrams only reference external entities | Unit-Class Refinement Consistency |
 
 ## Debug Output
 
@@ -124,5 +134,5 @@ The validator shall emit debug output containing:
 
 - the architectural unit identifier;
 - the Bazel `unit` target and its bound `unit_design` target;
-- the class identifiers read from the bound static class diagrams;
-- the class identifiers selected as refinements of each architectural unit.
+- the eligible entity identifiers read from the bound static class diagrams;
+- the eligible entity identifiers selected as refinements of each architectural unit.

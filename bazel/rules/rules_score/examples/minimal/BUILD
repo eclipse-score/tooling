@@ -87,8 +87,8 @@ unit(
 component(
     name = "MyComponent",
     components = [":MyUnit"],
-    requirements = [],
-    tests = [],
+    requirements = [":feature_requirements"],
+    tests = [":my_unit_test"],
 )
 
 dependable_element(

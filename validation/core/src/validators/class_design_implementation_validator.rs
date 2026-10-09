@@ -14,7 +14,7 @@
 //! Class implementation validation: compare unit design class diagrams with
 //! C++ implementation produced by the C++ parser.
 
-use super::shared::best_string_suggestion;
+use super::shared::{best_string_suggestion, format_source_file, format_source_line};
 use crate::models::ClassEntityIndex;
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::ValidationResult;
@@ -499,8 +499,14 @@ impl ClassDesignImplementationValidator {
                 entity.id
             ))
             .field("class", format!("\"{}\"", entity.id))
-            .field("design source file", format!("\"{}\"", design_source_file(entity)))
-            .field("design source line", design_source_line(entity).to_string())
+            .field(
+                "design source file",
+                format!("\"{}\"", format_source_file(&entity.source_location)),
+            )
+            .field(
+                "design source line",
+                format_source_line(&entity.source_location),
+            )
             .fix(format!(
                 "add implementation class \"{}\" in the C++ class implementation, or remove it from the unit design",
                 entity.id
@@ -530,9 +536,12 @@ impl ClassDesignImplementationValidator {
             .field("member", format!("{member_type} \"{member_name}\""))
             .field(
                 "design source file",
-                format!("\"{}\"", design_source_file(design_entity)),
+                format!("\"{}\"", format_source_file(&design_entity.source_location)),
             )
-            .field("design source line", design_source_line(design_entity).to_string())
+            .field(
+                "design source line",
+                format_source_line(&design_entity.source_location),
+            )
             .fix(format!(
                 "add {member_type} \"{member_name}\" to entity \"{}\" in the C++ class implementation, or remove it from the unit design",
                 design_entity.id
@@ -567,17 +576,20 @@ impl ClassDesignImplementationValidator {
             .field("design value", design_value)
             .field(
                 "design source file",
-                format!("\"{}\"", design_source_file(design_entity)),
+                format!("\"{}\"", format_source_file(&design_entity.source_location)),
             )
-            .field("design source line", design_source_line(design_entity).to_string())
+            .field(
+                "design source line",
+                format_source_line(&design_entity.source_location),
+            )
             .field("implementation value", implementation_value)
             .field(
                 "implementation source file",
-                format!("\"{}\"", source_file(implementation_entity)),
+                format!("\"{}\"", format_source_file(&implementation_entity.source_location)),
             )
             .field(
                 "implementation source line",
-                source_line(implementation_entity).to_string(),
+                format_source_line(&implementation_entity.source_location),
             )
             .fix(format!(
                 "make {field_reference} in entity \"{}\" consistent between the unit design and the C++ class implementation",
@@ -591,34 +603,6 @@ fn format_field_reference(field: &str, style: FieldReferenceStyle) -> String {
     match style {
         FieldReferenceStyle::Quoted => format!("\"{field}\""),
         FieldReferenceStyle::Verbatim => field.to_string(),
-    }
-}
-
-fn design_source_file(entity: &SimpleEntity) -> String {
-    source_file(entity)
-}
-
-fn source_file(entity: &SimpleEntity) -> String {
-    let (file, _) = entity.source_location.display();
-
-    if file.is_empty() {
-        "<unknown>".to_string()
-    } else {
-        file
-    }
-}
-
-fn design_source_line(entity: &SimpleEntity) -> String {
-    source_line(entity)
-}
-
-fn source_line(entity: &SimpleEntity) -> String {
-    let (_, line) = entity.source_location.display();
-
-    if line == 0 {
-        "<unknown>".to_string()
-    } else {
-        line.to_string()
     }
 }
 

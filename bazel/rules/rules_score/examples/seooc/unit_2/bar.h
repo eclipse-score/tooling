@@ -20,21 +20,25 @@
 #include <memory>
 #include <string>
 
+namespace safety_software_seooc_example {
+namespace component_example {
 namespace unit_2 {
 
 // trace: SampleComponent.REQ_COMP_003 SampleComponent.REQ_COMP_004
 // SampleComponent.REQ_COMP_005
 class Bar final {
 public:
-  explicit Bar(std::unique_ptr<unit_1::Foo> foo);
+  explicit Bar(std::unique_ptr<safety_software_seooc_example::component_example::unit_1::Foo> foo);
   bool AssertNumber() const;
   // trace: SampleComponent.REQ_COMP_006
   std::string Format() const;
 
 private:
-  std::unique_ptr<unit_1::Foo> foo_;
+  std::unique_ptr<safety_software_seooc_example::component_example::unit_1::Foo> foo_;
 };
 
 } // namespace unit_2
+} // namespace component_example
+} // namespace safety_software_seooc_example
 
 #endif // BAR_H

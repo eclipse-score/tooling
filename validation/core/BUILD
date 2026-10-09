@@ -59,6 +59,7 @@ rust_library(
         "src/results/diagnostics.rs",
         "src/results/error_models.rs",
         "src/results/mod.rs",
+        "src/validators/architectural_unit_class_design_validator.rs",
         "src/validators/bazel_component_validator.rs",
         "src/validators/class_design_implementation_validator.rs",
         "src/validators/class_design_sequence_validator.rs",

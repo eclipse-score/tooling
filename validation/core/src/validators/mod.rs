@@ -13,6 +13,7 @@
 
 //! Validator entrypoints for architecture checks.
 
+mod architectural_unit_class_design_validator;
 mod bazel_component_validator;
 mod class_design_implementation_validator;
 mod class_design_sequence_validator;
@@ -26,6 +27,8 @@ mod shared;
 #[path = "test/fixtures.rs"]
 pub(crate) mod fixtures;
 
+pub use architectural_unit_class_design_validator::validate_architectural_unit_class_design;
+pub(crate) use architectural_unit_class_design_validator::UnitDesignEntity;
 pub use bazel_component_validator::validate_bazel_component;
 pub use class_design_implementation_validator::validate_class_design_implementation;
 pub use class_design_sequence_validator::validate_class_design_sequence;
