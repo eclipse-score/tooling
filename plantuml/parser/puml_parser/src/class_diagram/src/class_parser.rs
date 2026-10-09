@@ -11,9 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 use crate::class_ast::{
-    Arrow, Attribute, ClassDef, ClassUmlFile, ClassUmlTopLevel, Element, EnumDef, EnumItem,
-    EnumValue, InterfaceDef, Method, Name, Namespace, Package, Param, Relationship, StructDef,
-    TypeAlias, Visibility,
+    Arrow, Attribute, ClassDef, ClassUmlFile, ClassUmlTopLevel, Element, EntityDef, EnumDef,
+    EnumItem, EnumValue, InterfaceDef, Method, Name, Namespace, Package, Param, Relationship,
+    StructDef, TypeAlias, Visibility,
 };
 use crate::class_traits::{TypeDef, WritableName};
 use crate::source_map::{
@@ -747,30 +747,29 @@ impl ClassParseSession<'_> {
         let implements_targets = collect_implements_targets(pair.clone());
 
         match kind.as_str() {
-            "abstract class" => {
+            "abstract class" | "class" => {
                 let mut def = self.parse_type_def_into::<ClassDef>(pair)?;
-                def.source_location = source_location;
-                def.is_abstract = true;
                 def.template_parameters = resolve_type_template_parameters(
                     explicit_template_parameters,
                     &def.name,
                     &raw_type_def,
                 );
+                def.source_location = source_location;
+                def.is_abstract = kind == "abstract class";
                 def.extends = extends_targets;
                 def.implements = implements_targets;
                 Ok(Element::ClassDef(def))
             }
-            "class" => {
-                let mut def = self.parse_type_def_into::<ClassDef>(pair)?;
-                def.source_location = source_location;
-                def.template_parameters = resolve_type_template_parameters(
-                    explicit_template_parameters,
-                    &def.name,
-                    &raw_type_def,
-                );
-                def.extends = extends_targets;
-                def.implements = implements_targets;
-                Ok(Element::ClassDef(def))
+            "entity" => {
+                let def = self.parse_type_def_into::<ClassDef>(pair)?;
+                Ok(Element::EntityDef(EntityDef {
+                    name: def.name,
+                    namespace: def.namespace,
+                    package: def.package,
+                    stereotypes: def.stereotypes,
+                    methods: def.methods,
+                    source_location,
+                }))
             }
             "struct" => {
                 let mut def = self.parse_type_def_into::<StructDef>(pair)?;
@@ -1567,6 +1566,7 @@ mod tests {
                     Element::ClassDef(def) => &def.name,
                     Element::StructDef(def) => &def.name,
                     Element::InterfaceDef(def) => &def.name,
+                    Element::EntityDef(def) => &def.name,
                     Element::EnumDef(def) => &def.name,
                 };
                 assert_eq!(name.internal, spelling, "`{keyword} {spelling}`");

@@ -123,6 +123,11 @@ fn test_c_variadic_method() {
 }
 
 #[test]
+fn test_free_function_entity() {
+    run_class_resolver_case("free_function_entity");
+}
+
+#[test]
 fn test_class_template_pack() {
     run_class_resolver_case("class_template_pack");
 }
