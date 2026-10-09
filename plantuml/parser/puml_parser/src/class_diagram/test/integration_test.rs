@@ -181,6 +181,11 @@ fn test_interface() {
 }
 
 #[test]
+fn test_implements() {
+    run_class_diagram_parser_case("implements");
+}
+
+#[test]
 fn test_namespace_1() {
     run_class_diagram_parser_case("namespace_1");
 }

@@ -17,7 +17,6 @@ filegroup(
     srcs = [
         "src/class_ast.rs",
         "src/class_parser.rs",
-        "src/class_traits.rs",
         "src/lib.rs",
         "src/source_map.rs",
     ],

@@ -3,8 +3,8 @@
     "name": "mock_method_variants_ignored",
     "elements": [
       {
-        "Types": {
-          "ClassDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "MockOutput",
               "alias": null
@@ -15,13 +15,16 @@
               "file": "",
               "line": 14
             },
-            "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
             "methods": [],
-            "template_parameters": null,
-            "extends": [],
-            "implements": []
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
+            }
           }
         }
       }

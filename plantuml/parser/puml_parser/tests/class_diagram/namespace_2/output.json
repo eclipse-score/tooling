@@ -26,7 +26,7 @@
               },
               "types": [
                 {
-                  "ClassDef": {
+                  "ClassLikeDef": {
                     "name": {
                       "internal": "Button",
                       "alias": null
@@ -37,13 +37,16 @@
                       "file": "",
                       "line": 17
                     },
-                    "is_abstract": false,
                     "type_aliases": [],
                     "attributes": [],
                     "methods": [],
-                    "template_parameters": null,
-                    "extends": [],
-                    "implements": []
+                    "kind": {
+                      "Class": {
+                        "is_abstract": false,
+                        "extends": [],
+                        "implements": []
+                      }
+                    }
                   }
                 }
               ],

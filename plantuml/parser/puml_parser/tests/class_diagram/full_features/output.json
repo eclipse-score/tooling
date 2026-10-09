@@ -14,7 +14,7 @@
           },
           "types": [
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "AInternal",
                   "alias": "A"
@@ -25,7 +25,6 @@
                   "file": "",
                   "line": 16
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [
                   {
@@ -96,13 +95,17 @@
                     }
                   }
                 ],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             },
             {
-              "StructDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "B",
                   "alias": null
@@ -127,11 +130,11 @@
                   }
                 ],
                 "methods": [],
-                "template_parameters": null
+                "kind": "Struct"
               }
             },
             {
-              "InterfaceDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "I",
                   "alias": null
@@ -158,8 +161,11 @@
                     }
                   }
                 ],
-                "template_parameters": null,
-                "extends": []
+                "kind": {
+                  "Interface": {
+                    "extends": []
+                  }
+                }
               }
             },
             {

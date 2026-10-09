@@ -1,0 +1,37 @@
+{
+  "implements.puml": {
+    "name": "implements",
+    "elements": [
+      {
+        "Type": {
+          "ClassLikeDef": {
+            "name": {
+              "internal": "Concrete",
+              "alias": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
+            "type_aliases": [],
+            "attributes": [],
+            "methods": [],
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": [
+                  "ISerializable",
+                  "platform::Auditable"
+                ]
+              }
+            }
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

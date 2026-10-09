@@ -15,8 +15,6 @@ use serde::{Deserialize, Serialize};
 use source_location::SourceLocation;
 use std::default::Default;
 
-use crate::class_traits::{TypeDef, WritableName};
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Visibility {
     Public,    // "+"
@@ -26,38 +24,24 @@ pub enum Visibility {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub enum Element {
-    ClassDef(ClassDef),
-    StructDef(StructDef),
-    InterfaceDef(InterfaceDef),
+pub enum TypeDefinition {
+    ClassLikeDef(ClassLikeDef),
     EntityDef(EntityDef),
     EnumDef(EnumDef),
 }
-impl Element {
-    pub fn set_namespace(&mut self, ns: String) {
+impl TypeDefinition {
+    pub fn declaration_mut(&mut self) -> &mut DeclarationCommon {
         match self {
-            Element::ClassDef(def) => def.namespace = ns,
-            Element::StructDef(def) => def.namespace = ns,
-            Element::InterfaceDef(def) => def.namespace = ns,
-            Element::EntityDef(def) => def.namespace = ns,
-            Element::EnumDef(def) => def.namespace = ns,
-        }
-    }
-    pub fn set_package(&mut self, ns: String) {
-        match self {
-            Element::ClassDef(def) => def.package = ns,
-            Element::StructDef(def) => def.package = ns,
-            Element::InterfaceDef(def) => def.package = ns,
-            Element::EntityDef(def) => def.package = ns,
-            Element::EnumDef(def) => def.package = ns,
+            TypeDefinition::ClassLikeDef(def) => &mut def.declaration,
+            TypeDefinition::EntityDef(def) => &mut def.declaration,
+            TypeDefinition::EnumDef(def) => &mut def.declaration,
         }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum ClassUmlTopLevel {
-    Types(Element),
-    Enum(EnumDef),
+    Type(TypeDefinition),
     Namespace(Namespace),
     Package(Package),
 }
@@ -73,8 +57,8 @@ pub struct Name {
     pub internal: String,
     pub alias: Option<String>,
 }
-impl WritableName for Name {
-    fn write_name(&mut self, internal: impl Into<String>, alias: Option<impl Into<String>>) {
+impl Name {
+    pub fn write_name(&mut self, internal: impl Into<String>, alias: Option<impl Into<String>>) {
         self.internal = internal.into();
         self.alias = alias.map(|d| d.into());
     }
@@ -163,134 +147,66 @@ impl Default for Method {
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
-pub struct ClassDef {
+pub struct DeclarationCommon {
     pub name: Name,
     pub namespace: String,
     pub package: String,
     #[serde(default)]
     pub stereotypes: Vec<String>,
-    pub is_abstract: bool,
-    pub template_parameters: Option<Vec<String>>,
-    pub extends: Vec<String>,
-    pub implements: Vec<String>,
-    pub attributes: Vec<Attribute>,
-    pub type_aliases: Vec<TypeAlias>,
-    pub methods: Vec<Method>,
     pub source_location: SourceLocation,
-}
-impl TypeDef for ClassDef {
-    fn name_mut(&mut self) -> &mut Name {
-        &mut self.name
-    }
-
-    fn stereotypes_mut(&mut self) -> &mut Vec<String> {
-        &mut self.stereotypes
-    }
-
-    fn attributes_mut(&mut self) -> &mut Vec<Attribute> {
-        &mut self.attributes
-    }
-
-    fn type_aliases_mut(&mut self) -> &mut Vec<TypeAlias> {
-        &mut self.type_aliases
-    }
-
-    fn methods_mut(&mut self) -> &mut Vec<Method> {
-        &mut self.methods
-    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
-pub struct StructDef {
-    pub name: Name,
-    pub namespace: String,
-    pub package: String,
-    #[serde(default)]
-    pub stereotypes: Vec<String>,
-    pub template_parameters: Option<Vec<String>>,
+pub struct ClassLikeMembers {
     pub attributes: Vec<Attribute>,
     pub type_aliases: Vec<TypeAlias>,
     pub methods: Vec<Method>,
-    pub source_location: SourceLocation,
-}
-impl TypeDef for StructDef {
-    fn name_mut(&mut self) -> &mut Name {
-        &mut self.name
-    }
-
-    fn stereotypes_mut(&mut self) -> &mut Vec<String> {
-        &mut self.stereotypes
-    }
-
-    fn attributes_mut(&mut self) -> &mut Vec<Attribute> {
-        &mut self.attributes
-    }
-
-    fn type_aliases_mut(&mut self) -> &mut Vec<TypeAlias> {
-        &mut self.type_aliases
-    }
-
-    fn methods_mut(&mut self) -> &mut Vec<Method> {
-        &mut self.methods
-    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
-pub struct InterfaceDef {
-    pub name: Name,
-    pub namespace: String,
-    pub package: String,
-    #[serde(default)]
-    pub stereotypes: Vec<String>,
+pub struct ClassLikeDef {
+    #[serde(flatten)]
+    pub declaration: DeclarationCommon,
     pub template_parameters: Option<Vec<String>>,
-    pub extends: Vec<String>,
-    pub attributes: Vec<Attribute>,
-    pub type_aliases: Vec<TypeAlias>,
-    pub methods: Vec<Method>,
-    pub source_location: SourceLocation,
+    #[serde(flatten)]
+    pub members: ClassLikeMembers,
+    pub kind: ClassLikeKind,
 }
-impl TypeDef for InterfaceDef {
-    fn name_mut(&mut self) -> &mut Name {
-        &mut self.name
-    }
 
-    fn stereotypes_mut(&mut self) -> &mut Vec<String> {
-        &mut self.stereotypes
-    }
-
-    fn attributes_mut(&mut self) -> &mut Vec<Attribute> {
-        &mut self.attributes
-    }
-
-    fn type_aliases_mut(&mut self) -> &mut Vec<TypeAlias> {
-        &mut self.type_aliases
-    }
-
-    fn methods_mut(&mut self) -> &mut Vec<Method> {
-        &mut self.methods
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum ClassLikeKind {
+    Class {
+        is_abstract: bool,
+        extends: Vec<String>,
+        implements: Vec<String>,
+    },
+    Struct,
+    Interface {
+        extends: Vec<String>,
+    },
+}
+impl Default for ClassLikeKind {
+    fn default() -> Self {
+        Self::Class {
+            is_abstract: false,
+            extends: Vec::new(),
+            implements: Vec::new(),
+        }
     }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct EntityDef {
-    pub name: Name,
-    pub namespace: String,
-    pub package: String,
-    #[serde(default)]
-    pub stereotypes: Vec<String>,
+    #[serde(flatten)]
+    pub declaration: DeclarationCommon,
     pub methods: Vec<Method>,
-    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct EnumDef {
-    pub name: Name,
-    pub namespace: String,
-    pub package: String,
-    #[serde(default)]
-    pub stereotypes: Vec<String>,
+    #[serde(flatten)]
+    pub declaration: DeclarationCommon,
     pub items: Vec<EnumItem>,
-    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
@@ -304,7 +220,7 @@ pub struct EnumItem {
 pub struct Namespace {
     pub name: Name,
     pub source_location: SourceLocation,
-    pub types: Vec<Element>,
+    pub types: Vec<TypeDefinition>,
     pub relationships: Vec<Relationship>,
     pub namespaces: Vec<Namespace>,
 }
@@ -313,7 +229,7 @@ pub struct Namespace {
 pub struct Package {
     pub name: Name,
     pub source_location: SourceLocation,
-    pub types: Vec<Element>,
+    pub types: Vec<TypeDefinition>,
     pub relationships: Vec<Relationship>,
     pub packages: Vec<Package>,
 }
@@ -342,19 +258,19 @@ mod tests {
 
     #[test]
     fn test_element_set_namespace_and_package() {
-        let mut class = ClassDef::default();
-        class.name.internal = "TestClass".into();
+        let mut class = ClassLikeDef::default();
+        class.declaration.name.internal = "TestClass".into();
 
-        let mut element = Element::ClassDef(class);
+        let mut element = TypeDefinition::ClassLikeDef(class);
 
-        element.set_namespace("ns1".into());
-        element.set_package("pkg1".into());
+        element.declaration_mut().namespace = "ns1".into();
+        element.declaration_mut().package = "pkg1".into();
 
-        let Element::ClassDef(def) = element else {
+        let TypeDefinition::ClassLikeDef(def) = element else {
             unreachable!();
         };
-        assert_eq!(def.namespace, "ns1");
-        assert_eq!(def.package, "pkg1");
+        assert_eq!(def.declaration.namespace, "ns1");
+        assert_eq!(def.declaration.package, "pkg1");
     }
 
     #[test]
@@ -441,14 +357,14 @@ mod tests {
     fn test_enum_def() {
         let mut enum_def = EnumDef::default();
 
-        enum_def.name.internal = "Color".into();
+        enum_def.declaration.name.internal = "Color".into();
         enum_def.items.push(EnumItem {
             name: "RED".into(),
             value: Some(EnumValue::Literal("1".into())),
             source_location: SourceLocation::new("test.puml", 0),
         });
 
-        assert_eq!(enum_def.name.internal, "Color");
+        assert_eq!(enum_def.declaration.name.internal, "Color");
         assert_eq!(enum_def.items.len(), 1);
     }
 
@@ -491,74 +407,70 @@ mod tests {
     #[test]
     fn test_element_all_variants_set_namespace() {
         let mut elements = vec![
-            Element::ClassDef(ClassDef::default()),
-            Element::StructDef(StructDef::default()),
-            Element::EnumDef(EnumDef::default()),
-            Element::InterfaceDef(InterfaceDef::default()),
-            Element::EntityDef(EntityDef::default()),
+            TypeDefinition::ClassLikeDef(ClassLikeDef::default()),
+            TypeDefinition::EnumDef(EnumDef::default()),
+            TypeDefinition::EntityDef(EntityDef::default()),
         ];
 
         for el in elements.iter_mut() {
-            el.set_namespace("test_ns".into());
+            el.declaration_mut().namespace = "test_ns".into();
         }
 
         for el in elements {
             match el {
-                Element::ClassDef(d) => assert_eq!(d.namespace, "test_ns"),
-                Element::StructDef(d) => assert_eq!(d.namespace, "test_ns"),
-                Element::EnumDef(d) => assert_eq!(d.namespace, "test_ns"),
-                Element::InterfaceDef(d) => assert_eq!(d.namespace, "test_ns"),
-                Element::EntityDef(d) => assert_eq!(d.namespace, "test_ns"),
+                TypeDefinition::ClassLikeDef(d) => assert_eq!(d.declaration.namespace, "test_ns"),
+                TypeDefinition::EnumDef(d) => assert_eq!(d.declaration.namespace, "test_ns"),
+                TypeDefinition::EntityDef(d) => assert_eq!(d.declaration.namespace, "test_ns"),
             }
         }
     }
 
     #[test]
-    fn test_methods_mut() {
-        let mut class = ClassDef::default();
+    fn test_class_like_members_methods() {
+        let mut class = ClassLikeDef::default();
 
-        class.methods_mut().push(Method {
+        class.members.methods.push(Method {
             name: "foo".into(),
             ..Default::default()
         });
 
-        assert_eq!(class.methods.len(), 1);
-        assert_eq!(class.methods[0].name, "foo");
+        assert_eq!(class.members.methods.len(), 1);
+        assert_eq!(class.members.methods[0].name, "foo");
     }
 
     #[test]
-    fn test_attributes_mut() {
-        let mut class = ClassDef::default();
+    fn test_class_like_members_attributes() {
+        let mut class = ClassLikeDef::default();
 
-        class.attributes_mut().push(Attribute {
+        class.members.attributes.push(Attribute {
             name: "field".into(),
             ..Default::default()
         });
 
-        assert_eq!(class.attributes.len(), 1);
+        assert_eq!(class.members.attributes.len(), 1);
     }
 
     #[test]
-    fn test_type_aliases_mut() {
-        let mut class = ClassDef::default();
+    fn test_class_like_members_type_aliases() {
+        let mut class = ClassLikeDef::default();
 
-        class.type_aliases_mut().push(TypeAlias {
+        class.members.type_aliases.push(TypeAlias {
             alias: "Byte".into(),
             original_type: "std::uint8_t".into(),
             ..Default::default()
         });
 
-        assert_eq!(class.type_aliases.len(), 1);
-        assert_eq!(class.type_aliases[0].alias, "Byte");
+        assert_eq!(class.members.type_aliases.len(), 1);
+        assert_eq!(class.members.type_aliases[0].alias, "Byte");
     }
 
     #[test]
-    fn test_name_mut() {
-        let mut class = ClassDef::default();
+    fn test_type_def_declaration() {
+        let mut class = ClassLikeDef::default();
 
-        class.name_mut().internal = "MyClass".into();
+        class.declaration.name.internal = "MyClass".into();
 
-        assert_eq!(class.name.internal, "MyClass");
+        assert_eq!(class.declaration.name.internal, "MyClass");
     }
 
     #[test]
@@ -571,126 +483,6 @@ mod tests {
         let name: &str = file.as_ref();
 
         assert_eq!(name, "test_file");
-    }
-
-    #[test]
-    fn test_struct_methods_mut() {
-        let mut s = StructDef::default();
-
-        s.methods_mut().push(Method::default());
-
-        assert_eq!(s.methods.len(), 1);
-    }
-
-    #[test]
-    fn test_interface_methods_mut() {
-        let mut i = InterfaceDef::default();
-
-        i.methods_mut().push(Method::default());
-
-        assert_eq!(i.methods.len(), 1);
-    }
-
-    #[test]
-    fn test_typedef_trait_object_calls_for_class_def() {
-        use crate::class_traits::TypeDef;
-
-        let mut c = ClassDef::default();
-
-        {
-            let obj: &mut dyn TypeDef = &mut c;
-
-            obj.name_mut().internal = "ClassViaTrait".into();
-            obj.attributes_mut().push(Attribute {
-                name: "field".into(),
-                ..Default::default()
-            });
-            obj.type_aliases_mut().push(TypeAlias {
-                alias: "Byte".into(),
-                original_type: "std::uint8_t".into(),
-                ..Default::default()
-            });
-            obj.methods_mut().push(Method {
-                name: "method".into(),
-                ..Default::default()
-            });
-        }
-
-        assert_eq!(c.name.internal, "ClassViaTrait");
-        assert_eq!(c.attributes.len(), 1);
-        assert_eq!(c.attributes[0].name, "field");
-        assert_eq!(c.type_aliases.len(), 1);
-        assert_eq!(c.type_aliases[0].alias, "Byte");
-        assert_eq!(c.methods.len(), 1);
-        assert_eq!(c.methods[0].name, "method");
-    }
-
-    #[test]
-    fn test_typedef_trait_object_calls_for_struct_def() {
-        use crate::class_traits::TypeDef;
-
-        let mut s = StructDef::default();
-
-        {
-            let obj: &mut dyn TypeDef = &mut s;
-
-            obj.name_mut().internal = "StructViaTrait".into();
-            obj.attributes_mut().push(Attribute {
-                name: "field".into(),
-                ..Default::default()
-            });
-            obj.type_aliases_mut().push(TypeAlias {
-                alias: "Byte".into(),
-                original_type: "std::uint8_t".into(),
-                ..Default::default()
-            });
-            obj.methods_mut().push(Method {
-                name: "method".into(),
-                ..Default::default()
-            });
-        }
-
-        assert_eq!(s.name.internal, "StructViaTrait");
-        assert_eq!(s.attributes.len(), 1);
-        assert_eq!(s.attributes[0].name, "field");
-        assert_eq!(s.type_aliases.len(), 1);
-        assert_eq!(s.type_aliases[0].alias, "Byte");
-        assert_eq!(s.methods.len(), 1);
-        assert_eq!(s.methods[0].name, "method");
-    }
-
-    #[test]
-    fn test_typedef_trait_object_calls_for_interface_def() {
-        use crate::class_traits::TypeDef;
-
-        let mut i = InterfaceDef::default();
-
-        {
-            let obj: &mut dyn TypeDef = &mut i;
-
-            obj.name_mut().internal = "InterfaceViaTrait".into();
-            obj.attributes_mut().push(Attribute {
-                name: "field".into(),
-                ..Default::default()
-            });
-            obj.type_aliases_mut().push(TypeAlias {
-                alias: "Byte".into(),
-                original_type: "std::uint8_t".into(),
-                ..Default::default()
-            });
-            obj.methods_mut().push(Method {
-                name: "method".into(),
-                ..Default::default()
-            });
-        }
-
-        assert_eq!(i.name.internal, "InterfaceViaTrait");
-        assert_eq!(i.attributes.len(), 1);
-        assert_eq!(i.attributes[0].name, "field");
-        assert_eq!(i.type_aliases.len(), 1);
-        assert_eq!(i.type_aliases[0].alias, "Byte");
-        assert_eq!(i.methods.len(), 1);
-        assert_eq!(i.methods[0].name, "method");
     }
 
     #[test]
@@ -721,19 +513,6 @@ mod tests {
     }
 
     #[test]
-    fn test_name_supports_generic_write_name_usage() {
-        fn call_write<T: WritableName>(mut t: T) -> T {
-            t.write_name("a", Some("b"));
-            t
-        }
-
-        let name = Name::default();
-        let name = call_write(name);
-
-        assert_eq!(name.internal, "a");
-    }
-
-    #[test]
     fn test_name_write_accepts_owned_and_borrowed_variants() {
         let mut name = Name {
             internal: "abc".into(),
@@ -758,16 +537,15 @@ mod tests {
     }
 
     #[test]
-    fn test_struct_methods_mut_returns_mutable_reference() {
-        let mut s = StructDef::default();
-
-        s.methods_mut().push(Method {
-            name: "struct_method".into(),
-            ..Default::default()
-        });
-
-        assert_eq!(s.methods.len(), 1);
-        assert_eq!(s.methods[0].name, "struct_method");
+    fn test_type_declaration_kind_default_is_class() {
+        assert_eq!(
+            ClassLikeDef::default().kind,
+            ClassLikeKind::Class {
+                is_abstract: false,
+                extends: vec![],
+                implements: vec![],
+            }
+        );
     }
 
     #[test]
@@ -801,13 +579,13 @@ mod tests {
         assert_eq!(name.internal, "abc");
         assert_eq!(name.alias, Some("x".to_string()));
 
-        let mut s = StructDef::default();
-        s.methods_mut().push(Method {
+        let mut type_def = ClassLikeDef::default();
+        type_def.members.methods.push(Method {
             name: "mixed_method".into(),
             ..Default::default()
         });
-        assert_eq!(s.methods.len(), 1);
-        assert_eq!(s.methods[0].name, "mixed_method");
+        assert_eq!(type_def.members.methods.len(), 1);
+        assert_eq!(type_def.members.methods[0].name, "mixed_method");
 
         let file1 = ClassUmlFile::default();
         assert_eq!(file1.as_ref(), "");
