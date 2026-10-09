@@ -20,8 +20,8 @@ pub use uid_utils::{is_identifier_path, join, normalize, normalized_segments};
 /// Kind of element a name belongs to.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum IdentityKind {
-    /// class, abstract class, interface, enum, struct: a trailing template
-    /// argument list is not part of the name.
+    /// class, abstract class, interface, enum, struct, entity:
+    /// a trailing template argument list is not part of the name.
     ClassLike,
     Other,
 }

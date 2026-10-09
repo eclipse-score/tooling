@@ -94,8 +94,6 @@ swimlane_text = @{
     (!("|" | NEWLINE) ~ ANY)+
 }
 
-keyword_boundary = _{ !ASCII_ALPHANUMERIC }
-
 control_stmt = { "break" | "kill" | "detach" }
 
 // Action

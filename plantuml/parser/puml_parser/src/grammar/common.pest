@@ -66,6 +66,7 @@ diagram_id = @{ (ASCII_ALPHANUMERIC | "_" | "-" | "." | "@" | " ")+ }
 puml_name  = { STRING | diagram_id }
 
 identifier = @{ (ASCII_ALPHANUMERIC | "_")+ }
+keyword_boundary = _{ !identifier }
 empty_line = { WHITESPACE* ~ EOL }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -379,5 +380,5 @@ arrow_mid_decor = @{ "(0)" | "(0" | "0)" | "()" | "(" | ")" | "0" }
 // ---------- Direction ----------
 arrow_direction = @{
     ("up" | "u" | "right" | "ri" | "r" | "down" | "do" | "d" | "left" | "le" | "l")
-    ~ !(ASCII_ALPHANUMERIC | "_")
+    ~ keyword_boundary
 }

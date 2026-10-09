@@ -98,4 +98,5 @@ For the detailed design and users Guide, see `docs/README.md` in the source tree
 Authoring guides:
 
 - [`docs/element-identifiers.md`](docs/element-identifiers.md) — how element identifiers are constructed and how to link component, class, and sequence diagrams
+- [`docs/class-diagram.md`](docs/class-diagram.md) — class-diagram syntax and free-function conventions
 - [`docs/sequence-diagram.md`](docs/sequence-diagram.md) — supported sequence diagram syntax and semantics
