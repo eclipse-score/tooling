@@ -20,8 +20,8 @@ use class_fbs::class_metamodel as fb_class;
 use crate::models::ClassDiagramInputs;
 use crate::readers::{to_source_location, Reader};
 use class_diagram::{
-    ClassDiagram, EntityType, EnumLiteral, FunctionArgument, MemberVariable, Method,
-    MethodModifier, RelationType, Relationship, SimpleEntity, TemplateParameter, TypeAlias,
+    ClassDiagram, EntityType, EnumLiteral, FreeFunctionDecl, FunctionArgument, MemberVariable,
+    Method, MethodModifier, RelationType, Relationship, SimpleEntity, TemplateParameter, TypeAlias,
     Visibility,
 };
 
@@ -134,20 +134,7 @@ fn read_method(
     entity: fb_class::SimpleEntity<'_>,
     path: &str,
 ) -> Result<Method, String> {
-    let parameters = method
-        .parameters()
-        .map(|params| {
-            params
-                .iter()
-                .map(|param| FunctionArgument {
-                    name: param.name().to_string(),
-                    param_type: param.param_type().map(|s| s.to_string()),
-                    is_variadic: param.is_variadic(),
-                    is_pack_expansion: param.is_pack_expansion(),
-                })
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
+    let parameters = read_function_arguments(method.parameters());
 
     let template_parameters = read_template_parameters(
         method.template_parameters(),
@@ -184,6 +171,26 @@ fn read_method(
             method.source_location().line(),
         ),
     })
+}
+
+fn read_function_arguments(
+    values: Option<
+        flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<fb_class::FunctionArgument<'_>>>,
+    >,
+) -> Vec<FunctionArgument> {
+    values
+        .map(|parameters| {
+            parameters
+                .iter()
+                .map(|parameter| FunctionArgument {
+                    name: parameter.name().to_string(),
+                    param_type: parameter.param_type().map(|value| value.to_string()),
+                    is_variadic: parameter.is_variadic(),
+                    is_pack_expansion: parameter.is_pack_expansion(),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn read_methods(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<Vec<Method>, String> {
@@ -280,6 +287,40 @@ fn read_entities(
         .transpose()
         .map(|values| values.unwrap_or_default())
 }
+
+fn read_free_functions(
+    diagram: fb_class::ClassDiagram<'_>,
+    path: &str,
+) -> Result<Vec<FreeFunctionDecl>, String> {
+    diagram
+        .free_functions()
+        .map(|values| {
+            values
+                .iter()
+                .map(|function| {
+                    Ok(FreeFunctionDecl {
+                        name: function.name().to_string(),
+                        enclosing_namespace_id: function
+                            .enclosing_namespace_id()
+                            .map(uid_utils::normalize),
+                        return_type: function.return_type().map(|value| value.to_string()),
+                        parameters: read_function_arguments(function.parameters()),
+                        template_parameters: read_template_parameters(
+                            function.template_parameters(),
+                            &format!("{path}:free_function:{}", function.name()),
+                        )?,
+                        source_location: to_source_location(
+                            function.source_location().file(),
+                            function.source_location().line(),
+                        ),
+                    })
+                })
+                .collect::<Result<Vec<_>, String>>()
+        })
+        .transpose()
+        .map(|values| values.unwrap_or_default())
+}
+
 fn read_relationship(
     rel: fb_class::Relationship<'_>,
     context: &str,
@@ -320,11 +361,12 @@ impl Reader for ClassDiagramReader {
                 .map_err(|e| format!("Failed to parse class FlatBuffer {path}: {e}"))?;
 
             let entities = read_entities(diagram, path)?;
+            let free_functions = read_free_functions(diagram, path)?;
 
             diagrams.push(ClassDiagram {
                 name: diagram.name().to_string(),
                 entities,
-                free_functions: Vec::new(),
+                free_functions,
             });
         }
 

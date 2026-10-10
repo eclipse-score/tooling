@@ -63,6 +63,11 @@ fn positive_class_features() {
 }
 
 #[test]
+fn positive_free_function_features() {
+    assert_case("positive_free_function_features");
+}
+
+#[test]
 fn positive_method_features() {
     assert_case("positive_method_features");
 }
@@ -173,6 +178,26 @@ fn negative_method_missing() {
 }
 
 #[test]
+fn negative_free_function_missing() {
+    assert_case("negative_free_function_missing");
+}
+
+#[test]
+fn negative_free_function_parameter_type_mismatch() {
+    assert_case("negative_free_function_parameter_type_mismatch");
+}
+
+#[test]
+fn negative_free_function_overload_mismatch() {
+    assert_case("negative_free_function_overload_mismatch");
+}
+
+#[test]
+fn negative_free_function_overloads_missing() {
+    assert_case("negative_free_function_overloads_missing");
+}
+
+#[test]
 fn negative_method_mismatch() {
     assert_case("negative_method_mismatch");
 }
@@ -218,8 +243,8 @@ fn negative_method_parameter_type_mismatch() {
 }
 
 #[test]
-fn negative_method_parameter_variadic_mismatch() {
-    assert_case("negative_method_parameter_variadic_mismatch");
+fn negative_method_parameter_variadic_pack_expansion_mismatch() {
+    assert_case("negative_method_parameter_variadic_pack_expansion_mismatch");
 }
 
 #[test]

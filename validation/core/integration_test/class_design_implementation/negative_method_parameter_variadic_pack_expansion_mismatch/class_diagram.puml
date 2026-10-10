@@ -13,8 +13,9 @@
 
 @startuml
 
-struct Engine {
-    + stop(mode : int, force : int) : int
+class Dispatcher {
+    + Dispatch(...) : void
+    + Expand(argument : int) : void
 }
 
 @enduml

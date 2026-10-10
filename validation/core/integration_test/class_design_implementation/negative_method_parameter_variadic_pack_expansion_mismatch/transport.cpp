@@ -11,7 +11,11 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-struct Engine
+class Dispatcher
 {
-    int stop(int mode, int force, ...);
+  public:
+    void Dispatch(int argument);
+
+    template <typename... Arguments>
+    void Expand(Arguments... arguments);
 };

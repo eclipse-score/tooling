@@ -15,7 +15,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use class_diagram::{ClassDiagram as ClassDiagramInput, EntityType, SimpleEntity};
+use class_diagram::{
+    ClassDiagram as ClassDiagramInput, EntityType, FreeFunctionDecl, SimpleEntity,
+};
 use source_location::SourceLocation;
 
 use crate::{ErrorBuilder, ErrorCategory, ValidationResult};
@@ -26,12 +28,14 @@ pub type ClassDiagramInputs = Vec<ClassDiagramInput>;
 /// Class-like entities from one or more class diagrams, keyed by lower-case id.
 pub struct ClassEntityIndex {
     entities: BTreeMap<String, SimpleEntity>,
+    free_functions: Vec<FreeFunctionDecl>,
 }
 
 impl ClassEntityIndex {
     /// Build an index from class diagrams for class implementation validation.
     pub fn build_index(diagrams: &[ClassDiagramInput], result: &mut ValidationResult) -> Self {
         let mut entities: BTreeMap<String, SimpleEntity> = BTreeMap::new();
+        let mut free_functions = Vec::new();
 
         for diagram in diagrams {
             for entity in &diagram.entities {
@@ -75,9 +79,14 @@ impl ClassEntityIndex {
                     entities.insert(key, indexed_entity);
                 }
             }
+
+            free_functions.extend(diagram.free_functions.iter().cloned());
         }
 
-        Self { entities }
+        Self {
+            entities,
+            free_functions,
+        }
     }
 
     pub fn entities(&self) -> impl Iterator<Item = &SimpleEntity> + '_ {
@@ -86,6 +95,10 @@ impl ClassEntityIndex {
 
     pub fn find_by_id(&self, id: &str) -> Option<&SimpleEntity> {
         self.entities.get(&id.to_lowercase())
+    }
+
+    pub fn free_functions(&self) -> impl Iterator<Item = &FreeFunctionDecl> + '_ {
+        self.free_functions.iter()
     }
 }
 

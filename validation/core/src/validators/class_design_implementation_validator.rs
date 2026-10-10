@@ -19,8 +19,10 @@ use crate::models::ClassEntityIndex;
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::ValidationResult;
 use class_diagram::{
-    EnumLiteral, MemberVariable, Method, Relationship, SimpleEntity, TemplateParameter, TypeAlias,
+    EnumLiteral, FreeFunctionDecl, MemberVariable, Method, Relationship, SimpleEntity,
+    TemplateParameter, TypeAlias,
 };
+use source_location::SourceLocation;
 use std::collections::BTreeMap;
 
 /// Run design-class-vs-implementation-class validation using indexed inputs.
@@ -41,6 +43,14 @@ enum FieldReferenceStyle {
     Verbatim,
 }
 
+enum ParameterDifference {
+    Count,
+    Name,
+    Type,
+    Variadic,
+    PackExpansion,
+}
+
 impl ClassDesignImplementationValidator {
     fn new() -> Self {
         Self {
@@ -54,7 +64,94 @@ impl ClassDesignImplementationValidator {
         implementation_classes: &ClassEntityIndex,
     ) -> ValidationResult {
         self.check_design_classes_have_implementation(design_classes, implementation_classes);
+        self.check_design_free_functions_with_implementation(
+            design_classes,
+            implementation_classes,
+        );
         self.result
+    }
+
+    fn check_design_free_functions_with_implementation(
+        &mut self,
+        design_classes: &ClassEntityIndex,
+        implementation_classes: &ClassEntityIndex,
+    ) {
+        let implementation_functions = free_function_map(implementation_classes);
+        for design_function in design_classes.free_functions() {
+            let key = free_function_key(design_function);
+            let implementation_function = implementation_functions
+                .get(&key)
+                .copied()
+                .or_else(|| unique_free_function_by_name(implementation_classes, design_function));
+
+            if let Some(implementation_function) = implementation_function {
+                self.append_free_function_comparison_diagnostics(
+                    design_function,
+                    implementation_function,
+                );
+                if !free_functions_match(design_function, implementation_function) {
+                    self.check_free_function_fields(design_function, implementation_function);
+                }
+            } else {
+                self.result.add_failure(Self::format_missing_free_function(
+                    design_function,
+                    best_string_suggestion(
+                        &key,
+                        implementation_functions.keys().map(String::as_str),
+                    )
+                    .as_deref(),
+                ));
+            }
+        }
+    }
+
+    fn check_free_function_fields(
+        &mut self,
+        design_function: &FreeFunctionDecl,
+        implementation_function: &FreeFunctionDecl,
+    ) {
+        if normalized_optional_type(&design_function.return_type)
+            != normalized_optional_type(&implementation_function.return_type)
+        {
+            self.result.add_failure(Self::format_free_function_mismatch(
+                design_function,
+                implementation_function,
+                "return type",
+                &render_optional_type(&design_function.return_type),
+                &render_optional_type(&implementation_function.return_type),
+            ));
+        }
+
+        if design_function.template_parameters != implementation_function.template_parameters {
+            self.result.add_failure(Self::format_free_function_mismatch(
+                design_function,
+                implementation_function,
+                "template parameters",
+                &render_template_parameters(&design_function.template_parameters),
+                &render_template_parameters(&implementation_function.template_parameters),
+            ));
+        }
+
+        self.check_free_function_parameter_fields(design_function, implementation_function);
+    }
+
+    fn check_free_function_parameter_fields(
+        &mut self,
+        design_function: &FreeFunctionDecl,
+        implementation_function: &FreeFunctionDecl,
+    ) {
+        for (difference, design_value, implementation_value) in parameter_differences(
+            &design_function.parameters,
+            &implementation_function.parameters,
+        ) {
+            self.result.add_failure(Self::format_free_function_mismatch(
+                design_function,
+                implementation_function,
+                &format!("parameter {}", parameter_difference_name(difference)),
+                &design_value,
+                &implementation_value,
+            ));
+        }
     }
 
     fn check_design_classes_have_implementation(
@@ -63,7 +160,7 @@ impl ClassDesignImplementationValidator {
         implementation_classes: &ClassEntityIndex,
     ) {
         for design_entity in design_classes.entities() {
-            let normalized_design_id = normalize_reference_name(&design_entity.id);
+            let normalized_design_id = normalize_qualified_name(&design_entity.id);
             let Some(implementation_entity) = implementation_classes
                 .find_by_id(&design_entity.id)
                 .or_else(|| implementation_classes.find_by_id(&normalized_design_id))
@@ -100,6 +197,22 @@ impl ClassDesignImplementationValidator {
         self.result
             .diagnostics
             .trace(|| format_entity_trace("Implementation entity", implementation_entity));
+    }
+
+    fn append_free_function_comparison_diagnostics(
+        &mut self,
+        design_function: &FreeFunctionDecl,
+        implementation_function: &FreeFunctionDecl,
+    ) {
+        self.result.diagnostics.debug(|| {
+            format_free_function_comparison_debug(design_function, implementation_function)
+        });
+        self.result
+            .diagnostics
+            .trace(|| format_free_function_trace("Design free function", design_function));
+        self.result.diagnostics.trace(|| {
+            format_free_function_trace("Implementation free function", implementation_function)
+        });
     }
 
     fn check_entity(&mut self, design_entity: &SimpleEntity, implementation_entity: &SimpleEntity) {
@@ -359,60 +472,20 @@ impl ClassDesignImplementationValidator {
         implementation_method: &Method,
     ) {
         let method_name = &design_method.name;
-
-        if design_method.parameters.len() != implementation_method.parameters.len() {
+        for (difference, design_value, implementation_value) in
+            parameter_differences(&design_method.parameters, &implementation_method.parameters)
+        {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
-                &format!("method \"{method_name}\" parameter count"),
+                &format!(
+                    "method \"{method_name}\" parameter {}",
+                    parameter_difference_name(difference)
+                ),
                 FieldReferenceStyle::Verbatim,
-                &format_parameter_count(&design_method.parameters),
-                &format_parameter_count(&implementation_method.parameters),
+                &design_value,
+                &implementation_value,
             ));
-            return;
-        }
-
-        for (design_parameter, implementation_parameter) in design_method
-            .parameters
-            .iter()
-            .zip(&implementation_method.parameters)
-        {
-            if design_parameter.name != implementation_parameter.name {
-                self.result.add_failure(Self::format_mismatch(
-                    design_entity,
-                    implementation_entity,
-                    &format!("method \"{method_name}\" parameter name"),
-                    FieldReferenceStyle::Verbatim,
-                    &format_parameter(design_parameter),
-                    &format_parameter(implementation_parameter),
-                ));
-            }
-
-            if normalized_optional_type(&design_parameter.param_type)
-                != normalized_optional_type(&implementation_parameter.param_type)
-            {
-                self.result.add_failure(Self::format_mismatch(
-                    design_entity,
-                    implementation_entity,
-                    &format!("method \"{method_name}\" parameter type"),
-                    FieldReferenceStyle::Verbatim,
-                    &format_parameter(design_parameter),
-                    &format_parameter(implementation_parameter),
-                ));
-            }
-
-            if design_parameter.is_variadic != implementation_parameter.is_variadic
-                || design_parameter.is_pack_expansion != implementation_parameter.is_pack_expansion
-            {
-                self.result.add_failure(Self::format_mismatch(
-                    design_entity,
-                    implementation_entity,
-                    &format!("method \"{method_name}\" parameter list"),
-                    FieldReferenceStyle::Verbatim,
-                    &format_method_parameters(&design_method.parameters),
-                    &format_method_parameters(&implementation_method.parameters),
-                ));
-            }
         }
     }
 
@@ -499,8 +572,11 @@ impl ClassDesignImplementationValidator {
                 entity.id
             ))
             .field("class", format!("\"{}\"", entity.id))
-            .field("design source file", format!("\"{}\"", design_source_file(entity)))
-            .field("design source line", design_source_line(entity).to_string())
+            .field(
+                "design source file",
+                format!("\"{}\"", source_file(&entity.source_location)),
+            )
+            .field("design source line", source_line(&entity.source_location))
             .fix(format!(
                 "add implementation class \"{}\" in the C++ class implementation, or remove it from the unit design",
                 entity.id
@@ -513,6 +589,75 @@ impl ClassDesignImplementationValidator {
         };
 
         error.build()
+    }
+
+    fn format_missing_free_function(
+        function: &FreeFunctionDecl,
+        suggested_function: Option<&str>,
+    ) -> String {
+        let function_name = free_function_key(function);
+        let error = ErrorBuilder::new(ErrorCategory::Class)
+            .title(format!(
+                "free function \"{function_name}\" from the unit design not found in the C++ implementation"
+            ))
+            .field("free function", format!("\"{function_name}\""))
+            .field(
+                "design source file",
+                format!("\"{}\"", source_file(&function.source_location)),
+            )
+            .field("design source line", source_line(&function.source_location))
+            .fix(format!(
+                "add free function \"{function_name}\" to the C++ implementation, or remove it from the unit design"
+            ));
+
+        let error = if let Some(suggested_function) = suggested_function {
+            error.suggest(&function_name, Some("free function"), suggested_function)
+        } else {
+            error
+        };
+
+        error.build()
+    }
+
+    fn format_free_function_mismatch(
+        design_function: &FreeFunctionDecl,
+        implementation_function: &FreeFunctionDecl,
+        field: &str,
+        design_value: &str,
+        implementation_value: &str,
+    ) -> String {
+        let function_name = normalize_qualified_name(&design_function.qualified_name());
+        ErrorBuilder::new(ErrorCategory::Implementation)
+            .title(format!(
+                "field {field} on free function \"{function_name}\" differs between the unit design and the C++ implementation"
+            ))
+            .field("free function", format!("\"{function_name}\""))
+            .field("field", field)
+            .field("design value", design_value)
+            .field(
+                "design source file",
+                format!("\"{}\"", source_file(&design_function.source_location)),
+            )
+            .field(
+                "design source line",
+                source_line(&design_function.source_location),
+            )
+            .field("implementation value", implementation_value)
+            .field(
+                "implementation source file",
+                format!(
+                    "\"{}\"",
+                    source_file(&implementation_function.source_location)
+                ),
+            )
+            .field(
+                "implementation source line",
+                source_line(&implementation_function.source_location),
+            )
+            .fix(format!(
+                "make {field} on free function \"{function_name}\" consistent between the unit design and the C++ implementation"
+            ))
+            .build()
     }
 
     fn format_missing_member(
@@ -530,9 +675,9 @@ impl ClassDesignImplementationValidator {
             .field("member", format!("{member_type} \"{member_name}\""))
             .field(
                 "design source file",
-                format!("\"{}\"", design_source_file(design_entity)),
+                format!("\"{}\"", source_file(&design_entity.source_location)),
             )
-            .field("design source line", design_source_line(design_entity).to_string())
+            .field("design source line", source_line(&design_entity.source_location))
             .fix(format!(
                 "add {member_type} \"{member_name}\" to entity \"{}\" in the C++ class implementation, or remove it from the unit design",
                 design_entity.id
@@ -567,17 +712,17 @@ impl ClassDesignImplementationValidator {
             .field("design value", design_value)
             .field(
                 "design source file",
-                format!("\"{}\"", design_source_file(design_entity)),
+                format!("\"{}\"", source_file(&design_entity.source_location)),
             )
-            .field("design source line", design_source_line(design_entity).to_string())
+            .field("design source line", source_line(&design_entity.source_location))
             .field("implementation value", implementation_value)
             .field(
                 "implementation source file",
-                format!("\"{}\"", source_file(implementation_entity)),
+                format!("\"{}\"", source_file(&implementation_entity.source_location)),
             )
             .field(
                 "implementation source line",
-                source_line(implementation_entity).to_string(),
+                source_line(&implementation_entity.source_location),
             )
             .fix(format!(
                 "make {field_reference} in entity \"{}\" consistent between the unit design and the C++ class implementation",
@@ -594,12 +739,8 @@ fn format_field_reference(field: &str, style: FieldReferenceStyle) -> String {
     }
 }
 
-fn design_source_file(entity: &SimpleEntity) -> String {
-    source_file(entity)
-}
-
-fn source_file(entity: &SimpleEntity) -> String {
-    let (file, _) = entity.source_location.display();
+fn source_file(source_location: &SourceLocation) -> String {
+    let (file, _) = source_location.display();
 
     if file.is_empty() {
         "<unknown>".to_string()
@@ -608,12 +749,8 @@ fn source_file(entity: &SimpleEntity) -> String {
     }
 }
 
-fn design_source_line(entity: &SimpleEntity) -> String {
-    source_line(entity)
-}
-
-fn source_line(entity: &SimpleEntity) -> String {
-    let (_, line) = entity.source_location.display();
+fn source_line(source_location: &SourceLocation) -> String {
+    let (_, line) = source_location.display();
 
     if line == 0 {
         "<unknown>".to_string()
@@ -629,6 +766,32 @@ fn format_class_comparison_debug(
     format!(
         "Comparing design entity {:?} with implementation entity {:?}",
         design_entity.id, implementation_entity.id
+    )
+}
+
+fn format_free_function_comparison_debug(
+    design_function: &FreeFunctionDecl,
+    implementation_function: &FreeFunctionDecl,
+) -> String {
+    format!(
+        "Comparing design free function {:?} with implementation free function {:?}",
+        design_function.qualified_name(),
+        implementation_function.qualified_name()
+    )
+}
+
+fn format_free_function_trace(label: &str, function: &FreeFunctionDecl) -> String {
+    format!(
+        "{label} {:?} details:\n\
+         namespace={:?}\n\
+         return_type={:?}\n\
+         parameters={:?}\n\
+         template_parameters={:?}",
+        function.qualified_name(),
+        function.enclosing_namespace_id,
+        function.return_type,
+        function.parameters,
+        function.template_parameters,
     )
 }
 
@@ -690,6 +853,13 @@ fn member_variables_match(
         && design_variable.is_static == implementation_variable.is_static
 }
 
+fn free_function_map(index: &ClassEntityIndex) -> BTreeMap<String, &FreeFunctionDecl> {
+    index
+        .free_functions()
+        .map(|function| (free_function_key(function), function))
+        .collect()
+}
+
 fn method_map(entity: &SimpleEntity) -> BTreeMap<String, &Method> {
     entity
         .methods
@@ -735,9 +905,21 @@ fn parameters_match(
         )
 }
 
+fn free_function_key(function: &FreeFunctionDecl) -> String {
+    let parameter_types = parameter_signature(&function.parameters);
+    format!(
+        "{}({parameter_types})",
+        normalize_qualified_name(&function.qualified_name())
+    )
+}
+
 fn method_key(method: &Method) -> String {
-    let parameter_types = method
-        .parameters
+    let parameter_types = parameter_signature(&method.parameters);
+    format!("{}({})", method.name, parameter_types)
+}
+
+fn parameter_signature(parameters: &[class_diagram::FunctionArgument]) -> String {
+    parameters
         .iter()
         .map(|parameter| {
             let variadic = if parameter.is_variadic || parameter.is_pack_expansion {
@@ -756,8 +938,98 @@ fn method_key(method: &Method) -> String {
             )
         })
         .collect::<Vec<_>>()
-        .join(", ");
-    format!("{}({})", method.name, parameter_types)
+        .join(", ")
+}
+
+fn parameter_differences(
+    design_parameters: &[class_diagram::FunctionArgument],
+    implementation_parameters: &[class_diagram::FunctionArgument],
+) -> Vec<(ParameterDifference, String, String)> {
+    if design_parameters.len() != implementation_parameters.len() {
+        return vec![(
+            ParameterDifference::Count,
+            format_parameter_count(design_parameters),
+            format_parameter_count(implementation_parameters),
+        )];
+    }
+
+    let mut differences = Vec::new();
+    for (design_parameter, implementation_parameter) in
+        design_parameters.iter().zip(implementation_parameters)
+    {
+        if design_parameter.name != implementation_parameter.name {
+            differences.push((
+                ParameterDifference::Name,
+                format_parameter(design_parameter),
+                format_parameter(implementation_parameter),
+            ));
+        }
+
+        if normalized_optional_type(&design_parameter.param_type)
+            != normalized_optional_type(&implementation_parameter.param_type)
+        {
+            differences.push((
+                ParameterDifference::Type,
+                format_parameter(design_parameter),
+                format_parameter(implementation_parameter),
+            ));
+        }
+
+        if design_parameter.is_variadic != implementation_parameter.is_variadic {
+            differences.push((
+                ParameterDifference::Variadic,
+                format_method_parameters(design_parameters),
+                format_method_parameters(implementation_parameters),
+            ));
+        }
+
+        if design_parameter.is_pack_expansion != implementation_parameter.is_pack_expansion {
+            differences.push((
+                ParameterDifference::PackExpansion,
+                format_method_parameters(design_parameters),
+                format_method_parameters(implementation_parameters),
+            ));
+        }
+    }
+
+    differences
+}
+
+fn parameter_difference_name(difference: ParameterDifference) -> &'static str {
+    match difference {
+        ParameterDifference::Count => "count",
+        ParameterDifference::Name => "name",
+        ParameterDifference::Type => "type",
+        ParameterDifference::Variadic => "variadic",
+        ParameterDifference::PackExpansion => "pack expansion",
+    }
+}
+
+fn unique_free_function_by_name<'a>(
+    index: &'a ClassEntityIndex,
+    design_function: &FreeFunctionDecl,
+) -> Option<&'a FreeFunctionDecl> {
+    let design_name = normalize_qualified_name(&design_function.qualified_name());
+    let mut matches = index
+        .free_functions()
+        .filter(|function| normalize_qualified_name(&function.qualified_name()) == design_name);
+    let function = matches.next()?;
+    matches.next().is_none().then_some(function)
+}
+
+fn free_functions_match(
+    design_function: &FreeFunctionDecl,
+    implementation_function: &FreeFunctionDecl,
+) -> bool {
+    normalize_qualified_name(&design_function.qualified_name())
+        == normalize_qualified_name(&implementation_function.qualified_name())
+        && normalized_optional_type(&design_function.return_type)
+            == normalized_optional_type(&implementation_function.return_type)
+        && parameters_match(
+            &design_function.parameters,
+            &implementation_function.parameters,
+        )
+        && design_function.template_parameters == implementation_function.template_parameters
 }
 
 fn render_optional_value<T, F>(value: Option<T>, default: &str, format_value: F) -> String
@@ -916,7 +1188,7 @@ fn normalized_optional_type(type_name: &Option<String>) -> Option<String> {
 }
 
 fn normalize_type_name(type_name: &str) -> String {
-    normalize_reference_name(
+    normalize_qualified_name(
         &type_name
             .trim()
             .trim_start_matches("::")
@@ -926,7 +1198,7 @@ fn normalize_type_name(type_name: &str) -> String {
     )
 }
 
-fn normalize_reference_name(reference: &str) -> String {
+fn normalize_qualified_name(reference: &str) -> String {
     // TODO: Remove this workaround once class diagram and implementation parser UIDs use the same namespace separator.
     reference.trim().replace('.', "::")
 }
@@ -962,17 +1234,17 @@ fn relationship_map(entity: &SimpleEntity) -> BTreeMap<String, &Relationship> {
 fn relationship_key(relationship: &Relationship) -> String {
     format!(
         "{} -> {}",
-        normalize_reference_name(&relationship.source),
-        normalize_reference_name(&relationship.target)
+        normalize_qualified_name(&relationship.source),
+        normalize_qualified_name(&relationship.target)
     )
 }
 
 fn relationship_display_name(relationship: &Relationship) -> String {
     format!(
         "{} -> {:?} -> {}",
-        normalize_reference_name(&relationship.source),
+        normalize_qualified_name(&relationship.source),
         relationship.relation_type,
-        normalize_reference_name(&relationship.target)
+        normalize_qualified_name(&relationship.target)
     )
 }
 
@@ -981,8 +1253,8 @@ mod tests {
     use super::*;
     use crate::models::ClassDiagramInputs;
     use class_diagram::{
-        ClassDiagram, EntityType, FunctionArgument, MemberVariable, Method, RelationType,
-        Relationship, SimpleEntity, Visibility,
+        ClassDiagram, EntityType, FreeFunctionDecl, FunctionArgument, MemberVariable, Method,
+        RelationType, Relationship, SimpleEntity, Visibility,
     };
     use source_location::SourceLocation;
     use std::sync::Once;
@@ -1107,6 +1379,29 @@ mod tests {
         ClassEntityIndex::build_index(&diagrams, &mut ValidationResult::default())
     }
 
+    fn index_with_free_functions(free_functions: Vec<FreeFunctionDecl>) -> ClassEntityIndex {
+        let diagrams: ClassDiagramInputs = vec![ClassDiagram {
+            name: "unit".to_string(),
+            entities: Vec::new(),
+            free_functions,
+        }];
+        ClassEntityIndex::build_index(&diagrams, &mut ValidationResult::default())
+    }
+
+    fn free_function(name: &str, parameter_types: &[&str]) -> FreeFunctionDecl {
+        FreeFunctionDecl {
+            name: name.to_string(),
+            enclosing_namespace_id: None,
+            return_type: Some("void".to_string()),
+            parameters: parameter_types
+                .iter()
+                .map(|parameter_type| parameter("", parameter_type, false))
+                .collect(),
+            template_parameters: None,
+            source_location: SourceLocation::new("test.puml", 1),
+        }
+    }
+
     #[test]
     fn method_key_normalizes_parameter_types_and_marks_variadic_parameters() {
         let mut method = method("dispatch");
@@ -1118,6 +1413,26 @@ mod tests {
         assert_eq!(
             method_key(&method),
             "dispatch(uint8_t, vehicle::Payload...)"
+        );
+    }
+
+    #[test]
+    fn free_function_key_normalizes_qualified_name_and_parameters() {
+        let function = FreeFunctionDecl {
+            name: "Dispatch".to_string(),
+            enclosing_namespace_id: Some("vehicle.core".to_string()),
+            return_type: Some("void".to_string()),
+            parameters: vec![
+                parameter("mode", "std::uint8_t", false),
+                parameter("args", "vehicle.Payload", true),
+            ],
+            template_parameters: None,
+            source_location: SourceLocation::new("test.puml", 1),
+        };
+
+        assert_eq!(
+            free_function_key(&function),
+            "vehicle::core::Dispatch(uint8_t, vehicle::Payload...)"
         );
     }
 
@@ -1232,6 +1547,46 @@ mod tests {
             .failures
             .iter()
             .any(|message| message.contains("[Member] Method \"run()\" from entity \"Sample\" in the unit design not found in the C++ class implementation.")));
+    }
+
+    #[test]
+    fn class_implementation_validation_reports_full_signature_for_missing_free_function_overloads()
+    {
+        let design = index_with_free_functions(vec![
+            free_function("Select", &["int"]),
+            free_function("Select", &["int", "int"]),
+        ]);
+        let implementation = index_with_free_functions(Vec::new());
+
+        let result = validate_class_design_implementation(&design, &implementation);
+
+        assert!(result
+            .failures
+            .iter()
+            .any(|message| message.contains("Free function \"Select(int)\"")));
+        assert!(result
+            .failures
+            .iter()
+            .any(|message| message.contains("Free function \"Select(int, int)\"")));
+    }
+
+    #[test]
+    fn class_implementation_validation_normalizes_nested_namespace_in_free_function_mismatch() {
+        let mut design_function = free_function("Dispatch", &["int"]);
+        design_function.enclosing_namespace_id = Some("vehicle.core".to_string());
+        let mut implementation_function = free_function("Dispatch", &["int"]);
+        implementation_function.enclosing_namespace_id = Some("vehicle::core".to_string());
+        implementation_function.return_type = Some("bool".to_string());
+
+        let design = index_with_free_functions(vec![design_function]);
+        let implementation = index_with_free_functions(vec![implementation_function]);
+
+        let result = validate_class_design_implementation(&design, &implementation);
+
+        assert!(result.failures.iter().any(|message| {
+            message.contains("free function \"vehicle::core::Dispatch\"")
+                && !message.contains("vehicle.core::Dispatch")
+        }));
     }
 
     #[test]

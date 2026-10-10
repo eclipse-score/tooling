@@ -15,6 +15,7 @@
 
 struct Engine {
     + stop(mode : int, force : int) : int
+    + start(mode : int, force : int) : int
 }
 
 @enduml
