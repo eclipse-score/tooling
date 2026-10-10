@@ -22,6 +22,7 @@ exports_files(
 filegroup(
     name = "specifications",
     srcs = [
+        "docs/specifications/architectural_unit_class_design.md",
         "docs/specifications/bazel_component.md",
         "docs/specifications/class_design_implementation.md",
         "docs/specifications/class_design_sequence.md",
@@ -58,6 +59,7 @@ rust_library(
         "src/results/diagnostics.rs",
         "src/results/error_models.rs",
         "src/results/mod.rs",
+        "src/validators/architectural_unit_class_design_validator.rs",
         "src/validators/bazel_component_validator.rs",
         "src/validators/class_design_implementation_validator.rs",
         "src/validators/class_design_sequence_validator.rs",

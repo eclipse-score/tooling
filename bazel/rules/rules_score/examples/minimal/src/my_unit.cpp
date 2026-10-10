@@ -11,13 +11,22 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-#include "src/my_unit.h"
+#include "my_unit.h"
 
-void MyUnit::configure(const std::string &key, const std::string &value) {
+namespace my_element {
+namespace MyComponent {
+namespace MyUnit {
+
+void KeyValueStore::configure(const std::string &key,
+                             const std::string &value) {
   store_[key] = value;
 }
 
-std::string MyUnit::get(const std::string &key) const {
+std::string KeyValueStore::get(const std::string &key) const {
   const auto it = store_.find(key);
   return it != store_.end() ? it->second : "";
 }
+
+} // namespace MyUnit
+} // namespace MyComponent
+} // namespace my_element

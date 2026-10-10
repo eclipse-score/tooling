@@ -17,6 +17,8 @@
 
 #include <type_traits>
 
+namespace unit_1 = safety_software_seooc_example::component_example::unit_1;
+
 TEST(Foo, GetNumber) {
   ::testing::Test::RecordProperty("lobster-tracing",
                                   "SampleComponent.REQ_COMP_001");

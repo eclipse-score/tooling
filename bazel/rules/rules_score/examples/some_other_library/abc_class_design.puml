@@ -11,16 +11,12 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml unit_1_class_diagram
+@startuml abc_class_design
 
-namespace safety_software_seooc_example {
+namespace other_seooc {
     namespace component_example {
-        namespace unit_1 {
-            class Foo {
-
-                + GetNumber() : uint8_t
-                + SetNumber(value : uint8_t) : void
-            }
+        namespace abc {
+            class AbcImpl
         }
     }
 }

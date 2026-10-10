@@ -203,6 +203,26 @@ section "Tool Requirements" {
 
         }
 
+        section "Architectural Unit Class Design Validator" {
+
+            ToolQualification.ToolRequirement ArchitecturalUnitClassDesignConsistency {
+                description = '''The validator shall report an error when a
+                unit declared in the architectural component diagram has no
+                corresponding class, struct, interface, or abstract-class
+                entity in the static class diagram of the unit design bound to
+                that unit. An enum alone shall not satisfy this requirement.
+
+                A corresponding entity shall have a canonical identifier with
+                the architectural unit identifier as a complete path prefix,
+                followed by at least one additional entity-name segment.
+                References to entities outside that path shall not constitute
+                corresponding entities.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+        }
+
         section "Class Design Implementation Validator" {
 
             ToolQualification.ToolRequirement ClassDesignImplementationEntityConsistency {
