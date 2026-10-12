@@ -1009,13 +1009,14 @@ def _collect_architecture_components(ctx):
 
     return all_components
 
-def _run_validation(ctx, arch_json, static_fbs_files, unit_design_class_fbs_by_label):
+def _run_validation(ctx, arch_json, static_fbs_files, internal_api_fbs_files, unit_design_class_fbs_by_label):
     """Run the dependable-element validation profile.
 
     Args:
         ctx: Rule context
         arch_json: The architecture JSON File object (already declared and written)
         static_fbs_files: Component-diagram FlatBuffer files from architectural_design targets.
+        internal_api_fbs_files: Internal API FlatBuffer files from architectural_design targets.
         unit_design_class_fbs_by_label: Dict from Bazel unit labels to their class-diagram FlatBuffer files.
     Returns:
         validation_log File object
@@ -1026,7 +1027,7 @@ def _run_validation(ctx, arch_json, static_fbs_files, unit_design_class_fbs_by_l
         for fbs_files in unit_design_class_fbs_by_label.values()
     ]
     action_inputs = depset(
-        direct = [arch_json] + static_fbs_files,
+        direct = [arch_json] + static_fbs_files + internal_api_fbs_files,
         transitive = unit_design_class_fbs,
     ).to_list()
 
@@ -1037,6 +1038,7 @@ def _run_validation(ctx, arch_json, static_fbs_files, unit_design_class_fbs_by_l
         input_bundle = {
             "architecture": arch_json.path,
             "component_diagrams": [f.path for f in static_fbs_files],
+            "internal_api_diagrams": [f.path for f in internal_api_fbs_files],
             "unit_design_class_diagrams": {
                 unit_label: [f.path for f in fbs_files]
                 for unit_label, fbs_files in unit_design_class_fbs_by_label.items()
@@ -1338,10 +1340,12 @@ def _dependable_element_index_impl(ctx):
     # Collect static FlatBuffers from architectural_design targets (the expected
     # static architecture) and verify them against the current architecture.
     static_fbs_files = []
+    internal_api_fbs_files = []
     validation_logs = []
     for ad in ctx.attr.architectural_design:
         if ArchitecturalDesignInfo in ad:
             static_fbs_files.extend(ad[ArchitecturalDesignInfo].static.to_list())
+            internal_api_fbs_files.extend(ad[ArchitecturalDesignInfo].internal_api.to_list())
             validation_logs.extend(ad[ArchitecturalDesignInfo].validation_logs)
 
     unit_design_class_fbs_by_label = {}
@@ -1352,7 +1356,13 @@ def _dependable_element_index_impl(ctx):
 
     # Run validation; build fails automatically on non-zero exit
     validation_logs.append(
-        _run_validation(ctx, arch_json, static_fbs_files, unit_design_class_fbs_by_label),
+        _run_validation(
+            ctx,
+            arch_json,
+            static_fbs_files,
+            internal_api_fbs_files,
+            unit_design_class_fbs_by_label,
+        ),
     )
 
     validation_output_files = []
