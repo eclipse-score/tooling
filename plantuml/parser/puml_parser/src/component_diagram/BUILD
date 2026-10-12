@@ -31,17 +31,17 @@ rust_library(
     crate_name = "component_parser",
     crate_root = "src/lib.rs",
     proc_macro_deps = [
-        "@crates//:pest_derive",
+        "@crates_score_tooling//:pest_derive",
     ],
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_utils",
         "//tools/metamodel/common:source_location",
-        "@crates//:log",
-        "@crates//:pest",
-        "@crates//:serde",
-        "@crates//:thiserror",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:pest",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:thiserror",
     ],
 )
 
@@ -49,7 +49,7 @@ rust_test(
     name = "component_unit_test",
     crate = ":puml_parser_component",
     proc_macro_deps = [
-        "@crates//:pest_derive",
+        "@crates_score_tooling//:pest_derive",
     ],
 )
 

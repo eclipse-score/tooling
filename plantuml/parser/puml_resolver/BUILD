@@ -58,7 +58,7 @@ rust_library(
     crate_root = "src/resolver_traits.rs",
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
-        "@crates//:log",
+        "@crates_score_tooling//:log",
     ],
 )
 

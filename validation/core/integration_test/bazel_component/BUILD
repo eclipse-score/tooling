@@ -45,7 +45,7 @@ rust_test(
     deps = [
         "//validation/core:validation_cli",
         "//validation/core/integration_test:test_framework",
-        "@crates//:serde",
-        "@crates//:serde_json",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
     ],
 )

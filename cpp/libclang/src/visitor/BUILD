@@ -38,9 +38,9 @@ rust_library(
         "//cpp/libclang/src/semantics:cpp_semantics",
         "//tools/metamodel/class:class_diagram",
         "//tools/metamodel/sequence:sequence_diagram",
-        "@crates//:clang",
-        "@crates//:log",
-        "@crates//:serde",
+        "@crates_score_tooling//:clang",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:serde",
     ],
 )
 
@@ -52,8 +52,8 @@ rust_test(
         "//cpp/libclang/src/semantics:cpp_semantics",
         "//tools/metamodel/class:class_diagram",
         "//tools/metamodel/sequence:sequence_diagram",
-        "@crates//:clang",
-        "@crates//:log",
-        "@crates//:serde",
+        "@crates_score_tooling//:clang",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:serde",
     ],
 )

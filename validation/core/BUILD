@@ -87,12 +87,12 @@ rust_library(
         "//tools/serialization/flatbuffers/class:class_fbs",
         "//tools/serialization/flatbuffers/component:component_fbs",
         "//tools/serialization/flatbuffers/sequence:sequence_fbs",
-        "@crates//:clap",
-        "@crates//:flatbuffers",
-        "@crates//:log",
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:strsim",
+        "@crates_score_tooling//:clap",
+        "@crates_score_tooling//:flatbuffers",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
+        "@crates_score_tooling//:strsim",
     ],
 )
 
@@ -106,11 +106,11 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":validation",
-        "@crates//:clap",
-        "@crates//:env_logger",
-        "@crates//:log",
-        "@crates//:serde",
-        "@crates//:serde_json",
+        "@crates_score_tooling//:clap",
+        "@crates_score_tooling//:env_logger",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
     ],
 )
 

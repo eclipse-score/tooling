@@ -23,18 +23,18 @@ rust_library(
     ],
     crate_name = "sequence_parser",
     proc_macro_deps = [
-        "@crates//:pest_derive",
+        "@crates_score_tooling//:pest_derive",
     ],
     visibility = ["//visibility:public"],
     deps = [
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_utils",
         "//tools/metamodel/common:source_location",
-        "@crates//:log",
-        "@crates//:pest",
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:thiserror",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:pest",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
+        "@crates_score_tooling//:thiserror",
     ],
 )
 
@@ -42,7 +42,7 @@ rust_test(
     name = "sequence_unit_test",
     crate = ":puml_parser_sequence",
     proc_macro_deps = [
-        "@crates//:pest_derive",
+        "@crates_score_tooling//:pest_derive",
     ],
 )
 
