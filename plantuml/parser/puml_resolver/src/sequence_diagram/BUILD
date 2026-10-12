@@ -34,10 +34,10 @@ rust_library(
         "//plantuml/parser/puml_resolver:uid_normalization",
         "//plantuml/parser/puml_utils",
         "//tools/metamodel/sequence:sequence_diagram",
-        "@crates//:log",
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:thiserror",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
+        "@crates_score_tooling//:thiserror",
     ],
 )
 
@@ -62,7 +62,7 @@ rust_test(
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//plantuml/parser/puml_utils",
         "//tools/metamodel/sequence:sequence_diagram",
-        "@crates//:serde",
-        "@crates//:serde_json",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
     ],
 )

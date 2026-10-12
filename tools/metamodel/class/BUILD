@@ -23,8 +23,8 @@ rust_library(
     edition = "2021",
     deps = [
         "//tools/metamodel/common:source_location",
-        "@crates//:serde",
-        "@crates//:thiserror",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:thiserror",
     ],
 )
 
@@ -32,6 +32,6 @@ rust_test(
     name = "class_diagram_test",
     crate = ":class_diagram",
     deps = [
-        "@crates//:serde_json",
+        "@crates_score_tooling//:serde_json",
     ],
 )

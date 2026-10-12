@@ -21,6 +21,6 @@ rust_library(
     crate_root = "activity_logic.rs",
     edition = "2021",
     deps = [
-        "@crates//:serde",
+        "@crates_score_tooling//:serde",
     ],
 )

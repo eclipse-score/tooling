@@ -25,8 +25,8 @@ rust_library(
         "//plantuml/parser/puml_parser:activity_diagram",
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//tools/metamodel/activity:activity_diagram",
-        "@crates//:serde",
-        "@crates//:thiserror",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:thiserror",
     ],
 )
 

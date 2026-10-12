@@ -21,15 +21,15 @@ rust_library(
     crate_name = "preprocessor",
     crate_root = "src/lib.rs",
     proc_macro_deps = [
-        "@crates//:pest_derive",
+        "@crates_score_tooling//:pest_derive",
     ],
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
         "//plantuml/parser/puml_parser/src/preprocessor/src/include:include_preprocessor",
         "//plantuml/parser/puml_parser/src/preprocessor/src/procedure:procedure_preprocessor",
         "//plantuml/parser/puml_utils",
-        "@crates//:log",
-        "@crates//:thiserror",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:thiserror",
     ],
 )
 
@@ -48,7 +48,7 @@ rust_test(
         ":puml_parser_preprocessor",
         "//plantuml/parser/integration_test:test_framework",
         "//plantuml/parser/puml_utils",
-        "@crates//:serde_yaml",
+        "@crates_score_tooling//:serde_yaml",
     ],
 )
 
@@ -67,6 +67,6 @@ rust_test(
         ":puml_parser_preprocessor",
         "//plantuml/parser/integration_test:test_framework",
         "//plantuml/parser/puml_utils",
-        "@crates//:serde_yaml",
+        "@crates_score_tooling//:serde_yaml",
     ],
 )

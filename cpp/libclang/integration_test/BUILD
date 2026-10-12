@@ -23,8 +23,8 @@ rust_library(
     ],
     visibility = ["//cpp/libclang:__subpackages__"],
     deps = [
-        "@crates//:assert-json-diff",
-        "@crates//:serde_json",
+        "@crates_score_tooling//:assert-json-diff",
+        "@crates_score_tooling//:serde_json",
     ],
 )
 

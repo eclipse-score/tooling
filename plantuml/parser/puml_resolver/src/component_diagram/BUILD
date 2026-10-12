@@ -26,8 +26,8 @@ rust_library(
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//plantuml/parser/puml_resolver:uid_normalization",
         "//tools/metamodel/component:component_diagram",
-        "@crates//:log",
-        "@crates//:thiserror",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:thiserror",
     ],
 )
 
@@ -50,6 +50,6 @@ rust_test(
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//plantuml/parser/puml_utils",
         "//tools/metamodel/component:component_diagram",
-        "@crates//:serde_json",
+        "@crates_score_tooling//:serde_json",
     ],
 )

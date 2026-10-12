@@ -23,8 +23,8 @@ rust_library(
     visibility = ["//validation/core:__subpackages__"],
     deps = [
         "//validation/core:validation",
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:serde_yaml",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
+        "@crates_score_tooling//:serde_yaml",
     ],
 )

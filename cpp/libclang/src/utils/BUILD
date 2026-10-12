@@ -21,9 +21,9 @@ rust_library(
     ],
     visibility = ["//cpp/libclang:__pkg__"],
     deps = [
-        "@crates//:clang",
-        "@crates//:log",
-        "@crates//:serde",
-        "@crates//:serde_json",
+        "@crates_score_tooling//:clang",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
     ],
 )

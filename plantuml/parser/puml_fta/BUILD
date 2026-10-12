@@ -20,10 +20,10 @@ rust_library(
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_parser/src/preprocessor/src/procedure:procedure_preprocessor",
         "//plantuml/parser/puml_utils",
-        "@crates//:log",
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:thiserror",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
+        "@crates_score_tooling//:thiserror",
     ],
 )
 
@@ -34,9 +34,9 @@ rust_test(
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_parser/src/preprocessor/src/procedure:procedure_preprocessor",
         "//plantuml/parser/puml_utils",
-        "@crates//:log",
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:thiserror",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
+        "@crates_score_tooling//:thiserror",
     ],
 )
