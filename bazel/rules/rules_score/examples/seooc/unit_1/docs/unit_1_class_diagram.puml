@@ -15,6 +15,10 @@
 
 namespace safety_software_seooc_example {
     namespace component_example {
+        interface InternalInterface <<interface>> {
+            {abstract} GetData(BindingType binding) : safety_software_seooc_example::component_example::Data*
+        }
+
         namespace unit_1 {
             class Foo {
 

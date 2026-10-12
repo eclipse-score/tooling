@@ -16,8 +16,11 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 filegroup(
     name = "architectural_unit_class_design_test_data",
     srcs = [
+        "//validation/core/integration_test/architectural_unit_class_design/negative_missing_bound_interface:case_data",
         "//validation/core/integration_test/architectural_unit_class_design/negative_missing_class:case_data",
+        "//validation/core/integration_test/architectural_unit_class_design/negative_missing_internal_api_method:case_data",
         "//validation/core/integration_test/architectural_unit_class_design/negative_path_prefix:case_data",
+        "//validation/core/integration_test/architectural_unit_class_design/positive_internal_api_class_design:case_data",
         "//validation/core/integration_test/architectural_unit_class_design/positive_refining_class:case_data",
         "//validation/core/integration_test/architectural_unit_class_design/positive_refining_supported_entity_types:case_data",
     ],

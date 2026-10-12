@@ -13,7 +13,7 @@
 
 use crate::models::{
     BazelArchitecture, BazelInput, ClassDiagramInputs, ClassEntityIndex,
-    ComponentDiagramArchitecture, ComponentDiagramInputs,
+    ComponentDiagramArchitecture, ComponentDiagramInputs, InternalApiIndex,
 };
 use crate::readers::{BazelReader, ClassDiagramReader, ComponentDiagramReader};
 use crate::validators::{
@@ -35,12 +35,15 @@ pub struct DependableElementInputs {
     component_diagrams: Vec<String>,
     #[serde(default)]
     unit_design_class_diagrams: Option<BTreeMap<String, Vec<String>>>,
+    #[serde(default)]
+    internal_api_diagrams: Vec<String>,
 }
 
 fn registered_validators<'a>(
     bazel: &'a Option<BazelArchitecture>,
     component: &'a Option<ComponentDiagramArchitecture>,
     unit_design_classes: &'a Option<BTreeMap<String, Vec<UnitDesignEntity>>>,
+    internal_api: &'a Option<InternalApiIndex>,
 ) -> Vec<ProfileValidator<'a>> {
     vec![
         Box::new(move || {
@@ -57,6 +60,7 @@ fn registered_validators<'a>(
                 bazel,
                 component,
                 unit_design_classes,
+                internal_api.as_ref(),
             ))
         }),
     ]
@@ -74,6 +78,11 @@ pub fn run(inputs: &DependableElementInputs) -> Result<ProfileRun, String> {
         &mut result,
         |raw: ComponentDiagramInputs, errs| raw.to_diagram_architecture(errs),
     )?;
+    let internal_api = read_and_convert::<ClassDiagramReader, InternalApiIndex>(
+        inputs.internal_api_diagrams.as_slice(),
+        &mut result,
+        |raw: ClassDiagramInputs, _errs| InternalApiIndex::build_index(&raw),
+    )?;
     let unit_design_classes = match &inputs.unit_design_class_diagrams {
         Some(diagrams_by_label) => {
             let mut entity_ids_by_label = BTreeMap::new();
@@ -90,6 +99,13 @@ pub fn run(inputs: &DependableElementInputs) -> Result<ProfileRun, String> {
                     .filter(|entity| is_unit_refinement_entity(entity.entity_type))
                     .map(|entity| UnitDesignEntity {
                         id: entity.id.clone(),
+                        entity_type: entity.entity_type,
+                        method_names: entity
+                            .methods
+                            .iter()
+                            .map(|method| method.name.clone())
+                            .filter(|name| !name.is_empty())
+                            .collect(),
                         source_location: entity.source_location.clone(),
                     })
                     .collect();
@@ -100,7 +116,7 @@ pub fn run(inputs: &DependableElementInputs) -> Result<ProfileRun, String> {
         None => None,
     };
 
-    let validators = registered_validators(&bazel, &component, &unit_design_classes);
+    let validators = registered_validators(&bazel, &component, &unit_design_classes, &internal_api);
 
     let mut ran_validator = false;
     for validator in validators {

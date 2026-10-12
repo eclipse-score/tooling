@@ -18,6 +18,14 @@
 
 namespace safety_software_seooc_example {
 namespace component_example {
+struct BindingType;
+struct Data;
+
+class InternalInterface {
+public:
+  virtual Data *GetData(BindingType binding) = 0;
+};
+
 namespace unit_1 {
 
 // trace: SampleComponent.REQ_COMP_002

@@ -239,6 +239,20 @@ section "Tool Requirements" {
                 satisfied_by = Verifier
             }
 
+            ToolQualification.ToolRequirement ArchitecturalUnitInternalApiClassDesignConsistency {
+                description = '''When an interface declared in the component
+                diagram is also specified in the Internal API diagram and is
+                required by one or more units, the validator shall report an
+                error if any requiring unit's static class diagram does not
+                declare a corresponding interface containing every method
+                name specified by the Internal API interface. Units that
+                provide the interface are not checked by this requirement.
+                Interfaces with no required unit bindings are outside this
+                consistency check.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
         }
 
         section "Class Design Implementation Validator" {

@@ -80,6 +80,7 @@ fn collect_unit_design_class_fbs(
 fn assert_case(case_dir: &str) {
     let expected = load_expected_yaml_fixture(SUITE_DIR, case_dir);
     let component_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "component");
+    let internal_api_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "internal_api");
     let class_fbs_paths = collect_case_fbs_files(SUITE_DIR, case_dir, "unit_design_class");
     let architecture_path = case_file_path(&format!(
         "validation/core/integration_test/{SUITE_DIR}/{case_dir}/architecture.json"
@@ -93,6 +94,7 @@ fn assert_case(case_dir: &str) {
         serde_json::json!({
             "architecture": architecture_path.display().to_string(),
             "component_diagrams": component_fbs_paths,
+            "internal_api_diagrams": internal_api_fbs_paths,
             "unit_design_class_diagrams": unit_design_class_diagrams,
         }),
     );
@@ -118,6 +120,21 @@ fn negative_path_prefix() {
 }
 
 #[test]
+fn negative_missing_bound_interface() {
+    assert_case("negative_missing_bound_interface");
+}
+
+#[test]
+fn negative_missing_internal_api_method() {
+    assert_case("negative_missing_internal_api_method");
+}
+
+#[test]
 fn negative_missing_class() {
     assert_case("negative_missing_class");
+}
+
+#[test]
+fn positive_internal_api_class_design() {
+    assert_case("positive_internal_api_class_design");
 }
