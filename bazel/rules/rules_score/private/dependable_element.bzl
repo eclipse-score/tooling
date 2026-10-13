@@ -1229,6 +1229,12 @@ def _dependable_element_index_impl(ctx):
     # Sphinx sidebar navigation.
     component_entries = ["components/" + name for name in component_refs]
 
+    # Units listed directly in components have no parent component page, so
+    # link their pages from the Components section.
+    for comp_target in ctx.attr.components:
+        if UnitInfo in comp_target and ComponentInfo not in comp_target:
+            component_entries.append("units/" + comp_target.label.name)
+
     # Generate submodule links for the index page
     deps_links = _process_deps(ctx)
 
