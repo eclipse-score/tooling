@@ -11,9 +11,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load("//cr_checker:cr_checker.bzl", "copyright_checker")
+load("//skills_sync:sync_skills.bzl", "sync_skills")
 load("//third_party/format:macros.bzl", "use_format_targets")
 
 package(default_visibility = ["//visibility:public"])
+
+sync_skills(repo_skills_target = "@score_tooling//.github/skills:skills")
 
 exports_files([
     "pyproject.toml",

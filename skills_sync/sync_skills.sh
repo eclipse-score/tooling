@@ -114,8 +114,8 @@ cmd_check() {
     declare -A repo_map=()
     for f in "${repo_files[@]}"; do
         case "$f" in
-            "${SKILL_MARKER}/"score-*)
-                rel="${f#${SKILL_MARKER}/}"
+            *"${SKILL_MARKER}/"score-*)
+                rel="$(relative_skill_path "$f")"
                 repo_map["$rel"]="$f"
                 ;;
         esac
