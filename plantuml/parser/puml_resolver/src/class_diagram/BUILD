@@ -24,6 +24,7 @@ rust_library(
     deps = [
         "//plantuml/parser/puml_parser:class_diagram",
         "//plantuml/parser/puml_parser:parser_core",
+        "//plantuml/parser/puml_resolver:group_resolution",
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//plantuml/parser/puml_resolver:uid_normalization",
         "//tools/metamodel/class:class_diagram",

@@ -1,0 +1,74 @@
+{
+  "a.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "P.A",
+        "name": "A",
+        "enclosing_namespace_id": "P",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 16 }
+      }
+    ],
+    "free_functions": []
+  },
+  "b.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "B",
+        "name": "B",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "B",
+            "target": "P.A",
+            "relation_type": "Association",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 17 }
+          }
+        ],
+        "source_location": { "file": "", "line": 15 }
+      },
+      {
+        "id": "C",
+        "name": "C",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "C",
+            "target": "P.A",
+            "relation_type": "Inheritance",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 16 }
+          }
+        ],
+        "source_location": { "file": "", "line": 16 }
+      }
+    ],
+    "free_functions": []
+  }
+}

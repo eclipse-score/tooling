@@ -11,13 +11,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use resolver_traits::DiagramResolver;
+use resolver_traits::{DiagramResolver, DiagramSource, GroupResolveError};
 use sequence_logic::SequenceTree;
 use sequence_parser::SeqPumlDocument;
 
 use crate::error::SequenceResolverError;
 use crate::lifecycle_validator::validate_lifecycle_consistency;
-use crate::participant_table::build_participant_table;
+use crate::participant_table::{build_participant_table, declared_participants, ParticipantTable};
 use crate::statement_resolver::build_sequence_tree;
 
 /// Resolver for sequence diagrams.
@@ -26,15 +26,15 @@ use crate::statement_resolver::build_sequence_tree;
 /// validates lifecycle consistency before assembling the final `SequenceTree`.
 /// The resolver stores no per-document state, so the same instance can resolve
 /// multiple documents safely.
+#[derive(Default)]
 pub struct SequenceResolver;
 
-impl DiagramResolver for SequenceResolver {
-    type Document = SeqPumlDocument;
-    type Output = SequenceTree;
-    type Error = SequenceResolverError;
-
-    fn resolve(&mut self, document: &SeqPumlDocument) -> Result<SequenceTree, Self::Error> {
-        let table = build_participant_table(&document.statements)?;
+impl SequenceResolver {
+    fn resolve_with_peers(
+        document: &SeqPumlDocument,
+        peers: &[&ParticipantTable],
+    ) -> Result<SequenceTree, SequenceResolverError> {
+        let table = build_participant_table(&document.statements, peers)?;
         let root = build_sequence_tree(&document.statements, &table)?;
         validate_lifecycle_consistency(&root, &table.participants)?;
 
@@ -43,6 +43,47 @@ impl DiagramResolver for SequenceResolver {
             participants: table.participants,
             root,
         })
+    }
+}
+
+impl DiagramResolver for SequenceResolver {
+    type Document = SeqPumlDocument;
+    type Output = SequenceTree;
+    type Error = SequenceResolverError;
+
+    fn resolve(&mut self, document: &SeqPumlDocument) -> Result<SequenceTree, Self::Error> {
+        Self::resolve_with_peers(document, &[])
+    }
+
+    /// Resolves the files of one view together: a participant a file references
+    /// but does not declare resolves to the explicit declaration in another
+    /// file. Statements, lifecycle checks and the output stay per file.
+    fn resolve_group(
+        documents: &[DiagramSource<'_, SeqPumlDocument>],
+    ) -> Result<Vec<SequenceTree>, GroupResolveError<Self::Error>> {
+        let declared: Vec<ParticipantTable> = documents
+            .iter()
+            .map(|document| {
+                declared_participants(&document.document.statements)
+                    .map_err(|source| GroupResolveError::in_file(document.name, source))
+            })
+            .collect::<Result<_, _>>()?;
+
+        documents
+            .iter()
+            .enumerate()
+            .map(|(index, document)| {
+                let peers: Vec<&ParticipantTable> = declared
+                    .iter()
+                    .enumerate()
+                    .filter(|(peer_index, _)| *peer_index != index)
+                    .map(|(_, table)| table)
+                    .collect();
+
+                Self::resolve_with_peers(document.document, &peers)
+                    .map_err(|source| GroupResolveError::in_file(document.name, source))
+            })
+            .collect()
     }
 }
 

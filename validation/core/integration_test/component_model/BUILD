@@ -17,16 +17,20 @@ filegroup(
     name = "component_model_test_data",
     srcs = [
         "//validation/core/integration_test/component_model/negative_children_split_across_files:case_data",
+        "//validation/core/integration_test/component_model/negative_component_under_plain_package:case_data",
         "//validation/core/integration_test/component_model/negative_conflicting_element_type:case_data",
         "//validation/core/integration_test/component_model/negative_conflicting_stereotype:case_data",
         "//validation/core/integration_test/component_model/negative_duplicate_component_alias_casefolded:case_data",
         "//validation/core/integration_test/component_model/negative_duplicate_dependable_element_alias_casefolded:case_data",
         "//validation/core/integration_test/component_model/negative_duplicate_interface_alias_casefolded:case_data",
         "//validation/core/integration_test/component_model/negative_duplicate_unit_alias_casefolded:case_data",
+        "//validation/core/integration_test/component_model/negative_top_level_component:case_data",
+        "//validation/core/integration_test/component_model/negative_unmerged_detail_declaration:case_data",
         "//validation/core/integration_test/component_model/positive_overview_nested_public_interface:case_data",
         "//validation/core/integration_test/component_model/positive_overview_partial_subset:case_data",
         "//validation/core/integration_test/component_model/positive_overview_subset:case_data",
         "//validation/core/integration_test/component_model/positive_three_file_merge:case_data",
+        "//validation/core/integration_test/component_model/positive_wrapperless_detail:case_data",
     ],
 )
 

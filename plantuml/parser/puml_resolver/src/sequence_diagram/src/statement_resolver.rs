@@ -283,7 +283,7 @@ mod message_arrow_tests {
     use sequence_parser::ParticipantIdentifier;
 
     fn table_for(statements: &[Statement]) -> ParticipantTable {
-        build_participant_table(statements).expect("table must build")
+        build_participant_table(statements, &[]).expect("table must build")
     }
 
     fn resolve_message(message: &Message) -> Result<Vec<Node>, SequenceResolverError> {

@@ -41,6 +41,17 @@ pub enum SequenceResolverError {
     },
 
     #[error(
+        "ambiguous sequence participant `{reference}` at {source_location}: declared in other files as {}",
+        uids.join(", ")
+    )]
+    AmbiguousParticipantReference {
+        reference: String,
+        /// Distinct uids the reference stands for, sorted.
+        uids: Vec<String>,
+        source_location: SourceLocation,
+    },
+
+    #[error(
         "participant `{participant}` (uid `{uid}`) is used after destroy at {source_location}"
     )]
     DestroyedParticipantUse {

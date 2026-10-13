@@ -805,7 +805,7 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
                     include_path = unit_name + "_design/" + relative_path
                     design_include_lines.append(".. include:: " + include_path)
                     design_include_lines.append("")
-                elif f.extension in ("puml", "plantuml"):
+                elif f.extension == "puml":
                     # sphinxcontrib-plantuml resolves .. uml:: paths relative to
                     # the *including* document (units/unit_name.rst), not the
                     # included RST file. Symlink the PUML alongside the unit RST

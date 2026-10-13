@@ -13,11 +13,12 @@
 
 @startuml
 
+' Overview of the `internal_api` view: the namespaces and the interface as a
+' reference. Its operations are declared in internal_api_detail.puml.
+
 namespace safety_software_seooc_example {
   namespace component_example {
-    interface InternalInterface <<interface>>{
-      {abstract} GetData(BindingType binding): Data*
-    }
+    interface InternalInterface <<interface>>
   }
 }
 

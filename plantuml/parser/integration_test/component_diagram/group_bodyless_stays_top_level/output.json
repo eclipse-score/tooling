@@ -1,0 +1,45 @@
+{
+    "bodyless.puml": {
+        "ComponentA": {
+            "id": "ComponentA",
+            "name": "ComponentA",
+            "alias": "ComponentA",
+            "parent_id": null,
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 15
+            }
+        }
+    },
+    "overview.puml": {
+        "SampleSEooC": {
+            "id": "SampleSEooC",
+            "name": "SampleSEooC",
+            "alias": "SampleSEooC",
+            "parent_id": null,
+            "element_type": "Package",
+            "stereotype": "SEooC",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 15
+            }
+        },
+        "SampleSEooC.ComponentA": {
+            "id": "SampleSEooC.ComponentA",
+            "name": "ComponentA",
+            "alias": "CompA",
+            "parent_id": "SampleSEooC",
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 16
+            }
+        }
+    }
+}

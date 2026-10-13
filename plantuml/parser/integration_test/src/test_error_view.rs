@@ -18,7 +18,8 @@ use puml_parser::{
     IncludeParseError, PreprocessError, ProcedureExpandError, ProcedureParseError, SequenceError,
 };
 use puml_resolver::{
-    ActivityResolverError, ClassPumlResolverError, ComponentResolverError, SequenceResolverError,
+    ActivityResolverError, ClassPumlResolverError, ComponentResolverError, ImplicitParentError,
+    SequenceResolverError,
 };
 
 #[derive(Debug)]
@@ -57,6 +58,19 @@ fn relative_path(path: &Path, dir: &Path) -> String {
         .unwrap_or(path)
         .to_string_lossy()
         .to_string()
+}
+
+fn project_implicit_parent(error: &ImplicitParentError) -> ProjectedError {
+    match error {
+        ImplicitParentError::Ambiguous { id, candidates, .. } => {
+            ProjectedError::new("AmbiguousImplicitParent")
+                .with_field("id", id.clone())
+                .with_field("candidates", candidates.join(", "))
+        }
+        ImplicitParentError::Cycle { id, chain, .. } => ProjectedError::new("ImplicitParentCycle")
+            .with_field("id", id.clone())
+            .with_field("chain", chain.join(", ")),
+    }
 }
 
 impl<Rule> ErrorView for BaseParseError<Rule> {
@@ -296,6 +310,15 @@ impl ErrorView for ComponentResolverError {
                         .map(|location| location.line.to_string())
                         .unwrap_or_default(),
                 ),
+
+            ComponentResolverError::ImplicitParent(error) => project_implicit_parent(error),
+
+            ComponentResolverError::CrossFileRelationSource {
+                reference,
+                source_location,
+            } => ProjectedError::new("CrossFileRelationSource")
+                .with_field("reference", reference.clone())
+                .with_field("line", source_location.line.to_string()),
         }
     }
 }
@@ -406,6 +429,15 @@ impl ErrorView for ClassPumlResolverError {
             ClassPumlResolverError::ParseError { message } => {
                 ProjectedError::new("ParseError").with_field("message", message.clone())
             }
+
+            ClassPumlResolverError::ImplicitParent(error) => project_implicit_parent(error),
+
+            ClassPumlResolverError::CrossFileRelationSource {
+                reference,
+                source_location,
+            } => ProjectedError::new("CrossFileRelationSource")
+                .with_field("reference", reference.clone())
+                .with_field("line", source_location.line.to_string()),
         }
     }
 }
@@ -439,6 +471,14 @@ impl ErrorView for SequenceResolverError {
                 source_location,
             } => ProjectedError::new("UnknownParticipant")
                 .with_field("reference", reference.clone())
+                .with_field("line", source_location.line.to_string()),
+            SequenceResolverError::AmbiguousParticipantReference {
+                reference,
+                uids,
+                source_location,
+            } => ProjectedError::new("AmbiguousParticipantReference")
+                .with_field("reference", reference.clone())
+                .with_field("uids", uids.join(", "))
                 .with_field("line", source_location.line.to_string()),
             SequenceResolverError::DestroyedParticipantUse {
                 participant,

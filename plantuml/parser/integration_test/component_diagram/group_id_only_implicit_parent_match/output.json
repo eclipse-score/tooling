@@ -1,0 +1,45 @@
+{
+    "bare.puml": {
+        "Foo": {
+            "id": "Foo",
+            "name": "Foo",
+            "alias": "Foo",
+            "parent_id": null,
+            "element_type": "Interface",
+            "stereotype": "Interface",
+            "relations": [],
+            "source_location": {
+                "line": 15,
+                "file": ""
+            }
+        }
+    },
+    "nested.puml": {
+        "Parent.Foo": {
+            "id": "Parent.Foo",
+            "name": "Foo",
+            "alias": "Foo",
+            "parent_id": "Parent",
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "line": 16,
+                "file": ""
+            }
+        },
+        "Parent": {
+            "id": "Parent",
+            "name": "Parent",
+            "alias": "Parent",
+            "parent_id": null,
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "line": 15,
+                "file": ""
+            }
+        }
+    }
+}

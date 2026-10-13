@@ -1,0 +1,69 @@
+{
+    "a.puml": {
+        "SampleSEooC": {
+            "id": "SampleSEooC",
+            "name": "SampleSEooC",
+            "alias": "SampleSEooC",
+            "parent_id": null,
+            "element_type": "Package",
+            "stereotype": "SEooC",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 15
+            }
+        },
+        "SampleSEooC.ComponentA": {
+            "id": "SampleSEooC.ComponentA",
+            "name": "ComponentA",
+            "alias": "ComponentA",
+            "parent_id": "SampleSEooC",
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 16
+            }
+        }
+    },
+    "b.puml": {
+        "ComponentA": {
+            "id": "ComponentA",
+            "name": "ComponentA",
+            "alias": "ComponentA",
+            "parent_id": null,
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 15
+            }
+        },
+        "ComponentB": {
+            "id": "ComponentB",
+            "name": "ComponentB",
+            "alias": "ComponentB",
+            "parent_id": null,
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [
+                {
+                    "target": "ComponentA",
+                    "annotation": "uses",
+                    "relation_type": "Dependency",
+                    "source_role": "None",
+                    "source_location": {
+                        "file": "",
+                        "line": 18
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "",
+                "line": 16
+            }
+        }
+    }
+}

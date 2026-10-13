@@ -19,10 +19,12 @@ load("@score_tooling//validation/ai_checker:ai_checker.bzl", "architecture_ai_te
 architectural_design(
     name = "sample_seooc_design",
     dynamic = [
+        "dynamic_cast.puml",
         "dynamic_design.puml",
     ],
     internal_api = [
         "internal_api.puml",
+        "internal_api_detail.puml",
     ],
     public_api = [
         "public_api.puml",
@@ -31,6 +33,7 @@ architectural_design(
     static = [
         "static_design.puml",
         "overview_design.puml",
+        "sub_component_design.puml",
         "index.md",
     ],
     visibility = ["//visibility:public"],

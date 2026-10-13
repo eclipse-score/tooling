@@ -1,0 +1,56 @@
+{
+    "a.puml": {
+        "SampleSEooC": {
+            "id": "SampleSEooC",
+            "name": "SampleSEooC",
+            "alias": "SampleSEooC",
+            "parent_id": null,
+            "element_type": "Package",
+            "stereotype": "SEooC",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 15
+            }
+        },
+        "SampleSEooC.ComponentA": {
+            "id": "SampleSEooC.ComponentA",
+            "name": "ComponentA",
+            "alias": "ComponentA",
+            "parent_id": "SampleSEooC",
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 16
+            }
+        }
+    },
+    "b.puml": {
+        "ComponentB": {
+            "id": "ComponentB",
+            "name": "ComponentB",
+            "alias": "ComponentB",
+            "parent_id": null,
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [
+                {
+                    "target": "SampleSEooC.ComponentA",
+                    "annotation": "uses",
+                    "relation_type": "Dependency",
+                    "source_role": "None",
+                    "source_location": {
+                        "file": "",
+                        "line": 17
+                    }
+                }
+            ],
+            "source_location": {
+                "file": "",
+                "line": 15
+            }
+        }
+    }
+}

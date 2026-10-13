@@ -59,7 +59,14 @@ Options:
 | `--lobster-output-dir <DIR>` | Output directory for `.lobster` traceability files | none (no output) |
 | `--output-stem <STEM>` | Override the file stem used to name every output file for this run, instead of deriving it from the input file's own basename. Requires exactly one input file. | none (uses the input file's basename) |
 
-At least one of `--file` or `--folders` is required.
+At least one of `--file` or `--folders` is required. Inputs must have the `.puml`
+extension; the same file given twice is an error.
+
+All inputs of one run, whether from `--file` or `--folders`, are resolved together: per
+diagram kind, the files form one group in which a top-level declaration with a body is
+reparented onto the nested declaration it matches in another file, and a relation
+endpoint unknown to its file resolves in the other files. Run separate invocations to
+keep files apart.
 
 Example:
 ```

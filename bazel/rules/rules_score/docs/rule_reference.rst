@@ -420,19 +420,19 @@ and ``safety_analysis``.
    * - ``static``
      - label list
      - no
-     - Static-view files (``.puml``, ``.rst``, ``.md``, ``.svg``, ``.png``) (default ``[]``). Multiple ``.puml`` files are allowed — e.g. a boundary overview diagram alongside a detailed one — and are merged into a single architecture, see `Multiple static PlantUML files`_ below.
+     - Static-view files -- component/package diagrams only (``.puml``, ``.rst``, ``.md``, ``.svg``, ``.png``); see `Multiple static PlantUML files`_ below for multi-file resolution. Class diagrams belong in the elaborating unit's own ``unit_design(static=[...])`` instead, never here (default ``[]``)
    * - ``dynamic``
      - label list
      - no
-     - Dynamic-view files (default ``[]``)
+     - Dynamic-view files; several sequence diagrams share a participant cast (see `Multiple files in the other views`_) (default ``[]``)
    * - ``public_api``
      - label list
      - no
-     - Public-API diagram files (``.puml``); also generates traceability items for safety analysis, exposed via ``ArchitecturalDesignInfo.public_api_lobster_files`` (default ``[]``)
+     - Public-API diagram files (``.puml``); also generates traceability items for safety analysis, exposed via ``ArchitecturalDesignInfo.public_api_lobster_files``. Several class diagrams resolve as one group (default ``[]``)
    * - ``internal_api``
      - label list
      - no
-     - Internal-API diagram files (``.puml``) describing interfaces exposed between components inside the SEooC; their FlatBuffers output is exposed via ``ArchitecturalDesignInfo.internal_api`` for downstream validation (default ``[]``)
+     - Internal-API diagram files (``.puml``) describing interfaces exposed between components inside the SEooC; their FlatBuffers output is exposed via ``ArchitecturalDesignInfo.internal_api`` for downstream validation. Several class diagrams resolve as one group (default ``[]``)
    * - ``maturity``
      - string
      - no
@@ -449,20 +449,51 @@ and ``safety_analysis``.
 Multiple static PlantUML files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``static`` accepts more than one ``.puml`` file. This is intended for splitting
-a large architecture into a boundary **overview** diagram (the SEooC and its
-public interfaces only) and one or more **detail** diagrams that elaborate the
-internals, without repeating every relation and nested entity in both places.
+``static`` accepts more than one ``.puml`` file, all component diagrams. This
+is intended for splitting a large architecture into a boundary **overview**
+diagram (the SEooC and its public interfaces only) and one or more **detail**
+diagrams that elaborate the internals, without repeating every relation and
+nested entity in both places. (Class diagrams are never allowed in ``static``
+-- put them in the elaborating unit's own ``unit_design(static=[...])``
+instead.)
 
-The files are parsed independently and then merged by entity id (the full
-dot-path of parent aliases). Rules for the merge:
+All ``.puml`` files passed to ``static`` are resolved
+**together**, in one pass, instead of one file at a time — see
+``ComponentResolver::resolve_group``. Once every file's elements are known,
+they're merged by entity id (the full dot-path of parent names). Rules for
+resolution and the merge:
 
+* **Implicit reparenting:** a *top-level* element with a body in one file that
+  has the same name, element type and stereotype as a *nested* declaration in
+  exactly one other file is implicitly reparented onto that declaration's
+  parent chain, instead of becoming a new top-level entity. Matching is by
+  name, so the files may use different aliases for the same entity. This is
+  what lets a detail file declare only a component's children (no wrapper)
+  while an overview file nests that same component under the SEooC boundary.
+  A bodyless element (``component X`` without ``{ ... }``) and a rooted name
+  (``::X``) are never reparented; they stay separate top-level entities.
+  Reparenting is transitive: if the parent itself needs reparenting, that is
+  resolved first (a cycle is an ``ImplicitParentCycle`` error). Matching
+  nested declarations under more than one distinct parent is an
+  ``AmbiguousImplicitParent`` error rather than an arbitrary guess.
+* A relation's *source* must be declared (or reparented) in the file that
+  writes it; only its *target* may resolve to another file in the same
+  ``static`` group, written as the declaring file writes it (its alias, else
+  its name). The group is consulted only when the target isn't found locally;
+  more than one other file resolving it is an ``AmbiguousReference`` error.
+  Referencing a source that isn't local is a
+  ``CrossFileRelationSource`` error -- *unless* the relation is undirected
+  (no arrowhead and no dependency-style decoration), in which case the two
+  sides are swapped instead of erroring (the locally-declared endpoint
+  becomes the source), since an undirected relation has no inherent
+  direction to violate.
 * Re-declaring the *same* entity (identical id) in more than one file is
   allowed as long as its ``stereotype`` and element type agree across files;
   their relations are unioned (duplicate relations are de-duplicated). This
   is what lets an overview file bare-declare a component or unit that a
-  detail file elaborates further.
-* Re-declaring the same alias with a conflicting ``stereotype`` or element
+  detail file elaborates further (whether by literally repeating the
+  wrapper, or implicitly via reparenting above).
+* Re-declaring the same id with a conflicting ``stereotype`` or element
   type across files is an error.
 * A parent whose children are declared across more than one file is only
   allowed if a single file contains the full set of children (i.e. one file
@@ -476,14 +507,40 @@ dot-path of parent aliases). Rules for the merge:
   Bazel-vs-diagram comparison (an entity nested under the wrong parent shows
   up as an extra/missing entry there).
 
-Each ``.puml`` file is parsed and resolved **independently**, before the
-merge step above ever runs. A relation (``-->``, ``..>``, etc.) may only
-reference aliases declared in the *same* file — an alias declared only in
-another ``static`` file is not visible yet at that point. Referencing such
-an alias fails at PlantUML parse time with an ``Element Resolver:
-UnresolvedReference: <alias>`` error, not as a Design validation error. Keep
-every file self-contained: if a detail file wires up an entity's
-interfaces, declare (or re-declare) those interfaces in that same file.
+.. _multiple-files-other-views:
+
+Multiple files in the other views
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Every view (``static``, ``dynamic``, ``public_api``, ``internal_api``; for
+``unit_design`` ``static`` and ``dynamic``) is resolved as **one group per
+view**: ids are shared inside a view, never across views. The files of a view
+are split by diagram kind first (component, class, sequence, activity); a group
+never mixes kinds. ``static`` of ``architectural_design`` is component-only.
+
+The kind is detected per file, in the order component, activity, class,
+sequence. Give each file a construct of its own kind: ``class`` (or a body with
+members) for class diagrams, ``participant`` or ``activate`` for sequence
+diagrams. ``package p { interface I }`` and a file of only ``a -> b : call()``
+are *component* diagrams.
+
+* **Class diagrams** (``public_api``, ``internal_api``, ``unit_design``
+  ``static``): same implicit reparenting and peer references as the component
+  rules above. A declaration without a body is a reference. Re-declaring one
+  id merges the declarations: a bodyless one merges into the one with a body
+  (members, type aliases or enum literals; relationships do not count and are
+  united); two bodies are ``class "<id>" is defined more than once``; a
+  different type or stereotype is a conflict. A namespace is defined only in
+  files that own a defined child.
+* **Sequence diagrams** (``dynamic``, ``unit_design`` ``dynamic``): no
+  reparenting. A message endpoint or ``create`` target that the file does not
+  declare resolves to the explicit ``participant`` declarations of the other
+  files of the view, by alias, else by name. A local declaration wins; distinct
+  uids from several files are ``AmbiguousParticipantReference``.
+  ``activate``/``deactivate``/``destroy`` and ``ref over`` stay file-local.
+* **Activity diagrams** carry no names and are independent per file.
+
+See ``plantuml/parser/docs/element-identifiers.md`` (section 4) for examples.
 
 .. _rule-unit-design:
 
@@ -517,11 +574,11 @@ implementation.
    * - ``static``
      - label list
      - no
-     - Static-view files (class diagrams, data-structure diagrams). When an ``.rst`` fragment references a ``.puml`` via ``.. uml::``, list both files together (default ``[]``)
+     - Static-view files (class diagrams, data-structure diagrams). When an ``.rst`` fragment references a ``.puml`` via ``.. uml::``, list both files together. Class diagrams resolve as one group (default ``[]``)
    * - ``dynamic``
      - label list
      - no
-     - Dynamic-view files (sequence, state diagrams) (default ``[]``)
+     - Dynamic-view files (sequence, state diagrams). Sequence diagrams resolve as one group; a shared cast file declares the participants, scenario files reference them (default ``[]``)
    * - ``visibility``
      - —
      - no
@@ -609,7 +666,7 @@ which breaks the dependency cycle between measures and analysis.
    * - ``srcs``
      - label list
      - no
-     - FTA PlantUML diagram files (``.puml`` / ``.plantuml``) (default ``[]``)
+     - FTA PlantUML diagram files (``.puml``) (default ``[]``)
    * - ``deps``
      - label list
      - no

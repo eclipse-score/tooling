@@ -545,18 +545,47 @@ dependable_element(
 # and class_detail.puml defines it (it has a method, making it the
 # elaboration site). Regression-checked by :class_example_link_rendered_test
 # below.
-architectural_design(
-    name = "arch_design_class_example",
+#
+# Both files are class diagrams (no component diagram is involved in this
+# scenario), so they're routed through unit_design()/unit()/component() --
+# not a bare architectural_design static list -- mirroring
+# :namespace_unit_design below. architectural_design's `static` attribute is
+# reserved for component diagrams only.
+unit_design(
+    name = "class_example_unit_design",
     static = [
         "fixtures/clickable_example/class_overview.puml",
         "fixtures/clickable_example/class_detail.puml",
     ],
 )
 
+unit(
+    name = "class_example_unit",
+    testonly = True,
+    # RealImpl-style rationale: mock_lib1 has no matching C++ class, only
+    # illustrative for this fixture's linking scenario.
+    maturity = "development",
+    tests = [":test_unit_tests"],
+    unit_design = [":class_example_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "class_example_component",
+    testonly = True,
+    components = [":class_example_unit"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
 dependable_element(
     name = "class_example_lib",
-    architectural_design = [":arch_design_class_example"],
-    components = [],
+    testonly = True,
+    architectural_design = [],
+    components = [":class_example_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
     # Downgraded to warnings for the same reason as clickable_example_lib
@@ -775,18 +804,47 @@ dependable_element(
 # `package_u.component_u.unit_one`, since component-diagram ids and
 # class-diagram namespace FQNs use the same dot-joined scheme. Regression-
 # checked by :unit_example_link_rendered_test below.
+#
+# unit_class_detail.puml is a class diagram, so it's routed through
+# unit_design()/unit()/component() (not architectural_design's `static`,
+# which is component-diagrams only) - mirroring :namespace_unit_design below.
 architectural_design(
     name = "arch_design_unit_example",
-    static = [
-        "fixtures/clickable_example/unit_overview.puml",
-        "fixtures/clickable_example/unit_class_detail.puml",
+    static = ["fixtures/clickable_example/unit_overview.puml"],
+)
+
+unit_design(
+    name = "unit_example_unit_design",
+    static = ["fixtures/clickable_example/unit_class_detail.puml"],
+)
+
+unit(
+    name = "unit_example_unit",
+    testonly = True,
+    # RealImpl-style rationale: mock_lib1 has no matching C++ class, only
+    # illustrative for this fixture's linking scenario.
+    maturity = "development",
+    tests = [":test_unit_tests"],
+    unit_design = [":unit_example_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "unit_example_component",
+    testonly = True,
+    components = [":unit_example_unit"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
     ],
+    tests = [],
 )
 
 dependable_element(
     name = "unit_example_lib",
+    testonly = True,
     architectural_design = [":arch_design_unit_example"],
-    components = [],
+    components = [":unit_example_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
     # Downgraded to warnings for the same reason as clickable_example_lib
@@ -976,15 +1034,67 @@ sh_test(
 # only tracks participant names, not per-message/method labels (see
 # puml_idmap/src/lib.rs). Implementing that would require the sequence
 # resolver to persist message identifiers in SequenceTree first.
+#
+# dynamic_dispatcher_class.puml/dynamic_worker_class.puml are class
+# diagrams, so they're routed through unit_design()/unit()/component() (not
+# architectural_design's `static`, which is component-diagrams only) -
+# mirroring :namespace_unit_design/:unit_example_unit_design above.
 architectural_design(
     name = "arch_design_dynamic_example",
     dynamic = ["fixtures/clickable_example/dynamic_overview.puml"],
     public_api = ["fixtures/clickable_example/dynamic_public_api_detail.puml"],
-    static = [
-        "fixtures/clickable_example/dynamic_component_detail.puml",
-        "fixtures/clickable_example/dynamic_dispatcher_class.puml",
-        "fixtures/clickable_example/dynamic_worker_class.puml",
+    static = ["fixtures/clickable_example/dynamic_component_detail.puml"],
+)
+
+unit_design(
+    name = "dynamic_dispatcher_unit_design",
+    static = ["fixtures/clickable_example/dynamic_dispatcher_class.puml"],
+)
+
+unit(
+    name = "dynamic_dispatcher_unit",
+    testonly = True,
+    # RealImpl-style rationale: mock_lib1 has no matching C++ class, only
+    # illustrative for this fixture's linking scenario. tests is empty (not
+    # :test_unit_tests) because dynamic_worker_unit below is a sibling under
+    # the same component/dependable_element -- reusing the same gtest
+    # target for both would make lobster-report see duplicate gtest item
+    # definitions within one aggregated report.
+    maturity = "development",
+    tests = [],
+    unit_design = [":dynamic_dispatcher_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+unit_design(
+    name = "dynamic_worker_unit_design",
+    static = ["fixtures/clickable_example/dynamic_worker_class.puml"],
+)
+
+unit(
+    name = "dynamic_worker_unit",
+    testonly = True,
+    # RealImpl-style rationale: mock_lib1 has no matching C++ class, only
+    # illustrative for this fixture's linking scenario. tests is empty --
+    # see dynamic_dispatcher_unit above for why.
+    maturity = "development",
+    tests = [],
+    unit_design = [":dynamic_worker_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "dynamic_example_component",
+    testonly = True,
+    components = [
+        ":dynamic_dispatcher_unit",
+        ":dynamic_worker_unit",
     ],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
 )
 
 # public_api items must be referenced by a FailureMode in the SEooC's own
@@ -1017,8 +1127,9 @@ dependability_analysis(
 
 dependable_element(
     name = "dynamic_example_lib",
+    testonly = True,
     architectural_design = [":arch_design_dynamic_example"],
-    components = [],
+    components = [":dynamic_example_component"],
     dependability_analysis = [":dynamic_example_dependability_analysis"],
     integrity_level = "B",
     # Downgraded to warnings for the same reason as clickable_example_lib

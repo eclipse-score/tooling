@@ -13,7 +13,7 @@
 
 @startuml namespace_unit_overview
 
-package package_ns {
+package package_ns <<SEooC>> {
     component component_ns <<component>> {
         component ns_unit <<unit>>
     }

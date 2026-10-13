@@ -1,0 +1,52 @@
+{
+  "overview.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "Lib.Foo",
+        "name": "Foo",
+        "enclosing_namespace_id": "Lib",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 16 }
+      }
+    ],
+    "free_functions": []
+  },
+  "detail.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "Foo",
+        "name": "Foo",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Interface",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [
+          {
+            "name": "run",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [],
+            "source_location": { "file": "", "line": 16 }
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 15 }
+      }
+    ],
+    "free_functions": []
+  }
+}

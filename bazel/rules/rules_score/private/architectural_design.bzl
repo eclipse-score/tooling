@@ -18,13 +18,13 @@ This module provides macros and rules for defining architectural design
 documentation following S-CORE process guidelines. Architectural design
 documents describe the software architecture including static and dynamic views.
 
-The rule automatically invokes the PlantUML parser on .puml/.plantuml files
+The rule automatically invokes the PlantUML parser on .puml files
 to produce FlatBuffers binary representations of the parsed diagrams.
 """
 
-load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:puml_utils.bzl", "emit_view_navigation", "plan_view_layout", "relative_source_path")
+load("//bazel/rules/rules_score/private:puml_parser.bzl", "disambiguated_stems", "run_puml_parser")
+load("//bazel/rules/rules_score/private:puml_utils.bzl", "emit_view_navigation", "plan_view_layout")
 load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 load("//bazel/rules/rules_score/private:views.bzl", "ARCH_VIEWS")
@@ -33,139 +33,10 @@ load("//bazel/rules/rules_score/private:views.bzl", "ARCH_VIEWS")
 # Private Rule Implementation
 # ============================================================================
 
-def _disambiguated_stems(ctx, files):
-    """Compute a unique output stem (no directory, no extension) for every
-    .puml/.plantuml file in `files`.
-
-    All diagrams of one architectural_design target share a flat output
-    directory (keyed by ctx.label.name) for their fbs/lobster/idmap
-    artifacts, so two files with the same basename but different source
-    directories (e.g. two `for_impl_apis.puml` files under different
-    subpackages) would otherwise collide on the same generated output path.
-    When a basename is unique, the plain stem is kept unchanged (preserving
-    existing filenames/titles); only colliding basenames are disambiguated,
-    using the file's package-relative directory.
-
-    Disambiguating by directory can itself collide -- e.g. `a/b/foo.puml`
-    and `a_b/foo.puml` both produce the stem `a_b__foo` once their `/` is
-    replaced with `_` -- so every stem actually produced is tracked and a
-    residual collision fails the build, naming both source files, rather
-    than silently overwriting one diagram's output with the other's.
-
-    Args:
-        ctx: Rule context.
-        files: Iterable of File objects (non-.puml/.plantuml entries ignored).
-    Returns:
-        Dict from File.path to a unique stem string.
-    """
-    puml_files = [f for f in files if f.extension in ("puml", "plantuml")]
-    basename_counts = {}
-    for f in puml_files:
-        basename_counts[f.basename] = basename_counts.get(f.basename, 0) + 1
-
-    stems = {}
-    stem_sources = {}
-    for f in puml_files:
-        stem = f.basename.rsplit(".", 1)[0]
-        if basename_counts[f.basename] > 1:
-            dir_part = paths.dirname(relative_source_path(f, ctx.label.package, ctx.label.workspace_name))
-            stem = "{}__{}".format(dir_part.replace("/", "_"), stem) if dir_part else stem
-
-        previous = stem_sources.get(stem)
-        if previous != None:
-            fail((
-                "architectural_design {}: '{}' and '{}' both disambiguate to the " +
-                "output stem '{}'; rename one of these files so their stems differ"
-            ).format(ctx.label, previous, f.short_path, stem))
-        stem_sources[stem] = f.short_path
-        stems[f.path] = stem
-    return stems
-
-def _run_puml_parser(ctx, puml_file, file_stem):
-    """Run the PlantUML parser on a single .puml file to produce a FlatBuffers binary,
-    a lobster traceability file, and an idmap sidecar.
-
-    The diagram type is auto-detected by the parser and encoded in the
-    FlatBuffers schema (each diagram type uses its own root_type).
-    Lobster output is produced in-process for component diagrams.
-
-    ``--output-stem`` is passed as the disambiguated `file_stem` (see
-    `_disambiguated_stems`) so puml_cli's output filenames always match the
-    declared output files below, even when two source diagrams share the
-    same basename but live in different directories -- without needing to
-    stage the input file itself under a differently-named symlink first.
-
-    ``--source-name`` is passed as ``puml_file.short_path`` so the ``source``
-    field embedded in the fbs/lobster/idmap outputs is a stable,
-    workspace-relative path. This is required by the `clickable_plantuml`
-    Sphinx extension, which matches idmap ``source`` keys against paths it
-    derives from Sphinx's own doctree — an unstable value (e.g. a sandbox
-    exec-root-relative path) would silently break cross-diagram linking.
-    `BUILD_WORKSPACE_DIRECTORY`, which `puml_cli` otherwise falls back on, is
-    only set for `bazel run`, never for build actions like this one.
-
-    Args:
-        ctx: Rule context
-        puml_file: The .puml File object to parse
-        file_stem: Unique output stem for this file (see _disambiguated_stems).
-    Returns:
-        Tuple of (fbs_output, lobster_output, idmap_output) declared output Files.
-    """
-    fbs_output = ctx.actions.declare_file(
-        "{}/{}.fbs.bin".format(ctx.label.name, file_stem),
-    )
-    lobster_output = ctx.actions.declare_file(
-        "{}/{}.lobster".format(ctx.label.name, file_stem),
-    )
-    idmap_output = ctx.actions.declare_file(
-        "{}/{}.idmap.json".format(ctx.label.name, file_stem),
-    )
-
-    ctx.actions.run(
-        inputs = [puml_file],
-        outputs = [fbs_output, lobster_output, idmap_output],
-        executable = ctx.executable._puml_parser,
-        arguments = [
-            "--file",
-            puml_file.path,
-            "--fbs-output-dir",
-            fbs_output.dirname,
-            "--lobster-output-dir",
-            lobster_output.dirname,
-            "--idmap-output-dir",
-            idmap_output.dirname,
-            "--source-name",
-            puml_file.short_path,
-            "--output-stem",
-            file_stem,
-            "--log-level",
-            get_log_level(ctx),
-        ],
-        progress_message = "Parsing PlantUML diagram: %s" % puml_file.short_path,
-    )
-
-    return fbs_output, lobster_output, idmap_output
-
-def _parse_puml_diagrams(ctx, files, stems):
-    """Run the PlantUML parser on all .puml/.plantuml files in a list.
-
-    Args:
-        ctx: Rule context
-        files: List of File objects
-        stems: Dict from File.path to unique output stem (see _disambiguated_stems).
-    Returns:
-        Tuple of (fbs_outputs, lobster_outputs, idmap_outputs) lists of generated Files.
-    """
-    fbs_outputs = []
-    lobster_outputs = []
-    idmap_outputs = []
-    for f in files:
-        if f.extension in ("puml", "plantuml"):
-            fbs, lobster, idmap = _run_puml_parser(ctx, f, stems[f.path])
-            fbs_outputs.append(fbs)
-            lobster_outputs.append(lobster)
-            idmap_outputs.append(idmap)
-    return fbs_outputs, lobster_outputs, idmap_outputs
+# Views passed as `--diagram-type` to `puml_cli`; every other view autodetects.
+_VIEW_DIAGRAM_TYPES = {
+    "static": "component",
+}
 
 def _colocate_view_files(ctx, staged_files, view_output_dir):
     """Symlink each (source File, staged relative path) pair from a view's
@@ -248,7 +119,7 @@ def _architectural_design_impl(ctx):
     # All diagrams of this target share one flat fbs/lobster/idmap namespace
     # (keyed by ctx.label.name), so stems must be disambiguated across all
     # four views together, not per-view.
-    stems = _disambiguated_stems(
+    stems = disambiguated_stems(
         ctx,
         ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api,
     )
@@ -265,7 +136,16 @@ def _architectural_design_impl(ctx):
     for view_name, root_title in ARCH_VIEWS:
         view_files = getattr(ctx.files, view_name)
 
-        fbs_list, lobster_list, idmap_list = _parse_puml_diagrams(ctx, view_files, stems)
+        # One `puml_cli` action per view: its diagrams resolve as one group, so
+        # `static` may split a decomposition across an overview and detail files.
+        fbs_list, lobster_list, idmap_list = run_puml_parser(
+            ctx,
+            view_files,
+            stems,
+            diagram_type = _VIEW_DIAGRAM_TYPES.get(view_name),
+            emit_lobster = True,
+            progress_label = "{} ({})".format(ctx.label, view_name),
+        )
         view_fbs[view_name] = fbs_list
         view_lobster[view_name] = lobster_list
         view_idmap[view_name] = idmap_list
@@ -382,17 +262,18 @@ def _architectural_design_impl(ctx):
 def _architectural_design_attrs():
     attrs = {
         "static": attr.label_list(
-            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+            allow_files = [".puml", ".svg", ".rst", ".md"],
             mandatory = False,
-            doc = "Static architecture diagrams (class diagrams, component diagrams, etc.)",
+            doc = "Static architecture diagrams -- component/package diagrams only " +
+                  "(see unit_design's static attribute for class diagrams).",
         ),
         "dynamic": attr.label_list(
-            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+            allow_files = [".puml", ".svg", ".rst", ".md"],
             mandatory = False,
             doc = "Dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
         ),
         "public_api": attr.label_list(
-            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+            allow_files = [".puml", ".svg", ".rst", ".md"],
             mandatory = False,
             doc = "Public API diagrams (parsed identically to static/dynamic). " +
                   "Classified separately so their lobster items are exposed via " +
@@ -400,7 +281,7 @@ def _architectural_design_attrs():
                   "traceability at the dependable element level.",
         ),
         "internal_api": attr.label_list(
-            allow_files = [".puml", ".plantuml", ".svg", ".rst", ".md"],
+            allow_files = [".puml", ".svg", ".rst", ".md"],
             mandatory = False,
             doc = "Internal API diagrams (class diagrams). " +
                   "Classified separately so their FlatBuffers outputs are exposed via " +
@@ -449,7 +330,7 @@ def architectural_design(
     """Define architectural design following S-CORE process guidelines.
 
     Architectural design documents describe the software architecture of a
-    component: static views (class/component/package diagrams) and dynamic
+    component: static views (component/package diagrams) and dynamic
     views (sequence/activity/state diagrams), plus public/internal API
     diagrams. Each view's diagrams are auto-wrapped into a generated,
     directory-matching navigation tree; hand-authored index/`<stem>` pages
@@ -460,11 +341,16 @@ def architectural_design(
     Args:
         name: The name of the architectural design target. Used as the base
             name for all generated targets.
-        static: Optional list of labels to diagram files (.puml, .plantuml,
+        static: Optional list of labels to diagram files (.puml,
             .png, .svg) or documentation files (.rst, .md) containing static
-            architecture views such as class diagrams, component diagrams,
-            or package diagrams as defined in the S-CORE process.
-        dynamic: Optional list of labels to diagram files (.puml, .plantuml,
+            architecture views -- component diagrams or package diagrams as
+            defined in the S-CORE process. Component diagrams only: class
+            diagrams belong in the elaborating unit's own
+            unit_design(static=[...]) instead (see unit_design.bzl), never
+            here. All `static` files resolve together as one group: a
+            top-level element with a body in one file is reparented onto the
+            nested declaration it matches in another file.
+        dynamic: Optional list of labels to diagram files (.puml,
             .png, .svg) or documentation files (.rst, .md) containing dynamic
             architecture views such as sequence diagrams, activity diagrams,
             or state diagrams as defined in the S-CORE process.

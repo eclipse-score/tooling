@@ -82,6 +82,11 @@ fn positive_participant_qualified_label_with_newline_match_suite_case() {
 }
 
 #[test]
+fn positive_participant_cast_across_files_suite_case() {
+    assert_case("positive_participant_cast_across_files");
+}
+
+#[test]
 fn positive_participant_qualified_reference_suite_case() {
     assert_case("positive_participant_qualified_reference");
 }

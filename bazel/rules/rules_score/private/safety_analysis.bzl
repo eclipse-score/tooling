@@ -383,7 +383,7 @@ _fault_trees = rule(
     attrs = dict(
         {
             "srcs": attr.label_list(
-                allow_files = [".puml", ".plantuml"],
+                allow_files = [".puml"],
                 mandatory = False,
                 doc = "FTA PlantUML diagram files.  " +
                       "The ``fta_events.trlc`` TRLC stub is generated from them.",
@@ -519,7 +519,7 @@ def fault_trees(
 
     Args:
         name: Target name.
-        srcs: FTA PlantUML diagram files (``.puml`` / ``.plantuml``).
+        srcs: FTA PlantUML diagram files (``.puml``).
         deps: ``failure_modes`` targets holding the failure modes the diagrams
             reference.
         spec: TRLC model specification files (``.rsl``) for resolving imports.

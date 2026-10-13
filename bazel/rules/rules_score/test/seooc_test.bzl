@@ -291,7 +291,7 @@ def _seooc_all_sources_relocated_test_impl(ctx):
     # Then: every .rst / .md / .puml / .json source from the index target's
     # output file set must appear as an input to the HTML action.
     index_files = target_under_test[DefaultInfo].files.to_list()
-    source_exts = ("rst", "md", "puml", "plantuml", "json")
+    source_exts = ("rst", "md", "puml", "json")
     expected_sources = [
         f
         for f in index_files

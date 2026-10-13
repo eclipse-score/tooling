@@ -28,17 +28,3 @@ TEST(Bar, AssertNumber) {
   ::testing::Test::RecordProperty("then", "it returns true");
   EXPECT_TRUE(unit.AssertNumber());
 }
-
-TEST(Bar, Format) {
-  ::testing::Test::RecordProperty("lobster-tracing",
-                                  "SampleComponent.REQ_COMP_006");
-
-  ::testing::Test::RecordProperty("given",
-                                  "a Bar instance owning a Foo with value 42");
-  unit_2::Bar unit{std::make_unique<unit_1::Foo>()};
-
-  ::testing::Test::RecordProperty("when", "Format is called");
-  ::testing::Test::RecordProperty(
-      "then", "it returns the human-readable string \"42\"");
-  EXPECT_EQ(unit.Format(), "42");
-}

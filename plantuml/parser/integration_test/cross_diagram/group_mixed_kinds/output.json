@@ -1,0 +1,47 @@
+{
+    "component_overview.puml": {
+        "defines": {
+            "logging": "logging"
+        },
+        "references": {
+            "Recorder": "logging.Recorder"
+        }
+    },
+    "component_detail.puml": {
+        "defines": {
+            "Recorder": "logging.Recorder"
+        },
+        "references": {
+            "Backend": "logging.Recorder.Backend"
+        }
+    },
+    "class_overview.puml": {
+        "defines": {},
+        "references": {
+            "Sink": "logging.Sink"
+        }
+    },
+    "class_detail.puml": {
+        "defines": {
+            "logging": "logging",
+            "Sink": "logging.Sink"
+        },
+        "references": {}
+    },
+    "sequence_cast.puml": {
+        "defines": {},
+        "references": {
+            "Recorder": "logging.Recorder",
+            "Backend": "logging.Recorder.Backend",
+            "Sink": "logging.Sink"
+        }
+    },
+    "sequence_scenario.puml": {
+        "defines": {},
+        "references": {
+            "Recorder": "logging.Recorder",
+            "Backend": "logging.Recorder.Backend",
+            "Sink": "logging.Sink"
+        }
+    }
+}

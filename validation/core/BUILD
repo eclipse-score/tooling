@@ -61,6 +61,7 @@ rust_library(
         "src/validators/bazel_component_validator.rs",
         "src/validators/class_design_implementation_validator.rs",
         "src/validators/class_design_sequence_validator.rs",
+        "src/validators/component_anchoring_validator.rs",
         "src/validators/component_internal_api_validator.rs",
         "src/validators/component_public_api_validator.rs",
         "src/validators/component_sequence_validator.rs",

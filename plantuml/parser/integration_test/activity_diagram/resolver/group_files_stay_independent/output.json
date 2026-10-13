@@ -1,0 +1,42 @@
+{
+  "a.puml": {
+    "name": "a",
+    "statements": [
+      {
+        "Action": {
+          "label": "Same action"
+        }
+      },
+      {
+        "Control": {
+          "kind": "Stop"
+        }
+      }
+    ]
+  },
+  "b.puml": {
+    "name": "b",
+    "statements": [
+      {
+        "Title": {
+          "text": "Second"
+        }
+      },
+      {
+        "Action": {
+          "label": "Same action"
+        }
+      },
+      {
+        "Action": {
+          "label": "Other action"
+        }
+      },
+      {
+        "Control": {
+          "kind": "Stop"
+        }
+      }
+    ]
+  }
+}

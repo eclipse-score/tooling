@@ -227,7 +227,7 @@ DependableElementInfo = provider(
 ArchitecturalDesignInfo = provider(
     doc = "Provider for architectural design artifacts including parsed design metadata.",
     fields = {
-        "static": "Depset of FlatBuffers binaries for static architecture diagrams (class diagrams, component diagrams, etc.)",
+        "static": "Depset of FlatBuffers binaries for static architecture diagrams (component/package diagrams only -- see UnitDesignInfo.static for class diagrams)",
         "dynamic": "Depset of FlatBuffers binaries for dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
         "public_api": "Depset of FlatBuffers binaries for public API diagrams (class diagrams, etc.)",
         "internal_api": "Depset of FlatBuffers binaries for internal API diagrams (class diagrams, etc.)",

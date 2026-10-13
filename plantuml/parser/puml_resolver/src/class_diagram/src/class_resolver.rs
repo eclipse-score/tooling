@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 use class_diagram::Visibility as ResolverVisibility;
 use class_diagram::*;
@@ -20,8 +21,11 @@ use class_parser::{
     Method as ParserMethod, Name, Namespace, Package, Param as ParserParam,
     Relationship as ParserRelationship, TypeAlias as ParserTypeAlias, TypeDefinition,
 };
+use group_resolution::{
+    unique_peer_match, ImplicitParentError, NestedCandidate, TopLevelCandidate,
+};
 use parser_core::common_ast::Arrow;
-use resolver_traits::DiagramResolver;
+use resolver_traits::{DiagramResolver, DiagramSource, GroupResolveError};
 use thiserror::Error;
 use uid_normalization::{
     identity_name, is_identifier_path, leaf_key, strip_root_marker, DeclarationScope, IdentityKind,
@@ -88,12 +92,59 @@ pub enum ClassPumlResolverError {
 
     #[error("Parse error: {message}")]
     ParseError { message: String },
+
+    #[error("Class Resolver: {0}")]
+    ImplicitParent(#[from] ImplicitParentError),
+
+    #[error(
+        "Class Resolver: CrossFileRelationSource: {reference} (line {line}) is not declared \
+         in the file that writes the relationship",
+        line = source_location.line
+    )]
+    CrossFileRelationSource {
+        reference: String,
+        source_location: SourceLocation,
+    },
 }
 
 /// An entity as Rule C sees it.
+#[derive(Clone)]
 struct Declared {
     id: String,
     line: u32,
+}
+
+/// Declarations of one file, by reference path.
+struct ReferenceTable {
+    declared: HashMap<String, Declared>,
+    name_map: HashMap<String, Vec<String>>,
+}
+
+impl ReferenceTable {
+    /// Rule C at the root; the id `raw` resolves to.
+    fn resolve(&self, raw: &str) -> Option<String> {
+        let exists = |path: &str| self.declared.contains_key(path);
+        let resolution = uid_normalization::resolve_reference(
+            &InternalScope::default(),
+            raw,
+            exists,
+            exists,
+            |leaf| self.name_map.get(leaf).cloned().unwrap_or_default(),
+        );
+        match resolution {
+            Resolution::Resolved(path) => Some(self.declared[&path].id.clone()),
+            _ => None,
+        }
+    }
+}
+
+/// Two declarations are the same entity when name, kind and stereotypes match.
+type EntityKind = (&'static str, Vec<String>);
+
+/// A relationship endpoint and whether its file declares it.
+struct Endpoint {
+    id: String,
+    local: bool,
 }
 
 pub struct ClassResolver {
@@ -107,6 +158,10 @@ pub struct ClassResolver {
     scopes: HashMap<String, String>,
     // id path of every aliased entity, package and namespace -> its alias
     aliased: HashMap<String, String>,
+    // id of a top-level declaration -> scope it is reparented onto (group)
+    implicit_parents: HashMap<String, InternalScope>,
+    // other files of the group
+    peers: Vec<Rc<ReferenceTable>>,
 }
 
 impl Default for ClassResolver {
@@ -128,15 +183,28 @@ impl ClassResolver {
             ids: HashSet::new(),
             scopes: HashMap::new(),
             aliased: HashMap::new(),
+            implicit_parents: HashMap::new(),
+            peers: Vec::new(),
         }
     }
 
     fn analyze(&mut self, file: &ClassUmlFile) -> Result<(), ClassPumlResolverError> {
+        self.declare_entities(file)?;
+        self.resolve_relations(file)
+    }
+
+    fn declare_entities(&mut self, file: &ClassUmlFile) -> Result<(), ClassPumlResolverError> {
         let root = DeclarationScope::default();
 
         for elem in &file.elements {
             self.process_top_level(elem, &root)?;
         }
+
+        Ok(())
+    }
+
+    fn resolve_relations(&mut self, file: &ClassUmlFile) -> Result<(), ClassPumlResolverError> {
+        let root = DeclarationScope::default();
 
         for rel in &file.relationships {
             self.process_relationship(rel, &root)?;
@@ -147,6 +215,13 @@ impl ClassResolver {
         }
 
         Ok(())
+    }
+
+    fn reference_table(&self) -> ReferenceTable {
+        ReferenceTable {
+            declared: self.declared.clone(),
+            name_map: self.name_map.clone(),
+        }
     }
 
     pub fn result(self) -> ClassDiagram {
@@ -164,21 +239,38 @@ impl ClassResolver {
 
     /// Scope of the declaration `name` under `scope`, and its identity text
     /// (Rule A'): the name decides the id, the alias only the reference path.
+    /// A top-level declaration of a group may be reparented; only its id path
+    /// moves.
     fn declare(
+        &self,
         name: &Name,
         kind: IdentityKind,
         scope: &DeclarationScope,
         source_location: Option<&SourceLocation>,
     ) -> Result<(DeclarationScope, String), ClassPumlResolverError> {
-        let text = identity_name(&name.internal, kind).map_err(|error| {
+        let text = Self::identity(name, kind, source_location)?;
+
+        let mut declared = scope.declare(&text, name.alias.as_deref());
+        if scope.id.is_empty() {
+            if let Some(parent) = self.implicit_parents.get(&declared.id.id()) {
+                declared.id = parent.child(&declared.id.id());
+            }
+        }
+        Ok((declared, text))
+    }
+
+    fn identity(
+        name: &Name,
+        kind: IdentityKind,
+        source_location: Option<&SourceLocation>,
+    ) -> Result<String, ClassPumlResolverError> {
+        identity_name(&name.internal, kind).map_err(|error| {
             ClassPumlResolverError::InvalidIdentifier {
                 name: name.internal.clone(),
                 reason: error.reason().to_string(),
                 source_location: source_location.cloned(),
             }
-        })?;
-
-        Ok((scope.declare(&text, name.alias.as_deref()), text))
+        })
     }
 
     fn enclosing_namespace_id(&self, declared: &DeclarationScope) -> Option<String> {
@@ -273,6 +365,34 @@ impl ClassResolver {
                     candidates,
                 })
             }
+        }
+    }
+
+    /// Resolves `raw` in this file, then in the other files of the group if
+    /// this file does not know it.
+    fn resolve_endpoint(
+        &self,
+        raw: &str,
+        scope: &DeclarationScope,
+        reference_line: u32,
+    ) -> Result<Endpoint, ClassPumlResolverError> {
+        let error = match self.resolve_reference(raw, scope, reference_line) {
+            Ok(id) => return Ok(Endpoint { id, local: true }),
+            Err(error @ ClassPumlResolverError::UnresolvedReference { .. }) => error,
+            Err(error) => return Err(error),
+        };
+
+        let matches = self
+            .peers
+            .iter()
+            .filter_map(|peer| Some((peer.resolve(raw)?, ())));
+        match unique_peer_match(matches) {
+            Ok(Some((id, ()))) => Ok(Endpoint { id, local: false }),
+            Ok(None) => Err(error),
+            Err(candidates) => Err(ClassPumlResolverError::AmbiguousReference {
+                reference: raw.to_string(),
+                candidates,
+            }),
         }
     }
 
@@ -398,7 +518,7 @@ impl ClassResolver {
         pkg: &Package,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let (nested, _) = Self::declare(
+        let (nested, _) = self.declare(
             &pkg.name,
             IdentityKind::Other,
             scope,
@@ -422,7 +542,7 @@ impl ClassResolver {
         ns: &Namespace,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let (nested, _) = Self::declare(
+        let (nested, _) = self.declare(
             &ns.name,
             IdentityKind::Other,
             scope,
@@ -447,7 +567,7 @@ impl ClassResolver {
         pkg: &Package,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let (nested, _) = Self::declare(
+        let (nested, _) = self.declare(
             &pkg.name,
             IdentityKind::Other,
             scope,
@@ -474,7 +594,7 @@ impl ClassResolver {
         ns: &Namespace,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let (nested, _) = Self::declare(
+        let (nested, _) = self.declare(
             &ns.name,
             IdentityKind::Other,
             scope,
@@ -551,7 +671,7 @@ impl ClassResolver {
             return Ok(());
         }
 
-        let (declared, _) = Self::declare(
+        let (declared, _) = self.declare(
             source_name,
             IdentityKind::ClassLike,
             scope,
@@ -560,7 +680,9 @@ impl ClassResolver {
         let source = declared.id.id();
 
         for declared_target in targets {
-            let target = self.resolve_reference(declared_target, scope, source_location.line)?;
+            let target = self
+                .resolve_endpoint(declared_target, scope, source_location.line)?
+                .id;
 
             self.add_relationship(Relationship {
                 source: source.clone(),
@@ -602,7 +724,7 @@ impl ClassResolver {
         def: &class_parser::EntityDef,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let (declared, _) = Self::declare(
+        let (declared, _) = self.declare(
             &def.declaration.name,
             IdentityKind::ClassLike,
             scope,
@@ -650,7 +772,7 @@ impl ClassResolver {
         let source_location = &def.declaration.source_location;
 
         let (declared, text) =
-            Self::declare(name, IdentityKind::ClassLike, scope, Some(source_location))?;
+            self.declare(name, IdentityKind::ClassLike, scope, Some(source_location))?;
         let id = declared.id.id();
         let owner_name = leaf_key(&text);
 
@@ -848,7 +970,7 @@ impl ClassResolver {
         def: &EnumDef,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let (declared, _) = Self::declare(
+        let (declared, _) = self.declare(
             &def.declaration.name,
             IdentityKind::ClassLike,
             scope,
@@ -983,16 +1105,23 @@ impl ClassResolver {
         rel: &ParserRelationship,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let left = self.resolve_reference(&rel.left, scope, rel.source_location.line)?;
-        let right = self.resolve_reference(&rel.right, scope, rel.source_location.line)?;
+        let left = self.resolve_endpoint(&rel.left, scope, rel.source_location.line)?;
+        let right = self.resolve_endpoint(&rel.right, scope, rel.source_location.line)?;
 
         let (relation_type, reversed) = self.convert_arrow(&rel.arrow)?;
 
-        let (source_id, target_id) = if reversed {
+        let (source, target) = if reversed {
             (right, left)
         } else {
             (left, right)
         };
+        if !source.local {
+            return Err(ClassPumlResolverError::CrossFileRelationSource {
+                reference: source.id,
+                source_location: rel.source_location.clone(),
+            });
+        }
+        let (source_id, target_id) = (source.id, target.id);
 
         let (source_multiplicity, target_multiplicity) = if reversed {
             (
@@ -1047,6 +1176,8 @@ impl DiagramResolver for ClassResolver {
         self.declared.clear();
         self.ids.clear();
         self.aliased.clear();
+        self.implicit_parents.clear();
+        self.peers.clear();
 
         self.logic.name = document.name.clone();
 
@@ -1062,6 +1193,253 @@ impl DiagramResolver for ClassResolver {
         );
 
         Ok(logic_class)
+    }
+
+    /// Resolves the files of one view together: see [`group_resolution`] for
+    /// reparenting; a relationship endpoint unknown to its own file resolves in
+    /// the other files, but a relationship source must be local.
+    ///
+    /// Returns one diagram per document, holding only what it declares.
+    fn resolve_group(
+        documents: &[DiagramSource<'_, ClassUmlFile>],
+    ) -> Result<Vec<Self::Output>, GroupResolveError<Self::Error>> {
+        let mut resolvers: Vec<ClassResolver> = Self::discover_implicit_parents(documents)?
+            .into_iter()
+            .zip(documents)
+            .map(|(implicit_parents, document)| {
+                let mut resolver = ClassResolver::new();
+                resolver.implicit_parents = implicit_parents;
+                resolver.logic.name = document.document.name.clone();
+                resolver
+            })
+            .collect();
+
+        for (resolver, document) in resolvers.iter_mut().zip(documents) {
+            resolver
+                .declare_entities(document.document)
+                .map_err(|source| GroupResolveError::in_file(document.name, source))?;
+        }
+
+        let tables: Vec<Rc<ReferenceTable>> = resolvers
+            .iter()
+            .map(|resolver| Rc::new(resolver.reference_table()))
+            .collect();
+        for (index, (resolver, document)) in resolvers.iter_mut().zip(documents).enumerate() {
+            resolver.peers = tables
+                .iter()
+                .enumerate()
+                .filter(|(peer_index, _)| *peer_index != index)
+                .map(|(_, table)| Rc::clone(table))
+                .collect();
+            resolver
+                .resolve_relations(document.document)
+                .map_err(|source| GroupResolveError::in_file(document.name, source))?;
+        }
+
+        Ok(resolvers
+            .into_iter()
+            .map(|resolver| resolver.logic)
+            .collect())
+    }
+}
+
+// Group: implicit reparenting.
+impl ClassResolver {
+    /// Per file, the scope each top-level declaration is reparented onto.
+    fn discover_implicit_parents(
+        documents: &[DiagramSource<'_, ClassUmlFile>],
+    ) -> Result<Vec<HashMap<String, InternalScope>>, GroupResolveError<ClassPumlResolverError>>
+    {
+        let mut collector = CandidateCollector::default();
+        for (file_idx, document) in documents.iter().enumerate() {
+            collector.file_idx = file_idx;
+            for element in &document.document.elements {
+                collector.collect_top_level(element);
+            }
+        }
+
+        let names: Vec<&str> = documents.iter().map(|document| document.name).collect();
+        group_resolution::discover_implicit_parents(&collector.top_level, &collector.nested, &names)
+            .map_err(|error| {
+                GroupResolveError::in_file(
+                    names[error.file_idx()],
+                    ClassPumlResolverError::ImplicitParent(error),
+                )
+            })
+    }
+}
+
+/// Collects the declarations that may be reparented. Declarations the
+/// declaration pass rejects are skipped; it reports them.
+#[derive(Default)]
+struct CandidateCollector {
+    file_idx: usize,
+    top_level: Vec<TopLevelCandidate<EntityKind>>,
+    nested: Vec<NestedCandidate<EntityKind>>,
+}
+
+/// What a declaration contributes as a reparenting candidate.
+struct Decl<'a> {
+    name: &'a Name,
+    identity_kind: IdentityKind,
+    kind: EntityKind,
+    has_body: bool,
+    source_location: &'a SourceLocation,
+}
+
+impl CandidateCollector {
+    fn collect_top_level(&mut self, element: &ClassUmlTopLevel) {
+        let root = DeclarationScope::default();
+        match element {
+            ClassUmlTopLevel::Type(element) => self.collect_type(element, &root, None),
+            ClassUmlTopLevel::Namespace(ns) => self.collect_namespace(ns, &root, None),
+            ClassUmlTopLevel::Package(pkg) => self.collect_package(pkg, &root, None),
+        }
+    }
+
+    /// Records a declaration, top-level when `root_id` is `None`. Returns its
+    /// scope and the id of the top-level declaration it hangs under.
+    fn record(
+        &mut self,
+        decl: Decl<'_>,
+        scope: &DeclarationScope,
+        root_id: Option<&str>,
+    ) -> Option<(DeclarationScope, String)> {
+        let Decl {
+            name,
+            identity_kind,
+            kind,
+            has_body,
+            source_location,
+        } = decl;
+        let text = ClassResolver::identity(name, identity_kind, None).ok()?;
+        let rooted = strip_root_marker(&text) != text;
+        let declared = scope.declare(&text, name.alias.as_deref());
+        let id = declared.id.id();
+
+        let root = match root_id {
+            None => {
+                self.top_level.push(TopLevelCandidate {
+                    id: id.clone(),
+                    file_idx: self.file_idx,
+                    kind,
+                    has_body,
+                    rooted,
+                    source_location: source_location.clone(),
+                });
+                id
+            }
+            // an absolute name is not nested under its parent
+            Some(_) if rooted => return None,
+            Some(root) => {
+                self.nested.push(NestedCandidate {
+                    id,
+                    own: InternalScope::from_path(&text).id(),
+                    root_id: root.to_string(),
+                    file_idx: self.file_idx,
+                    kind,
+                });
+                root.to_string()
+            }
+        };
+        Some((declared, root))
+    }
+
+    fn collect_type(
+        &mut self,
+        element: &TypeDefinition,
+        scope: &DeclarationScope,
+        root_id: Option<&str>,
+    ) {
+        let (declaration, kind, has_body) = match element {
+            TypeDefinition::ClassLikeDef(def) => {
+                let members = &def.members;
+                let has_members = !(members.attributes.is_empty()
+                    && members.methods.is_empty()
+                    && members.type_aliases.is_empty());
+                match &def.kind {
+                    ClassLikeKind::Class {
+                        is_abstract,
+                        extends,
+                        implements,
+                    } => (
+                        &def.declaration,
+                        if *is_abstract {
+                            "abstract class"
+                        } else {
+                            "class"
+                        },
+                        has_members || !(extends.is_empty() && implements.is_empty()),
+                    ),
+                    ClassLikeKind::Struct => (&def.declaration, "struct", has_members),
+                    ClassLikeKind::Interface { extends } => (
+                        &def.declaration,
+                        "interface",
+                        has_members || !extends.is_empty(),
+                    ),
+                }
+            }
+            TypeDefinition::EnumDef(def) => (&def.declaration, "enum", !def.items.is_empty()),
+            // Entities are not model entities; the declaration pass skips them.
+            TypeDefinition::EntityDef(_) => return,
+        };
+        let decl = Decl {
+            name: &declaration.name,
+            identity_kind: IdentityKind::ClassLike,
+            kind: (kind, declaration.stereotypes.clone()),
+            has_body,
+            source_location: &declaration.source_location,
+        };
+        self.record(decl, scope, root_id);
+    }
+
+    fn collect_package(&mut self, pkg: &Package, scope: &DeclarationScope, root_id: Option<&str>) {
+        let decl = Decl {
+            name: &pkg.name,
+            identity_kind: IdentityKind::Other,
+            kind: ("package", Vec::new()),
+            has_body: !(pkg.types.is_empty()
+                && pkg.packages.is_empty()
+                && pkg.relationships.is_empty()),
+            source_location: &pkg.source_location,
+        };
+        let Some((declared, root)) = self.record(decl, scope, root_id) else {
+            return;
+        };
+
+        for element in &pkg.types {
+            self.collect_type(element, &declared, Some(&root));
+        }
+        for sub in &pkg.packages {
+            self.collect_package(sub, &declared, Some(&root));
+        }
+    }
+
+    fn collect_namespace(
+        &mut self,
+        ns: &Namespace,
+        scope: &DeclarationScope,
+        root_id: Option<&str>,
+    ) {
+        let decl = Decl {
+            name: &ns.name,
+            identity_kind: IdentityKind::Other,
+            kind: ("namespace", Vec::new()),
+            has_body: !(ns.types.is_empty()
+                && ns.namespaces.is_empty()
+                && ns.relationships.is_empty()),
+            source_location: &ns.source_location,
+        };
+        let Some((declared, root)) = self.record(decl, scope, root_id) else {
+            return;
+        };
+
+        for element in &ns.types {
+            self.collect_type(element, &declared, Some(&root));
+        }
+        for sub in &ns.namespaces {
+            self.collect_namespace(sub, &declared, Some(&root));
+        }
     }
 }
 

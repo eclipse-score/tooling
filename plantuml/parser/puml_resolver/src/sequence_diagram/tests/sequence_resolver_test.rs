@@ -22,7 +22,7 @@ use resolver_traits::DiagramResolver;
 use sequence_logic::SequenceTree;
 use sequence_parser::PumlSequenceParser;
 use sequence_resolver::{SequenceResolver, SequenceResolverError};
-use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor};
+use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor, ResolverGroupRunner};
 
 struct SequenceResolverRunner;
 
@@ -59,6 +59,35 @@ fn run_sequence_resolver_case(case_name: &str) {
         SequenceResolverRunner,
         DefaultExpectationChecker,
     );
+}
+
+fn run_sequence_resolver_group_case(case_name: &str) {
+    run_case(
+        "integration_test/sequence_diagram",
+        case_name,
+        ResolverGroupRunner::<_, SequenceResolver>::new(PumlSequenceParser),
+        DefaultExpectationChecker,
+    );
+}
+
+#[test]
+fn test_group_cast_across_files() {
+    run_sequence_resolver_group_case("group_cast_across_files");
+}
+
+#[test]
+fn test_group_local_wins_over_peer() {
+    run_sequence_resolver_group_case("group_local_wins_over_peer");
+}
+
+#[test]
+fn test_group_ambiguous_peer_reference() {
+    run_sequence_resolver_group_case("group_ambiguous_peer_reference");
+}
+
+#[test]
+fn test_group_lifecycle_per_file() {
+    run_sequence_resolver_group_case("group_lifecycle_per_file");
 }
 
 #[test]

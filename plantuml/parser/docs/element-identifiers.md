@@ -36,6 +36,7 @@ behaviour described here with executable goldens.
 | Alias is a local reference key; names of aliased elements are not references | implemented | `invalid_reference_by_label` cases |
 | Reference resolution (`S.r`, else unique leaf; leading `.`/`::` roots) | implemented | `qualified_reference`, `relation_simple_name_prefers_direct_hit` |
 | `ExternalEndpoint` matched on the name | implemented | `doc_6_external_endpoint` |
+| Several files of one view resolve as one group (reparenting, peer references) | implemented | `group_*` cases |
 | Root anchor (Bazel-package prefix) | not implemented; ids are unique per dependable element | — |
 
 ---
@@ -302,7 +303,134 @@ name.
 
 ---
 
-## 4. Special cases
+## 4. Several files, one view
+
+A view (`static`, `dynamic`, `public_api`, `internal_api`) may consist of
+several files, for example an overview and a detail diagram. The parser
+resolves all files of one view and diagram kind as one **group**:
+`architectural_design` runs one group per view, `unit_design` one for `static`
+and one for `dynamic`. Principle: a **declaration is authoritative** and gets
+the id of where it is written; a **reference** that finds nothing in its own
+file is resolved against the group. Each file still produces its own output;
+only the ids are shared.
+
+| Kind | Declarations | References |
+|------|--------------|------------|
+| component | A top-level element with a body is reparented onto a matching nested declaration | A relation target may be declared in another file |
+| class | A top-level class, struct, interface, enum, package or namespace with a body is reparented onto a matching nested declaration | A relationship, `extends` or `implements` target may be declared in another file |
+| sequence | No reparenting: a participant is flat and its name is its full path | A message, lifecycle or `ref over` name may be declared in another file |
+| activity | No names, nothing to merge | — |
+
+### Reparenting
+
+```text
+' overview.puml                          ' detail.puml (no wrapper)
+package logging <<SEooC>> {              component Recorder <<component>> {
+    component Recorder <<component>>         component Backend <<unit>>
+}                                        }
+```
+
+| Written in | Element | Identifier |
+|------------|---------|-----------|
+| `overview.puml` | `Recorder` | `logging.Recorder` |
+| `detail.puml` | `Recorder` | `logging.Recorder` (reparented) |
+| `detail.puml` | `Backend` | `logging.Recorder.Backend` |
+
+The top-level `Recorder` of the detail file has a body and matches the nested
+`Recorder` of the overview by **name**, **element type** and **stereotype**, so
+its id moves under `logging`. Everything it contains follows. The alias plays no
+part: the overview may write `component Recorder as R` and the detail file
+still matches.
+
+| Case | Result |
+|------|--------|
+| Declaration without a body in the detail file | Not reparented: a separate top-level element, no error here; validation reports it as an extra element |
+| Different element type or stereotype | Not a match; stays top-level |
+| Rooted name `::X` | Never reparented |
+| Matches under two different scopes | `AmbiguousImplicitParent` |
+| The parent is itself reparented | Resolved transitively; a cycle is `ImplicitParentCycle` |
+
+In component diagrams validation then checks that every `<<component>>` and
+`<<unit>>` is nested under a `<<SEooC>>` or `<<component>>`. A top-level one
+means the reparenting did not happen.
+
+### References
+
+A reference is first resolved in its own file. Only when nothing matches there
+is it looked up in the other files, by the reference path the declaring file
+wrote (its alias, else its name):
+
+- Found in one other file: that element's id.
+- Found with different ids in several other files: `AmbiguousReference`.
+- A relation **source** must be declared in the file that writes it, otherwise
+  `CrossFileRelationSource`. An undirected component relation has no source,
+  its ends are swapped.
+
+### Class diagrams
+
+The same reparenting applies; the overview entry is written without a body:
+
+```text
+' overview.puml                          ' detail.puml (no wrapper)
+package Lib {                            class Foo {
+    package Sub {                            + run() : void
+        class Foo                        }
+    }
+}
+```
+
+Both declare `Lib.Sub.Foo`; the detail file's `Foo` is reparented onto the
+overview's. Validation merges the declarations of one id across the files of a
+view:
+
+| Case | Result |
+|------|--------|
+| One declaration has a body, the other has none | Merged; the declaration with the body wins |
+| Two declarations both have a body | `class "<id>" is defined more than once` |
+| Same id, different element type or stereotype | `re-declared with a conflicting entity type` / `stereotype` |
+
+For reparenting, a body is any member, type alias, `extends` or `implements`
+(enum: any literal). For the merge, any member, type alias or enum literal;
+the relationships of all declarations are united, so an overview may draw them
+while the class stays a reference.
+
+### Sequence diagrams
+
+Participants are flat, so there is nothing to reparent. Declare the cast once
+in a shared file with qualified names and aliases; scenario files then write
+messages using only the aliases:
+
+```text
+' cast.puml
+participant "logging::Recorder::Backend" as Backend
+
+' scenario.puml (declares no participant)
+Backend -> Backend : Write()
+activate Backend
+```
+
+`Backend` in the scenario resolves to `logging.Recorder.Backend` through the
+cast. Rules:
+
+- Only explicit `participant`-style declarations of the other files are
+  offered; an undeclared message endpoint of another file is not.
+- A message endpoint or a `create` that no declaration of the file covers is
+  looked up in the other files. A local declaration always wins.
+- Two other files declaring the same reference key with different ids are
+  `AmbiguousParticipantReference`; the same id twice is fine.
+- `activate`, `deactivate`, `destroy` and `ref over` do not consult other
+  files: they name a participant the scenario already uses.
+- A bare name is never completed to a qualified one that another file
+  declares.
+
+### Activity diagrams
+
+Activity diagrams carry no names, so a group is just the independent
+documents: there is nothing to merge or reference.
+
+---
+
+## 5. Special cases
 
 **`ExternalEndpoint`** — the reserved marker for an actor outside the described
 architecture. It is matched on the name and emitted verbatim, with no scope
@@ -327,9 +455,21 @@ identifiers at all.
 participant (`Caller -> "Display Service" : call()`); this toolchain rejects
 it. Declare the participant explicitly.
 
+**Diagram kind detection** — unless a view fixes the kind (`static` of
+`architectural_design` is component-only), each file is tried as component,
+activity, class, then sequence diagram, and the first parser that accepts it
+wins. Some files are valid for several kinds: `package p { interface I }` and a
+file of only `a -> b : call()` parse as *component* diagrams. Give every file a
+construct of its own kind, so that it joins the right group:
+
+| Kind | Construct that settles it |
+|------|---------------------------|
+| class | the `class`, `struct` or `abstract class` keyword, or a body with members |
+| sequence | `participant`/`actor`, or `activate`, `deactivate`, `alt` … |
+
 ---
 
-## 5. Errors you may hit
+## 6. Errors you may hit
 
 | Message | Cause | Fix |
 |---------|-------|-----|
@@ -343,10 +483,16 @@ it. Declare the participant explicitly.
 | `duplicate sequence participant id <uid>` | Two participants resolve to the same identifier | Rename one |
 | `duplicate sequence participant name <name>` | Two participants share a reference key | Rename one of the aliases |
 | `unknown sequence participant <name>` | `activate`, `deactivate`, `destroy` or `ref over` names a participant that is not declared | Declare it first, and name it by its alias |
+| `AmbiguousImplicitParent` | A top-level declaration matches nested declarations under several scopes | Make the overview unambiguous, or root the name with `::` |
+| `ImplicitParentCycle` | Files reparent each other's declarations | Remove one of the wrappers |
+| `CrossFileRelationSource` | A relation source is declared in another file | Write the relation in the file that declares its source |
+| `AmbiguousParticipantReference` | Two other files declare the reference key with different ids | Declare the participant in the file, or declare it once |
+| `class "<id>" is defined more than once` | Two files declare a class with a body | Keep the body in one file; write the other without |
+| `class "<id>" is re-declared with a conflicting …` | Two files declare one id with a different element type or stereotype | Make the declarations agree |
 
 ---
 
-## 6. Best practices
+## 7. Best practices
 
 1. **Name elements as in Bazel and C++.** `<<SEooC>>`, `<<component>>` and
    `<<unit>>` names equal the Bazel target names; class names equal the C++
@@ -366,6 +512,12 @@ it. Declare the participant explicitly.
    the reference (`core.User`) or anchor it at the root (`.User`). Keep names
    unique within a component diagram. In class diagrams, declare an element
    before referring to it from another scope.
+9. **Split a view by detail, not by identity.** Write the nesting once in an
+   overview and the content in a detail file whose top-level element carries
+   the same name, type and stereotype. Do not repeat the wrapper.
+10. **Declare a cast once.** Put the participants of a unit design in one
+    file; scenario files use the aliases and contain a sequence-only construct
+    (`activate`, `alt`, …) so they are detected as sequence diagrams.
 
 ---
 
@@ -471,3 +623,27 @@ means "the same architecture element", which is exactly what cross-diagram
 consistency validation compares. When component diagrams are merged,
 declarations of one identifier merge, and two names compare equal if they are
 the same identifier path in either spelling (`a::b::C` and `a.b.C`).
+
+### Rule G
+
+**Group resolution.** The files of one view and diagram kind resolve together.
+
+1. *Reparenting.* A top-level declaration `D` with a body that is not rooted
+   has a candidate scope for every nested declaration `N` of another file with
+   the same normalized name, element type and stereotype: the id of `N`
+   without its last segment, itself reparented if the top-level ancestor of `N`
+   is. No candidate keeps `D` top-level, one candidate becomes `D`'s parent
+   scope, several are `AmbiguousImplicitParent`, a cyclic chain is
+   `ImplicitParentCycle`. Only the id path moves; reference paths stay
+   file-local. Component and class diagrams only.
+2. *Peer references.* A reference that is unresolved in its file is resolved
+   by Rule C at the root of every other file. One distinct id is the result,
+   several are an ambiguous reference. A name that matches an aliased element
+   of its own file stays `NameOfAliasedElement`. A relation source must
+   resolve in its own file.
+3. *Sequence.* No reparenting. A message endpoint or `create` that no
+   declaration of the file covers resolves to the explicit participant
+   declarations of the other files by reference key: one distinct uid is the
+   result, several are `AmbiguousParticipantReference`. Lifecycle and `ref over`
+   statements stay per file.
+4. *Activity.* Every document resolves on its own.
