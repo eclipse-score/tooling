@@ -3,8 +3,8 @@
     "name": "",
     "elements": [
       {
-        "Types": {
-          "InterfaceDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "J",
               "alias": null
@@ -29,8 +29,11 @@
               }
             ],
             "methods": [],
-            "template_parameters": null,
-            "extends": []
+            "kind": {
+              "Interface": {
+                "extends": []
+              }
+            }
           }
         }
       }

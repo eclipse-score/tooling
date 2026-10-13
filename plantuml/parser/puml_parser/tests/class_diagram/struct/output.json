@@ -14,7 +14,7 @@
           },
           "types": [
             {
-              "StructDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "Packet",
                   "alias": null
@@ -28,7 +28,7 @@
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null
+                "kind": "Struct"
               }
             }
           ],
@@ -37,8 +37,8 @@
         }
       },
       {
-        "Types": {
-          "StructDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "Message",
               "alias": null
@@ -73,13 +73,13 @@
               }
             ],
             "methods": [],
-            "template_parameters": null
+            "kind": "Struct"
           }
         }
       },
       {
-        "Types": {
-          "StructDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "Node",
               "alias": null
@@ -114,7 +114,7 @@
               }
             ],
             "methods": [],
-            "template_parameters": null
+            "kind": "Struct"
           }
         }
       }

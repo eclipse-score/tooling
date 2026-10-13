@@ -14,7 +14,7 @@
           },
           "types": [
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "Api",
                   "alias": null
@@ -25,7 +25,6 @@
                   "file": "",
                   "line": 16
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [
@@ -42,9 +41,13 @@
                     }
                   }
                 ],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             }
           ],

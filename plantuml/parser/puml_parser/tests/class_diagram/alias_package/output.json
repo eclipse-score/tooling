@@ -3,8 +3,8 @@
     "name": "alias_package",
     "elements": [
       {
-        "Types": {
-          "StructDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "TestResult",
               "alias": "TR"
@@ -18,7 +18,7 @@
             "type_aliases": [],
             "attributes": [],
             "methods": [],
-            "template_parameters": null
+            "kind": "Struct"
           }
         }
       },
@@ -34,7 +34,7 @@
           },
           "types": [
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "A",
                   "alias": null
@@ -45,17 +45,20 @@
                   "file": "",
                   "line": 18
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             },
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "B",
                   "alias": null
@@ -66,13 +69,16 @@
                   "file": "",
                   "line": 19
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             }
           ],
@@ -92,7 +98,7 @@
           },
           "types": [
             {
-              "StructDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "StartResponsePayload",
                   "alias": "SRP"
@@ -106,7 +112,7 @@
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null
+                "kind": "Struct"
               }
             },
             {

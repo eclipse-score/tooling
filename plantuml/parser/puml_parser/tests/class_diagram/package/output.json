@@ -14,7 +14,7 @@
           },
           "types": [
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "A",
                   "alias": null
@@ -25,17 +25,20 @@
                   "file": "",
                   "line": 16
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             },
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "B",
                   "alias": null
@@ -46,13 +49,16 @@
                   "file": "",
                   "line": 17
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             }
           ],
@@ -84,7 +90,7 @@
               },
               "types": [
                 {
-                  "ClassDef": {
+                  "ClassLikeDef": {
                     "name": {
                       "internal": "Button",
                       "alias": null
@@ -95,13 +101,16 @@
                       "file": "",
                       "line": 22
                     },
-                    "is_abstract": false,
                     "type_aliases": [],
                     "attributes": [],
                     "methods": [],
-                    "template_parameters": null,
-                    "extends": [],
-                    "implements": []
+                    "kind": {
+                      "Class": {
+                        "is_abstract": false,
+                        "extends": [],
+                        "implements": []
+                      }
+                    }
                   }
                 }
               ],

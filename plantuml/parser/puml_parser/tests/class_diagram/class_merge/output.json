@@ -3,15 +3,14 @@
     "name": "class_merge",
     "elements": [
       {
-        "Types": {
-          "ClassDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "A",
               "alias": null
             },
             "namespace": "",
             "package": "",
-            "is_abstract": false,
             "type_aliases": [],
             "attributes": [
               {
@@ -27,25 +26,29 @@
             ],
             "methods": [],
             "template_parameters": null,
-            "extends": [],
-            "implements": [],
             "source_location": {
               "file": "",
               "line": 15
+            },
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
             }
           }
         }
       },
       {
-        "Types": {
-          "ClassDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "A",
               "alias": null
             },
             "namespace": "",
             "package": "",
-            "is_abstract": false,
             "type_aliases": [],
             "attributes": [
               {
@@ -61,11 +64,16 @@
             ],
             "methods": [],
             "template_parameters": null,
-            "extends": [],
-            "implements": [],
             "source_location": {
               "file": "",
               "line": 19
+            },
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
             }
           }
         }

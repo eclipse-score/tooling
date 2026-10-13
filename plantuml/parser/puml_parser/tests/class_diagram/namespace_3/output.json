@@ -3,8 +3,8 @@
     "name": "namespace_3",
     "elements": [
       {
-        "Types": {
-          "ClassDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "GlobalClass",
               "alias": null
@@ -15,13 +15,16 @@
               "file": "",
               "line": 15
             },
-            "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
             "methods": [],
-            "template_parameters": null,
-            "extends": [],
-            "implements": []
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
+            }
           }
         }
       },
@@ -37,7 +40,7 @@
           },
           "types": [
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "DB",
                   "alias": null
@@ -48,13 +51,16 @@
                   "file": "",
                   "line": 18
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             }
           ],

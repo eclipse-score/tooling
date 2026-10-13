@@ -16,9 +16,9 @@ use class_diagram::Visibility as ResolverVisibility;
 use class_diagram::*;
 use class_parser::Visibility as ParserVisibility;
 use class_parser::{
-    Attribute, ClassUmlFile, ClassUmlTopLevel, Element, EnumDef, EnumValue, Method as ParserMethod,
-    Name, Namespace, Package, Param as ParserParam, Relationship as ParserRelationship,
-    TypeAlias as ParserTypeAlias,
+    Attribute, ClassLikeDef, ClassLikeKind, ClassUmlFile, ClassUmlTopLevel, EnumDef, EnumValue,
+    Method as ParserMethod, Name, Namespace, Package, Param as ParserParam,
+    Relationship as ParserRelationship, TypeAlias as ParserTypeAlias, TypeDefinition,
 };
 use parser_core::common_ast::Arrow;
 use resolver_traits::DiagramResolver;
@@ -359,14 +359,9 @@ impl ClassResolver {
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
         match elem {
-            ClassUmlTopLevel::Types(element) => {
+            ClassUmlTopLevel::Type(element) => {
                 self.process_element(element, scope)?;
             }
-
-            ClassUmlTopLevel::Enum(enum_def) => {
-                self.process_enum(enum_def, scope)?;
-            }
-
             ClassUmlTopLevel::Namespace(ns) => {
                 self.process_namespace(ns, scope)?;
             }
@@ -384,10 +379,9 @@ impl ClassResolver {
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
         match elem {
-            ClassUmlTopLevel::Types(element) => {
+            ClassUmlTopLevel::Type(element) => {
                 self.process_declared_relations_element(element, scope)?;
             }
-            ClassUmlTopLevel::Enum(_) => {}
             ClassUmlTopLevel::Namespace(ns) => {
                 self.process_namespace_declared_relations(ns, scope)?;
             }
@@ -504,36 +498,42 @@ impl ClassResolver {
 
     fn process_declared_relations_element(
         &mut self,
-        element: &Element,
+        element: &TypeDefinition,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        match element {
-            Element::ClassDef(def) => {
-                self.process_declared_relationships(
-                    &def.name,
-                    &def.extends,
-                    scope,
-                    RelationType::Inheritance,
-                    &def.source_location,
-                )?;
-                self.process_declared_relationships(
-                    &def.name,
-                    &def.implements,
-                    scope,
-                    RelationType::Implementation,
-                    &def.source_location,
-                )?;
+        if let TypeDefinition::ClassLikeDef(def) = element {
+            match &def.kind {
+                ClassLikeKind::Class {
+                    extends,
+                    implements,
+                    ..
+                } => {
+                    self.process_declared_relationships(
+                        &def.declaration.name,
+                        extends,
+                        scope,
+                        RelationType::Inheritance,
+                        &def.declaration.source_location,
+                    )?;
+                    self.process_declared_relationships(
+                        &def.declaration.name,
+                        implements,
+                        scope,
+                        RelationType::Implementation,
+                        &def.declaration.source_location,
+                    )?;
+                }
+                ClassLikeKind::Interface { extends } => {
+                    self.process_declared_relationships(
+                        &def.declaration.name,
+                        extends,
+                        scope,
+                        RelationType::Inheritance,
+                        &def.declaration.source_location,
+                    )?;
+                }
+                ClassLikeKind::Struct => {}
             }
-            Element::InterfaceDef(def) => {
-                self.process_declared_relationships(
-                    &def.name,
-                    &def.extends,
-                    scope,
-                    RelationType::Inheritance,
-                    &def.source_location,
-                )?;
-            }
-            _ => {}
         }
 
         Ok(())
@@ -577,30 +577,22 @@ impl ClassResolver {
 
     fn process_element(
         &mut self,
-        element: &Element,
+        element: &TypeDefinition,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
         match element {
-            Element::EnumDef(def) => self.process_enum(def, scope),
-            Element::EntityDef(def) if self.is_function_entity(def) => {
+            TypeDefinition::EnumDef(def) => self.process_enum(def, scope),
+            TypeDefinition::EntityDef(def) if self.is_function_entity(def) => {
                 self.process_free_function_entity(def, scope)
             }
-            Element::EntityDef(_) => Ok(()),
-            _ => {
-                let entity_type = match element {
-                    Element::ClassDef(def) if def.is_abstract => EntityType::AbstractClass,
-                    Element::ClassDef(_) => EntityType::Class,
-                    Element::StructDef(_) => EntityType::Struct,
-                    Element::InterfaceDef(_) => EntityType::Interface,
-                    _ => unreachable!(),
-                };
-                self.process_class(element, scope, entity_type)
-            }
+            TypeDefinition::EntityDef(_) => Ok(()),
+            TypeDefinition::ClassLikeDef(def) => self.process_class(def, scope),
         }
     }
 
     fn is_function_entity(&self, def: &class_parser::EntityDef) -> bool {
-        def.stereotypes
+        def.declaration
+            .stereotypes
             .iter()
             .any(|stereotype| stereotype.eq_ignore_ascii_case("function"))
     }
@@ -611,10 +603,10 @@ impl ClassResolver {
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
         let (declared, _) = Self::declare(
-            &def.name,
+            &def.declaration.name,
             IdentityKind::ClassLike,
             scope,
-            Some(&def.source_location),
+            Some(&def.declaration.source_location),
         )?;
         let enclosing_namespace_id = self.enclosing_namespace_id(&declared);
 
@@ -637,53 +629,25 @@ impl ClassResolver {
 
     fn process_class(
         &mut self,
-        def: &Element,
+        def: &ClassLikeDef,
         scope: &DeclarationScope,
-        entity_type: EntityType,
     ) -> Result<(), ClassPumlResolverError> {
-        let (
-            name,
-            stereotypes,
-            attributes,
-            type_aliases,
-            methods,
-            template_parameters,
-            source_location,
-        ) = match def {
-            Element::ClassDef(c) => (
-                &c.name,
-                &c.stereotypes,
-                &c.attributes,
-                &c.type_aliases,
-                &c.methods,
-                &c.template_parameters,
-                &c.source_location,
-            ),
-            Element::StructDef(s) => (
-                &s.name,
-                &s.stereotypes,
-                &s.attributes,
-                &s.type_aliases,
-                &s.methods,
-                &s.template_parameters,
-                &s.source_location,
-            ),
-            Element::InterfaceDef(i) => (
-                &i.name,
-                &i.stereotypes,
-                &i.attributes,
-                &i.type_aliases,
-                &i.methods,
-                &i.template_parameters,
-                &i.source_location,
-            ),
-            Element::EntityDef(_) => {
-                unreachable!("EntityDef should not be passed to process_class")
-            }
-            Element::EnumDef(_) => {
-                unreachable!("EnumDef should not be passed to process_class")
-            }
+        let entity_type = match &def.kind {
+            ClassLikeKind::Class {
+                is_abstract: true, ..
+            } => EntityType::AbstractClass,
+            ClassLikeKind::Class { .. } => EntityType::Class,
+            ClassLikeKind::Struct => EntityType::Struct,
+            ClassLikeKind::Interface { .. } => EntityType::Interface,
         };
+
+        let name = &def.declaration.name;
+        let stereotypes = &def.declaration.stereotypes;
+        let attributes = &def.members.attributes;
+        let type_aliases = &def.members.type_aliases;
+        let methods = &def.members.methods;
+        let template_parameters = &def.template_parameters;
+        let source_location = &def.declaration.source_location;
 
         let (declared, text) =
             Self::declare(name, IdentityKind::ClassLike, scope, Some(source_location))?;
@@ -885,10 +849,10 @@ impl ClassResolver {
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
         let (declared, _) = Self::declare(
-            &def.name,
+            &def.declaration.name,
             IdentityKind::ClassLike,
             scope,
-            Some(&def.source_location),
+            Some(&def.declaration.source_location),
         )?;
         let id = declared.id.id();
 
@@ -920,10 +884,16 @@ impl ClassResolver {
 
         let entity = SimpleEntity {
             id: id.clone(),
-            name: strip_root_marker(def.name.alias.as_deref().unwrap_or(&def.name.internal))
-                .to_string(),
+            name: strip_root_marker(
+                def.declaration
+                    .name
+                    .alias
+                    .as_deref()
+                    .unwrap_or(&def.declaration.name.internal),
+            )
+            .to_string(),
             enclosing_namespace_id: self.enclosing_namespace_id(&declared),
-            stereotypes: def.stereotypes.clone(),
+            stereotypes: def.declaration.stereotypes.clone(),
             entity_type: EntityType::Enum,
             type_aliases: vec![],
             variables: vec![],
@@ -931,10 +901,10 @@ impl ClassResolver {
             template_parameters: None,
             enum_literals: literals,
             relationships: vec![],
-            source_location: def.source_location.clone(),
+            source_location: def.declaration.source_location.clone(),
         };
 
-        self.push_entity(entity, &declared, def.name.alias.as_deref())
+        self.push_entity(entity, &declared, def.declaration.name.alias.as_deref())
     }
 
     fn convert_arrow(&self, arrow: &Arrow) -> Result<(RelationType, bool), ClassPumlResolverError> {
@@ -1098,7 +1068,7 @@ impl DiagramResolver for ClassResolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use class_parser::{ClassDef, EnumItem, Name};
+    use class_parser::{ClassLikeDef, ClassLikeKind, EnumItem, Name};
     use parser_core::common_ast::{ArrowDecor, ArrowLine};
 
     // ----------------------------
@@ -1111,42 +1081,46 @@ mod tests {
         }
     }
 
-    fn make_class_at(name: &str, line: u32) -> Element {
-        Element::ClassDef(ClassDef {
-            name: make_name(name),
-            namespace: "".to_string(),
-            package: "".to_string(),
-            stereotypes: Vec::new(),
-            source_location: SourceLocation::new("test.puml", line),
-            is_abstract: false,
+    fn make_class_at(name: &str, line: u32) -> TypeDefinition {
+        TypeDefinition::ClassLikeDef(ClassLikeDef {
+            declaration: class_parser::DeclarationCommon {
+                name: make_name(name),
+                namespace: "".to_string(),
+                package: "".to_string(),
+                stereotypes: Vec::new(),
+                source_location: SourceLocation::new("test.puml", line),
+            },
             template_parameters: None,
-            extends: vec![],
-            implements: vec![],
-            attributes: vec![],
-            type_aliases: vec![],
-            methods: vec![],
+            members: class_parser::ClassLikeMembers::default(),
+            kind: ClassLikeKind::Class {
+                is_abstract: false,
+                extends: vec![],
+                implements: vec![],
+            },
         })
     }
 
-    fn make_class(name: &str) -> Element {
+    fn make_class(name: &str) -> TypeDefinition {
         make_class_at(name, 1)
     }
 
-    fn make_aliased_class(internal: &str, alias: &str) -> Element {
+    fn make_aliased_class(internal: &str, alias: &str) -> TypeDefinition {
         let mut element = make_class(internal);
-        if let Element::ClassDef(def) = &mut element {
-            def.name.alias = Some(alias.to_string());
+        if let TypeDefinition::ClassLikeDef(def) = &mut element {
+            def.declaration.name.alias = Some(alias.to_string());
         }
         element
     }
 
-    fn make_enum(name: &str, items: Vec<&str>) -> Element {
-        Element::EnumDef(EnumDef {
-            name: make_name(name),
-            namespace: "".to_string(),
-            package: "".to_string(),
-            source_location: SourceLocation::new("test.puml", 1),
-            stereotypes: Vec::new(),
+    fn make_enum(name: &str, items: Vec<&str>) -> TypeDefinition {
+        TypeDefinition::EnumDef(EnumDef {
+            declaration: class_parser::DeclarationCommon {
+                name: make_name(name),
+                namespace: "".to_string(),
+                package: "".to_string(),
+                source_location: SourceLocation::new("test.puml", 1),
+                stereotypes: Vec::new(),
+            },
             items: items
                 .into_iter()
                 .map(|n| EnumItem {
@@ -1248,8 +1222,8 @@ mod tests {
     #[test]
     fn test_constructor_of_aliased_class_is_recognized() {
         let mut element = make_aliased_class("score::Foo", "F");
-        if let Element::ClassDef(def) = &mut element {
-            def.methods.push(ParserMethod {
+        if let TypeDefinition::ClassLikeDef(def) = &mut element {
+            def.members.methods.push(ParserMethod {
                 name: "Foo".to_string(),
                 ..Default::default()
             });
@@ -1480,7 +1454,7 @@ mod tests {
     // ----------------------------
     // package alias
     // ----------------------------
-    fn make_package(name: &str, alias: Option<&str>, types: Vec<Element>) -> Package {
+    fn make_package(name: &str, alias: Option<&str>, types: Vec<TypeDefinition>) -> Package {
         let mut package_name = make_name(name);
         package_name.alias = alias.map(str::to_string);
         Package {
@@ -1739,7 +1713,7 @@ mod tests {
 
         let file = ClassUmlFile {
             name: "test".to_string(),
-            elements: vec![ClassUmlTopLevel::Types(make_class("User"))],
+            elements: vec![ClassUmlTopLevel::Type(make_class("User"))],
             relationships: vec![],
         };
 
@@ -1757,14 +1731,16 @@ mod tests {
     #[test]
     fn test_process_top_level_enum_and_namespace() {
         let cases = vec![
-            ClassUmlTopLevel::Enum(EnumDef {
-                name: make_name("MyEnum"),
-                namespace: "".to_string(),
-                package: "".to_string(),
-                source_location: SourceLocation::new("test.puml", 1),
-                stereotypes: Vec::new(),
+            ClassUmlTopLevel::Type(TypeDefinition::EnumDef(EnumDef {
+                declaration: class_parser::DeclarationCommon {
+                    name: make_name("MyEnum"),
+                    namespace: "".to_string(),
+                    package: "".to_string(),
+                    source_location: SourceLocation::new("test.puml", 1),
+                    stereotypes: Vec::new(),
+                },
                 items: vec![],
-            }),
+            })),
             ClassUmlTopLevel::Namespace(Namespace {
                 name: make_name("ns"),
                 source_location: SourceLocation::new("test.puml", 1),

@@ -3,8 +3,8 @@
     "name": "ignored_visibility_statements",
     "elements": [
       {
-        "Types": {
-          "ClassDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "A",
               "alias": null
@@ -15,19 +15,22 @@
               "file": "",
               "line": 20
             },
-            "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
             "methods": [],
-            "template_parameters": null,
-            "extends": [],
-            "implements": []
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
+            }
           }
         }
       },
       {
-        "Types": {
-          "ClassDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "B",
               "alias": null
@@ -38,19 +41,22 @@
               "file": "",
               "line": 21
             },
-            "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
             "methods": [],
-            "template_parameters": null,
-            "extends": [],
-            "implements": []
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
+            }
           }
         }
       },
       {
-        "Types": {
-          "ClassDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "C",
               "alias": null
@@ -61,13 +67,16 @@
               "file": "",
               "line": 22
             },
-            "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
             "methods": [],
-            "template_parameters": null,
-            "extends": [],
-            "implements": []
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
+            }
           }
         }
       }
