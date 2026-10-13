@@ -1,0 +1,82 @@
+{
+  "free_function_entity.puml": {
+    "name": "free_function_entity",
+    "elements": [
+      {
+        "Namespace": {
+          "name": {
+            "internal": "amp",
+            "display": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 16
+          },
+          "types": [],
+          "relationships": [],
+          "namespaces": [
+            {
+              "name": {
+                "internal": "algorithm",
+                "display": null
+              },
+              "source_location": {
+                "file": "",
+                "line": 17
+              },
+              "relationships": [],
+              "types": [
+                {
+                  "EntityDef": {
+                    "name": {
+                      "internal": "clamp",
+                      "display": null
+                    },
+                    "namespace": "algorithm",
+                    "package": "",
+                    "stereotypes": [
+                      "function"
+                    ],
+                    "methods": [
+                      {
+                        "visibility": "Public",
+                        "name": "clamp",
+                        "template_parameters": null,
+                        "params": [
+                          {
+                            "name": "value",
+                            "param_type": null
+                          },
+                          {
+                            "name": "min",
+                            "param_type": null
+                          },
+                          {
+                            "name": "max",
+                            "param_type": null
+                          }
+                        ],
+                        "type": null,
+                        "modifiers": [],
+                        "source_location": {
+                          "file": "",
+                          "line": 19
+                        }
+                      }
+                    ],
+                    "source_location": {
+                      "file": "",
+                      "line": 18
+                    }
+                  }
+                }
+              ],
+              "namespaces": []
+            }
+          ]
+        }
+      }
+    ],
+    "relationships": []
+  }
+}
