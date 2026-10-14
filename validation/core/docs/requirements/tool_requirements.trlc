@@ -276,6 +276,16 @@ section "Tool Requirements" {
                 satisfied_by = Verifier
             }
 
+            ToolQualification.ToolRequirement ClassDesignImplementationFreeFunctionConsistency {
+                description = '''The validator shall report an error when a
+                free function modeled in the unit design is missing from the
+                implementation, or when the matching implementation free
+                function differs in return type, parameters, or template
+                parameters.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
             ToolQualification.ToolRequirement ClassDesignImplementationTypeNormalization {
                 description = '''The validator shall normalize namespace
                 separators, the `std::` type prefix, and pointer or reference

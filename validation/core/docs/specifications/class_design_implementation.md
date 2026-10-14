@@ -18,9 +18,9 @@
 This validator enforces consistency between the class model in the unit design
 and the class model extracted from the implementation.
 
-It shall make sure that every class, member, method, enum literal, type alias,
-and relationship modeled in the unit design exists in the implementation and is
-compatible with it.
+It shall make sure that every class and free function, as well as every class
+member, method, enum literal, type alias, and relationship modeled in the unit
+design, exists in the implementation and is compatible with it.
 
 Implementation-only entities and members are allowed. The unit design is the
 validated contract.
@@ -251,6 +251,31 @@ class Vehicle {
 public:
   void Load(Payload payload);
 };
+```
+
+### Free Function Consistency
+
+Every free function (at global or namespace scope) modeled in the unit design
+must exist in the implementation. Functions are matched by their
+namespace-qualified name and normalized parameter types, which supports
+overloads. Return type, parameter names and types, variadic or pack-expansion
+markers, and template parameters must match.
+*(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationFreeFunctionConsistency`)*
+
+```text
+' PlantUML class diagram
+namespace vehicle {
+  entity VehicleFuncs <<function>> {
+    + Dispatch(mode: std::uint8_t): void
+  }
+}
+```
+
+```cpp
+// implementation C++ code
+namespace vehicle {
+void Dispatch(std::uint8_t mode);
+}
 ```
 
 ### Type Normalization
