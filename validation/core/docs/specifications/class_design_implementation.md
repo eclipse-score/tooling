@@ -48,9 +48,13 @@ contained by a matched entity is covered by the following type alias, variable,
 method, enum literal, relationship, and template parameter items.
 
 If the same class ID is declared more than once across the unit design's input
-class diagrams (e.g. split across multiple `.puml` files), this is reported
-as a failure naming both source locations, independent of entity type
-consistency.
+class diagrams (e.g. an overview and a detail `.puml` file), the declarations
+merge when at most one of them has a body (members, type aliases or enum
+literals); the relationships of all declarations are united. Two declarations
+with a body are reported as a failure naming both source locations, independent
+of entity type consistency. A different entity type or stereotype across the
+declarations is a failure as well.
+*(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationDeclarationMerge`)*
 
 ```text
 ' PlantUML class diagram

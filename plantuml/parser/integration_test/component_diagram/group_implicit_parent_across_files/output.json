@@ -1,0 +1,58 @@
+{
+    "overview.puml": {
+        "SampleSEooC": {
+            "id": "SampleSEooC",
+            "name": "SampleSEooC",
+            "alias": "SampleSEooC",
+            "parent_id": null,
+            "comp_type": "Package",
+            "stereotype": "SEooC",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 15
+            }
+        },
+        "SampleSEooC.ComponentA": {
+            "id": "SampleSEooC.ComponentA",
+            "name": "ComponentA",
+            "alias": "CompA",
+            "parent_id": "SampleSEooC",
+            "comp_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 16
+            }
+        }
+    },
+    "detail.puml": {
+        "SampleSEooC.ComponentA": {
+            "id": "SampleSEooC.ComponentA",
+            "name": "ComponentA",
+            "alias": "ComponentA",
+            "parent_id": "SampleSEooC",
+            "comp_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 15
+            }
+        },
+        "SampleSEooC.ComponentA.UnitA": {
+            "id": "SampleSEooC.ComponentA.UnitA",
+            "name": "UnitA",
+            "alias": "UnitA",
+            "parent_id": "SampleSEooC.ComponentA",
+            "comp_type": "Component",
+            "stereotype": "unit",
+            "relations": [],
+            "source_location": {
+                "file": "",
+                "line": 16
+            }
+        }
+    }
+}

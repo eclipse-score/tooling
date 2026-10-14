@@ -73,6 +73,33 @@ Bazel build graph, so an overview file may declare a subset of a parent's
 interfaces (e.g. its public ones) while a detail file declares others (e.g.
 its internal ones), without that counting as a split decomposition.
 
+### Anchoring
+
+Every `<<component>>` and `<<unit>>` of the merged model must be nested
+directly under a `<<SEooC>>` or a `<<component>>`; interfaces and
+unstereotyped elements are exempt. The check runs on the ids left after
+group resolution, so it fires when an overview and a detail declaration did
+not resolve onto one id, for example because the detail declaration has no
+body or differs in stereotype or element type. The error carries the source
+location and, when another declaration of the same name exists, that
+declaration. Nesting depth is not constrained: a dependable element may hold
+units directly and components may nest arbitrarily. The check runs in the
+`architectural_design` profile only.
+
+*(Requirement: {requirement:downstream-ref}`Tools.ComponentModelAnchoring`)*
+
+```text
+[Design] Component "component_a" is not nested under a <<SEooC>> package.
+```
+
+```text
+[Design] Unit "unit_1" is nested under an entity that is neither a <<SEooC>> nor a <<component>>.
+```
+
+Only the root of an unanchored subtree is reported; its descendants are
+anchored relative to it. A parent missing from the model is reported when the
+sets are built, not here.
+
 ### Determinism
 
 Errors are ordered by source location (file, then line), not by which
@@ -81,12 +108,21 @@ error is identical regardless of the order files are listed in `static`.
 
 ### Not Validated Here
 
-Each `.puml` file is parsed and resolved independently, before the id-based
-merge above ever runs. A relation may only reference an alias declared in
-that same file: referencing an alias that's only declared in another
-`static` file fails at PlantUML parse time (`Element Resolver:
-UnresolvedReference: <alias>`), not as a Design validation error from this
-validator.
+Group resolution of the `static` files runs at PlantUML parse time, before the
+id-based merge above, and reports its own errors, not Design validation errors:
+
+- A relation target not found locally resolves in the other files; more than
+  one match is `AmbiguousReference`.
+- A relation source must be declared in the file that writes it, else
+  `CrossFileRelationSource`; an undirected relation swaps its sides instead.
+- A top-level element with a body that matches a nested declaration (name,
+  element type, stereotype) in exactly one other file is reparented onto it;
+  several parents are `AmbiguousImplicitParent`, a reparenting cycle is
+  `ImplicitParentCycle`.
+
+`architectural_design.static` is restricted to component/package diagrams;
+class diagrams belong in the elaborating unit's own
+`unit_design(static=[...])` instead.
 
 ## Failure Cases
 
@@ -94,6 +130,7 @@ validator.
 |---|---|
 | Same id declared in two files with conflicting stereotype or element type | Cross-File Declaration Consistency |
 | A parent's children declared across files with no single file containing all of them | Single-Home Decomposition |
+| A component or unit not nested under a SEooC or component | Anchoring |
 
 ## Debug Output
 

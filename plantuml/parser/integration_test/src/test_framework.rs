@@ -10,11 +10,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
+use puml_parser::DiagramParser;
+use puml_resolver::{DiagramResolver, DiagramSource};
+use puml_utils::LogLevel;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value as JsonValue;
 use serde_yaml::Value as YamlValue;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -129,6 +134,69 @@ pub trait DiagramProcessor {
         &self,
         files: &HashSet<Rc<PathBuf>>,
     ) -> Result<HashMap<Rc<PathBuf>, Self::Output>, Self::Error>;
+}
+
+// =================== ResolverGroupRunner ===================
+/// Parses every file of a case with `P` and resolves them in one
+/// `R::resolve_group` call, as `puml_cli` does for one diagram kind.
+pub struct ResolverGroupRunner<P, R> {
+    parser: RefCell<P>,
+    resolver: PhantomData<R>,
+}
+
+impl<P, R> ResolverGroupRunner<P, R> {
+    pub fn new(parser: P) -> Self {
+        Self {
+            parser: RefCell::new(parser),
+            resolver: PhantomData,
+        }
+    }
+}
+
+impl<P, R> DiagramProcessor for ResolverGroupRunner<P, R>
+where
+    P: DiagramParser<Output = R::Document>,
+    P::Error: std::fmt::Debug,
+    R: DiagramResolver + Default,
+{
+    type Output = R::Output;
+    type Error = R::Error;
+
+    fn run(
+        &self,
+        files: &HashSet<Rc<PathBuf>>,
+    ) -> Result<HashMap<Rc<PathBuf>, R::Output>, R::Error> {
+        let mut sorted_paths: Vec<Rc<PathBuf>> = files.iter().cloned().collect();
+        sorted_paths.sort();
+
+        let mut parser = self.parser.borrow_mut();
+        let mut names = Vec::new();
+        let mut documents = Vec::new();
+        for path in &sorted_paths {
+            let content = fs::read_to_string(&**path).expect("Failed to read test file");
+            documents.push(
+                parser
+                    .parse_file(path, &content, LogLevel::Error)
+                    .expect("Failed to parse test file"),
+            );
+            // basename, as the CLI's `--source-name`: keeps diagnostics portable
+            names.push(
+                path.file_name()
+                    .expect("test fixture path must have a file name")
+                    .to_string_lossy()
+                    .into_owned(),
+            );
+        }
+
+        let sources: Vec<DiagramSource<'_, R::Document>> = names
+            .iter()
+            .zip(documents.iter())
+            .map(|(name, document)| DiagramSource { name, document })
+            .collect();
+        let resolved = R::resolve_group(&sources).map_err(|e| e.source)?;
+
+        Ok(sorted_paths.into_iter().zip(resolved).collect())
+    }
 }
 
 // =================== ExpectationChecker ===================

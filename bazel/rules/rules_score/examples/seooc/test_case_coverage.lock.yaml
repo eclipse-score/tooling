@@ -65,11 +65,7 @@ requirements:
   - id: SampleComponent.REQ_COMP_006
     version: '1'
     description: The numeric value formatter shall convert a validated numeric value manager into a human-readable string representation
-    test_cases:
-      - uid: //Bar:Format
-        given: a Bar instance owning a Foo with value 42
-        when: Format is called
-        then: it returns the human-readable string "42"
+    test_cases: []
   - id: SampleComponentExtra.REQ_COMP_EXTRA_001
     version: '1'
     description: The numeric value management interface shall return a fixed, well-defined value immediately upon construction, without requiring any prior initialization calls

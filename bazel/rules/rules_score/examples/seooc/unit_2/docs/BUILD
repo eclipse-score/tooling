@@ -23,6 +23,7 @@ unit_design(
     name = "unit_design",
     static = [
         "unit_2_design.rst",
+        "unit_2_overview.puml",
         "unit_2_class_diagram.puml",
     ],
     visibility = ["//visibility:public"],

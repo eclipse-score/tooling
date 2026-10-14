@@ -252,19 +252,6 @@ def puml_layout_test_suite(name):
         reserved_plan.errors,
     )
 
-    # --- same-stem .puml and .plantuml collide -----------------------------------
-
-    same_stem_puml = _fake_file("static/overview.puml")
-    same_stem_plantuml = _fake_file("static/overview.plantuml")
-    same_stem_plan = plan_view_layout([same_stem_puml, same_stem_plantuml], "")
-
-    loadingtest.equals(
-        env,
-        "puml_and_plantuml_same_stem_rejected",
-        ["both 'overview.puml' and 'overview.plantuml' exist for 'overview' in directory 'static'; keep only one"],
-        same_stem_plan.errors,
-    )
-
     # --- a file from another repository is rejected ------------------------------
     # short_path for an external-repo file starts with "../"; there is no
     # in-tree relative path to stage it at.

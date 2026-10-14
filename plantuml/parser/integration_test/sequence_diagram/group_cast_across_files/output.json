@@ -1,0 +1,85 @@
+{
+  "cast.puml": {
+    "name": "cast",
+    "participants": [
+      {
+        "display_name": "comp::unit",
+        "alias": "u",
+        "uid": "comp.unit",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Client",
+        "alias": null,
+        "uid": "Client",
+        "participant_type": "Actor",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": []
+    }
+  },
+  "scenario.puml": {
+    "name": "scenario",
+    "participants": [
+      {
+        "display_name": "Client",
+        "alias": null,
+        "uid": "Client",
+        "participant_type": "Actor",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "comp::unit",
+        "alias": "u",
+        "uid": "comp.unit",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "Client",
+            "receiver": "comp.unit",
+            "message": "call()",
+            "source_location": {
+              "file": "",
+              "line": 16
+            }
+          }
+        },
+        {
+          "Interaction": {
+            "sender": "comp.unit",
+            "receiver": "Client",
+            "message": "notify()",
+            "source_location": {
+              "file": "",
+              "line": 17
+            }
+          }
+        }
+      ]
+    }
+  }
+}

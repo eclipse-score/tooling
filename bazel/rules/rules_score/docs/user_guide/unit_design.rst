@@ -175,3 +175,29 @@ Bazel
 
 For the complete ``unit_design`` attribute reference, see
 :ref:`unit_design <rule-unit-design>` in the rule index.
+
+Splitting a unit design across files
+-------------------------------------
+
+``static`` and ``dynamic`` each accept several files and resolve them as one
+group per view:
+
+- **Class diagrams:** an overview nests a class without a body; the detail file
+  declares it with its members and needs no wrapper. Two files with a body for
+  the same class are an error.
+- **Sequence diagrams:** one file declares the participants (the cast);
+  scenario files use only the aliases.
+
+.. code-block:: text
+
+    ' overview.puml                  ' detail.puml
+    @startuml                        @startuml
+    namespace unit_1 {               class Foo {
+        class Foo                        + GetNumber() : uint8_t
+    }                                }
+    @enduml                          @enduml
+
+Always write the ``class`` keyword (class diagrams) or ``activate`` /
+``participant`` (sequence diagrams): the diagram kind is detected per file, and
+a file without such a construct may be read as a component diagram. The rules
+are in :ref:`multiple-files-other-views`.

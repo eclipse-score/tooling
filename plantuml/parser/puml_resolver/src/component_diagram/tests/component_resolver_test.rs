@@ -21,7 +21,7 @@ use component_resolver::{ComponentResolver, ComponentResolverError};
 use parser_core::DiagramParser;
 use puml_utils::LogLevel;
 use resolver_traits::DiagramResolver;
-use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor};
+use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor, ResolverGroupRunner};
 
 // ===== Component Resolver adapter DiagramProcessor =====
 struct ComponentResolverRunner;
@@ -58,6 +58,80 @@ fn run_component_resolver_case(case_name: &str) {
         ComponentResolverRunner,
         DefaultExpectationChecker,
     );
+}
+
+fn run_component_resolver_group_case(case_name: &str) {
+    run_case(
+        "integration_test/component_diagram",
+        case_name,
+        ResolverGroupRunner::<_, ComponentResolver>::new(PumlComponentParser),
+        DefaultExpectationChecker,
+    );
+}
+
+#[test]
+fn test_group_implicit_parent_across_files() {
+    run_component_resolver_group_case("group_implicit_parent_across_files");
+}
+
+#[test]
+fn test_group_ambiguous_implicit_parent() {
+    run_component_resolver_group_case("group_ambiguous_implicit_parent");
+}
+
+#[test]
+fn test_group_transitive_implicit_parent() {
+    run_component_resolver_group_case("group_transitive_implicit_parent");
+}
+
+#[test]
+fn test_group_implicit_parent_cycle() {
+    run_component_resolver_group_case("group_implicit_parent_cycle");
+}
+
+#[test]
+fn test_group_undirected_relation_swap() {
+    run_component_resolver_group_case("group_undirected_relation_swap");
+}
+
+#[test]
+fn test_group_id_only_implicit_parent_match() {
+    run_component_resolver_group_case("group_id_only_implicit_parent_match");
+}
+
+#[test]
+fn test_group_bodyless_stays_top_level() {
+    run_component_resolver_group_case("group_bodyless_stays_top_level");
+}
+
+#[test]
+fn test_group_kind_mismatch_stays_top_level() {
+    run_component_resolver_group_case("group_kind_mismatch_stays_top_level");
+}
+
+#[test]
+fn test_group_cross_file_relation() {
+    run_component_resolver_group_case("group_cross_file_relation");
+}
+
+#[test]
+fn test_group_local_wins_over_peer() {
+    run_component_resolver_group_case("group_local_wins_over_peer");
+}
+
+#[test]
+fn test_group_cross_file_relation_source() {
+    run_component_resolver_group_case("group_cross_file_relation_source");
+}
+
+#[test]
+fn test_group_ambiguous_peer_reference() {
+    run_component_resolver_group_case("group_ambiguous_peer_reference");
+}
+
+#[test]
+fn test_group_local_alias_name_error() {
+    run_component_resolver_group_case("group_local_alias_name_error");
 }
 
 fn run_deployment_resolver_case(case_name: &str) {

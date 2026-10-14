@@ -330,8 +330,10 @@ matching definition in another — and are wired up the same way:
   references, since neither has children) sharing a `TaskInterface` binding
   (so the diagrams also pass the architectural-design consistency validator).
   Each unit is elaborated by its own class diagram
-  (`dynamic_dispatcher_class.puml`, `dynamic_worker_class.puml`, also in
-  `static`), which is where the click ultimately lands. `TaskInterface` itself
+  (`dynamic_dispatcher_class.puml`, `dynamic_worker_class.puml`, each in its
+  own `unit_design(static=[...])` -- `architectural_design`'s `static`
+  attribute is component/package diagrams only), which is where the click
+  ultimately lands. `TaskInterface` itself
   is only ever a reference in the component diagram; its definition lives in
   the public API (`dynamic_public_api_detail.puml`, via the `public_api`
   attribute), exactly like the public-API scenario above. See

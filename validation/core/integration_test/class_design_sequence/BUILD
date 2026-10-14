@@ -26,6 +26,7 @@ filegroup(
         "//validation/core/integration_test/class_design_sequence/negative_participant_qualified_suffix_not_matched:case_data",
         "//validation/core/integration_test/class_design_sequence/positive_participant_abstract_base_method_match:case_data",
         "//validation/core/integration_test/class_design_sequence/positive_participant_alias_display_name_namespace_match:case_data",
+        "//validation/core/integration_test/class_design_sequence/positive_participant_cast_across_files:case_data",
         "//validation/core/integration_test/class_design_sequence/positive_participant_multilevel_inherited_method_match:case_data",
         "//validation/core/integration_test/class_design_sequence/positive_participant_namespace_callee_method_match:case_data",
         "//validation/core/integration_test/class_design_sequence/positive_participant_qualified_label_with_newline_match:case_data",

@@ -1,0 +1,86 @@
+{
+    "leaf.puml": {
+        "Root.ComponentA.ComponentB": {
+            "id": "Root.ComponentA.ComponentB",
+            "name": "ComponentB",
+            "alias": "ComponentB",
+            "parent_id": "Root.ComponentA",
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "line": 15,
+                "file": ""
+            }
+        },
+        "Root.ComponentA.ComponentB.UnitB": {
+            "id": "Root.ComponentA.ComponentB.UnitB",
+            "name": "UnitB",
+            "alias": "UnitB",
+            "parent_id": "Root.ComponentA.ComponentB",
+            "element_type": "Component",
+            "stereotype": "unit",
+            "relations": [],
+            "source_location": {
+                "line": 16,
+                "file": ""
+            }
+        }
+    },
+    "mid.puml": {
+        "Root.ComponentA.ComponentB": {
+            "id": "Root.ComponentA.ComponentB",
+            "name": "ComponentB",
+            "alias": "ComponentB",
+            "parent_id": "Root.ComponentA",
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "line": 16,
+                "file": ""
+            }
+        },
+        "Root.ComponentA": {
+            "id": "Root.ComponentA",
+            "name": "ComponentA",
+            "alias": "ComponentA",
+            "parent_id": "Root",
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "line": 15,
+                "file": ""
+            }
+        }
+    },
+    "root.puml": {
+        "Root": {
+            "id": "Root",
+            "name": "Root",
+            "alias": "Root",
+            "parent_id": null,
+            "element_type": "Package",
+            "stereotype": "SEooC",
+            "relations": [],
+            "source_location": {
+                "line": 15,
+                "file": ""
+            }
+        },
+        "Root.ComponentA": {
+            "id": "Root.ComponentA",
+            "name": "ComponentA",
+            "alias": "ComponentA",
+            "parent_id": "Root",
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "line": 16,
+                "file": ""
+            }
+        }
+    }
+}

@@ -24,6 +24,7 @@ cc_library(
     deps = [
         "//unit_1:unit_1_lib",
         "//unit_2:unit_2_lib",
+        "//unit_3:unit_3_lib",
     ],
 )
 
@@ -56,11 +57,13 @@ component(
 # not just units (see docs/user_guide/architectural_design.rst).
 component(
     name = "sub_component_example",
+    components = ["//unit_3:unit_3"],
     requirements = [
         "//docs/requirements:component_requirements_sub",
         "//docs/requirements:feature_requirements",
     ],
     tags = ["manual"],
+    test_case_coverage_lock = "sub_component_test_case_coverage.lock.yaml",
     tests = [],
 )
 

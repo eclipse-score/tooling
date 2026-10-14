@@ -395,25 +395,51 @@ architectural_design(
 )
 ```
 
-`static` accepts more than one `.puml` file. They are merged by entity id (the full parent-name
-dot-path) into a single architecture: re-declaring the same entity (same id) in more than one
-file is allowed and merges its relations, as long as `stereotype`/element type agree everywhere
-it's declared — this is how `overview_design.puml` above can bare-declare the SEooC and its
-top-level component while `static_design.puml` elaborates their internals, without duplicating
-every nested unit and relation in both files. A parent whose children are split across files with
-no single file containing all of them is an error. Re-nesting an entity under a different parent
-across files is *not* caught here (different parent ⇒ different id ⇒ a different entity) — that
-class of mistake instead surfaces as a Bazel ↔ diagram mismatch (extra/missing entity) in the
+`static` accepts more than one `.puml` file, all of them component/package diagrams; class
+diagrams belong in the elaborating unit's own `unit_design(static=[...])` instead. All files are
+resolved *together* in one pass (`ComponentResolver::resolve_group`), then merged by entity id (the
+full parent-name dot-path) into a single architecture: re-declaring the same entity (same id) in
+more than one file is allowed and merges its relations, as long as `stereotype`/element type agree
+everywhere it's declared. A top-level element *with a body* in one file that has the same name,
+element type and stereotype as a *nested* declaration in exactly one other file is implicitly
+reparented onto that declaration's parent chain instead of becoming a new top-level entity (matching
+is by name, so the files may use different aliases). This is how `static_design.puml` can declare
+only `component_example`'s children with **no SEooC wrapper**, while `overview_design.puml` nests
+`component_example` under the SEooC boundary. A bodyless re-declaration and a rooted name (`::X`)
+stay separate top-level entities. Reparenting is transitive (a cycle is an `ImplicitParentCycle`
+error); matching nested declarations under more than one distinct parent is an
+`AmbiguousImplicitParent` error rather than a guess. A parent whose children are split across files
+with no single file containing all of them is an error. Re-nesting an entity under a different
+parent across files is *not* caught here (different parent => different id => a different entity);
+that class of mistake surfaces as a Bazel <-> diagram mismatch (extra/missing entity) in the
 `bazel_component` check below.
 
-Each `.puml` file is parsed and resolved on its own, *before* the id-based merge above runs — a
-relation may only reference an alias declared in that same file. Referencing an alias that's only
-declared in another `static` file fails at PlantUML parse time (`Element Resolver:
-UnresolvedReference: <alias>`), not as a Design validation error. So keep each file
-self-contained: if a detail file wires up an entity's interfaces, (re-)declare those interfaces
-in that same file rather than assuming they're visible from the overview file.
+A relation's *source* must be declared (or reparented) in the file that writes it; only its
+*target* may resolve to another file in the same `static` group (falling back to the group only
+when unresolved locally, erroring `AmbiguousReference` if more than one other file resolves it).
+Referencing a source that isn't local is a `CrossFileRelationSource` error — *unless* the relation
+is undirected (no arrowhead, no dependency-style decoration), in which case the two sides are
+swapped instead of erroring (the locally-declared endpoint becomes the source).
 
-`static`/`dynamic` accept `.puml`, `.plantuml`, `.png`, `.svg`, `.rst`, `.md`. To combine a
+The same multi-file split applies to every other view, resolved as **one group per view** (ids are
+never shared across views; `unit_design` has one group for `static` and one for `dynamic`). Files
+are bucketed by diagram kind, detected per file in the order component, activity, class, sequence:
+
+- **Class** (`public_api`, `internal_api`, `unit_design` `static`): overview nests `class X`
+  without a body, the detail file declares `class X { ... }` with no wrapper (same reparenting as
+  components; a bodyless declaration is a reference). Two bodies for one id =
+  `class "<id>" is defined more than once`; different type/stereotype = conflict. Always write the
+  `class` keyword — `package p { interface I }` is detected as a *component* diagram.
+- **Sequence** (`dynamic`, `unit_design` `dynamic`): one cast file declares `participant
+  "pkg::Comp::Unit" as Alias`; scenario files use only the alias and need `activate` (a bare
+  message-only file is detected as a component diagram). Message endpoints and `create` resolve
+  against other files' explicit participants (local wins; distinct uids =
+  `AmbiguousParticipantReference`); lifecycle and `ref over` stay file-local.
+- **Activity**: no names, nothing to share.
+
+Full rules and examples: `plantuml/parser/docs/element-identifiers.md` (section 4).
+
+`static`/`dynamic` accept `.puml`, `.png`, `.svg`, `.rst`, `.md`. To combine a
 diagram with prose, add both the RST/Markdown wrapper *and* the referenced `.puml` to the same
 list (as `public_api.puml` + `public_api.rst` above, which overrides `public_api.puml`'s
 generated wrapper page); the wrapper embeds the diagram with `.. uml:: file.puml`. `index.md`
@@ -434,10 +460,10 @@ every `.puml` gets an auto-generated wrapper page, and every directory gets a ge
   body a section title** — it becomes the page title, and without one Sphinx warns that a
   toctree entry has no title.
 
-Build-time errors (each naming the offending files): a diagram named `index.puml`/
-`index.plantuml` (that stem is reserved for the navigation page); two files in one view
-resolving to the same staged path; a stem having both `.rst` and `.md`, or both `.puml` and
-`.plantuml`. For a page you want fully outside this scheme, leave the `.puml` out of the view
+Build-time errors (each naming the offending files): a diagram named `index.puml` (that stem
+is reserved for the navigation page); two files in one view resolving to the same staged path;
+a stem having both `.rst` and `.md`. For a page you want fully outside this scheme, leave the
+`.puml` out of the view
 attribute and reference it via your own `.. uml::` elsewhere in the docs tree.
 
 ### `unit_design`

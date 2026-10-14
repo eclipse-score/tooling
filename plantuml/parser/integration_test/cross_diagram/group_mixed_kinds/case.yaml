@@ -1,0 +1,20 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+# One `puml_cli` call covers all six files: each diagram kind resolves as its
+# own group (component and class overview + detail, sequence cast + scenario)
+# and the resulting ids still link across kinds.
+group: true
+links:
+  - ["component_overview.puml#Recorder", "component_detail.puml#Recorder", "sequence_cast.puml#Recorder"]
+  - ["component_detail.puml#Backend", "sequence_cast.puml#Backend"]
+  - ["class_overview.puml#Sink", "class_detail.puml#Sink", "sequence_cast.puml#Sink"]

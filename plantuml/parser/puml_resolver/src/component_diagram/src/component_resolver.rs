@@ -19,10 +19,13 @@ use component_diagram::{
     SourceLocation,
 };
 use component_parser::{Arrow, CompPumlDocument, Element, Port, PortType, Relation, Statement};
-use resolver_traits::DiagramResolver;
+use group_resolution::{
+    unique_peer_match, ImplicitParentError, NestedCandidate, TopLevelCandidate,
+};
+use resolver_traits::{DiagramResolver, DiagramSource, GroupResolveError};
 use uid_normalization::{
     identity_name, leaf_key, resolve_reference, strip_root_marker, DeclarationScope, IdentityKind,
-    Resolution,
+    InternalScope, Resolution,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -79,6 +82,19 @@ pub enum ComponentResolverError {
         to: String,
         reason: String,
     },
+
+    #[error("Element Resolver: {0}")]
+    ImplicitParent(#[from] ImplicitParentError),
+
+    #[error(
+        "Element Resolver: CrossFileRelationSource: {reference} (line {line}) is not declared \
+         in the file that writes the relation",
+        line = source_location.line
+    )]
+    CrossFileRelationSource {
+        reference: String,
+        source_location: SourceLocation,
+    },
 }
 
 #[derive(Clone)]
@@ -94,6 +110,14 @@ struct ArrowAnalysis {
     has_direction: bool,
     reverse_direction: bool,
     decor_role: Option<EndpointRole>,
+}
+
+struct Endpoint {
+    id: String,
+    role: Option<EndpointRole>,
+    element_type: Option<ComponentType>,
+    /// Declared in the file that writes the relation.
+    local: bool,
 }
 
 struct RelationValidationInput<'a> {
@@ -126,6 +150,8 @@ pub struct ComponentResolver {
     // id of every aliased element or port -> its alias
     aliased: HashMap<String, String>,
     pending_relations: Vec<PendingRelation>,
+    // id of a top-level element -> scope it is reparented onto (static group)
+    implicit_parents: HashMap<String, InternalScope>,
 }
 
 impl ComponentResolver {
@@ -213,12 +239,9 @@ impl ComponentResolver {
                 reference: raw.to_string(),
                 alias: self.aliased[&id].clone(),
             },
-            _ => {
-                error!("Unresolved reference: {}", raw);
-                ComponentResolverError::UnresolvedReference {
-                    reference: raw.to_string(),
-                }
-            }
+            _ => ComponentResolverError::UnresolvedReference {
+                reference: raw.to_string(),
+            },
         }
     }
 }
@@ -299,15 +322,49 @@ impl ComponentResolver {
         }
     }
 
+    /// Resolves `raw` in this file, then in `peers` if this file does not know it.
     fn resolve_ref_with_metadata(
         &self,
         raw: &str,
-    ) -> Result<(String, Option<EndpointRole>, Option<ComponentType>), ComponentResolverError> {
-        let (resolved, port_role_hint) = self.resolve_endpoint(raw)?;
+        peers: &[&ComponentResolver],
+    ) -> Result<Endpoint, ComponentResolverError> {
+        let error = match self.resolve_endpoint(raw) {
+            Ok((id, role)) => {
+                let element_type = self.elements.get(&id).map(|e| e.element_type);
+                return Ok(Endpoint {
+                    id,
+                    role,
+                    element_type,
+                    local: true,
+                });
+            }
+            Err(error @ ComponentResolverError::UnresolvedReference { .. }) => error,
+            Err(error) => return Err(error),
+        };
 
-        let element_type = self.elements.get(&resolved).map(|e| e.element_type);
-
-        Ok((resolved, port_role_hint, element_type))
+        let matches = peers.iter().filter_map(|peer| {
+            let (id, role) = peer.resolve_endpoint(raw).ok()?;
+            let element_type = peer.elements.get(&id).map(|e| e.element_type);
+            Some((id, (role, element_type)))
+        });
+        let found = unique_peer_match(matches).map_err(|candidates| {
+            ComponentResolverError::AmbiguousReference {
+                reference: raw.to_string(),
+                candidates,
+            }
+        })?;
+        match found {
+            Some((id, (role, element_type))) => Ok(Endpoint {
+                id,
+                role,
+                element_type,
+                local: false,
+            }),
+            None => {
+                error!("Unresolved reference: {}", raw);
+                Err(error)
+            }
+        }
     }
 
     fn validate_relation_constraints(
@@ -412,19 +469,46 @@ impl ComponentResolver {
         None
     }
 
-    fn resolve_one_relation(&mut self, relation: &Relation) -> Result<(), ComponentResolverError> {
-        let (mut src_fqn, mut src_port_role, mut src_type) =
-            self.resolve_ref_with_metadata(&relation.lhs)?;
-
-        let (mut tgt_fqn, mut tgt_port_role, mut tgt_type) =
-            self.resolve_ref_with_metadata(&relation.rhs)?;
+    fn resolve_one_relation(
+        &mut self,
+        relation: &Relation,
+        peers: &[&ComponentResolver],
+    ) -> Result<(), ComponentResolverError> {
+        let mut source = self.resolve_ref_with_metadata(&relation.lhs, peers)?;
+        let mut target = self.resolve_ref_with_metadata(&relation.rhs, peers)?;
 
         let parsed_arrow = Self::parse_arrow(relation)?;
         if parsed_arrow.reverse_direction {
-            std::mem::swap(&mut src_fqn, &mut tgt_fqn);
-            std::mem::swap(&mut src_port_role, &mut tgt_port_role);
-            std::mem::swap(&mut src_type, &mut tgt_type);
+            std::mem::swap(&mut source, &mut target);
         }
+
+        // An undirected relation has no source: the local endpoint owns it.
+        if !source.local
+            && target.local
+            && !parsed_arrow.has_direction
+            && parsed_arrow.decor_role.is_none()
+        {
+            std::mem::swap(&mut source, &mut target);
+        }
+
+        if !source.local {
+            return Err(ComponentResolverError::CrossFileRelationSource {
+                reference: source.id,
+                source_location: relation.source_location.clone(),
+            });
+        }
+
+        let Endpoint {
+            id: src_fqn,
+            role: src_port_role,
+            element_type: src_type,
+            ..
+        } = source;
+        let Endpoint {
+            id: tgt_fqn,
+            element_type: tgt_type,
+            ..
+        } = target;
 
         let src_is_interface = matches!(src_type, Some(ComponentType::Interface));
         let tgt_is_interface = matches!(tgt_type, Some(ComponentType::Interface));
@@ -489,12 +573,15 @@ impl ComponentResolver {
         Ok(())
     }
 
-    fn resolve_pending_relations(&mut self) -> Result<(), ComponentResolverError> {
+    fn resolve_pending_relations(
+        &mut self,
+        peers: &[&ComponentResolver],
+    ) -> Result<(), ComponentResolverError> {
         let pending_relations = std::mem::take(&mut self.pending_relations);
 
         for relation in pending_relations {
             let saved_scope = std::mem::replace(&mut self.scope, relation.scope);
-            let res = self.resolve_one_relation(&relation.relation);
+            let res = self.resolve_one_relation(&relation.relation, peers);
             self.scope = saved_scope;
             res?;
         }
@@ -519,14 +606,54 @@ impl DiagramResolver for ComponentResolver {
         self.port_leaves.clear();
         self.aliased.clear();
         self.pending_relations.clear();
+        self.implicit_parents.clear();
 
         for stmt in &document.statements {
             self.visit_statement(stmt)?;
         }
 
-        self.resolve_pending_relations()?;
+        self.resolve_pending_relations(&[])?;
 
         Ok(self.elements.clone())
+    }
+
+    /// Resolves the files of one `static` view together: see
+    /// [`group_resolution`] for reparenting; a relation endpoint unknown to its
+    /// own file resolves in the other files, but a relation source must be local.
+    ///
+    /// Returns one element map per document, holding only what it declares.
+    fn resolve_group(
+        documents: &[DiagramSource<'_, CompPumlDocument>],
+    ) -> Result<Vec<Self::Output>, GroupResolveError<Self::Error>> {
+        let mut resolvers: Vec<ComponentResolver> = Self::discover_implicit_parents(documents)?
+            .into_iter()
+            .map(|implicit_parents| ComponentResolver {
+                implicit_parents,
+                ..ComponentResolver::default()
+            })
+            .collect();
+
+        for (resolver, document) in resolvers.iter_mut().zip(documents) {
+            for statement in &document.document.statements {
+                resolver
+                    .visit_statement(statement)
+                    .map_err(|source| GroupResolveError::in_file(document.name, source))?;
+            }
+        }
+
+        for (index, document) in documents.iter().enumerate().take(resolvers.len()) {
+            let (before, rest) = resolvers.split_at_mut(index);
+            let (current, after) = rest.split_first_mut().expect("index is in range");
+            let peers: Vec<&ComponentResolver> = before.iter().chain(after.iter()).collect();
+            current
+                .resolve_pending_relations(&peers)
+                .map_err(|source| GroupResolveError::in_file(document.name, source))?;
+        }
+
+        Ok(resolvers
+            .into_iter()
+            .map(|resolver| resolver.elements)
+            .collect())
     }
 }
 
@@ -626,7 +753,13 @@ impl ComponentResolver {
         })?;
         let text = Self::identity(name, Some(&element.identity.source_location))?;
 
-        let declared = self.scope.declare(&text, element.identity.alias.as_deref());
+        let mut declared = self.scope.declare(&text, element.identity.alias.as_deref());
+        if self.scope.id.is_empty() {
+            // Only the id path moves; the reference path stays file-local.
+            if let Some(parent) = self.implicit_parents.get(&declared.id.id()) {
+                declared.id = parent.child(&declared.id.id());
+            }
+        }
         let fqn = declared.id.id();
         let reference = declared.reference.id();
         self.check_unique(&fqn, &reference, &element.identity.source_location)?;
@@ -664,6 +797,103 @@ impl ComponentResolver {
         self.scope = outer;
 
         Ok(())
+    }
+}
+
+/// Two declarations are the same element when name, type and stereotype match.
+type ElementKind = (ComponentType, Option<String>);
+
+// Static group: implicit reparenting.
+impl ComponentResolver {
+    /// Per file, the scope each top-level element is reparented onto.
+    fn discover_implicit_parents(
+        documents: &[DiagramSource<'_, CompPumlDocument>],
+    ) -> Result<Vec<HashMap<String, InternalScope>>, GroupResolveError<ComponentResolverError>>
+    {
+        let mut top_level = Vec::new();
+        let mut nested = Vec::new();
+        for (file_idx, document) in documents.iter().enumerate() {
+            Self::collect_implicit_parent_candidates(
+                &document.document.statements,
+                &DeclarationScope::default(),
+                None,
+                file_idx,
+                &mut top_level,
+                &mut nested,
+            );
+        }
+
+        let names: Vec<&str> = documents.iter().map(|document| document.name).collect();
+        group_resolution::discover_implicit_parents(&top_level, &nested, &names).map_err(|error| {
+            GroupResolveError::in_file(
+                names[error.file_idx()],
+                ComponentResolverError::ImplicitParent(error),
+            )
+        })
+    }
+
+    fn collect_implicit_parent_candidates(
+        statements: &[Statement],
+        scope: &DeclarationScope,
+        root_id: Option<&str>,
+        file_idx: usize,
+        top_level: &mut Vec<TopLevelCandidate<ElementKind>>,
+        nested: &mut Vec<NestedCandidate<ElementKind>>,
+    ) {
+        for statement in statements {
+            let Statement::Element(element) = statement else {
+                continue;
+            };
+            // Elements the declaration pass rejects are reported there.
+            let Some(name) = element.identity.name.as_deref() else {
+                continue;
+            };
+            let (Ok(element_type), Ok(text)) = (
+                parse_kind(&element.identity.element_kind),
+                Self::identity(name, None),
+            ) else {
+                continue;
+            };
+            let rooted = strip_root_marker(&text) != text;
+            let declared = scope.declare(&text, element.identity.alias.as_deref());
+            let id = declared.id.id();
+            let stereotype = element.identity.stereotype.clone();
+
+            let root = match root_id {
+                None => {
+                    top_level.push(TopLevelCandidate {
+                        id: id.clone(),
+                        file_idx,
+                        kind: (element_type, stereotype),
+                        has_body: !element.statements.is_empty(),
+                        rooted,
+                        source_location: element.identity.source_location.clone(),
+                    });
+                    id
+                }
+                // an absolute name is not nested under its parent
+                Some(_) if rooted => continue,
+                Some(root) => {
+                    nested.push(NestedCandidate {
+                        id,
+                        own: InternalScope::from_path(&text).id(),
+                        root_id: root.to_string(),
+                        file_idx,
+                        kind: (element_type, stereotype),
+                    });
+                    root.to_string()
+                }
+            };
+
+            Self::collect_implicit_parent_candidates(
+                &element.statements,
+                &declared,
+                Some(&root),
+                file_idx,
+                top_level,
+                nested,
+            );
+        }
     }
 }
 

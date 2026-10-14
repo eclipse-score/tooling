@@ -40,6 +40,12 @@ equals a unit id, a single-segment uid matches the unique unit whose id ends in
 that segment. A participant that does not resolve to exactly one unit has no
 interface context; the Component Sequence validator reports it.
 
+An internal API interface declared in several `internal_api` files (for
+example an overview and a detail file) is one interface holding the union of
+the declared methods. Its source location in errors is the first declaration
+that has methods.
+*(Requirement: {requirement:downstream-ref}`Tools.InternalApiInterfaceMerge`)*
+
 Method names are extracted by taking the text before the first `(` and
 trimming whitespace, so a sequence call `GetData(d: Data*)` is compared
 against an internal API method declared as `GetData()` using the same name

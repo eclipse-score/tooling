@@ -13,7 +13,7 @@
 
 @startuml unit_overview
 
-package package_u {
+package package_u <<SEooC>> {
     component component_u <<component>> {
         component unit_one <<unit>>
     }

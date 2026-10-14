@@ -88,6 +88,16 @@ fn positive_method_final_features() {
 // }
 
 #[test]
+fn positive_overview_and_detail_merge() {
+    assert_case("positive_overview_and_detail_merge");
+}
+
+#[test]
+fn positive_overview_relationship_merge() {
+    assert_case("positive_overview_relationship_merge");
+}
+
+#[test]
 fn positive_relationship_features() {
     assert_case("positive_relationship_features");
 }
@@ -265,6 +275,11 @@ fn negative_method_visibility_mismatch() {
 #[test]
 fn negative_relationship_missing() {
     assert_case("negative_relationship_missing");
+}
+
+#[test]
+fn negative_overview_relationship_missing() {
+    assert_case("negative_overview_relationship_missing");
 }
 
 #[test]

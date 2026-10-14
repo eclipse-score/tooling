@@ -14,11 +14,17 @@
 @startuml overview_design
 
 ' Boundary overview: the SEooC and its public API only. Internals are
-' elaborated in static_design.puml; every entity here is also declared there.
+' elaborated in static_design.puml, which declares only `component_example`'s
+' children (no wrapper) -- it is implicitly anchored onto the nested
+' declaration here since the two `static` files are resolved jointly. The alias
+' `CE` is local to this file; static_design.puml declares the same component
+' without it.
 
 package safety_software_seooc_example <<SEooC>> {
-    component component_example <<component>>
+    component "component_example" as CE <<component>>
 }
+
+note right of CE : elaborated in static_design.puml
 
 interface SampleLibraryAPI
 

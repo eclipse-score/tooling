@@ -17,8 +17,8 @@ use crate::models::{
 };
 use crate::readers::{ClassDiagramReader, ComponentDiagramReader, SequenceDiagramReader};
 use crate::validators::{
-    validate_component_internal_api, validate_component_public_api, validate_component_sequence,
-    validate_sequence_internal_api,
+    validate_component_anchoring, validate_component_internal_api, validate_component_public_api,
+    validate_component_sequence, validate_sequence_internal_api,
 };
 use crate::ValidationResult;
 use serde::Deserialize;
@@ -43,6 +43,7 @@ fn registered_validators<'a>(
     public_api: &'a Option<PublicApiIndex>,
 ) -> Vec<ProfileValidator<'a>> {
     vec![
+        Box::new(move || Some(validate_component_anchoring(component.as_ref()?))),
         Box::new(move || {
             let (component, sequence) = (component.as_ref()?, sequence.as_ref()?);
             Some(validate_component_sequence(component, sequence))

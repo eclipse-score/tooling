@@ -13,7 +13,7 @@
 
 @startuml component_diagram
 
-package package_a {
+package package_a <<SEooC>> {
     interface iface_a
     interface IFACE_A
 }

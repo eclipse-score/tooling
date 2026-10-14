@@ -13,7 +13,7 @@
 
 @startuml leaf_unit_overview
 
-package package_lf {
+package package_lf <<SEooC>> {
     component component_lf <<component>> {
         component unit_x <<unit>>
     }

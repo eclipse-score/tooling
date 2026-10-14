@@ -1,0 +1,63 @@
+{
+  "cast.puml": {
+    "name": "cast",
+    "participants": [
+      {
+        "display_name": "comp::unit",
+        "alias": "u",
+        "uid": "comp.unit",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": []
+    }
+  },
+  "scenario.puml": {
+    "name": "scenario",
+    "participants": [
+      {
+        "display_name": "other",
+        "alias": "u",
+        "uid": "other",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Client",
+        "alias": null,
+        "uid": "Client",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 18
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "Client",
+            "receiver": "other",
+            "message": "call()",
+            "source_location": {
+              "file": "",
+              "line": 18
+            }
+          }
+        }
+      ]
+    }
+  }
+}

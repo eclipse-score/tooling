@@ -13,7 +13,7 @@
 
 @startuml public_api_overview
 
-package package_pub {
+package package_pub <<SEooC>> {
     component component_pub <<component>> {
         component unit_pub <<unit>>
     }

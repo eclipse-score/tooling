@@ -71,10 +71,8 @@ def plan_view_layout(view_files, package, own_repo = None):
       author's title becomes the page's title and its own text renders
       above the generated toctree.
     * A hand-authored ``<stem>.rst``/``<stem>.md`` alongside a same-stem
-      ``<stem>.puml``/``<stem>.plantuml`` suppresses that diagram's
-      generated wrapper -- the wrapper is only a placeholder for prose that
-      doesn't exist yet, so real authored content always wins. The ``.puml``
-      is still staged as a sibling so the author's own ``.. uml::``
+      ``<stem>.puml`` suppresses that diagram's generated wrapper. The
+      ``.puml`` is still staged as a sibling so the author's own ``.. uml::``
       resolves.
 
     A diagram literally named ``index`` is rejected via `errors`: that stem
@@ -159,7 +157,7 @@ def plan_view_layout(view_files, package, own_repo = None):
         staged_paths[staged_path] = f.short_path
         staged.append((f, staged_path))
 
-        if f.extension not in ("puml", "plantuml", "rst", "md"):
+        if f.extension not in ("puml", "rst", "md"):
             continue
 
         _register_directory(relative_directory)
@@ -176,18 +174,9 @@ def plan_view_layout(view_files, package, own_repo = None):
             )
             continue
 
-        if "puml" in group and "plantuml" in group:
-            errors.append(
-                "both '{stem}.puml' and '{stem}.plantuml' exist for '{stem}' in directory '{dir}'; keep only one".format(
-                    stem = stem,
-                    dir = relative_directory or ".",
-                ),
-            )
-            continue
-
         doc_ext = "rst" if "rst" in group else ("md" if "md" in group else None)
         doc_file = group.get(doc_ext) if doc_ext else None
-        puml_file = group.get("puml") or group.get("plantuml")
+        puml_file = group.get("puml")
 
         if stem == "index":
             if puml_file:

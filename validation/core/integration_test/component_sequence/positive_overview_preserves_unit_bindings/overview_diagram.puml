@@ -18,7 +18,7 @@
 
 @startuml overview_diagram
 
-package package_a {
+package package_a <<SEooC>> {
     component component_a <<component>> {
         component unit_1 <<unit>>
         component unit_2 <<unit>>

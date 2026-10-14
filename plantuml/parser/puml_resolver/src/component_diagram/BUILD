@@ -23,6 +23,7 @@ rust_library(
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
         "//plantuml/parser/puml_parser:component_diagram",
+        "//plantuml/parser/puml_resolver:group_resolution",
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//plantuml/parser/puml_resolver:uid_normalization",
         "//tools/metamodel/component:component_diagram",

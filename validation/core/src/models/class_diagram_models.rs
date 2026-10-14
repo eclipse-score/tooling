@@ -37,8 +37,35 @@ pub struct ClassEntityIndex {
     free_functions: Vec<FreeFunctionDecl>,
 }
 
+/// A declaration without members, e.g. an overview entry. Relationships do not
+/// count: an overview may draw them.
+fn is_bodyless(entity: &SimpleEntity) -> bool {
+    entity.methods.is_empty()
+        && entity.variables.is_empty()
+        && entity.type_aliases.is_empty()
+        && entity.enum_literals.is_empty()
+}
+
+/// The first field on which two same-id declarations disagree.
+fn conflicting_declaration_field(
+    prev: &SimpleEntity,
+    entity: &SimpleEntity,
+) -> Option<&'static str> {
+    if prev.entity_type != entity.entity_type {
+        return Some("entity type");
+    }
+    if prev.stereotypes != entity.stereotypes {
+        return Some("stereotype");
+    }
+    None
+}
+
 impl ClassEntityIndex {
     /// Builds an index from class design diagrams.
+    ///
+    /// A bodyless declaration merges into the same id declared elsewhere and
+    /// the relationships of all declarations are united. Two declarations with
+    /// a body, or disagreeing on entity type or stereotype, are errors.
     pub fn build_diagram_index(
         diagrams: &[ClassDiagramInput],
         result: &mut ValidationResult,
@@ -81,37 +108,91 @@ impl ClassEntityIndex {
                     let (first_source_file, _) = prev.source_location.display();
                     let (second_source_file, _) = indexed_entity.source_location.display();
 
-                    result.add_failure(
-                        ErrorBuilder::new(ErrorCategory::Class)
-                            .title(format!(
-                                "class \"{}\" is defined more than once in the class {}.",
-                                prev.id,
-                                source_kind,
-                            ))
-                            .field("class", format!("\"{}\"", prev.id))
-                            .field(
-                                format!("{source_kind} source file"),
-                                format!("\"{}\"", first_source_file),
-                            )
-                            .field(
-                                format!("{source_kind} source line"),
-                                prev.source_location.line.to_string(),
-                            )
-                            .field(
-                                "duplicate source file",
-                                format!("\"{}\"", second_source_file),
-                            )
-                            .field(
-                                "duplicate source line",
-                                indexed_entity.source_location.line.to_string(),
-                            )
-                            .fix(format!(
-                                "remove or rename one of the duplicate class \"{}\" declarations in the class {}",
-                                prev.id,
-                                source_kind,
-                            ))
-                            .build(),
-                    );
+                    let merges_declarations = matches!(input_kind, ClassInputKind::Design);
+                    let conflicting_field = if merges_declarations {
+                        conflicting_declaration_field(prev, &indexed_entity)
+                    } else {
+                        None
+                    };
+
+                    if let Some(field) = conflicting_field {
+                        result.add_failure(
+                            ErrorBuilder::new(ErrorCategory::Class)
+                                .title(format!(
+                                    "class \"{}\" is re-declared with a conflicting {field} in another class diagram file.",
+                                    prev.id,
+                                ))
+                                .field("class", format!("\"{}\"", prev.id))
+                                .field("conflicting field", field)
+                                .field(
+                                    "design source file",
+                                    format!("\"{}\"", first_source_file),
+                                )
+                                .field(
+                                    "design source line",
+                                    prev.source_location.line.to_string(),
+                                )
+                                .field(
+                                    "conflicting source file",
+                                    format!("\"{}\"", second_source_file),
+                                )
+                                .field(
+                                    "conflicting source line",
+                                    indexed_entity.source_location.line.to_string(),
+                                )
+                                .fix(format!(
+                                    "make every declaration of class \"{}\" agree on {field}, or rename one of the conflicting classes",
+                                    prev.id,
+                                ))
+                                .build(),
+                        );
+                    } else if merges_declarations
+                        && (is_bodyless(&indexed_entity) || is_bodyless(prev))
+                    {
+                        let (mut merged, other) = if is_bodyless(prev) {
+                            (indexed_entity, prev.clone())
+                        } else {
+                            (prev.clone(), indexed_entity)
+                        };
+                        for relationship in other.relationships {
+                            if !merged.relationships.contains(&relationship) {
+                                merged.relationships.push(relationship);
+                            }
+                        }
+                        entities.insert(key, merged);
+                    } else {
+                        result.add_failure(
+                            ErrorBuilder::new(ErrorCategory::Class)
+                                .title(format!(
+                                    "class \"{}\" is defined more than once in the class {}.",
+                                    prev.id,
+                                    source_kind,
+                                ))
+                                .field("class", format!("\"{}\"", prev.id))
+                                .field(
+                                    format!("{source_kind} source file"),
+                                    format!("\"{}\"", first_source_file),
+                                )
+                                .field(
+                                    format!("{source_kind} source line"),
+                                    prev.source_location.line.to_string(),
+                                )
+                                .field(
+                                    "duplicate source file",
+                                    format!("\"{}\"", second_source_file),
+                                )
+                                .field(
+                                    "duplicate source line",
+                                    indexed_entity.source_location.line.to_string(),
+                                )
+                                .fix(format!(
+                                    "remove or rename one of the duplicate class \"{}\" declarations in the class {}",
+                                    prev.id,
+                                    source_kind,
+                                ))
+                                .build(),
+                        );
+                    }
                 } else {
                     entities.insert(key, indexed_entity);
                 }
@@ -153,8 +234,13 @@ pub struct InternalApiIndex {
 
 impl InternalApiIndex {
     /// Build an [`InternalApiIndex`] from internal-API diagram inputs.
+    ///
+    /// An interface declared in several files is one interface holding the
+    /// union of the methods; its source location is the first declaration
+    /// with methods.
     pub fn build_index(diagrams: &[ClassDiagramInput]) -> Self {
-        let mut interfaces = Vec::new();
+        let mut interfaces: Vec<InternalApiInterface> = Vec::new();
+        let mut positions: BTreeMap<String, usize> = BTreeMap::new();
 
         for diagram in diagrams {
             for entity in &diagram.entities {
@@ -162,18 +248,28 @@ impl InternalApiIndex {
                     continue;
                 }
 
-                let interface = InternalApiInterface {
-                    id: entity.id.clone(),
-                    method_names: entity
-                        .methods
-                        .iter()
-                        .map(|method| method.name.clone())
-                        .filter(|name| !name.is_empty())
-                        .collect(),
-                    source_location: entity.source_location.clone(),
-                };
+                let method_names: BTreeSet<String> = entity
+                    .methods
+                    .iter()
+                    .map(|method| method.name.clone())
+                    .filter(|name| !name.is_empty())
+                    .collect();
 
-                interfaces.push(interface);
+                if let Some(position) = positions.get(&entity.id) {
+                    let interface = &mut interfaces[*position];
+                    if interface.method_names.is_empty() && !method_names.is_empty() {
+                        interface.source_location = entity.source_location.clone();
+                    }
+                    interface.method_names.extend(method_names);
+                    continue;
+                }
+
+                positions.insert(entity.id.clone(), interfaces.len());
+                interfaces.push(InternalApiInterface {
+                    id: entity.id.clone(),
+                    method_names,
+                    source_location: entity.source_location.clone(),
+                });
             }
         }
 
@@ -249,13 +345,18 @@ mod tests {
         }
     }
 
+    fn with_method(mut entity: SimpleEntity, name: &str) -> SimpleEntity {
+        entity.methods.push(method(name));
+        entity
+    }
+
     #[test]
     fn class_entity_index_reports_duplicate_source_locations() {
         let diagrams = vec![ClassDiagram {
             name: "classes".to_string(),
             entities: vec![
-                entity("Unit.Sample", "design_a.puml", 12),
-                entity("unit.sample", "design_b.puml", 34),
+                with_method(entity("Unit.Sample", "design_a.puml", 12), "Run"),
+                with_method(entity("unit.sample", "design_b.puml", 34), "Stop"),
             ],
             free_functions: Vec::new(),
         }];
@@ -285,6 +386,128 @@ mod tests {
 
         assert!(result.failures.is_empty());
         assert_eq!(index.entities().count(), 1);
+    }
+
+    #[test]
+    fn class_entity_index_merges_bodyless_declaration_into_detail() {
+        for entities in [
+            vec![
+                entity("Unit.Sample", "overview.puml", 3),
+                with_method(entity("Unit.Sample", "detail.puml", 5), "Run"),
+            ],
+            vec![
+                with_method(entity("Unit.Sample", "detail.puml", 5), "Run"),
+                entity("Unit.Sample", "overview.puml", 3),
+            ],
+        ] {
+            let diagrams = vec![ClassDiagram {
+                name: "classes".to_string(),
+                entities,
+                free_functions: Vec::new(),
+            }];
+
+            let mut result = ValidationResult::default();
+            let index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
+
+            assert!(
+                result.is_empty(),
+                "unexpected failures: {:?}",
+                result.failures
+            );
+            let merged = index.find_by_id("Unit.Sample").expect("merged entity");
+            assert_eq!(merged.methods.len(), 1);
+        }
+    }
+
+    #[test]
+    fn class_entity_index_unites_relationships_of_overview_and_detail() {
+        let relationship = |target: &str| class_diagram::Relationship {
+            source: "Unit.Sample".to_string(),
+            target: target.to_string(),
+            ..Default::default()
+        };
+        let mut overview = entity("Unit.Sample", "overview.puml", 3);
+        overview.relationships = vec![relationship("Unit.A"), relationship("Unit.B")];
+        let mut detail = with_method(entity("Unit.Sample", "detail.puml", 5), "Run");
+        detail.relationships = vec![relationship("Unit.B"), relationship("Unit.C")];
+
+        let diagrams = vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities: vec![overview, detail],
+            free_functions: Vec::new(),
+        }];
+
+        let mut result = ValidationResult::default();
+        let index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
+
+        assert!(
+            result.is_empty(),
+            "unexpected failures: {:?}",
+            result.failures
+        );
+        let merged = index.find_by_id("Unit.Sample").expect("merged entity");
+        assert_eq!(merged.methods.len(), 1);
+        let targets: Vec<&str> = merged
+            .relationships
+            .iter()
+            .map(|r| r.target.as_str())
+            .collect();
+        assert_eq!(targets, ["Unit.B", "Unit.C", "Unit.A"]);
+    }
+
+    #[test]
+    fn class_entity_index_reports_conflicting_entity_type() {
+        let mut interface = entity("Unit.Sample", "detail.puml", 5);
+        interface.entity_type = EntityType::Interface;
+        let diagrams = vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities: vec![entity("Unit.Sample", "overview.puml", 3), interface],
+            free_functions: Vec::new(),
+        }];
+
+        let mut result = ValidationResult::default();
+        let _index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
+
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0].contains(
+            "is re-declared with a conflicting entity type in another class diagram file"
+        ));
+    }
+
+    #[test]
+    fn internal_api_index_merges_interface_declared_in_several_files() {
+        let interface = |file: &str, line: u32, methods: &[&str]| {
+            let mut declared = entity("InternalAPI.InternalInterface", file, line);
+            declared.entity_type = EntityType::Interface;
+            for name in methods {
+                declared.methods.push(method(name));
+            }
+            ClassDiagram {
+                name: file.to_string(),
+                entities: vec![declared],
+                free_functions: Vec::new(),
+            }
+        };
+        let diagrams = vec![
+            interface("overview.puml", 3, &[]),
+            interface("detail_a.puml", 5, &["GetData"]),
+            interface("detail_b.puml", 7, &["SetData", "GetData"]),
+        ];
+
+        let index = InternalApiIndex::build_index(&diagrams);
+
+        let interfaces: Vec<_> = index.interfaces().collect();
+        assert_eq!(interfaces.len(), 1);
+        let names: Vec<&str> = interfaces[0]
+            .method_names
+            .iter()
+            .map(String::as_str)
+            .collect();
+        assert_eq!(names, ["GetData", "SetData"]);
+        assert_eq!(
+            interfaces[0].source_location,
+            SourceLocation::new("detail_a.puml", 5)
+        );
     }
 
     #[test]

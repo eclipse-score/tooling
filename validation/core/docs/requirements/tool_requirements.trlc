@@ -105,6 +105,15 @@ section "Tool Requirements" {
                 satisfied_by = Verifier
             }
 
+            ToolQualification.ToolRequirement ComponentModelAnchoring {
+                description = '''The validator shall report an error when a
+                `<<component>>` or `<<unit>>` is not nested directly under a
+                `<<SEooC>>` or a `<<component>>`, naming its source location
+                and any other declaration of the same name.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
         }
 
         section "Component Sequence Validator" {
@@ -168,6 +177,15 @@ section "Tool Requirements" {
                 satisfied_by = Verifier
             }
 
+            ToolQualification.ToolRequirement InternalApiInterfaceMerge {
+                description = '''When an interface is declared in more than
+                one internal API file, the validator shall treat it as one
+                interface holding the union of the methods declared in all
+                of its declarations.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
         }
 
         section "Component Internal API Validator" {
@@ -213,6 +231,17 @@ section "Tool Requirements" {
                 type. Consistency of type aliases, variables, methods, enum
                 literals, relationships, and template parameters is specified
                 by the dedicated requirements below.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ClassDesignImplementationDeclarationMerge {
+                description = '''When the same class id is declared more than
+                once across the unit design class diagrams, the validator
+                shall merge the declarations and unite their relationships if
+                at most one of them has a body, and shall report an error when
+                two declarations have a body or when their entity type or
+                stereotype differs.'''
                 derived_from = [UseCases.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }

@@ -77,6 +77,21 @@ After declaring an alias, subsequent messages, lifecycle commands, and `ref` blo
 
 Undeclared message endpoints are automatically created as regular `participant` instances. This is convenient for short diagrams, but explicit declarations are recommended for production diagrams to preserve participant type, stereotype, and stable source locations.
 
+#### Sharing participants across files
+
+When several scenario files belong to one view (the `dynamic` view of an `architectural_design` or `unit_design`), declare the participants once in a cast file and reference them from the scenarios by alias:
+
+```text
+' cast.puml
+participant "orders::OrderService" as OrderService
+
+' scenario.puml
+Client -> OrderService : correct()
+activate OrderService
+```
+
+A message endpoint or `create` target that the scenario does not declare resolves to the explicit participant declarations of the other files, matched by alias, else by name. A local declaration wins. Two other files declaring the same key with different identifiers are an `AmbiguousParticipantReference` error. `activate`, `deactivate`, `destroy` and `ref over` do not look into other files. A file with only messages is detected as a component diagram, so give each scenario `activate` or a participant of its own. See [Element Identifiers](element-identifiers.md#4-several-files-one-view).
+
 ### Messages and arrow direction
 
 Messages with exactly one arrowhead are supported.
@@ -289,6 +304,7 @@ Use the following checklist when submitting a sequence diagram:
 6. Every control structure is closed, and `else` appears only in `alt` or `par`.
 7. A participant is not used after `destroy` unless it is created again first.
 8. Interactions that downstream tools must understand use only structures described as supported and modeled; visual-only directives do not carry business semantics.
+9. A scenario that relies on a shared cast file contains `activate` or a participant of its own, so it is detected as a sequence diagram.
 
 ## Related test cases
 
