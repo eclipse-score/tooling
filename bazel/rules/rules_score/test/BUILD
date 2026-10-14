@@ -48,6 +48,10 @@ load(
     "same_label_collision_fails_test",
 )
 load(
+    ":dependable_element_toplevel_unit_test.bzl",
+    "toplevel_unit_linked_test",
+)
+load(
     ":html_generation_test.bzl",
     "auto_config_generation_test",
     "basic_html_generation_test",
@@ -917,6 +921,26 @@ dependable_element(
     requirements = [":feat_req"],
     tests = [],
     deps = [],
+)
+
+# Unit listed directly in components (no parent component).
+dependable_element(
+    name = "toplevel_unit_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_leaf_unit_example"],
+    components = [":leaf_unit"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+toplevel_unit_linked_test(
+    name = "toplevel_unit_linked_test",
+    target_under_test = ":toplevel_unit_example_lib_index",
+    unit_name = "leaf_unit",
 )
 
 sh_test(
