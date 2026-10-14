@@ -68,6 +68,11 @@ fn positive_free_function_features() {
 }
 
 #[test]
+fn positive_shared_implementation_dependency() {
+    assert_case("positive_shared_implementation_dependency");
+}
+
+#[test]
 fn positive_method_features() {
     assert_case("positive_method_features");
 }
@@ -150,6 +155,11 @@ fn negative_relationship_missing_with_suggestion() {
 #[test]
 fn negative_duplicate_class_entity_input() {
     assert_case("negative_duplicate_class_entity_input");
+}
+
+#[test]
+fn negative_duplicate_class_entity_implementation_input() {
+    assert_case("negative_duplicate_class_entity_implementation_input");
 }
 
 #[test]

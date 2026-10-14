@@ -22,7 +22,7 @@ fn validate(
     sequence_diagrams: SequenceDiagramInputs,
 ) -> ValidationResult {
     let mut setup_result = ValidationResult::default();
-    let design_index = ClassEntityIndex::build_index(&design_classes, &mut setup_result);
+    let design_index = ClassEntityIndex::build_diagram_index(&design_classes, &mut setup_result);
     let sequence_index = sequence_diagrams.to_sequence_diagram_index(&mut setup_result);
     assert!(
         setup_result.is_empty(),

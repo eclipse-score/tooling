@@ -1376,7 +1376,7 @@ mod tests {
             entities,
             free_functions: Vec::new(),
         }];
-        ClassEntityIndex::build_index(&diagrams, &mut ValidationResult::default())
+        ClassEntityIndex::build_diagram_index(&diagrams, &mut ValidationResult::default())
     }
 
     fn index_with_free_functions(free_functions: Vec<FreeFunctionDecl>) -> ClassEntityIndex {
@@ -1385,7 +1385,7 @@ mod tests {
             entities: Vec::new(),
             free_functions,
         }];
-        ClassEntityIndex::build_index(&diagrams, &mut ValidationResult::default())
+        ClassEntityIndex::build_diagram_index(&diagrams, &mut ValidationResult::default())
     }
 
     fn free_function(name: &str, parameter_types: &[&str]) -> FreeFunctionDecl {

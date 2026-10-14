@@ -61,12 +61,12 @@ pub fn run(inputs: &UnitInputs) -> Result<ProfileRun, String> {
     let design_classes = read_and_convert::<ClassDiagramReader, ClassEntityIndex>(
         inputs.design_classes.as_slice(),
         &mut result,
-        |raw: ClassDiagramInputs, errs| ClassEntityIndex::build_index(&raw, errs),
+        |raw: ClassDiagramInputs, errs| ClassEntityIndex::build_diagram_index(&raw, errs),
     )?;
     let implementation_classes = read_and_convert::<ClassDiagramReader, ClassEntityIndex>(
         inputs.implementation_classes.as_slice(),
         &mut result,
-        |raw: ClassDiagramInputs, errs| ClassEntityIndex::build_index(&raw, errs),
+        |raw: ClassDiagramInputs, errs| ClassEntityIndex::build_implementation_index(&raw, errs),
     )?;
     let sequence_diagrams = read_and_convert::<SequenceDiagramReader, SequenceDiagramIndex>(
         inputs.sequence_diagrams.as_slice(),

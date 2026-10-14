@@ -25,6 +25,12 @@ use crate::{ErrorBuilder, ErrorCategory, ValidationResult};
 /// Collection of class diagrams loaded from one or more FlatBuffer files.
 pub type ClassDiagramInputs = Vec<ClassDiagramInput>;
 
+#[derive(Clone, Copy)]
+enum ClassInputKind {
+    Design,
+    Implementation,
+}
+
 /// Class-like entities from one or more class diagrams, keyed by lower-case id.
 pub struct ClassEntityIndex {
     entities: BTreeMap<String, SimpleEntity>,
@@ -32,10 +38,33 @@ pub struct ClassEntityIndex {
 }
 
 impl ClassEntityIndex {
-    /// Build an index from class diagrams for class implementation validation.
-    pub fn build_index(diagrams: &[ClassDiagramInput], result: &mut ValidationResult) -> Self {
+    /// Builds an index from class design diagrams.
+    pub fn build_diagram_index(
+        diagrams: &[ClassDiagramInput],
+        result: &mut ValidationResult,
+    ) -> Self {
+        Self::build_index(diagrams, result, ClassInputKind::Design)
+    }
+
+    /// Builds an index from C++ implementation diagrams.
+    pub fn build_implementation_index(
+        diagrams: &[ClassDiagramInput],
+        result: &mut ValidationResult,
+    ) -> Self {
+        Self::build_index(diagrams, result, ClassInputKind::Implementation)
+    }
+
+    fn build_index(
+        diagrams: &[ClassDiagramInput],
+        result: &mut ValidationResult,
+        input_kind: ClassInputKind,
+    ) -> Self {
         let mut entities: BTreeMap<String, SimpleEntity> = BTreeMap::new();
         let mut free_functions = Vec::new();
+        let (source_kind, ignore_same_source_location) = match input_kind {
+            ClassInputKind::Design => ("design", false),
+            ClassInputKind::Implementation => ("implementation", true),
+        };
 
         for diagram in diagrams {
             for entity in &diagram.entities {
@@ -43,22 +72,29 @@ impl ClassEntityIndex {
 
                 let key = indexed_entity.id.to_lowercase();
                 if let Some(prev) = entities.get(&key) {
+                    if ignore_same_source_location
+                        && prev.source_location == indexed_entity.source_location
+                    {
+                        continue;
+                    }
+
                     let (first_source_file, _) = prev.source_location.display();
                     let (second_source_file, _) = indexed_entity.source_location.display();
 
                     result.add_failure(
                         ErrorBuilder::new(ErrorCategory::Class)
                             .title(format!(
-                                "class \"{}\" is defined more than once in the class diagram.",
+                                "class \"{}\" is defined more than once in the class {}.",
                                 prev.id,
+                                source_kind,
                             ))
                             .field("class", format!("\"{}\"", prev.id))
                             .field(
-                                "design source file",
+                                format!("{source_kind} source file"),
                                 format!("\"{}\"", first_source_file),
                             )
                             .field(
-                                "design source line",
+                                format!("{source_kind} source line"),
                                 prev.source_location.line.to_string(),
                             )
                             .field(
@@ -70,8 +106,9 @@ impl ClassEntityIndex {
                                 indexed_entity.source_location.line.to_string(),
                             )
                             .fix(format!(
-                                "remove or rename one of the duplicate class \"{}\" declarations in the class diagram",
+                                "remove or rename one of the duplicate class \"{}\" declarations in the class {}",
                                 prev.id,
+                                source_kind,
                             ))
                             .build(),
                     );
@@ -224,12 +261,30 @@ mod tests {
         }];
 
         let mut result = ValidationResult::default();
-        let _index = ClassEntityIndex::build_index(&diagrams, &mut result);
+        let _index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
 
         assert_eq!(result.failures.len(), 1);
         assert!(result.failures[0].contains(
-            "[Class] Class \"Unit.Sample\" is defined more than once in the class diagram."
+            "[Class] Class \"Unit.Sample\" is defined more than once in the class design."
         ));
+    }
+
+    #[test]
+    fn implementation_class_entity_index_ignores_same_source_location() {
+        let diagrams = vec![ClassDiagram {
+            name: "implementation".to_string(),
+            entities: vec![
+                entity("Unit.Sample", "implementation.h", 12),
+                entity("unit.sample", "implementation.h", 12),
+            ],
+            free_functions: Vec::new(),
+        }];
+
+        let mut result = ValidationResult::default();
+        let index = ClassEntityIndex::build_implementation_index(&diagrams, &mut result);
+
+        assert!(result.failures.is_empty());
+        assert_eq!(index.entities().count(), 1);
     }
 
     #[test]
