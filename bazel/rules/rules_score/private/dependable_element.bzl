@@ -290,7 +290,7 @@ def _check_staged_path(seen_paths, declared_relative_path, source_label, errors)
             that already staged it this rule instantiation; mutated in place.
         declared_relative_path: The path this file is about to be staged at,
             relative to `ctx.label.name`.
-        source_label: The `Label` this file came from.
+        source_label: The `Label` (or file path string) this file came from.
         errors: List of human-readable collision messages; mutated in place.
 
     Returns:
@@ -714,6 +714,19 @@ def _process_deps(ctx):
 def _get_component_names(components):
     return [c.label.name for c in components]
 
+def _register_unit(visited_units, unit_target):
+    """Add a unit to `visited_units` by name; fail if another unit owns the name."""
+    unit_name = unit_target.label.name
+    existing = visited_units.get(unit_name)
+    if existing == None:
+        visited_units[unit_name] = unit_target
+    elif existing.label != unit_target.label:
+        fail("units {} and {} share the name '{}'; unit names must be unique within a dependable_element".format(
+            existing.label,
+            unit_target.label,
+            unit_name,
+        ))
+
 def _collect_units_recursive(components, visited_units = None):
     """Iteratively collect all units from components, handling nested components.
 
@@ -748,18 +761,14 @@ def _collect_units_recursive(components, visited_units = None):
             for nested in nested_components:
                 # Check if nested item is a unit or component
                 if UnitInfo in nested:
-                    unit_name = nested.label.name
-                    if unit_name not in visited_units:
-                        visited_units[unit_name] = nested
+                    _register_unit(visited_units, nested)
                 elif ComponentInfo in nested:
                     # Add nested component to queue for processing
                     to_process.append(nested)
 
             # Check if this is directly a unit
         elif UnitInfo in comp_target:
-            unit_name = comp_target.label.name
-            if unit_name not in visited_units:
-                visited_units[unit_name] = comp_target
+            _register_unit(visited_units, comp_target)
 
     return visited_units
 
@@ -776,12 +785,15 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
     """
     unit_info = unit_target[UnitInfo]
 
-    # Create RST file for this unit
-    unit_rst = ctx.actions.declare_file(ctx.label.name + "/units/" + unit_name + ".rst")
+    # Per-unit directory: same-named files of different units can't collide.
+    unit_dir = "units/" + unit_name
+    unit_rst = ctx.actions.declare_file(ctx.label.name + "/" + unit_dir + "/index.rst")
 
     # Collect design files - unit_design depset contains File objects
     design_files = []
     design_include_lines = []
+    seen_paths = {}
+    staging_errors = []
     if unit_info.unit_design:
         doc_files = _filter_doc_files(unit_info.unit_design.to_list())
 
@@ -791,9 +803,11 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
 
             for f in doc_files:
                 relative_path = _compute_relative_path(f, common_dir)
+                if _check_staged_path(seen_paths, unit_dir + "/design/" + relative_path, f.short_path, staging_errors):
+                    continue
                 output_file = _create_artifact_symlink(
                     ctx,
-                    "units/" + unit_name + "_design",
+                    unit_dir + "/design",
                     f,
                     relative_path,
                 )
@@ -801,21 +815,20 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
 
                 if _is_document_file(f):
                     # Inline the design RST directly into the unit page.
-                    # Path is relative to the unit RST (which lives in units/).
-                    include_path = unit_name + "_design/" + relative_path
+                    include_path = "design/" + relative_path
                     design_include_lines.append(".. include:: " + include_path)
                     design_include_lines.append("")
                 elif f.extension == "puml":
                     # sphinxcontrib-plantuml resolves .. uml:: paths relative to
-                    # the *including* document (units/unit_name.rst), not the
-                    # included RST file. Symlink the PUML alongside the unit RST
-                    # so the directive inside the included RST can find it.
-                    # NOTE: All PUML files across all units must have unique
-                    # basenames because they share the flat units/ namespace.
-                    # Use unit-specific filenames (e.g. unit_1_class_diagram.puml)
-                    # to avoid declaration conflicts.
-                    sibling = _create_artifact_symlink(ctx, "units", f, f.basename)
+                    # the *including* document (the unit page), not the included
+                    # RST, so the PUML is also staged next to the unit page.
+                    if _check_staged_path(seen_paths, unit_dir + "/" + f.basename, f.short_path, staging_errors):
+                        continue
+                    sibling = _create_artifact_symlink(ctx, unit_dir, f, f.basename)
                     design_files.append(sibling)
+
+    if staging_errors:
+        fail("unit {}: {}".format(unit_target.label, "; ".join(staging_errors)))
 
     # Collect implementation target names
     impl_names = []
@@ -926,7 +939,7 @@ def _generate_component_doc(ctx, comp_target, comp_name, unit_names):
 
     units_section = ""
     if unit_names:
-        unit_toctree_refs = "\n".join(["   ../units/" + name for name in unit_names])
+        unit_toctree_refs = "\n".join(["   ../units/" + name + "/index" for name in unit_names])
         units_section = "\n" + _COMPONENT_UNITS_SECTION_TEMPLATE.format(
             unit_toctree_refs = unit_toctree_refs,
         ) + "\n"
@@ -1233,7 +1246,7 @@ def _dependable_element_index_impl(ctx):
     # link their pages from the Components section.
     for comp_target in ctx.attr.components:
         if UnitInfo in comp_target and ComponentInfo not in comp_target:
-            component_entries.append("units/" + comp_target.label.name)
+            component_entries.append("units/" + comp_target.label.name + "/index")
 
     # Generate submodule links for the index page
     deps_links = _process_deps(ctx)

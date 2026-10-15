@@ -52,6 +52,12 @@ load(
     "toplevel_unit_linked_test",
 )
 load(
+    ":dependable_element_unit_staging_test.bzl",
+    "same_name_units_fail_test",
+    "unit_design_collision_fails_test",
+    "unit_same_puml_names_test",
+)
+load(
     ":html_generation_test.bzl",
     "auto_config_generation_test",
     "basic_html_generation_test",
@@ -1008,6 +1014,150 @@ toplevel_unit_linked_test(
     name = "toplevel_unit_linked_test",
     target_under_test = ":toplevel_unit_example_lib_index",
     unit_name = "leaf_unit",
+)
+
+# Regression fixture: two units whose designs both ship a "class_diagram.puml"
+# and a "design.rst". Each unit stages under its own units/<unit>/ directory,
+# so the two must not collide; checked by :unit_same_puml_names_test.
+unit_design(
+    name = "same_puml_unit_a_design",
+    static = [
+        "fixtures/unit_same_puml/unit_a/class_diagram.puml",
+        "fixtures/unit_same_puml/unit_a/design.rst",
+    ],
+)
+
+unit_design(
+    name = "same_puml_unit_b_design",
+    static = [
+        "fixtures/unit_same_puml/unit_b/class_diagram.puml",
+        "fixtures/unit_same_puml/unit_b/design.rst",
+    ],
+)
+
+unit(
+    name = "same_puml_unit_a",
+    testonly = True,
+    maturity = "development",
+    tests = [],
+    unit_design = [":same_puml_unit_a_design"],
+    implementation = [":mock_lib1"],
+)
+
+unit(
+    name = "same_puml_unit_b",
+    testonly = True,
+    maturity = "development",
+    tests = [],
+    unit_design = [":same_puml_unit_b_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "same_puml_component",
+    testonly = True,
+    components = [
+        ":same_puml_unit_a",
+        ":same_puml_unit_b",
+    ],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
+dependable_element(
+    name = "same_puml_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_leaf_unit_example"],
+    components = [":same_puml_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+unit_same_puml_names_test(
+    name = "unit_same_puml_names_test",
+    target_under_test = ":same_puml_example_lib_index",
+    unit_names = [
+        "same_puml_unit_a",
+        "same_puml_unit_b",
+    ],
+)
+
+# Rendered HTML: each unit page shows its own diagram and no design fragment
+# becomes a standalone page.
+sh_test(
+    name = "unit_same_puml_rendered_test",
+    srcs = ["check_unit_design_render.sh"],
+    args = [
+        "$(rootpath :same_puml_example_lib_doc)",
+        "same_puml_unit_a:unit_a",
+        "same_puml_unit_b:unit_b",
+    ],
+    data = [":same_puml_example_lib_doc"],
+)
+
+# Regression fixture: one unit whose design ships two diagrams with the same
+# basename in different directories. Both are staged next to the unit page,
+# so analysis must fail naming both files; see
+# :unit_design_collision_fails_test.
+unit(
+    name = "same_puml_clash_unit",
+    testonly = True,
+    maturity = "development",
+    tags = ["manual"],
+    tests = [],
+    unit_design = ["//fixtures/unit_same_puml_clash:design"],
+    implementation = [":mock_lib1"],
+)
+
+dependable_element(
+    name = "same_puml_clash_repro",
+    testonly = True,
+    architectural_design = [":arch_design_leaf_unit_example"],
+    components = [":same_puml_clash_unit"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+    deps = [],
+)
+
+unit_design_collision_fails_test(
+    name = "unit_design_collision_fails_test",
+    target_under_test = ":same_puml_clash_repro_index",
+)
+
+# Regression fixture: two distinct units from different packages share the
+# target name "dup_unit", so they would share units/dup_unit/ -- analysis must
+# fail instead of silently dropping one; see :same_name_units_fail_test.
+dependable_element(
+    name = "same_name_units_repro",
+    testonly = True,
+    architectural_design = [":arch_design_leaf_unit_example"],
+    components = [
+        "//fixtures/same_name_units/pkg_a:dup_unit",
+        "//fixtures/same_name_units/pkg_b:dup_unit",
+    ],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+    deps = [],
+)
+
+same_name_units_fail_test(
+    name = "same_name_units_fail_test",
+    target_under_test = ":same_name_units_repro_index",
 )
 
 sh_test(

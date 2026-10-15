@@ -55,14 +55,12 @@ logger = logging.getLogger(__name__)
 DEFAULT_EXCLUDE_PATTERNS: List[str] = [
     "bazel-*",
     ".venv*",
-    # Design-fragment subdirectories (e.g. units/unit_1_design/, always named
-    # "units/" + unit_name + "_design" by dependable_element.bzl) are
-    # included via '.. include::' directives and must not be treated as
-    # standalone pages. Scoped to the "units/" parent so it doesn't also
-    # match unrelated directories that merely end in "_design", such as
-    # architectural_design/ or software_architectural_design/ (the actual
-    # architecture documentation, which must be built as standalone pages).
-    "**/units/*_design",
+    # Design-fragment subdirectories (units/<unit_name>/design/, created by
+    # dependable_element.bzl) are included via '.. include::' directives and
+    # must not be treated as standalone pages. Scoped to the "units/" parent
+    # so it doesn't also match unrelated directories named "design". Sphinx
+    # matches these against srcdir-relative paths, so no "**/" prefix.
+    "units/*/design",
 ]
 
 # The needs builder phase runs against only the static docs/ checkout;
