@@ -159,12 +159,12 @@ def _component_impl(ctx):
     # and bubble up SphinxSourcesInfo from sub-components/units.
     #
     # Only ComponentRequirementsInfo-providing targets contribute their own
-    # rendered RST here. feature_requirements targets are commonly also listed
-    # in `requirements` (see below) purely so their .lobster file can resolve
-    # derived_from references from the component requirements; they are
-    # already rendered once at the dependable_element level, so re-rendering
-    # them per component would duplicate the feature requirements page across
-    # every component that references the same feature.
+    # rendered RST here. feature_requirements / assumed_system_requirements
+    # targets are commonly also listed in `requirements` (see below) purely so
+    # their .lobster file can resolve derived_from references from the component
+    # requirements; they are already rendered once at the dependable_element
+    # level, so re-rendering them per component would duplicate the upstream
+    # requirements page across every component that references the same item.
     # -------------------------------------------------------------------------
     req_sphinx_files = []
     for req_target in ctx.attr.requirements:
@@ -181,7 +181,10 @@ def _component_impl(ctx):
 
     # -------------------------------------------------------------------------
     # Lobster Tracing: collect .lobster files from component_requirements targets
-    # and feature_requirements targets (needed to resolve derived_from references).
+    # and from upstream requirements targets -- feature_requirements, or
+    # assumed_system_requirements when a SEooC traces component requirements
+    # directly to ASRs without a feature requirements layer. Both feed the
+    # config's upstream level, so derived_from references resolve either way.
     # -------------------------------------------------------------------------
     req_lobster_files = []
     req_lobster_transitive_files = []
@@ -367,8 +370,9 @@ _component_test = rule(
         ),
         "requirements": attr.label_list(
             default = [],
-            providers = [[ComponentRequirementsInfo], [FeatureRequirementsInfo]],
-            doc = "Component requirements artifacts (component_requirements or feature_requirements targets)",
+            providers = [[ComponentRequirementsInfo], [FeatureRequirementsInfo], [AssumedSystemRequirementsInfo]],
+            doc = "Component requirements artifacts (component_requirements, feature_requirements or " +
+                  "assumed_system_requirements targets)",
         ),
         "components": attr.label_list(
             providers = [[ComponentInfo], [UnitInfo]],
@@ -429,12 +433,16 @@ def component(
         name: The name of the component. Used as the target name.
         requirements: List of labels to component_requirements targets
             that define the requirements for this component. A
-            feature_requirements target may also be listed here so its
-            .lobster file is available to resolve derived_from references
-            from the component requirements; only component_requirements
-            targets contribute rendered RST to the component's Sphinx docs,
-            so listing a feature_requirements target does not duplicate it
-            in the generated documentation.
+            feature_requirements or assumed_system_requirements target may
+            also be listed here so its .lobster file is available to resolve
+            derived_from references from the component requirements; only
+            component_requirements targets contribute rendered RST to the
+            component's Sphinx docs, so listing an upstream requirements
+            target does not duplicate it in the generated documentation.
+            A SEooC that derives its component requirements directly from
+            Assumed System Requirements (without an intermediate feature
+            requirements layer) lists the assumed_system_requirements target
+            here.
         components: List of labels to nested component targets (for hierarchical
             component structures).
         tests: List of labels to Bazel test targets that verify the component
