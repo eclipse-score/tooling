@@ -76,6 +76,27 @@ Template parameters modeled on unit design entities and methods must match the
 template parameters on the corresponding implementation entities and methods.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationTemplateParameterConsistency`)*
 
+For classes, methods, and free functions:
+
+- Parameters match by position, count, kind, and pack marker. Non-type parameter
+  types are normalized before comparison; template-template parameters are
+  compared recursively.
+- Omitted design names are unconstrained; explicit names must match. An absent
+  parameter list is not a wildcard.
+
+**Notation:** type, non-type, and template-template parameters support optional
+names and packs: `typename... Ts`, `int... Ns`, and
+`template<typename> class... Cs`. `class` and `typename` are interchangeable for
+type parameters and template-template parameter tails. Packs precede explicit
+names (`typename Ts...` is unsupported). Legacy `T` and `Ts...` denote type
+parameters; unnamed non-type parameters require built-in or unambiguous compound
+types such as `int`, `std::size_t`, or `int*`.
+
+**Scope:** this is a modeling subset, not C++ declaration validation. Defaults,
+constraints, and complex declarators are unsupported; type lookup and semantic
+validity remain the C++ compiler's responsibility. An unsupported template list
+in a quoted name produces no template parameter metadata.
+
 ```text
 ' PlantUML class diagram
 class Repository<T> {

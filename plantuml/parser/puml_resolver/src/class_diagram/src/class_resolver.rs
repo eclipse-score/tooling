@@ -875,35 +875,11 @@ impl ClassResolver {
             .trim()
     }
 
-    fn convert_template_parameters(
-        parameters: &Option<Vec<String>>,
-    ) -> Option<Vec<TemplateParameter>> {
-        parameters.as_ref().map(|values| {
-            values
-                .iter()
-                .map(|value| {
-                    let trimmed = value.trim();
-                    let (name, is_pack) = trimmed
-                        .strip_suffix("...")
-                        .map(|name| (name.trim(), true))
-                        .unwrap_or((trimmed, false));
-
-                    TemplateParameter::Type {
-                        name: name.to_string(),
-                        is_pack,
-                    }
-                })
-                .collect()
-        })
-    }
-
     fn convert_class_template_parameters(
-        parameters: &Option<Vec<String>>,
+        parameters: &Option<Vec<TemplateParameter>>,
         methods: &[ParserMethod],
     ) -> Option<Vec<TemplateParameter>> {
-        parameters.as_ref()?;
-
-        let mut converted = Self::convert_template_parameters(parameters).unwrap_or_default();
+        let mut converted = parameters.as_ref()?.clone();
 
         for method in methods {
             Self::append_pack_expansion_parameters(&mut converted, &method.params);
@@ -913,12 +889,10 @@ impl ClassResolver {
     }
 
     fn convert_template_parameters_with_pack_expansions(
-        parameters: &Option<Vec<String>>,
+        parameters: &Option<Vec<TemplateParameter>>,
         params: &[ParserParam],
     ) -> Option<Vec<TemplateParameter>> {
-        parameters.as_ref()?;
-
-        let mut converted = Self::convert_template_parameters(parameters).unwrap_or_default();
+        let mut converted = parameters.as_ref()?.clone();
         Self::append_pack_expansion_parameters(&mut converted, params);
 
         (!converted.is_empty()).then_some(converted)

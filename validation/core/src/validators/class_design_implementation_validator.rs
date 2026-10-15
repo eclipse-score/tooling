@@ -122,7 +122,10 @@ impl ClassDesignImplementationValidator {
             ));
         }
 
-        if design_function.template_parameters != implementation_function.template_parameters {
+        if !template_parameters_match(
+            &design_function.template_parameters,
+            &implementation_function.template_parameters,
+        ) {
             self.result.add_failure(Self::format_free_function_mismatch(
                 design_function,
                 implementation_function,
@@ -227,7 +230,10 @@ impl ClassDesignImplementationValidator {
             ));
         }
 
-        if design_entity.template_parameters != implementation_entity.template_parameters {
+        if !template_parameters_match(
+            &design_entity.template_parameters,
+            &implementation_entity.template_parameters,
+        ) {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
@@ -441,7 +447,10 @@ impl ClassDesignImplementationValidator {
             implementation_method,
         );
 
-        if design_method.template_parameters != implementation_method.template_parameters {
+        if !template_parameters_match(
+            &design_method.template_parameters,
+            &implementation_method.template_parameters,
+        ) {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
@@ -884,8 +893,88 @@ fn methods_match(design_method: &Method, implementation_method: &Method) -> bool
             == normalized_optional_type(&implementation_method.return_type)
         && design_method.visibility == implementation_method.visibility
         && parameters_match(&design_method.parameters, &implementation_method.parameters)
-        && design_method.template_parameters == implementation_method.template_parameters
+        && template_parameters_match(
+            &design_method.template_parameters,
+            &implementation_method.template_parameters,
+        )
         && design_method.modifiers == implementation_method.modifiers
+}
+
+fn template_parameters_match(
+    design: &Option<Vec<TemplateParameter>>,
+    implementation: &Option<Vec<TemplateParameter>>,
+) -> bool {
+    match (design, implementation) {
+        (None, None) => true,
+        (Some(design), Some(implementation)) => {
+            template_parameter_lists_match(design, implementation)
+        }
+        _ => false,
+    }
+}
+
+fn template_parameter_lists_match(
+    design: &[TemplateParameter],
+    implementation: &[TemplateParameter],
+) -> bool {
+    design.len() == implementation.len()
+        && design
+            .iter()
+            .zip(implementation)
+            .all(|(design, implementation)| {
+                // Omitting a name in the design leaves only that name unconstrained.
+                if !design.name().is_empty() && design.name() != implementation.name() {
+                    return false;
+                }
+
+                match (design, implementation) {
+                    (
+                        TemplateParameter::Type {
+                            is_pack: design_pack,
+                            ..
+                        },
+                        TemplateParameter::Type {
+                            is_pack: implementation_pack,
+                            ..
+                        },
+                    ) => design_pack == implementation_pack,
+                    (
+                        TemplateParameter::NonType {
+                            value_type: design_type,
+                            is_pack: design_pack,
+                            ..
+                        },
+                        TemplateParameter::NonType {
+                            value_type: implementation_type,
+                            is_pack: implementation_pack,
+                            ..
+                        },
+                    ) => {
+                        design_pack == implementation_pack
+                            && normalize_non_type_template_parameter_type(design_type)
+                                == normalize_non_type_template_parameter_type(implementation_type)
+                    }
+                    (
+                        TemplateParameter::Template {
+                            parameters: design_parameters,
+                            is_pack: design_pack,
+                            ..
+                        },
+                        TemplateParameter::Template {
+                            parameters: implementation_parameters,
+                            is_pack: implementation_pack,
+                            ..
+                        },
+                    ) => {
+                        design_pack == implementation_pack
+                            && template_parameter_lists_match(
+                                design_parameters,
+                                implementation_parameters,
+                            )
+                    }
+                    _ => false,
+                }
+            })
 }
 
 fn parameters_match(
@@ -1029,7 +1118,10 @@ fn free_functions_match(
             &design_function.parameters,
             &implementation_function.parameters,
         )
-        && design_function.template_parameters == implementation_function.template_parameters
+        && template_parameters_match(
+            &design_function.template_parameters,
+            &implementation_function.template_parameters,
+        )
 }
 
 fn render_optional_value<T, F>(value: Option<T>, default: &str, format_value: F) -> String
@@ -1113,28 +1205,13 @@ fn render_template_parameters(template_parameters: &Option<Vec<TemplateParameter
 }
 
 fn render_template_parameter(parameter: &TemplateParameter) -> String {
-    match parameter {
-        TemplateParameter::Type { name, is_pack } => {
-            render_quoted_template_parameter(name, *is_pack)
+    let content = match parameter {
+        TemplateParameter::Type { name, is_pack } => render_template_parameter_name(name, *is_pack),
+        TemplateParameter::NonType { .. } | TemplateParameter::Template { .. } => {
+            render_template_parameter_content(parameter)
         }
-        TemplateParameter::NonType { name, is_pack, .. } => {
-            render_quoted_template_parameter(name, *is_pack)
-        }
-        TemplateParameter::Template {
-            name,
-            parameters,
-            is_pack,
-        } => format!(
-            "\"template <{}> {}{}\"",
-            render_template_parameter_list(parameters),
-            name,
-            template_pack_marker(*is_pack)
-        ),
-    }
-}
-
-fn render_quoted_template_parameter(name: &str, is_pack: bool) -> String {
-    format!("\"{}\"", render_template_parameter_name(name, is_pack))
+    };
+    format!("\"{content}\"")
 }
 
 fn render_template_parameter_name(name: &str, is_pack: bool) -> String {
@@ -1148,31 +1225,35 @@ fn render_template_parameter_list(parameters: &[TemplateParameter]) -> String {
 fn render_template_parameter_content(parameter: &TemplateParameter) -> String {
     match parameter {
         TemplateParameter::Type { name, is_pack } => {
-            format!(
-                "typename {}",
-                render_template_parameter_name(name, *is_pack)
-            )
+            render_template_parameter_declaration("typename", name, *is_pack)
         }
         TemplateParameter::NonType {
             name,
             value_type,
             is_pack,
-        } => format!(
-            "{} {}",
-            value_type,
-            render_template_parameter_name(name, *is_pack)
-        ),
+        } => render_template_parameter_declaration(value_type, name, *is_pack),
         TemplateParameter::Template {
             name,
             parameters,
             is_pack,
-        } => format!(
-            "template <{}> typename {}{}",
-            render_template_parameter_list(parameters),
+        } => render_template_parameter_declaration(
+            &format!(
+                "template <{}> typename",
+                render_template_parameter_list(parameters)
+            ),
             name,
-            template_pack_marker(*is_pack)
+            *is_pack,
         ),
     }
+}
+
+fn render_template_parameter_declaration(prefix: &str, name: &str, is_pack: bool) -> String {
+    let mut declaration = format!("{}{}", prefix.trim(), template_pack_marker(is_pack));
+    if !name.is_empty() {
+        declaration.push(' ');
+        declaration.push_str(name);
+    }
+    declaration
 }
 
 fn template_pack_marker(is_pack: bool) -> &'static str {
@@ -1185,6 +1266,16 @@ fn template_pack_marker(is_pack: bool) -> &'static str {
 
 fn normalized_optional_type(type_name: &Option<String>) -> Option<String> {
     type_name.as_deref().map(normalize_type_name)
+}
+
+fn normalize_non_type_template_parameter_type(type_name: &str) -> String {
+    // Preserve existing behavior for potentially literal-bearing expressions.
+    // Whitespace within literals is significant and must not be collapsed.
+    if type_name.contains('"') || type_name.contains('\'') {
+        return normalize_type_name(type_name);
+    }
+
+    normalize_type_name(&type_name.split_whitespace().collect::<Vec<_>>().join(" "))
 }
 
 fn normalize_type_name(type_name: &str) -> String {
@@ -1450,11 +1541,262 @@ mod tests {
     }
 
     #[test]
-    fn template_parameter_formatting_includes_pack_and_nested_parameters() {
+    fn template_parameter_matching_only_relaxes_omitted_design_names() {
+        let ty = |name: &str, is_pack| TemplateParameter::Type {
+            name: name.to_string(),
+            is_pack,
+        };
+        let value = |name: &str, value_type: &str, is_pack| TemplateParameter::NonType {
+            name: name.to_string(),
+            value_type: value_type.to_string(),
+            is_pack,
+        };
+        let nested = |name: &str, inner| TemplateParameter::Template {
+            name: name.to_string(),
+            parameters: vec![inner],
+            is_pack: false,
+        };
+        let assert_match = |design, implementation, expected| {
+            assert_eq!(
+                template_parameters_match(&design, &implementation),
+                expected,
+                "design: {design:?}, implementation: {implementation:?}",
+            );
+        };
+
+        // List presence, length and positional matching are independent of name relaxation.
+        for (design, implementation, expected) in [
+            (None, None, true),
+            (None, Some(vec![ty("T", false)]), false),
+            (Some(vec![]), None, false),
+            (Some(vec![]), Some(vec![]), true),
+            (Some(vec![ty("", false)]), Some(vec![]), false),
+            (
+                Some(vec![ty("T", false), ty("", false)]),
+                Some(vec![ty("U", false), ty("", false)]),
+                false,
+            ),
+            (
+                Some(vec![ty("T", false), ty("", false)]),
+                Some(vec![ty("", false), ty("", false)]),
+                false,
+            ),
+            (
+                Some(vec![ty("T", false), ty("", false)]),
+                Some(vec![ty("", false), ty("T", false)]),
+                false,
+            ),
+            (
+                Some(vec![ty("T", false), ty("", false)]),
+                Some(vec![ty("T", false)]),
+                false,
+            ),
+            (
+                Some(vec![ty("", false), value("", "int", false)]),
+                Some(vec![value("N", "int", false), ty("T", false)]),
+                false,
+            ),
+        ] {
+            assert_match(design, implementation, expected);
+        }
+
+        // Each parameter rule is checked alone and after a matching prefix parameter.
+        // An empty name is unnamed; is_pack is explicit in both constructors.
+        for (design, implementation, expected) in [
+            // Type names: omission is allowed only on the design side.
+            (ty("", false), ty("", false), true),
+            (ty("", false), ty("T", false), true),
+            (ty("T", false), ty("T", false), true),
+            (ty("T", false), ty("U", false), false),
+            (ty("T", false), ty("", false), false),
+            // Packs and parameter kinds remain constrained even without a name.
+            (ty("", true), ty("Ts", true), true),
+            (ty("", false), ty("Ts", true), false),
+            (ty("", true), ty("T", false), false),
+            (ty("", false), value("N", "int", false), false),
+            // Non-type parameters compare normalized types, names and pack flags.
+            (value("", "int", false), value("N", "int", false), true),
+            (value("", "int", false), value("N", "long", false), false),
+            (
+                value("", "unsigned  long", false),
+                value("N", "unsigned long", false),
+                true,
+            ),
+            (
+                value("N", "unsigned\t long   *", false),
+                value("N", "unsigned long*", false),
+                true,
+            ),
+            (
+                value("N", "const\t Widget   &", false),
+                value("N", "const Widget&", false),
+                true,
+            ),
+            (
+                value("N", "size_t", false),
+                value("N", " ::std::size_t \t", false),
+                true,
+            ),
+            (
+                value("", "vehicle.Payload*", false),
+                value("P", " vehicle::Payload * ", false),
+                true,
+            ),
+            (
+                value("N", "size_t", false),
+                value("M", "std::size_t", false),
+                false,
+            ),
+            (
+                value("", "size_t", true),
+                value("Ns", "std::size_t", false),
+                false,
+            ),
+            (
+                value("", "size_t", false),
+                value("Ns", "std::size_t", true),
+                false,
+            ),
+        ] {
+            assert_match(
+                Some(vec![design.clone()]),
+                Some(vec![implementation.clone()]),
+                expected,
+            );
+            assert_match(
+                Some(vec![ty("T", false), design]),
+                Some(vec![ty("T", false), implementation]),
+                expected,
+            );
+        }
+
+        // Template-template parameters apply the same constraints recursively.
+        for (design, implementation, expected) in [
+            // Template-template parameters allow omitted outer and inner design names.
+            (nested("", ty("", false)), nested("C", ty("U", false)), true),
+            // An explicit outer template-template parameter name must match.
+            (
+                nested("C", ty("", false)),
+                nested("D", ty("U", false)),
+                false,
+            ),
+            // An explicit nested parameter name must also match recursively.
+            (
+                nested("C", ty("T", false)),
+                nested("C", ty("U", false)),
+                false,
+            ),
+            // Omitting nested names does not allow a different nested parameter kind.
+            (
+                nested("", ty("", false)),
+                nested("C", value("N", "int", false)),
+                false,
+            ),
+            // Value-type normalization also applies recursively.
+            (
+                nested("", nested("", value("", "size_t", false))),
+                nested("C", nested("D", value("N", " std::size_t ", false))),
+                true,
+            ),
+        ] {
+            assert_match(Some(vec![design]), Some(vec![implementation]), expected);
+        }
+    }
+
+    #[test]
+    fn template_parameter_formatting_handles_kinds_packs_and_lists() {
+        let assert_declaration = |parameter: &TemplateParameter, expected: &str| {
+            assert_eq!(
+                render_template_parameter_content(parameter),
+                expected,
+                "parameter: {parameter:?}"
+            );
+            let nested = TemplateParameter::Template {
+                name: "Factory".to_string(),
+                parameters: vec![parameter.clone()],
+                is_pack: false,
+            };
+            assert_eq!(
+                render_template_parameters(&Some(vec![nested])),
+                format!("[\"template <{expected}> typename Factory\"]"),
+                "nested parameter: {parameter:?}"
+            );
+        };
+
+        // Type parameters use declarations when nested and shorthand at the top level.
+        for (name, is_pack, declaration, shorthand) in [
+            ("", false, "typename", ""),
+            ("T", false, "typename T", "T"),
+            ("", true, "typename...", "..."),
+            ("Ts", true, "typename... Ts", "Ts..."),
+        ] {
+            let parameter = TemplateParameter::Type {
+                name: name.to_string(),
+                is_pack,
+            };
+            assert_declaration(&parameter, declaration);
+            assert_eq!(
+                render_template_parameter(&parameter),
+                format!("\"{shorthand}\""),
+                "parameter: {parameter:?}"
+            );
+        }
+
+        // Non-type parameters trim outer whitespace without normalizing type spelling.
+        for (value_type, name, is_pack, expected) in [
+            (" \tint\t ", "", false, "int"),
+            (" \tint\t ", "N", false, "int N"),
+            (" \tint\t ", "", true, "int..."),
+            (" \tint\t ", "Ns", true, "int... Ns"),
+            (" \t::std::size_t\t ", "Ns", true, "::std::size_t... Ns"),
+            (" unsigned  long ", "N", false, "unsigned  long N"),
+        ] {
+            let parameter = TemplateParameter::NonType {
+                name: name.to_string(),
+                value_type: value_type.to_string(),
+                is_pack,
+            };
+            assert_declaration(&parameter, expected);
+            assert_eq!(
+                render_template_parameter(&parameter),
+                format!("\"{expected}\""),
+                "parameter: {parameter:?}"
+            );
+        }
+
+        // Template-template parameters use declarations at every nesting level.
+        for (name, is_pack, expected) in [
+            ("", false, "template <typename> typename"),
+            ("C", false, "template <typename> typename C"),
+            ("", true, "template <typename> typename..."),
+            ("Cs", true, "template <typename> typename... Cs"),
+        ] {
+            let parameter = TemplateParameter::Template {
+                name: name.to_string(),
+                parameters: vec![TemplateParameter::Type {
+                    name: String::new(),
+                    is_pack: false,
+                }],
+                is_pack,
+            };
+            assert_declaration(&parameter, expected);
+            assert_eq!(
+                render_template_parameter(&parameter),
+                format!("\"{expected}\""),
+                "parameter: {parameter:?}"
+            );
+        }
+
+        // Mixed lists preserve order and combine all three parameter kinds.
         let template_parameters = Some(vec![
             TemplateParameter::Type {
                 name: "T".to_string(),
                 is_pack: true,
+            },
+            TemplateParameter::NonType {
+                name: "Capacity".to_string(),
+                value_type: "unsigned long".to_string(),
+                is_pack: false,
             },
             TemplateParameter::Template {
                 name: "Factory".to_string(),
@@ -1466,10 +1808,9 @@ mod tests {
                 is_pack: false,
             },
         ]);
-
         assert_eq!(
             render_template_parameters(&template_parameters),
-            "[\"T...\", \"template <int Size> Factory\"]"
+            "[\"T...\", \"unsigned long Capacity\", \"template <int Size> typename Factory\"]"
         );
     }
 
@@ -1488,6 +1829,41 @@ mod tests {
         assert_eq!(
             relationship_display_name(&relationship),
             "vehicle::Engine -> Composition -> vehicle::Manufacturer"
+        );
+    }
+
+    #[test]
+    fn non_type_whitespace_normalization_collapses_whitespace() {
+        for (type_name, expected) in [
+            ("unsigned  long", "unsigned long"),
+            (" \tunsigned\t  long  ", "unsigned long"),
+            ("unsigned\t long   *", "unsigned long*"),
+            ("const\t Widget   &", "const Widget&"),
+        ] {
+            assert_eq!(
+                normalize_non_type_template_parameter_type(type_name),
+                expected,
+                "type_name: {type_name:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn non_type_whitespace_normalization_preserves_literal_behavior() {
+        for type_name in [
+            "Tag<\"a  b\">",
+            "Tag<' '>",
+            "Tag<R\"delim(a  b)delim\">",
+            "Tag<\"a * b\">",
+        ] {
+            assert_eq!(
+                normalize_non_type_template_parameter_type(type_name),
+                normalize_type_name(type_name),
+            );
+        }
+        assert_ne!(
+            normalize_non_type_template_parameter_type("Tag<\"a  b\">"),
+            normalize_non_type_template_parameter_type("Tag<\"a b\">"),
         );
     }
 

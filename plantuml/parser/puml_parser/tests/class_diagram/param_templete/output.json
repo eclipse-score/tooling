@@ -22,7 +22,7 @@
                 "visibility": "Public",
                 "name": "Create",
                 "template_parameters": [
-                  "T"
+                  {"Type": {"name": "T", "is_pack": false}}
                 ],
                 "params": [
                   {

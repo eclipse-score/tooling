@@ -15,6 +15,9 @@
               "file": "",
               "line": 15
             },
+            "template_parameters": [
+              {"Type": {"name": "RoutineControlImplementation", "is_pack": false}}
+            ],
             "type_aliases": [],
             "attributes": [],
             "methods": [],

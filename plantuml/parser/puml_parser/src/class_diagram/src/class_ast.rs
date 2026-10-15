@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
+pub use class_diagram::TemplateParameter;
 pub use parser_core::common_ast::Arrow;
 use serde::{Deserialize, Serialize};
 use source_location::SourceLocation;
@@ -118,7 +119,7 @@ pub struct TypeAlias {
 pub struct Method {
     pub visibility: Visibility,
     pub name: String,
-    pub template_parameters: Option<Vec<String>>,
+    pub template_parameters: Option<Vec<TemplateParameter>>,
     pub params: Vec<Param>,
     pub r#type: Option<String>,
     pub modifiers: Vec<String>,
@@ -167,7 +168,7 @@ pub struct ClassLikeMembers {
 pub struct ClassLikeDef {
     #[serde(flatten)]
     pub declaration: DeclarationCommon,
-    pub template_parameters: Option<Vec<String>>,
+    pub template_parameters: Option<Vec<TemplateParameter>>,
     #[serde(flatten)]
     pub members: ClassLikeMembers,
     pub kind: ClassLikeKind,

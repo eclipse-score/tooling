@@ -11,7 +11,14 @@
         "type_aliases": [],
         "variables": [],
         "methods": [],
-        "template_parameters": null,
+        "template_parameters": [
+          {
+            "Type": {
+              "name": "Spec",
+              "is_pack": true
+            }
+          }
+        ],
         "enum_literals": [],
         "relationships": [],
         "source_location": { "file": "", "line": 15 }

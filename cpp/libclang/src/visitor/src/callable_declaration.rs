@@ -122,14 +122,13 @@ pub(crate) fn parse_template_parameters(entity: &Entity) -> Option<Vec<TemplateP
     let parameters = entity
         .get_children()
         .into_iter()
-        .enumerate()
-        .filter_map(|(index, child)| match child.get_kind() {
+        .filter_map(|child| match child.get_kind() {
             // template <typename Foo>  →  "name: Foo, is_pack: False"
-            // template <typename, typename> -> "name: T0, is_pack: False", "name: T1, is_pack: False"
+            // Unnamed parameters retain an empty name, as in the design parser.
             // template <typename... Foo> -> "name: Foo, is_pack: True"
             EntityKind::TemplateTypeParameter => Some(TemplateParameter::Type {
-                name: child.get_name().unwrap_or_else(|| format!("T{index}")),
-                is_pack: is_template_parameter_pack(&child),
+                name: child.get_name().unwrap_or_default(),
+                is_pack: is_template_parameter_pack(&child, entity),
             }),
             // template <int N>  →  "name: N, value_type: int"
             EntityKind::NonTypeTemplateParameter => Some(TemplateParameter::NonType {
@@ -138,13 +137,13 @@ pub(crate) fn parse_template_parameters(entity: &Entity) -> Option<Vec<TemplateP
                     .get_type()
                     .map(|ty| ty.get_display_name())
                     .unwrap_or_default(),
-                is_pack: is_template_parameter_pack(&child),
+                is_pack: is_template_parameter_pack(&child, entity),
             }),
             // template <template<...> class C>  → "name: C, parameters: [...], is_pack: False"
             EntityKind::TemplateTemplateParameter => Some(TemplateParameter::Template {
-                name: child.get_name().unwrap_or_else(|| format!("T{index}")),
+                name: child.get_name().unwrap_or_default(),
                 parameters: parse_template_parameters(&child).unwrap_or_default(),
-                is_pack: is_template_parameter_pack(&child),
+                is_pack: is_template_parameter_pack(&child, entity),
             }),
             _ => None,
         })
@@ -179,14 +178,40 @@ fn strip_top_level_cv_qualifiers_ref(resolved: &ResolvedType) -> &ResolvedType {
     }
 }
 
-fn is_template_parameter_pack(entity: &Entity) -> bool {
-    entity.get_range().is_some_and(|range| {
-        range
+fn is_template_parameter_pack(entity: &Entity, parent: &Entity) -> bool {
+    let Some(range) = entity.get_range() else {
+        return false;
+    };
+
+    if range
+        .tokenize()
+        .iter()
+        .any(|token| token.get_spelling() == "...")
+        || entity
+            .get_display_name()
+            .as_deref()
+            .is_some_and(|display_name| display_name.contains("..."))
+    {
+        return true;
+    }
+
+    if entity.get_name().is_some_and(|name| !name.is_empty()) {
+        return false;
+    }
+
+    // libclang can end an unnamed parameter's extent before its ellipsis.
+    // Inspect only the next non-comment token in the enclosing declaration,
+    // never a later parameter or an ellipsis elsewhere in the class body.
+    let end = range.get_end().get_file_location();
+    parent.get_range().is_some_and(|parent_range| {
+        parent_range
             .tokenize()
             .iter()
-            .any(|token| token.get_spelling() == "...")
-    }) || entity
-        .get_display_name()
-        .as_deref()
-        .is_some_and(|display_name| display_name.contains("..."))
+            .filter(|token| token.get_kind() != clang::token::TokenKind::Comment)
+            .find(|token| {
+                let location = token.get_location().get_file_location();
+                location.file == end.file && location.offset >= end.offset
+            })
+            .is_some_and(|token| token.get_spelling() == "...")
+    })
 }

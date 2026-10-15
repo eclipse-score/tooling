@@ -1,0 +1,66 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml positive_class_template_forms
+
+namespace amp {
+    ' Declaration forms: unquoted, quoted, aliases, and legacy parameter packs.
+    class ordinary_template<T, U> {
+        + value() : T
+    }
+
+    class "quoted_template_alias<T, U>" as quoted_template_alias {
+        + value() : T
+    }
+
+    class "quoted_template_no_alias<T, U>" {
+        + value() : T
+    }
+
+    class "Proxy<Spec...>" as P
+
+    class "TypeParameters<typename T, typename... Ts>" as TypeParameters {
+    }
+
+    class "NonTypeParameters<int N, unsigned long M, int... Ns>" as NonTypeParameters {
+    }
+
+    class "TemplateParameters<template<typename U> class C, template<typename V> class... Cs>" as TemplateParameters {
+    }
+
+    class "MixedNamedAndUnnamedParameters<typename T, typename>" as MixedNamedAndUnnamedParameters {
+    }
+
+    class "NestedOmittedNames<template<typename, int> class C>" as NestedOmittedNames {
+    }
+
+    class "UnnamedPack<typename...>" as UnnamedPack {
+    }
+
+    class "UnnamedBeforePack<typename, typename...>" as UnnamedBeforePack {
+    }
+
+    class "UnnamedTemplate<template<typename> class>" as UnnamedTemplate {
+    }
+
+    class "UnnamedTemplatePack<template<typename> class...>" as UnnamedTemplatePack {
+    }
+
+    class "UnnamedValuePack<int...>" as UnnamedValuePack {
+    }
+
+    class "NestedUnnamedTemplate<template<template<typename> class> class>" as NestedUnnamedTemplate {
+    }
+}
+
+@enduml

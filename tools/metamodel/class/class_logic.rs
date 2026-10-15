@@ -111,6 +111,14 @@ impl TemplateParameter {
             Self::Template { name, .. } => name,
         }
     }
+
+    pub fn is_pack(&self) -> bool {
+        match self {
+            Self::Type { is_pack, .. }
+            | Self::NonType { is_pack, .. }
+            | Self::Template { is_pack, .. } => *is_pack,
+        }
+    }
 }
 
 /// Visibility modifier for members
@@ -291,6 +299,60 @@ impl FreeFunctionDecl {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn template_parameters_use_tagged_json_for_all_kinds_and_packs() {
+        for is_pack in [false, true] {
+            let nested = TemplateParameter::Type {
+                name: "T".to_string(),
+                is_pack: true,
+            };
+            let cases = [
+                (
+                    TemplateParameter::Type {
+                        name: "T".to_string(),
+                        is_pack,
+                    },
+                    "T",
+                    serde_json::json!({"Type": {"name": "T", "is_pack": is_pack}}),
+                ),
+                (
+                    TemplateParameter::NonType {
+                        name: "N".to_string(),
+                        value_type: "int".to_string(),
+                        is_pack,
+                    },
+                    "N",
+                    serde_json::json!({"NonType": {
+                        "name": "N", "value_type": "int", "is_pack": is_pack
+                    }}),
+                ),
+                (
+                    TemplateParameter::Template {
+                        name: "Container".to_string(),
+                        parameters: vec![nested],
+                        is_pack,
+                    },
+                    "Container",
+                    serde_json::json!({"Template": {
+                        "name": "Container",
+                        "parameters": [{"Type": {"name": "T", "is_pack": true}}],
+                        "is_pack": is_pack
+                    }}),
+                ),
+            ];
+
+            for (parameter, name, expected) in cases {
+                assert_eq!(parameter.name(), name);
+                assert_eq!(parameter.is_pack(), is_pack);
+                assert_eq!(serde_json::to_value(&parameter).unwrap(), expected);
+                assert_eq!(
+                    serde_json::from_value::<TemplateParameter>(expected).unwrap(),
+                    parameter
+                );
+            }
+        }
+    }
 
     #[test]
     fn test_entity_serialization() {

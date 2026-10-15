@@ -29,7 +29,7 @@
             "parameters": [
               {
                 "Type": {
-                  "name": "T0",
+                  "name": "",
                   "is_pack": false
                 }
               }
@@ -164,7 +164,7 @@
         },
         {
           "Type": {
-            "name": "T2",
+            "name": "",
             "is_pack": false
           }
         }
@@ -195,6 +195,101 @@
       "source_location": {
         "file": "cpp/libclang/integration_test/cases/template_class/transport.cpp",
         "line": 15
+      }
+    },
+    "UnnamedTypePack": {
+      "id": "UnnamedTypePack",
+      "name": "UnnamedTypePack",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "stereotypes": [],
+      "template_parameters": [
+        { "Type": { "name": "", "is_pack": true } }
+      ],
+      "type_aliases": [],
+      "variables": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/template_class/transport.cpp",
+        "line": 49
+      }
+    },
+    "UnnamedValuePack": {
+      "id": "UnnamedValuePack",
+      "name": "UnnamedValuePack",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "stereotypes": [],
+      "template_parameters": [
+        { "NonType": { "name": "", "value_type": "int", "is_pack": true } }
+      ],
+      "type_aliases": [],
+      "variables": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/template_class/transport.cpp",
+        "line": 54
+      }
+    },
+    "UnnamedTemplatePack": {
+      "id": "UnnamedTemplatePack",
+      "name": "UnnamedTemplatePack",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "stereotypes": [],
+      "template_parameters": [
+        {
+          "Template": {
+            "name": "",
+            "parameters": [ { "Type": { "name": "", "is_pack": false } } ],
+            "is_pack": true
+          }
+        }
+      ],
+      "type_aliases": [],
+      "variables": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/template_class/transport.cpp",
+        "line": 59
+      }
+    },
+    "UnnamedTemplateOwner": {
+      "id": "UnnamedTemplateOwner",
+      "name": "UnnamedTemplateOwner",
+      "enclosing_namespace_id": null,
+      "entity_type": "Class",
+      "enum_literals": [],
+      "methods": [],
+      "relationships": [],
+      "stereotypes": [],
+      "template_parameters": [
+        {
+          "Template": {
+            "name": "",
+            "parameters": [
+              {
+                "Type": {
+                  "name": "",
+                  "is_pack": false
+                }
+              }
+            ],
+            "is_pack": false
+          }
+        }
+      ],
+      "type_aliases": [],
+      "variables": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/template_class/transport.cpp",
+        "line": 43
       }
     }
   },
