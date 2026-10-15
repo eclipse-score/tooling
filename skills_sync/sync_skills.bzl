@@ -21,7 +21,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 # repositories.
 _TOOLING_SKILLS = "@score_tooling//.github/skills:skills"
 
-def sync_skills(name = "sync_skills"):
+def sync_skills(name = "sync_skills", repo_skills_target = None):
     """Registers targets to pull and verify score_tooling's shared skills.
 
     Adds two targets to the calling package (expected to be the repository
@@ -43,11 +43,20 @@ def sync_skills(name = "sync_skills"):
 
     Args:
         name: Name of the runnable sync target. Defaults to "sync_skills".
+        repo_skills_target: Optional label of a filegroup with the repo's
+            committed "score-*" skill files. Required when .github/skills has
+            its own BUILD file, because that package boundary hides the files
+            from the glob used by default.
     """
-    repo_skill_files = native.glob(
-        [".github/skills/score-*/**"],
-        allow_empty = True,
-    )
+    if repo_skills_target == None:
+        repo_skill_data = native.glob(
+            [".github/skills/score-*/**"],
+            allow_empty = True,
+        )
+        repo_skill_args = repo_skill_data
+    else:
+        repo_skill_data = [repo_skills_target]
+        repo_skill_args = ["$(locations {})".format(repo_skills_target)]
 
     sh_binary(
         name = name,
@@ -66,6 +75,6 @@ def sync_skills(name = "sync_skills"):
             "check",
             "$(locations {})".format(_TOOLING_SKILLS),
             "--",
-        ] + repo_skill_files,
-        data = [_TOOLING_SKILLS] + repo_skill_files,
+        ] + repo_skill_args,
+        data = [_TOOLING_SKILLS] + repo_skill_data,
     )

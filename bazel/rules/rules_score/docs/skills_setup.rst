@@ -27,3 +27,7 @@ available to Copilot locally.
 - ``bazel test //:sync_skills.check`` — fails if the committed skills are
   missing, outdated, or stale relative to the ``score_tooling`` version in
   use. Wire this into CI so upstream skill updates are caught automatically.
+
+If ``.github/skills`` has its own ``BUILD`` file, the default glob in the root
+package cannot see the skill files. Define a filegroup that lists them in that
+package and pass it with ``sync_skills(repo_skills_target = "//.github/skills:skills")``.

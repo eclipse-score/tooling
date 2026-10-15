@@ -13,14 +13,15 @@
 
 package(default_visibility = ["//visibility:public"])
 
-# Only directories following the "score-*" naming convention are considered
-# skills that are shared with downstream repositories via //:sync_skills.
-# Skills that do not follow this convention (e.g. "rules-score") are kept
-# local to this repository and are not distributed.
+# Only "score-*" skills are shared with downstream repositories via
+# //:sync_skills; others (e.g. "rules-score") stay local. Files are listed
+# explicitly so a missing or renamed file fails the build.
 filegroup(
     name = "skills",
-    srcs = glob(
-        ["score-*/**"],
-        allow_empty = True,
-    ),
+    srcs = [
+        "score-architecture/SKILL.md",
+        "score-requirements/SKILL.md",
+        "score-safety-analysis/SKILL.md",
+        "score-testing/SKILL.md",
+    ],
 )
