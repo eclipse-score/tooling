@@ -211,6 +211,46 @@ def _component_excludes_feature_req_docs_test_impl(ctx):
 
 component_excludes_feature_req_docs_test = analysistest.make(_component_excludes_feature_req_docs_test_impl)
 
+def _component_direct_asr_test_impl(ctx):
+    """Test that a component whose component_requirements trace straight to
+    Assumed System Requirements -- with no feature_requirements layer -- can
+    list the assumed_system_requirements target in `requirements`, and that its
+    .lobster file reaches the generated lobster config.
+
+    Regression test: the rule's `requirements` attribute used to only accept
+    [ComponentRequirementsInfo] / [FeatureRequirementsInfo], so passing an
+    assumed_system_requirements target failed analysis with "does not have
+    mandatory providers" even though the implementation already handled
+    AssumedSystemRequirementsInfo. Without the ASR .lobster in the config,
+    lobster-trace reports "unknown tracing target req <pkg>.<AssumedSystemReq>".
+    """
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    asserts.true(
+        env,
+        ComponentInfo in target_under_test,
+        "Component tracing directly to ASRs should provide ComponentInfo",
+    )
+
+    # The ASR .lobster must be wired into the component's lobster pipeline as an
+    # upstream source, otherwise derived_from references cannot be resolved.
+    input_basenames = []
+    for action in analysistest.target_actions(env):
+        for f in action.inputs.to_list():
+            input_basenames.append(f.basename)
+
+    asserts.true(
+        env,
+        "asr_trlc.lobster" in input_basenames,
+        "The assumed_system_requirements .lobster file should feed the " +
+        "component's lobster actions (inputs found: %s)" % input_basenames,
+    )
+
+    return analysistest.end(env)
+
+component_direct_asr_test = analysistest.make(_component_direct_asr_test_impl)
+
 # ============================================================================
 # Test Case Coverage Lock Tests
 # ============================================================================
@@ -338,6 +378,7 @@ def unit_component_test_suite(name):
             ":component_provider_test",
             ":component_sphinx_sources_test",
             ":component_excludes_feature_req_docs_test",
+            ":component_direct_asr_test",
             ":component_test_case_coverage_lock_test",
             ":component_requirements_transitive_test",
             ":test_case_coverage_lock_check_action_release_test",

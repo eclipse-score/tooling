@@ -135,6 +135,7 @@ load(
 )
 load(
     ":unit_component_test.bzl",
+    "component_direct_asr_test",
     "component_excludes_feature_req_docs_test",
     "component_provider_test",
     "component_requirements_transitive_test",
@@ -285,6 +286,14 @@ component_requirements(
 # - Assumptions of Use:       wp__requirements_comp_aou
 # (AoUs reach a dependable_element as `safety_measures` of its safety_analysis; see
 # :aou_root_cause_aous.)
+
+# Component requirements tracing directly to an AssumedSystemReq, with no
+# feature_requirements layer (used by :test_component_direct_asr).
+component_requirements(
+    name = "comp_req_direct_asr",
+    srcs = ["fixtures/seooc_test/component_requirements_direct_asr.trlc"],
+    deps = [":asr_trlc"],
+)
 
 # - Architecture Design:      wp__component_arch
 architectural_design(
@@ -1349,6 +1358,24 @@ component(
     tests = [],  # Empty for testing
 )
 
+# Test Component tracing straight to Assumed System Requirements, i.e. with no
+# feature_requirements layer in between (see
+# fixtures/seooc_test/component_requirements_direct_asr.trlc). The
+# assumed_system_requirements target must be accepted in `requirements` so its
+# .lobster file reaches the component's lobster config; otherwise lobster-trace
+# fails with "unknown tracing target req TestSEooC.ASR_TEST_001".
+component(
+    name = "test_component_direct_asr",
+    testonly = True,
+    components = [":test_unit"],
+    requirements = [
+        ":comp_req_direct_asr",
+        ":asr_trlc",
+    ],
+    tags = ["manual"],
+    tests = [],
+)
+
 # Test Dependable Element.
 # maturity = "development": this fixture intentionally omits a
 # test_case_coverage.lock.yaml, so under the release traceability gate its
@@ -2052,6 +2079,14 @@ component_sphinx_sources_test(
 component_excludes_feature_req_docs_test(
     name = "component_excludes_feature_req_docs_test",
     target_under_test = ":test_component",
+)
+
+# Regression test for component() rejecting assumed_system_requirements targets
+# in `requirements`, which blocked SEooCs that trace component requirements
+# directly to ASRs (no feature requirements layer).
+component_direct_asr_test(
+    name = "component_direct_asr_test",
+    target_under_test = ":test_component_direct_asr",
 )
 
 component_test_case_coverage_lock_test(
