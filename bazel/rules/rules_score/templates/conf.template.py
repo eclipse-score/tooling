@@ -60,7 +60,7 @@ extensions = [
 myst_enable_extensions = sphinx_conf_helpers.DEFAULT_MYST_ENABLE_EXTENSIONS
 
 # Exclude patterns for Bazel builds. Design-fragment subdirectories (e.g.
-# units/unit_1_design/) are included via '.. include::' directives and must
+# units/unit_1/design/) are included via '.. include::' directives and must
 # not be treated as standalone pages -- see DEFAULT_EXCLUDE_PATTERNS.
 exclude_patterns = sphinx_conf_helpers.DEFAULT_EXCLUDE_PATTERNS
 

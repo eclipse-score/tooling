@@ -73,11 +73,8 @@ plantuml_output_format = "svg_obj"
 # MyST parser extensions
 myst_enable_extensions = ["colon_fence"]
 
-# Exclude patterns for Bazel builds
-exclude_patterns = [
-    "bazel-*",
-    ".venv*",
-]
+# Exclude patterns for Bazel builds (same as the shipped default template)
+exclude_patterns = sphinx_conf_helpers.DEFAULT_EXCLUDE_PATTERNS
 
 # Enable markdown rendering
 source_suffix = {

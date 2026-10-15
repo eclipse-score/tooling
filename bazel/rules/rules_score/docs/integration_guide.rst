@@ -281,6 +281,21 @@ If two ``architectural_design`` labels from different packages share a target
 name, or if two files within one label resolve to the same relative path, the
 build fails with an error.
 
+Staged Layout of Units
+----------------------
+
+A ``dependable_element`` stages every unit into its own directory:
+
+.. code-block:: text
+
+   units/<unit name>/index.rst           unit page (published as units/<unit name>/index.html)
+   units/<unit name>/design/...          design files, included into the unit page
+   units/<unit name>/<diagram>.puml      PlantUML files, staged next to the unit page
+
+Same-named design files of different units therefore never collide. The build
+fails, naming both files, if two design files of one unit resolve to the same
+path, and it fails if two distinct units share a target name.
+
 ---
 
 .. _sphinx-hermetic-tool-setup:
