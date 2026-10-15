@@ -1117,9 +1117,15 @@ fn render_template_parameter(parameter: &TemplateParameter) -> String {
         TemplateParameter::Type { name, is_pack } => {
             render_quoted_template_parameter(name, *is_pack)
         }
-        TemplateParameter::NonType { name, is_pack, .. } => {
-            render_quoted_template_parameter(name, *is_pack)
-        }
+        TemplateParameter::NonType {
+            name,
+            value_type,
+            is_pack,
+        } => format!(
+            "\"{} {}\"",
+            value_type,
+            render_template_parameter_name(name, *is_pack)
+        ),
         TemplateParameter::Template {
             name,
             parameters,
@@ -1456,6 +1462,11 @@ mod tests {
                 name: "T".to_string(),
                 is_pack: true,
             },
+            TemplateParameter::NonType {
+                name: "Capacity".to_string(),
+                value_type: "unsigned long".to_string(),
+                is_pack: false,
+            },
             TemplateParameter::Template {
                 name: "Factory".to_string(),
                 parameters: vec![TemplateParameter::NonType {
@@ -1469,7 +1480,7 @@ mod tests {
 
         assert_eq!(
             render_template_parameters(&template_parameters),
-            "[\"T...\", \"template <int Size> Factory\"]"
+            "[\"T...\", \"unsigned long Capacity\", \"template <int Size> Factory\"]"
         );
     }
 

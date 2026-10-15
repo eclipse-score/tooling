@@ -316,3 +316,13 @@ fn negative_template_parameter_mismatch() {
 fn negative_template_parameter_pack_mismatch() {
     assert_case("negative_template_parameter_pack_mismatch");
 }
+
+#[test]
+fn positive_class_template_forms() {
+    assert_case("positive_class_template_forms");
+}
+
+#[test]
+fn positive_class_template_parameter_kinds() {
+    assert_case("positive_class_template_parameter_kinds");
+}

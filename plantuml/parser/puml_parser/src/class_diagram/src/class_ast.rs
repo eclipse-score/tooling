@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 pub use parser_core::common_ast::Arrow;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use source_location::SourceLocation;
 use std::default::Default;
 
@@ -114,11 +114,154 @@ pub struct TypeAlias {
     pub source_location: SourceLocation,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum TemplateParameter {
+    Type {
+        name: String,
+        is_pack: bool,
+    },
+    NonType {
+        name: String,
+        value_type: String,
+        is_pack: bool,
+    },
+    Template {
+        name: String,
+        parameters: Vec<TemplateParameter>,
+        is_pack: bool,
+    },
+}
+
+impl TemplateParameter {
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Type { name, .. } | Self::NonType { name, .. } | Self::Template { name, .. } => {
+                name
+            }
+        }
+    }
+
+    pub fn is_pack(&self) -> bool {
+        match self {
+            Self::Type { is_pack, .. }
+            | Self::NonType { is_pack, .. }
+            | Self::Template { is_pack, .. } => *is_pack,
+        }
+    }
+}
+
+impl Serialize for TemplateParameter {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        #[derive(Serialize)]
+        enum Structured<'a> {
+            NonType {
+                name: &'a str,
+                value_type: &'a str,
+                is_pack: bool,
+            },
+            Template {
+                name: &'a str,
+                parameters: &'a [TemplateParameter],
+                is_pack: bool,
+            },
+        }
+
+        match self {
+            Self::Type { name, is_pack } => {
+                if *is_pack {
+                    serializer.serialize_str(&format!("{name}..."))
+                } else {
+                    serializer.serialize_str(name)
+                }
+            }
+            Self::NonType {
+                name,
+                value_type,
+                is_pack,
+            } => Structured::NonType {
+                name,
+                value_type,
+                is_pack: *is_pack,
+            }
+            .serialize(serializer),
+            Self::Template {
+                name,
+                parameters,
+                is_pack,
+            } => Structured::Template {
+                name,
+                parameters,
+                is_pack: *is_pack,
+            }
+            .serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for TemplateParameter {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        enum Structured {
+            NonType {
+                name: String,
+                value_type: String,
+                is_pack: bool,
+            },
+            Template {
+                name: String,
+                parameters: Vec<TemplateParameter>,
+                is_pack: bool,
+            },
+        }
+
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Repr {
+            Type(String),
+            Structured(Structured),
+        }
+
+        match Repr::deserialize(deserializer)? {
+            Repr::Type(value) => {
+                let (name, is_pack) = value
+                    .strip_suffix("...")
+                    .map(|name| (name.to_string(), true))
+                    .unwrap_or((value, false));
+                Ok(Self::Type { name, is_pack })
+            }
+            Repr::Structured(Structured::NonType {
+                name,
+                value_type,
+                is_pack,
+            }) => Ok(Self::NonType {
+                name,
+                value_type,
+                is_pack,
+            }),
+            Repr::Structured(Structured::Template {
+                name,
+                parameters,
+                is_pack,
+            }) => Ok(Self::Template {
+                name,
+                parameters,
+                is_pack,
+            }),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Method {
     pub visibility: Visibility,
     pub name: String,
-    pub template_parameters: Option<Vec<String>>,
+    pub template_parameters: Option<Vec<TemplateParameter>>,
     pub params: Vec<Param>,
     pub r#type: Option<String>,
     pub modifiers: Vec<String>,
@@ -167,7 +310,7 @@ pub struct ClassLikeMembers {
 pub struct ClassLikeDef {
     #[serde(flatten)]
     pub declaration: DeclarationCommon,
-    pub template_parameters: Option<Vec<String>>,
+    pub template_parameters: Option<Vec<TemplateParameter>>,
     #[serde(flatten)]
     pub members: ClassLikeMembers,
     pub kind: ClassLikeKind,

@@ -13,7 +13,7 @@
 use crate::class_ast::{
     Arrow, Attribute, ClassLikeDef, ClassLikeKind, ClassUmlFile, ClassUmlTopLevel,
     DeclarationCommon, EntityDef, EnumDef, EnumItem, EnumValue, Method, Name, Namespace, Package,
-    Param, Relationship, TypeAlias, TypeDefinition, Visibility,
+    Param, Relationship, TemplateParameter, TypeAlias, TypeDefinition, Visibility,
 };
 use crate::source_map::{
     normalize_multiline_member_signatures, remap_syntax_error_to_original_source, NormalizedContent,
@@ -130,6 +130,80 @@ struct ClassParseSession<'a> {
 }
 
 impl ClassParseSession<'_> {
+    fn parse_template_parameters(pair: pest::iterators::Pair<Rule>) -> Vec<TemplateParameter> {
+        fn parse_parameter(pair: pest::iterators::Pair<Rule>) -> TemplateParameter {
+            match pair.as_rule() {
+                Rule::template_param => parse_parameter(pair.into_inner().next().unwrap()),
+                Rule::template_template_inner_param => {
+                    parse_parameter(pair.into_inner().next().unwrap())
+                }
+                Rule::legacy_type_template_param | Rule::explicit_type_template_param => {
+                    let mut name = String::new();
+                    let mut is_pack = false;
+                    for inner in pair.into_inner() {
+                        match inner.as_rule() {
+                            Rule::identifier => name = inner.as_str().to_string(),
+                            Rule::varargs => is_pack = true,
+                            _ => {}
+                        }
+                    }
+                    TemplateParameter::Type { name, is_pack }
+                }
+                Rule::non_type_template_param => {
+                    let mut name = String::new();
+                    let mut value_type = String::new();
+                    let mut is_pack = false;
+                    for inner in pair.into_inner() {
+                        match inner.as_rule() {
+                            Rule::non_type_template_type | Rule::builtin_non_type_template_type => {
+                                value_type = inner.as_str().trim().to_string()
+                            }
+                            Rule::identifier => name = inner.as_str().to_string(),
+                            Rule::varargs => is_pack = true,
+                            _ => {}
+                        }
+                    }
+                    TemplateParameter::NonType {
+                        name,
+                        value_type,
+                        is_pack,
+                    }
+                }
+                Rule::template_template_param => {
+                    let mut name = String::new();
+                    let mut parameters = Vec::new();
+                    let mut is_pack = false;
+                    for inner in pair.into_inner() {
+                        match inner.as_rule() {
+                            Rule::template_param
+                            | Rule::template_template_inner_param
+                            | Rule::explicit_type_template_param
+                            | Rule::template_template_param
+                            | Rule::non_type_template_param
+                            | Rule::legacy_type_template_param => {
+                                parameters.push(parse_parameter(inner));
+                            }
+                            Rule::identifier => name = inner.as_str().to_string(),
+                            Rule::varargs => is_pack = true,
+                            _ => {}
+                        }
+                    }
+                    TemplateParameter::Template {
+                        name,
+                        parameters,
+                        is_pack,
+                    }
+                }
+                rule => unreachable!("unexpected template parameter rule: {rule:?}"),
+            }
+        }
+
+        pair.into_inner()
+            .filter(|inner| inner.as_rule() == Rule::template_param)
+            .map(parse_parameter)
+            .collect()
+    }
+
     fn extract_stereotypes(pair: pest::iterators::Pair<Rule>) -> Vec<String> {
         pair.into_inner()
             .filter(|inner| inner.as_rule() == Rule::STEREOTYPE_NAME)
@@ -430,13 +504,6 @@ impl ClassParseSession<'_> {
     }
 
     fn parse_method(&self, pair: pest::iterators::Pair<Rule>) -> Method {
-        fn parse_generic_param_list(pair: pest::iterators::Pair<Rule>) -> Vec<String> {
-            pair.into_inner()
-                .filter(|p| p.as_rule() == Rule::template_param)
-                .map(|p| p.as_str().to_string())
-                .collect()
-        }
-
         fn ensure_abstract_modifier(method: &mut Method) {
             if !method
                 .modifiers
@@ -498,7 +565,7 @@ impl ClassParseSession<'_> {
                     }
                 }
                 Rule::generic_param_list => {
-                    method.template_parameters = Some(parse_generic_param_list(p));
+                    method.template_parameters = Some(Self::parse_template_parameters(p));
                 }
                 _ => (),
             }
@@ -663,16 +730,14 @@ impl ClassParseSession<'_> {
 
         fn collect_type_template_parameters(
             pair: pest::iterators::Pair<Rule>,
-        ) -> Option<Vec<String>> {
-            fn walk(pair: pest::iterators::Pair<Rule>, params: &mut Option<Vec<String>>) {
+        ) -> Option<Vec<TemplateParameter>> {
+            fn walk(
+                pair: pest::iterators::Pair<Rule>,
+                params: &mut Option<Vec<TemplateParameter>>,
+            ) {
                 match pair.as_rule() {
                     Rule::type_generic_param_list => {
-                        *params = Some(
-                            pair.into_inner()
-                                .filter(|inner| inner.as_rule() == Rule::template_param)
-                                .map(|inner| inner.as_str().to_string())
-                                .collect(),
-                        );
+                        *params = Some(ClassParseSession::parse_template_parameters(pair));
                     }
                     Rule::class_body => {}
                     _ => {
@@ -688,7 +753,7 @@ impl ClassParseSession<'_> {
             params
         }
 
-        fn parse_template_parameter_list_text(text: &str) -> Option<Vec<String>> {
+        fn parse_template_parameter_list_text(text: &str) -> Option<Vec<TemplateParameter>> {
             let trimmed = text.trim();
             if trimmed.starts_with('<') && trimmed.ends_with('>') {
                 let inner = trimmed[1..trimmed.len() - 1].trim();
@@ -700,15 +765,12 @@ impl ClassParseSession<'_> {
             PlantUmlCommonParser::parse(Rule::type_generic_param_list, text)
                 .ok()
                 .and_then(|mut pairs| pairs.next())
-                .map(|pair| {
-                    pair.into_inner()
-                        .filter(|inner| inner.as_rule() == Rule::template_param)
-                        .map(|inner| inner.as_str().to_string())
-                        .collect()
-                })
+                .map(ClassParseSession::parse_template_parameters)
         }
 
-        fn infer_template_parameters_from_template_string(name: &str) -> Option<Vec<String>> {
+        fn infer_template_parameters_from_template_string(
+            name: &str,
+        ) -> Option<Vec<TemplateParameter>> {
             if !name.contains("<<template>>") {
                 return None;
             }
@@ -732,7 +794,24 @@ impl ClassParseSession<'_> {
             parse_template_parameter_list_text(&candidate[start..=end])
         }
 
-        fn infer_template_parameters_from_type_def_text(raw_type_def: &str) -> Option<Vec<String>> {
+        fn infer_template_parameters_from_class_name(name: &str) -> Option<Vec<TemplateParameter>> {
+            let candidate = name.trim();
+            if !candidate.ends_with('>') {
+                return None;
+            }
+
+            let start = candidate.find('<')?;
+            let base_name = candidate[..start].trim();
+            if base_name.is_empty() || base_name.contains('<') || base_name.contains('>') {
+                return None;
+            }
+
+            parse_template_parameter_list_text(&candidate[start..])
+        }
+
+        fn infer_template_parameters_from_type_def_text(
+            raw_type_def: &str,
+        ) -> Option<Vec<TemplateParameter>> {
             let marker_index = raw_type_def.find("<<template>>")?;
             let template_label = raw_type_def[marker_index..]
                 .split('"')
@@ -743,15 +822,16 @@ impl ClassParseSession<'_> {
         }
 
         fn resolve_type_template_parameters(
-            explicit: Option<Vec<String>>,
+            explicit: Option<Vec<TemplateParameter>>,
             name: &Name,
             raw_type_def: &str,
-        ) -> Option<Vec<String>> {
+        ) -> Option<Vec<TemplateParameter>> {
             explicit.or_else(|| {
                 name.alias
                     .as_deref()
                     .and_then(infer_template_parameters_from_template_string)
                     .or_else(|| infer_template_parameters_from_template_string(&name.internal))
+                    .or_else(|| infer_template_parameters_from_class_name(&name.internal))
                     .or_else(|| infer_template_parameters_from_type_def_text(raw_type_def))
             })
         }
@@ -1406,6 +1486,246 @@ mod tests {
         assert_eq!(
             class_def.members.attributes[0].r#type.as_deref(),
             Some("safecpp::Scope<>")
+        );
+    }
+
+    #[test]
+    fn test_parse_template_parameters_from_quoted_class_names() {
+        for (declaration, expected_internal, expected_alias) in [
+            (
+                r#"class "ordinary_template<T, U>" as ordinary_template"#,
+                "ordinary_template<T, U>",
+                Some("ordinary_template"),
+            ),
+            (
+                r#"class "other_template<T, U>" as Alias"#,
+                "other_template<T, U>",
+                Some("Alias"),
+            ),
+            (
+                r#"class "unaliased_template<T, U>""#,
+                "unaliased_template<T, U>",
+                None,
+            ),
+            (
+                r#"class "non_type_template<int N>" as ValueTemplate"#,
+                "non_type_template<int N>",
+                Some("ValueTemplate"),
+            ),
+            (
+                r#"class "template_template<template<typename U> class C>" as ContainerTemplate"#,
+                "template_template<template<typename U> class C>",
+                Some("ContainerTemplate"),
+            ),
+        ] {
+            let file = parse_class_diagram_body(declaration).expect("must parse");
+            let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &file.elements[0]
+            else {
+                panic!("expected a class");
+            };
+
+            assert_eq!(def.declaration.name.internal, expected_internal);
+            assert_eq!(def.declaration.name.alias.as_deref(), expected_alias);
+            match expected_internal {
+                "ordinary_template<T, U>" | "other_template<T, U>" | "unaliased_template<T, U>" => {
+                    assert_eq!(
+                        def.template_parameters.as_deref().unwrap(),
+                        &[
+                            TemplateParameter::Type {
+                                name: "T".to_string(),
+                                is_pack: false,
+                            },
+                            TemplateParameter::Type {
+                                name: "U".to_string(),
+                                is_pack: false,
+                            },
+                        ]
+                    );
+                }
+                "non_type_template<int N>" => assert_eq!(
+                    def.template_parameters.as_deref().unwrap(),
+                    &[TemplateParameter::NonType {
+                        name: "N".to_string(),
+                        value_type: "int".to_string(),
+                        is_pack: false,
+                    }]
+                ),
+                "template_template<template<typename U> class C>" => assert_eq!(
+                    def.template_parameters.as_deref().unwrap(),
+                    &[TemplateParameter::Template {
+                        name: "C".to_string(),
+                        parameters: vec![TemplateParameter::Type {
+                            name: "U".to_string(),
+                            is_pack: false,
+                        }],
+                        is_pack: false,
+                    }]
+                ),
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_template_parameters_from_quoted_class_name_with_pack() {
+        let file = parse_class_diagram_body(r#"class "Proxy<Spec...>" as P"#).expect("must parse");
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+
+        assert_eq!(def.declaration.name.internal, "Proxy<Spec...>");
+        assert_eq!(def.declaration.name.alias.as_deref(), Some("P"));
+        assert_eq!(
+            def.template_parameters.as_deref().unwrap(),
+            &[TemplateParameter::Type {
+                name: "Spec".to_string(),
+                is_pack: true,
+            }]
+        );
+    }
+
+    #[test]
+    fn test_parse_unnamed_template_parameters() {
+        let file = parse_class_diagram_body(
+            r#"class "unnamed_parameters<typename, class, typename..., class..., int, unsigned long...>" as unnamed_parameters"#,
+        )
+        .expect("must parse");
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+
+        assert_eq!(
+            def.template_parameters.as_deref().unwrap(),
+            &[
+                TemplateParameter::Type {
+                    name: String::new(),
+                    is_pack: false,
+                },
+                TemplateParameter::Type {
+                    name: String::new(),
+                    is_pack: false,
+                },
+                TemplateParameter::Type {
+                    name: String::new(),
+                    is_pack: true,
+                },
+                TemplateParameter::Type {
+                    name: String::new(),
+                    is_pack: true,
+                },
+                TemplateParameter::NonType {
+                    name: String::new(),
+                    value_type: "int".to_string(),
+                    is_pack: false,
+                },
+                TemplateParameter::NonType {
+                    name: String::new(),
+                    value_type: "unsigned long".to_string(),
+                    is_pack: true,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_all_class_template_parameter_kinds() {
+        let file = parse_class_diagram_body(
+            "class Box<typename T, int N, unsigned long M, template<typename U> class C, typename... Ts, int... Ns, template<class V> class... Cs>",
+        )
+        .expect("must parse");
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+
+        assert_eq!(
+            def.template_parameters.as_deref().unwrap(),
+            &[
+                TemplateParameter::Type {
+                    name: "T".to_string(),
+                    is_pack: false,
+                },
+                TemplateParameter::NonType {
+                    name: "N".to_string(),
+                    value_type: "int".to_string(),
+                    is_pack: false,
+                },
+                TemplateParameter::NonType {
+                    name: "M".to_string(),
+                    value_type: "unsigned long".to_string(),
+                    is_pack: false,
+                },
+                TemplateParameter::Template {
+                    name: "C".to_string(),
+                    parameters: vec![TemplateParameter::Type {
+                        name: "U".to_string(),
+                        is_pack: false,
+                    }],
+                    is_pack: false,
+                },
+                TemplateParameter::Type {
+                    name: "Ts".to_string(),
+                    is_pack: true,
+                },
+                TemplateParameter::NonType {
+                    name: "Ns".to_string(),
+                    value_type: "int".to_string(),
+                    is_pack: true,
+                },
+                TemplateParameter::Template {
+                    name: "Cs".to_string(),
+                    parameters: vec![TemplateParameter::Type {
+                        name: "V".to_string(),
+                        is_pack: false,
+                    }],
+                    is_pack: true,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_template_template_parameter_syntax() {
+        let parsed = PlantUmlCommonParser::parse(
+            Rule::template_template_param,
+            "template<typename U> class C",
+        );
+        assert!(parsed.is_ok(), "{parsed:?}");
+    }
+
+    #[test]
+    fn test_parse_all_method_template_parameter_kinds() {
+        let result = parse_single_class_member_file(
+            "+Run<typename T, int N, template<typename U> class C>(value: T)",
+        )
+        .expect("must parse");
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &result.elements[0] else {
+            panic!("expected a class");
+        };
+
+        assert_eq!(
+            def.members.methods[0]
+                .template_parameters
+                .as_deref()
+                .unwrap(),
+            &[
+                TemplateParameter::Type {
+                    name: "T".to_string(),
+                    is_pack: false,
+                },
+                TemplateParameter::NonType {
+                    name: "N".to_string(),
+                    value_type: "int".to_string(),
+                    is_pack: false,
+                },
+                TemplateParameter::Template {
+                    name: "C".to_string(),
+                    parameters: vec![TemplateParameter::Type {
+                        name: "U".to_string(),
+                        is_pack: false,
+                    }],
+                    is_pack: false,
+                },
+            ]
         );
     }
 

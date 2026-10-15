@@ -15,6 +15,9 @@
               "file": "",
               "line": 15
             },
+            "template_parameters": [
+              "RoutineControlImplementation"
+            ],
             "type_aliases": [],
             "attributes": [],
             "methods": [],
