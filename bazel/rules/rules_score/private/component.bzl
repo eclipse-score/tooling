@@ -20,6 +20,7 @@ with associated requirements and tests.
 """
 
 load("@lobster//:lobster.bzl", "subrule_lobster_gtest", "subrule_lobster_html_report", "subrule_lobster_report")
+load("@lobster_capabilities//:capabilities.bzl", "SUPPORTS_DERIVE_GWT_FROM_TEST_NAME")
 load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "CertifiedScope", "ComponentInfo", "ComponentRequirementsInfo", "ComponentTestCaseCoverageInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo", "UnitInfo")
 load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_sources")
 
@@ -246,7 +247,15 @@ def _component_impl(ctx):
                 collected_architecture.append(component[ComponentInfo].architecture)
 
     # Convert unit test XML files to a single gtest.lobster file
-    gtest_lobster_file, provider = subrule_lobster_gtest(depset(transitive = collected_unit_test_files).to_list())
+    # Given/When/Then is derived from conventionally named test cases, so that
+    # tests do not have to repeat the information as record properties. Older
+    # lobster versions do not offer the option and keep relying on the record
+    # properties alone.
+    derive_gwt = {"derive_gwt_from_test_name": True} if SUPPORTS_DERIVE_GWT_FROM_TEST_NAME else {}
+    gtest_lobster_file, provider = subrule_lobster_gtest(
+        depset(transitive = collected_unit_test_files).to_list(),
+        **derive_gwt
+    )
 
     # -------------------------------------------------------------------------
     # Architecture Lobster: generate architecture.lobster for this component
