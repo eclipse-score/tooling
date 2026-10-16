@@ -20,7 +20,7 @@ component component_example <<component>> {
 
     interface InternalInterface
     unit_1 -l-( InternalInterface
-    unit_2 -r- InternalInterface
+    unit_2 )-r- InternalInterface
 }
 
 @enduml

@@ -14,7 +14,7 @@
 //! Class implementation validation: compare unit design class diagrams with
 //! C++ implementation produced by the C++ parser.
 
-use super::shared::best_string_suggestion;
+use super::shared::{best_string_suggestion, format_source_file, format_source_line};
 use crate::models::ClassEntityIndex;
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::ValidationResult;
@@ -22,7 +22,6 @@ use class_diagram::{
     EnumLiteral, FreeFunctionDecl, MemberVariable, Method, Relationship, SimpleEntity,
     TemplateParameter, TypeAlias,
 };
-use source_location::SourceLocation;
 use std::collections::BTreeMap;
 
 /// Run design-class-vs-implementation-class validation using indexed inputs.
@@ -574,9 +573,12 @@ impl ClassDesignImplementationValidator {
             .field("class", format!("\"{}\"", entity.id))
             .field(
                 "design source file",
-                format!("\"{}\"", source_file(&entity.source_location)),
+                format!("\"{}\"", format_source_file(&entity.source_location)),
             )
-            .field("design source line", source_line(&entity.source_location))
+            .field(
+                "design source line",
+                format_source_line(&entity.source_location),
+            )
             .fix(format!(
                 "add implementation class \"{}\" in the C++ class implementation, or remove it from the unit design",
                 entity.id
@@ -603,9 +605,12 @@ impl ClassDesignImplementationValidator {
             .field("free function", format!("\"{function_name}\""))
             .field(
                 "design source file",
-                format!("\"{}\"", source_file(&function.source_location)),
+                format!("\"{}\"", format_source_file(&function.source_location)),
             )
-            .field("design source line", source_line(&function.source_location))
+            .field(
+                "design source line",
+                format_source_line(&function.source_location),
+            )
             .fix(format!(
                 "add free function \"{function_name}\" to the C++ implementation, or remove it from the unit design"
             ));
@@ -636,23 +641,23 @@ impl ClassDesignImplementationValidator {
             .field("design value", design_value)
             .field(
                 "design source file",
-                format!("\"{}\"", source_file(&design_function.source_location)),
+                format!("\"{}\"", format_source_file(&design_function.source_location)),
             )
             .field(
                 "design source line",
-                source_line(&design_function.source_location),
+                format_source_line(&design_function.source_location),
             )
             .field("implementation value", implementation_value)
             .field(
                 "implementation source file",
                 format!(
                     "\"{}\"",
-                    source_file(&implementation_function.source_location)
+                    format_source_file(&implementation_function.source_location)
                 ),
             )
             .field(
                 "implementation source line",
-                source_line(&implementation_function.source_location),
+                format_source_line(&implementation_function.source_location),
             )
             .fix(format!(
                 "make {field} on free function \"{function_name}\" consistent between the unit design and the C++ implementation"
@@ -675,9 +680,12 @@ impl ClassDesignImplementationValidator {
             .field("member", format!("{member_type} \"{member_name}\""))
             .field(
                 "design source file",
-                format!("\"{}\"", source_file(&design_entity.source_location)),
+                format!("\"{}\"", format_source_file(&design_entity.source_location)),
             )
-            .field("design source line", source_line(&design_entity.source_location))
+            .field(
+                "design source line",
+                format_source_line(&design_entity.source_location),
+            )
             .fix(format!(
                 "add {member_type} \"{member_name}\" to entity \"{}\" in the C++ class implementation, or remove it from the unit design",
                 design_entity.id
@@ -712,17 +720,23 @@ impl ClassDesignImplementationValidator {
             .field("design value", design_value)
             .field(
                 "design source file",
-                format!("\"{}\"", source_file(&design_entity.source_location)),
+                format!("\"{}\"", format_source_file(&design_entity.source_location)),
             )
-            .field("design source line", source_line(&design_entity.source_location))
+            .field(
+                "design source line",
+                format_source_line(&design_entity.source_location),
+            )
             .field("implementation value", implementation_value)
             .field(
                 "implementation source file",
-                format!("\"{}\"", source_file(&implementation_entity.source_location)),
+                format!(
+                    "\"{}\"",
+                    format_source_file(&implementation_entity.source_location)
+                ),
             )
             .field(
                 "implementation source line",
-                source_line(&implementation_entity.source_location),
+                format_source_line(&implementation_entity.source_location),
             )
             .fix(format!(
                 "make {field_reference} in entity \"{}\" consistent between the unit design and the C++ class implementation",
@@ -736,26 +750,6 @@ fn format_field_reference(field: &str, style: FieldReferenceStyle) -> String {
     match style {
         FieldReferenceStyle::Quoted => format!("\"{field}\""),
         FieldReferenceStyle::Verbatim => field.to_string(),
-    }
-}
-
-fn source_file(source_location: &SourceLocation) -> String {
-    let (file, _) = source_location.display();
-
-    if file.is_empty() {
-        "<unknown>".to_string()
-    } else {
-        file
-    }
-}
-
-fn source_line(source_location: &SourceLocation) -> String {
-    let (_, line) = source_location.display();
-
-    if line == 0 {
-        "<unknown>".to_string()
-    } else {
-        line.to_string()
     }
 }
 

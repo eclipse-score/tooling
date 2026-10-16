@@ -13,11 +13,19 @@
 
 @startuml unit_1_class_diagram
 
-namespace unit_1 {
-    class Foo {
+namespace safety_software_seooc_example {
+    namespace component_example {
+        interface InternalInterface <<interface>> {
+            {abstract} GetData(BindingType binding) : safety_software_seooc_example::component_example::Data*
+        }
 
-        + GetNumber() : uint8_t
-        + SetNumber(value : uint8_t) : void
+        namespace unit_1 {
+            class Foo {
+
+                + GetNumber() : uint8_t
+                + SetNumber(value : uint8_t) : void
+            }
+        }
     }
 }
 

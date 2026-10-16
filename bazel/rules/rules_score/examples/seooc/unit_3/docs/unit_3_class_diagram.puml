@@ -13,9 +13,15 @@
 
 @startuml unit_3_class_diagram
 
-namespace unit_3 {
-    class Formatter <<final>> {
-        + Format(foo : const unit_1::Foo &) : std::string
+namespace safety_software_seooc_example {
+    namespace component_example {
+        namespace sub_component_example {
+            namespace unit_3 {
+                class Formatter <<final>> {
+                    + Format(foo : const safety_software_seooc_example::component_example::unit_1::Foo &) : std::string
+                }
+            }
+        }
     }
 }
 
