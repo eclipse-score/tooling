@@ -17,7 +17,7 @@ import logging
 import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 _LEVEL_MAP = {
     "error": logging.ERROR,
@@ -88,6 +88,8 @@ _RE_MARKUP = re.compile(r"\*\*?(.*?)\*\*?")
 _RE_QUALIFIED_ROOT_CAUSE = re.compile(r"^[A-Za-z_]\w*\.[A-Za-z_]\w*$")
 _RE_DIRECTIVE = re.compile(r"^\.\.\s+([\w]+)::\s*(.*)")
 _RE_FIELD = re.compile(r"^\s+:([\w]+):\s*(.*)")  # noqa: E501
+_RE_REF = re.compile(r"(?P<id>[A-Za-z_]\w*)\s*(?P<filter>\[.*\])?")
+_RE_FILTER_VERSION = re.compile(r"\bversion\s*==\s*(\d+)")
 
 _TRLC_HEADER = """\
 /********************************************************************************
@@ -140,9 +142,47 @@ def _escape(text: str) -> str:
     return text.replace("\\", "\\\\").replace('"', '\\"')
 
 
-def _collect_refs(fields: dict[str, str]) -> list[str]:
-    """Extract all cross-reference IDs from relationship fields."""
-    return [r.strip() for k in _REF_FIELDS if k in fields for r in fields[k].split(",") if r.strip()]
+def _split_top_level(value: str, sep: str = ",") -> list[str]:
+    """Split on ``sep``, ignoring occurrences nested inside ``[...]`` brackets."""
+    parts: list[str] = []
+    current: list[str] = []
+    depth = 0
+    for ch in value:
+        if ch == "[":
+            depth += 1
+        elif ch == "]":
+            depth = max(depth - 1, 0)
+        if ch == sep and depth == 0:
+            parts.append("".join(current))
+            current = []
+        else:
+            current.append(ch)
+    parts.append("".join(current))
+    return parts
+
+
+class _Ref(NamedTuple):
+    id: str
+    version: str
+
+
+def _parse_ref(name: str, field: str, raw: str) -> _Ref:
+    """Parse ``<id>[<sphinx-needs filter>]``; a ``version==N`` filter pins the version."""
+    m = _RE_REF.fullmatch(raw)
+    if not m:
+        raise ValueError(f"'{name}': invalid reference '{raw}' in ':{field}:'")
+    version = _RE_FILTER_VERSION.search(m.group("filter") or "")
+    return _Ref(m.group("id"), version.group(1) if version else _DEFAULT_VERSION)
+
+
+def _collect_refs(name: str, fields: dict[str, str]) -> list[_Ref]:
+    """Extract the cross-references of record *name* from its relationship fields."""
+    refs: list[_Ref] = []
+    for field in _REF_FIELDS:
+        for raw in _split_top_level(fields.get(field, "")):
+            if raw.strip():
+                refs.append(_parse_ref(name, field, raw.strip()))
+    return refs
 
 
 def _collect_root_causes(fields: dict[str, str]) -> list[str]:
@@ -190,6 +230,11 @@ def parse_directives(content: str) -> list[dict[str, Any]]:
         directive, title = m.group(1), m.group(2).strip()
         i += 1
 
+        # docutils lets the directive argument wrap onto indented lines before the fields.
+        while i < len(lines) and lines[i].strip() and lines[i][0].isspace() and not _RE_FIELD.match(lines[i]):
+            title += " " + lines[i].strip()
+            i += 1
+
         fields, i = _collect_fields(lines, i)
         raw_body, i = _collect_body(lines, i)
         body = _RE_MARKUP.sub(r"\1", raw_body).strip()
@@ -200,9 +245,9 @@ def parse_directives(content: str) -> list[dict[str, Any]]:
 
 def render_trlc(directives: list[dict[str, Any]], package: str, ref_package: str) -> str:
     """Render parsed directives into TRLC file content."""
-    has_refs = any(_collect_refs(item["fields"]) for item in directives)
+    refs_by_record = [_collect_refs(_record_name(item), item["fields"]) for item in directives]
     imports = list(_IMPORTS)
-    if has_refs and ref_package and ref_package != _DEFAULT_REF_PACKAGE and ref_package not in imports:
+    if any(refs_by_record) and ref_package and ref_package != _DEFAULT_REF_PACKAGE and ref_package not in imports:
         imports.append(ref_package)
     root_causes_by_record = [_root_causes_of(item) for item in directives]
     for root_causes in root_causes_by_record:
@@ -213,7 +258,7 @@ def render_trlc(directives: list[dict[str, Any]], package: str, ref_package: str
     import_lines = [f"import {name}" for name in imports]
     lines_out = [_TRLC_HEADER, f"package {package}", "", *import_lines, ""]
 
-    for item, root_causes in zip(directives, root_causes_by_record):
+    for item, root_causes, refs in zip(directives, root_causes_by_record, refs_by_record):
         fields = item["fields"]
         trlc_type = DIRECTIVE_TO_TRLC[item["directive"]]
         name = _record_name(item)
@@ -227,9 +272,8 @@ def render_trlc(directives: list[dict[str, Any]], package: str, ref_package: str
         lines_out.append(f'    description = "{desc}"')
         lines_out.append(f"    safety      = {safety}")
 
-        refs = _collect_refs(fields)
         if refs:
-            ref_list = ", ".join(f"{ref_package}.{r}@1" for r in refs)
+            ref_list = ", ".join(f"{ref_package}.{ref.id}@{ref.version}" for ref in refs)
             lines_out.append(f"    derived_from = [{ref_list}]")
 
         if trlc_type in _SAFETY_MEASURE_TYPES:
@@ -268,7 +312,7 @@ def convert(
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="RST to TRLC converter")
     p.add_argument("input_file", type=Path)
-    p.add_argument("--output-dir", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True)
     p.add_argument("--package", default=None)
     p.add_argument("--ref-package", default=None)
     p.add_argument(
@@ -282,9 +326,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s")
     if not args.input_file.exists():
         sys.exit(f"ERROR: file not found: {args.input_file}")
-    output_file = args.output_dir / (args.input_file.stem + ".trlc")
     try:
-        record_count = convert(args.input_file, output_file, package=args.package, ref_package=args.ref_package)
+        record_count = convert(args.input_file, args.output, package=args.package, ref_package=args.ref_package)
     except ValueError as e:
         sys.exit(f"ERROR: {args.input_file}: {e}")
-    logging.info("%s -> %s  (%d record(s))", args.input_file, output_file, record_count)
+    logging.info("%s -> %s  (%d record(s))", args.input_file, args.output, record_count)

@@ -11,14 +11,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 """
-Tests for RST-based requirement macros:
-  - assumed_system_requirements(srcs=[".rst"])
-  - feature_requirements(srcs=[".rst"])
-  - component_requirements(srcs=[".rst"])
-  - assumptions_of_use(srcs=[".rst"])
+Tests for requirement macros fed with rst_to_trlc output:
+  - assumed_system_requirements(srcs=[":<rst_to_trlc target>"])
+  - feature_requirements(srcs=[":<rst_to_trlc target>"])
+  - component_requirements(srcs=[":<rst_to_trlc target>"])
+  - assumptions_of_use(srcs=[":<rst_to_trlc target>"])
 
 Each test verifies that the macro correctly exposes its provider when the
-input is an RST file rather than a pre-built trlc_requirements label.
+input is converted from an RST file rather than a pre-built trlc_requirements label.
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")

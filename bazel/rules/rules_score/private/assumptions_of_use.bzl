@@ -19,10 +19,10 @@ S-CORE process guidelines. Assumptions of Use define the safety-relevant
 operating conditions and constraints for a Safety Element out of Context (SEooC).
 
 Implemented as the "aou" kind of the shared score_requirements_rule (see
-requirements.bzl), so raw .trlc files, .rst files, and existing
-TrlcProviderInfo-emitting targets (e.g. trlc_requirements) may all be passed
-as srcs, matching the conventions of feature_requirements,
-component_requirements, and assumed_system_requirements.
+requirements.bzl), so raw .trlc files, targets generating them (e.g.
+rst_to_trlc), and existing TrlcProviderInfo-emitting targets (e.g.
+trlc_requirements) may all be passed as srcs, matching the conventions of
+feature_requirements, component_requirements, and assumed_system_requirements.
 
 Traceability to feature/assumed-system requirements is established at the
 dependable_element level (via its own `requirements` attribute), not here.
@@ -41,7 +41,6 @@ def assumptions_of_use(
         name,
         srcs,
         deps = [],
-        ref_package = None,
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:aou_config"),
         **kwargs):
     """Define Assumptions of Use following S-CORE process guidelines.
@@ -54,17 +53,14 @@ def assumptions_of_use(
     Args:
         name: The name of the assumptions of use target. Used as the base
             name for all generated targets.
-        srcs: List of TRLC/RST/label sources defining the Assumptions of Use.
-            Accepts raw ``.trlc`` files, ``.rst`` files containing ``aou_req``
-            directives (converted to TRLC automatically), and/or labels to
+        srcs: List of TRLC/label sources defining the Assumptions of Use.
+            Accepts raw ``.trlc`` files, targets generating them (e.g.
+            ``rst_to_trlc`` over ``aou_req`` directives), and/or labels to
             existing targets that already provide TrlcProviderInfo (e.g.
-            ``trlc_requirements`` targets). RST ``aou_req`` directives take
-            the root causes as ``:root_causes: <fta_package>.<RootCause>, ...``.
+            ``trlc_requirements`` targets).
         deps: List of the ``fault_trees`` target(s) providing the root causes
             the AoUs reference, and optionally other requirement targets
             (providing TrlcProviderInfo) needed for cross-reference parsing.
-        ref_package: Optional TRLC package prefix used for ``derived_from``
-            cross-references when converting RST sources.
         lobster_config: Lobster YAML configuration for AoU traceability
             extraction. Defaults to the standard S-CORE AoU config.
         visibility: Bazel visibility specification for the generated targets.
@@ -82,11 +78,17 @@ def assumptions_of_use(
         )
         ```
 
-    Example using RST sources directly:
+    Example using an RST source:
         ```starlark
+        rst_to_trlc(
+            name = "my_assumptions_of_use_trlc",
+            srcs = ["docs/assumptions_of_use.rst"],
+            ref_package = "MyFaultTrees",
+        )
+
         assumptions_of_use(
             name = "my_assumptions_of_use",
-            srcs = ["docs/assumptions_of_use.rst"],
+            srcs = [":my_assumptions_of_use_trlc"],
             deps = [":my_fault_trees"],
         )
         ```
@@ -97,7 +99,6 @@ def assumptions_of_use(
         deps = deps,
         req_kind = "aou",
         lobster_config = lobster_config,
-        ref_package = ref_package or "",
         **kwargs
     )
     trlc_requirements_test(

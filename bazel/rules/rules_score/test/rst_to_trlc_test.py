@@ -337,6 +337,49 @@ class TestParseDirectives(unittest.TestCase):
         self.assertNotIn("**", result[0]["body"])
         self.assertIn("robust", result[0]["body"])
 
+    def test_multi_line_title_is_joined_and_fields_still_parsed(self):
+        """docutils allows a directive's argument to wrap onto continuation
+        lines with no blank-line separator; the real field list must still
+        be found on the lines that follow."""
+        rst = _rst(
+            ".. comp_req:: Logging During the C++ Static Storage",
+            "   construction and destruction.",
+            "   :id: comp_req__test__001",
+            "   :safety: QM",
+            "",
+            "   Body.",
+        )
+        result = parse_directives(rst)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(
+            result[0]["title"],
+            "Logging During the C++ Static Storage construction and destruction.",
+        )
+        self.assertEqual(result[0]["fields"]["id"], "comp_req__test__001")
+
+    def test_single_line_title_unaffected_by_continuation_handling(self):
+        rst = _rst(
+            ".. feat_req:: Single Line Title",
+            "   :id: feat_req__test__001",
+            "   :safety: QM",
+            "",
+            "   Body.",
+        )
+        result = parse_directives(rst)
+        self.assertEqual(result[0]["title"], "Single Line Title")
+
+    def test_unindented_next_directive_not_swallowed_as_continuation(self):
+        rst = _rst(
+            ".. comp_req:: A",
+            ".. comp_req:: B",
+            "   :id: comp_req__test__b",
+        )
+        result = parse_directives(rst)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["title"], "A")
+        self.assertEqual(result[1]["title"], "B")
+        self.assertEqual(result[1]["fields"]["id"], "comp_req__test__b")
+
 
 # ---------------------------------------------------------------------------
 # render_trlc – TRLC output for each S-CORE type
@@ -396,6 +439,16 @@ class TestRenderTrlc(unittest.TestCase):
         items = self._single("feat_req", {"satisfies": "asr_req__test__001"})
         out = render_trlc(items, "FeatPkg", "AsrPkg")
         self.assertIn("import AsrPkg", out)
+
+    def test_feat_req_satisfies_that_is_only_a_filter_is_rejected(self):
+        items = self._single("feat_req", {"satisfies": "[version==1]"})
+        with self.assertRaisesRegex(ValueError, r"feat_req__test__001.*'\[version==1\]'.*:satisfies:"):
+            render_trlc(items, "FeatPkg", "AsrPkg")
+
+    def test_feat_req_version_filter_pins_referenced_version(self):
+        items = self._single("feat_req", {"satisfies": "asr_req__test__001[version==2]"})
+        out = render_trlc(items, "FeatPkg", "AsrPkg")
+        self.assertIn("derived_from = [AsrPkg.asr_req__test__001@2]", out)
 
     # --- CompReq ---
 
@@ -557,30 +610,102 @@ class TestRenderTrlc(unittest.TestCase):
 
 class TestCollectRefs(unittest.TestCase):
     def test_satisfies_is_a_ref_field(self):
-        self.assertEqual(_collect_refs({"satisfies": "asr_req__test__001"}), ["asr_req__test__001"])
+        self.assertEqual(_collect_refs("r", {"satisfies": "asr_req__test__001"}), [("asr_req__test__001", "1")])
 
     def test_derived_from_is_a_ref_field(self):
         self.assertEqual(
-            _collect_refs({"derived_from": "asr_req__test__001"}),
-            ["asr_req__test__001"],
+            _collect_refs("r", {"derived_from": "asr_req__test__001"}),
+            [("asr_req__test__001", "1")],
         )
 
     def test_comma_separated_refs(self):
         self.assertEqual(
-            _collect_refs({"satisfies": "req_001, req_002"}),
-            ["req_001", "req_002"],
+            _collect_refs("r", {"satisfies": "req_001, req_002"}),
+            [("req_001", "1"), ("req_002", "1")],
         )
+
+    def test_empty_and_trailing_comma_entries_are_skipped(self):
+        self.assertEqual(_collect_refs("r", {"satisfies": "req_001,"}), [("req_001", "1")])
+        self.assertEqual(_collect_refs("r", {"satisfies": ""}), [])
 
     def test_fulfils_is_not_a_ref_field(self):
         """fulfils is not part of the S-CORE process and must not produce refs."""
-        self.assertEqual(_collect_refs({"fulfils": "some_req"}), [])
+        self.assertEqual(_collect_refs("r", {"fulfils": "some_req"}), [])
 
     def test_mitigates_is_not_a_ref_field(self):
         """mitigates is not part of the S-CORE process and must not produce refs."""
-        self.assertEqual(_collect_refs({"mitigates": "some_req"}), [])
+        self.assertEqual(_collect_refs("r", {"mitigates": "some_req"}), [])
 
     def test_returns_empty_when_no_ref_fields(self):
-        self.assertEqual(_collect_refs({"safety": "QM", "reqtype": "Functional"}), [])
+        self.assertEqual(_collect_refs("r", {"safety": "QM", "reqtype": "Functional"}), [])
+
+    def test_strips_trailing_needs_filter(self):
+        """sphinx-needs filter suffixes are not valid TRLC reference syntax."""
+        self.assertEqual(
+            _collect_refs("r", {"satisfies": "req_001[status==valid]"}),
+            [("req_001", "1")],
+        )
+
+    def test_whitespace_before_filter_is_ignored(self):
+        self.assertEqual(
+            _collect_refs("r", {"satisfies": "req_001 [version==1]"}),
+            [("req_001", "1")],
+        )
+
+    def test_strips_multiple_trailing_needs_filters(self):
+        self.assertEqual(
+            _collect_refs("r", {"satisfies": "req_001[status==valid][version==3]"}),
+            [("req_001", "3")],
+        )
+
+    def test_version_filter_pins_version(self):
+        self.assertEqual(
+            _collect_refs("r", {"satisfies": "req_001[version==2]"}),
+            [("req_001", "2")],
+        )
+
+    def test_version_filter_with_spaces_pins_version(self):
+        self.assertEqual(
+            _collect_refs("r", {"satisfies": "req_001[version == 12]"}),
+            [("req_001", "12")],
+        )
+
+    def test_filter_without_version_defaults_to_1(self):
+        self.assertEqual(
+            _collect_refs("r", {"satisfies": "req_001[status==valid]"}),
+            [("req_001", "1")],
+        )
+
+    def test_strips_needs_filter_from_each_comma_separated_ref(self):
+        self.assertEqual(
+            _collect_refs("r", {"satisfies": "req_001[version==1], req_002[version==2]"}),
+            [("req_001", "1"), ("req_002", "2")],
+        )
+
+    def test_filter_containing_comma_is_not_split_into_two_refs(self):
+        """Commas inside a filter's ``[...]`` do not separate refs."""
+        self.assertEqual(
+            _collect_refs("r", {"satisfies": "req_001[version==1, status==x]"}),
+            [("req_001", "1")],
+        )
+
+    def test_filter_with_nested_brackets_is_stripped(self):
+        self.assertEqual(
+            _collect_refs("r", {"satisfies": 'req_001[tags in ["a", "b"]]'}),
+            [("req_001", "1")],
+        )
+
+    def test_ref_that_is_only_a_filter_expression_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, r"'my_req'.*'\[version==1\]'.*:satisfies:"):
+            _collect_refs("my_req", {"satisfies": "[version==1]"})
+
+    def test_text_after_filter_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, r"invalid reference 'req_001\[version==1\] trailing'"):
+            _collect_refs("r", {"derived_from": "req_001[version==1] trailing"})
+
+    def test_non_identifier_ref_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, r"invalid reference 'req-001'"):
+            _collect_refs("r", {"satisfies": "req-001"})
 
 
 # ---------------------------------------------------------------------------
