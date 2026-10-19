@@ -36,3 +36,13 @@ toplevel_unit_linked_test = analysistest.make(
     _toplevel_unit_linked_test_impl,
     attrs = {"unit_name": attr.string(mandatory = True)},
 )
+
+def _toplevel_unit_scope_fails_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    asserts.expect_failure(env, "bare_scope_unit depends on")
+    return analysistest.end(env)
+
+toplevel_unit_scope_fails_test = analysistest.make(
+    _toplevel_unit_scope_fails_test_impl,
+    expect_failure = True,
+)

@@ -38,6 +38,11 @@ load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphi
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test", "trlc_specification")
 load(
+    ":certified_scope_test.bzl",
+    "certified_scope_index_test_suite",
+    "certified_scope_matching_test_suite",
+)
+load(
     ":dependable_element_aou_test.bzl",
     "aou_derived_test",
     "aou_merged_test",
@@ -51,6 +56,7 @@ load(
 load(
     ":dependable_element_toplevel_unit_test.bzl",
     "toplevel_unit_linked_test",
+    "toplevel_unit_scope_fails_test",
 )
 load(
     ":dependable_element_unit_staging_test.bzl",
@@ -158,6 +164,7 @@ load(
     "component_sphinx_sources_test",
     "component_test_case_coverage_lock_test",
     "dependable_element_test_case_coverage_lock_check_action_test",
+    "unit_certified_scope_test",
     "unit_component_test_suite",
     "unit_provider_test",
     "unit_sphinx_sources_test",
@@ -1024,6 +1031,35 @@ toplevel_unit_linked_test(
     name = "toplevel_unit_linked_test",
     target_under_test = ":toplevel_unit_example_lib_index",
     unit_name = "leaf_unit",
+)
+
+cc_library(
+    name = "bare_scope_impl",
+    deps = [":mock_lib1"],
+)
+
+unit(
+    name = "bare_scope_unit",
+    tests = [],
+    unit_design = [],
+    implementation = [":bare_scope_impl"],
+)
+
+dependable_element(
+    name = "bare_scope_release",
+    architectural_design = [],
+    components = [":bare_scope_unit"],
+    dependability_analysis = [],
+    integrity_level = "B",
+    maturity = "release",
+    requirements = [],
+    tags = ["manual"],
+    tests = [],
+)
+
+toplevel_unit_scope_fails_test(
+    name = "toplevel_unit_scope_release_test",
+    target_under_test = ":bare_scope_release_index",
 )
 
 # Regression fixture: two units whose designs both ship a "class_diagram.puml"
@@ -2203,6 +2239,34 @@ test_suite(
 # ============================================================================
 
 # Unit tests
+unit(
+    name = "caller_scope_unit",
+    scope = [
+        ":mock_lib1",
+        "//:__pkg__",
+        "//child:__subpackages__",
+        "@score_docs_as_code//x:__pkg__",
+    ],
+    tests = [],
+    unit_design = [],
+    implementation = [":mock_lib2"],
+)
+
+unit_certified_scope_test(
+    name = "unit_caller_scope_test",
+    expected_scopes = [
+        str(package_relative_label(scope_entry))
+        for scope_entry in [
+            ":mock_lib2",
+            ":mock_lib1",
+            "//:__pkg__",
+            "//child:__subpackages__",
+            "@score_docs_as_code//x:__pkg__",
+        ]
+    ],
+    target_under_test = ":caller_scope_unit",
+)
+
 unit_provider_test(
     name = "unit_provider_test",
     target_under_test = ":test_unit",
@@ -2509,6 +2573,13 @@ requirements_multi_spec_test_suite(name = "requirements_multi_spec_tests")
 # lobster_config.bzl unit tests (format_lobster_sources / format_lobster_block)
 # ============================================================================
 lobster_config_test_suite(name = "lobster_config")
+
+# ============================================================================
+# certified_scope.bzl unit tests
+# ============================================================================
+certified_scope_matching_test_suite(name = "certified_scope_matching")
+
+certified_scope_index_test_suite(name = "certified_scope_index")
 
 # ============================================================================
 # puml_utils.bzl unit tests (plan_view_layout)

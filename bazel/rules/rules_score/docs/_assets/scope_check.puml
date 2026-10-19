@@ -31,9 +31,10 @@ package "dependable_element" as de {
 }
 
 note bottom of outofscope
-  Rejected: "Not in certified scope
-  //third_party/foo:__subpackages__,
-  stopping at other"
+  Scope violation:
+  Unit //pkg:MyUnit depends on //other/unrelated:thing,
+  but the dependency is not in any certified scope
+  (package '//other/unrelated' is not covered).
 end note
 
 @enduml

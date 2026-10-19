@@ -84,7 +84,7 @@ UnitInfo = provider(
         "implementation_sequence_fbs": "Depset of FlatBuffers binaries generated from implementation sequence diagrams.",
         "implementation": "Depset of implementation targets (cc_library, rust_library, etc.).",
         "tests": "Depset of test targets (cc_test, rust_test, etc.).",
-        "dependent_labels": "Depset of Labels that this unit's implementation depends on transitively (used for certification scope validation).",
+        "dependent_labels": "Depset containing one struct for this unit with its label and a depset of transitive implementation dependency labels.",
         "validation_log": "Struct with file and name fields describing the UnitValidate (design-vs-implementation) log entry produced by this unit target.",
     },
 )
@@ -178,7 +178,7 @@ ComponentInfo = provider(
         "components": "Depset of nested component and/or unit Targets that comprise this component.",
         "tests": "Depset of test traceability files (.lobster) generated from unit test results, collected transitively from all nested components and units.",
         "architecture": "Depset of architecture traceability files (.lobster) generated from unit architectural designs, collected transitively from all nested components and units.",
-        "dependent_labels": "Depset of Labels that this component's implementation depends on transitively (collected from all nested units and components, used for certification scope validation).",
+        "dependent_labels": "Depset of per-unit structs containing each unit label and its transitive implementation dependency depset, collected from nested units and components for certification scope validation.",
     },
 )
 
