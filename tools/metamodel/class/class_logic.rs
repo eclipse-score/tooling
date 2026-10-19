@@ -49,6 +49,10 @@ pub struct SimpleEntity {
     /// Type of entity (class, struct, interface, enum, etc.)
     pub entity_type: EntityType,
 
+    /// Whether this C++ class entity is a class-template partial specialization.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_partial_specialization: bool,
+
     // aliased type with using keyword also called annotation in plantuml
     pub type_aliases: Vec<TypeAlias>,
     pub variables: Vec<MemberVariable>,
@@ -300,6 +304,7 @@ mod tests {
             enclosing_namespace_id: Some("Core".to_string()),
             stereotypes: Vec::new(),
             entity_type: EntityType::Class,
+            is_partial_specialization: false,
             variables: vec![MemberVariable {
                 name: "name".to_string(),
                 data_type: Some("string".to_string()),

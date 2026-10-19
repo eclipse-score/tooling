@@ -132,6 +132,7 @@ impl ClassSerializer {
                 enum_literals: Some(enum_literals_offset),
                 relationships: Some(entity_relationships_offset),
                 source_location: Some(source_location_offset),
+                is_partial_specialization: entity.is_partial_specialization,
             },
         )
     }

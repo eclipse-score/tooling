@@ -131,11 +131,39 @@ struct ClassParseSession<'a> {
 
 impl ClassParseSession<'_> {
     fn parse_template_parameters(pair: pest::iterators::Pair<Rule>) -> Vec<TemplateParameter> {
-        fn parse_parameter(pair: pest::iterators::Pair<Rule>) -> TemplateParameter {
+        fn parse_parameter(pair: pest::iterators::Pair<Rule>) -> Vec<TemplateParameter> {
             match pair.as_rule() {
                 Rule::template_param => parse_parameter(pair.into_inner().next().unwrap()),
                 Rule::template_template_inner_param => {
                     parse_parameter(pair.into_inner().next().unwrap())
+                }
+                Rule::function_signature_template_param => {
+                    let mut parameters = Vec::new();
+                    let mut inner = pair.into_inner();
+
+                    if let Some(return_type) = inner.next() {
+                        parameters.push(TemplateParameter::Type {
+                            name: return_type.as_str().to_string(),
+                            is_pack: false,
+                        });
+                    }
+
+                    if let Some(arguments) = inner.next() {
+                        for argument in arguments.into_inner() {
+                            let mut name = String::new();
+                            let mut is_pack = false;
+                            for part in argument.into_inner() {
+                                match part.as_rule() {
+                                    Rule::identifier => name = part.as_str().to_string(),
+                                    Rule::varargs => is_pack = true,
+                                    _ => {}
+                                }
+                            }
+                            parameters.push(TemplateParameter::Type { name, is_pack });
+                        }
+                    }
+
+                    parameters
                 }
                 Rule::legacy_type_template_param | Rule::explicit_type_template_param => {
                     let mut name = String::new();
@@ -147,7 +175,7 @@ impl ClassParseSession<'_> {
                             _ => {}
                         }
                     }
-                    TemplateParameter::Type { name, is_pack }
+                    vec![TemplateParameter::Type { name, is_pack }]
                 }
                 Rule::non_type_template_param => {
                     let mut name = String::new();
@@ -163,11 +191,11 @@ impl ClassParseSession<'_> {
                             _ => {}
                         }
                     }
-                    TemplateParameter::NonType {
+                    vec![TemplateParameter::NonType {
                         name,
                         value_type,
                         is_pack,
-                    }
+                    }]
                 }
                 Rule::template_template_param => {
                     let mut name = String::new();
@@ -181,18 +209,18 @@ impl ClassParseSession<'_> {
                             | Rule::template_template_param
                             | Rule::non_type_template_param
                             | Rule::legacy_type_template_param => {
-                                parameters.push(parse_parameter(inner));
+                                parameters.extend(parse_parameter(inner));
                             }
                             Rule::identifier => name = inner.as_str().to_string(),
                             Rule::varargs => is_pack = true,
                             _ => {}
                         }
                     }
-                    TemplateParameter::Template {
+                    vec![TemplateParameter::Template {
                         name,
                         parameters,
                         is_pack,
-                    }
+                    }]
                 }
                 rule => unreachable!("unexpected template parameter rule: {rule:?}"),
             }
@@ -200,7 +228,7 @@ impl ClassParseSession<'_> {
 
         pair.into_inner()
             .filter(|inner| inner.as_rule() == Rule::template_param)
-            .map(parse_parameter)
+            .flat_map(parse_parameter)
             .collect()
     }
 
@@ -1564,6 +1592,39 @@ mod tests {
                 _ => unreachable!(),
             }
         }
+    }
+
+    #[test]
+    fn test_parse_function_signature_template_parameters_from_quoted_class_name() {
+        let file = parse_class_diagram_body(
+            r#"class "move_only_function<ReturnType(ArgTypes...), Capacity, Alignment>" as move_only_function"#,
+        )
+        .expect("must parse");
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+
+        assert_eq!(
+            def.template_parameters.as_deref().unwrap(),
+            &[
+                TemplateParameter::Type {
+                    name: "ReturnType".to_string(),
+                    is_pack: false,
+                },
+                TemplateParameter::Type {
+                    name: "ArgTypes".to_string(),
+                    is_pack: true,
+                },
+                TemplateParameter::Type {
+                    name: "Capacity".to_string(),
+                    is_pack: false,
+                },
+                TemplateParameter::Type {
+                    name: "Alignment".to_string(),
+                    is_pack: false,
+                },
+            ]
+        );
     }
 
     #[test]

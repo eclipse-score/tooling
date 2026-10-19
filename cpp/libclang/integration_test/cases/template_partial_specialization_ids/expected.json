@@ -6,6 +6,7 @@
       "entity_type": "Class",
       "enum_literals": [],
       "id": "demo::Endpoint<ReturnType (ArgTypes...)>",
+      "is_partial_specialization": true,
       "methods": [
         {
           "modifiers": [],
@@ -67,6 +68,7 @@
       "entity_type": "Class",
       "enum_literals": [],
       "id": "demo::Endpoint<void (ArgTypes...)>",
+      "is_partial_specialization": true,
       "methods": [
         {
           "modifiers": [],

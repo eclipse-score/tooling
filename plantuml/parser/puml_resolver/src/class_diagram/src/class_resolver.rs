@@ -786,6 +786,7 @@ impl ClassResolver {
             enclosing_namespace_id: self.enclosing_namespace_id(&declared),
             stereotypes: stereotypes.clone(),
             entity_type,
+            is_partial_specialization: false,
             type_aliases: type_aliases.iter().map(Self::convert_type_alias).collect(),
             variables: attributes.iter().map(Self::convert_variable).collect(),
             methods: methods
@@ -1031,6 +1032,7 @@ impl ClassResolver {
             enclosing_namespace_id: self.enclosing_namespace_id(&declared),
             stereotypes: def.declaration.stereotypes.clone(),
             entity_type: EntityType::Enum,
+            is_partial_specialization: false,
             type_aliases: vec![],
             variables: vec![],
             methods: vec![],
