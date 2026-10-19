@@ -12,7 +12,7 @@
 ' *******************************************************************************
 @startuml "Invalid Unresolved Reference"
 
-component "Component A" as ComponentA <<component>>
+component ComponentA <<component>>
 ComponentA --> MissingComponent : uses
 
 @enduml

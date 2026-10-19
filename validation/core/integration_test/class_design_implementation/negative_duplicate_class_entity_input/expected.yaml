@@ -12,10 +12,10 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  [Class] Class "Engine" is defined more than once in the class diagram.
+  [Class] Class "Engine" is defined more than once in the class design.
     Class                 : "Engine"
     Design source file    : "validation/core/integration_test/class_design_implementation/negative_duplicate_class_entity_input/class_diagram_part1.puml"
     Design source line    : 18
     Duplicate source file : "validation/core/integration_test/class_design_implementation/negative_duplicate_class_entity_input/class_diagram_part2.puml"
     Duplicate source line : 18
-    Fix                   : Remove or rename one of the duplicate class "Engine" declarations in the class diagram.
+    Fix                   : Remove or rename one of the duplicate class "Engine" declarations in the class design.

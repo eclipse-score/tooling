@@ -22,9 +22,9 @@ rust_library(
         "//tools/metamodel/class:class_diagram",
         "//tools/metamodel/component:component_diagram",
         "//tools/metamodel/sequence:sequence_diagram",
-        "@crates//:log",
-        "@crates//:serde",
-        "@crates//:serde_json",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
     ],
 )
 

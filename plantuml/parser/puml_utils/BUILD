@@ -22,9 +22,9 @@ rust_library(
     ],
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
-        "@crates//:log",
-        "@crates//:serde",
-        "@crates//:serde_json",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
     ],
 )
 

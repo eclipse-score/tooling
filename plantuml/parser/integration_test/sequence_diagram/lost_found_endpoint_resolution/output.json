@@ -5,6 +5,7 @@
       {
         "display_name": "Service",
         "alias": null,
+        "uid": "Service",
         "participant_type": "Participant",
         "source_location": {
           "file": "",

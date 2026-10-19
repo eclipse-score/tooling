@@ -13,15 +13,18 @@
 package OtherLibrary
 
 import ScoreReq
+import other_library_fta
 
 ScoreReq.AoU TimingConstraint {
     description = "The caller shall ensure that invocations do not exceed 10ms cycle time"
     safety = ScoreReq.Asil.B
     version = 1
+    root_causes = [other_library_fta.CycleTimeExceeded]
 }
 
 ScoreReq.AoU SpaceConstraint {
     description = "The caller shall ensure that invocations do not exceed 10 MB"
     safety = ScoreReq.Asil.B
     version = 1
+    root_causes = [other_library_fta.MemoryBudgetExceeded]
 }

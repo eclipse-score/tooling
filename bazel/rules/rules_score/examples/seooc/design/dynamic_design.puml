@@ -13,10 +13,11 @@
 
 @startuml
 
-participant "Unit 1" as unit_1 <<unit>>
-participant "Unit 2" as unit_2 <<unit>>
+' Scenario only: the participants are declared in dynamic_cast.puml. `activate`
+' makes the file a sequence diagram (a message-only file is a component diagram).
 
 unit_1 -> unit_2 : GetData()
+activate unit_2
 return Data*
 
 @enduml

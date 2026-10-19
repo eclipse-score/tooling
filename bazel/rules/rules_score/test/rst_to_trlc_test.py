@@ -91,6 +91,7 @@ class TestAllowedRstAttrs(unittest.TestCase):
             "safety",
             "satisfies",
             "derived_from",
+            "root_causes",
             "rationale",
             "version",
         ):
@@ -415,12 +416,48 @@ class TestRenderTrlc(unittest.TestCase):
     # --- AoU ---
 
     def test_aou_req_produces_aou_type(self):
-        out = render_trlc(self._single("aou_req"), "Pkg", "")
+        out = render_trlc(self._single("aou_req", {"root_causes": "FtaPkg.RcA"}), "Pkg", "")
         self.assertIn("ScoreReq.AoU", out)
 
     def test_aou_req_no_rationale(self):
-        out = render_trlc(self._single("aou_req"), "Pkg", "")
+        out = render_trlc(self._single("aou_req", {"root_causes": "FtaPkg.RcA"}), "Pkg", "")
         self.assertNotIn("rationale", out)
+
+    def test_aou_req_root_causes_rendered_and_package_imported(self):
+        items = self._single(
+            "aou_req",
+            {"root_causes": "FtaPkg.RcA, OtherFta.RcB"},
+        )
+        out = render_trlc(items, "Pkg", "")
+        self.assertIn("root_causes = [FtaPkg.RcA, OtherFta.RcB]", out)
+        self.assertIn("import FtaPkg", out)
+        self.assertIn("import OtherFta", out)
+
+    def test_aou_req_without_root_causes_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, r"aou_req__test__001.*:root_causes:"):
+            render_trlc(self._single("aou_req"), "Pkg", "")
+
+    def test_aou_req_unqualified_root_cause_is_rejected(self):
+        items = self._single("aou_req", {"root_causes": "FtaPkg.RcA, RcB"})
+        with self.assertRaisesRegex(ValueError, r"'RcB'.*<fta_package>\.<RootCause>"):
+            render_trlc(items, "Pkg", "")
+
+    def test_aou_req_malformed_root_cause_is_rejected(self):
+        items = self._single("aou_req", {"root_causes": "A.B.C"})
+        with self.assertRaises(ValueError):
+            render_trlc(items, "Pkg", "")
+
+    def test_root_causes_on_non_aou_is_rejected(self):
+        items = self._single("comp_req", {"root_causes": "FtaPkg.RcA"})
+        with self.assertRaisesRegex(ValueError, r"comp_req__test__001.*only supported on 'aou_req'"):
+            render_trlc(items, "Pkg", "")
+
+    def test_aou_req_root_cause_in_output_package_is_not_imported(self):
+        items = self._single("aou_req", {"root_causes": "Pkg.RcA, FtaPkg.RcB"})
+        out = render_trlc(items, "Pkg", "")
+        self.assertNotIn("import Pkg", out)
+        self.assertIn("import FtaPkg", out)
+        self.assertIn("root_causes = [Pkg.RcA, FtaPkg.RcB]", out)
 
     # --- Ignored Sphinx-only attributes ---
 
@@ -687,12 +724,24 @@ class TestConvert(unittest.TestCase):
             ".. aou_req:: Operating Conditions\n"
             "   :id: aou_req__test__001\n"
             "   :safety: ASIL_B\n"
+            "   :root_causes: FtaPkg.RcA\n"
             "\n"
             "   The SEooC shall operate within defined conditions.\n"
         )
         out = self._convert(rst)
         self.assertIn("ScoreReq.AoU", out)
+        self.assertIn("root_causes = [FtaPkg.RcA]", out)
         self.assertNotIn("rationale", out)
+
+    def test_aou_req_without_root_causes_fails_and_writes_nothing(self):
+        rst = ".. aou_req:: No Cause\n   :id: aou_req__test__002\n   :safety: QM\n\n   Body.\n"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src = Path(tmpdir) / "aous.rst"
+            src.write_text(rst, encoding="utf-8")
+            out = Path(tmpdir) / "aous.trlc"
+            with self.assertRaises(ValueError):
+                convert(src, out)
+            self.assertFalse(out.exists())
 
     def test_package_name_derived_from_file_stem(self):
         rst = ".. assumed_system_req:: Pkg Test\n   :id: asr_req__test__001\n   :safety: QM\n\n   Body.\n"

@@ -32,6 +32,7 @@ pub struct Port {
     pub port_type: PortType,
     pub name: String,
     pub alias: Option<String>,
+    pub source_location: SourceLocation,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]

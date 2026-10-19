@@ -55,7 +55,7 @@ section "Tool Requirements" {
             ToolQualification.ToolRequirement BazelComponentNameCaseInsensitive {
                 description = '''The validator shall match element names
                 between Bazel and PlantUML case-insensitively, using the
-                PlantUML alias when present, otherwise the PlantUML id, and
+                PlantUML name (the last segment of the entity id), and
                 the Bazel target name on the Bazel side.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
@@ -105,16 +105,26 @@ section "Tool Requirements" {
                 satisfied_by = Verifier
             }
 
+            ToolQualification.ToolRequirement ComponentModelAnchoring {
+                description = '''The validator shall report an error when a
+                `<<component>>` or `<<unit>>` is not nested directly under a
+                `<<SEooC>>` or a `<<component>>`, naming its source location
+                and any other declaration of the same name.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
         }
 
         section "Component Sequence Validator" {
 
-            ToolQualification.ToolRequirement ComponentSequenceAliasConsistency {
+            ToolQualification.ToolRequirement ComponentSequenceIdentifierConsistency {
                 description = '''The validator shall report an error when a
-                unit alias defined in the component diagram does not appear
-                among the participants in any sequence diagram, or when a
-                participant alias in a sequence diagram does not match any
-                unit alias in the component diagram.'''
+                unit defined in the component diagram is not referenced by
+                any participant in the sequence diagrams, when a participant
+                uid in a sequence diagram does not match any unit id in the
+                component diagram, or when a participant uid matches multiple
+                unit ids ambiguously.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
@@ -167,6 +177,15 @@ section "Tool Requirements" {
                 satisfied_by = Verifier
             }
 
+            ToolQualification.ToolRequirement InternalApiInterfaceMerge {
+                description = '''When an interface is declared in more than
+                one internal API file, the validator shall treat it as one
+                interface holding the union of the methods declared in all
+                of its declarations.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
         }
 
         section "Component Internal API Validator" {
@@ -212,6 +231,17 @@ section "Tool Requirements" {
                 type. Consistency of type aliases, variables, methods, enum
                 literals, relationships, and template parameters is specified
                 by the dedicated requirements below.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ClassDesignImplementationDeclarationMerge {
+                description = '''When the same class id is declared more than
+                once across the unit design class diagrams, the validator
+                shall merge the declarations and unite their relationships if
+                at most one of them has a body, and shall report an error when
+                two declarations have a body or when their entity type or
+                stereotype differs.'''
                 derived_from = [UseCases.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
@@ -271,6 +301,16 @@ section "Tool Requirements" {
                 the matching implementation entity, or when the matching
                 implementation relationship differs in source, target, or
                 relationship type.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement ClassDesignImplementationFreeFunctionConsistency {
+                description = '''The validator shall report an error when a
+                free function modeled in the unit design is missing from the
+                implementation, or when the matching implementation free
+                function differs in return type, parameters, or template
+                parameters.'''
                 derived_from = [UseCases.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }

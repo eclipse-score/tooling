@@ -36,9 +36,8 @@ pub struct SimpleEntity {
     // class Circle <<entity>> {
     // "id": "core.geometry.Circle",
     pub id: String,
-    /// Display name (may differ from id when alias is used)
-    /// just variable name in c++ and alias in plantuml (if alias does not exist label name is the
-    /// fallback)
+    /// Alias if present, else the declared name; the spelling is kept (`.`/`::`)
+    /// without a leading root marker, so rooted and relative declarations agree.
     pub name: String,
 
     /// FQN of parent namespace/package

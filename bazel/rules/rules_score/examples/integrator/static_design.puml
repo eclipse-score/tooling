@@ -13,9 +13,9 @@
 
 @startuml
 
-package "Integrator SEooC" as integrator_seooc <<SEooC>> {
-    component "IntegratorComponent" as integrator_component <<component>> {
-        component "IntegratorUnit" as integrator_unit <<unit>>
+package integrator_seooc <<SEooC>> {
+    component integrator_component <<component>> {
+        component integrator_unit <<unit>>
     }
 }
 

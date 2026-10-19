@@ -12,10 +12,10 @@
 ' *******************************************************************************
 @startuml "Relation with Reverse Simple Name"
 
-package "Sample SEooC" as SampleSEooC #LightBlue {
-    component "Component A" as ComponentA <<component>> {
+package SampleSEooC #LightBlue {
+    component ComponentA <<component>> {
     }
-    component "Component B" as ComponentB <<component>> {
+    component ComponentB <<component>> {
     }
 
     ComponentB <-- ComponentA

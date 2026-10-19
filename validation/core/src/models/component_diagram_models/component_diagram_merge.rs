@@ -42,14 +42,11 @@ pub(super) fn merge_relations(existing: &mut LogicComponent, incoming: &LogicCom
 /// Returns the first field on which two same-id declarations disagree, or
 /// `None` if they may be merged.
 ///
-/// `alias`/`parent` aren't compared: the same `id` already implies both match.
+/// `name`/`alias`/`parent` aren't compared: the same `id` already implies both match.
 pub(super) fn conflicting_declaration_field(
     prev: &LogicComponent,
     entity: &LogicComponent,
 ) -> Option<&'static str> {
-    if prev.name != entity.name {
-        return Some("display name");
-    }
     if prev.stereotype != entity.stereotype {
         return Some("stereotype");
     }
@@ -67,21 +64,21 @@ pub(super) fn format_conflicting_declaration_error(
     // Order by source location so the message is stable regardless of file order.
     let (first, second) = ordered_declarations(prev, entity);
     let kind = entity_kind_name(first);
-    let alias = first.match_key();
+    let name = first.match_key();
     let (source_file, source_line) = first.source_location.display();
     let (conflicting_file, conflicting_line) = second.source_location.display();
     ErrorBuilder::new(ErrorCategory::Design)
         .title(format!(
-            "{kind} \"{alias}\" is re-declared with a conflicting {field} in another component diagram file"
+            "{kind} \"{name}\" is re-declared with a conflicting {field} in another component diagram file"
         ))
-        .field(kind, format!("\"{alias}\""))
+        .field(kind, format!("\"{name}\""))
         .field("conflicting field", field)
         .field("component source file", format!("\"{source_file}\""))
         .field("component source line", source_line.to_string())
         .field("conflicting source file", format!("\"{conflicting_file}\""))
         .field("conflicting source line", conflicting_line.to_string())
         .fix(format!(
-            "make every declaration of \"{alias}\" across all static diagrams agree on {field}, or rename one of the conflicting entities"
+            "make every declaration of \"{name}\" across all static diagrams agree on {field}, or rename one of the conflicting entities"
         ))
         .build()
 }
@@ -132,7 +129,7 @@ pub(super) fn check_single_home_decomposition(
             continue;
         }
 
-        let parent_alias = entities
+        let parent_name = entities
             .iter()
             .find(|entity| entity.id.to_lowercase() == *parent_key)
             .map(LogicComponentExt::match_key)
@@ -141,9 +138,9 @@ pub(super) fn check_single_home_decomposition(
         // Report per file so a benign subset re-declaration isn't shown as a duplicate.
         let mut error = ErrorBuilder::new(ErrorCategory::Design)
             .title(format!(
-                "entity \"{parent_alias}\" has children declared across more than one component diagram file, with no single file containing all of them"
+                "entity \"{parent_name}\" has children declared across more than one component diagram file, with no single file containing all of them"
             ))
-            .field("entity", format!("\"{parent_alias}\""));
+            .field("entity", format!("\"{parent_name}\""));
         for (file, children) in by_file {
             let children_display = children
                 .values()
@@ -155,7 +152,7 @@ pub(super) fn check_single_home_decomposition(
         result.add_failure(
             error
                 .fix(format!(
-                    "declare the full decomposition of \"{parent_alias}\" in a single file; other files may re-declare \"{parent_alias}\" with a subset of its already-declared children (or none), but must not add children missing from every other file"
+                    "declare the full decomposition of \"{parent_name}\" in a single file; other files may re-declare \"{parent_name}\" with a subset of its already-declared children (or none), but must not add children missing from every other file"
                 ))
                 .build(),
         );
@@ -375,46 +372,6 @@ mod tests {
                 .iter()
                 .any(|message| message.contains("is re-declared with a conflicting stereotype")),
             "Expected conflicting stereotype error, got: {:?}",
-            result.failures
-        );
-    }
-
-    #[test]
-    fn reports_conflicting_display_name() {
-        let mut first = entity_in_file(
-            "comp_a",
-            Some("comp_a"),
-            None,
-            ComponentType::Component,
-            Some("component"),
-            Vec::new(),
-            "detail.puml",
-        );
-        first.name = Some("Component A".to_string());
-        let mut second = entity_in_file(
-            "comp_a",
-            Some("comp_a"),
-            None,
-            ComponentType::Component,
-            Some("component"),
-            Vec::new(),
-            "overview.puml",
-        );
-        second.name = Some("Component A (renamed)".to_string());
-
-        let inputs = ComponentDiagramInputs {
-            entities: vec![first, second],
-        };
-
-        let mut result = ValidationResult::default();
-        let _architecture = inputs.to_diagram_architecture(&mut result);
-
-        assert!(
-            result
-                .failures
-                .iter()
-                .any(|message| message.contains("is re-declared with a conflicting display name")),
-            "Expected conflicting display name error, got: {:?}",
             result.failures
         );
     }

@@ -59,7 +59,7 @@ with a traceability report.
 | Architectural Design | `architectural_design` | score-architecture |
 | Units & Components | `unit`, `unit_design`, `component` | score-architecture |
 | Tests & Coverage | `tests` attr, `test_case_coverage_lock` | score-testing |
-| Dependability Analysis | `safety_analysis`, `dependability_analysis` | score-safety-analysis |
+| Dependability Analysis | `failure_modes`, `fault_trees`, `safety_analysis`, `dependability_analysis` | score-safety-analysis |
 | SEooC assembly | `dependable_element` | this skill |
 
 ### Hierarchy
@@ -151,7 +151,6 @@ component(
 dependable_element(
     name = "my_element",
     architectural_design = [":my_arch"],
-    assumptions_of_use = [],
     components = [":MyComponent"],
     dependability_analysis = [],
     integrity_level = "B",
@@ -160,8 +159,8 @@ dependable_element(
 )
 ```
 
-Note how the diagram alias must equal the target name — `docs/static_design.puml` declares
-`package "my_element" ... { component "MyComponent" { component "MyUnit" } }`, matching
+Note how the diagram name must equal the target name — `docs/static_design.puml` declares
+`package my_element ... { component MyComponent { component MyUnit } }`, matching
 `dependable_element(name = "my_element")`, `component(name = "MyComponent")`, and
 `unit(name = "MyUnit")`. This is enforced by the `bazel_component` validator (see
 **score-architecture**).
@@ -182,11 +181,14 @@ FMEA, cross-module `deps`, and test-case coverage — see
 3. **Implementation & tests** → back each `unit` with a `cc_library` + `cc_test`; annotate tests
    with `lobster-tracing` + Given-When-Then; add `test_case_coverage_lock` on components.
    *(score-testing)*
-4. **Safety analysis** → add `safety_analysis` (FailureMode + SafetyMeasure + FTA) and wrap it in a
-   `dependability_analysis`. *(score-safety-analysis)*
+4. **Safety analysis** → add `failure_modes`, `fault_trees` (FTA, `deps = [failure_modes]`) and
+   `safety_analysis` (`safety_measures`: Mitigation files + AoU / `component_requirements`
+   targets) and wrap it in a `dependability_analysis`. AoU targets and
+   `component_requirements` list `fault_trees` in `deps`; AoU targets passed as `safety_measures`
+   are the element's own AoUs (derived, deduplicated, forwarded to dependees). *(score-safety-analysis)*
 5. **Assemble** → allocate `CompReq` to `component(requirements=…)` and `FeatReq` to
    `dependable_element(requirements=…)`; wire `architectural_design`, `components`,
-   `assumptions_of_use`, `dependability_analysis`, `glossary`, and `integrity_level`.
+   `dependability_analysis`, `glossary`, and `integrity_level`.
 
 ---
 
@@ -213,7 +215,7 @@ warnings while a design is in progress; switch to `"release"` before certificati
 - **ASIL vs. integrity_level**: requirement records use `ScoreReq.Asil` = `QM`/`B`/`D` only;
   `dependable_element.integrity_level` uses `A`/`B`/`C`/`D` (D > C > B > A) for the element
   hierarchy.
-- **Naming**: diagram aliases must equal Bazel target names. `bazel_component` is case-insensitive;
+- **Naming**: diagram names must equal Bazel target names. `bazel_component` is case-insensitive;
   all other validators are case-sensitive.
 - **Traceability spine**: `AssumedSystemReq → FeatReq → CompReq` (version-pinned `@`) →
   `lobster-tracing` in tests → `test_case_coverage.lock.yaml`; `FailureMode.interface` links safety

@@ -25,6 +25,8 @@ load(
     "component_requirements",
     "dependability_analysis",
     "dependable_element",
+    "failure_modes",
+    "fault_trees",
     "feature_requirements",
     "safety_analysis",
     "sphinx_module",
@@ -35,9 +37,25 @@ load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphi
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test", "trlc_specification")
 load(
+    ":dependable_element_aou_test.bzl",
+    "aou_derived_test",
+    "aou_merged_test",
+    "aou_none_test",
+)
+load(
     ":dependable_element_staged_path_collision_test.bzl",
     "cross_label_collision_fails_test",
     "same_label_collision_fails_test",
+)
+load(
+    ":dependable_element_toplevel_unit_test.bzl",
+    "toplevel_unit_linked_test",
+)
+load(
+    ":dependable_element_unit_staging_test.bzl",
+    "same_name_units_fail_test",
+    "unit_design_collision_fails_test",
+    "unit_same_puml_names_test",
 )
 load(
     ":html_generation_test.bzl",
@@ -85,6 +103,13 @@ load(
     "requirements_rst_test_suite",
 )
 load(
+    ":safety_analysis_measures_test.bzl",
+    "aou_in_aou_deps_fails_test",
+    "fta_default_package_test",
+    "measure_deps_are_context_only_test",
+    "measure_spec_is_merged_test",
+)
+load(
     ":score_module_providers_test.bzl",
     "config_auto_generation_test",
     "config_explicit_usage_test",
@@ -116,6 +141,7 @@ load(
 )
 load(
     ":unit_component_test.bzl",
+    "component_direct_asr_test",
     "component_excludes_feature_req_docs_test",
     "component_provider_test",
     "component_requirements_transitive_test",
@@ -264,9 +290,15 @@ component_requirements(
 )
 
 # - Assumptions of Use:       wp__requirements_comp_aou
-assumptions_of_use(
-    name = "aous",
-    srcs = ["fixtures/seooc_test/assumptions_of_use.rst"],
+# (AoUs reach a dependable_element as `safety_measures` of its safety_analysis; see
+# :aou_root_cause_aous.)
+
+# Component requirements tracing directly to an AssumedSystemReq, with no
+# feature_requirements layer (used by :test_component_direct_asr).
+component_requirements(
+    name = "comp_req_direct_asr",
+    srcs = ["fixtures/seooc_test/component_requirements_direct_asr.trlc"],
+    deps = [":asr_trlc"],
 )
 
 # - Architecture Design:      wp__component_arch
@@ -355,7 +387,6 @@ stem_collision_fails_test(
 dependable_element(
     name = "staged_path_same_label_collision_repro",
     architectural_design = [],
-    assumptions_of_use = [":aous"],
     checklists = ["//fixtures/staged_path_collision:dup_srcs_aux"],
     components = [],
     dependability_analysis = [":dependability_analysis_target"],
@@ -381,7 +412,6 @@ same_label_collision_fails_test(
 dependable_element(
     name = "staged_path_cross_label_collision_repro",
     architectural_design = [],
-    assumptions_of_use = [":aous"],
     checklists = [
         "//fixtures/staged_path_collision/pkg_a:dup",
         "//fixtures/staged_path_collision/pkg_b:dup",
@@ -416,7 +446,6 @@ dependable_element(
         ":arch_design_authored_rst_override_repro",
         ":arch_design_diagram_free_repro",
     ],
-    assumptions_of_use = [":aous"],
     components = [],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
@@ -437,13 +466,20 @@ dependability_analysis(
     safety_analysis = [":samplelibrary_safety_analysis"],
 )
 
+fault_trees(
+    name = "samplelibrary_fault_trees",
+    # TODO: add failure modes and root causes here
+    # srcs = [],
+    # deps = [],
+)
+
 safety_analysis(
     name = "samplelibrary_safety_analysis",
-    # TODO: add failure modes, safety measures, and root causes here
-    # failuremodes = [],
-    # safetymeasures = [], # can be AoUs or requirements
-    # root_causes = [],
+    # TODO: add failure modes and safety measures here
+    # failure_modes = [],
+    # safety_measures = [], # AoUs, requirements, Mitigation files
     arch_design = ":arch_design",
+    fault_trees = ":samplelibrary_fault_trees",
 )
 
 architectural_design(
@@ -472,7 +508,6 @@ dependable_element(
         ":arch_design_clickable_example_overview",
         ":arch_design_clickable_example_proxy_detail",
     ],
-    assumptions_of_use = [":aous"],
     components = [],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
@@ -507,7 +542,6 @@ architectural_design(
 dependable_element(
     name = "interface_example_lib",
     architectural_design = [":arch_design_interface_example"],
-    assumptions_of_use = [":aous"],
     components = [],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
@@ -526,19 +560,47 @@ dependable_element(
 # and class_detail.puml defines it (it has a method, making it the
 # elaboration site). Regression-checked by :class_example_link_rendered_test
 # below.
-architectural_design(
-    name = "arch_design_class_example",
+#
+# Both files are class diagrams (no component diagram is involved in this
+# scenario), so they're routed through unit_design()/unit()/component() --
+# not a bare architectural_design static list -- mirroring
+# :namespace_unit_design below. architectural_design's `static` attribute is
+# reserved for component diagrams only.
+unit_design(
+    name = "class_example_unit_design",
     static = [
         "fixtures/clickable_example/class_overview.puml",
         "fixtures/clickable_example/class_detail.puml",
     ],
 )
 
+unit(
+    name = "class_example_unit",
+    testonly = True,
+    # RealImpl-style rationale: mock_lib1 has no matching C++ class, only
+    # illustrative for this fixture's linking scenario.
+    maturity = "development",
+    tests = [":test_unit_tests"],
+    unit_design = [":class_example_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "class_example_component",
+    testonly = True,
+    components = [":class_example_unit"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
 dependable_element(
     name = "class_example_lib",
-    architectural_design = [":arch_design_class_example"],
-    assumptions_of_use = [":aous"],
-    components = [],
+    testonly = True,
+    architectural_design = [],
+    components = [":class_example_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
     # Downgraded to warnings for the same reason as clickable_example_lib
@@ -570,11 +632,22 @@ architectural_design(
 # dependability_analysis_target/samplelibrary_safety_analysis fixture used by
 # other targets in this file is deliberately empty, so this scenario gets its
 # own minimal safety analysis that traces to "package_pub.PublicInterface".
+failure_modes(
+    name = "public_api_example_failure_modes",
+    srcs = ["fixtures/clickable_example/public_api_failure_modes.trlc"],
+)
+
+fault_trees(
+    name = "public_api_example_fault_trees",
+    srcs = ["fixtures/clickable_example/public_api_fta.puml"],
+    deps = [":public_api_example_failure_modes"],
+)
+
 safety_analysis(
     name = "public_api_example_safety_analysis",
     arch_design = ":arch_design_public_api_example",
-    failuremodes = ["fixtures/clickable_example/public_api_failure_modes.trlc"],
-    root_causes = ["fixtures/clickable_example/public_api_fta.puml"],
+    failure_modes = [":public_api_example_failure_modes"],
+    fault_trees = ":public_api_example_fault_trees",
 )
 
 dependability_analysis(
@@ -589,11 +662,22 @@ dependability_analysis(
 # lobster-trlc accepts the resulting RootCause.failure_modes fan-out. Reuses
 # :arch_design_public_api_example so the failure modes' `interface` field has
 # a real public_api item to trace up to (see :public_api_example_safety_analysis above).
+failure_modes(
+    name = "multi_failure_mode_example_failure_modes",
+    srcs = ["fixtures/clickable_example/multi_failure_mode_failure_modes.trlc"],
+)
+
+fault_trees(
+    name = "multi_failure_mode_example_fault_trees",
+    srcs = ["fixtures/clickable_example/multi_failure_mode_fta.puml"],
+    deps = [":multi_failure_mode_example_failure_modes"],
+)
+
 safety_analysis(
     name = "multi_failure_mode_example_safety_analysis",
     arch_design = ":arch_design_public_api_example",
-    failuremodes = ["fixtures/clickable_example/multi_failure_mode_failure_modes.trlc"],
-    root_causes = ["fixtures/clickable_example/multi_failure_mode_fta.puml"],
+    failure_modes = [":multi_failure_mode_example_failure_modes"],
+    fault_trees = ":multi_failure_mode_example_fault_trees",
 )
 
 dependability_analysis(
@@ -604,22 +688,33 @@ dependability_analysis(
 
 # Regression fixture: an AoU referencing a generated fault-tree root cause
 # (`AouRootCauseFta.UserProvidedWrongConfiguration`). The AoU file is parsed
-# standalone by assumptions_of_use, so the safety_analysis target must be in its
-# `deps` to make the generated package resolvable; passing the same file as
-# `safetymeasures` makes the AoU count towards root-cause coverage.
-safety_analysis(
-    name = "aou_root_cause_safety_analysis",
-    arch_design = ":arch_design_public_api_example",
-    failuremodes = ["fixtures/aou_root_cause/failure_modes.trlc"],
+# standalone by assumptions_of_use, so the fault_trees target must be in its
+# `deps` to make the generated package resolvable; passing the AoU target as
+# `safety_measures` makes the AoU count towards root-cause coverage.
+failure_modes(
+    name = "aou_root_cause_failure_modes",
+    srcs = ["fixtures/aou_root_cause/failure_modes.trlc"],
+)
+
+fault_trees(
+    name = "aou_root_cause_fault_trees",
+    srcs = ["fixtures/aou_root_cause/fta.puml"],
     fta_package = "AouRootCauseFta",
-    root_causes = ["fixtures/aou_root_cause/fta.puml"],
-    safetymeasures = ["fixtures/aou_root_cause/aou.trlc"],
+    deps = [":aou_root_cause_failure_modes"],
 )
 
 assumptions_of_use(
     name = "aou_root_cause_aous",
     srcs = ["fixtures/aou_root_cause/aou.trlc"],
-    deps = [":aou_root_cause_safety_analysis"],
+    deps = [":aou_root_cause_fault_trees"],
+)
+
+safety_analysis(
+    name = "aou_root_cause_safety_analysis",
+    arch_design = ":arch_design_public_api_example",
+    failure_modes = [":aou_root_cause_failure_modes"],
+    fault_trees = ":aou_root_cause_fault_trees",
+    safety_measures = [":aou_root_cause_aous"],
 )
 
 dependability_analysis(
@@ -628,10 +723,66 @@ dependability_analysis(
     safety_analysis = [":aou_root_cause_safety_analysis"],
 )
 
+# A component requirement measure derives from the AoU held in its deps; the
+# AoU is only used to resolve the reference, it is not a measure of the analysis.
+component_requirements(
+    name = "comp_req_measure_reqs",
+    srcs = ["fixtures/comp_req_measure/comp_req.trlc"],
+    deps = [
+        ":aou_root_cause_aous",
+        ":aou_root_cause_fault_trees",
+    ],
+)
+
+safety_analysis(
+    name = "comp_req_measure_safety_analysis",
+    arch_design = ":arch_design_public_api_example",
+    failure_modes = [":aou_root_cause_failure_modes"],
+    fault_trees = ":aou_root_cause_fault_trees",
+    safety_measures = [":comp_req_measure_reqs"],
+)
+
+measure_deps_are_context_only_test(
+    name = "measure_deps_are_context_only_test",
+    target_under_test = ":comp_req_measure_safety_analysis",
+)
+
+build_test(
+    name = "comp_req_measure_builds",
+    targets = [":comp_req_measure_safety_analysis"],
+)
+
+# A measure target with its own spec: the assembler needs the extra RSL to parse it.
+safety_analysis(
+    name = "measure_spec_safety_analysis",
+    arch_design = ":arch_design_public_api_example",
+    failure_modes = [":aou_root_cause_failure_modes"],
+    fault_trees = ":aou_root_cause_fault_trees",
+    safety_measures = ["//fixtures/spec_extras:spec_extras_comp_req"],
+)
+
+measure_spec_is_merged_test(
+    name = "measure_spec_is_merged_test",
+    target_under_test = ":measure_spec_safety_analysis",
+)
+
+# An assumptions_of_use target must not carry another one in its deps: the
+# deps' AoUs would be extracted as its own.
+assumptions_of_use(
+    name = "aou_in_aou_deps_repro",
+    srcs = ["fixtures/aou_root_cause/aou.trlc"],
+    tags = ["manual"],
+    deps = [":aou_root_cause_aous"],
+)
+
+aou_in_aou_deps_fails_test(
+    name = "aou_in_aou_deps_fails_test",
+    target_under_test = ":aou_in_aou_deps_repro",
+)
+
 dependable_element(
     name = "public_api_example_lib",
     architectural_design = [":arch_design_public_api_example"],
-    assumptions_of_use = [":aous"],
     components = [],
     dependability_analysis = [":public_api_example_dependability_analysis"],
     integrity_level = "B",
@@ -652,7 +803,6 @@ dependable_element(
     name = "comp_req_root_cause_example_lib",
     testonly = True,
     architectural_design = [":arch_design_public_api_example"],
-    assumptions_of_use = [":aous"],
     components = [":test_component"],
     dependability_analysis = [":public_api_example_dependability_analysis"],
     integrity_level = "B",
@@ -669,19 +819,47 @@ dependable_element(
 # `package_u.component_u.unit_one`, since component-diagram ids and
 # class-diagram namespace FQNs use the same dot-joined scheme. Regression-
 # checked by :unit_example_link_rendered_test below.
+#
+# unit_class_detail.puml is a class diagram, so it's routed through
+# unit_design()/unit()/component() (not architectural_design's `static`,
+# which is component-diagrams only) - mirroring :namespace_unit_design below.
 architectural_design(
     name = "arch_design_unit_example",
-    static = [
-        "fixtures/clickable_example/unit_overview.puml",
-        "fixtures/clickable_example/unit_class_detail.puml",
+    static = ["fixtures/clickable_example/unit_overview.puml"],
+)
+
+unit_design(
+    name = "unit_example_unit_design",
+    static = ["fixtures/clickable_example/unit_class_detail.puml"],
+)
+
+unit(
+    name = "unit_example_unit",
+    testonly = True,
+    # RealImpl-style rationale: mock_lib1 has no matching C++ class, only
+    # illustrative for this fixture's linking scenario.
+    maturity = "development",
+    tests = [":test_unit_tests"],
+    unit_design = [":unit_example_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "unit_example_component",
+    testonly = True,
+    components = [":unit_example_unit"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
     ],
+    tests = [],
 )
 
 dependable_element(
     name = "unit_example_lib",
+    testonly = True,
     architectural_design = [":arch_design_unit_example"],
-    assumptions_of_use = [":aous"],
-    components = [],
+    components = [":unit_example_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
     # Downgraded to warnings for the same reason as clickable_example_lib
@@ -743,7 +921,6 @@ dependable_element(
     name = "namespace_unit_example_lib",
     testonly = True,
     architectural_design = [":arch_design_namespace_unit_example"],
-    assumptions_of_use = [":aous"],
     components = [":namespace_unit_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
@@ -773,6 +950,227 @@ sh_test(
     data = [":namespace_unit_example_lib_index"],
 )
 
+# Seooc-shaped unit link (unit id package_lf.component_lf.unit_x, class
+# namespace id unit_x; the ids differ). The link is the clickable fallback on
+# the shared last segment, the unit name.
+unit_design(
+    name = "leaf_unit_design",
+    static = ["fixtures/clickable_example/leaf_unit_class_detail.puml"],
+)
+
+unit(
+    name = "leaf_unit",
+    testonly = True,
+    maturity = "development",
+    tests = [":test_unit_tests"],
+    unit_design = [":leaf_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "leaf_unit_component",
+    testonly = True,
+    components = [":leaf_unit"],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
+architectural_design(
+    name = "arch_design_leaf_unit_example",
+    static = ["fixtures/clickable_example/leaf_unit_overview.puml"],
+)
+
+dependable_element(
+    name = "leaf_unit_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_leaf_unit_example"],
+    components = [":leaf_unit_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+# Unit listed directly in components (no parent component).
+dependable_element(
+    name = "toplevel_unit_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_leaf_unit_example"],
+    components = [":leaf_unit"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+toplevel_unit_linked_test(
+    name = "toplevel_unit_linked_test",
+    target_under_test = ":toplevel_unit_example_lib_index",
+    unit_name = "leaf_unit",
+)
+
+# Regression fixture: two units whose designs both ship a "class_diagram.puml"
+# and a "design.rst". Each unit stages under its own units/<unit>/ directory,
+# so the two must not collide; checked by :unit_same_puml_names_test.
+unit_design(
+    name = "same_puml_unit_a_design",
+    static = [
+        "fixtures/unit_same_puml/unit_a/class_diagram.puml",
+        "fixtures/unit_same_puml/unit_a/design.rst",
+    ],
+)
+
+unit_design(
+    name = "same_puml_unit_b_design",
+    static = [
+        "fixtures/unit_same_puml/unit_b/class_diagram.puml",
+        "fixtures/unit_same_puml/unit_b/design.rst",
+    ],
+)
+
+unit(
+    name = "same_puml_unit_a",
+    testonly = True,
+    maturity = "development",
+    tests = [],
+    unit_design = [":same_puml_unit_a_design"],
+    implementation = [":mock_lib1"],
+)
+
+unit(
+    name = "same_puml_unit_b",
+    testonly = True,
+    maturity = "development",
+    tests = [],
+    unit_design = [":same_puml_unit_b_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "same_puml_component",
+    testonly = True,
+    components = [
+        ":same_puml_unit_a",
+        ":same_puml_unit_b",
+    ],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
+dependable_element(
+    name = "same_puml_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_leaf_unit_example"],
+    components = [":same_puml_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+unit_same_puml_names_test(
+    name = "unit_same_puml_names_test",
+    target_under_test = ":same_puml_example_lib_index",
+    unit_names = [
+        "same_puml_unit_a",
+        "same_puml_unit_b",
+    ],
+)
+
+# Rendered HTML: each unit page shows its own diagram and no design fragment
+# becomes a standalone page.
+sh_test(
+    name = "unit_same_puml_rendered_test",
+    srcs = ["check_unit_design_render.sh"],
+    args = [
+        "$(rootpath :same_puml_example_lib_doc)",
+        "same_puml_unit_a:unit_a",
+        "same_puml_unit_b:unit_b",
+    ],
+    data = [":same_puml_example_lib_doc"],
+)
+
+# Regression fixture: one unit whose design ships two diagrams with the same
+# basename in different directories. Both are staged next to the unit page,
+# so analysis must fail naming both files; see
+# :unit_design_collision_fails_test.
+unit(
+    name = "same_puml_clash_unit",
+    testonly = True,
+    maturity = "development",
+    tags = ["manual"],
+    tests = [],
+    unit_design = ["//fixtures/unit_same_puml_clash:design"],
+    implementation = [":mock_lib1"],
+)
+
+dependable_element(
+    name = "same_puml_clash_repro",
+    testonly = True,
+    architectural_design = [":arch_design_leaf_unit_example"],
+    components = [":same_puml_clash_unit"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+    deps = [],
+)
+
+unit_design_collision_fails_test(
+    name = "unit_design_collision_fails_test",
+    target_under_test = ":same_puml_clash_repro_index",
+)
+
+# Regression fixture: two distinct units from different packages share the
+# target name "dup_unit", so they would share units/dup_unit/ -- analysis must
+# fail instead of silently dropping one; see :same_name_units_fail_test.
+dependable_element(
+    name = "same_name_units_repro",
+    testonly = True,
+    architectural_design = [":arch_design_leaf_unit_example"],
+    components = [
+        "//fixtures/same_name_units/pkg_a:dup_unit",
+        "//fixtures/same_name_units/pkg_b:dup_unit",
+    ],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+    deps = [],
+)
+
+same_name_units_fail_test(
+    name = "same_name_units_fail_test",
+    target_under_test = ":same_name_units_repro_index",
+)
+
+sh_test(
+    name = "leaf_unit_example_link_rendered_test",
+    srcs = ["check_idmap_link.sh"],
+    args = [
+        "--leaf",
+        "unit_x",
+        "$(rootpaths :leaf_unit_example_lib_index)",
+    ],
+    data = [":leaf_unit_example_lib_index"],
+)
+
 # Live example of clickable_plantuml's "dynamic to static" linking chain: the
 # *dynamic* architecture (dynamic_overview.puml, a sequence diagram) shows
 # participants `Dispatcher` and `Worker` - both references, since sequence
@@ -795,26 +1193,89 @@ sh_test(
 # only tracks participant names, not per-message/method labels (see
 # puml_idmap/src/lib.rs). Implementing that would require the sequence
 # resolver to persist message identifiers in SequenceTree first.
+#
+# dynamic_dispatcher_class.puml/dynamic_worker_class.puml are class
+# diagrams, so they're routed through unit_design()/unit()/component() (not
+# architectural_design's `static`, which is component-diagrams only) -
+# mirroring :namespace_unit_design/:unit_example_unit_design above.
 architectural_design(
     name = "arch_design_dynamic_example",
     dynamic = ["fixtures/clickable_example/dynamic_overview.puml"],
     public_api = ["fixtures/clickable_example/dynamic_public_api_detail.puml"],
-    static = [
-        "fixtures/clickable_example/dynamic_component_detail.puml",
-        "fixtures/clickable_example/dynamic_dispatcher_class.puml",
-        "fixtures/clickable_example/dynamic_worker_class.puml",
+    static = ["fixtures/clickable_example/dynamic_component_detail.puml"],
+)
+
+unit_design(
+    name = "dynamic_dispatcher_unit_design",
+    static = ["fixtures/clickable_example/dynamic_dispatcher_class.puml"],
+)
+
+unit(
+    name = "dynamic_dispatcher_unit",
+    testonly = True,
+    # RealImpl-style rationale: mock_lib1 has no matching C++ class, only
+    # illustrative for this fixture's linking scenario. tests is empty (not
+    # :test_unit_tests) because dynamic_worker_unit below is a sibling under
+    # the same component/dependable_element -- reusing the same gtest
+    # target for both would make lobster-report see duplicate gtest item
+    # definitions within one aggregated report.
+    maturity = "development",
+    tests = [],
+    unit_design = [":dynamic_dispatcher_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+unit_design(
+    name = "dynamic_worker_unit_design",
+    static = ["fixtures/clickable_example/dynamic_worker_class.puml"],
+)
+
+unit(
+    name = "dynamic_worker_unit",
+    testonly = True,
+    # RealImpl-style rationale: mock_lib1 has no matching C++ class, only
+    # illustrative for this fixture's linking scenario. tests is empty --
+    # see dynamic_dispatcher_unit above for why.
+    maturity = "development",
+    tests = [],
+    unit_design = [":dynamic_worker_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+component(
+    name = "dynamic_example_component",
+    testonly = True,
+    components = [
+        ":dynamic_dispatcher_unit",
+        ":dynamic_worker_unit",
     ],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
 )
 
 # public_api items must be referenced by a FailureMode in the SEooC's own
 # safety analysis (see :public_api_example_safety_analysis above for the same reasoning)
 # - the shared dependability_analysis_target fixture is deliberately empty, so
 # this scenario gets its own minimal safety analysis that traces to "TaskInterface".
+failure_modes(
+    name = "dynamic_example_failure_modes",
+    srcs = ["fixtures/clickable_example/dynamic_public_api_failure_modes.trlc"],
+)
+
+fault_trees(
+    name = "dynamic_example_fault_trees",
+    srcs = ["fixtures/clickable_example/dynamic_public_api_fta.puml"],
+    deps = [":dynamic_example_failure_modes"],
+)
+
 safety_analysis(
     name = "dynamic_example_safety_analysis",
     arch_design = ":arch_design_dynamic_example",
-    failuremodes = ["fixtures/clickable_example/dynamic_public_api_failure_modes.trlc"],
-    root_causes = ["fixtures/clickable_example/dynamic_public_api_fta.puml"],
+    failure_modes = [":dynamic_example_failure_modes"],
+    fault_trees = ":dynamic_example_fault_trees",
 )
 
 dependability_analysis(
@@ -825,9 +1286,9 @@ dependability_analysis(
 
 dependable_element(
     name = "dynamic_example_lib",
+    testonly = True,
     architectural_design = [":arch_design_dynamic_example"],
-    assumptions_of_use = [":aous"],
-    components = [],
+    components = [":dynamic_example_component"],
     dependability_analysis = [":dynamic_example_dependability_analysis"],
     integrity_level = "B",
     # Downgraded to warnings for the same reason as clickable_example_lib
@@ -868,7 +1329,6 @@ component(
 dependable_element(
     name = "dep_seooc_lib",
     architectural_design = [":arch_design_dep"],
-    assumptions_of_use = [":aous"],
     components = [":dep_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
@@ -898,9 +1358,10 @@ unit(
 )
 
 component(
-    name = "design_name_component",
+    name = "design_name_component_bazel_target",
     testonly = True,
     components = [":design_name_unit_bazel_target"],
+    design_name = "design_name_component",
     requirements = [
         ":comp_req",
         ":feat_req",
@@ -911,8 +1372,7 @@ component(
 dependable_element(
     name = "design_name_example_lib",
     architectural_design = [":arch_design_design_name_example"],
-    assumptions_of_use = [":aous"],
-    components = [":design_name_component"],
+    components = [":design_name_component_bazel_target"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
     maturity = "development",
@@ -945,7 +1405,6 @@ component(
 dependable_element(
     name = "seooc_test_lib",
     architectural_design = [":arch_design"],
-    assumptions_of_use = [":aous"],
     components = [":seooc_test_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
@@ -1049,6 +1508,24 @@ component(
     tests = [],  # Empty for testing
 )
 
+# Test Component tracing straight to Assumed System Requirements, i.e. with no
+# feature_requirements layer in between (see
+# fixtures/seooc_test/component_requirements_direct_asr.trlc). The
+# assumed_system_requirements target must be accepted in `requirements` so its
+# .lobster file reaches the component's lobster config; otherwise lobster-trace
+# fails with "unknown tracing target req TestSEooC.ASR_TEST_001".
+component(
+    name = "test_component_direct_asr",
+    testonly = True,
+    components = [":test_unit"],
+    requirements = [
+        ":comp_req_direct_asr",
+        ":asr_trlc",
+    ],
+    tags = ["manual"],
+    tests = [],
+)
+
 # Test Dependable Element.
 # maturity = "development": this fixture intentionally omits a
 # test_case_coverage.lock.yaml, so under the release traceability gate its
@@ -1058,7 +1535,6 @@ dependable_element(
     name = "test_dependable_element",
     testonly = True,
     architectural_design = [":arch_design_elem"],
-    assumptions_of_use = [":aous"],
     components = [":test_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
@@ -1074,7 +1550,6 @@ dependable_element(
     name = "test_dependable_element_coverage_release",
     testonly = True,
     architectural_design = [":arch_design_elem"],
-    assumptions_of_use = [":aous"],
     components = [":test_component_with_test_case_coverage_lock"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
@@ -1088,7 +1563,6 @@ dependable_element(
     name = "test_dependable_element_coverage_development",
     testonly = True,
     architectural_design = [":arch_design_elem"],
-    assumptions_of_use = [":aous"],
     components = [":test_component_with_test_case_coverage_lock"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
@@ -1096,6 +1570,115 @@ dependable_element(
     requirements = [":feat_req"],
     tags = ["manual"],
     tests = [],  # Empty for testing
+)
+
+# The AoUs of a dependable_element are the `safety_measures` of its safety analyses.
+dependable_element(
+    name = "aou_derived_example_lib",
+    architectural_design = [":arch_design_public_api_example"],
+    components = [],
+    dependability_analysis = [":aou_root_cause_dependability_analysis"],
+    integrity_level = "B",
+    # Same reasoning as public_api_example_lib above.
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+aou_derived_test(
+    name = "aou_derived_test",
+    target_under_test = ":aou_derived_example_lib_index",
+)
+
+# Two safety analyses (under two dependability analyses) consuming the same
+# AoU target contribute it once.
+safety_analysis(
+    name = "aou_root_cause_safety_analysis_dup",
+    arch_design = ":arch_design_public_api_example",
+    failure_modes = [":aou_root_cause_failure_modes"],
+    fault_trees = ":aou_root_cause_fault_trees",
+    safety_measures = [":aou_root_cause_aous"],
+)
+
+dependability_analysis(
+    name = "aou_root_cause_dependability_analysis_dup",
+    arch_design = ":arch_design_public_api_example",
+    safety_analysis = [":aou_root_cause_safety_analysis_dup"],
+)
+
+dependable_element(
+    name = "aou_deduplicated_example_lib",
+    architectural_design = [":arch_design_public_api_example"],
+    components = [],
+    dependability_analysis = [
+        ":aou_root_cause_dependability_analysis",
+        ":aou_root_cause_dependability_analysis_dup",
+    ],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+    deps = [],
+)
+
+aou_derived_test(
+    name = "aou_deduplicated_test",
+    target_under_test = ":aou_deduplicated_example_lib_index",
+)
+
+build_test(
+    name = "aou_deduplicated_builds",
+    targets = [":aou_deduplicated_example_lib_index"],
+)
+
+# A dependable_element whose safety analyses have no AoU measure has no AoUs.
+aou_none_test(
+    name = "aou_none_test",
+    target_under_test = ":public_api_example_lib_index",
+)
+
+# Diamond: the AoU of aou_derived_example_lib reaches aou_diamond_top directly
+# and chain-forwarded through aou_diamond_mid; it is received once.
+dependable_element(
+    name = "aou_diamond_mid",
+    aou_forwarding = "fixtures/aou_root_cause/forwarding.yaml",
+    architectural_design = [":arch_design_public_api_example"],
+    components = [],
+    dependability_analysis = [],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+    deps = [":aou_derived_example_lib"],
+)
+
+dependable_element(
+    name = "aou_diamond_top",
+    architectural_design = [":arch_design_public_api_example"],
+    components = [],
+    dependability_analysis = [],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+    deps = [
+        ":aou_derived_example_lib",
+        ":aou_diamond_mid",
+    ],
+)
+
+aou_merged_test(
+    name = "aou_merged_test",
+    target_under_test = ":aou_diamond_top_index",
+)
+
+build_test(
+    name = "aou_diamond_builds",
+    targets = [":aou_diamond_top_index"],
 )
 
 # ============================================================================
@@ -1173,7 +1756,6 @@ dependable_element(
     name = "test_dependable_element_nested",
     testonly = True,
     architectural_design = [":arch_design_nested"],
-    assumptions_of_use = [":aous"],
     components = [":test_parent_component"],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
@@ -1649,6 +2231,14 @@ component_excludes_feature_req_docs_test(
     target_under_test = ":test_component",
 )
 
+# Regression test for component() rejecting assumed_system_requirements targets
+# in `requirements`, which blocked SEooCs that trace component requirements
+# directly to ASRs (no feature requirements layer).
+component_direct_asr_test(
+    name = "component_direct_asr_test",
+    target_under_test = ":test_component_direct_asr",
+)
+
 component_test_case_coverage_lock_test(
     name = "component_test_case_coverage_lock_test",
     target_under_test = ":test_component_with_test_case_coverage_lock",
@@ -1716,6 +2306,7 @@ component_requirements(
 assumptions_of_use(
     name = "aous_rst",
     srcs = ["fixtures/rst_requirements/assumptions_of_use.rst"],
+    deps = [":aou_root_cause_fault_trees"],
 )
 
 asr_rst_output_test(
@@ -1880,6 +2471,16 @@ py_test(
 )
 
 py_test(
+    name = "test_merge_lobster_items",
+    size = "small",
+    srcs = ["test_merge_lobster_items.py"],
+    deps = [
+        "@lobster//lobster/common",
+        "@score_tooling//bazel/rules/rules_score:merge_lobster_items",
+    ],
+)
+
+py_test(
     name = "test_sphinx_html_merge",
     size = "small",
     srcs = ["test_sphinx_html_merge.py"],
@@ -1955,11 +2556,30 @@ py_test(
     deps = ["@trlc//tools/trlc_rst:trlc_rst_lib"],
 )
 
+# The default `fta_package` of a fault_trees target contains its Bazel package
+# path, so equally named targets of different packages do not collide.
+fta_default_package_test(
+    name = "fta_default_package_test",
+    expected_package = "fixtures_fta_default_package__default_package_fault_trees_fta",
+    target_under_test = "//fixtures/fta_default_package:default_package_fault_trees",
+)
+
 # Combined test suite for all tests
 test_suite(
     name = "all_tests",
     tests = [
+        ":aou_deduplicated_builds",
+        ":aou_deduplicated_test",
+        ":aou_derived_test",
+        ":aou_diamond_builds",
+        ":aou_in_aou_deps_fails_test",
+        ":aou_merged_test",
+        ":aou_none_test",
+        ":comp_req_measure_builds",
+        ":fta_default_package_test",
         ":lobster_config_tests",
+        ":measure_deps_are_context_only_test",
+        ":measure_spec_is_merged_test",
         ":metamodel_drift_report_test",
         ":requirements_multi_spec_tests",
         ":requirements_rst_tests",
@@ -1967,6 +2587,7 @@ test_suite(
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",
         ":test_bazel_sphinx_needs",
+        ":test_merge_lobster_items",
         ":test_metamodel_drift",
         ":test_rst_to_trlc",
         ":test_safety_analysis_assembler",

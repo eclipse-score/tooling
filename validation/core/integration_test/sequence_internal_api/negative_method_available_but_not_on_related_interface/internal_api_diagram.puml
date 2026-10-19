@@ -14,11 +14,11 @@
 @startuml
 
 package package_a {
-    interface "SharedInterface" as SharedInterface {
+    interface SharedInterface {
         + OtherMethod()
     }
 
-    interface "CallerOnlyInterface" as CallerOnlyInterface {
+    interface CallerOnlyInterface {
         + GetData()
     }
 }

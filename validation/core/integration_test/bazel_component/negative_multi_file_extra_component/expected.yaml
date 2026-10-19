@@ -13,7 +13,7 @@
 should_pass: false
 error_contains: |
   [Naming] Component "extra_component" from the PlantUML component diagram not found in Bazel.
-    Alias                 : "extra_component"
+    Name                  : "extra_component"
     Parent                : safety_software_seooc_example
     Component source file : "validation/core/integration_test/bazel_component/negative_multi_file_extra_component/component_diagram.puml"
     Component source line : 22

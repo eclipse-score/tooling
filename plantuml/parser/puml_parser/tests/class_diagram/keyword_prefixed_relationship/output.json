@@ -1,0 +1,57 @@
+{
+  "keyword_prefixed_relationship.puml": {
+    "name": "keyword_prefixed_relationship",
+    "elements": [],
+    "relationships": [
+      {
+        "left": "class1",
+        "right": "Foo",
+        "arrow": { "left": null, "line": { "raw": "-" }, "middle": null, "right": { "raw": ">" } },
+        "label": null,
+        "source_location": { "file": "", "line": 16 }
+      },
+      {
+        "left": "entity_manager",
+        "right": "Foo",
+        "arrow": { "left": null, "line": { "raw": "-" }, "middle": null, "right": { "raw": ">" } },
+        "label": null,
+        "source_location": { "file": "", "line": 17 }
+      },
+      {
+        "left": "struct1",
+        "right": "Foo",
+        "arrow": { "left": null, "line": { "raw": "-" }, "middle": null, "right": { "raw": ">" } },
+        "label": null,
+        "source_location": { "file": "", "line": 18 }
+      },
+      {
+        "left": "interface1",
+        "right": "Foo",
+        "arrow": { "left": null, "line": { "raw": "-" }, "middle": null, "right": { "raw": ">" } },
+        "label": null,
+        "source_location": { "file": "", "line": 19 }
+      },
+      {
+        "left": "object1",
+        "right": "Foo",
+        "arrow": { "left": null, "line": { "raw": "-" }, "middle": null, "right": { "raw": ">" } },
+        "label": null,
+        "source_location": { "file": "", "line": 20 }
+      },
+      {
+        "left": "enum1",
+        "right": "Foo",
+        "arrow": { "left": null, "line": { "raw": "-" }, "middle": null, "right": { "raw": ">" } },
+        "label": null,
+        "source_location": { "file": "", "line": 21 }
+      },
+      {
+        "left": "package1",
+        "right": "Foo",
+        "arrow": { "left": null, "line": { "raw": "-" }, "middle": null, "right": { "raw": ">" } },
+        "label": null,
+        "source_location": { "file": "", "line": 22 }
+      }
+    ]
+  }
+}

@@ -19,5 +19,5 @@
 # AoU to its own dependees — the system integrator.
 #
 forwarded_aous:
-  - aou_id: "OtherLibrary.TimingConstraint"
+  - aou_id: "OtherLibrary.TimingConstraint@1"
     justification: "This SEooC is a library component and has no control over the invocation cycle time. The system integrator must ensure that calls to the library do not exceed the 10ms cycle time constraint imposed by the underlying other_seooc dependency."

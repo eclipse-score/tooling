@@ -13,9 +13,9 @@
 
 @startuml test_dependable_element_asr_direct
 
-package "Test Dependable Element ASR Direct" as test_dependable_element_asr_direct <<SEooC>> {
-    component "Test Component Direct ASR" as test_component_direct_asr <<component>> {
-        component "Test Unit ASR Direct" as test_unit_asr_direct <<unit>>
+package test_dependable_element_asr_direct <<SEooC>> {
+    component test_component_direct_asr <<component>> {
+        component test_unit_asr_direct <<unit>>
     }
 }
 

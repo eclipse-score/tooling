@@ -22,7 +22,7 @@ use class_resolver::{ClassPumlResolverError, ClassResolver};
 use parser_core::DiagramParser;
 use puml_utils::LogLevel;
 use resolver_traits::DiagramResolver;
-use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor};
+use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor, ResolverGroupRunner};
 
 // ===== Class Resolver adapter DiagramProcessor =====
 struct ClassResolverRunner;
@@ -60,6 +60,65 @@ fn run_class_resolver_case(case_name: &str) {
         ClassResolverRunner,
         DefaultExpectationChecker,
     );
+}
+
+fn run_class_resolver_group_case(case_name: &str) {
+    run_case(
+        "integration_test/class_diagram",
+        case_name,
+        ResolverGroupRunner::<_, ClassResolver>::new(PumlClassParser),
+        DefaultExpectationChecker,
+    );
+}
+
+#[test]
+fn test_group_implicit_parent_across_files() {
+    run_class_resolver_group_case("group_implicit_parent_across_files");
+}
+
+#[test]
+fn test_group_bodyless_stays_top_level() {
+    run_class_resolver_group_case("group_bodyless_stays_top_level");
+}
+
+#[test]
+fn test_group_kind_mismatch_stays_top_level() {
+    run_class_resolver_group_case("group_kind_mismatch_stays_top_level");
+}
+
+#[test]
+fn test_group_ambiguous_implicit_parent() {
+    run_class_resolver_group_case("group_ambiguous_implicit_parent");
+}
+
+#[test]
+fn test_group_implicit_parent_cycle() {
+    run_class_resolver_group_case("group_implicit_parent_cycle");
+}
+
+#[test]
+fn test_group_cross_file_relation() {
+    run_class_resolver_group_case("group_cross_file_relation");
+}
+
+#[test]
+fn test_group_local_wins_over_peer() {
+    run_class_resolver_group_case("group_local_wins_over_peer");
+}
+
+#[test]
+fn test_group_cross_file_relation_source() {
+    run_class_resolver_group_case("group_cross_file_relation_source");
+}
+
+#[test]
+fn test_group_ambiguous_peer_reference() {
+    run_class_resolver_group_case("group_ambiguous_peer_reference");
+}
+
+#[test]
+fn test_group_local_alias_name_error() {
+    run_class_resolver_group_case("group_local_alias_name_error");
 }
 
 #[test]
@@ -123,6 +182,11 @@ fn test_c_variadic_method() {
 }
 
 #[test]
+fn test_free_function_entity() {
+    run_class_resolver_case("free_function_entity");
+}
+
+#[test]
 fn test_class_template_pack() {
     run_class_resolver_case("class_template_pack");
 }
@@ -133,13 +197,93 @@ fn test_empty_template_args() {
 }
 
 #[test]
-fn test_class_alias_id_leaf() {
-    run_class_resolver_case("class_alias_id_leaf");
+fn test_name_wins_over_alias() {
+    run_class_resolver_case("name_wins_over_alias");
+}
+
+#[test]
+fn test_qualified_label_in_package() {
+    run_class_resolver_case("qualified_label_in_package");
+}
+
+#[test]
+fn test_template_label() {
+    run_class_resolver_case("template_label");
+}
+
+#[test]
+fn test_multiline_label() {
+    run_class_resolver_case("multiline_label");
+}
+
+#[test]
+fn test_reversed_alias_form() {
+    run_class_resolver_case("reversed_alias_form");
+}
+
+#[test]
+fn test_constructor_of_aliased_class() {
+    run_class_resolver_case("constructor_of_aliased_class");
+}
+
+#[test]
+fn test_invalid_prose_label() {
+    run_class_resolver_case("invalid_prose_label");
+}
+
+#[test]
+fn test_invalid_prose_package() {
+    run_class_resolver_case("invalid_prose_package");
+}
+
+#[test]
+fn test_invalid_malformed_label() {
+    run_class_resolver_case("invalid_malformed_label");
+}
+
+#[test]
+fn test_invalid_reference_by_label() {
+    run_class_resolver_case("invalid_reference_by_label");
+}
+
+#[test]
+fn test_invalid_duplicate_label() {
+    run_class_resolver_case("invalid_duplicate_label");
 }
 
 #[test]
 fn test_relation_leaf_of_qualified_declaration() {
     run_class_resolver_case("relation_leaf_of_qualified_declaration");
+}
+
+#[test]
+fn test_qualified_declaration_in_package() {
+    run_class_resolver_case("qualified_declaration_in_package");
+}
+
+#[test]
+fn test_rooted_declaration_in_package() {
+    run_class_resolver_case("rooted_declaration_in_package");
+}
+
+#[test]
+fn test_rooted_dotted_declaration() {
+    run_class_resolver_case("rooted_dotted_declaration");
+}
+
+#[test]
+fn test_separator_equivalence() {
+    run_class_resolver_case("separator_equivalence");
+}
+
+#[test]
+fn test_qualified_container_in_package() {
+    run_class_resolver_case("qualified_container_in_package");
+}
+
+#[test]
+fn test_invalid_qualified_declaration_duplicate() {
+    run_class_resolver_case("qualified_declaration_duplicate");
 }
 
 #[test]
@@ -158,13 +302,18 @@ fn test_extends_root_marker() {
 }
 
 #[test]
+fn test_extends_root_marker_quoted_name() {
+    run_class_resolver_case("extends_root_marker_quoted_name");
+}
+
+#[test]
 fn test_invalid_duplicate_entity() {
     run_class_resolver_case("invalid_duplicate_entity");
 }
 
 #[test]
-fn test_invalid_duplicate_entity_alias() {
-    run_class_resolver_case("invalid_duplicate_entity_alias");
+fn test_invalid_duplicate_alias() {
+    run_class_resolver_case("invalid_duplicate_alias");
 }
 
 #[test]

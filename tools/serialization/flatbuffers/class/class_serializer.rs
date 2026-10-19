@@ -12,9 +12,9 @@
 // *******************************************************************************
 
 use class_diagram::{
-    ClassDiagram, EntityType, EnumLiteral, FunctionArgument, MemberVariable, Method,
-    MethodModifier, RelationType, Relationship, SimpleEntity, SourceLocation, TemplateParameter,
-    TypeAlias, Visibility,
+    ClassDiagram, EntityType, EnumLiteral, FreeFunctionDecl, FunctionArgument, MemberVariable,
+    Method, MethodModifier, RelationType, Relationship, SimpleEntity, SourceLocation,
+    TemplateParameter, TypeAlias, Visibility,
 };
 use class_fbs::class_metamodel as fb;
 use flatbuffers::FlatBufferBuilder;
@@ -34,11 +34,19 @@ impl ClassSerializer {
             .collect();
         let entities_offset = builder.create_vector(&entity_offsets);
 
+        let free_function_offsets: Vec<_> = diagram
+            .free_functions
+            .iter()
+            .map(|function| Self::serialize_free_function(&mut builder, function))
+            .collect();
+        let free_functions_offset = builder.create_vector(&free_function_offsets);
+
         let root = fb::ClassDiagram::create(
             &mut builder,
             &fb::ClassDiagramArgs {
                 name: Some(name_offset),
                 entities: Some(entities_offset),
+                free_functions: Some(free_functions_offset),
             },
         );
 
@@ -228,6 +236,50 @@ impl ClassSerializer {
                 parameters: Some(parameters_offset),
                 template_parameters: template_parameters_offset,
                 modifiers: Some(modifiers_offset),
+                source_location: Some(source_location_offset),
+            },
+        )
+    }
+
+    fn serialize_free_function<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        function: &FreeFunctionDecl,
+    ) -> flatbuffers::WIPOffset<fb::FreeFunctionDecl<'a>> {
+        let name_offset = builder.create_string(&function.name);
+        let enclosing_namespace_id_offset = function
+            .enclosing_namespace_id
+            .as_ref()
+            .map(|namespace| builder.create_string(namespace));
+        let return_type_offset = function
+            .return_type
+            .as_ref()
+            .map(|return_type| builder.create_string(return_type));
+
+        let parameter_offsets: Vec<_> = function
+            .parameters
+            .iter()
+            .map(|parameter| Self::serialize_parameter(builder, parameter))
+            .collect();
+        let parameters_offset = builder.create_vector(&parameter_offsets);
+
+        let template_parameters_offset = function.template_parameters.as_ref().map(|parameters| {
+            let template_offsets: Vec<_> = parameters
+                .iter()
+                .map(|parameter| Self::serialize_template_parameter(builder, parameter))
+                .collect();
+            builder.create_vector(&template_offsets)
+        });
+        let source_location_offset =
+            Self::serialize_source_location(builder, &function.source_location);
+
+        fb::FreeFunctionDecl::create(
+            builder,
+            &fb::FreeFunctionDeclArgs {
+                name: Some(name_offset),
+                enclosing_namespace_id: enclosing_namespace_id_offset,
+                return_type: return_type_offset,
+                parameters: Some(parameters_offset),
+                template_parameters: template_parameters_offset,
                 source_location: Some(source_location_offset),
             },
         )

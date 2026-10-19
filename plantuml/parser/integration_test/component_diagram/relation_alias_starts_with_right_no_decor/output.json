@@ -22,7 +22,7 @@
       "stereotype": "component",
       "relations": [
         {
-          "target": "Pkg.right_svc",
+          "target": "Pkg.Labeled",
           "annotation": "uses",
           "relation_type": "Association",
           "source_role": "None",
@@ -37,8 +37,8 @@
         "line": 17
       }
     },
-    "Pkg.right_svc": {
-      "id": "Pkg.right_svc",
+    "Pkg.Labeled": {
+      "id": "Pkg.Labeled",
       "name": "Labeled",
       "alias": "right_svc",
       "parent_id": "Pkg",

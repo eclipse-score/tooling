@@ -13,8 +13,8 @@
 @startuml
 
 package "MyComponent" as MyComponent <<component>> {
-    portin " " as p_in
-    portout " " as p_out
+    portin p_in
+    portout p_out
 }
 
 interface "IRequired" as IRequired

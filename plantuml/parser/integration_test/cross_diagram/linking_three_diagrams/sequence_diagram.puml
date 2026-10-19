@@ -11,7 +11,7 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 @startuml
-participant "Backend" as Backend
-participant IBackend
+participant "logging::Recorder::Backend" as Backend
+participant "logging::IBackend" as IBackend
 Backend -> IBackend : StartListening()
 @enduml

@@ -1,0 +1,16 @@
+{
+    "component_diagram.puml": {
+        "defines": {
+            "component_example": "component_example"
+        },
+        "references": {
+            "unit_1": "component_example.unit_1"
+        }
+    },
+    "class_diagram.puml": {
+        "defines": {},
+        "references": {
+            "Worker": "component_example.unit_1.Worker"
+        }
+    }
+}

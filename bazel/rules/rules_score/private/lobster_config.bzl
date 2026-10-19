@@ -20,6 +20,52 @@ format_lobster_sources() to build the source-line block, then pass it as a
 substitution value to ctx.actions.expand_template().
 """
 
+load("//bazel/rules/rules_score/private:verbosity.bzl", "get_log_level")
+
+MERGE_LOBSTER_ITEMS_ATTR = {
+    "_merge_lobster_items_tool": attr.label(
+        default = Label("//bazel/rules/rules_score:merge_lobster_items"),
+        executable = True,
+        cfg = "exec",
+        doc = "Tool merging lobster files, collapsing items defined by several of them.",
+    ),
+}
+
+def merge_lobster_files(ctx, files, output_name):
+    """Merge lobster files so an item defined by several of them is kept once.
+
+    Lobster rejects an item defined in two input files; this collapses identical
+    definitions and fails the build on conflicting ones. The rule must declare
+    ``MERGE_LOBSTER_ITEMS_ATTR`` and ``VERBOSITY_ATTR``.
+
+    Args:
+        ctx: Rule context.
+        files: List of File objects; the first file defining a tag wins.
+        output_name: Path of the merged file, relative to the package.
+
+    Returns:
+        Tuple ``(files, created)``: the files to use in place of *files* (the
+        input list when it has at most one file), and the files this call
+        created.
+    """
+    if len(files) <= 1:
+        return files, []
+    merged = ctx.actions.declare_file(output_name)
+    args = ctx.actions.args()
+    args.add("--output", merged)
+    args.add("--log-level", get_log_level(ctx))
+    args.add("--input-lobster")
+    args.add_all(files)
+    ctx.actions.run(
+        inputs = files,
+        outputs = [merged],
+        executable = ctx.executable._merge_lobster_items_tool,
+        arguments = [args],
+        progress_message = "Merging lobster items into %s" % merged.short_path,
+        mnemonic = "MergeLobsterItems",
+    )
+    return [merged], [merged]
+
 def format_lobster_sources(files):
     """Format a list of File objects as lobster source lines.
 

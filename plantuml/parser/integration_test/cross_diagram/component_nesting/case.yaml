@@ -12,12 +12,11 @@
 # *******************************************************************************
 # Nested package -> component -> component. Each enclosing scope (package,
 # outer component) is itself a "define" so it can be referenced/linked to,
-# and the leaf components (aliased and bare) are "reference"s. The label
-# ("Log Recorder") differs from the alias (Recorder) to prove the id is
-# built from the alias, not the label. `distinct` records that a nested
-# component does not accidentally link to a same-named sequence participant
-# today, since the component's id carries the full nesting chain and the
-# participant's does not (no root anchor yet).
+# and the leaf components (aliased and bare) are "reference"s. The name
+# (LogRecorder) differs from the alias (Recorder) to prove the id is built
+# from the name, not the alias. `distinct` records that a nested component
+# does not link to a same-named sequence participant, since the component's
+# id carries the full nesting chain and the participant's does not.
 diagram_types:
   component_diagram.puml: component
   sequence_diagram.puml: sequence

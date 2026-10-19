@@ -106,6 +106,16 @@ fn test_ignored_visibility_statements() {
 }
 
 #[test]
+fn test_free_function_entity() {
+    run_class_diagram_parser_case("free_function_entity");
+}
+
+#[test]
+fn test_keyword_prefixed_relationship() {
+    run_class_diagram_parser_case("keyword_prefixed_relationship");
+}
+
+#[test]
 fn test_method_modifier_placement() {
     run_class_diagram_parser_case("method_modifier_placement");
 }
@@ -168,6 +178,11 @@ fn test_enum() {
 #[test]
 fn test_interface() {
     run_class_diagram_parser_case("interface");
+}
+
+#[test]
+fn test_implements() {
+    run_class_diagram_parser_case("implements");
 }
 
 #[test]

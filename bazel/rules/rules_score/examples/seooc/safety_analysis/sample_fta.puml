@@ -23,6 +23,7 @@ $OrGate("OG1", "SampleLibrary.SampleFailureMode")
 
 $IntermediateEvent("SampleFailureMode is Angry", "IEF", "OG1")
 $RootCause("Just bad luck", "JustBadLuck", "OG1")
+$RootCause("Shared memory segment created with the wrong name", "ShmemCreatedWrongName", "OG1")
 
 ' 3rd level cascades from AGF
 $AndGate("AG2", "IEF")

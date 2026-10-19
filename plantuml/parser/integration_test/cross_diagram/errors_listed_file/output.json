@@ -1,0 +1,8 @@
+{
+    "valid_class_diagram.puml": {
+        "defines": {},
+        "references": {
+            "A": "A"
+        }
+    }
+}

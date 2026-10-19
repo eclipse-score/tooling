@@ -14,4 +14,5 @@
 struct Engine
 {
     int stop(int mode);
+    int start(int mode, int force, ...);
 };

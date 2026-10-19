@@ -1,0 +1,59 @@
+{
+  "extends_root_marker_quoted_name.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "X",
+        "name": "X",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 15 }
+      },
+      {
+        "id": "p.X",
+        "name": "X",
+        "enclosing_namespace_id": "p",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 17 }
+      },
+      {
+        "id": "p.D",
+        "name": "D",
+        "enclosing_namespace_id": "p",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "p.D",
+            "target": "X",
+            "relation_type": "Inheritance",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 18 }
+          }
+        ],
+        "source_location": { "file": "", "line": 18 }
+      }
+    ],
+    "free_functions": []
+  }
+}

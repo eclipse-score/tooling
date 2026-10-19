@@ -16,24 +16,22 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 filegroup(
     name = "class_design_sequence_test_data",
     srcs = [
+        "//validation/core/integration_test/class_design_sequence/negative_participant_alias_not_matched:case_data",
         "//validation/core/integration_test/class_design_sequence/negative_participant_ambiguous_short_name:case_data",
         "//validation/core/integration_test/class_design_sequence/negative_participant_method_missing:case_data",
         "//validation/core/integration_test/class_design_sequence/negative_participant_method_missing_with_suggestion:case_data",
         "//validation/core/integration_test/class_design_sequence/negative_participant_missing:case_data",
         "//validation/core/integration_test/class_design_sequence/negative_participant_missing_with_suggestion:case_data",
         "//validation/core/integration_test/class_design_sequence/negative_participant_private_inherited_method:case_data",
-        "//validation/core/integration_test/class_design_sequence/negative_participant_special_display_empty_suffix:case_data",
-        "//validation/core/integration_test/class_design_sequence/negative_participant_special_display_multiple_colons:case_data",
+        "//validation/core/integration_test/class_design_sequence/negative_participant_qualified_suffix_not_matched:case_data",
         "//validation/core/integration_test/class_design_sequence/positive_participant_abstract_base_method_match:case_data",
-        "//validation/core/integration_test/class_design_sequence/positive_participant_alias_display_name_class_name_match:case_data",
         "//validation/core/integration_test/class_design_sequence/positive_participant_alias_display_name_namespace_match:case_data",
+        "//validation/core/integration_test/class_design_sequence/positive_participant_cast_across_files:case_data",
         "//validation/core/integration_test/class_design_sequence/positive_participant_multilevel_inherited_method_match:case_data",
         "//validation/core/integration_test/class_design_sequence/positive_participant_namespace_callee_method_match:case_data",
+        "//validation/core/integration_test/class_design_sequence/positive_participant_qualified_label_with_newline_match:case_data",
+        "//validation/core/integration_test/class_design_sequence/positive_participant_qualified_reference:case_data",
         "//validation/core/integration_test/class_design_sequence/positive_participant_short_name_namespace_match:case_data",
-        "//validation/core/integration_test/class_design_sequence/positive_participant_special_display_encoded_newline_match:case_data",
-        "//validation/core/integration_test/class_design_sequence/positive_participant_special_display_leading_colon_short_name_match:case_data",
-        "//validation/core/integration_test/class_design_sequence/positive_participant_special_display_qualified_type_match:case_data",
-        "//validation/core/integration_test/class_design_sequence/positive_participant_special_display_short_type_match:case_data",
     ],
 )
 
@@ -47,7 +45,7 @@ rust_test(
     deps = [
         "//validation/core:validation_cli",
         "//validation/core/integration_test:test_framework",
-        "@crates//:serde",
-        "@crates//:serde_json",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
     ],
 )

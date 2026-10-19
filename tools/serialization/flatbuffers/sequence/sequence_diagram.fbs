@@ -55,6 +55,8 @@ table SequenceParticipant {
     display_name: string (required);
     /// Optional alias used for references in messages
     alias: string;
+    /// Identifier of the participant (labels and messages refer to it)
+    uid: string (required);
     /// Participant kind (participant, actor, boundary, ...)
     participant_type: ParticipantType = Participant;
     /// Source location of the declaration, when available

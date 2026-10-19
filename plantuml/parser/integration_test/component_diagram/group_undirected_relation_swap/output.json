@@ -1,0 +1,43 @@
+{
+    "file_a.puml": {
+        "ComponentX": {
+            "id": "ComponentX",
+            "name": "ComponentX",
+            "alias": "ComponentX",
+            "parent_id": null,
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [],
+            "source_location": {
+                "line": 15,
+                "file": ""
+            }
+        }
+    },
+    "file_b.puml": {
+        "ComponentY": {
+            "id": "ComponentY",
+            "name": "ComponentY",
+            "alias": "ComponentY",
+            "parent_id": null,
+            "element_type": "Component",
+            "stereotype": "component",
+            "relations": [
+                {
+                    "target": "ComponentX",
+                    "annotation": "link",
+                    "relation_type": "Association",
+                    "source_role": "None",
+                    "source_location": {
+                        "line": 17,
+                        "file": ""
+                    }
+                }
+            ],
+            "source_location": {
+                "line": 15,
+                "file": ""
+            }
+        }
+    }
+}

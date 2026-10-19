@@ -21,6 +21,7 @@ use crate::models::{
 };
 use crate::{Diagnostics, ErrorBuilder, ErrorCategory, ValidationResult};
 use class_diagram::{RelationType, Visibility};
+use uid_utils::{resolve_uid, UidMatch};
 
 /// Run class-design-vs-sequence validation.
 pub fn validate_class_design_sequence(
@@ -79,34 +80,11 @@ impl<'a> ClassDesignSequenceValidator<'a> {
     ) {
         let (source_file, source_line) = participant_info.source_location.display();
 
-        if let Some(display_issue) = unsupported_participant_display_form(participant_info) {
-            self.report_unsupported_participant_display_name(
-                participant,
-                participant_info,
-                &source_file,
-                source_line,
-                display_issue,
-            );
-            return;
-        }
-
-        self.log_ignored_special_display_suffix(
-            participant,
-            participant_info,
-            &source_file,
-            source_line,
-        );
-
         match self.resolve_participant_class(participant) {
             ParticipantResolution::Matched(_) => {}
-            ParticipantResolution::Missing => {
-                self.result.add_failure(self.missing_participant_failure(
-                    participant,
-                    participant_info,
-                    &source_file,
-                    source_line,
-                ))
-            }
+            ParticipantResolution::Missing => self.result.add_failure(
+                self.missing_participant_failure(participant, &source_file, source_line),
+            ),
             ParticipantResolution::Ambiguous(matches) => {
                 self.result.add_failure(self.ambiguous_participant_failure(
                     participant,
@@ -118,28 +96,9 @@ impl<'a> ClassDesignSequenceValidator<'a> {
         }
     }
 
-    fn log_ignored_special_display_suffix(
-        &self,
-        participant: &str,
-        participant_info: &SequenceParticipantInfo,
-        source_file: &str,
-        source_line: u32,
-    ) {
-        if let Some(ignored_suffix) = ignored_special_display_suffix(participant_info) {
-            log::warn!(
-                "sequence participant \"{}\" ignores trailing special display text \"{}\" at {}:{}; it is not treated as namespace or class matching data",
-                participant,
-                ignored_suffix,
-                source_file,
-                source_line,
-            );
-        }
-    }
-
     fn missing_participant_failure(
         &self,
         participant: &str,
-        participant_info: &SequenceParticipantInfo,
         source_file: &str,
         source_line: u32,
     ) -> String {
@@ -155,7 +114,7 @@ impl<'a> ClassDesignSequenceValidator<'a> {
             ));
 
         if let Some(suggested_class) = self
-            .best_participant_class_suggestion(participant, participant_info)
+            .best_participant_class_suggestion(participant)
             .as_deref()
         {
             error.suggest(participant, Some("class"), suggested_class)
@@ -172,6 +131,8 @@ impl<'a> ClassDesignSequenceValidator<'a> {
         source_line: u32,
         matches: &BTreeSet<String>,
     ) -> String {
+        let example = matches.first().map_or(participant, String::as_str);
+
         ErrorBuilder::new(ErrorCategory::Class)
             .title(format!(
                 "sequence participant \"{participant}\" matches multiple classes in the class diagram"
@@ -181,7 +142,7 @@ impl<'a> ClassDesignSequenceValidator<'a> {
             .field("sequence source file", format!("\"{source_file}\""))
             .field("sequence source line", source_line.to_string())
             .fix(format!(
-                "rename participant \"{participant}\" in the sequence diagram to a unique class id, or rename one of the matching classes in the class diagram"
+                "write the qualified id of the intended class as the label of participant \"{participant}\" in the sequence diagram, for example participant \"{example}\" as {participant}, or rename one of the matching classes in the class diagram"
             ))
             .build()
     }
@@ -279,23 +240,13 @@ impl<'a> ClassDesignSequenceValidator<'a> {
         }
     }
 
-    fn best_participant_class_suggestion(
-        &self,
-        participant: &str,
-        participant_info: &SequenceParticipantInfo,
-    ) -> Option<String> {
-        let class_candidates: BTreeSet<String> = self
-            .design_classes
-            .entities()
-            .flat_map(|entity| [entity.id.clone(), entity.name.clone()])
-            .filter(|candidate| !candidate.is_empty())
-            .collect();
-
-        participant_suggestion_queries(participant, participant_info)
-            .into_iter()
-            .find_map(|query| {
-                best_string_suggestion(&query, class_candidates.iter().map(String::as_str))
-            })
+    fn best_participant_class_suggestion(&self, participant: &str) -> Option<String> {
+        best_string_suggestion(
+            participant,
+            self.design_classes
+                .entities()
+                .map(|entity| entity.id.as_str()),
+        )
     }
 
     fn best_method_suggestion(
@@ -311,131 +262,18 @@ impl<'a> ClassDesignSequenceValidator<'a> {
     }
 
     fn resolve_participant_class(&self, participant: &str) -> ParticipantResolution<'a> {
-        if let Some(resolution) = self.resolve_class_from_participant(participant) {
-            return resolution;
-        }
+        let design_classes: &'a ClassEntityIndex = self.design_classes;
+        let class_ids = design_classes.entities().map(|entity| entity.id.as_str());
 
-        if let Some(participant_info) = self.sequence_diagram.participant_info(participant) {
-            if let Some(resolution) = self.resolve_class_from_display_name(
-                participant,
-                participant_info.display_name.as_str(),
-            ) {
-                return resolution;
-            }
-
-            if let Some(resolution) = self.resolve_class_from_special_display_form(participant_info)
-            {
-                return resolution;
-            }
-        }
-
-        self.resolve_by_class_name(participant)
-    }
-
-    fn resolve_class_from_participant(
-        &self,
-        participant: &str,
-    ) -> Option<ParticipantResolution<'a>> {
-        self.resolve_by_class_id(participant)
-            .map(ParticipantResolution::Matched)
-    }
-
-    fn resolve_class_from_display_name(
-        &self,
-        participant: &str,
-        display_name: &str,
-    ) -> Option<ParticipantResolution<'a>> {
-        if display_name == participant {
-            return None;
-        }
-
-        if let Some(entity) = self.resolve_by_class_id(display_name) {
-            return Some(ParticipantResolution::Matched(entity));
-        }
-
-        match self.resolve_by_class_name(display_name) {
-            ParticipantResolution::Missing => None,
-            matched_or_ambiguous => Some(matched_or_ambiguous),
-        }
-    }
-
-    fn resolve_class_from_special_display_form(
-        &self,
-        participant_info: &SequenceParticipantInfo,
-    ) -> Option<ParticipantResolution<'a>> {
-        let display_candidates = class_match_candidates_from_display(participant_info);
-
-        for id_candidate in display_candidates.id_candidates {
-            if let Some(entity) = self.resolve_by_class_id(&id_candidate) {
-                return Some(ParticipantResolution::Matched(entity));
-            }
-        }
-
-        for name_candidate in display_candidates.name_candidates {
-            match self.resolve_by_class_name(&name_candidate) {
-                ParticipantResolution::Missing => {}
-                matched_or_ambiguous => return Some(matched_or_ambiguous),
-            }
-        }
-
-        None
-    }
-
-    fn report_unsupported_participant_display_name(
-        &mut self,
-        participant: &str,
-        participant_info: &SequenceParticipantInfo,
-        source_file: &str,
-        source_line: u32,
-        display_issue: UnsupportedParticipantDisplayForm,
-    ) {
-        self.result.add_failure(
-            ErrorBuilder::new(ErrorCategory::Class)
-                .title(format!(
-                    "sequence participant \"{participant}\" uses an invalid kind of display name"
-                ))
-                .field("participant", format!("\"{participant}\""))
-                .field("display name", format!("\"{}\"", participant_info.display_name))
-                .field(
-                    "invalid form",
-                    display_issue.invalid_form(&participant_info.display_name),
-                )
-                .field("sequence source file", format!("\"{source_file}\""))
-                .field("sequence source line", source_line.to_string())
-                .fix(
-                    "use one supported form such as :Name, prefix:qualified::Type, or provide an unambiguous alias"
-                        .to_string(),
-                )
-                .build(),
-        );
-    }
-
-    fn resolve_by_class_id(&self, reference: &str) -> Option<&'a class_diagram::SimpleEntity> {
-        if let Some(entity) = self.design_classes.find_by_id(reference) {
-            return Some(entity);
-        }
-
-        let normalized_reference = SequenceParticipantInfo::normalize_qualified_name(reference);
-        if normalized_reference == reference {
-            return None;
-        }
-
-        self.design_classes.find_by_id(&normalized_reference)
-    }
-
-    fn resolve_by_class_name(&self, class_name: &str) -> ParticipantResolution<'a> {
-        let short_name_matches: Vec<_> = self
-            .design_classes
-            .entities()
-            .filter(|entity| entity.name == class_name)
-            .collect();
-
-        match short_name_matches.as_slice() {
-            [] => ParticipantResolution::Missing,
-            [entity] => ParticipantResolution::Matched(entity),
-            entities => ParticipantResolution::Ambiguous(
-                entities.iter().map(|entity| entity.id.clone()).collect(),
+        match resolve_uid(participant, class_ids) {
+            UidMatch::Resolved(class_id) => design_classes.find_by_id(class_id).map_or(
+                ParticipantResolution::Missing,
+                ParticipantResolution::Matched,
             ),
+            UidMatch::Ambiguous(class_ids) => ParticipantResolution::Ambiguous(
+                class_ids.into_iter().map(str::to_string).collect(),
+            ),
+            UidMatch::Unresolved => ParticipantResolution::Missing,
         }
     }
 
@@ -563,204 +401,6 @@ enum ParticipantResolution<'a> {
     Matched(&'a class_diagram::SimpleEntity),
     Missing,
     Ambiguous(BTreeSet<String>),
-}
-
-#[derive(Default)]
-struct ClassMatchCandidates {
-    id_candidates: Vec<String>,
-    name_candidates: Vec<String>,
-}
-
-#[derive(Clone, Copy)]
-enum UnsupportedParticipantDisplayForm {
-    MultipleStandaloneColons,
-    EmptyColonSuffix,
-}
-
-impl UnsupportedParticipantDisplayForm {
-    fn invalid_form(self, display_name: &str) -> String {
-        match self {
-            Self::MultipleStandaloneColons => format!(
-                "\"{}\" contains multiple standalone ':' separators",
-                display_name
-            ),
-            Self::EmptyColonSuffix => {
-                format!(
-                    "\"{}\" uses ':' without a non-empty right-hand side",
-                    display_name
-                )
-            }
-        }
-    }
-}
-
-fn unsupported_participant_display_form(
-    participant_info: &SequenceParticipantInfo,
-) -> Option<UnsupportedParticipantDisplayForm> {
-    let primary_line = first_nonempty_display_line(&participant_info.display_name)?;
-    let separator_colons = separator_colon_positions(primary_line);
-
-    if separator_colons.len() > 1 {
-        return Some(UnsupportedParticipantDisplayForm::MultipleStandaloneColons);
-    }
-
-    if let Some(colon_index) = separator_colons.first() {
-        if primary_line[colon_index + 1..].trim().is_empty() {
-            return Some(UnsupportedParticipantDisplayForm::EmptyColonSuffix);
-        }
-    }
-
-    None
-}
-
-fn class_match_candidates_from_display(
-    participant_info: &SequenceParticipantInfo,
-) -> ClassMatchCandidates {
-    let Some(primary_line) = first_nonempty_display_line(&participant_info.display_name) else {
-        return ClassMatchCandidates::default();
-    };
-
-    let separator_colons = separator_colon_positions(primary_line);
-    if separator_colons.len() != 1 {
-        return ClassMatchCandidates::default();
-    }
-
-    let colon_index = separator_colons[0];
-    if colon_index == 0 {
-        let short_name = primary_line[1..].trim();
-        if short_name.is_empty() {
-            return ClassMatchCandidates::default();
-        }
-
-        return ClassMatchCandidates {
-            id_candidates: Vec::new(),
-            name_candidates: vec![short_name.to_string()],
-        };
-    }
-
-    let Some(type_text) = text_after_separator_colon(primary_line, colon_index) else {
-        return ClassMatchCandidates::default();
-    };
-
-    class_match_candidates_from_type_text(type_text)
-}
-
-fn participant_suggestion_queries(
-    participant: &str,
-    participant_info: &SequenceParticipantInfo,
-) -> Vec<String> {
-    let mut queries = BTreeSet::new();
-
-    insert_participant_suggestion_query(&mut queries, participant);
-
-    if participant_info.display_name != participant {
-        insert_participant_suggestion_query(&mut queries, &participant_info.display_name);
-    }
-
-    let display_candidates = class_match_candidates_from_display(participant_info);
-    for candidate in display_candidates
-        .id_candidates
-        .into_iter()
-        .chain(display_candidates.name_candidates)
-    {
-        insert_participant_suggestion_query(&mut queries, &candidate);
-    }
-
-    queries.into_iter().collect()
-}
-
-fn insert_participant_suggestion_query(queries: &mut BTreeSet<String>, query: &str) {
-    if query.is_empty() {
-        return;
-    }
-
-    queries.insert(query.to_string());
-
-    let normalized_query = SequenceParticipantInfo::normalize_qualified_name(query);
-    if normalized_query != query {
-        queries.insert(normalized_query);
-    }
-}
-
-fn text_after_separator_colon(primary_line: &str, colon_index: usize) -> Option<&str> {
-    let type_text = primary_line[colon_index + 1..].trim();
-    (!type_text.is_empty()).then_some(type_text)
-}
-
-fn class_match_candidates_from_type_text(type_text: &str) -> ClassMatchCandidates {
-    let mut candidates = ClassMatchCandidates {
-        id_candidates: Vec::new(),
-        name_candidates: Vec::new(),
-    };
-
-    if type_text.contains("::") {
-        candidates.id_candidates.push(type_text.to_string());
-    }
-
-    candidates.name_candidates.push(type_text.to_string());
-
-    if let Some(short_name) = type_text.rsplit("::").next().map(str::trim) {
-        if !short_name.is_empty() && short_name != type_text {
-            candidates.name_candidates.push(short_name.to_string());
-        }
-    }
-
-    candidates
-}
-
-fn ignored_special_display_suffix(participant_info: &SequenceParticipantInfo) -> Option<String> {
-    let normalized_segments = normalized_display_segments(&participant_info.display_name);
-    let (primary_line, ignored_segments) = normalized_segments.split_first()?;
-    let separator_colons = separator_colon_positions(primary_line);
-
-    if separator_colons.len() != 1 || ignored_segments.is_empty() {
-        return None;
-    }
-
-    Some(ignored_segments.join(" | "))
-}
-
-fn first_nonempty_display_line(display_name: &str) -> Option<&str> {
-    normalized_display_segments(display_name).into_iter().next()
-}
-
-fn normalized_display_segments(display_name: &str) -> Vec<&str> {
-    let mut lines = Vec::new();
-
-    for physical_line in display_name.lines() {
-        for escaped_line in physical_line
-            .split("\\n")
-            .flat_map(|segment| segment.split("/n"))
-        {
-            let trimmed = escaped_line.trim();
-            if !trimmed.is_empty() {
-                lines.push(trimmed);
-            }
-        }
-    }
-
-    lines
-}
-
-fn separator_colon_positions(text: &str) -> Vec<usize> {
-    const COLON: u8 = b':';
-
-    let bytes = text.as_bytes();
-
-    bytes
-        .iter()
-        .enumerate()
-        .filter_map(|(index, byte)| {
-            if *byte != COLON {
-                return None;
-            }
-
-            let previous_is_colon = index > 0 && bytes[index - 1] == COLON;
-            let next_is_colon = index + 1 < bytes.len() && bytes[index + 1] == COLON;
-
-            (!previous_is_colon && !next_is_colon).then_some(index)
-        })
-        .collect()
 }
 
 fn format_name_set(names: &BTreeSet<String>) -> String {

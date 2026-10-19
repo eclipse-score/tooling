@@ -46,6 +46,10 @@ load(
     _dependable_element = "dependable_element",
 )
 load(
+    "//bazel/rules/rules_score/private:failure_modes.bzl",
+    _failure_modes = "failure_modes",
+)
+load(
     "//bazel/rules/rules_score/private:feature_requirements.bzl",
     _feature_requirements = "feature_requirements",
 )
@@ -59,6 +63,7 @@ load(
 )
 load(
     "//bazel/rules/rules_score/private:safety_analysis.bzl",
+    _fault_trees = "fault_trees",
     _safety_analysis = "safety_analysis",
 )
 load(
@@ -79,7 +84,9 @@ assumptions_of_use = _assumptions_of_use
 assumed_system_requirements = _assumed_system_requirements
 component_requirements = _component_requirements
 dependability_analysis = _dependability_analysis
+failure_modes = _failure_modes
 feature_requirements = _feature_requirements
+fault_trees = _fault_trees
 glossary = _glossary
 filter_execpath = _filter_execpath
 safety_analysis = _safety_analysis

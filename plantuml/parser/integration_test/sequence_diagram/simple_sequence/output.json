@@ -3,8 +3,9 @@
     "name": "simple_sequence",
     "participants": [
       {
-        "display_name": "Component A",
-        "alias": "ComponentA",
+        "display_name": "ComponentA",
+        "alias": null,
+        "uid": "ComponentA",
         "participant_type": "Participant",
         "source_location": {
           "file": "",
@@ -13,8 +14,9 @@
         "stereotype": "component"
       },
       {
-        "display_name": "Component B",
-        "alias": "ComponentB",
+        "display_name": "ComponentB",
+        "alias": null,
+        "uid": "ComponentB",
         "participant_type": "Participant",
         "source_location": {
           "file": "",
@@ -23,8 +25,9 @@
         "stereotype": "component"
       },
       {
-        "display_name": "Component C",
-        "alias": "ComponentC",
+        "display_name": "ComponentC",
+        "alias": null,
+        "uid": "ComponentC",
         "participant_type": "Participant",
         "source_location": {
           "file": "",

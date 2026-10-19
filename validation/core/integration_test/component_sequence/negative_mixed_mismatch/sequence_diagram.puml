@@ -13,8 +13,8 @@
 
 @startuml sequence_diagram
 
-participant "Unit 2" as unit_2 <<unit>>
-participant "Unit 3" as unit_3 <<unit>>
+participant unit_2 <<unit>>
+participant unit_3 <<unit>>
 
 unit_2 -> unit_3 : Relay
 

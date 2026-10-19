@@ -13,9 +13,9 @@
 
 @startuml simple_sequence
 
-participant "Component A" as ComponentA <<component>>
-participant "Component B" as ComponentB <<component>>
-participant "Component C" as ComponentC <<component>>
+participant ComponentA <<component>>
+participant ComponentB <<component>>
+participant ComponentC <<component>>
 
 ComponentA -> ComponentB : callMethod1()
 alt condition1

@@ -1,0 +1,44 @@
+{
+  "uid_qualified_label_path.puml": {
+    "name": "uid_qualified_label_path",
+    "participants": [
+      {
+        "display_name": "comp::unit_1",
+        "alias": "u1",
+        "uid": "comp.unit_1",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 16
+        },
+        "stereotype": null
+      },
+      {
+        "display_name": "Client",
+        "alias": null,
+        "uid": "Client",
+        "participant_type": "Participant",
+        "source_location": {
+          "file": "",
+          "line": 17
+        },
+        "stereotype": null
+      }
+    ],
+    "root": {
+      "items": [
+        {
+          "Interaction": {
+            "sender": "Client",
+            "receiver": "comp.unit_1",
+            "message": "call()",
+            "source_location": {
+              "file": "",
+              "line": 19
+            }
+          }
+        }
+      ]
+    }
+  }
+}

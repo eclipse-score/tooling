@@ -15,9 +15,49 @@ use sequence_logic::SourceLocation;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum SequenceResolverError {
-    #[error("participant `{participant}` is used after destroy at {source_location}")]
-    DestroyedParticipantUse {
+    #[error("invalid sequence participant `{participant}` at {source_location}: {reason}")]
+    InvalidParticipantIdentifier {
         participant: String,
+        reason: String,
+        source_location: SourceLocation,
+    },
+
+    #[error("duplicate sequence participant id {participant_id} at {source_location}")]
+    DuplicateParticipantId {
+        participant_id: String,
+        source_location: SourceLocation,
+    },
+
+    #[error("duplicate sequence participant name `{reference}` at {source_location}")]
+    DuplicateParticipantReference {
+        reference: String,
+        source_location: SourceLocation,
+    },
+
+    #[error("unknown sequence participant `{reference}` at {source_location}")]
+    UnknownParticipant {
+        reference: String,
+        source_location: SourceLocation,
+    },
+
+    #[error(
+        "ambiguous sequence participant `{reference}` at {source_location}: declared in other files as {}",
+        uids.join(", ")
+    )]
+    AmbiguousParticipantReference {
+        reference: String,
+        /// Distinct uids the reference stands for, sorted.
+        uids: Vec<String>,
+        source_location: SourceLocation,
+    },
+
+    #[error(
+        "participant `{participant}` (uid `{uid}`) is used after destroy at {source_location}"
+    )]
+    DestroyedParticipantUse {
+        /// Reference name the author wrote: the alias, else the name.
+        participant: String,
+        uid: String,
         source_location: SourceLocation,
     },
 

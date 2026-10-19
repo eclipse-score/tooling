@@ -21,6 +21,7 @@ pub use source_location::SourceLocation;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LogicComponent {
     pub id: String, //FQN
+    /// Declared name without a leading root marker, independent of the alias.
     pub name: Option<String>,
     pub alias: Option<String>,
     pub parent_id: Option<String>, // FQN of parent

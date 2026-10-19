@@ -20,7 +20,7 @@ use activity_resolver::{ActivityDiagram, ActivityResolver, ActivityResolverError
 use parser_core::DiagramParser;
 use puml_utils::LogLevel;
 use resolver_traits::DiagramResolver;
-use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor};
+use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor, ResolverGroupRunner};
 
 struct ActivityResolverRunner;
 
@@ -57,6 +57,27 @@ fn run_activity_resolver_case(case_name: &str) {
         ActivityResolverRunner,
         DefaultExpectationChecker,
     );
+}
+
+fn run_activity_resolver_group_case(case_name: &str) {
+    run_case(
+        "integration_test/activity_diagram/resolver",
+        case_name,
+        ResolverGroupRunner::<_, ActivityResolver>::new(PumlActivityParser),
+        DefaultExpectationChecker,
+    );
+}
+
+// Activity diagrams have no cross-file semantics: a group resolves exactly
+// as its files do one by one.
+#[test]
+fn test_activity_resolver_group_files_stay_independent() {
+    run_activity_resolver_group_case("group_files_stay_independent");
+}
+
+#[test]
+fn test_activity_resolver_group_matches_single_file() {
+    run_activity_resolver_group_case("repeat_if");
 }
 
 #[test]

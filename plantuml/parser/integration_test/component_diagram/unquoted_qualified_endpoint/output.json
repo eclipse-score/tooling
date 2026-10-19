@@ -1,0 +1,78 @@
+{
+  "unquoted_qualified_endpoint.puml": {
+    "ns": {
+      "id": "ns",
+      "name": "ns",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Package",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 15
+      }
+    },
+    "ns.B": {
+      "id": "ns.B",
+      "name": "B",
+      "alias": null,
+      "parent_id": "ns",
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {
+        "file": "",
+        "line": 16
+      }
+    },
+    "A": {
+      "id": "A",
+      "name": "A",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "ns.B",
+          "annotation": "unquoted",
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 20
+          }
+        }
+      ],
+      "source_location": {
+        "file": "",
+        "line": 18
+      }
+    },
+    "D": {
+      "id": "D",
+      "name": "D",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "ns.B",
+          "annotation": "quoted",
+          "relation_type": "Dependency",
+          "source_role": "None",
+          "source_location": {
+            "file": "",
+            "line": 21
+          }
+        }
+      ],
+      "source_location": {
+        "file": "",
+        "line": 19
+      }
+    }
+  }
+}

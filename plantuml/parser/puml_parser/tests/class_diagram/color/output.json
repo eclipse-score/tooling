@@ -6,14 +6,18 @@
         "Namespace": {
           "name": {
             "internal": "Service",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 15
           },
           "types": [
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "Api",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "Service",
                 "package": "",
@@ -21,7 +25,6 @@
                   "file": "",
                   "line": 16
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [
@@ -38,9 +41,13 @@
                     }
                   }
                 ],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             }
           ],

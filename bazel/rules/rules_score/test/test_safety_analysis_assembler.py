@@ -15,6 +15,7 @@
 import os
 import sys
 import tempfile
+import types
 import unittest
 
 import safety_analysis_assembler as fa
@@ -26,10 +27,11 @@ class _Type:
 
 
 class _Obj:
-    def __init__(self, name, type_name, fields=None):
+    def __init__(self, name, type_name, fields=None, file_name="x.trlc"):
         self.name = name
         self.n_typ = _Type(type_name)
         self._fields = fields or {}
+        self.location = types.SimpleNamespace(file_name=file_name)
 
     def to_python_dict(self):
         return self._fields
@@ -167,6 +169,35 @@ class ChainDerivationTest(unittest.TestCase):
         self.assertEqual(fa._root_causes_for_failure_mode(self.obj_map, "Lib.FM_Orphan"), [])
 
 
+class CheckInputsTest(unittest.TestCase):
+    def test_consistent_inputs_have_no_errors(self):
+        self.assertEqual(fa._check_inputs(_objs(), []), [])
+
+    def test_root_cause_failure_mode_outside_failure_modes_is_reported(self):
+        objs = {fqn: obj for fqn, obj in _objs().items() if fqn != "Lib.FM_A"}
+        errors = fa._check_inputs(objs, [])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Lib.RC_A", errors[0])
+        self.assertIn("Lib.FM_A", errors[0])
+
+    def test_mitigation_in_mitigations_file_is_accepted(self):
+        objs = _objs()
+        objs["Lib.CM_1"] = _Obj("CM_1", "Mitigation", {"root_causes": ["Lib.RC_A"]}, file_name="m.trlc")
+        self.assertEqual(fa._check_inputs(objs, ["m.trlc"]), [])
+
+    def test_non_mitigation_in_mitigations_file_is_reported(self):
+        objs = _objs()
+        objs["Lib.Aou_1"] = _Obj("Aou_1", "AoU", {"root_causes": ["Lib.RC_A"]}, file_name="m.trlc")
+        errors = fa._check_inputs(objs, ["m.trlc"])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("AoU Lib.Aou_1", errors[0])
+
+    def test_non_mitigation_outside_mitigations_file_is_accepted(self):
+        objs = _objs()
+        objs["Lib.Aou_1"] = _Obj("Aou_1", "AoU", {"root_causes": ["Lib.RC_A"]}, file_name="a.trlc")
+        self.assertEqual(fa._check_inputs(objs, ["m.trlc"]), [])
+
+
 class BuildBodyTest(unittest.TestCase):
     def setUp(self):
         self.renderer = _FakeRenderer(_objs())
@@ -297,10 +328,7 @@ abstract type SafetyMeasure {
 type Mitigation extends SafetyMeasure {
 }
 
-type AoU {
-    safety optional String
-    description optional String
-    root_causes optional RootCause [1..*]
+type AoU extends SafetyMeasure {
 }
 
 tuple CompReqSourceId {
@@ -338,7 +366,9 @@ Mitigation CmA {
 }
 """
 
-_COMPREQ_BODY = """\
+_COMPREQ_TRLC = """\
+package TestSafetyAnalysis
+
 CompReq CrB {
     description = "cr b description"
     derived_from = [TestSafetyAnalysis.RcB@1]
@@ -393,7 +423,8 @@ class MainIntegrationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             rsl = self._write(tmp, "types.rsl", _RSL)
             fm = self._write(tmp, "fm.trlc", _FM_TRLC)
-            cm = self._write(tmp, "cm.trlc", _MITIGATION_TRLC + "\n" + _COMPREQ_BODY)
+            cm = self._write(tmp, "cm.trlc", _MITIGATION_TRLC)
+            cr = self._write(tmp, "cr.trlc", _COMPREQ_TRLC)
             fta = self._write(tmp, "fta_events.trlc", _FTA_TRLC)
             template = self._write(tmp, "tmpl.rst", "{body}\n")
             out = os.path.join(tmp, "safety_analysis.rst")
@@ -415,9 +446,11 @@ class MainIntegrationTest(unittest.TestCase):
                     "a.puml",
                     "--failuremodes",
                     fm,
-                    "--safetymeasures",
+                    "--mitigations",
                     cm,
-                    "--spec",
+                    "--safetymeasures",
+                    cr,
+                    "--dep-files",
                     rsl,
                 ]
             )
@@ -446,6 +479,51 @@ class MainIntegrationTest(unittest.TestCase):
             # RcA is addressed by the Mitigation, RcB by the CompReq; RcUncovered
             # by neither and is the only root cause flagged.
             self.assertEqual(rst.count(":bdg-danger:`No safety measure`"), 1)
+
+    def _assemble(self, tmp, failuremodes=(), mitigations=(), spec=()):
+        rsl = self._write(tmp, "types.rsl", _RSL)
+        fta = self._write(tmp, "fta_events.trlc", _FTA_TRLC)
+        template = self._write(tmp, "tmpl.rst", "{body}\n")
+        argv = [
+            "safety_analysis_assembler",
+            "--output",
+            os.path.join(tmp, "safety_analysis.rst"),
+            "--template",
+            template,
+            "--title",
+            "T",
+            "--fta-package",
+            "TestSafetyAnalysis",
+            "--fta-events",
+            fta,
+            "--failuremodes",
+            *failuremodes,
+            "--mitigations",
+            *mitigations,
+            "--dep-files",
+            rsl,
+            *spec,
+        ]
+        self._run_main(argv)
+
+    def test_root_cause_failure_mode_outside_failure_modes_exits_nonzero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fm = self._write(tmp, "fm.trlc", _FM_TRLC)
+            with self.assertRaises(SystemExit) as ctx:
+                self._assemble(tmp, spec=[fm])
+            self.assertEqual(ctx.exception.code, 1)
+
+    def test_non_mitigation_in_mitigations_file_exits_nonzero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fm = self._write(tmp, "fm.trlc", _FM_TRLC)
+            aou = self._write(
+                tmp,
+                "aou.trlc",
+                "package TestSafetyAnalysis\n\nAoU AouA {\n    root_causes = [TestSafetyAnalysis.RcA]\n}\n",
+            )
+            with self.assertRaises(SystemExit) as ctx:
+                self._assemble(tmp, failuremodes=[fm], mitigations=[aou])
+            self.assertEqual(ctx.exception.code, 1)
 
     def test_malformed_fta_events_exits_nonzero(self):
         with tempfile.TemporaryDirectory() as tmp:

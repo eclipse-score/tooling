@@ -34,6 +34,7 @@ whole page.  Coverage of the links is checked by lobster, not here.
 import argparse
 import dataclasses
 import logging
+import os
 import re
 import sys
 
@@ -331,6 +332,30 @@ def _render_measures(renderer: TRLCRST, obj_map: dict, measure_fqns: list[str]) 
     return _heading(_SAFETY_MEASURES_TITLE, "-") + "\n" + body + "\n"
 
 
+def _check_inputs(obj_map: dict, mitigation_files: list[str]) -> list[str]:
+    """Input errors: a root cause whose failure mode is not rendered, or a
+    non-Mitigation record in a ``--mitigations`` file.
+
+    Only records of the source files are in *obj_map*; a failure mode parsed for
+    reference resolution only is therefore reported.
+    """
+    errors = []
+    fm_fqns = {fqn for fqn, obj in obj_map.items() if obj.n_typ.name == "FailureMode"}
+    mitigation_paths = {os.path.abspath(f) for f in mitigation_files}
+    for fqn, obj in obj_map.items():
+        kind = obj.n_typ.name
+        if kind == "RootCause":
+            for fm_fqn in obj.to_python_dict().get("failure_modes") or []:
+                if fm_fqn not in fm_fqns:
+                    errors.append(f"RootCause {fqn} references failure mode {fm_fqn}, which is not in failure_modes")
+        if kind != "Mitigation" and os.path.abspath(obj.location.file_name) in mitigation_paths:
+            errors.append(
+                f"{kind} {fqn} is in a mitigations file; only Mitigation records belong there "
+                "(pass AoU / CompReq records via an assumptions_of_use / component_requirements target)"
+            )
+    return errors
+
+
 def _build_body(renderer: TRLCRST, title: str, fta_package: str, diagram_names: list[str]) -> str:
     obj_map = renderer.objects_by_fqn()
     fm_fqns = [fqn for fqn, obj in obj_map.items() if obj.n_typ.name == "FailureMode"]
@@ -372,16 +397,23 @@ def main() -> None:
     )
     parser.add_argument("--failuremodes", nargs="*", default=[], help="FailureMode .trlc files.")
     parser.add_argument(
+        "--mitigations",
+        nargs="*",
+        default=[],
+        help="Mitigation .trlc files; any other record type in them is an error.",
+    )
+    parser.add_argument(
         "--safetymeasures",
         nargs="*",
         default=[],
-        help="Mitigation/AoU/CompReq .trlc files scoped to this safety_analysis target.",
+        help="AoU/CompReq .trlc files of the measure targets scoped to this safety_analysis target.",
     )
     parser.add_argument(
-        "--spec",
+        "--dep-files",
         nargs="*",
         default=[],
-        help="TRLC .rsl/.trlc spec files for import resolution.",
+        dest="dep_files",
+        help="TRLC .rsl/.trlc files parsed for import resolution only; their records are not rendered.",
     )
     parser.add_argument(
         "--log-level",
@@ -394,16 +426,22 @@ def main() -> None:
 
     logging.basicConfig(level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s")
 
-    source_files = list(args.failuremodes) + list(args.safetymeasures) + [args.fta_events]
+    source_files = list(args.failuremodes) + list(args.mitigations) + list(args.safetymeasures) + [args.fta_events]
     renderer = TRLCRST(
         input_directory=None,
         source_files=source_files,
-        dep_files=list(args.spec),
+        dep_files=list(args.dep_files),
     )
     try:
         renderer.parse_trlc_files()
     except TRLCParseError as exc:
         logger.error("TRLC parse error: %s", exc)
+        sys.exit(1)
+
+    errors = _check_inputs(renderer.objects_by_fqn(), args.mitigations)
+    if errors:
+        for error in errors:
+            logger.error("%s", error)
         sys.exit(1)
 
     body = _build_body(renderer, args.title, args.fta_package, args.diagrams)

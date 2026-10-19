@@ -13,7 +13,7 @@
 
 @startuml public_api
 
-interface "Other API" as OtherAPI <<interface>> {
+interface OtherAPI <<interface>> {
     +GetNumber(): int
 }
 

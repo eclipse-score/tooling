@@ -2,8 +2,8 @@
     "relation_generic_lollipop_provided_to_component.puml": {
         "Pkg.ComponentA": {
             "id": "Pkg.ComponentA",
-            "name": "Component A",
-            "alias": "ComponentA",
+            "name": "ComponentA",
+            "alias": null,
             "parent_id": "Pkg",
             "comp_type": "Component",
             "stereotype": "component",

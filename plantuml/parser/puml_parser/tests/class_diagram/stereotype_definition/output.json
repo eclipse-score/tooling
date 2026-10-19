@@ -3,20 +3,21 @@
     "name": "stereotype_definition",
     "elements": [
       {
-        "Types": {
-          "ClassDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "User",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
-            "stereotypes": ["Model"],
+            "stereotypes": [
+              "Model"
+            ],
             "source_location": {
               "file": "",
               "line": 15
             },
-            "is_abstract": false,
             "type_aliases": [],
             "attributes": [
               {
@@ -44,22 +45,29 @@
                 }
               }
             ],
-            "template_parameters": null,
-            "extends": [],
-            "implements": []
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
+            }
           }
         }
       },
       {
-        "Types": {
-          "StructDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "Config",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
-            "stereotypes": ["Singleton", "Immutable"],
+            "stereotypes": [
+              "Singleton",
+              "Immutable"
+            ],
             "source_location": {
               "file": "",
               "line": 20
@@ -78,20 +86,22 @@
               }
             ],
             "methods": [],
-            "template_parameters": null
+            "kind": "Struct"
           }
         }
       },
       {
-        "Types": {
-          "InterfaceDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "AbstractService",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
-            "stereotypes": ["abstract"],
+            "stereotypes": [
+              "abstract"
+            ],
             "source_location": {
               "file": "",
               "line": 24
@@ -112,42 +122,49 @@
                 }
               }
             ],
-            "template_parameters": null,
-            "extends": []
+            "kind": {
+              "Interface": {
+                "extends": []
+              }
+            }
           }
         }
       },
       {
-        "Enum": {
-          "name": {
-            "internal": "Gender",
-            "display": null
-          },
-          "namespace": "",
-          "package": "",
-          "source_location": {
-            "file": "",
-            "line": 28
-          },
-          "stereotypes": ["enum"],
-          "items": [
-            {
-              "name": "MALE",
-              "value": null,
-              "source_location": {
-                "file": "",
-                "line": 29
-              }
+        "Type": {
+          "EnumDef": {
+            "name": {
+              "internal": "Gender",
+              "alias": null
             },
-            {
-              "name": "FEMALE",
-              "value": null,
-              "source_location": {
-                "file": "",
-                "line": 30
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 28
+            },
+            "stereotypes": [
+              "enum"
+            ],
+            "items": [
+              {
+                "name": "MALE",
+                "value": null,
+                "source_location": {
+                  "file": "",
+                  "line": 29
+                }
+              },
+              {
+                "name": "FEMALE",
+                "value": null,
+                "source_location": {
+                  "file": "",
+                  "line": 30
+                }
               }
-            }
-          ]
+            ]
+          }
         }
       }
     ],

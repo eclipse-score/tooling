@@ -262,7 +262,7 @@ testable within that component.
    * - ``deps``
      - label list
      - no
-     - ``feature_requirements`` or ``assumed_system_requirements`` targets for ``derived_from`` resolution (default ``[]``)
+     - ``feature_requirements`` or ``assumed_system_requirements`` targets for ``derived_from`` resolution. Also list the ``assumptions_of_use`` target of a *received* AoU and the ``fault_trees`` target of referenced ``<fta_package>.<RootCause>`` records (default ``[]``)
    * - ``image_srcs``
      - label list
      - no
@@ -311,11 +311,11 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
    * - ``srcs``
      - label list
      - yes
-     - ``.trlc`` files (containing ``AoU`` records), ``.rst`` files, or labels to existing ``TrlcProviderInfo``-providing targets
+     - ``.trlc`` files (containing ``AoU`` records), ``.rst`` files, or labels to existing ``TrlcProviderInfo``-providing targets. Every ``aou_req`` directive of an ``.rst`` source needs ``:root_causes: <fta_package>.<RootCause>, ...``; a missing or unqualified value fails the conversion
    * - ``deps``
      - label list
      - no
-     - Other requirement targets (``TrlcProviderInfo``) needed for cross-reference parsing (default ``[]``). List the ``safety_analysis`` target when an ``AoU`` references its generated ``<fta_package>.<RootCause>`` records.
+     - Other requirement targets (``TrlcProviderInfo``) needed for cross-reference parsing (default ``[]``). List the ``fault_trees`` target: every ``AoU`` references the generated ``<fta_package>.<RootCause>`` records it addresses (``root_causes``, mandatory). Other ``assumptions_of_use`` targets are rejected here, as their AoUs would be extracted as own AoUs.
    * - ``ref_package``
      - string
      - no
@@ -420,19 +420,19 @@ and ``safety_analysis``.
    * - ``static``
      - label list
      - no
-     - Static-view files (``.puml``, ``.rst``, ``.md``, ``.svg``, ``.png``) (default ``[]``). Multiple ``.puml`` files are allowed — e.g. a boundary overview diagram alongside a detailed one — and are merged into a single architecture, see `Multiple static PlantUML files`_ below.
+     - Static-view files -- component/package diagrams only (``.puml``, ``.rst``, ``.md``, ``.svg``, ``.png``); see `Multiple static PlantUML files`_ below for multi-file resolution. Class diagrams belong in the elaborating unit's own ``unit_design(static=[...])`` instead, never here (default ``[]``)
    * - ``dynamic``
      - label list
      - no
-     - Dynamic-view files (default ``[]``)
+     - Dynamic-view files; several sequence diagrams share a participant cast (see `Multiple files in the other views`_) (default ``[]``)
    * - ``public_api``
      - label list
      - no
-     - Public-API diagram files (``.puml``); also generates traceability items for safety analysis, exposed via ``ArchitecturalDesignInfo.public_api_lobster_files`` (default ``[]``)
+     - Public-API diagram files (``.puml``); also generates traceability items for safety analysis, exposed via ``ArchitecturalDesignInfo.public_api_lobster_files``. Several class diagrams resolve as one group (default ``[]``)
    * - ``internal_api``
      - label list
      - no
-     - Internal-API diagram files (``.puml``) describing interfaces exposed between components inside the SEooC; their FlatBuffers output is exposed via ``ArchitecturalDesignInfo.internal_api`` for downstream validation (default ``[]``)
+     - Internal-API diagram files (``.puml``) describing interfaces exposed between components inside the SEooC; their FlatBuffers output is exposed via ``ArchitecturalDesignInfo.internal_api`` for downstream validation. Several class diagrams resolve as one group (default ``[]``)
    * - ``maturity``
      - string
      - no
@@ -449,20 +449,51 @@ and ``safety_analysis``.
 Multiple static PlantUML files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``static`` accepts more than one ``.puml`` file. This is intended for splitting
-a large architecture into a boundary **overview** diagram (the SEooC and its
-public interfaces only) and one or more **detail** diagrams that elaborate the
-internals, without repeating every relation and nested entity in both places.
+``static`` accepts more than one ``.puml`` file, all component diagrams. This
+is intended for splitting a large architecture into a boundary **overview**
+diagram (the SEooC and its public interfaces only) and one or more **detail**
+diagrams that elaborate the internals, without repeating every relation and
+nested entity in both places. (Class diagrams are never allowed in ``static``
+-- put them in the elaborating unit's own ``unit_design(static=[...])``
+instead.)
 
-The files are parsed independently and then merged by entity id (the full
-dot-path of parent aliases). Rules for the merge:
+All ``.puml`` files passed to ``static`` are resolved
+**together**, in one pass, instead of one file at a time — see
+``ComponentResolver::resolve_group``. Once every file's elements are known,
+they're merged by entity id (the full dot-path of parent names). Rules for
+resolution and the merge:
 
+* **Implicit reparenting:** a *top-level* element with a body in one file that
+  has the same name, element type and stereotype as a *nested* declaration in
+  exactly one other file is implicitly reparented onto that declaration's
+  parent chain, instead of becoming a new top-level entity. Matching is by
+  name, so the files may use different aliases for the same entity. This is
+  what lets a detail file declare only a component's children (no wrapper)
+  while an overview file nests that same component under the SEooC boundary.
+  A bodyless element (``component X`` without ``{ ... }``) and a rooted name
+  (``::X``) are never reparented; they stay separate top-level entities.
+  Reparenting is transitive: if the parent itself needs reparenting, that is
+  resolved first (a cycle is an ``ImplicitParentCycle`` error). Matching
+  nested declarations under more than one distinct parent is an
+  ``AmbiguousImplicitParent`` error rather than an arbitrary guess.
+* A relation's *source* must be declared (or reparented) in the file that
+  writes it; only its *target* may resolve to another file in the same
+  ``static`` group, written as the declaring file writes it (its alias, else
+  its name). The group is consulted only when the target isn't found locally;
+  more than one other file resolving it is an ``AmbiguousReference`` error.
+  Referencing a source that isn't local is a
+  ``CrossFileRelationSource`` error -- *unless* the relation is undirected
+  (no arrowhead and no dependency-style decoration), in which case the two
+  sides are swapped instead of erroring (the locally-declared endpoint
+  becomes the source), since an undirected relation has no inherent
+  direction to violate.
 * Re-declaring the *same* entity (identical id) in more than one file is
   allowed as long as its ``stereotype`` and element type agree across files;
   their relations are unioned (duplicate relations are de-duplicated). This
   is what lets an overview file bare-declare a component or unit that a
-  detail file elaborates further.
-* Re-declaring the same alias with a conflicting ``stereotype`` or element
+  detail file elaborates further (whether by literally repeating the
+  wrapper, or implicitly via reparenting above).
+* Re-declaring the same id with a conflicting ``stereotype`` or element
   type across files is an error.
 * A parent whose children are declared across more than one file is only
   allowed if a single file contains the full set of children (i.e. one file
@@ -476,14 +507,40 @@ dot-path of parent aliases). Rules for the merge:
   Bazel-vs-diagram comparison (an entity nested under the wrong parent shows
   up as an extra/missing entry there).
 
-Each ``.puml`` file is parsed and resolved **independently**, before the
-merge step above ever runs. A relation (``-->``, ``..>``, etc.) may only
-reference aliases declared in the *same* file — an alias declared only in
-another ``static`` file is not visible yet at that point. Referencing such
-an alias fails at PlantUML parse time with an ``Element Resolver:
-UnresolvedReference: <alias>`` error, not as a Design validation error. Keep
-every file self-contained: if a detail file wires up an entity's
-interfaces, declare (or re-declare) those interfaces in that same file.
+.. _multiple-files-other-views:
+
+Multiple files in the other views
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Every view (``static``, ``dynamic``, ``public_api``, ``internal_api``; for
+``unit_design`` ``static`` and ``dynamic``) is resolved as **one group per
+view**: ids are shared inside a view, never across views. The files of a view
+are split by diagram kind first (component, class, sequence, activity); a group
+never mixes kinds. ``static`` of ``architectural_design`` is component-only.
+
+The kind is detected per file, in the order component, activity, class,
+sequence. Give each file a construct of its own kind: ``class`` (or a body with
+members) for class diagrams, ``participant`` or ``activate`` for sequence
+diagrams. ``package p { interface I }`` and a file of only ``a -> b : call()``
+are *component* diagrams.
+
+* **Class diagrams** (``public_api``, ``internal_api``, ``unit_design``
+  ``static``): same implicit reparenting and peer references as the component
+  rules above. A declaration without a body is a reference. Re-declaring one
+  id merges the declarations: a bodyless one merges into the one with a body
+  (members, type aliases or enum literals; relationships do not count and are
+  united); two bodies are ``class "<id>" is defined more than once``; a
+  different type or stereotype is a conflict. A namespace is defined only in
+  files that own a defined child.
+* **Sequence diagrams** (``dynamic``, ``unit_design`` ``dynamic``): no
+  reparenting. A message endpoint or ``create`` target that the file does not
+  declare resolves to the explicit ``participant`` declarations of the other
+  files of the view, by alias, else by name. A local declaration wins; distinct
+  uids from several files are ``AmbiguousParticipantReference``.
+  ``activate``/``deactivate``/``destroy`` and ``ref over`` stay file-local.
+* **Activity diagrams** carry no names and are independent per file.
+
+See ``plantuml/parser/docs/element-identifiers.md`` (section 4) for examples.
 
 .. _rule-unit-design:
 
@@ -517,11 +574,11 @@ implementation.
    * - ``static``
      - label list
      - no
-     - Static-view files (class diagrams, data-structure diagrams). When an ``.rst`` fragment references a ``.puml`` via ``.. uml::``, list both files together (default ``[]``)
+     - Static-view files (class diagrams, data-structure diagrams). When an ``.rst`` fragment references a ``.puml`` via ``.. uml::``, list both files together. Class diagrams resolve as one group (default ``[]``)
    * - ``dynamic``
      - label list
      - no
-     - Dynamic-view files (sequence, state diagrams) (default ``[]``)
+     - Dynamic-view files (sequence, state diagrams). Sequence diagrams resolve as one group; a shared cast file declares the participants, scenario files reference them (default ``[]``)
    * - ``visibility``
      - —
      - no
@@ -529,22 +586,20 @@ implementation.
 
 **Generated targets:** ``<name>`` (no standalone test; diagrams are consumed by the parent ``unit``)
 
-.. _rule-safety-analysis:
+.. _rule-failure-modes:
 
-safety_analysis
-~~~~~~~~~~~~~~~
+failure_modes
+~~~~~~~~~~~~~
 
-Bundles failure modes, safety measures, and FTA diagrams into a single FMEA
-documentation target.
+Stage 1 of the safety analysis: the ``FailureMode`` records. The
+``fault_trees`` diagrams reference them as tree top events (list the target in
+``fault_trees.deps``); ``safety_analysis`` renders and traces them.
 
 .. code-block:: python
 
-   safety_analysis(
-       name            = "my_safety_analysis",
-       failuremodes    = ["docs/failuremodes.trlc"],
-       root_causes     = ["docs/fta.puml"],
-       safetymeasures  = ["docs/safetymeasures.trlc"],
-       arch_design     = ":arch",
+   failure_modes(
+       name = "my_failure_modes",
+       srcs = ["docs/failure_modes.trlc"],
    )
 
 .. list-table::
@@ -559,30 +614,131 @@ documentation target.
      - string
      - yes
      - Target name
-   * - ``failuremodes``
+   * - ``srcs``
+     - label list
+     - yes
+     - ``.trlc`` files containing ``FailureMode`` records
+   * - ``deps``
      - label list
      - no
-     - ``.trlc`` files containing ``FailureMode`` records (default ``[]``)
-   * - ``safetymeasures``
+     - Targets providing ``TrlcProviderInfo`` needed to parse the records (default ``[]``)
+   * - ``lobster_config``
+     - label
+     - no
+     - lobster-trlc configuration for ``FailureMode`` extraction (default: the S-CORE failure mode config)
+   * - ``visibility``
+     - —
+     - no
+     - Bazel visibility
+
+**Generated targets:** ``<name>``, ``<name>_test`` (TRLC validation)
+
+.. _rule-fault-trees:
+
+fault_trees
+~~~~~~~~~~~
+
+Stage 2 of the safety analysis: the fault-tree root causes. Requirement
+targets (``assumptions_of_use``, ``component_requirements``) list it in
+``deps`` to reference the generated ``<fta_package>.<RootCause>`` records,
+which breaks the dependency cycle between measures and analysis.
+
+.. code-block:: python
+
+   fault_trees(
+       name = "my_fault_trees",
+       srcs = ["docs/fta.puml"],
+       deps = [":my_failure_modes"],
+   )
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``name``
+     - string
+     - yes
+     - Target name
+   * - ``srcs``
      - label list
      - no
-     - ``.trlc`` files containing ``Mitigation``/``AoU``/``CompReq`` records (default ``[]``)
-   * - ``root_causes``
+     - FTA PlantUML diagram files (``.puml``) (default ``[]``)
+   * - ``deps``
      - label list
      - no
-     - FTA PlantUML diagram files (``.puml`` / ``.plantuml``) (default ``[]``)
+     - ``failure_modes`` targets holding the failure modes the diagrams reference (default ``[]``)
    * - ``fta_package``
      - string
      - no
      - TRLC package name for the generated ``fta_events.trlc`` stub (the
-       ``RootCause`` records derived from ``root_causes``). The target
-       exports it (plus ``failuremodes``) as ``TrlcProviderInfo``, so other
-       targets such as ``assumptions_of_use`` can list it in ``deps``.
-       Defaults to a sanitized form of ``name`` with a ``_fta`` suffix.
+       ``RootCause`` records derived from ``srcs``). The target
+       exports it (with the failure modes as context) as ``TrlcProviderInfo``.
+       Defaults to a sanitized form of the target's package and name with a
+       ``_fta`` suffix (e.g. ``pkg_sub__name_fta``), so equally named targets
+       of different packages do not collide. The repository is not part of
+       it; set ``fta_package`` explicitly when equally named targets of
+       different repositories meet in one build, when package names differ
+       only in case or underscores (TRLC rejects those as too similar, e.g.
+       ``pkg/fta:y`` and ``pkg:fta_y``), and to get a stable, readable
+       name for ``<fta_package>.<RootCause>`` references.
+   * - ``visibility``
+     - —
+     - no
+     - Bazel visibility
+
+**Generated targets:** ``<name>`` (generated ``fta_events.trlc`` and the root-cause lobster file; no standalone test)
+
+.. _rule-safety-analysis:
+
+safety_analysis
+~~~~~~~~~~~~~~~
+
+Stage 3 of the safety analysis: renders the FMEA page from the
+``failure_modes``, a ``fault_trees`` target and the measures that address the
+root causes.
+
+.. code-block:: python
+
+   safety_analysis(
+       name            = "my_safety_analysis",
+       arch_design     = ":arch",
+       failure_modes   = [":my_failure_modes"],
+       fault_trees     = ":my_fault_trees",
+       safety_measures = [":aous", "docs/mitigations.trlc"],
+   )
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``name``
+     - string
+     - yes
+     - Target name
+   * - ``failure_modes``
+     - label list
+     - no
+     - ``failure_modes`` targets whose records are rendered and traced (default ``[]``). Every failure mode a root cause references must be listed; the assembler fails otherwise.
+   * - ``fault_trees``
+     - label
+     - yes
+     - ``fault_trees`` target providing the root causes
+   * - ``safety_measures``
+     - label list
+     - no
+     - Measures addressing the root causes (default ``[]``): ``assumptions_of_use`` / ``component_requirements`` targets and ``.trlc`` files containing ``Mitigation`` records (any other record type in such a file is rejected). Only the records of these entries are rendered and traced; the targets in their ``deps`` are used to resolve references only. The ``assumptions_of_use`` targets listed here are the *own* AoUs of the ``dependable_element`` whose ``dependability_analysis`` includes this target: they are rendered in the safety analysis, forwarded to dependees, and shown once however many safety analyses list them. An ``assumptions_of_use`` target that no ``safety_analysis`` lists here is neither rendered nor forwarded.
    * - ``arch_design``
      - label
-     - no
-     - ``architectural_design`` target for interface traceability (default ``None``)
+     - yes
+     - ``architectural_design`` target
    * - ``visibility``
      - —
      - no
@@ -621,7 +777,7 @@ Running ``bazel test`` validates the full FMEA traceability chain.
    * - ``safety_analysis``
      - label list
      - no
-     - ``safety_analysis`` targets to include in this analysis (default ``[]``)
+     - ``safety_analysis`` targets to include in this analysis (default ``[]``). A ``dependable_element`` stages the pages of each ``dependability_analysis`` under the analysis name as ``safety_analysis.rst`` / ``fta.puml``, so list one ``safety_analysis`` per ``dependability_analysis`` and use several ``dependability_analysis`` targets for several safety analyses.
    * - ``arch_design``
      - label
      - no
@@ -775,7 +931,6 @@ and scope checks at build/test time.
    dependable_element(
        name                   = "my_seooc",
        integrity_level        = "B",
-       assumptions_of_use     = [":aous"],
        requirements           = [":features"],
        architectural_design   = [":arch"],
        dependability_analysis = [":analysis"],
@@ -799,10 +954,6 @@ and scope checks at build/test time.
      - string
      - yes
      - ``"A"``, ``"B"``, ``"C"``, or ``"D"`` (D is highest: D > C > B > A)
-   * - ``assumptions_of_use``
-     - label list
-     - yes
-     - ``assumptions_of_use`` targets
    * - ``requirements``
      - label list
      - yes
@@ -838,12 +989,12 @@ and scope checks at build/test time.
    * - ``aou_forwarding``
      - label
      - no
-     - Optional YAML file that selects which *received* AoUs to chain-forward to elements that depend on this one. Own AoUs (declared in ``assumptions_of_use``) are always forwarded automatically — no file needed. Schema:
+     - Optional YAML file that selects which *received* AoUs to chain-forward to elements that depend on this one. Own AoUs (the ``assumptions_of_use`` targets consumed as ``safety_measures`` by the element's safety analyses) are always forwarded automatically — no file needed. Every entry names the AoU with its version (``Package.AOU_ID@<version>``), so a justification is reviewed again when the AoU changes; unknown IDs, mismatching versions and duplicate entries fail the build. An AoU that reaches the element along several paths is received once; differing definitions fail the build. Schema:
 
        .. code-block:: yaml
 
           forwarded_aous:
-            - aou_id: "Package.AOU_ID"
+            - aou_id: "Package.AOU_ID@1"
               justification: >
                 Reason why this element cannot handle the AoU itself
                 and must forward it to its own integrators.

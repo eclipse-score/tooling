@@ -17,4 +17,4 @@ error_contains: |
     Matching classes     : "unit_1.Controller", "unit_2.Controller"
     Sequence source file : "validation/core/integration_test/class_design_sequence/negative_participant_ambiguous_short_name/sequence_diagram.puml"
     Sequence source line : 16
-    Fix                  : Rename participant "Controller" in the sequence diagram to a unique class id, or rename one of the matching classes in the class diagram.
+    Fix                  : Write the qualified id of the intended class as the label of participant "Controller" in the sequence diagram, for example participant "unit_1.Controller" as Controller, or rename one of the matching classes in the class diagram.

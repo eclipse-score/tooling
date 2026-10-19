@@ -3,8 +3,9 @@
     "name": "participant_identifier_examples",
     "participants": [
       {
-        "display_name": "Display Service",
+        "display_name": "DisplayService",
         "alias": "Service",
+        "uid": "DisplayService",
         "participant_type": "Participant",
         "source_location": {
           "file": "",
@@ -15,20 +16,11 @@
       {
         "display_name": "Caller",
         "alias": null,
+        "uid": "Caller",
         "participant_type": "Participant",
         "source_location": {
           "file": "",
           "line": 17
-        },
-        "stereotype": null
-      },
-      {
-        "display_name": "Display Service",
-        "alias": null,
-        "participant_type": "Participant",
-        "source_location": {
-          "file": "",
-          "line": 22
         },
         "stereotype": null
       }
@@ -38,22 +30,11 @@
         {
           "Interaction": {
             "sender": "Caller",
-            "receiver": "Service",
+            "receiver": "DisplayService",
             "message": "callByAlias()",
             "source_location": {
               "file": "",
               "line": 19
-            }
-          }
-        },
-        {
-          "Interaction": {
-            "sender": "Service",
-            "receiver": "Display Service",
-            "message": "callByDisplayName()",
-            "source_location": {
-              "file": "",
-              "line": 22
             }
           }
         }

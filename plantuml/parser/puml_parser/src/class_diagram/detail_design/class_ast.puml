@@ -19,44 +19,44 @@ skinparam classAttributeIconSize 0
 ' ========================
 ' AST
 ' ========================
-class ClassDef {
-  name: Name
-  namespace: String
-  package: String
-  attributes: Vec<Attribute>
-  methods: Vec<Method>
-  source_location: SourceLocation
+class ClassLikeDef {
+  declaration: DeclarationCommon
+  template_parameters: Option<Vec<String>>
+  members: ClassLikeMembers
+  kind: ClassLikeKind
 }
 
-class StructDef {
-  name: Name
-  namespace: String
-  package: String
-  attributes: Vec<Attribute>
-  methods: Vec<Method>
-  source_location: SourceLocation
+enum ClassLikeKind {
+  Class
+  Struct
+  Interface
 }
 
-class InterfaceDef {
-  name: Name
-  namespace: String
-  package: String
-  attributes: Vec<Attribute>
+class EntityDef {
+  declaration: DeclarationCommon
   methods: Vec<Method>
-  source_location: SourceLocation
 }
 
 class EnumDef {
+  declaration: DeclarationCommon
+  items: Vec<EnumItem>
+}
+
+class DeclarationCommon {
   name: Name
   namespace: String
   package: String
   stereotypes: Vec<String>
-  items: Vec<EnumItem>
   source_location: SourceLocation
 }
 
+class ClassLikeMembers {
+  attributes: Vec<Attribute>
+  type_aliases: Vec<TypeAlias>
+  methods: Vec<Method>
+}
+
 class EnumItem {
-  visibility: Option<Visibility>
   name: String
   value: Option<EnumValue>
   source_location: SourceLocation
@@ -80,13 +80,16 @@ class TypeAlias {
 
 class Namespace {
   name: Name
-  types: Vec<Element>
+  source_location: SourceLocation
+  types: Vec<TypeDefinition>
+  relationships: Vec<Relationship>
   namespaces: Vec<Namespace>
 }
 
 class Package {
   name: Name
-  types: Vec<Element>
+  source_location: SourceLocation
+  types: Vec<TypeDefinition>
   packages: Vec<Package>
   relationships: Vec<Relationship>
 }
@@ -100,9 +103,11 @@ class ClassUmlFile {
 class Method {
   visibility: Visibility
   name: String
-  generic_params: Vec<String>
+  template_parameters: Option<Vec<String>>
   params: Vec<Param>
   type: Option<String>
+  modifiers: Vec<String>
+  is_friend: bool
   source_location: SourceLocation
 }
 
@@ -110,22 +115,21 @@ class Attribute {
   visibility: Visibility
   name: String
   type: Option<String>
+  modifiers: Vec<String>
   source_location: SourceLocation
 }
 
 ' ========================
 ' enum
 ' ========================
-enum Element {
-  ClassDef
-  StructDef
+enum TypeDefinition {
+  ClassLikeDef
+  EntityDef
   EnumDef
-  InterfaceDef
 }
 
 enum ClassUmlTopLevel {
-  Types
-  Enum
+  TypeDefinition
   Namespace
   Package
 }
@@ -133,30 +137,35 @@ enum ClassUmlTopLevel {
 ' ========================
 ' relationship
 ' ========================
-ClassDef "1" o-- "*" Attribute
-ClassDef "1" o-- "*" Method
+ClassLikeDef "1" *-- "1" DeclarationCommon
+ClassLikeDef "1" *-- "1" ClassLikeMembers
+ClassLikeDef "1" *-- "1" ClassLikeKind
+EntityDef "1" *-- "1" DeclarationCommon
+EntityDef "1" o-- "*" Method
+EnumDef "1" *-- "1" DeclarationCommon
 
-StructDef "1" o-- "*" Attribute
-StructDef "1" o-- "*" Method
-
-InterfaceDef "1" o-- "*" Attribute
-InterfaceDef "1" o-- "*" Method
+ClassLikeMembers "1" o-- "*" Attribute
+ClassLikeMembers "1" o-- "*" TypeAlias
+ClassLikeMembers "1" o-- "*" Method
 
 EnumDef "1" o-- "*" EnumItem
 
-Element <|-- ClassDef
-Element <|-- StructDef
-Element <|-- EnumDef
-Element <|-- InterfaceDef
+TypeDefinition "1" *-- "1" ClassLikeDef
+TypeDefinition "1" *-- "1" EntityDef
+TypeDefinition "1" *-- "1" EnumDef
 
-Namespace "1" o-- "*" Element
+Namespace "1" o-- "*" TypeDefinition
+Namespace "1" o-- "*" Relationship
 Namespace "1" o-- "*" Namespace
 
-Package "1" o-- "*" Element
+Package "1" o-- "*" TypeDefinition
 Package "1" o-- "*" Package
 Package "1" o-- "*" Relationship
 
 ClassUmlFile "1" o-- "*" ClassUmlTopLevel
 ClassUmlFile "1" o-- "*" Relationship
+ClassUmlTopLevel "1" *-- "1" TypeDefinition
+ClassUmlTopLevel "1" *-- "1" Namespace
+ClassUmlTopLevel "1" *-- "1" Package
 
 @enduml

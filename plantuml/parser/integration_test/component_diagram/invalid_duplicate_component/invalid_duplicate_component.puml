@@ -13,8 +13,8 @@
 @startuml "Invalid Duplicate Component"
 
 package "Pkg" as Pkg {
-    component "Component A" as X <<component>>
-    component "Component B" as X <<component>>
+    component X <<component>>
+    component X <<component>>
 }
 
 @enduml

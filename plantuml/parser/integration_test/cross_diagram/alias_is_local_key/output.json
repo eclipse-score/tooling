@@ -1,0 +1,20 @@
+{
+    "class_diagram.puml": {
+        "defines": {},
+        "references": {
+            "Y": "score.x.Y"
+        }
+    },
+    "component_diagram.puml": {
+        "defines": {},
+        "references": {
+            "score.x.Y": "score.x.Y"
+        }
+    },
+    "sequence_diagram.puml": {
+        "defines": {},
+        "references": {
+            "y": "score.x.Y"
+        }
+    }
+}

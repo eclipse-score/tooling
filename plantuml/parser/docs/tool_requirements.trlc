@@ -90,5 +90,53 @@ section "Tool Requirements" {
             }
 
         }
+
+        section "Group Resolution" {
+
+            ToolRequirement GroupResolutionInputGroup {
+                description = '''The tool shall resolve all input files of one invocation, whether given by `--file` or `--folders`, per diagram kind as one group.'''
+            }
+
+            ToolRequirement GroupResolutionInputExtension {
+                description = '''The tool shall report an error for an input file whose extension is not `.puml`.'''
+            }
+
+            ToolRequirement GroupResolutionDuplicateInput {
+                description = '''The tool shall report an error when one invocation names the same input file more than once.'''
+            }
+
+            ToolRequirement GroupResolutionImplicitParent {
+                description = '''In component and class diagrams, when a top-level element with a body matches a nested declaration in another file of the group, the tool shall resolve the top-level element as that nested declaration, so that its children belong to the nested declaration.'''
+            }
+
+            ToolRequirement GroupResolutionImplicitParentEligibility {
+                description = '''In component and class diagrams, a top-level element without a body, or whose element type or stereotype differs from the nested declaration, shall stay a top-level element.'''
+            }
+
+            ToolRequirement GroupResolutionAmbiguousImplicitParent {
+                description = '''The tool shall report `AmbiguousImplicitParent` when a top-level element with a body matches more than one nested declaration in the other files of the group.'''
+            }
+
+            ToolRequirement GroupResolutionImplicitParentCycle {
+                description = '''The tool shall report `ImplicitParentCycle` when resolving top-level elements as nested declarations would make an element its own ancestor.'''
+            }
+
+            ToolRequirement GroupResolutionRelationEndpoint {
+                description = '''In component and class diagrams, the tool shall resolve a relation endpoint to the declaration in the file of the relation when that file has one, and otherwise to the matching element of another file of the group.'''
+            }
+
+            ToolRequirement GroupResolutionAmbiguousReference {
+                description = '''The tool shall report `AmbiguousReference` when a relation endpoint is not declared in the file of the relation and matches more than one element in the other files of the group.'''
+            }
+
+            ToolRequirement GroupResolutionRelationSource {
+                description = '''In component and class diagrams, the tool shall report `CrossFileRelationSource` when the source of a relation is not declared in the file of the relation. An undirected component relation whose target is declared in that file belongs to that target instead.'''
+            }
+
+            ToolRequirement GroupResolutionSequenceParticipant {
+                description = '''In sequence diagrams, the tool shall resolve a participant used in one file to the declaration in the file itself when it has one, and otherwise to the declaration in another file of the group.'''
+            }
+
+        }
     }
 }

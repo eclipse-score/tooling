@@ -18,9 +18,9 @@
 This validator enforces consistency between the class model in the unit design
 and the class model extracted from the implementation.
 
-It shall make sure that every class, member, method, enum literal, type alias,
-and relationship modeled in the unit design exists in the implementation and is
-compatible with it.
+It shall make sure that every class and free function, as well as every class
+member, method, enum literal, type alias, and relationship modeled in the unit
+design, exists in the implementation and is compatible with it.
 
 Implementation-only entities and members are allowed. The unit design is the
 validated contract.
@@ -48,9 +48,13 @@ contained by a matched entity is covered by the following type alias, variable,
 method, enum literal, relationship, and template parameter items.
 
 If the same class ID is declared more than once across the unit design's input
-class diagrams (e.g. split across multiple `.puml` files), this is reported
-as a failure naming both source locations, independent of entity type
-consistency.
+class diagrams (e.g. an overview and a detail `.puml` file), the declarations
+merge when at most one of them has a body (members, type aliases or enum
+literals); the relationships of all declarations are united. Two declarations
+with a body are reported as a failure naming both source locations, independent
+of entity type consistency. A different entity type or stereotype across the
+declarations is a failure as well.
+*(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationDeclarationMerge`)*
 
 ```text
 ' PlantUML class diagram
@@ -253,6 +257,31 @@ public:
 };
 ```
 
+### Free Function Consistency
+
+Every free function (at global or namespace scope) modeled in the unit design
+must exist in the implementation. Functions are matched by their
+namespace-qualified name and normalized parameter types, which supports
+overloads. Return type, parameter names and types, variadic or pack-expansion
+markers, and template parameters must match.
+*(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationFreeFunctionConsistency`)*
+
+```text
+' PlantUML class diagram
+namespace vehicle {
+  entity VehicleFuncs <<function>> {
+    + Dispatch(mode: std::uint8_t): void
+  }
+}
+```
+
+```cpp
+// implementation C++ code
+namespace vehicle {
+void Dispatch(std::uint8_t mode);
+}
+```
+
 ### Type Normalization
 
 Before comparing types, the validator applies limited normalization.
@@ -271,6 +300,11 @@ implementation parser UIDs: dots used as namespace separators are converted to
 relationship source/target identifiers alike. cv-qualifiers such as `const`
 and `volatile`, and the pointer/reference decorators `*`/`&`, are preserved
 (only the spacing around them is normalized).
+
+The class diagram reader already rewrites `::` to `.` in class/entity IDs,
+enclosing namespace IDs, and relationship endpoints of both inputs, so
+sequence validators and this validator compare IDs in the same form. Type
+names are read as written and normalized only here.
 
 ## Failure Cases
 

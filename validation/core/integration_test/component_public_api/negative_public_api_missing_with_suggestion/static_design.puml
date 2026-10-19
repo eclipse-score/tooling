@@ -13,11 +13,11 @@
 
 @startuml static_design
 
-package "Sample Seooc" as sample_seooc <<SEooC>> {
+package sample_seooc <<SEooC>> {
     portout sample_seooc_public_api_port
 }
 
-interface "SampleLibraryAPI" as SampleLibraryAPI
+interface SampleLibraryAPI
 
 sample_seooc_public_api_port )-d- SampleLibraryAPI
 

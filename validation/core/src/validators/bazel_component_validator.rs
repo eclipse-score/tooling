@@ -94,7 +94,7 @@ impl BazelComponentValidator {
             if !diagram_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = Self::parent_display(parent, default_parent);
-                let suggested_alias = best_string_suggestion(
+                let suggested_name = best_string_suggestion(
                     name,
                     diagram_set
                         .keys()
@@ -107,7 +107,7 @@ impl BazelComponentValidator {
                     name,
                     &parent_str,
                     label,
-                    suggested_alias.as_deref(),
+                    suggested_name.as_deref(),
                 ));
             }
         }
@@ -117,7 +117,7 @@ impl BazelComponentValidator {
             if !bazel_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = Self::parent_display(parent, default_parent);
-                let suggested_alias = best_string_suggestion(
+                let suggested_name = best_string_suggestion(
                     name,
                     bazel_set
                         .keys()
@@ -129,7 +129,7 @@ impl BazelComponentValidator {
                     name,
                     &parent_str,
                     entity,
-                    suggested_alias.as_deref(),
+                    suggested_name.as_deref(),
                 ));
             }
         }
@@ -181,7 +181,7 @@ impl BazelComponentValidator {
     fn format_empty(display_type: &str, name: &str, label: &str) -> String {
         format!(
             "Empty {display_type} in Bazel build graph:\n\
-               Alias          : \"{name}\"\n\
+               Name           : \"{name}\"\n\
                Bazel label    : {label}\n\
                Required       : A {display_type} must decompose into at least one nested unit or component; add one or remove the empty {display_type}",
         )
@@ -193,19 +193,19 @@ impl BazelComponentValidator {
         name: &str,
         parent_str: &str,
         label: &str,
-        suggested_alias: Option<&str>,
+        suggested_name: Option<&str>,
     ) -> String {
         let error = ErrorBuilder::new(ErrorCategory::Naming)
             .title(format!(
                 "{display_type} \"{name}\" from Bazel not found in the PlantUML component diagram"
             ))
-            .field("alias", format!("\"{name}\""))
+            .field("name", format!("\"{name}\""))
             .field("parent", parent_str)
             .field("stereotype", format!("<<{stereotype}>>"))
             .field("bazel label", label);
 
-        let error = if let Some(suggested_alias) = suggested_alias {
-            error.suggest(name, Some(display_type), suggested_alias)
+        let error = if let Some(suggested_name) = suggested_name {
+            error.suggest(name, Some(display_type), suggested_name)
         } else {
             error
         };
@@ -222,7 +222,7 @@ impl BazelComponentValidator {
         name: &str,
         parent_str: &str,
         entity: &LogicComponent,
-        suggested_alias: Option<&str>,
+        suggested_name: Option<&str>,
     ) -> String {
         let (source_file, source_line) = entity.source_location.display();
 
@@ -230,13 +230,13 @@ impl BazelComponentValidator {
             .title(format!(
                 "{entity_type} \"{name}\" from the PlantUML component diagram not found in Bazel"
             ))
-            .field("alias", format!("\"{name}\""))
+            .field("name", format!("\"{name}\""))
             .field("parent", parent_str)
             .field("component source file", format!("\"{source_file}\""))
             .field("component source line", source_line.to_string());
 
-        let error = if let Some(suggested_alias) = suggested_alias {
-            error.suggest(name, Some(entity_type), suggested_alias)
+        let error = if let Some(suggested_name) = suggested_name {
+            error.suggest(name, Some(entity_type), suggested_name)
         } else {
             error
         };
@@ -329,22 +329,18 @@ mod tests {
         BazelInput { components }
     }
 
-    fn entity(
-        id: &str,
-        alias: Option<&str>,
-        parent_id: Option<&str>,
-        stereotype: Option<&str>,
-    ) -> LogicComponent {
+    fn entity(id: &str, parent_id: Option<&str>, stereotype: Option<&str>) -> LogicComponent {
         let element_type = if stereotype == Some("SEooC") {
             ComponentType::Package
         } else {
             ComponentType::Component
         };
+        let name = id.rsplit('.').next().unwrap_or(id);
 
         LogicComponent {
             id: id.to_string(),
-            name: alias.map(|s| s.to_string()),
-            alias: alias.map(|s| s.to_string()),
+            name: Some(name.to_string()),
+            alias: None,
             parent_id: parent_id.map(|s| s.to_string()),
             element_type,
             stereotype: stereotype.map(|s| s.to_string()),
@@ -375,9 +371,9 @@ mod tests {
             ("@//pkg:comp_a", vec!["@//pkg/u1:unit_1"], vec![]),
         ]);
         let diagram = diagram(vec![
-            entity("MyDE", Some("my_de"), None, Some("SEooC")),
-            entity("CompA", Some("comp_a"), Some("MyDE"), Some("component")),
-            entity("CompA.Unit1", Some("unit_1"), Some("CompA"), Some("unit")),
+            entity("my_de", None, Some("SEooC")),
+            entity("my_de.comp_a", Some("my_de"), Some("component")),
+            entity("my_de.comp_a.unit_1", Some("my_de.comp_a"), Some("unit")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
@@ -401,28 +397,20 @@ mod tests {
             ),
         ]);
         let diagram = diagram(vec![
+            entity("safety_software_seooc_example", None, Some("SEooC")),
             entity(
-                "SampleSeooc",
+                "safety_software_seooc_example.component_example",
                 Some("safety_software_seooc_example"),
-                None,
-                Some("SEooC"),
-            ),
-            entity(
-                "ComponentExample",
-                Some("component_example"),
-                Some("SampleSeooc"),
                 Some("component"),
             ),
             entity(
-                "Unit1",
-                Some("unit_1"),
-                Some("ComponentExample"),
+                "safety_software_seooc_example.component_example.unit_1",
+                Some("safety_software_seooc_example.component_example"),
                 Some("unit"),
             ),
             entity(
-                "Unit2",
-                Some("unit_2"),
-                Some("ComponentExample"),
+                "safety_software_seooc_example.component_example.unit_2",
+                Some("safety_software_seooc_example.component_example"),
                 Some("unit"),
             ),
         ]);
@@ -441,10 +429,10 @@ mod tests {
             ),
         ]);
         let diagram = diagram(vec![
-            entity("MyDE", Some("my_de"), None, Some("SEooC")),
-            entity("CompA", Some("comp_a"), Some("MyDE"), Some("component")),
-            entity("CompA.Unit1", Some("unit_1"), Some("CompA"), Some("unit")),
-            entity("CompA.Unit2", Some("unit_2"), Some("CompA"), Some("unit")),
+            entity("my_de", None, Some("SEooC")),
+            entity("my_de.comp_a", Some("my_de"), Some("component")),
+            entity("my_de.comp_a.unit_1", Some("my_de.comp_a"), Some("unit")),
+            entity("my_de.comp_a.unit_2", Some("my_de.comp_a"), Some("unit")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
@@ -461,9 +449,9 @@ mod tests {
             ),
         ]);
         let diagram = diagram(vec![
-            entity("MyDE", Some("my_de"), None, Some("SEooC")),
-            entity("CompA", Some("comp_a"), Some("MyDE"), Some("component")),
-            entity("CompA.Unit1", Some("unit_1"), Some("CompA"), Some("unit")),
+            entity("my_de", None, Some("SEooC")),
+            entity("my_de.comp_a", Some("my_de"), Some("component")),
+            entity("my_de.comp_a.unit_1", Some("my_de.comp_a"), Some("unit")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
@@ -499,13 +487,8 @@ mod tests {
     fn test_extra_component_in_plantuml_detected() {
         let arch = make_arch(vec![("my_de", vec![], vec![])]);
         let diagram = diagram(vec![
-            entity("MyDE", Some("my_de"), None, Some("SEooC")),
-            entity(
-                "ExtraComp",
-                Some("extra_comp"),
-                Some("MyDE"),
-                Some("component"),
-            ),
+            entity("my_de", None, Some("SEooC")),
+            entity("my_de.extra_comp", Some("my_de"), Some("component")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
@@ -525,9 +508,13 @@ mod tests {
             ("@//pkg:comp_a", vec![], vec![]),
         ]);
         let diagram = diagram(vec![
-            entity("MyDE", Some("my_de"), None, Some("SEooC")),
-            entity("CompA", Some("comp_a"), Some("MyDE"), Some("component")),
-            entity("ExtraUnit", Some("extra_unit"), Some("CompA"), Some("unit")),
+            entity("my_de", None, Some("SEooC")),
+            entity("my_de.comp_a", Some("my_de"), Some("component")),
+            entity(
+                "my_de.comp_a.extra_unit",
+                Some("my_de.comp_a"),
+                Some("unit"),
+            ),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(!errs.is_empty());
@@ -543,7 +530,7 @@ mod tests {
     #[test]
     fn test_component_with_wrong_stereotype_rejected() {
         let arch = make_arch(vec![("my_de", vec![], vec![])]);
-        let diagram = diagram(vec![entity("MyDE", Some("my_de"), None, Some("component"))]);
+        let diagram = diagram(vec![entity("my_de", None, Some("component"))]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(
             !errs.is_empty(),
@@ -565,8 +552,8 @@ mod tests {
             ("@//pkg:comp_a", vec![], vec![]),
         ]);
         let diagram = diagram(vec![
-            entity("MyDE", Some("my_de"), None, Some("SEooC")),
-            entity("CompA", Some("comp_a"), Some("MyDE"), Some("SEooC")),
+            entity("my_de", None, Some("SEooC")),
+            entity("my_de.comp_a", Some("my_de"), Some("SEooC")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(
@@ -604,27 +591,33 @@ mod tests {
             ("@//pkg:Comp_A", vec!["@//pkg/u1:Unit_1"], vec![]),
         ]);
         let diagram = diagram(vec![
-            entity("MyDE", Some("MY_DE"), None, Some("SEooC")),
-            entity("CompA", Some("COMP_A"), Some("MyDE"), Some("component")),
-            entity("Unit1", Some("UNIT_1"), Some("CompA"), Some("unit")),
+            entity("MY_DE", None, Some("SEooC")),
+            entity("MY_DE.COMP_A", Some("MY_DE"), Some("component")),
+            entity("MY_DE.COMP_A.UNIT_1", Some("MY_DE.COMP_A"), Some("unit")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
     }
 
     #[test]
-    fn test_entity_without_alias_uses_id_as_key() {
+    fn test_unit_name_differs_from_bazel_target() {
         let arch = make_arch(vec![
             ("my_de", vec![], vec!["@//pkg:comp_a"]),
             ("@//pkg:comp_a", vec!["@//pkg/u1:unit_1"], vec![]),
         ]);
         let diagram = diagram(vec![
-            entity("my_de", None, None, Some("SEooC")),
-            entity("comp_a", None, Some("my_de"), Some("component")),
-            entity("unit_1", None, Some("comp_a"), Some("unit")),
+            entity("my_de", None, Some("SEooC")),
+            entity("my_de.comp_a", Some("my_de"), Some("component")),
+            entity("my_de.comp_a.first", Some("my_de.comp_a"), Some("unit")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
-        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
+        assert!(
+            errs.failures.iter().any(|m| m.contains(
+                "Unit \"unit_1\" from Bazel not found in the PlantUML component diagram."
+            )),
+            "Expected missing unit error, got: {:?}",
+            errs.failures
+        );
     }
 
     #[test]
@@ -634,8 +627,8 @@ mod tests {
             ("@//pkg:comp_a", vec![], vec![]),
         ]);
         let diagram = diagram(vec![
-            entity("MyDE", Some("my_de"), None, Some("SEooC")),
-            entity("CompA", Some("comp_a"), Some("MyDE"), Some("component")),
+            entity("my_de", None, Some("SEooC")),
+            entity("my_de.comp_a", Some("my_de"), Some("component")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(
@@ -648,7 +641,7 @@ mod tests {
     #[test]
     fn test_empty_dependable_element_detected() {
         let arch = make_arch(vec![("my_de", vec![], vec![])]);
-        let diagram = diagram(vec![entity("MyDE", Some("my_de"), None, Some("SEooC"))]);
+        let diagram = diagram(vec![entity("my_de", None, Some("SEooC"))]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(
             errs.failures
@@ -669,20 +662,18 @@ mod tests {
             ("@//pkg:lola_component", vec!["@//pkg/u1:unit_1"], vec![]),
         ]);
         let diagram = diagram(vec![
-            entity("MyDE", Some("my_de"), None, Some("SEooC")),
+            entity("my_de", None, Some("SEooC")),
+            entity("my_de.bindings", Some("my_de"), Some("component")),
             entity(
-                "Bindings",
-                Some("bindings"),
-                Some("MyDE"),
+                "my_de.bindings.lola_component",
+                Some("my_de.bindings"),
                 Some("component"),
             ),
             entity(
-                "LolaComponent",
-                Some("lola_component"),
-                Some("Bindings"),
-                Some("component"),
+                "my_de.bindings.lola_component.unit_1",
+                Some("my_de.bindings.lola_component"),
+                Some("unit"),
             ),
-            entity("Unit1", Some("unit_1"), Some("LolaComponent"), Some("unit")),
         ]);
         let errs = run_arch_validation(&arch, &diagram);
         assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);

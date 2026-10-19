@@ -3,11 +3,11 @@
     "name": "alias_package",
     "elements": [
       {
-        "Types": {
-          "StructDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "TestResult",
-              "display": "TR"
+              "alias": "TR"
             },
             "namespace": "",
             "package": "",
@@ -18,7 +18,7 @@
             "type_aliases": [],
             "attributes": [],
             "methods": [],
-            "template_parameters": null
+            "kind": "Struct"
           }
         }
       },
@@ -26,14 +26,18 @@
         "Package": {
           "name": {
             "internal": "diag",
-            "display": "mwdiag"
+            "alias": "mwdiag"
+          },
+          "source_location": {
+            "file": "",
+            "line": 17
           },
           "types": [
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "A",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "",
                 "package": "diag",
@@ -41,20 +45,23 @@
                   "file": "",
                   "line": 18
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             },
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "B",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "",
                 "package": "diag",
@@ -62,13 +69,16 @@
                   "file": "",
                   "line": 19
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             }
           ],
@@ -80,14 +90,18 @@
         "Package": {
           "name": {
             "internal": "activate",
-            "display": "act"
+            "alias": "act"
+          },
+          "source_location": {
+            "file": "",
+            "line": 22
           },
           "types": [
             {
-              "StructDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "StartResponsePayload",
-                  "display": "SRP"
+                  "alias": "SRP"
                 },
                 "namespace": "",
                 "package": "activate",
@@ -98,14 +112,14 @@
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null
+                "kind": "Struct"
               }
             },
             {
               "EnumDef": {
                 "name": {
                   "internal": "ErrorInfo",
-                  "display": "ERR"
+                  "alias": "ERR"
                 },
                 "namespace": "",
                 "package": "activate",

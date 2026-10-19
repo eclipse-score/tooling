@@ -28,8 +28,8 @@ requirements.
 """
 
 load("@lobster//:lobster.bzl", "subrule_lobster_html_report", "subrule_lobster_report")
-load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "ArchitecturalDesignInfo", "DependabilityAnalysisInfo", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_sources")
+load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "ArchitecturalDesignInfo", "DependabilityAnalysisInfo", "SafetyAnalysisProviderInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:lobster_config.bzl", "MERGE_LOBSTER_ITEMS_ATTR", "format_lobster_sources", "merge_lobster_files")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR")
 
 # ============================================================================
@@ -46,8 +46,8 @@ def _collect_analysis_providers(sa, rst_srcs_list, rst_deps_list, rst_aux_list, 
         rst_srcs_list: List of depsets to extend with SphinxSourcesInfo.srcs.
         rst_deps_list: List of depsets to extend with SphinxSourcesInfo.deps.
         rst_aux_list:  List of depsets to extend with SphinxSourcesInfo.aux_srcs.
-        lobster_files: Dict to update with AnalysisInfo.lobster_files
-                       (canonical name → File).
+        lobster_files: Dict to extend with AnalysisInfo.lobster_files
+                       (canonical name → list of Files, without duplicates).
     """
     if SphinxSourcesInfo in sa:
         rst_srcs_list.append(sa[SphinxSourcesInfo].srcs)
@@ -55,7 +55,10 @@ def _collect_analysis_providers(sa, rst_srcs_list, rst_deps_list, rst_aux_list, 
         if sa[SphinxSourcesInfo].aux_srcs:
             rst_aux_list.append(sa[SphinxSourcesInfo].aux_srcs)
     if AnalysisInfo in sa:
-        lobster_files.update(sa[AnalysisInfo].lobster_files)
+        for name, lobster_file in sa[AnalysisInfo].lobster_files.items():
+            files = lobster_files.setdefault(name, [])
+            if lobster_file not in files:
+                files.append(lobster_file)
 
 # ============================================================================
 # Private Rule Implementation
@@ -84,7 +87,9 @@ def _dependability_analysis_impl(ctx):
     rst_srcs_transitive = [dfa_rst_files]
     rst_deps_transitive = [dfa_rst_files]
     rst_aux_transitive = []
-    lobster_files = {}  # canonical name → File, merged from all sub-analyses
+    lobster_files = {}  # canonical name → list of Files, merged from all sub-analyses
+    aou_targets = []
+    aou_labels = {}
 
     # -------------------------------------------------------------------------
     # Collect from safety_analysis targets
@@ -93,6 +98,11 @@ def _dependability_analysis_impl(ctx):
     for sa in ctx.attr.safety_analysis:
         safety_analysis_output_files.append(sa[DefaultInfo].files)
         _collect_analysis_providers(sa, rst_srcs_transitive, rst_deps_transitive, rst_aux_transitive, lobster_files)
+        if SafetyAnalysisProviderInfo in sa:
+            for aou in sa[SafetyAnalysisProviderInfo].aou_targets:
+                if aou.label not in aou_labels:
+                    aou_labels[aou.label] = True
+                    aou_targets.append(aou)
 
     # -------------------------------------------------------------------------
     # Collect from security_analysis targets
@@ -106,6 +116,14 @@ def _dependability_analysis_impl(ctx):
     # architectural_design attribute, so they are not included in this rule's
     # sphinx deps to avoid orphan warnings.
 
+    # Safety analyses sharing a measure each carry its item; keep it once.
+    for name in list(lobster_files.keys()):
+        lobster_files[name], _ = merge_lobster_files(
+            ctx,
+            lobster_files[name],
+            "{}/{}".format(ctx.label.name, name),
+        )
+
     all_rst_srcs = depset(transitive = rst_srcs_transitive)
     all_rst_deps = depset(transitive = rst_deps_transitive)
     all_rst_aux = depset(transitive = rst_aux_transitive) if rst_aux_transitive else depset()
@@ -117,7 +135,7 @@ def _dependability_analysis_impl(ctx):
     lobster_html_file = None
     report_files = []
 
-    all_lobster_file_objects = lobster_files.values()
+    all_lobster_file_objects = [f for files in lobster_files.values() for f in files]
     arch_lobster_files = arch_design_info.public_api_lobster_files.to_list() if arch_design_info else []
     all_lobster_file_objects = list(all_lobster_file_objects) + arch_lobster_files
     if all_lobster_file_objects:
@@ -130,8 +148,8 @@ def _dependability_analysis_impl(ctx):
             output = lobster_config,
             substitutions = {
                 "{ARCH_SOURCES}": format_lobster_sources(arch_lobster_files),
-                "{FM_SOURCES}": format_lobster_sources([lobster_files["failuremodes.lobster"]] if "failuremodes.lobster" in lobster_files else []),
-                "{RC_SOURCES}": format_lobster_sources([lobster_files["fta_root_causes.lobster"]] if "fta_root_causes.lobster" in lobster_files else []),
+                "{FM_SOURCES}": format_lobster_sources(lobster_files.get("failuremodes.lobster", [])),
+                "{RC_SOURCES}": format_lobster_sources(lobster_files.get("fta_root_causes.lobster", [])),
             },
         )
 
@@ -198,6 +216,7 @@ def _dependability_analysis_impl(ctx):
             arch_design = arch_design_info,
             name = ctx.label.name,
             lobster_files = lobster_files,
+            aou_targets = aou_targets,
         ),
         SphinxSourcesInfo(
             srcs = all_rst_srcs,
@@ -253,7 +272,7 @@ _dependability_analysis_test = rule(
                 doc = "Lobster config template for safety analysis traceability.",
             ),
         },
-        **VERBOSITY_ATTR
+        **dict(VERBOSITY_ATTR, **MERGE_LOBSTER_ITEMS_ATTR)
     ),
     subrules = [subrule_lobster_report, subrule_lobster_html_report],
     test = True,

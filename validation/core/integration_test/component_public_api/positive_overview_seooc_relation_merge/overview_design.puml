@@ -18,8 +18,8 @@
 
 @startuml overview_design
 
-package "Sample Seooc" as sample_seooc <<SEooC>> {
-    component "Component Example" as component_example <<component>>
+package sample_seooc <<SEooC>> {
+    component component_example <<component>>
 }
 
 @enduml

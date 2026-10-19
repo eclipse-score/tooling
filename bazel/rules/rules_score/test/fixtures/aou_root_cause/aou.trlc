@@ -13,7 +13,7 @@
 
 // Regression fixture: an AoU that prevents a generated fault-tree root cause
 // (package AouRootCauseFta). Resolving that reference needs the
-// safety_analysis target in the `deps` of assumptions_of_use.
+// fault_trees target in the `deps` of assumptions_of_use.
 package AouRootCauseAous
 
 import ScoreReq

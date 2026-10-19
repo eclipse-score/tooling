@@ -24,12 +24,12 @@ rust_library(
     visibility = ["//cpp/libclang:__subpackages__"],
     deps = [
         "//tools/metamodel/common:source_location",
-        "@crates//:serde",
+        "@crates_score_tooling//:serde",
     ],
 )
 
 rust_test(
     name = "resolved_type_test",
     srcs = ["src/resolved_type.rs"],
-    deps = ["@crates//:serde"],
+    deps = ["@crates_score_tooling//:serde"],
 )

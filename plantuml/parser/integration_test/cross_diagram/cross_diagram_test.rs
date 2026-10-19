@@ -23,6 +23,8 @@
 //! `puml_cli` per file (`DiagramProcessor`), and [`CrossDiagramChecker`]
 //! adds the `links`/`distinct` cross-file id assertions on top of the
 //! framework's default per-file checks (`ExpectationChecker::check_case`).
+//! Files listed under `errors` must fail with the given error substrings and are left out
+//! of the golden.
 //!
 //! Goldens document *current* behavior; they are updated by the changes that
 //! implement the target design in `plantuml/parser/docs/element-identifiers.md`.
@@ -46,12 +48,20 @@ struct CaseConfig {
     /// `puml_cli`. Files not listed here are run without `--diagram-type`
     /// (letting `puml_cli` auto-detect the diagram type).
     diagram_types: HashMap<String, String>,
+    /// Passes every file of the case to ONE `puml_cli` invocation, so files
+    /// of the same diagram kind resolve as a group (overview + detail files,
+    /// peer participant declarations). Requires autodetection (no
+    /// `diagram_types`) and no `errors`.
+    group: bool,
     /// Groups of `file.puml#Alias` references that must resolve to the same
     /// idmap id.
     links: Vec<Vec<String>>,
     /// Groups of `file.puml#Alias` references that must resolve to pairwise
     /// distinct idmap ids.
     distinct: Vec<Vec<String>>,
+    /// Files that must fail, with substrings their error must contain. Such
+    /// files produce no idmap output.
+    errors: HashMap<String, Vec<String>>,
 }
 
 /// One or more idmap ids sharing a single alias, e.g. two same-named classes
@@ -173,21 +183,29 @@ impl ErrorView for PumlCliError {
     }
 }
 
-/// Runs `puml_cli --idmap-output-dir` for a single file and parses its
-/// output (or failure) into this suite's `DiagramProcessor` types.
-fn run_file(
+/// Runs `puml_cli --idmap-output-dir` once for `paths` (one file, or a whole
+/// group) and parses each file's output (or the failure) into this suite's
+/// `DiagramProcessor` types. Returns one `IdMapSections` per path, in order.
+fn run_files(
     case_name: &str,
-    path: &Path,
+    paths: &[&Path],
     diagram_type: Option<&str>,
-) -> Result<IdMapSections, PumlCliError> {
-    let stem = path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or_else(|| panic!("{case_name}: non-utf8 file name {}", path.display()));
-    let out_dir = test_tmp_dir(case_name, stem);
+) -> Result<Vec<IdMapSections>, PumlCliError> {
+    let first = paths[0];
+    let out_dir_name = if paths.len() == 1 {
+        first
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or_else(|| panic!("{case_name}: non-utf8 file name {}", first.display()))
+    } else {
+        "group"
+    };
+    let out_dir = test_tmp_dir(case_name, out_dir_name);
 
     let mut cmd = Command::new(puml_cli_path());
-    cmd.arg("--file").arg(path);
+    for path in paths {
+        cmd.arg("--file").arg(path);
+    }
     if let Some(diagram_type) = diagram_type {
         cmd.arg("--diagram-type").arg(diagram_type);
     }
@@ -199,17 +217,29 @@ fn run_file(
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        let prefix = format!("Resolve error in {}: ", path.display());
+        let prefix = format!("Resolve error in {}: ", first.display());
         let message = stderr
             .strip_prefix(prefix.as_str())
             .unwrap_or(&stderr)
             .to_string();
         return Err(PumlCliError {
-            file: path.to_path_buf(),
+            file: first.to_path_buf(),
             message,
         });
     }
 
+    Ok(paths
+        .iter()
+        .map(|path| read_idmap(case_name, &out_dir, path))
+        .collect())
+}
+
+/// Reads `<stem>.idmap.json` for `path` from `out_dir`.
+fn read_idmap(case_name: &str, out_dir: &Path, path: &Path) -> IdMapSections {
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or_else(|| panic!("{case_name}: non-utf8 file name {}", path.display()));
     let idmap_path = out_dir.join(format!("{stem}.idmap.json"));
     let idmap_content = fs::read_to_string(&idmap_path)
         .unwrap_or_else(|error| panic!("failed to read {}: {error}", idmap_path.display()));
@@ -238,10 +268,10 @@ fn run_file(
             .collect::<BTreeMap<_, _>>()
     };
 
-    Ok(IdMapSections {
+    IdMapSections {
         defines: to_map(raw.defines),
         references: to_map(raw.references),
-    })
+    }
 }
 
 /// Runs `puml_cli` for every file in a case, driven by `test_framework`.
@@ -268,6 +298,14 @@ impl DiagramProcessor for PumlCliIdmapRunner {
             .to_string();
         let config = load_case_config(&dir);
 
+        if config.group {
+            let mut sorted: Vec<&Rc<PathBuf>> = files.iter().collect();
+            sorted.sort();
+            let paths: Vec<&Path> = sorted.iter().map(|path| path.as_path()).collect();
+            let outputs = run_files(&case_name, &paths, None)?;
+            return Ok(sorted.into_iter().map(Rc::clone).zip(outputs).collect());
+        }
+
         let mut results = HashMap::new();
         for path in files {
             let file_name = path
@@ -276,8 +314,27 @@ impl DiagramProcessor for PumlCliIdmapRunner {
                 .unwrap_or_default()
                 .to_string();
             let diagram_type = config.diagram_types.get(&file_name).map(String::as_str);
-            let idmap = run_file(&case_name, path, diagram_type)?;
-            results.insert(Rc::clone(path), idmap);
+            let outcome = run_files(&case_name, &[path.as_path()], diagram_type)
+                .map(|mut sections| sections.remove(0));
+
+            match (outcome, config.errors.get(&file_name)) {
+                (Ok(idmap), None) => {
+                    results.insert(Rc::clone(path), idmap);
+                }
+                (Err(error), None) => return Err(error),
+                (Err(error), Some(substrings)) => {
+                    for substring in substrings {
+                        assert!(
+                            error.message.contains(substring.as_str()),
+                            "{case_name}: error for {file_name} must contain {substring:?}, got {:?}",
+                            error.message
+                        );
+                    }
+                }
+                (Ok(_), Some(_)) => {
+                    panic!("{case_name}: {file_name} is listed in `errors` but succeeded")
+                }
+            }
         }
         Ok(results)
     }
@@ -319,12 +376,26 @@ fn resolve_ref(
 }
 
 /// Catches typos in `case.yaml`: file names that don't exist in this case,
-/// and `links`/`distinct` groups too small to assert anything.
+/// `errors` entries that assert nothing, `links`/`distinct` groups too small
+/// to assert anything, and references to files that produce no idmap.
 fn validate_case_config(case_name: &str, file_names: &BTreeSet<String>, config: &CaseConfig) {
-    for file_name in config.diagram_types.keys() {
+    assert!(
+        !config.group || (config.diagram_types.is_empty() && config.errors.is_empty()),
+        "{case_name}: `group` cases autodetect diagram types and cannot list `errors`"
+    );
+
+    let configured_files = config.diagram_types.keys().chain(config.errors.keys());
+    for file_name in configured_files {
         assert!(
             file_names.contains(file_name),
             "{case_name}: case.yaml names {file_name:?}, which is not a .puml file in this case"
+        );
+    }
+
+    for (file_name, substrings) in &config.errors {
+        assert!(
+            !substrings.is_empty(),
+            "{case_name}: `errors` entry for {file_name:?} needs at least one error substring"
         );
     }
 
@@ -340,6 +411,10 @@ fn validate_case_config(case_name: &str, file_names: &BTreeSet<String>, config: 
             assert!(
                 file_names.contains(file_name),
                 "{case_name}: reference {reference:?} names a file that is not in this case"
+            );
+            assert!(
+                !config.errors.contains_key(file_name),
+                "{case_name}: reference {reference:?} names a file listed in `errors`, which produces no idmap"
             );
         }
     }
@@ -374,8 +449,8 @@ impl ExpectationChecker<PumlCliError, IdMapSections> for CrossDiagramChecker {
             .unwrap_or("cross_diagram_case");
         let config = load_case_config(dir);
 
-        let file_names: BTreeSet<String> = outputs
-            .keys()
+        let file_names: BTreeSet<String> = puml_files(dir)
+            .iter()
             .map(|path| {
                 path.file_name()
                     .and_then(|n| n.to_str())
@@ -485,10 +560,19 @@ macro_rules! cross_diagram_cases {
 
 cross_diagram_cases!(
     component_nesting,
-    class_alias_wins,
+    class_name_wins,
+    alias_is_local_key,
     namespace_and_package,
     sequence_forms,
-    prose_without_alias,
+    prose_names,
     linking_three_diagrams,
     qualified_reference,
+    qualified_in_nested_scope,
+    doc_4_trap_prose_label,
+    doc_6_external_endpoint,
+    errors_participants,
+    errors_listed_file,
+    unit_to_class_link,
+    separator_equivalence,
+    group_mixed_kinds,
 );

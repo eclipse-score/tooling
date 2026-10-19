@@ -14,8 +14,9 @@
 @startuml safety_analysis_doc_pipeline
 
 ' Component view of the FMEA build: input artifacts (authored + tooling
-' defaults) flow through three in-process tool actions of the ``safety_analysis`` rule into
-' the generated files, the providers, and finally the Sphinx staging tree.
+' defaults) flow through the in-process tool actions of the ``failure_modes``,
+' ``fault_trees`` and ``safety_analysis`` rules into the generated files, the
+' providers, and finally the Sphinx staging tree.
 
 skinparam linetype ortho
 skinparam ArrowFontSize 10
@@ -42,9 +43,10 @@ skinparam component {
 
 ' ── Input artifacts ──────────────────────────────────────────────────────────
 package "Authored by the component team" {
-    rectangle "failuremodes.trlc\n(FailureMode records)"    <<src>> as fm_trlc
-    rectangle "safetymeasures.trlc\n(Mitigation/AoU/CompReq)"  <<src>> as sm_trlc
-    rectangle "fta_*.puml\n(root_causes attr)"              <<src>> as fta_puml
+    rectangle "failure_modes srcs\n(FailureMode records)"    <<src>> as fm_trlc
+    rectangle "mitigations.trlc\n(Mitigation records)"      <<src>> as sm_trlc
+    rectangle "aous.trlc\n(AoU records, root_causes)"       <<src>> as aou_trlc
+    rectangle "fta_*.puml\n(fault_trees srcs)"              <<src>> as fta_puml
 }
 package "Tooling defaults (rules_score / ScoreReq)" {
     rectangle "ScoreReq *.rsl\n(spec attr)"        <<def>> as rsl
@@ -53,11 +55,21 @@ package "Tooling defaults (rules_score / ScoreReq)" {
     rectangle "fm/safetymeasures lobster\nconfigs"    <<def>> as lcfg
 }
 
-' ── safety_analysis rule: three tool actions ────────────────────────────────────────────
-package "safety_analysis rule actions" {
+' ── failure_modes rule: one tool action ─────────────────────────────────────
+package "failure_modes rule action" {
+    component "lobster-trlc" <<tool>> as ltrlc_fm
+}
+
+' ── fault_trees rule: two tool actions ──────────────────────────────────────
+package "fault_trees rule actions" {
     component "puml_cli  (FTA mode)\n--fta-output-dir\n[crate: puml_fta]" <<tool>> as puml
+    component "lobster-trlc"                                              <<tool>> as ltrlc_ft
+}
+
+' ── safety_analysis rule: two tool actions ──────────────────────────────────
+package "safety_analysis rule actions" {
     component "safety_analysis_assembler\n[lib: TRLCRST]"                            <<tool>> as asm
-    component "lobster-trlc  x3"                                          <<tool>> as ltrlc
+    component "lobster-trlc"                                              <<tool>> as ltrlc
 }
 
 ' ── Generated files ──────────────────────────────────────────────────────────
@@ -65,33 +77,45 @@ package "Generated files" {
     rectangle "fta_*.puml\n(authored, symlinked)"   <<gen>> as puml_inl
     rectangle "fta_events.trlc\n(RootCause stubs)" <<gen>> as fta_events
     rectangle "safety_analysis.rst"               <<gen>> as safety_analysis_rst
-    rectangle "failuremodes.lobster\nsafetymeasures.lobster\nfta_root_causes.lobster" <<gen>> as fmcm_lob
+    rectangle "failure_modes lobster"                        <<gen>> as fm_lob
+    rectangle "fta_root_causes.lobster" <<gen>> as ft_lob
+    rectangle "safetymeasures.lobster" <<gen>> as sm_lob
 }
 
 ' ── Providers ────────────────────────────────────────────────────────────────
+rectangle "TrlcProviderInfo + FaultTreesInfo\n────────────────\nfta_events.trlc, failure modes (deps)\nlobster_files, diagrams" <<prov>> as ftpi
 rectangle "SphinxSourcesInfo\n────────────────\nsrcs:     safety_analysis.rst\ndeps:     safety_analysis.rst\naux_srcs: fta_*.puml" <<prov>> as ssi
 rectangle "AnalysisInfo.lobster_files\n────────────────\nfailuremodes.lobster\nsafetymeasures.lobster\nfta_root_causes.lobster" <<prov>> as ai
-rectangle "TrlcProviderInfo\n────────────────\nreqs: fta_events.trlc, failuremodes\n(safetymeasures excluded: they\nreference fta_events)" <<prov>> as trlcpi
+rectangle "SafetyAnalysisProviderInfo\n────────────────\naou_targets (safety_measures)" <<prov>> as sapi
 
 ' ── Downstream rules + staging ───────────────────────────────────────────────
 component "dependability_analysis" <<tool>> as da
-component "dependable_element"     <<tool>> as de
-component "assumptions_of_use\n(deps = [safety_analysis])" <<tool>> as aou
+component "dependable_element\n(own AoUs from aou_targets)"     <<tool>> as de
+component "assumptions_of_use\n(deps = [fault_trees])" <<tool>> as aou
 rectangle "dependability_analysis/\n  dfa.rst    <- toctree\n  safety_analysis.rst   <- toctree\n  fta_*.puml (.. uml::)" <<stage>> as stage
 
 ' ── Edges: inputs -> tools ───────────────────────────────────────────────────
 fta_puml --> puml : parse macro calls
+fm_trlc  --> ltrlc_fm
+rsl      --> ltrlc_fm
+lcfg     --> ltrlc_fm
+fm_trlc  --> ltrlc_ft : import context
+fta_events --> ltrlc_ft
+rsl      --> ltrlc_ft
+lcfg     --> ltrlc_ft
 
 fta_events --> asm
 fta_puml --> asm : diagram names\n(one .. uml:: each)
 fm_trlc  --> asm
 sm_trlc  --> asm
+aou_trlc --> asm : safety_measures
 rsl      --> asm : import resolution
 tmpl     --> asm
 
-fm_trlc  --> ltrlc
 sm_trlc  --> ltrlc
+aou_trlc --> ltrlc
 fta_events --> ltrlc
+fm_trlc  --> ltrlc
 rsl      --> ltrlc
 lcfg     --> ltrlc
 
@@ -100,19 +124,25 @@ fta_puml --> puml_inl : symlinked beside safety_analysis.rst
 meta     --> stage : on PlantUML include path
 puml  --> fta_events
 asm   --> safety_analysis_rst
-ltrlc --> fmcm_lob
+ltrlc_fm --> fm_lob
+ltrlc_ft --> ft_lob
+ltrlc --> sm_lob
 
 ' ── Edges: generated -> providers ────────────────────────────────────────────
 safety_analysis_rst --> ssi
 puml_inl --> ssi
-fmcm_lob --> ai
-fta_events --> trlcpi
-fm_trlc    --> trlcpi
+ft_lob --> ai
+fm_lob --> ai
+sm_lob --> ai
+fta_events --> ftpi
+fm_trlc    --> ftpi
+aou_trlc   --> sapi
 
 ' ── Edges: providers -> downstream -> staging ────────────────────────────────
 ssi --> da : merge SphinxSourcesInfo
 ai  --> da : merge lobster_files
-trlcpi --> aou : resolve AoU.root_causes\n(<fta_package>.<RootCause>)
+sapi --> da : aou_targets
+ftpi --> aou : resolve AoU.root_causes\n(<fta_package>.<RootCause>)
 da  --> de
 de  --> stage : symlink srcs + aux_srcs\n(aux not indexed in toctree)
 

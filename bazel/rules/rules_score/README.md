@@ -28,7 +28,9 @@ for safety related automotive software.
 | `architectural_design` | `ArchitecturalDesignInfo` |
 | `unit` | `UnitInfo`, `CertifiedScope` |
 | `component` | `ComponentInfo` |
-| `safety_analysis` | `AnalysisInfo` |
+| `failure_modes` | `FailureModesInfo`, `TrlcProviderInfo` |
+| `fault_trees` | `FaultTreesInfo`, `TrlcProviderInfo` |
+| `safety_analysis` | `AnalysisInfo`, `SafetyAnalysisProviderInfo` |
 | `glossary` | `SphinxSourcesInfo` |
 | `dependability_analysis` | `DependabilityAnalysisInfo` |
 | `dependable_element` | HTML documentation zip (Sphinx) |
@@ -71,9 +73,11 @@ assumptions_of_use(
 ```
 
 **`bazel build`** — renders the AoU TRLC/RST sources and exposes their
-LOBSTER traceability file via `AssumptionsOfUseInfo.aou_lobster`. Tracing to
-feature/assumed-system requirements is established at the `dependable_element`
-level (via its own `requirements` attribute), not here.
+LOBSTER traceability file via `AssumptionsOfUseInfo.aou_lobster`. Every `AoU`
+references the fault-tree root cause(s) it addresses (`root_causes`, mandatory);
+list the `fault_trees` target in `deps` so `<fta_package>.<RootCause>` resolves.
+Tracing to feature/assumed-system requirements is established at the
+`dependable_element` level (via its own `requirements` attribute), not here.
 
 ---
 
@@ -137,23 +141,53 @@ and collects requirement + architecture + test lobster sources.
 
 ---
 
-## `safety_analysis`
+## `failure_modes` / `fault_trees` / `safety_analysis`
+
+Three stages avoid a dependency cycle: the fault trees reference the failure
+modes, the measures (AoUs, component requirements) reference root causes, and
+the safety analysis lists the failure modes and the measures.
 
 ```starlark
+failure_modes(
+    name = "my_failure_modes",
+    srcs = ["failure_modes.trlc"],
+)
+
+fault_trees(
+    name = "my_fault_trees",
+    srcs = ["fta.puml"],
+    deps = [":my_failure_modes"],
+)
+
+assumptions_of_use(
+    name = "my_aou",
+    srcs = ["aous.trlc"],
+    deps = [":my_fault_trees"],
+)
+
 safety_analysis(
     name = "my_safety_analysis",
-    failuremodes = [":failure_modes"],
-    root_causes = ["fta.puml"],
-    safetymeasures = [":safetymeasures"],
     arch_design = ":my_design",
+    failure_modes = [":my_failure_modes"],
+    fault_trees = ":my_fault_trees",
+    safety_measures = [":my_aou", "mitigations.trlc"],
 )
 ```
 
-**`bazel build`** — generates `safety_analysis.rst` (failure modes with their root causes and measures, fault trees, safety measures),
-runs `lobster-trlc` on TRLC inputs, and extracts FTA events from `.puml`
-diagrams into `fta_events.trlc` (generated `RootCause` records, usable via the
-target's `TrlcProviderInfo`). Build-only; traceability validation is done
-by the wrapping `dependability_analysis` test.
+**`bazel build` (`failure_modes`)** — runs `lobster-trlc` on the `FailureMode`
+records.
+
+**`bazel build` (`fault_trees`)** — extracts FTA events from `.puml` diagrams
+into `fta_events.trlc` (generated `RootCause` records, usable via the target's
+`TrlcProviderInfo`) and runs `lobster-trlc` on the root causes.
+
+**`bazel build` (`safety_analysis`)** — generates `safety_analysis.rst` (failure
+modes with their root causes and measures, fault trees) and runs `lobster-trlc`
+on the measures. Raw `.trlc` files in `safety_measures` may only hold
+`Mitigation` records; a root cause whose failure mode is not in `failure_modes`
+fails the build. Build-only; traceability validation is done by the wrapping
+`dependability_analysis` test. The `dependable_element` derives its own AoUs
+from the `assumptions_of_use` targets passed as `safety_measures`.
 
 ---
 
@@ -244,7 +278,6 @@ dependable_element(
     dependability_analysis = [":my_da"],
     components = [":my_component"],
     glossary = [":project_glossary"],
-    assumptions_of_use = [],
     tests = [],
 )
 ```

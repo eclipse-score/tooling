@@ -17,10 +17,10 @@ mod diagram_analysis;
 mod helpers;
 
 pub(in crate::validators) use diagram_analysis::{
-    build_observed_call_contexts, build_unit_bindings, SequenceCallContext, UnitBindings,
-    UnitInterfaces,
+    build_observed_call_contexts, build_unit_bindings, resolve_unit, SequenceCallContext,
+    UnitBindings, UnitInterfaces,
 };
 pub(in crate::validators) use helpers::{
-    best_string_suggestion, earliest_source_by_id, extract_method_name, format_name_list,
-    format_sequence_call, intersect_interfaces,
+    best_id_suggestion, best_string_suggestion, earliest_source_by_id, extract_method_name,
+    format_name_list, format_sequence_call, intersect_interfaces,
 };

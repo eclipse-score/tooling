@@ -53,7 +53,9 @@ load(
 )
 load(
     "//bazel/rules/rules_score/private:lobster_config.bzl",
+    "MERGE_LOBSTER_ITEMS_ATTR",
     "format_lobster_block",
+    "merge_lobster_files",
 )
 load("//bazel/rules/rules_score/private:sphinx_module.bzl", "sphinx_module")
 load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
@@ -288,7 +290,7 @@ def _check_staged_path(seen_paths, declared_relative_path, source_label, errors)
             that already staged it this rule instantiation; mutated in place.
         declared_relative_path: The path this file is about to be staged at,
             relative to `ctx.label.name`.
-        source_label: The `Label` this file came from.
+        source_label: The `Label` (or file path string) this file came from.
         errors: List of human-readable collision messages; mutated in place.
 
     Returns:
@@ -712,6 +714,19 @@ def _process_deps(ctx):
 def _get_component_names(components):
     return [c.label.name for c in components]
 
+def _register_unit(visited_units, unit_target):
+    """Add a unit to `visited_units` by name; fail if another unit owns the name."""
+    unit_name = unit_target.label.name
+    existing = visited_units.get(unit_name)
+    if existing == None:
+        visited_units[unit_name] = unit_target
+    elif existing.label != unit_target.label:
+        fail("units {} and {} share the name '{}'; unit names must be unique within a dependable_element".format(
+            existing.label,
+            unit_target.label,
+            unit_name,
+        ))
+
 def _collect_units_recursive(components, visited_units = None):
     """Iteratively collect all units from components, handling nested components.
 
@@ -746,18 +761,14 @@ def _collect_units_recursive(components, visited_units = None):
             for nested in nested_components:
                 # Check if nested item is a unit or component
                 if UnitInfo in nested:
-                    unit_name = nested.label.name
-                    if unit_name not in visited_units:
-                        visited_units[unit_name] = nested
+                    _register_unit(visited_units, nested)
                 elif ComponentInfo in nested:
                     # Add nested component to queue for processing
                     to_process.append(nested)
 
             # Check if this is directly a unit
         elif UnitInfo in comp_target:
-            unit_name = comp_target.label.name
-            if unit_name not in visited_units:
-                visited_units[unit_name] = comp_target
+            _register_unit(visited_units, comp_target)
 
     return visited_units
 
@@ -774,12 +785,15 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
     """
     unit_info = unit_target[UnitInfo]
 
-    # Create RST file for this unit
-    unit_rst = ctx.actions.declare_file(ctx.label.name + "/units/" + unit_name + ".rst")
+    # Per-unit directory: same-named files of different units can't collide.
+    unit_dir = "units/" + unit_name
+    unit_rst = ctx.actions.declare_file(ctx.label.name + "/" + unit_dir + "/index.rst")
 
     # Collect design files - unit_design depset contains File objects
     design_files = []
     design_include_lines = []
+    seen_paths = {}
+    staging_errors = []
     if unit_info.unit_design:
         doc_files = _filter_doc_files(unit_info.unit_design.to_list())
 
@@ -789,9 +803,11 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
 
             for f in doc_files:
                 relative_path = _compute_relative_path(f, common_dir)
+                if _check_staged_path(seen_paths, unit_dir + "/design/" + relative_path, f.short_path, staging_errors):
+                    continue
                 output_file = _create_artifact_symlink(
                     ctx,
-                    "units/" + unit_name + "_design",
+                    unit_dir + "/design",
                     f,
                     relative_path,
                 )
@@ -799,21 +815,20 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
 
                 if _is_document_file(f):
                     # Inline the design RST directly into the unit page.
-                    # Path is relative to the unit RST (which lives in units/).
-                    include_path = unit_name + "_design/" + relative_path
+                    include_path = "design/" + relative_path
                     design_include_lines.append(".. include:: " + include_path)
                     design_include_lines.append("")
-                elif f.extension in ("puml", "plantuml"):
+                elif f.extension == "puml":
                     # sphinxcontrib-plantuml resolves .. uml:: paths relative to
-                    # the *including* document (units/unit_name.rst), not the
-                    # included RST file. Symlink the PUML alongside the unit RST
-                    # so the directive inside the included RST can find it.
-                    # NOTE: All PUML files across all units must have unique
-                    # basenames because they share the flat units/ namespace.
-                    # Use unit-specific filenames (e.g. unit_1_class_diagram.puml)
-                    # to avoid declaration conflicts.
-                    sibling = _create_artifact_symlink(ctx, "units", f, f.basename)
+                    # the *including* document (the unit page), not the included
+                    # RST, so the PUML is also staged next to the unit page.
+                    if _check_staged_path(seen_paths, unit_dir + "/" + f.basename, f.short_path, staging_errors):
+                        continue
+                    sibling = _create_artifact_symlink(ctx, unit_dir, f, f.basename)
                     design_files.append(sibling)
+
+    if staging_errors:
+        fail("unit {}: {}".format(unit_target.label, "; ".join(staging_errors)))
 
     # Collect implementation target names
     impl_names = []
@@ -924,7 +939,7 @@ def _generate_component_doc(ctx, comp_target, comp_name, unit_names):
 
     units_section = ""
     if unit_names:
-        unit_toctree_refs = "\n".join(["   ../units/" + name for name in unit_names])
+        unit_toctree_refs = "\n".join(["   ../units/" + name + "/index" for name in unit_names])
         units_section = "\n" + _COMPONENT_UNITS_SECTION_TEMPLATE.format(
             unit_toctree_refs = unit_toctree_refs,
         ) + "\n"
@@ -1036,6 +1051,19 @@ def _symlink_validation_log(ctx, validation_log):
 # Index Generation Rule Implementation
 # ============================================================================
 
+def _own_aou_targets(ctx):
+    """AoU targets this element owns: the measures of its safety analyses, deduplicated by label."""
+    targets = []
+    seen = {}
+    for da_target in ctx.attr.dependability_analysis:
+        if DependabilityAnalysisInfo not in da_target:
+            continue
+        for aou in da_target[DependabilityAnalysisInfo].aou_targets:
+            if aou.label not in seen:
+                seen[aou.label] = True
+                targets.append(aou)
+    return targets
+
 def _cond_names(*conditioned_names):
     """Flatten (condition, level_name) pairs into a name list, dropping false conditions.
 
@@ -1076,7 +1104,6 @@ def _dependable_element_index_impl(ctx):
     # Process each well-known artifact type into symlinked output files and
     # toctree references for the index template.
     artifact_types = [
-        "assumptions_of_use",
         "dependability_analysis",
         "checklists",
         "glossary",
@@ -1087,6 +1114,21 @@ def _dependable_element_index_impl(ctx):
         files, refs = _process_artifact_type(ctx, artifact_name, seen_paths = seen_staged_paths, errors = staging_errors)
         output_files.extend(files)
         artifacts_by_type[artifact_name] = refs
+
+    # Own AoUs are the safety analyses' measures, namespaced like every other
+    # artifact type under each target's own name.
+    own_aou_refs = []
+    for aou_target in _own_aou_targets(ctx):
+        label_files, label_refs = _process_artifact_files(
+            ctx,
+            "assumptions_of_use",
+            aou_target,
+            seen_paths = seen_staged_paths,
+            errors = staging_errors,
+            path_prefix = "{}/".format(aou_target.label.name),
+        )
+        output_files.extend(label_files)
+        own_aou_refs.extend(label_refs)
 
     arch_refs_by_view = {view_name: [] for view_name, _ in ARCH_VIEWS}
     arch_unclassified_refs = []
@@ -1200,6 +1242,12 @@ def _dependable_element_index_impl(ctx):
     # Sphinx sidebar navigation.
     component_entries = ["components/" + name for name in component_refs]
 
+    # Units listed directly in components have no parent component page, so
+    # link their pages from the Components section.
+    for comp_target in ctx.attr.components:
+        if UnitInfo in comp_target and ComponentInfo not in comp_target:
+            component_entries.append("units/" + comp_target.label.name + "/index")
+
     # Generate submodule links for the index page
     deps_links = _process_deps(ctx)
 
@@ -1231,7 +1279,7 @@ def _dependable_element_index_impl(ctx):
     assumed_system_ref = _section_page(
         "assumed_system",
         "Assumed System",
-        assumed_system_req_refs + artifacts_by_type["assumptions_of_use"],
+        assumed_system_req_refs + own_aou_refs,
     )
     software_arch_ref = _generate_software_arch_page(
         ctx,
@@ -1491,11 +1539,22 @@ def _dependable_element_index_impl(ctx):
         coverage_lobster_files.append(cov_lobster)
 
     # Collect safety analysis lobster files from dependability_analysis targets
-    sa_lobster_files = {}  # canonical name -> File, merged from all DA targets
+    sa_lobster_files = {}  # canonical name -> list of Files, merged from all DA targets
     for da_target in ctx.attr.dependability_analysis:
         if DependabilityAnalysisInfo in da_target:
             da_info = da_target[DependabilityAnalysisInfo]
-            sa_lobster_files.update(da_info.lobster_files)
+            for name, files in da_info.lobster_files.items():
+                merged = sa_lobster_files.setdefault(name, [])
+                merged.extend([f for f in files if f not in merged])
+
+    # An item shared by several dependability analyses is kept once.
+    for name in list(sa_lobster_files.keys()):
+        sa_lobster_files[name], merged_files = merge_lobster_files(
+            ctx,
+            sa_lobster_files[name],
+            "{}/merged_{}".format(ctx.label.name, name),
+        )
+        output_files.extend(merged_files)
 
     # Collect public api lobster files from architectural_design targets
     public_api_lobster_list = []
@@ -1510,37 +1569,51 @@ def _dependable_element_index_impl(ctx):
     comp_test_list = comp_test_lobster_depset.to_list()
     comp_arch_list = comp_arch_lobster_depset.to_list()
     interface_req_list = public_api_lobster_list
-    fm_list = [sa_lobster_files["failuremodes.lobster"]] if "failuremodes.lobster" in sa_lobster_files else []
-    rc_list = [sa_lobster_files["fta_root_causes.lobster"]] if "fta_root_causes.lobster" in sa_lobster_files else []
-    safetymeasures_list = [sa_lobster_files["safetymeasures.lobster"]] if "safetymeasures.lobster" in sa_lobster_files else []
+    fm_list = sa_lobster_files.get("failuremodes.lobster", [])
+    rc_list = sa_lobster_files.get("fta_root_causes.lobster", [])
+    safetymeasures_list = sa_lobster_files.get("safetymeasures.lobster", [])
 
     # =========================================================================
     # AoU Forwarding: collect own AoUs and received AoUs from deps
     # =========================================================================
 
-    # Collect own AoU lobster files from assumptions_of_use targets.
-    own_aou_lobster_files = []
-    for aou_target in ctx.attr.assumptions_of_use:
-        if AssumptionsOfUseInfo in aou_target:
-            own_aou_lobster_files.append(aou_target[AssumptionsOfUseInfo].aou_lobster)
-
+    # Own AoUs are the measures of the safety analyses.
+    own_aou_lobster_files = [
+        aou_target[AssumptionsOfUseInfo].aou_lobster
+        for aou_target in _own_aou_targets(ctx)
+    ]
     own_aou_lobster_depset = depset(transitive = own_aou_lobster_files)
 
-    # Collect forwarded AoU lobster files from deps (received AoUs)
-    received_aou_lobster_files = []
+    # Collect forwarded AoU lobster files from deps (received AoUs). The same
+    # AoU can arrive along several paths; the merge keeps one item per tag,
+    # preferring the files of the defining elements.
+    received_own_lobster = []
+    received_chain_lobster = []
     for dep in ctx.attr.processed_deps:
         if ForwardedAoUInfo in dep:
             fwd_info = dep[ForwardedAoUInfo]
-            received_aou_lobster_files.append(fwd_info.own_aou_lobster)
-            received_aou_lobster_files.append(fwd_info.chain_forwarded_lobster)
+            received_own_lobster.append(fwd_info.own_aou_lobster)
+            received_chain_lobster.append(fwd_info.chain_forwarded_lobster)
 
-    received_aou_lobster_depset = depset(transitive = received_aou_lobster_files)
-    received_aou_list = received_aou_lobster_depset.to_list()
+    received_own_list = depset(transitive = received_own_lobster).to_list()
+    received_aou_list = received_own_list + [
+        f
+        for f in depset(transitive = received_chain_lobster).to_list()
+        if f not in received_own_list
+    ]
+    received_aou_list, merged_aous = merge_lobster_files(
+        ctx,
+        received_aou_list,
+        "{}/received_aous.lobster".format(ctx.label.name),
+    )
+    output_files.extend(merged_aous)
 
     # Chain-forwarding: if aou_forwarding YAML is provided, filter received AoUs.
+    # The tool also runs without received AoUs, so entries naming a missing
+    # AoU fail the build.
     chain_forwarded_lobster_depset = depset()
     forwarded_aou_markers_list = []
-    if ctx.file.aou_forwarding and received_aou_list:
+    if ctx.file.aou_forwarding:
         chain_forwarded_lobster_file = ctx.actions.declare_file(
             ctx.label.name + "/chain_forwarded_aous.lobster",
         )
@@ -1843,10 +1916,6 @@ def _dependable_element_index_attrs():
             mandatory = True,
             doc = "Name of the dependable element module (used as document title)",
         ),
-        "assumptions_of_use": attr.label_list(
-            mandatory = True,
-            doc = "Assumptions of Use targets or files.",
-        ),
         "requirements": attr.label_list(
             mandatory = True,
             providers = [[FeatureRequirementsInfo], [AssumedSystemRequirementsInfo]],
@@ -1946,6 +2015,7 @@ def _dependable_element_index_attrs():
     }
     attrs.update(VALIDATION_ATTRS)
     attrs.update(VERBOSITY_ATTR)
+    attrs.update(MERGE_LOBSTER_ITEMS_ATTR)
     return attrs
 
 _dependable_element_index = rule(
@@ -2086,7 +2156,6 @@ _dependable_element_test = rule(
 # lobster-trace: Tools.ArchitectureModelingDependableElement
 def dependable_element(
         name,
-        assumptions_of_use,
         requirements,
         architectural_design,
         dependability_analysis,
@@ -2115,14 +2184,14 @@ def dependable_element(
     Args:
         name: The name of the dependable element. Used as the base name for
             all generated targets.
-        assumptions_of_use: List of labels to assumptions_of_use targets that
-            define the safety-relevant operating conditions and constraints.
         requirements: List of labels to requirements targets (component_requirements,
             feature_requirements, etc.) that define functional and safety requirements.
         architectural_design: List of labels to architectural_design targets that
             describe the software architecture and design decisions.
         dependability_analysis: List of labels to dependability_analysis targets
             containing safety analysis results (FMEA, FMEDA, FTA, DFA, etc.).
+            The AoUs the element exposes to its dependees are the `safety_measures`
+            of their safety_analysis targets.
         components: List of labels to component and/or unit targets that implement
             this dependable element.
         tests: List of labels to Bazel test targets that verify the dependable
@@ -2184,7 +2253,6 @@ def dependable_element(
         module_name = name,
         template = Label("//bazel/rules/rules_score:templates/dependable_element_index.template.rst"),
         section_template = Label("//bazel/rules/rules_score:templates/section_page.template.rst"),
-        assumptions_of_use = assumptions_of_use,
         requirements = requirements,
         components = components,
         architectural_design = architectural_design,

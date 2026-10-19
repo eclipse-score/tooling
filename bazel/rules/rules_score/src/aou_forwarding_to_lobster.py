@@ -34,6 +34,8 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
@@ -54,21 +56,45 @@ _LEVEL_MAP = {
 }
 
 
-def parse_forwarding_yaml(yaml_path: str) -> list[dict[str, str]]:
+@dataclass(frozen=True)
+class ForwardingEntry:
+    """One entry of the forwarding YAML."""
+
+    aou_id: str
+    justification: str
+    line: int = 1
+
+
+_VERSIONED_ID = re.compile(r"^[^@\s]+@\d+$")
+
+
+def _entry_lines(root: yaml.Node | None) -> list[int]:
+    if not isinstance(root, yaml.MappingNode):
+        return []
+    for key, value in root.value:
+        if isinstance(key, yaml.ScalarNode) and key.value == "forwarded_aous" and isinstance(value, yaml.SequenceNode):
+            return [node.start_mark.line + 1 for node in value.value]
+    return []
+
+
+def parse_forwarding_yaml(yaml_path: str) -> list[ForwardingEntry]:
     """Parse the AoU forwarding YAML file.
 
     Args:
         yaml_path: Path to the YAML file.
 
     Returns:
-        List of dicts with 'aou_id' and 'justification' keys.
+        The entries in file order.
 
     Raises:
-        SystemExit: If YAML is malformed or missing required fields.
+        SystemExit: If YAML is malformed, an entry lacks a field, an 'aou_id'
+            has no version, or an 'aou_id' is listed twice.
     """
     try:
         with open(yaml_path, encoding="utf-8") as f:
-            data = yaml.safe_load(f)
+            text = f.read()
+        root = yaml.compose(text, Loader=yaml.SafeLoader)
+        data = yaml.safe_load(text)
     except (OSError, yaml.YAMLError) as e:
         raise SystemExit(f"Failed to parse YAML {yaml_path}: {e}") from e
 
@@ -79,7 +105,9 @@ def parse_forwarding_yaml(yaml_path: str) -> list[dict[str, str]]:
     if not isinstance(entries, list):
         raise SystemExit(f"YAML {yaml_path}: 'forwarded_aous' must be a list.")
 
-    result = []
+    lines = _entry_lines(root)
+    result: list[ForwardingEntry] = []
+    seen: dict[str, int] = {}
     for i, entry in enumerate(entries):
         if not isinstance(entry, dict):
             raise SystemExit(f"YAML {yaml_path}: entry {i} must be a mapping with 'aou_id' and 'justification'.")
@@ -91,7 +119,15 @@ def parse_forwarding_yaml(yaml_path: str) -> list[dict[str, str]]:
             raise SystemExit(
                 f"YAML {yaml_path}: entry {i} (aou_id='{aou_id}') is missing required field 'justification'."
             )
-        result.append({"aou_id": aou_id, "justification": justification})
+        if not isinstance(aou_id, str) or not _VERSIONED_ID.match(aou_id):
+            raise SystemExit(
+                f"YAML {yaml_path}: entry {i} (aou_id='{aou_id}') must name the AoU version, e.g. 'Pkg.Name@1', "
+                "so that the justification is reviewed again when the AoU changes."
+            )
+        if aou_id in seen:
+            raise SystemExit(f"YAML {yaml_path}: aou_id '{aou_id}' is listed in entries {seen[aou_id]} and {i}.")
+        seen[aou_id] = i
+        result.append(ForwardingEntry(aou_id, justification, lines[i] if i < len(lines) else 1))
 
     logger.info("Parsed %d forwarding entr%s from %s", len(result), "y" if len(result) == 1 else "ies", yaml_path)
     return result
@@ -123,18 +159,16 @@ def load_lobster_items(lobster_paths: list[str]) -> list[Requirement]:
 
 
 def _match_forwarded_entries(
-    forwarding_entries: list[dict[str, str]],
+    forwarding_entries: list[ForwardingEntry],
     lobster_items: list[Requirement],
-) -> list[tuple[dict[str, str], Requirement]]:
+) -> list[tuple[ForwardingEntry, Requirement]]:
     """Match each forwarding YAML entry to its received AoU lobster item.
 
-    Matches by checking if the AoU ID appears in the lobster item's tag.
-    Lobster-trlc generates tags like "req PackageName.RecordName@version".
-    The YAML can reference either the full versioned ID or the base name
-    (without @version suffix).
+    An entry matches the item whose tag (including '@version') equals its
+    'aou_id'.
 
     Args:
-        forwarding_entries: Parsed YAML entries with 'aou_id' fields.
+        forwarding_entries: Parsed YAML entries.
         lobster_items: All lobster items from received AoU files.
 
     Returns:
@@ -143,45 +177,34 @@ def _match_forwarded_entries(
     Raises:
         SystemExit: If any aou_id from YAML doesn't match a received item.
     """
-    # Build lookup: tag suffix -> item
-    # Lobster-trlc may generate versioned tags like "req Pkg.Name@1".
-    # We index by both the full ID and the base ID (without @version), but
-    # only register the bare base ID when it is unambiguous: if two received
-    # items share the same base ID at different versions (e.g. the same AoU
-    # forwarded at different versions via different deps), a bare YAML
-    # reference must not silently resolve to whichever one loaded last.
-    item_by_id: dict[str, Requirement] = {}
-    base_id_versions: dict[str, dict[object, Requirement]] = {}
+    item_by_id = {f"{item.tag.tag}@{item.tag.version}": item for item in lobster_items if item.tag.version}
+    versions_by_base_id: dict[str, set[int]] = {}
     for item in lobster_items:
-        full_id = item.tag.tag
         if item.tag.version:
-            full_id += f"@{item.tag.version}"
-        item_by_id[full_id] = item
-        base_id_versions.setdefault(item.tag.tag, {})[item.tag.version] = item
-
-    for base_id, by_version in base_id_versions.items():
-        if len(by_version) == 1:
-            item_by_id[base_id] = next(iter(by_version.values()))
+            versions_by_base_id.setdefault(item.tag.tag, set()).add(item.tag.version)
 
     matched = []
     for entry in forwarding_entries:
-        aou_id = entry["aou_id"]
-        if aou_id not in item_by_id:
-            available = ", ".join(sorted(item_by_id.keys())) if item_by_id else "(none)"
+        item = item_by_id.get(entry.aou_id)
+        if item is None:
+            base_id = entry.aou_id.rsplit("@", 1)[0]
             hint = ""
-            if aou_id in base_id_versions and len(base_id_versions[aou_id]) > 1:
-                hint = " (ambiguous: multiple versions received -- specify '@version' explicitly)"
+            if base_id in versions_by_base_id:
+                received = ", ".join(str(v) for v in sorted(versions_by_base_id[base_id]))
+                hint = f" (received version(s): {received}; review the justification and update the version)"
+            available = ", ".join(sorted(item_by_id)) if item_by_id else "(none)"
             raise SystemExit(
-                f"AoU ID '{aou_id}' listed in forwarding YAML not found in received AoUs.{hint} Available IDs: {available}"
+                f"AoU ID '{entry.aou_id}' listed in forwarding YAML not found in received AoUs.{hint} "
+                f"Available IDs: {available}"
             )
-        matched.append((entry, item_by_id[aou_id]))
+        matched.append((entry, item))
 
     logger.info("Matched %d/%d forwarding entries to received AoU items", len(matched), len(forwarding_entries))
     return matched
 
 
 def filter_forwarded_aous(
-    forwarding_entries: list[dict[str, str]],
+    forwarding_entries: list[ForwardingEntry],
     lobster_items: list[Requirement],
 ) -> list[Requirement]:
     """Filter lobster items to only those listed in the forwarding YAML.
@@ -205,7 +228,7 @@ def filter_forwarded_aous(
 
 
 def build_forwarded_markers(
-    forwarding_entries: list[dict[str, str]],
+    forwarding_entries: list[ForwardingEntry],
     lobster_items: list[Requirement],
     yaml_path: str,
 ) -> list[Requirement]:
@@ -233,14 +256,13 @@ def build_forwarded_markers(
     """
     markers = []
     for entry, item in _match_forwarded_entries(forwarding_entries, lobster_items):
-        aou_id = entry["aou_id"]
         marker = Requirement(
-            tag=Tracing_Tag("req", f"{aou_id}__forwarded"),
-            location=File_Reference(yaml_path, line=1),
+            tag=Tracing_Tag("req", f"{item.tag.tag}__forwarded"),
+            location=File_Reference(yaml_path, line=entry.line),
             framework="AoUForwarding",
             kind="ForwardedAoU",
-            name=aou_id,
-            text=entry["justification"],
+            name=item.tag.tag,
+            text=entry.justification,
         )
         marker.add_tracing_target(item.tag)
         markers.append(marker)
@@ -257,9 +279,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--input-lobster",
-        nargs="+",
+        nargs="*",
         required=True,
-        help="One or more .lobster files received from deps containing AoU entries.",
+        help="The received AoU .lobster file(s) holding the AoUs this element can forward.",
     )
     parser.add_argument(
         "--output",

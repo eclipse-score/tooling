@@ -14,9 +14,9 @@
 @startuml
 
 ' The package alias must match the dependable_element target name.
-package "my_element" as my_element <<SEooC>> {
-    component "MyComponent" as MyComponent <<component>> {
-        component "MyUnit" as MyUnit <<unit>>
+package my_element <<SEooC>> {
+    component MyComponent <<component>> {
+        component MyUnit <<unit>>
     }
 }
 

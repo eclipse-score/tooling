@@ -14,11 +14,11 @@
 @startuml
 
 package package_a {
-    interface "diagnostics_interfac" as diagnostics_interfac {
+    interface diagnostics_interfac {
         + GetDiagnostics()
     }
 
-    interface "internal_interface" as internal_interface {
+    interface internal_interface {
         + GetData()
     }
 }

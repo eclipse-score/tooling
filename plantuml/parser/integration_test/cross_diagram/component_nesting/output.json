@@ -1,12 +1,12 @@
 {
     "component_diagram.puml": {
         "defines": {
-            "logging": "logging",
-            "Recorder": "logging.Recorder"
+            "logging": "score.mw.log",
+            "Recorder": "score.mw.log.LogRecorder"
         },
         "references": {
-            "Backend": "logging.Recorder.Backend",
-            "Frontend": "logging.Recorder.Frontend"
+            "Backend": "score.mw.log.LogRecorder.Backend",
+            "Frontend": "score.mw.log.LogRecorder.Frontend"
         }
     },
     "sequence_diagram.puml": {

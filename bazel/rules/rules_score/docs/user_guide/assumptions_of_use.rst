@@ -16,9 +16,9 @@ Assumptions of Use
 ===================
 
 Conditions that the *integrating project* must satisfy when using your SEooC.
-The optional ``root_causes`` field lets an ``AoU`` close one or more FTA
-``RootCause`` root causes directly, pushing the obligation to prevent them
-out to the integrator.
+Every own ``AoU`` references the FTA ``RootCause`` records it closes in its
+mandatory ``root_causes`` field, pushing the obligation to prevent them out to
+the integrator.
 
 Traceability to requirements is established at the Bazel level via the ``deps``
 attribute on the ``assumptions_of_use`` rule — there is no TRLC ``derived_from``
@@ -32,26 +32,27 @@ however, declare that it implements a received AoU by referencing it from its ow
     package SampleType
 
     import ScoreReq
+    import sample_safety_analysis_fta
 
     ScoreReq.AoU SampleAoU {
         description = "It shall be made sure that shared memory segments are never created with the wrong name (ShmemCreatedWrongName)"
         safety      = ScoreReq.Asil.B
         version     = 1
+        root_causes = [sample_safety_analysis_fta.ShmemCreatedWrongName]
     }
 
 .. code-block:: starlark
-   :caption: examples/seooc/docs/BUILD and examples/seooc/BUILD
+   :caption: examples/seooc/docs/BUILD
 
    assumptions_of_use(
        name = "sample_aous",
        srcs = ["aous.trlc"],
+       deps = ["//safety_analysis:sample_fault_trees"],
    )
 
-   dependable_element(
-       name = "safety_software_seooc_example",
-       assumptions_of_use = ["//docs:sample_aous"],
-       ...
-   )
+The ``dependable_element`` has no AoU attribute: its own AoUs are the
+``assumptions_of_use`` targets that the ``safety_analysis`` targets of its
+``dependability_analysis`` list in ``safety_measures`` (see below).
 
 Preventing a root cause
 -----------------------
@@ -75,21 +76,36 @@ referencing the generated ``RootCause`` record in ``root_causes``:
     }
 
 The generated ``<fta_package>`` package only exists as output of the
-``safety_analysis`` target, so two attributes must name that target:
+``fault_trees`` target, so the ``assumptions_of_use`` target lists it in
+``deps``. The ``safety_analysis`` target lists the same ``assumptions_of_use``
+target in ``safety_measures``, which counts the AoU as a measure of the root cause:
 
 .. code-block:: starlark
 
-   safety_analysis(
-       name = "sample_safety_analysis",
-       safetymeasures = ["aou.trlc"],  # counts the AoU as a measure of the root cause
+   fault_trees(
+       name = "sample_fault_trees",
+       fta_package = "sample_safety_analysis_fta",
        # ...
    )
 
    assumptions_of_use(
        name = "sample_aous",
        srcs = ["aou.trlc"],
-       deps = [":sample_safety_analysis"],  # resolves sample_safety_analysis_fta
+       deps = [":sample_fault_trees"],  # resolves sample_safety_analysis_fta
    )
+
+   safety_analysis(
+       name = "sample_safety_analysis",
+       fault_trees = ":sample_fault_trees",
+       safety_measures = [":sample_aous"],  # counts the AoU as a measure of the root cause
+       # ...
+   )
+
+The ``dependable_element`` derives its own AoUs from the ``safety_measures`` of its
+safety analyses: an AoU is exposed to dependees once, however many safety
+analyses list it. An ``assumptions_of_use`` target that no ``safety_analysis``
+lists in ``safety_measures`` is neither rendered nor forwarded, and a
+``dependable_element`` without a safety analysis has no own AoUs.
 
 An own AoU is never a ``derived_from`` source of a ``CompReq``; only AoUs
 received from another dependable element are (see `AoU Forwarding`_).
@@ -105,7 +121,7 @@ satisfy — even those originating from transitive dependencies.
 There are two forwarding mechanisms:
 
 **Automatic forwarding (own AoUs)**
-All AoUs declared in a dependable element's ``assumptions_of_use`` attribute are
+All AoUs that the element's safety analyses list in ``safety_measures`` are
 automatically forwarded to every element that lists it in ``deps``. No
 configuration is needed.
 
@@ -119,17 +135,24 @@ is forwarded rather than handled locally:
    :caption: examples/seooc/aou_forwarding.yaml
 
     forwarded_aous:
-      - aou_id: "OtherLibrary.TimingConstraint"
+      - aou_id: "OtherLibrary.TimingConstraint@1"
         justification: >
           This SEooC is a library component and has no control over the
           invocation cycle time. The system integrator must ensure that
           calls to the library do not exceed the 10ms cycle time constraint
           imposed by the underlying other_seooc dependency.
 
+``aou_id`` carries the version of the received AoU (``Package.Name@version``),
+so a justification is reviewed again when the AoU changes. An unknown ID, a
+mismatching version or a duplicate entry fails the build.
+
 **Handling AoUs received in the dependee**
 Every AoU a dependable element receives appears as
 an item in a "Received AoUs" tier in the dependee's lobster traceability
-report. Each received AoU must be covered by exactly one of:
+report. An AoU that reaches the element along several paths (for example
+directly and through a dependency that forwards it) appears once; if the
+paths carry different definitions, the build fails. Each received AoU must be
+covered by at least one of:
 
 - **Handling it locally**: a component requirement's ``derived_from`` field
   references the AoU it implements (see below). This shows up as "Component
@@ -192,10 +215,10 @@ Two things are required for the reference to resolve:
    )
 
 Being a real TRLC reference, an AoU entry in ``derived_from`` is resolved (and
-a typo or an AoU this element does not actually receive is rejected) by the
-TRLC parser itself at build time, not by a later lobster-report matching step
--- while the resulting lobster item is still tagged and traced exactly as
-before, so the coverage report is unaffected.
+a typo or an AoU whose ``assumptions_of_use`` target is missing from ``deps`` is
+rejected) by the TRLC parser itself at build time, not by a later lobster-report
+matching step -- while the resulting lobster item is still tagged and traced
+exactly as before, so the coverage report is unaffected.
 
 **Example: three-level forwarding chain** (the real working code for this
 example lives in ``examples/some_other_library``, ``examples/seooc``, and
@@ -203,9 +226,10 @@ example lives in ``examples/some_other_library``, ``examples/seooc``, and
 
 ::
 
-    other_seooc                     → defines AoU: OtherLibrary.TimingConstraint
+    other_seooc                     → defines AoUs: OtherLibrary.TimingConstraint, OtherLibrary.SpaceConstraint
         ↑ (deps)
     safety_software_seooc_example   → defines own AoU: SampleType.SampleAoU (auto-forwarded)
+                                     → handles received SpaceConstraint locally via derived_from
                                      → chain-forwards received TimingConstraint via aou_forwarding.yaml
         ↑ (deps)
     integrator_seooc                → receives SampleType.SampleAoU (auto-forwarded)
@@ -217,7 +241,6 @@ example lives in ``examples/some_other_library``, ``examples/seooc``, and
 
    dependable_element(
        name = "safety_software_seooc_example",
-       assumptions_of_use = ["//docs:sample_aous"],
        aou_forwarding = "aou_forwarding.yaml",
        deps = ["@some_other_library//:other_seooc"],
        ...

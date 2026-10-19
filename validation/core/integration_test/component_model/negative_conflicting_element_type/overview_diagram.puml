@@ -19,9 +19,9 @@
 
 @startuml overview_diagram
 
-package "Package A" as package_a <<SEooC>> {
-    component "Component A" as component_a <<component>> {
-        interface "Shared Thing" as shared_thing <<component>>
+package package_a <<SEooC>> {
+    component component_a <<component>> {
+        interface shared_thing <<component>>
     }
 }
 

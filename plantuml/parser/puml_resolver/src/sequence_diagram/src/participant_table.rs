@@ -11,106 +11,277 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use sequence_logic::{
-    ParticipantType as LogicParticipantType, SequenceParticipant, SourceLocation,
+    ParticipantId, ParticipantType as LogicParticipantType, SequenceParticipant, SourceLocation,
 };
 use sequence_parser::sequence_ast::{
-    CreateCmd, MessageEndpoint, ParticipantDef, ParticipantIdentifier,
+    CreateCmd, MessageEndpoint, ParticipantDef, ParticipantIdentifier, ParticipantRef,
     ParticipantType as SyntaxParticipantType, Statement,
 };
 
-pub(crate) fn build_participant_table(statements: &[Statement]) -> Vec<SequenceParticipant> {
-    let mut resolved_names = HashSet::new();
-    let mut participants = Vec::new();
+use crate::error::SequenceResolverError;
+use crate::participant_uid::participant_uid;
 
-    add_explicit_participants(statements, &mut participants, &mut resolved_names);
+const DISPLAY_NAME_REASON: &str =
+    "is the display name of an aliased participant, refer to it by its alias";
+
+/// Participants in declaration order plus the uid each reference name stands for.
+#[derive(Debug, Default)]
+pub(crate) struct ParticipantTable {
+    pub(crate) participants: Vec<SequenceParticipant>,
+    uid_by_reference: HashMap<String, ParticipantId>,
+    uids: HashSet<String>,
+}
+
+impl ParticipantTable {
+    pub(crate) fn uid_of_identifier(
+        &self,
+        identifier: &ParticipantIdentifier,
+        source_location: &SourceLocation,
+    ) -> Result<ParticipantId, SequenceResolverError> {
+        self.uid_of_reference(
+            reference_name(&identifier.display_name, identifier.alias.as_deref()),
+            source_location,
+        )
+    }
+
+    pub(crate) fn uid_of_ref(
+        &self,
+        participant: &ParticipantRef,
+        source_location: &SourceLocation,
+    ) -> Result<ParticipantId, SequenceResolverError> {
+        self.uid_of_reference(&participant.identifier, source_location)
+    }
+
+    fn uid_of_reference(
+        &self,
+        reference_name: &str,
+        source_location: &SourceLocation,
+    ) -> Result<ParticipantId, SequenceResolverError> {
+        if let Some(uid) = self.uid_by_reference.get(reference_name) {
+            return Ok(uid.clone());
+        }
+
+        if self.is_display_name_of_aliased(reference_name) {
+            return Err(display_name_error(reference_name, source_location));
+        }
+
+        Err(SequenceResolverError::UnknownParticipant {
+            reference: reference_name.to_string(),
+            source_location: source_location.clone(),
+        })
+    }
+
+    fn has_reference(&self, reference_name: &str) -> bool {
+        self.uid_by_reference.contains_key(reference_name)
+    }
+
+    fn is_display_name_of_aliased(&self, name: &str) -> bool {
+        self.participants
+            .iter()
+            .any(|participant| participant.alias.is_some() && participant.display_name == name)
+    }
+
+    fn participant_by_reference(&self, reference: &str) -> Option<&SequenceParticipant> {
+        self.participants.iter().find(|participant| {
+            reference_name(&participant.display_name, participant.alias.as_deref()) == reference
+        })
+    }
+}
+
+/// The explicit `participant` declarations of one file. A file of a group
+/// offers them to the other files, see [`build_participant_table`].
+pub(crate) fn declared_participants(
+    statements: &[Statement],
+) -> Result<ParticipantTable, SequenceResolverError> {
+    let mut table = ParticipantTable::default();
+
+    add_explicit_participants(statements, &mut table)?;
+
+    Ok(table)
+}
+
+/// Builds the participants of one file. A reference that no statement of the
+/// file declares resolves to the explicit declaration in `peers`, the other
+/// files of the group, before an implicit participant is created.
+pub(crate) fn build_participant_table(
+    statements: &[Statement],
+    peers: &[&ParticipantTable],
+) -> Result<ParticipantTable, SequenceResolverError> {
+    let mut table = ParticipantTable::default();
+
+    add_explicit_participants(statements, &mut table)?;
 
     // Message endpoints and create commands must share the ordered pass so the
     // first participant reference keeps its source location.
-    add_implicit_participants(statements, &mut participants, &mut resolved_names);
+    add_implicit_participants(statements, &mut table, peers)?;
 
-    participants
+    Ok(table)
 }
 
 fn add_explicit_participants(
     statements: &[Statement],
-    participants: &mut Vec<SequenceParticipant>,
-    resolved_names: &mut HashSet<String>,
-) {
+    table: &mut ParticipantTable,
+) -> Result<(), SequenceResolverError> {
     for stmt in statements {
         if let Statement::ParticipantDef(participant_def) = stmt {
-            add_participant(
-                participants,
-                resolved_names,
-                explicit_participant(participant_def),
-            );
+            add_participant(table, explicit_participant(participant_def))?;
         }
     }
+
+    Ok(())
 }
 
 fn add_implicit_participants(
     statements: &[Statement],
-    participants: &mut Vec<SequenceParticipant>,
-    resolved_names: &mut HashSet<String>,
-) {
+    table: &mut ParticipantTable,
+    peers: &[&ParticipantTable],
+) -> Result<(), SequenceResolverError> {
     for stmt in statements {
         match stmt {
             Statement::Message(msg) => {
-                add_endpoint_participant(
-                    participants,
-                    resolved_names,
-                    &msg.left,
-                    &msg.source_location,
-                );
-                add_endpoint_participant(
-                    participants,
-                    resolved_names,
-                    &msg.right,
-                    &msg.source_location,
-                );
+                add_endpoint_participant(table, peers, &msg.left, &msg.source_location)?;
+                add_endpoint_participant(table, peers, &msg.right, &msg.source_location)?;
             }
             Statement::CreateCmd(create_cmd) => {
-                add_participant(
-                    participants,
-                    resolved_names,
-                    created_participant(create_cmd),
-                );
+                add_referenced_participant(table, peers, created_participant(create_cmd))?;
             }
+            // Lifecycle and `ref over` statements do not declare participants.
             _ => {}
+        }
+    }
+
+    Ok(())
+}
+
+/// Adds `participant` unless its reference name is already in the table. A
+/// reference declared in `peers` adds that declaration instead.
+/// The display name of an aliased participant is not a reference name.
+fn add_referenced_participant(
+    table: &mut ParticipantTable,
+    peers: &[&ParticipantTable],
+    participant: SequenceParticipant,
+) -> Result<(), SequenceResolverError> {
+    let reference = reference_name(&participant.display_name, participant.alias.as_deref());
+
+    if table.has_reference(reference) {
+        return Ok(());
+    }
+
+    if table.is_display_name_of_aliased(reference) {
+        return Err(display_name_error(reference, &participant.source_location));
+    }
+
+    if let Some(declared) = peer_declaration(peers, reference, &participant.source_location)? {
+        return add_participant(table, declared);
+    }
+
+    if peers
+        .iter()
+        .any(|peer| peer.is_display_name_of_aliased(reference))
+    {
+        return Err(display_name_error(reference, &participant.source_location));
+    }
+
+    add_participant(table, participant)
+}
+
+/// The declaration `reference` stands for in `peers`. Peers declaring the same
+/// uid agree; distinct uids make the reference ambiguous.
+fn peer_declaration(
+    peers: &[&ParticipantTable],
+    reference: &str,
+    source_location: &SourceLocation,
+) -> Result<Option<SequenceParticipant>, SequenceResolverError> {
+    let mut declared: Vec<&SequenceParticipant> = Vec::new();
+
+    for participant in peers
+        .iter()
+        .filter_map(|peer| peer.participant_by_reference(reference))
+    {
+        if !declared.iter().any(|known| known.uid == participant.uid) {
+            declared.push(participant);
+        }
+    }
+
+    match declared.as_slice() {
+        [] => Ok(None),
+        [only] => Ok(Some((*only).clone())),
+        _ => {
+            let mut uids: Vec<String> = declared.iter().map(|known| known.uid.clone()).collect();
+            uids.sort();
+
+            Err(SequenceResolverError::AmbiguousParticipantReference {
+                reference: reference.to_string(),
+                uids,
+                source_location: source_location.clone(),
+            })
         }
     }
 }
 
+/// Adds `participant`; its reference name and uid must both be unused.
 fn add_participant(
-    participants: &mut Vec<SequenceParticipant>,
-    resolved_names: &mut HashSet<String>,
-    participant: SequenceParticipant,
-) {
-    let identifier = ParticipantIdentifier {
-        display_name: participant.display_name.clone(),
-        alias: participant.alias.clone(),
-    };
-    let reference_name = participant_reference_name(&identifier);
-    if reference_name.is_empty() || !resolved_names.insert(reference_name.to_string()) {
-        return;
+    table: &mut ParticipantTable,
+    mut participant: SequenceParticipant,
+) -> Result<(), SequenceResolverError> {
+    let reference =
+        reference_name(&participant.display_name, participant.alias.as_deref()).to_string();
+
+    if table.has_reference(&reference) {
+        return Err(SequenceResolverError::DuplicateParticipantReference {
+            reference,
+            source_location: participant.source_location,
+        });
     }
-    participants.push(participant);
+
+    participant.uid = participant_uid(&participant.display_name).map_err(|reason| {
+        SequenceResolverError::InvalidParticipantIdentifier {
+            participant: participant.display_name.clone(),
+            reason: reason.to_string(),
+            source_location: participant.source_location.clone(),
+        }
+    })?;
+
+    if !table.uids.insert(participant.uid.clone()) {
+        return Err(SequenceResolverError::DuplicateParticipantId {
+            participant_id: participant.uid,
+            source_location: participant.source_location,
+        });
+    }
+
+    table
+        .uid_by_reference
+        .insert(reference, ParticipantId::from(participant.uid.as_str()));
+    table.participants.push(participant);
+
+    Ok(())
 }
 
 fn add_endpoint_participant(
-    participants: &mut Vec<SequenceParticipant>,
-    resolved_names: &mut HashSet<String>,
+    table: &mut ParticipantTable,
+    peers: &[&ParticipantTable],
     endpoint: &MessageEndpoint,
     source_location: &SourceLocation,
-) {
+) -> Result<(), SequenceResolverError> {
     if let MessageEndpoint::Participant(identifier) = endpoint {
-        add_participant(
-            participants,
-            resolved_names,
+        add_referenced_participant(
+            table,
+            peers,
             implicit_participant(identifier, source_location),
-        );
+        )?;
+    }
+
+    Ok(())
+}
+
+fn display_name_error(name: &str, source_location: &SourceLocation) -> SequenceResolverError {
+    SequenceResolverError::InvalidParticipantIdentifier {
+        participant: name.to_string(),
+        reason: DISPLAY_NAME_REASON.to_string(),
+        source_location: source_location.clone(),
     }
 }
 
@@ -118,6 +289,7 @@ fn explicit_participant(participant_def: &ParticipantDef) -> SequenceParticipant
     SequenceParticipant {
         display_name: participant_def.identifier.display_name.clone(),
         alias: participant_def.identifier.alias.clone(),
+        uid: String::new(),
         participant_type: map_parser_participant_type(&participant_def.participant_type),
         source_location: participant_def.source_location.clone(),
         stereotype: participant_def.stereotype.clone(),
@@ -128,6 +300,7 @@ fn created_participant(create_cmd: &CreateCmd) -> SequenceParticipant {
     SequenceParticipant {
         display_name: create_cmd.identifier.display_name.clone(),
         alias: create_cmd.identifier.alias.clone(),
+        uid: String::new(),
         participant_type: map_parser_participant_type(&create_cmd.participant_type),
         source_location: create_cmd.source_location.clone(),
         stereotype: create_cmd.stereotype.clone(),
@@ -141,6 +314,7 @@ fn implicit_participant(
     SequenceParticipant {
         display_name: identifier.display_name.clone(),
         alias: identifier.alias.clone(),
+        uid: String::new(),
         participant_type: LogicParticipantType::Participant,
         source_location: source_location.clone(),
         stereotype: None,
@@ -160,11 +334,21 @@ fn map_parser_participant_type(kind: &SyntaxParticipantType) -> LogicParticipant
     }
 }
 
-pub(crate) fn participant_reference_name(identifier: &ParticipantIdentifier) -> &str {
-    identifier
-        .alias
-        .as_deref()
-        .unwrap_or(&identifier.display_name)
+fn reference_name<'a>(display_name: &'a str, alias: Option<&'a str>) -> &'a str {
+    alias.unwrap_or(display_name)
+}
+
+/// Reference name of the participant with `uid`; falls back to the uid.
+pub(crate) fn reference_of_uid<'a>(
+    participants: &'a [SequenceParticipant],
+    uid: &'a str,
+) -> &'a str {
+    participants
+        .iter()
+        .find(|participant| participant.uid == uid)
+        .map_or(uid, |participant| {
+            reference_name(&participant.display_name, participant.alias.as_deref())
+        })
 }
 
 #[cfg(test)]
@@ -172,6 +356,18 @@ mod participant_table_tests {
     use super::*;
     use parser_core::common_ast::{Arrow, ArrowDecor, ArrowLine};
     use sequence_parser::sequence_ast::{DestroyCmd, Message, ParticipantRef};
+
+    fn build(statements: &[Statement]) -> ParticipantTable {
+        build_participant_table(statements, &[]).unwrap()
+    }
+
+    fn build_err(statements: &[Statement]) -> SequenceResolverError {
+        build_participant_table(statements, &[]).unwrap_err()
+    }
+
+    fn declared(statements: &[Statement]) -> ParticipantTable {
+        declared_participants(statements).unwrap()
+    }
 
     fn source(line: u32) -> SourceLocation {
         SourceLocation::new("test.puml", line)
@@ -237,48 +433,97 @@ mod participant_table_tests {
             message("B", "A", source(2)),
         ];
 
-        let participants = build_participant_table(&statements);
+        let participants = build(&statements).participants;
 
         assert_eq!(participants.len(), 2);
         assert_eq!(participants[0].display_name, "A");
+        assert_eq!(participants[0].uid, "A");
         assert_eq!(participants[1].display_name, "B");
+        assert_eq!(participants[1].uid, "B");
     }
 
     #[test]
     fn aliased_participant_reference_does_not_create_duplicate() {
         let statements = vec![
             participant("A"),
-            participant_with_alias("Display B", "B"),
+            participant_with_alias("DisplayB", "B"),
             message("A", "B", source(1)),
         ];
 
-        let participants = build_participant_table(&statements);
+        let participants = build(&statements).participants;
 
         assert_eq!(participants.len(), 2);
-        assert_eq!(participants[1].display_name, "Display B");
+        assert_eq!(participants[1].display_name, "DisplayB");
         assert_eq!(participants[1].alias.as_deref(), Some("B"));
+        assert_eq!(participants[1].uid, "DisplayB");
     }
 
     #[test]
-    fn aliased_participant_display_name_reference_creates_implicit_participant() {
+    fn aliased_participant_display_name_reference_is_rejected() {
         let statements = vec![
             participant("A"),
-            participant_with_alias("Display B", "B"),
-            message("A", "Display B", source(1)),
+            participant_with_alias("DisplayB", "B"),
+            message("A", "DisplayB", source(1)),
         ];
 
-        let participants = build_participant_table(&statements);
+        match build_err(&statements) {
+            SequenceResolverError::InvalidParticipantIdentifier {
+                participant,
+                reason,
+                source_location,
+            } => {
+                assert_eq!(participant, "DisplayB");
+                assert_eq!(reason, DISPLAY_NAME_REASON);
+                assert_eq!(source_location, source(1));
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
 
-        assert_eq!(participants.len(), 3);
-        assert_eq!(participants[2].display_name, "Display B");
-        assert_eq!(participants[2].alias, None);
+    #[test]
+    fn plain_display_name_of_aliased_participant_is_rejected_as_endpoint() {
+        let statements = vec![
+            participant_with_alias("Display", "d"),
+            message("d", "Display", source(2)),
+        ];
+
+        assert!(matches!(
+            build_err(&statements),
+            SequenceResolverError::InvalidParticipantIdentifier { participant, reason, .. }
+                if participant == "Display" && reason == DISPLAY_NAME_REASON
+        ));
+    }
+
+    #[test]
+    fn aliased_participants_with_the_same_name_are_duplicates() {
+        let statements = vec![
+            participant_with_alias("Display", "d"),
+            participant("Display"),
+        ];
+
+        assert!(matches!(
+            build_err(&statements),
+            SequenceResolverError::DuplicateParticipantId { participant_id, .. }
+                if participant_id == "Display"
+        ));
+    }
+
+    #[test]
+    fn prose_name_is_rejected_even_with_an_alias() {
+        let statements = vec![participant_with_alias("Prose label", "p")];
+
+        assert!(matches!(
+            build_err(&statements),
+            SequenceResolverError::InvalidParticipantIdentifier { participant, .. }
+                if participant == "Prose label"
+        ));
     }
 
     #[test]
     fn no_participants_declared_creates_implicit_participants() {
         let statements = vec![message("X", "Y", source(1))];
 
-        let participants = build_participant_table(&statements);
+        let participants = build(&statements).participants;
 
         assert_eq!(participants.len(), 2);
         assert_eq!(participants[0].display_name, "X");
@@ -302,7 +547,7 @@ mod participant_table_tests {
             }),
         ];
 
-        let participants = build_participant_table(&statements);
+        let participants = build(&statements).participants;
 
         assert_eq!(participants.len(), 2);
         assert_eq!(participants[0].display_name, "A");
@@ -320,8 +565,276 @@ mod participant_table_tests {
             source_location: source(1),
         })];
 
-        let participants = build_participant_table(&statements);
+        let table = build(&statements);
 
-        assert!(participants.is_empty());
+        assert!(table.participants.is_empty());
+    }
+
+    #[test]
+    fn uid_is_the_name_not_the_alias() {
+        let statements = vec![
+            participant_with_alias("comp::unit", "u"),
+            participant_with_alias("name", "p"),
+            participant("Bare"),
+        ];
+
+        let table = build(&statements);
+        let uids: Vec<_> = table.participants.iter().map(|p| p.uid.as_str()).collect();
+
+        assert_eq!(uids, ["comp.unit", "name", "Bare"]);
+    }
+
+    #[test]
+    fn references_resolve_to_the_uid_by_alias_or_name() {
+        let statements = vec![
+            participant_with_alias("comp::unit", "u"),
+            participant("Bare"),
+        ];
+        let table = build(&statements);
+
+        assert_eq!(
+            table.uid_of_reference("u", &source(1)).unwrap().as_ref(),
+            "comp.unit"
+        );
+        assert_eq!(
+            table.uid_of_reference("Bare", &source(1)).unwrap().as_ref(),
+            "Bare"
+        );
+    }
+
+    #[test]
+    fn display_name_of_aliased_participant_is_not_a_reference() {
+        let table = build(&[participant_with_alias("Display", "d")]);
+
+        assert!(matches!(
+            table.uid_of_reference("Display", &source(4)),
+            Err(SequenceResolverError::InvalidParticipantIdentifier { participant, reason, source_location })
+                if participant == "Display"
+                    && reason == DISPLAY_NAME_REASON
+                    && source_location == source(4)
+        ));
+    }
+
+    #[test]
+    fn undeclared_reference_is_unknown() {
+        let table = build(&[participant("A")]);
+
+        assert!(matches!(
+            table.uid_of_reference("Ghost", &source(4)),
+            Err(SequenceResolverError::UnknownParticipant { reference, .. }) if reference == "Ghost"
+        ));
+    }
+
+    #[test]
+    fn create_with_display_name_of_aliased_participant_is_rejected() {
+        let statements = vec![
+            participant_with_alias("Display", "d"),
+            Statement::CreateCmd(CreateCmd {
+                participant_type: SyntaxParticipantType::Participant,
+                identifier: ParticipantIdentifier {
+                    display_name: "Display".to_string(),
+                    alias: None,
+                },
+                stereotype: None,
+                source_location: source(2),
+            }),
+        ];
+
+        assert!(matches!(
+            build_err(&statements),
+            SequenceResolverError::InvalidParticipantIdentifier { participant, reason, source_location }
+                if participant == "Display"
+                    && reason == DISPLAY_NAME_REASON
+                    && source_location == source(2)
+        ));
+    }
+
+    #[test]
+    fn explicit_declarations_with_the_same_uid_are_duplicates() {
+        let statements = vec![
+            participant_with_alias("comp::X", "a"),
+            participant_with_alias("comp::X", "b"),
+        ];
+
+        assert!(matches!(
+            build_err(&statements),
+            SequenceResolverError::DuplicateParticipantId { participant_id, .. }
+                if participant_id == "comp.X"
+        ));
+    }
+
+    #[test]
+    fn explicit_declarations_with_the_same_reference_name_are_duplicates() {
+        let statements = vec![participant("A"), participant_with_alias("comp::B", "A")];
+
+        assert!(matches!(
+            build_err(&statements),
+            SequenceResolverError::DuplicateParticipantReference { reference, .. }
+                if reference == "A"
+        ));
+    }
+
+    #[test]
+    fn implicit_participant_with_taken_uid_is_a_duplicate() {
+        let statements = vec![
+            participant_with_alias("comp::X", "a"),
+            message("a", "comp.X", source(3)),
+        ];
+
+        match build_err(&statements) {
+            SequenceResolverError::DuplicateParticipantId {
+                participant_id,
+                source_location,
+            } => {
+                assert_eq!(participant_id, "comp.X");
+                assert_eq!(source_location, source(3));
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn free_text_without_alias_is_invalid() {
+        let statements = vec![participant("Order Service")];
+
+        assert!(matches!(
+            build_err(&statements),
+            SequenceResolverError::InvalidParticipantIdentifier { participant, .. }
+                if participant == "Order Service"
+        ));
+    }
+
+    #[test]
+    fn create_reuses_an_already_known_participant() {
+        let statements = vec![
+            participant("A"),
+            Statement::CreateCmd(CreateCmd {
+                participant_type: SyntaxParticipantType::Participant,
+                identifier: ParticipantIdentifier {
+                    display_name: "A".to_string(),
+                    alias: None,
+                },
+                stereotype: None,
+                source_location: source(2),
+            }),
+        ];
+
+        assert_eq!(build(&statements).participants.len(), 1);
+    }
+
+    #[test]
+    fn unresolved_reference_resolves_to_the_peer_declaration() {
+        let cast = declared(&[participant_with_alias("comp::unit", "u")]);
+        let statements = vec![message("u", "B", source(5))];
+
+        let participants = build_participant_table(&statements, &[&cast])
+            .unwrap()
+            .participants;
+
+        assert_eq!(participants.len(), 2);
+        assert_eq!(participants[0].uid, "comp.unit");
+        assert_eq!(participants[0].display_name, "comp::unit");
+        assert_eq!(participants[0].alias.as_deref(), Some("u"));
+        assert_eq!(participants[0].source_location, source(0));
+        assert_eq!(participants[1].uid, "B");
+    }
+
+    #[test]
+    fn local_declaration_wins_over_peer() {
+        let cast = declared(&[participant_with_alias("comp::unit", "u")]);
+        let statements = vec![participant("u"), message("u", "B", source(5))];
+
+        let participants = build_participant_table(&statements, &[&cast])
+            .unwrap()
+            .participants;
+
+        assert_eq!(participants[0].uid, "u");
+        assert_eq!(participants.len(), 2);
+    }
+
+    #[test]
+    fn peers_declaring_the_same_uid_agree() {
+        let first = declared(&[participant_with_alias("comp::unit", "u")]);
+        let second = declared(&[participant_with_alias("comp::unit", "u")]);
+        let statements = vec![message("u", "u", source(5))];
+
+        let participants = build_participant_table(&statements, &[&first, &second])
+            .unwrap()
+            .participants;
+
+        assert_eq!(participants.len(), 1);
+        assert_eq!(participants[0].uid, "comp.unit");
+    }
+
+    #[test]
+    fn peers_declaring_distinct_uids_are_ambiguous() {
+        let first = declared(&[participant_with_alias("b::unit", "u")]);
+        let second = declared(&[participant_with_alias("a::unit", "u")]);
+        let statements = vec![message("u", "B", source(5))];
+
+        assert!(matches!(
+            build_participant_table(&statements, &[&first, &second]).unwrap_err(),
+            SequenceResolverError::AmbiguousParticipantReference { reference, uids, source_location }
+                if reference == "u"
+                    && uids == ["a.unit", "b.unit"]
+                    && source_location == source(5)
+        ));
+    }
+
+    #[test]
+    fn display_name_of_a_peer_alias_is_not_a_reference() {
+        let cast = declared(&[participant_with_alias("Display", "d")]);
+        let statements = vec![message("Display", "B", source(5))];
+
+        assert!(matches!(
+            build_participant_table(&statements, &[&cast]).unwrap_err(),
+            SequenceResolverError::InvalidParticipantIdentifier { participant, reason, source_location }
+                if participant == "Display"
+                    && reason == DISPLAY_NAME_REASON
+                    && source_location == source(5)
+        ));
+    }
+
+    #[test]
+    fn peers_offer_only_explicit_declarations() {
+        let scenario = declared(&[participant("A"), message("A", "B", source(1))]);
+
+        assert_eq!(scenario.participants.len(), 1);
+    }
+
+    #[test]
+    fn create_reuses_a_peer_declaration() {
+        let cast = declared(&[participant_with_alias("comp::unit", "u")]);
+        let statements = vec![Statement::CreateCmd(CreateCmd {
+            participant_type: SyntaxParticipantType::Participant,
+            identifier: ParticipantIdentifier {
+                display_name: "u".to_string(),
+                alias: None,
+            },
+            stereotype: None,
+            source_location: source(2),
+        })];
+
+        let participants = build_participant_table(&statements, &[&cast])
+            .unwrap()
+            .participants;
+
+        assert_eq!(participants.len(), 1);
+        assert_eq!(participants[0].uid, "comp.unit");
+    }
+
+    #[test]
+    fn peer_declaration_with_a_taken_uid_is_a_duplicate() {
+        let cast = declared(&[participant_with_alias("comp::X", "b")]);
+        let statements = vec![
+            participant_with_alias("comp::X", "a"),
+            message("a", "b", source(3)),
+        ];
+
+        assert!(matches!(
+            build_participant_table(&statements, &[&cast]).unwrap_err(),
+            SequenceResolverError::DuplicateParticipantId { participant_id, .. }
+                if participant_id == "comp.X"
+        ));
     }
 }

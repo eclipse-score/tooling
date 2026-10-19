@@ -151,7 +151,7 @@ Rendering: Diagrams, Wrapper Pages, and Directory Navigation
 ---------------------------------------------------------------
 
 Each view (``static``, ``dynamic``, ``public_api``, ``internal_api``) is just a
-flat list of ``.puml``/``.plantuml`` files, but Sphinx needs an actual page to
+flat list of ``.puml`` files, but Sphinx needs an actual page to
 put every diagram on, plus a place in the sidebar to reach it from.
 ``architectural_design`` builds that structure automatically:
 
@@ -190,8 +190,7 @@ on the file's stem relative to the diagrams already in that directory:
        toctree.
      - Prose that isn't about one specific diagram — design rationale, an
        overview, background context.
-   * - ``<stem>.rst``/``.md`` next to a same-stem ``<stem>.puml``/
-       ``.plantuml``
+   * - ``<stem>.rst``/``.md`` next to a same-stem ``<stem>.puml``
      - **Override** — replaces that diagram's generated wrapper page
        outright. The ``.puml`` is still staged as a sibling, so your page can
        embed it with its own ``.. uml:: <stem>.puml``.
@@ -205,7 +204,7 @@ on the file's stem relative to the diagrams already in that directory:
      - A directory-level introduction that must not hide any diagram from
        the navigation.
 
-A ``.puml``/``.plantuml`` file whose own stem is literally ``index`` is
+A ``.puml`` file whose own stem is literally ``index`` is
 rejected at analysis time — that stem is reserved for the directory's
 generated navigation page; name the diagram something else.
 
@@ -270,19 +269,19 @@ Any component-type element (``<<SEooC>>``, ``<<component>>``, or ``<<unit>>``) c
 
     @startuml static_design
 
-    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
-        component "ComponentExample" as component_example <<component>> {
-            component "Unit 1" as unit_1 <<unit>>
-            component "Unit 2" as unit_2 <<unit>>
-            component "Sub Component Example" as sub_component_example <<component>>
+    package safety_software_seooc_example <<SEooC>> {
+        component component_example <<component>> {
+            component unit_1 <<unit>>
+            component unit_2 <<unit>>
+            component sub_component_example <<component>>
 
-            interface "InternalInterface" as InternalInterface
+            interface InternalInterface
             unit_1 -l-( InternalInterface
             unit_2 -r- InternalInterface
         }
     }
 
-    interface "SampleLibraryAPI" as SampleLibraryAPI
+    interface SampleLibraryAPI
 
     safety_software_seooc_example )-d- SampleLibraryAPI
 
@@ -297,17 +296,17 @@ When an element needs an explicitly named, standalone binding point — for exam
 
     @startuml SeoocExample_StaticDesign
 
-    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
-        component "ComponentExample" as component_example <<component>> {
-            component "Unit 1" as unit_1 <<unit>>
+    package safety_software_seooc_example <<SEooC>> {
+        component component_example <<component>> {
+            component unit_1 <<unit>>
         }
 
-        portin  " " as p_required   ' required interface port
-        portout " " as p_public     ' provided interface port
+        portin  p_required   ' required interface port
+        portout p_public     ' provided interface port
     }
 
-    interface "RequiredInterface"  as RequiredInterface
-    interface "SampleLibraryAPI"   as SampleLibraryAPI
+    interface RequiredInterface
+    interface SampleLibraryAPI
 
     p_required -( RequiredInterface : requires
     p_public   )- SampleLibraryAPI : provides
@@ -322,19 +321,22 @@ Splitting Into an Overview and Detail Diagrams
 For a large architecture, pass more than one file to ``static``: one shared
 **overview** diagram that bare-declares the SEooC boundary and its top-level
 components, plus one or more **detail** diagrams that elaborate a component's
-internals. Each file is parsed independently and then merged by entity id, so
-the same component can appear in both without repeating its full contents:
+internals. All files passed to ``static`` are resolved *together*: a
+top-level element with a body in a detail file that matches a nested
+declaration in the overview file (same name, element type and stereotype) is
+implicitly anchored onto it, so the detail file needs no wrapper and no
+repeated interfaces/relations:
 
 .. code-block:: text
 
     ' overview_design.puml
     @startuml overview_design
 
-    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
-        component "ComponentExample" as component_example <<component>>
+    package safety_software_seooc_example <<SEooC>> {
+        component component_example <<component>>
     }
 
-    interface "SampleLibraryAPI" as SampleLibraryAPI
+    interface SampleLibraryAPI
     safety_software_seooc_example )-d- SampleLibraryAPI
 
     @enduml
@@ -344,11 +346,9 @@ the same component can appear in both without repeating its full contents:
     ' static_design.puml
     @startuml static_design
 
-    package "Safety Software SEooC Example" as safety_software_seooc_example <<SEooC>> {
-        component "ComponentExample" as component_example <<component>> {
-            component "Unit 1" as unit_1 <<unit>>
-            component "Unit 2" as unit_2 <<unit>>
-        }
+    component component_example <<component>> {
+        component unit_1 <<unit>>
+        component unit_2 <<unit>>
     }
 
     @enduml
@@ -372,11 +372,44 @@ See ``examples/seooc/design`` for the full working pair.
   shared overview file plus one or more detail files that each own a
   disjoint part of the hierarchy, not several files partially detailing the
   same component.
-- A relation may only reference aliases declared in the *same* file — an
-  overview cannot wire up a relation to an alias that only a detail file
-  declares. Keep each file self-contained.
+- Anchoring only fires for a top-level element with a body that matches
+  exactly one other file's nested declaration (same name, element type, and
+  stereotype); a bodyless re-declaration stays a separate top-level entity,
+  and a match under more than one distinct parent across the file set is an
+  ambiguity error rather than a guess.
+- A relation's *source* must be declared (or anchored) in the file that
+  writes it; only its *target* may resolve to another file in the same
+  ``static`` group.
 
 See :ref:`multiple-static-puml-files` for the complete merge rules.
+
+The same split works in every other view. Each view is resolved on its own, so
+ids are never shared between ``static``, ``dynamic``, ``public_api`` and
+``internal_api``:
+
+- **Class diagrams** (``public_api``, ``internal_api``): an overview nests a
+  class without a body, a detail file declares it with its members; the detail
+  file is anchored the same way as for components. Write the ``class`` keyword
+  in every file, otherwise a file may be detected as a component diagram.
+- **Sequence diagrams** (``dynamic``): one file declares the participants
+  (the cast), the scenario files use only the aliases and an ``activate`` so
+  they are detected as sequence diagrams.
+- **Activity diagrams** have no names to share.
+
+.. code-block:: text
+
+    ' cast.puml
+    @startuml
+    participant "logging::Recorder::Backend" as Backend
+    @enduml
+
+    ' scenario.puml
+    @startuml
+    Client -> Backend : Write()
+    activate Backend
+    @enduml
+
+See :ref:`multiple-files-other-views` for the rules and error messages.
 
 Bazel
 ~~~~~~

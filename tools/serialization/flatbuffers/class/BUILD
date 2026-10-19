@@ -29,7 +29,7 @@ rust_library(
     # Generated code from flatc - suppress all lints we can't fix
     rustc_flags = ["--cap-lints=allow"],
     deps = [
-        "@crates//:flatbuffers",
+        "@crates_score_tooling//:flatbuffers",
     ],
 )
 
@@ -42,6 +42,6 @@ rust_library(
     deps = [
         ":class_fbs",
         "//tools/metamodel/class:class_diagram",
-        "@crates//:flatbuffers",
+        "@crates_score_tooling//:flatbuffers",
     ],
 )

@@ -20,6 +20,7 @@ rust_library(
         ":activity_resolver",
         ":class_resolver",
         ":component_resolver",
+        ":group_resolution",
         ":resolver_traits",
         ":sequence_resolver",
     ],
@@ -58,7 +59,7 @@ rust_library(
     crate_root = "src/resolver_traits.rs",
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
-        "@crates//:log",
+        "@crates_score_tooling//:log",
     ],
 )
 
@@ -71,6 +72,7 @@ rust_library(
     crate_root = "src/uid_normalization.rs",
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
+        "//plantuml/parser/puml_utils",
         "//tools/metamodel/common:uid_utils",
     ],
 )
@@ -78,4 +80,24 @@ rust_library(
 rust_test(
     name = "uid_normalization_unit_test",
     crate = ":uid_normalization",
+)
+
+rust_library(
+    name = "group_resolution",
+    srcs = [
+        "src/group_resolution.rs",
+    ],
+    crate_name = "group_resolution",
+    crate_root = "src/group_resolution.rs",
+    visibility = ["//plantuml/parser:__subpackages__"],
+    deps = [
+        ":uid_normalization",
+        "//tools/metamodel/common:source_location",
+        "@crates_score_tooling//:thiserror",
+    ],
+)
+
+rust_test(
+    name = "group_resolution_unit_test",
+    crate = ":group_resolution",
 )

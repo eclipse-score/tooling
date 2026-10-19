@@ -1,0 +1,45 @@
+{
+  "qualified_label_in_package.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "p.score.x.Y",
+        "name": "Y",
+        "enclosing_namespace_id": "p.score.x",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 16 }
+      },
+      {
+        "id": "p.User",
+        "name": "User",
+        "enclosing_namespace_id": "p",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "p.User",
+            "target": "p.score.x.Y",
+            "relation_type": "Association",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 18 }
+          }
+        ],
+        "source_location": { "file": "", "line": 17 }
+      }
+    ],
+    "free_functions": []
+  }
+}

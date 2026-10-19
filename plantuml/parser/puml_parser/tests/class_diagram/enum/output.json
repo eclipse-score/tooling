@@ -3,10 +3,11 @@
     "name": "enum",
     "elements": [
       {
-        "Enum": {
+        "Type": {
+          "EnumDef": {
           "name": {
             "internal": "Status",
-            "display": null
+            "alias": null
           },
           "namespace": "",
           "package": "",
@@ -16,13 +17,15 @@
           },
           "stereotypes": [],
           "items": []
+          }
         }
       },
       {
-        "Enum": {
+        "Type": {
+          "EnumDef": {
           "name": {
             "internal": "Response",
-            "display": null
+            "alias": null
           },
           "namespace": "",
           "package": "",
@@ -57,13 +60,15 @@
               }
             }
           ]
+          }
         }
       },
       {
-        "Enum": {
+        "Type": {
+          "EnumDef": {
           "name": {
             "internal": "State",
-            "display": null
+            "alias": null
           },
           "namespace": "",
           "package": "",
@@ -104,13 +109,15 @@
               }
             }
           ]
+          }
         }
       },
       {
-        "Enum": {
+        "Type": {
+          "EnumDef": {
           "name": {
             "internal": "CAN",
-            "display": null
+            "alias": null
           },
           "namespace": "",
           "package": "",
@@ -141,6 +148,7 @@
               }
             }
           ]
+          }
         }
       }
     ],

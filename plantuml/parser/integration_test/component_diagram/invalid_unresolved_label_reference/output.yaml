@@ -12,6 +12,7 @@
 # *******************************************************************************
 invalid_unresolved_label_reference.puml:
   error:
-    type: "UnresolvedReference"
+    type: "NameOfAliasedElement"
     fields:
       reference: "Foo"
+      alias: "F"

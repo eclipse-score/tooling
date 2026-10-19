@@ -23,7 +23,7 @@ pub use component_diagram::{
 
 /// Validation-specific helpers for component metamodel entities.
 pub trait LogicComponentExt {
-    /// Canonical match key: alias (lowercased) when present, otherwise raw id.
+    /// Canonical match key: last id segment (lowercased).
     fn match_key(&self) -> String;
 
     fn is_component(&self) -> bool;
@@ -38,7 +38,11 @@ pub trait LogicComponentExt {
 
 impl LogicComponentExt for LogicComponent {
     fn match_key(&self) -> String {
-        self.alias.as_deref().unwrap_or(&self.id).to_lowercase()
+        self.id
+            .rsplit('.')
+            .next()
+            .unwrap_or(&self.id)
+            .to_lowercase()
     }
 
     fn is_component(&self) -> bool {
@@ -90,7 +94,7 @@ pub struct ComponentDiagramArchitecture {
 }
 
 impl ComponentDiagramArchitecture {
-    /// Index `entities` by stereotype and parent alias.
+    /// Index `entities` by stereotype and parent key.
     ///
     /// `<<SEooC>>` go into `seooc_set`;
     /// `<<component>>` go into `comp_set`;
@@ -99,15 +103,14 @@ impl ComponentDiagramArchitecture {
     /// benign re-declarations of the exact same entity across multiple
     /// `static` files (see [`Self::build_set`]), which are merged instead.
     fn from_entities(entities: &[LogicComponent], result: &mut ValidationResult) -> Self {
-        // Index by raw id for parent resolution; PlantUML nesting uses id,
-        // not alias.
+        // Index by raw id for parent resolution; PlantUML nesting uses id.
         let mut id_index: BTreeMap<String, &LogicComponent> = BTreeMap::new();
         for entity in entities {
             let key = entity.id.to_lowercase();
             if let Some(prev) = id_index.insert(key.clone(), entity) {
                 // Same id: benign re-declaration (merged in build_set) or a
                 // conflicting one; a different id colliding after lowercasing
-                // is a genuine duplicate-alias error instead.
+                // is a genuine duplicate-name error instead.
                 if prev.id == entity.id {
                     if let Some(field) =
                         component_diagram_merge::conflicting_declaration_field(prev, entity)
@@ -121,24 +124,24 @@ impl ComponentDiagramArchitecture {
                     continue;
                 }
                 let kind = entity_kind_name(entity);
-                let alias = entity.match_key();
+                let name = entity.match_key();
                 let parent =
-                    entity_parent_alias(entity, &id_index).unwrap_or_else(|| "<none>".to_string());
+                    entity_parent_key(entity, &id_index).unwrap_or_else(|| "<none>".to_string());
                 let ((source_file, source_line), (duplicate_file, duplicate_line)) =
                     ordered_source_locations(&prev.source_location, &entity.source_location);
                 result.add_failure(
                     ErrorBuilder::new(ErrorCategory::Design)
                         .title(format!(
-                            "{kind} \"{alias}\" is defined more than once in the component diagram."
+                            "{kind} \"{name}\" is defined more than once in the component diagram."
                         ))
-                        .field(kind, format!("\"{alias}\""))
+                        .field(kind, format!("\"{name}\""))
                         .field("parent", &parent)
                         .field("component source file", format!("\"{source_file}\""))
                         .field("component source line", source_line.to_string())
                         .field("duplicate source file", format!("\"{duplicate_file}\""))
                         .field("duplicate source line", duplicate_line.to_string())
                         .fix(format!(
-                            "keep only one {kind} \"{alias}\" under \"{parent}\", or rename one of the duplicate entities"
+                            "keep only one {kind} \"{name}\" under \"{parent}\", or rename one of the duplicate entities"
                         ))
                         .build(),
                 );
@@ -177,25 +180,25 @@ impl ComponentDiagramArchitecture {
     ) -> BTreeMap<EntityKey, LogicComponent> {
         let mut set: BTreeMap<EntityKey, LogicComponent> = BTreeMap::new();
         for entity in items {
-            let alias = entity.match_key();
-            let parent_alias = match &entity.parent_id {
+            let name = entity.match_key();
+            let parent_key = match &entity.parent_id {
                 Some(parent_id) => match id_index.get(&parent_id.to_lowercase()) {
                     Some(parent) => Some(parent.match_key()),
                     None => {
                         let kind = entity_kind_name(entity);
-                        let alias = entity.match_key();
+                        let name = entity.match_key();
                         let (source_file, source_line) = entity.source_location.display();
                         result.add_failure(
                             ErrorBuilder::new(ErrorCategory::Design)
                                 .title(format!(
-                                    "{kind} \"{alias}\" references a parent that is not defined in the component diagram."
+                                    "{kind} \"{name}\" references a parent that is not defined in the component diagram."
                                 ))
-                                .field(kind, format!("\"{alias}\""))
+                                .field(kind, format!("\"{name}\""))
                                 .field("parent", format!("\"{parent_id}\""))
                                 .field("component source file", format!("\"{source_file}\""))
                                 .field("component source line", source_line.to_string())
                                 .fix(format!(
-                                    "update the parent reference for {kind} \"{alias}\", or add the missing parent entity in the component diagram"
+                                    "update the parent reference for {kind} \"{name}\", or add the missing parent entity in the component diagram"
                                 ))
                                 .build(),
                         );
@@ -204,7 +207,7 @@ impl ComponentDiagramArchitecture {
                 },
                 None => None,
             };
-            let key = (alias, parent_alias);
+            let key = (name, parent_key);
             // Benign re-declaration: merge relations instead of overwriting.
             if let Some(existing) = set.get_mut(&key) {
                 if existing.id == entity.id {
@@ -217,16 +220,16 @@ impl ComponentDiagramArchitecture {
                     continue;
                 }
                 let kind = entity_kind_name(entity);
-                let alias = entity.match_key();
+                let name = entity.match_key();
                 let parent = key.1.as_deref().unwrap_or("<none>");
                 let ((source_file, source_line), (duplicate_file, duplicate_line)) =
                     ordered_source_locations(&prev.source_location, &entity.source_location);
                 result.add_failure(
                     ErrorBuilder::new(ErrorCategory::Design)
                         .title(format!(
-                            "{kind} \"{alias}\" is defined more than once in the component diagram."
+                            "{kind} \"{name}\" is defined more than once in the component diagram."
                         ))
-                        .field(kind, format!("\"{alias}\""))
+                        .field(kind, format!("\"{name}\""))
                         .field("parent", parent)
                         .field("component source file", format!("\"{source_file}\""))
                         .field("component source line", source_line.to_string())
@@ -234,7 +237,7 @@ impl ComponentDiagramArchitecture {
                         .field("duplicate source line", duplicate_line.to_string())
                         .fix(
                             format!(
-                                "keep only one {kind} \"{alias}\" under \"{parent}\", or rename one of the duplicate entities"
+                                "keep only one {kind} \"{name}\" under \"{parent}\", or rename one of the duplicate entities"
                             ),
                         )
                         .build(),
@@ -259,7 +262,7 @@ fn entity_kind_name(entity: &LogicComponent) -> &'static str {
     }
 }
 
-fn entity_parent_alias(
+fn entity_parent_key(
     entity: &LogicComponent,
     id_index: &BTreeMap<String, &LogicComponent>,
 ) -> Option<String> {
@@ -421,6 +424,75 @@ mod tests {
     }
 
     #[test]
+    fn resolves_qualified_parent_declared_elsewhere_in_the_merged_inputs() {
+        let inputs = ComponentDiagramInputs {
+            entities: vec![
+                entity(
+                    "a.b",
+                    None,
+                    Some("a"),
+                    ComponentType::Component,
+                    Some("component"),
+                    Vec::new(),
+                ),
+                entity(
+                    "a",
+                    None,
+                    None,
+                    ComponentType::Package,
+                    Some("SEooC"),
+                    Vec::new(),
+                ),
+                entity(
+                    "a.b.C",
+                    None,
+                    Some("a.b"),
+                    ComponentType::Component,
+                    Some("unit"),
+                    Vec::new(),
+                ),
+            ],
+        };
+
+        let mut result = ValidationResult::default();
+        let architecture = inputs.to_diagram_architecture(&mut result);
+
+        assert!(
+            result.is_empty(),
+            "unexpected failures: {:?}",
+            result.failures
+        );
+        assert!(architecture
+            .unit_set
+            .contains_key(&("c".to_string(), Some("b".to_string()))));
+    }
+
+    #[test]
+    fn reports_qualified_component_whose_prefix_parent_is_declared_nowhere() {
+        let inputs = ComponentDiagramInputs {
+            entities: vec![entity(
+                "a.b.C",
+                None,
+                Some("a.b"),
+                ComponentType::Component,
+                Some("component"),
+                Vec::new(),
+            )],
+        };
+
+        let mut result = ValidationResult::default();
+        let _architecture = inputs.to_diagram_architecture(&mut result);
+
+        assert!(
+            result.failures.iter().any(|message| message.contains(
+                "Component \"c\" references a parent that is not defined in the component diagram."
+            )),
+            "Expected unresolved parent error, got: {:?}",
+            result.failures
+        );
+    }
+
+    #[test]
     fn reports_unresolved_parent_id() {
         let inputs = ComponentDiagramInputs {
             entities: vec![
@@ -433,7 +505,7 @@ mod tests {
                     Vec::new(),
                 ),
                 entity(
-                    "CompA",
+                    "comp_a",
                     Some("comp_a"),
                     Some("NonExistent"),
                     ComponentType::Component,

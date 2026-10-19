@@ -31,7 +31,7 @@ The following example uses only structures that are fully modeled and can be use
 @startuml OrderFlow
 
 actor Client
-participant "Order Service" as OrderService <<service>>
+participant OrderService <<service>>
 database Orders
 
 Client -> OrderService : submit(order)
@@ -57,30 +57,40 @@ The following participant declaration forms are supported:
 
 ```text
 participant Service
-participant "Order Service" as OrderService
-participant OrderService as "Order Service"  // not recommended
-participant "Order Service" as OrderService <<service>>
-participant "order : orders::OrderService" as OrderService
+participant OrderService <<service>>
+participant "orders::OrderService" as OrderService
+participant "ExternalEndpoint" as ext
 ```
 
-The alias form is recommended. Although `participant OrderService as "Order Service"` is supported by the current grammar, the consistent form should be `"Display Name" as Alias` to avoid confusing display names with reference names.
+The written name is the participant identity and must be an identifier path (letters, digits and `_`, separated by `.` or `::`). A free-text name such as `participant "Order Service" as OrderService` is rejected. The alias is only a local reference key; use it, or the declared name when there is no alias, in messages. See [Element Identifiers](element-identifiers.md) for how the identifier is built from the name and why the qualified form
+`"package::Component::Unit"` is needed for diagrams that must link to a
+component or class diagram.
 
-A quoted free-text display name **requires** an alias — `participant "Order Service"` on its own is rejected, because the resolver cannot derive an identifier from it. See [Element Identifiers](element-identifiers.md) for how the identifier is built from the display name and why the qualified form `"instance : package::Component::Unit"` is preferred for diagrams that must link to a component or class diagram.
-
-> **Not yet implemented.** Today `participant "Order Service"` without an alias is accepted; the display name itself becomes the participant's identity. The rejection described above, and the label-derived `uid` it depends on, land with Rule B — see [Element Identifiers §0](element-identifiers.md#0-implementation-status).
-
-The display name, alias, participant type, and stereotype are written to the logical model.
+The name, alias, `uid`, participant type, and stereotype are written to the logical model.
 
 ```text
-participant "Order Service" as OrderService
+participant "orders::OrderService" as OrderService
 Client -> OrderService : correct()
 ```
 
-After declaring an alias, subsequent messages, lifecycle commands, and `ref` blocks must use that alias consistently. Referring to the quoted display name instead is rejected when that display name is free text.
-
-> **Not yet implemented.** Today, referring to the quoted display name instead of the declared alias does not error — it silently creates a second, separate implicit participant keyed by that display name. See [Element Identifiers §0](element-identifiers.md#0-implementation-status).
+After declaring an alias, subsequent messages, lifecycle commands, and `ref` blocks must use that alias consistently. Referring to the name of an aliased participant instead is rejected.
 
 Undeclared message endpoints are automatically created as regular `participant` instances. This is convenient for short diagrams, but explicit declarations are recommended for production diagrams to preserve participant type, stereotype, and stable source locations.
+
+#### Sharing participants across files
+
+When several scenario files belong to one view (the `dynamic` view of an `architectural_design` or `unit_design`), declare the participants once in a cast file and reference them from the scenarios by alias:
+
+```text
+' cast.puml
+participant "orders::OrderService" as OrderService
+
+' scenario.puml
+Client -> OrderService : correct()
+activate OrderService
+```
+
+A message endpoint or `create` target that the scenario does not declare resolves to the explicit participant declarations of the other files, matched by alias, else by name. A local declaration wins. Two other files declaring the same key with different identifiers are an `AmbiguousParticipantReference` error. `activate`, `deactivate`, `destroy` and `ref over` do not look into other files. A file with only messages is detected as a component diagram, so give each scenario `activate` or a participant of its own. See [Element Identifiers](element-identifiers.md#4-several-files-one-view).
 
 ### Messages and arrow direction
 
@@ -152,7 +162,7 @@ Message suffixes apply as follows:
 
 Standalone `create`, `activate`, `deactivate`, and `destroy` commands are recommended. Message suffixes are suitable when the action is strictly bound to a single message.
 
-The `create` command may also specify a participant type, display name, alias, and stereotype, for example `create database "Event Store" as EventStore <<storage>>`. These participant properties are preserved in the participant model.
+The `create` command may also specify a participant type, name, alias, and stereotype, for example `create database "event_store::Events" as Events <<storage>>`. These participant properties are preserved in the participant model.
 
 Combined suffixes are supported. The resolver creates lifecycle nodes in the source-code order of the suffixes. `**` creates the participant before the message interaction; other actions are created after the interaction. For example:
 
@@ -287,13 +297,14 @@ These errors usually include the source file and line number. The repository als
 Use the following checklist when submitting a sequence diagram:
 
 1. The file starts with `@startuml` and ends with `@enduml`.
-2. Important participants are declared explicitly, with stable aliases for names containing spaces or complex display names.
+2. Important participants are declared explicitly, with identifier-path names (an alias only for long or qualified names).
 3. Once an alias is declared, references use that alias consistently to avoid creating a separate implicit participant.
 4. Every message has exactly one arrowhead. Use `return` only for responses shown in the diagram; use an explicit reverse message when the response must enter the logical model.
 5. Combined message suffixes have clear semantics and order. `--` applies to the sender, `++` and `!!` apply to the receiver, and `**` creates the receiver before the interaction.
 6. Every control structure is closed, and `else` appears only in `alt` or `par`.
 7. A participant is not used after `destroy` unless it is created again first.
 8. Interactions that downstream tools must understand use only structures described as supported and modeled; visual-only directives do not carry business semantics.
+9. A scenario that relies on a shared cast file contains `activate` or a participant of its own, so it is detected as a sequence diagram.
 
 ## Related test cases
 

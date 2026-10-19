@@ -34,7 +34,7 @@ package sample::file_level #Lavender
         + Execute(amp::stop_token) : ResultBlank
     }
 
-    class "<<template>>\nTest<T>" as TestTemplate <<service>> #Khaki {
+    class TestTemplate<T> <<service>> #Khaki {
         + Bind()
     }
 

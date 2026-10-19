@@ -3,11 +3,11 @@
     "name": "cpp_style",
     "elements": [
       {
-        "Types": {
-          "ClassDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "::app::core::Controller",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -15,22 +15,25 @@
               "file": "",
               "line": 15
             },
-            "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
             "methods": [],
-            "template_parameters": null,
-            "extends": [],
-            "implements": []
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
+            }
           }
         }
       },
       {
-        "Types": {
-          "ClassDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "Dispatcher",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -38,7 +41,6 @@
               "file": "",
               "line": 17
             },
-            "is_abstract": false,
             "type_aliases": [],
             "attributes": [],
             "methods": [
@@ -61,9 +63,13 @@
                 }
               }
             ],
-            "template_parameters": null,
-            "extends": [],
-            "implements": []
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
+            }
           }
         }
       }

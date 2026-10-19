@@ -23,6 +23,6 @@ rust_library(
     edition = "2021",
     deps = [
         "//tools/metamodel/common:source_location",
-        "@crates//:serde",
+        "@crates_score_tooling//:serde",
     ],
 )

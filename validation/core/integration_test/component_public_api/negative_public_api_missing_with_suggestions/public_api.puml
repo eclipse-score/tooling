@@ -13,11 +13,11 @@
 
 @startuml public_api
 
-interface "Sample Library AP 1" as SampleLibraryAP1 <<interface>> {
+interface SampleLibraryAP1 <<interface>> {
     +GetNumber(): int
 }
 
-interface "Sample Library AP 2" as SampleLibraryAP2 <<interface>> {
+interface SampleLibraryAP2 <<interface>> {
     +GetNumber(): int
 }
 

@@ -1,21 +1,25 @@
 {
     "component_diagram.puml": {
-        "defines": {},
+        "defines": {
+            "logging": "logging",
+            "Recorder": "logging.Recorder"
+        },
         "references": {
-            "Backend": "Backend"
+            "Backend": "logging.Recorder.Backend"
         }
     },
     "class_diagram.puml": {
         "defines": {
-            "IBackend": "IBackend"
+            "logging": "logging",
+            "IBackend": "logging.IBackend"
         },
         "references": {}
     },
     "sequence_diagram.puml": {
         "defines": {},
         "references": {
-            "Backend": "Backend",
-            "IBackend": "IBackend"
+            "Backend": "logging.Recorder.Backend",
+            "IBackend": "logging.IBackend"
         }
     }
 }

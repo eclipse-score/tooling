@@ -35,7 +35,8 @@ use puml_parser::{
     PumlClassParser, PumlComponentParser, PumlSequenceParser,
 };
 use puml_resolver::{
-    ActivityResolver, ClassResolver, ComponentResolver, DiagramResolver, SequenceResolver,
+    ActivityResolver, ClassResolver, ComponentResolver, DiagramResolver, DiagramSource,
+    SequenceResolver,
 };
 use puml_utils::{write_fbs_to_file, write_json_to_file, LogLevel};
 
@@ -107,7 +108,10 @@ struct Args {
     /// ``fta_events.trlc`` (the generated ``RootCause`` records; see
     /// ``--fta-package``) is written to this directory.  No
     /// FlatBuffers / component processing is performed in this mode.
-    #[arg(long)]
+    #[arg(
+        long,
+        conflicts_with_all = ["fbs_output_dir", "lobster_output_dir", "source_name", "output_stem"]
+    )]
     fta_output_dir: Option<String>,
 
     /// TRLC package name for the generated ``fta_events.trlc`` stub file.
@@ -122,21 +126,18 @@ struct Args {
     #[arg(long)]
     idmap_output_dir: Option<String>,
 
-    /// Only meaningful for a single resolved diagram: requires exactly one
-    /// input file (a single `--file`, no `--folders`) and cannot be combined
-    /// with `--fta-output-dir` (which always processes a batch of files).
-    /// Must be a relative path (never a machine-specific absolute path).
-    #[arg(long)]
-    source_name: Option<String>,
+    /// Workspace-relative source path embedded in outputs, one per `--file`
+    /// (same order); omit entirely or give exactly one per `--file`. Not
+    /// combinable with `--folders` or `--fta-output-dir`. Must be relative.
+    #[arg(long, conflicts_with = "folders")]
+    source_name: Vec<String>,
 
-    /// Override the file stem used to name every output file (`.fbs.bin`,
-    /// `.lobster`, `.idmap.json`, ...) for this run, instead of deriving it
-    /// from the input file's own basename. Only meaningful for a single
-    /// resolved diagram: requires exactly one input file (a single `--file`,
-    /// no `--folders`) and cannot be combined with `--fta-output-dir`. Must
-    /// be a single path component (no `/`, no `.`/`..`), never a path.
-    #[arg(long)]
-    output_stem: Option<String>,
+    /// File stem for every output file, one per `--file` (same order), instead
+    /// of each input's own stem; omit entirely or give exactly one per
+    /// `--file`. Not combinable with `--folders` or `--fta-output-dir`. Must be
+    /// a single path component.
+    #[arg(long, conflicts_with = "folders")]
+    output_stem: Vec<String>,
 }
 
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -170,96 +171,76 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     Builder::new()
         .filter_level(log_level.to_level_filter())
         .init();
+    execute(&args, log_level)
+}
+
+fn execute(args: &Args, log_level: LogLevel) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(dir) = &args.fta_output_dir {
-        // FTA mode is a self-contained pipeline that short-circuits the normal
-        // FlatBuffers/lobster passes; reject co-specified output modes rather
-        // than silently ignoring them.
-        if args.fbs_output_dir.is_some() || args.lobster_output_dir.is_some() {
-            return Err(
-                "--fta-output-dir cannot be combined with --fbs-output-dir or \
-                        --lobster-output-dir"
-                    .into(),
-            );
-        }
-        if args.source_name.is_some() {
-            return Err("--source-name cannot be combined with --fta-output-dir".into());
-        }
-        if args.output_stem.is_some() {
-            return Err("--output-stem cannot be combined with --fta-output-dir".into());
-        }
+        // FTA mode short-circuits the normal output passes.
         let Some(fta_package) = &args.fta_package else {
             return Err("--fta-package is required together with --fta-output-dir".into());
         };
-        return run_fta(&args, dir, fta_package, log_level);
+        return run_fta(args, dir, fta_package, log_level);
     }
 
     if args.fta_package.is_some() {
         return Err("--fta-package requires --fta-output-dir".into());
     }
 
-    if let Some(name) = &args.source_name {
+    for name in &args.source_name {
         validate_source_name(name)?;
     }
-    if let Some(stem) = &args.output_stem {
+    for stem in &args.output_stem {
         validate_output_stem(stem)?;
     }
 
+    let fbs_output_dir = prepare_output_dir(&args.fbs_output_dir)?;
+    let lobster_output_dir = prepare_output_dir(&args.lobster_output_dir)?;
+    let idmap_output_dir = prepare_output_dir(&args.idmap_output_dir)?;
+
     let emit_debug_json = log_level.to_level_filter() >= log::LevelFilter::Debug;
 
-    let fbs_output_dir: Option<PathBuf> = if let Some(dir) = &args.fbs_output_dir {
-        let p = PathBuf::from(dir);
-        fs::create_dir_all(&p)?;
-        Some(p)
-    } else {
-        None
-    };
-
-    let lobster_output_dir: Option<PathBuf> = if let Some(dir) = &args.lobster_output_dir {
-        let p = PathBuf::from(dir);
-        fs::create_dir_all(&p)?;
-        Some(p)
-    } else {
-        None
-    };
-
-    let idmap_output_dir: Option<PathBuf> = if let Some(dir) = &args.idmap_output_dir {
-        let p = PathBuf::from(dir);
-        fs::create_dir_all(&p)?;
-        Some(p)
-    } else {
-        None
-    };
     // Two input files with the same file stem (in different directories) would
     // otherwise silently overwrite each other's `<stem>.idmap.json`; track the
     // output paths already claimed this run and fail fast on a collision.
     let mut seen_idmap_outputs: HashSet<PathBuf> = HashSet::new();
 
-    let file_list = collect_files_from_args(&args)?;
+    let file_list = collect_files_from_args(args)?;
 
     if file_list.is_empty() {
         return Err("No valid PUML files found.".into());
     }
-    require_single_input(args.source_name.is_some(), file_list.len(), "source-name")?;
-    require_single_input(args.output_stem.is_some(), file_list.len(), "output-stem")?;
+    require_one_per_file_or_none(&args.source_name, file_list.len(), "source-name")?;
+    require_one_per_file_or_none(&args.output_stem, file_list.len(), "output-stem")?;
     debug!("Collected {} puml files.", file_list.len());
 
+    // Per file: `IncludeExpander` keeps line numbers only for one file.
     debug!("Preprocessing: include expansion");
     let mut preprocessor = Preprocessor::new();
-    let preprocessed_files = preprocessor.preprocess(&file_list, log_level)?;
+    let mut preprocessed: Vec<(Rc<PathBuf>, String)> = Vec::with_capacity(file_list.len());
+    for path in &file_list {
+        let singleton: HashSet<Rc<PathBuf>> = std::iter::once(Rc::clone(path)).collect();
+        let mut file_map = preprocessor.preprocess(&singleton, log_level)?;
+        let content = file_map
+            .remove(path)
+            .expect("preprocess returns an entry for its single input");
+        preprocessed.push((Rc::clone(path), content));
+    }
 
     debug!("Parsing started");
-    for (path, content) in &preprocessed_files {
-        // `naming_path` drives every output *filename* below (via its file
-        // stem); it's `path` unless `--output-stem` overrides it. `source_file`
-        // is the stable, workspace-relative path embedded *inside* outputs
-        // (see `--source-name`'s docs). Parsers only ever read `source_path`
-        // to stamp per-element `SourceLocation`s (never to access the
-        // filesystem -- `content` is already loaded), so with `--source-name`
-        // a synthetic path built from `source_file` is enough to make every
-        // `SourceLocation.file` in the resolved model -- and thus in the
-        // FlatBuffers output -- carry the corrected value as well.
-        let naming_path = output_naming_path(args.output_stem.as_deref(), path);
-        let (source_file, source_path) = output_source_path(args.source_name.as_deref(), path);
+    let mut naming_paths: Vec<PathBuf> = Vec::with_capacity(file_list.len());
+    let mut source_files: Vec<String> = Vec::with_capacity(file_list.len());
+    let mut diagram_names: Vec<Option<String>> = Vec::with_capacity(file_list.len());
+    let mut parsed_diagrams: Vec<ParsedDiagram> = Vec::with_capacity(file_list.len());
+
+    for (i, (path, content)) in preprocessed.iter().enumerate() {
+        // `naming_path` names the output files; `source_file` is the path
+        // embedded in outputs. Parsers only stamp `source_path` into
+        // `SourceLocation`s, so a path built from `source_file` suffices.
+        let output_stem = args.output_stem.get(i).map(String::as_str);
+        let source_name = args.source_name.get(i).map(String::as_str);
+        let naming_path = output_naming_path(output_stem, path).into_owned();
+        let (source_file, source_path) = output_source_path(source_name, path);
 
         let parsed_content = parse_puml_file(&source_path, content, log_level, args.diagram_type)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -269,76 +250,170 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        // Capture the @startuml <name> before resolve_parsed_diagram
-        // consumes parsed_content — the resolver discards it from the map.
-        let diagram_name: Option<String> = match &parsed_content {
+        // The resolver discards the `@startuml <name>`; keep it.
+        diagram_names.push(match &parsed_content {
             ParsedDiagram::Component(doc) => doc.name.clone(),
             _ => None,
-        };
+        });
+        naming_paths.push(naming_path);
+        source_files.push(source_file);
+        parsed_diagrams.push(parsed_content);
+    }
 
-        match resolve_parsed_diagram(parsed_content) {
-            Ok(logic_result) => {
-                debug!(
-                    "Successfully resolved PlantUML document: {}",
-                    path.display()
-                );
-                if emit_debug_json {
-                    if let Some(ref dir) = fbs_output_dir {
-                        write_json_to_file(&logic_result, &naming_path, dir, "logic.ast")?;
-                    }
-                }
+    debug!("Resolving {} diagram(s)", parsed_diagrams.len());
+    let resolved_diagrams = resolve_parsed_diagrams(&source_files, &parsed_diagrams)
+        .map_err(|e| format!("Resolve error: {e}"))?;
 
-                let fbs_buffer = serialize_resolved_diagram(&logic_result);
-                if let Some(ref dir) = fbs_output_dir {
-                    write_fbs_to_file(&fbs_buffer, &naming_path, dir)?;
-                }
+    for (i, logic_result) in resolved_diagrams.into_iter().enumerate() {
+        let path = &file_list[i];
+        let naming_path = &naming_paths[i];
+        let source_file = &source_files[i];
 
-                if let Some(ldir) = &lobster_output_dir {
-                    let lobster_model = match &logic_result {
-                        ResolvedDiagram::Component(model) => LobsterModel::Component(model),
-                        ResolvedDiagram::Class(model) => LobsterModel::Class(model),
-                        ResolvedDiagram::Activity(_) => LobsterModel::Empty,
-                        ResolvedDiagram::Sequence(_) => LobsterModel::Empty,
-                    };
-                    write_lobster_to_file(lobster_model, &naming_path, &source_file, ldir)?;
-                }
-
-                if let Some(idir) = &idmap_output_dir {
-                    let output_path = puml_idmap::idmap_output_path(&naming_path, idir);
-                    if !seen_idmap_outputs.insert(output_path.clone()) {
-                        return Err(format!(
-                            "duplicate idmap output {}: multiple input files map to the \
-                             same <stem>.idmap.json in {}; rename one of the inputs so \
-                             their file stems differ",
-                            output_path.display(),
-                            idir.display(),
-                        )
-                        .into());
-                    }
-
-                    match idmap_model_for(&logic_result) {
-                        Some(idmap_model) => {
-                            write_idmap_to_file(
-                                idmap_model,
-                                &naming_path,
-                                Some(&source_file),
-                                diagram_name.as_deref(),
-                                idir,
-                            )?;
-                        }
-                        None => {
-                            write_empty_idmap_to_file(&naming_path, Some(&source_file), idir)?;
-                        }
-                    }
-                }
+        debug!(
+            "Successfully resolved PlantUML document: {}",
+            path.display()
+        );
+        if emit_debug_json {
+            if let Some(ref dir) = fbs_output_dir {
+                write_json_to_file(&logic_result, naming_path, dir, "logic.ast")?;
             }
-            Err(e) => {
-                return Err(format!("Resolve error in {}: {}", path.display(), e).into());
+        }
+
+        let fbs_buffer = serialize_resolved_diagram(&logic_result);
+        if let Some(ref dir) = fbs_output_dir {
+            write_fbs_to_file(&fbs_buffer, naming_path, dir)?;
+        }
+
+        if let Some(ldir) = &lobster_output_dir {
+            let lobster_model = match &logic_result {
+                ResolvedDiagram::Component(model) => LobsterModel::Component(model),
+                ResolvedDiagram::Class(model) => LobsterModel::Class(model),
+                ResolvedDiagram::Activity(_) => LobsterModel::Empty,
+                ResolvedDiagram::Sequence(_) => LobsterModel::Empty,
+            };
+            write_lobster_to_file(lobster_model, naming_path, source_file, ldir)?;
+        }
+
+        if let Some(idir) = &idmap_output_dir {
+            claim_idmap_output(naming_path, idir, &mut seen_idmap_outputs, "input")?;
+
+            match idmap_model_for(&logic_result) {
+                Some(idmap_model) => {
+                    write_idmap_to_file(
+                        idmap_model,
+                        naming_path,
+                        Some(source_file),
+                        diagram_names[i].as_deref(),
+                        idir,
+                    )?;
+                }
+                None => {
+                    write_empty_idmap_to_file(naming_path, Some(source_file), idir)?;
+                }
             }
         }
     }
 
     debug!("Parsing completed");
+    Ok(())
+}
+
+/// Resolves the diagrams of each kind in `parsed` as one group; `names` (one
+/// per diagram) attribute errors to files. Results keep the order of `parsed`.
+fn resolve_parsed_diagrams(
+    names: &[String],
+    parsed: &[ParsedDiagram],
+) -> Result<Vec<ResolvedDiagram>, Box<dyn std::error::Error>> {
+    let mut activity = Vec::new();
+    let mut component = Vec::new();
+    let mut class = Vec::new();
+    let mut sequence = Vec::new();
+    for (i, doc) in parsed.iter().enumerate() {
+        match doc {
+            ParsedDiagram::Activity(d) => activity.push((i, d)),
+            ParsedDiagram::Component(d) => component.push((i, d)),
+            ParsedDiagram::Class(d) => class.push((i, d)),
+            ParsedDiagram::Sequence(d) => sequence.push((i, d)),
+        }
+    }
+
+    let mut results: Vec<Option<ResolvedDiagram>> = (0..parsed.len()).map(|_| None).collect();
+    resolve_bucket::<ActivityResolver>(names, &activity, ResolvedDiagram::Activity, &mut results)?;
+    resolve_bucket::<ComponentResolver>(
+        names,
+        &component,
+        ResolvedDiagram::Component,
+        &mut results,
+    )?;
+    resolve_bucket::<ClassResolver>(names, &class, ResolvedDiagram::Class, &mut results)?;
+    resolve_bucket::<SequenceResolver>(names, &sequence, ResolvedDiagram::Sequence, &mut results)?;
+
+    Ok(results
+        .into_iter()
+        .map(|r| r.expect("every diagram is in exactly one bucket"))
+        .collect())
+}
+
+/// Resolves the `(index, document)` entries of one kind as a group and stores
+/// each result at its index.
+fn resolve_bucket<R>(
+    names: &[String],
+    bucket: &[(usize, &R::Document)],
+    wrap: fn(R::Output) -> ResolvedDiagram,
+    results: &mut [Option<ResolvedDiagram>],
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    R: DiagramResolver + Default,
+{
+    if bucket.is_empty() {
+        return Ok(());
+    }
+    let sources: Vec<DiagramSource<'_, R::Document>> = bucket
+        .iter()
+        .map(|&(i, document)| DiagramSource {
+            name: names[i].as_str(),
+            document,
+        })
+        .collect();
+    let resolved = R::resolve_group(&sources)?;
+    for (&(i, _), output) in bucket.iter().zip(resolved) {
+        results[i] = Some(wrap(output));
+    }
+    Ok(())
+}
+
+/// Creates the output directory of an `--*-output-dir` flag, if given.
+fn prepare_output_dir(dir: &Option<String>) -> Result<Option<PathBuf>, Box<dyn std::error::Error>> {
+    match dir {
+        Some(dir) => {
+            let p = PathBuf::from(dir);
+            fs::create_dir_all(&p)?;
+            Ok(Some(p))
+        }
+        None => Ok(None),
+    }
+}
+
+/// Claims `naming_path`'s `<stem>.idmap.json` path; errors if another
+/// `input_kind` file claimed it this run.
+fn claim_idmap_output(
+    naming_path: &Path,
+    idir: &Path,
+    seen_idmap_outputs: &mut HashSet<PathBuf>,
+    input_kind: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let output_path = puml_idmap::idmap_output_path(naming_path, idir);
+    if !seen_idmap_outputs.insert(output_path.clone()) {
+        return Err(format!(
+            "duplicate idmap output {}: multiple {} files map to the \
+             same <stem>.idmap.json in {}; rename one of the inputs so \
+             their file stems differ",
+            output_path.display(),
+            input_kind,
+            idir.display(),
+        )
+        .into());
+    }
     Ok(())
 }
 
@@ -413,17 +488,7 @@ fn run_fta(
 
         if let Some(ref idir_str) = args.idmap_output_dir {
             let idir = PathBuf::from(idir_str);
-            let output_path = puml_idmap::idmap_output_path(file, &idir);
-            if !seen_idmap_outputs.insert(output_path.clone()) {
-                return Err(format!(
-                    "duplicate idmap output {}: multiple FTA input files map to the \
-                     same <stem>.idmap.json in {}; rename one of the inputs so \
-                     their file stems differ",
-                    output_path.display(),
-                    idir.display(),
-                )
-                .into());
-            }
+            claim_idmap_output(file, &idir, &mut seen_idmap_outputs, "FTA input")?;
             let source_file = source_path_for_output(file);
             write_idmap_to_file(
                 IdMapModel::Fta(&model),
@@ -481,43 +546,10 @@ fn idmap_model_for(resolved: &ResolvedDiagram) -> Option<IdMapModel<'_>> {
     }
 }
 
-fn resolve_parsed_diagram(
-    parsed_content: ParsedDiagram,
-) -> Result<ResolvedDiagram, Box<dyn std::error::Error>> {
-    match parsed_content {
-        ParsedDiagram::Activity(parsed_content) => {
-            let mut resolver = ActivityResolver::new();
-            puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Activity)
-        }
-        ParsedDiagram::Component(parsed_content) => {
-            let mut resolver = ComponentResolver::new();
-            puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Component)
-        }
-        ParsedDiagram::Class(parsed_content) => {
-            let mut resolver = ClassResolver::new();
-            puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Class)
-        }
-        ParsedDiagram::Sequence(parsed_content) => {
-            let mut resolver = SequenceResolver;
-            puml_resolver(&mut resolver, &parsed_content).map(ResolvedDiagram::Sequence)
-        }
-    }
-}
-
-fn puml_resolver<Resolver>(
-    resolver: &mut Resolver,
-    parsed_content: &Resolver::Document,
-) -> Result<Resolver::Output, Box<dyn std::error::Error>>
-where
-    Resolver: DiagramResolver,
-    Resolver::Output: std::fmt::Debug,
-    Resolver::Error: std::error::Error + 'static,
-{
-    let logic_result = resolver
-        .resolve(parsed_content)
-        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-
-    Ok(logic_result)
+/// Resolves one diagram alone.
+#[cfg(test)]
+fn resolve_single(parsed: ParsedDiagram) -> Result<ResolvedDiagram, Box<dyn std::error::Error>> {
+    resolve_parsed_diagrams(&[String::new()], &[parsed]).map(|mut resolved| resolved.remove(0))
 }
 
 fn parse_with_parser<P>(
@@ -552,8 +584,15 @@ fn parse_puml_file(
                 .map(ParsedDiagram::Activity)
         }
         DiagramType::Component | DiagramType::Deployment => {
-            parse_with_parser(&mut PumlComponentParser, path, content, log_level)
-                .map(ParsedDiagram::Component)
+            match PumlComponentParser.parse_file(path, content, log_level) {
+                Ok(doc) => {
+                    debug!("Successfully parsed PlantUML document: {}", path.display());
+                    Ok(ParsedDiagram::Component(doc))
+                }
+                Err(component_err) => {
+                    Err(diagnose_wrong_kind(path, content, log_level, component_err))
+                }
+            }
         }
         DiagramType::Class => parse_with_parser(&mut PumlClassParser, path, content, log_level)
             .map(ParsedDiagram::Class),
@@ -566,6 +605,39 @@ fn parse_puml_file(
 }
 
 type ParseAttempt<'a> = (&'a str, Box<dyn std::error::Error>, Option<(usize, usize)>);
+
+/// Names the kind of a file that is not a Component diagram, when another
+/// parser accepts it; otherwise returns the component parse error.
+fn diagnose_wrong_kind(
+    path: &Rc<PathBuf>,
+    content: &str,
+    log_level: LogLevel,
+    component_err: <PumlComponentParser as DiagramParser>::Error,
+) -> Box<dyn std::error::Error>
+where
+    <PumlComponentParser as DiagramParser>::Error: std::error::Error + 'static,
+{
+    let kind = if PumlClassParser.parse_file(path, content, log_level).is_ok() {
+        "Class"
+    } else if PumlActivityParser
+        .parse_file(path, content, log_level)
+        .is_ok()
+    {
+        "Activity"
+    } else if PumlSequenceParser
+        .parse_file(path, content, log_level)
+        .is_ok()
+    {
+        "Sequence"
+    } else {
+        return Box::new(component_err);
+    };
+    format!(
+        "{}: expected a Component diagram, found a {kind} diagram",
+        path.display()
+    )
+    .into()
+}
 
 fn parse_in_order(
     path: &Rc<PathBuf>,
@@ -666,22 +738,34 @@ fn parse_in_order(
     .into())
 }
 
-fn collect_files_from_args(
-    args: &Args,
-) -> Result<HashSet<Rc<PathBuf>>, Box<dyn std::error::Error>> {
-    let mut file_list: HashSet<Rc<PathBuf>> = HashSet::new();
+/// Collects the input files, deduplicated: every `--file` in the given order,
+/// then the `--folders` files sorted. All of them are resolved as one group
+/// per diagram kind.
+fn collect_files_from_args(args: &Args) -> Result<Vec<Rc<PathBuf>>, Box<dyn std::error::Error>> {
+    let mut ordered: Vec<Rc<PathBuf>> = Vec::new();
+    let mut seen: HashSet<Rc<PathBuf>> = HashSet::new();
 
-    // Collect individual files from --file arguments (may be repeated)
     for file_path in &args.file {
-        add_single_file(Path::new(file_path), &mut file_list)?;
+        let abs_path = Rc::new(resolve_puml_file(Path::new(file_path))?);
+        if !seen.insert(Rc::clone(&abs_path)) {
+            return Err(format!("Duplicate --file entry: {file_path}").into());
+        }
+        ordered.push(abs_path);
     }
 
-    // Collect files from folders using --folders argument
     if let Some(folder_path) = &args.folders {
-        collect_puml_files_from_folder(Path::new(folder_path), &mut file_list)?;
+        let mut folder_files: HashSet<Rc<PathBuf>> = HashSet::new();
+        collect_puml_files_from_folder(Path::new(folder_path), &mut folder_files)?;
+        let mut folder_files: Vec<Rc<PathBuf>> = folder_files.into_iter().collect();
+        folder_files.sort();
+        for path in folder_files {
+            if seen.insert(Rc::clone(&path)) {
+                ordered.push(path);
+            }
+        }
     }
 
-    Ok(file_list)
+    Ok(ordered)
 }
 
 fn resolve_path(path: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
@@ -698,18 +782,18 @@ fn resolve_path(path: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
     Ok(base_dir.join(path))
 }
 
-/// Reject a flag that only makes sense for a single resolved diagram (e.g.
-/// `--source-name`, `--output-stem`) when more than one input file was
-/// collected.
-fn require_single_input(
-    is_set: bool,
+/// Rejects a per-file flag given neither zero times nor once per input file.
+fn require_one_per_file_or_none(
+    values: &[String],
     file_count: usize,
     flag_name: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if is_set && file_count != 1 {
+    if !values.is_empty() && values.len() != file_count {
         return Err(format!(
-            "--{flag_name} requires exactly one input file (a single --file, no \
-             --folders); got {file_count} files"
+            "--{flag_name} must be given exactly once per input file (in the same \
+             order as --file) or not at all; got {file_count} input file(s), \
+             {} --{flag_name}",
+            values.len(),
         )
         .into());
     }
@@ -817,10 +901,9 @@ fn output_naming_path<'a>(output_stem: Option<&str>, path: &'a Path) -> Cow<'a, 
     }
 }
 
-fn add_single_file(
-    path: &Path,
-    file_list: &mut HashSet<Rc<PathBuf>>,
-) -> Result<(), Box<dyn std::error::Error>> {
+/// Resolve a `--file`/folder-entry path to an absolute path, checking it is
+/// an existing `.puml` file.
+fn resolve_puml_file(path: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let abs_path = resolve_path(path)?;
 
     if !abs_path.is_file() {
@@ -829,8 +912,7 @@ fn add_single_file(
     if abs_path.extension().and_then(|ext| ext.to_str()) != Some("puml") {
         return Err(format!("File is not a .puml file: {}", path.display()).into());
     }
-    file_list.insert(Rc::new(abs_path));
-    Ok(())
+    Ok(abs_path)
 }
 
 fn collect_puml_files_from_folder(
@@ -882,12 +964,263 @@ B --> A : reply
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Sequence)
             .expect("sequence parse must succeed");
 
-        let resolved = resolve_parsed_diagram(parsed);
+        let resolved = resolve_single(parsed);
         assert!(
             resolved.is_ok(),
             "sequence diagram must resolve without error; got: {:?}",
             resolved.err()
         );
+    }
+}
+
+#[cfg(test)]
+mod group_pipeline_tests {
+    use super::*;
+
+    fn parse(name: &str, content: &str, diagram_type: DiagramType) -> ParsedDiagram {
+        let path = Rc::new(PathBuf::from(name));
+        parse_puml_file(&path, content, LogLevel::Info, diagram_type)
+            .unwrap_or_else(|error| panic!("{name} must parse: {error}"))
+    }
+
+    /// One call covering several kinds resolves each kind as its own group
+    /// and returns the results in input order.
+    #[test]
+    fn mixed_kinds_resolve_per_kind_in_input_order() {
+        let names: Vec<String> = [
+            "scenario.puml",
+            "class_detail.puml",
+            "component_overview.puml",
+            "cast.puml",
+            "class_overview.puml",
+            "component_detail.puml",
+        ]
+        .map(String::from)
+        .to_vec();
+        let parsed = vec![
+            parse(
+                "scenario.puml",
+                "@startuml\nu -> u : call()\nactivate u\n@enduml",
+                DiagramType::Sequence,
+            ),
+            parse(
+                "class_detail.puml",
+                "@startuml\nclass Sink {\n  +Write() : void\n}\n@enduml",
+                DiagramType::Class,
+            ),
+            parse(
+                "component_overview.puml",
+                "@startuml\npackage \"pkg\" as pkg <<SEooC>> {\n  component \"Comp\" as Comp <<component>>\n}\n@enduml",
+                DiagramType::Component,
+            ),
+            parse(
+                "cast.puml",
+                "@startuml\nparticipant \"pkg::Comp\" as u\n@enduml",
+                DiagramType::Sequence,
+            ),
+            parse(
+                "class_overview.puml",
+                "@startuml\npackage logging {\n  class Sink\n}\n@enduml",
+                DiagramType::Class,
+            ),
+            parse(
+                "component_detail.puml",
+                "@startuml\ncomponent \"Comp\" as Comp <<component>> {\n  component \"Unit\" as Unit <<unit>>\n}\n@enduml",
+                DiagramType::Component,
+            ),
+        ];
+
+        let resolved = resolve_parsed_diagrams(&names, &parsed).expect("group must resolve");
+
+        assert!(matches!(resolved[0], ResolvedDiagram::Sequence(_)));
+        assert!(matches!(resolved[1], ResolvedDiagram::Class(_)));
+        assert!(matches!(resolved[2], ResolvedDiagram::Component(_)));
+        assert!(matches!(resolved[3], ResolvedDiagram::Sequence(_)));
+        assert!(matches!(resolved[4], ResolvedDiagram::Class(_)));
+        assert!(matches!(resolved[5], ResolvedDiagram::Component(_)));
+
+        let ResolvedDiagram::Class(detail) = &resolved[1] else {
+            unreachable!()
+        };
+        assert_eq!(detail.entities[0].id, "logging.Sink");
+    }
+
+    /// A group error names the file it occurs in, not the first file of the
+    /// call.
+    #[test]
+    fn group_error_names_the_failing_file() {
+        let names: Vec<String> = ["fine.puml", "broken.puml"].map(String::from).to_vec();
+        let parsed = vec![
+            parse(
+                "fine.puml",
+                "@startuml\nclass Sink {\n  +Write() : void\n}\n@enduml",
+                DiagramType::Class,
+            ),
+            parse(
+                "broken.puml",
+                "@startuml\nghost -> ghost : call()\n@enduml",
+                DiagramType::Component,
+            ),
+        ];
+
+        let error = resolve_parsed_diagrams(&names, &parsed)
+            .expect_err("an unresolved reference must fail the group")
+            .to_string();
+
+        assert!(error.contains("broken.puml"), "got: {error}");
+        assert!(!error.contains("fine.puml"), "got: {error}");
+    }
+}
+
+#[cfg(test)]
+mod cli_input_tests {
+    use super::*;
+    use clap::Parser;
+
+    fn unique_dir(tag: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir =
+            std::env::temp_dir().join(format!("puml_cli_{}_{}_{}", tag, std::process::id(), nanos));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn write(path: &Path, content: &str) {
+        fs::write(path, content).unwrap();
+    }
+
+    fn execute_with(argv: &[&str]) -> Result<(), String> {
+        let args = Args::parse_from(std::iter::once("puml_cli").chain(argv.iter().copied()));
+        execute(&args, LogLevel::Warn).map_err(|error| error.to_string())
+    }
+
+    /// `--folders` files of one kind are one group: `b.puml` relates to a
+    /// component only `a.puml` declares.
+    #[test]
+    fn folder_files_resolve_as_one_group() {
+        let dir = unique_dir("folders");
+        write(
+            &dir.join("a.puml"),
+            "@startuml\ncomponent A <<component>>\n@enduml",
+        );
+        write(
+            &dir.join("b.puml"),
+            "@startuml\ncomponent B <<component>>\nB --> A\n@enduml",
+        );
+        let out = dir.join("out");
+
+        let result = execute_with(&[
+            "--folders",
+            dir.to_str().unwrap(),
+            "--diagram-type",
+            "component",
+            "--lobster-output-dir",
+            out.to_str().unwrap(),
+        ]);
+
+        fs::remove_dir_all(&dir).ok();
+        assert_eq!(result, Ok(()));
+    }
+
+    /// The same files without `--folders` grouping each fail alone.
+    #[test]
+    fn separate_invocations_do_not_share_a_group() {
+        let dir = unique_dir("single");
+        write(
+            &dir.join("b.puml"),
+            "@startuml\ncomponent B <<component>>\nB --> A\n@enduml",
+        );
+
+        let result = execute_with(&[
+            "--file",
+            dir.join("b.puml").to_str().unwrap(),
+            "--diagram-type",
+            "component",
+        ]);
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.unwrap_err().contains("A"));
+    }
+
+    #[test]
+    fn duplicate_file_is_an_error() {
+        let dir = unique_dir("duplicate");
+        write(&dir.join("a.puml"), "@startuml\ncomponent A\n@enduml");
+        let file = dir.join("a.puml");
+
+        let result = execute_with(&[
+            "--file",
+            file.to_str().unwrap(),
+            "--file",
+            file.to_str().unwrap(),
+        ]);
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.unwrap_err().starts_with("Duplicate --file entry: "));
+    }
+
+    #[test]
+    fn source_name_count_must_match_file_count() {
+        let dir = unique_dir("source_name");
+        write(&dir.join("a.puml"), "@startuml\ncomponent A\n@enduml");
+        write(&dir.join("b.puml"), "@startuml\ncomponent B\n@enduml");
+
+        let result = execute_with(&[
+            "--file",
+            dir.join("a.puml").to_str().unwrap(),
+            "--file",
+            dir.join("b.puml").to_str().unwrap(),
+            "--source-name",
+            "pkg/a.puml",
+        ]);
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(result
+            .unwrap_err()
+            .starts_with("--source-name must be given exactly once per input file"));
+    }
+
+    #[test]
+    fn plantuml_extension_is_rejected() {
+        let dir = unique_dir("extension");
+        write(&dir.join("a.plantuml"), "@startuml\ncomponent A\n@enduml");
+        let file = dir.join("a.plantuml");
+
+        let result = execute_with(&["--file", file.to_str().unwrap()]);
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(result
+            .unwrap_err()
+            .starts_with("File is not a .puml file: "));
+    }
+
+    #[test]
+    fn other_diagram_kind_is_named_when_component_is_expected() {
+        for (content, kind) in [
+            (
+                "@startuml\nclass Sink {\n  +Write() : void\n}\n@enduml",
+                "Class",
+            ),
+            ("@startuml\nstart\n:Do work;\nstop\n@enduml", "Activity"),
+            (
+                "@startuml\nparticipant A\nA -> A : call\n@enduml",
+                "Sequence",
+            ),
+        ] {
+            let path = Rc::new(PathBuf::from("d.puml"));
+            let error = parse_puml_file(&path, content, LogLevel::Warn, DiagramType::Component)
+                .err()
+                .unwrap_or_else(|| panic!("{kind} diagram must not parse as Component"))
+                .to_string();
+
+            assert_eq!(
+                error,
+                format!("d.puml: expected a Component diagram, found a {kind} diagram")
+            );
+        }
     }
 }
 
@@ -1065,7 +1398,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Activity)
             .expect("activity parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("activity must resolve");
+        let resolved = resolve_single(parsed).expect("activity must resolve");
         assert!(
             matches!(resolved, ResolvedDiagram::Activity(_)),
             "activity diagram must resolve to the Activity variant that triggers the empty writer"
@@ -1121,7 +1454,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Component)
             .expect("component parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("component must resolve");
+        let resolved = resolve_single(parsed).expect("component must resolve");
         assert!(matches!(resolved, ResolvedDiagram::Component(_)));
 
         let idmap_model =
@@ -1152,7 +1485,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Class)
             .expect("class parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("class must resolve");
+        let resolved = resolve_single(parsed).expect("class must resolve");
         assert!(matches!(resolved, ResolvedDiagram::Class(_)));
 
         let idmap_model =
@@ -1188,7 +1521,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&source_path, content, LogLevel::Info, DiagramType::Class)
             .expect("class parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("class diagram must resolve");
+        let resolved = resolve_single(parsed).expect("class diagram must resolve");
         let fbs_bytes = serialize_resolved_diagram(&resolved);
         let fbs_text = String::from_utf8_lossy(&fbs_bytes);
 
@@ -1224,7 +1557,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Class)
             .expect("class parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("class must resolve");
+        let resolved = resolve_single(parsed).expect("class must resolve");
         let idmap_model =
             idmap_model_for(&resolved).expect("class diagrams must dispatch to an IdMapModel");
 
@@ -1251,17 +1584,18 @@ mod idmap_wiring_tests {
         cleanup_dir(&dir);
     }
 
-    /// `--output-stem` requires exactly one input file.
+    /// `--output-stem` must be given once per input file, or not at all.
     #[test]
-    fn output_stem_rejected_with_multiple_inputs() {
-        let err = require_single_input(true, 2, "output-stem")
-            .expect_err("must reject --output-stem with more than one input file");
+    fn output_stem_rejected_with_mismatched_count() {
+        let err = require_one_per_file_or_none(&["a".to_string()], 2, "output-stem")
+            .expect_err("must reject a count that matches neither 0 nor the file count");
         assert!(err.to_string().contains("--output-stem"));
-        assert!(err.to_string().contains("got 2 files"));
+        assert!(err.to_string().contains("2 input file"));
 
-        require_single_input(true, 1, "output-stem").expect("a single input file must be fine");
-        require_single_input(false, 2, "output-stem")
-            .expect("the flag being unset must never trigger the check");
+        require_one_per_file_or_none(&["a".to_string(), "b".to_string()], 2, "output-stem")
+            .expect("one entry per input file must be fine");
+        require_one_per_file_or_none(&[], 2, "output-stem")
+            .expect("omitting the flag entirely must never trigger the check");
     }
 
     /// `--output-stem` must be a single path component: no separators, and
@@ -1283,7 +1617,7 @@ mod idmap_wiring_tests {
 
         let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Sequence)
             .expect("sequence parse must succeed");
-        let resolved = resolve_parsed_diagram(parsed).expect("sequence must resolve");
+        let resolved = resolve_single(parsed).expect("sequence must resolve");
         assert!(matches!(resolved, ResolvedDiagram::Sequence(_)));
 
         let idmap_model =
@@ -1323,9 +1657,9 @@ mod idmap_wiring_tests {
     #[test]
     fn component_reference_and_class_define_share_fqn_for_same_package_interface() {
         let component_content = "@startuml\n\
-             package \"Package A\" as package_a {\n\
-                 component \"Component A\" as component_a <<component>> {\n\
-                     component \"Unit 1\" as unit_1 <<unit>>\n\
+             package package_a {\n\
+                 component component_a <<component>> {\n\
+                     component unit_1 <<unit>>\n\
                  }\n\
                  interface \"InternalInterface\" as InternalInterface\n\
                  unit_1 -( InternalInterface\n\
@@ -1339,8 +1673,7 @@ mod idmap_wiring_tests {
             DiagramType::Component,
         )
         .expect("component parse must succeed");
-        let component_resolved =
-            resolve_parsed_diagram(component_parsed).expect("component must resolve");
+        let component_resolved = resolve_single(component_parsed).expect("component must resolve");
         let component_idmap_model = idmap_model_for(&component_resolved)
             .expect("component diagrams must dispatch to an IdMapModel");
 
@@ -1359,7 +1692,7 @@ mod idmap_wiring_tests {
             DiagramType::Class,
         )
         .expect("class parse must succeed");
-        let class_resolved = resolve_parsed_diagram(class_parsed).expect("class must resolve");
+        let class_resolved = resolve_single(class_parsed).expect("class must resolve");
         let class_idmap_model = idmap_model_for(&class_resolved)
             .expect("class diagrams must dispatch to an IdMapModel");
 

@@ -2,8 +2,8 @@
   "relation_absolute_fqn.puml": {
     "PkgA": {
       "id": "PkgA",
-      "name": "Package A",
-      "alias": "PkgA",
+      "name": "PkgA",
+      "alias": null,
       "parent_id": null,
       "comp_type": "Package",
       "stereotype": null,
@@ -15,8 +15,8 @@
     },
     "PkgA.ComponentA": {
       "id": "PkgA.ComponentA",
-      "name": "Component A",
-      "alias": "ComponentA",
+      "name": "ComponentA",
+      "alias": null,
       "parent_id": "PkgA",
       "comp_type": "Component",
       "stereotype": "component",
@@ -28,8 +28,8 @@
     },
     "PkgB": {
       "id": "PkgB",
-      "name": "Package B",
-      "alias": "PkgB",
+      "name": "PkgB",
+      "alias": null,
       "parent_id": null,
       "comp_type": "Package",
       "stereotype": null,
@@ -41,8 +41,8 @@
     },
     "PkgB.ComponentB": {
       "id": "PkgB.ComponentB",
-      "name": "Component B",
-      "alias": "ComponentB",
+      "name": "ComponentB",
+      "alias": null,
       "parent_id": "PkgB",
       "comp_type": "Component",
       "stereotype": "component",

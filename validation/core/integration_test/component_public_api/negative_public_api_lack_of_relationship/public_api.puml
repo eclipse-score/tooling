@@ -13,7 +13,7 @@
 
 @startuml public_api
 
-interface "Sample Library API" as SampleLibraryAPI <<interface>> {
+interface SampleLibraryAPI <<interface>> {
     +GetNumber(): int
 }
 

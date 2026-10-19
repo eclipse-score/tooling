@@ -1,0 +1,41 @@
+{
+  "constructor_of_aliased_class.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "ns.Foo",
+        "name": "F",
+        "enclosing_namespace_id": "ns",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [
+          {
+            "name": "Foo",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": ["Constructor"],
+            "source_location": { "file": "", "line": 16 }
+          },
+          {
+            "name": "~Foo",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": ["Destructor"],
+            "source_location": { "file": "", "line": 17 }
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 15 }
+      }
+    ],
+    "free_functions": []
+  }
+}

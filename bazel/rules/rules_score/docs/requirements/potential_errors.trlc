@@ -121,6 +121,17 @@ section "Potential Errors" {
             impact_type = ToolQualification.Impact_Type.Safety
         }
 
+        ToolQualification.PotentialError Conflicting_AoU_Definitions_Merged {
+            description = '''
+                An assumption of use reaches a dependable element along
+                several paths with different content, for example in two
+                versions, and one definition silently replaces the other.
+            '''
+            impacts = ["Integrator is shown an outdated or wrong assumption of use"]
+            affects = [Forward_AoU_To_Dependees]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
     }
 
 }

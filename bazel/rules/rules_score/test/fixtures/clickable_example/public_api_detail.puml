@@ -14,7 +14,7 @@
 @startuml PublicInterface
 
 package package_pub {
-    interface "PublicInterface" as PublicInterface
+    interface PublicInterface
 }
 
 @enduml

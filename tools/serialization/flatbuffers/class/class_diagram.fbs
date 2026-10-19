@@ -127,9 +127,19 @@ table SimpleEntity {
     stereotypes: [string];
 }
 
+table FreeFunctionDecl {
+    name: string (required);
+    enclosing_namespace_id: string;
+    return_type: string;
+    parameters: [FunctionArgument];
+    template_parameters: [TemplateParameter];
+    source_location: SourceLocation (required);
+}
+
 table ClassDiagram {
     name: string (required);
     entities: [SimpleEntity];
+    free_functions: [FreeFunctionDecl];
 }
 
 root_type ClassDiagram;

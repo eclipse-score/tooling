@@ -16,7 +16,7 @@ Safety Analysis
 ================
 
 .. note::
-   A complete working example covering ``safety_analysis`` and ``dependability_analysis`` is
+   A complete working example covering ``failure_modes``, ``fault_trees``, ``safety_analysis`` and ``dependability_analysis`` is
    available in
    `bazel/rules/rules_score/examples/seooc/safety_analysis/ <https://github.com/eclipse-score/tooling/tree/main/bazel/rules/rules_score/examples/seooc/safety_analysis>`_.
 
@@ -85,8 +85,8 @@ Artifacts and traceability
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As mentioned above, the safety analysis method used by ``dependability_analysis`` is a combination of
-both an FMEA and a FTA. Each ``safety_analysis`` target bundles four types of artifacts that must be
-linked together:
+both an FMEA and a FTA. The ``failure_modes``, ``fault_trees`` and ``safety_analysis`` targets together bundle four types of
+artifacts that must be linked together:
 
 .. list-table::
    :header-rows: 1
@@ -184,7 +184,7 @@ Each identified failure mode is recorded as a ``ScoreReq.FailureMode`` record
 in a ``.trlc`` file (here ``sample_safety_analysis_failure_modes.trlc``). The
 TRLC ``package`` name (``SampleLibrary`` below) is chosen freely by the author —
 it is not derived from the Bazel target name and is not enforced by the rule
-(only the *generated* ``<name>_fta`` package, see `Modeling the fault tree
+(only the *generated* ``<fta_package>`` package, see `Modeling the fault tree
 (PlantUML)`_, is fixed):
 
 .. code-block:: text
@@ -309,8 +309,8 @@ Gate and intermediate-event aliases (e.g. ``OG_1``) are only local identifiers
 within the diagram; they do not refer to TRLC records.
 
 A dedicated Rust tool (``puml_cli``'s FTA parser) reads every ``$FailureMode``/
-``$RootCause`` in the ``safety_analysis``'s ``root_causes`` diagrams and generates a
-TRLC stub package (``fta_events.trlc``, imported as the ``<name>_fta``
+``$RootCause`` in the ``fault_trees``'s ``srcs`` diagrams and generates a
+TRLC stub package (``fta_events.trlc``, imported as the ``<fta_package>``
 package) with one ``RootCause`` record per reachable ``$RootCause`` alias; each
 record's ``failure_modes`` lists the ``FailureMode`` record(s) of the ``$FailureMode``
 root it hangs under. No manual linking
@@ -385,12 +385,12 @@ Pick the path by *who* closes the root cause:
      - ``derived_from`` referencing the ``RootCause``
    * - ``AoU`` (Assumption of Use)
      - an obligation only the **integrator/caller** can guarantee, not the SEooC.
-     - optional ``root_causes``
+     - mandatory ``root_causes``
 
 Recording measures (TRLC)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Each measure imports the generated ``<name>_fta`` package and references the
+Each measure imports the generated ``<fta_package>`` package and references the
 ``RootCause`` stub(s) it addresses explicitly from its
 ``root_causes``/``derived_from`` field. For example, the following
 ``Mitigation`` records (from ``sample_safety_analysis_safetymeasures.trlc``)
@@ -439,7 +439,7 @@ A ``CompReq``
 can reference the generated ``RootCause`` stub directly in its
 ``derived_from`` list (closing it via a normal, implemented-and-tested
 component requirement instead of a dedicated safety measure), or an ``AoU``
-can reference it via its own optional ``root_causes`` field (pushing the
+can reference it via its mandatory ``root_causes`` field (pushing the
 obligation out to the integrator). The traceability report of the enclosing
 ``dependable_element`` flags a root cause that is covered by none of
 ``Mitigation``, ``CompReq``, or ``AoU``; with ``maturity = "release"`` this
@@ -463,6 +463,8 @@ Step 4 — Wire the analysis into Bazel
 
    load(
        "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
+       "failure_modes",
+       "fault_trees",
        "safety_analysis",
    )
 
@@ -475,39 +477,61 @@ Step 4 — Wire the analysis into Bazel
        visibility = ["//visibility:public"],
    )
 
+   failure_modes(
+       name = "sample_failure_modes",
+       srcs = ["sample_safety_analysis_failure_modes.trlc"],
+   )
+
+   fault_trees(
+       name = "sample_fault_trees",
+       srcs = [":sample_fta"],
+       fta_package = "sample_safety_analysis_fta",
+       visibility = ["//visibility:public"],
+       deps = [":sample_failure_modes"],
+   )
+
    safety_analysis(
        name = "sample_safety_analysis",
        arch_design = "//design:sample_seooc_design",
-       failuremodes = ["sample_safety_analysis_failure_modes.trlc"],
-       root_causes = [":sample_fta"],
-       safetymeasures = ["sample_safety_analysis_safetymeasures.trlc"],
+       failure_modes = [":sample_failure_modes"],
+       fault_trees = ":sample_fault_trees",
+       safety_measures = [
+           "//docs:sample_aous",
+           "sample_safety_analysis_safetymeasures.trlc",
+       ],
        visibility = ["//visibility:public"],
    )
 
-An ``AoU`` whose ``root_causes`` reference the generated ``<name>_fta`` package
-is wired twice. Pass its ``.trlc`` file in ``safetymeasures`` so it counts as a
-measure of the root cause, and list the ``safety_analysis`` target in the
-``deps`` of the ``assumptions_of_use`` target so the generated package resolves
-when the AoU file is parsed. Every ``AoU`` in a ``safetymeasures`` file is
-expected to reference a root cause; keep AoUs without ``root_causes`` in a
-separate file that is only passed to ``assumptions_of_use``:
+The analysis is split in three targets to avoid a dependency cycle: the
+``failure_modes`` target holds the ``FailureMode`` records, the ``fault_trees``
+target generates the ``<fta_package>`` package with the ``RootCause`` records
+referencing them, the measures reference those records, and the
+``safety_analysis`` target lists the failure modes and the measures. Every
+``AoU`` references a root cause, so each ``assumptions_of_use`` target lists the
+``fault_trees`` target in its ``deps`` (so the generated package resolves when
+the AoU file is parsed) and is passed in the ``safety_measures`` of the
+``safety_analysis`` (so it counts as a measure of the root cause):
 
 .. code-block:: starlark
-
-   safety_analysis(
-       name = "sample_safety_analysis",
-       safetymeasures = ["aou.trlc"],
-       # ...
-   )
+   :caption: bazel/rules/rules_score/examples/seooc/docs/BUILD
 
    assumptions_of_use(
        name = "sample_aous",
-       srcs = ["aou.trlc"],
-       deps = [":sample_safety_analysis"],
+       srcs = ["aous.trlc"],
+       deps = ["//safety_analysis:sample_fault_trees"],
    )
 
+Raw ``.trlc`` files in ``safety_measures`` may only hold ``Mitigation``
+records, and a root cause whose failure mode is not in ``failure_modes`` fails
+the build.
+
+The ``dependable_element`` derives its own AoUs from the ``safety_measures`` of its
+safety analyses, so the AoU reaches the dependees once, however many safety
+analyses list it. An ``assumptions_of_use`` target that no ``safety_analysis``
+lists in ``safety_measures`` is neither rendered nor forwarded.
+
 The ``dependability_analysis`` target of the dependable element then
-references one or more ``safety_analysis`` targets by label:
+references a ``safety_analysis`` target by label:
 
 .. code-block:: starlark
    :caption: bazel/rules/rules_score/examples/seooc/BUILD
@@ -527,7 +551,15 @@ references one or more ``safety_analysis`` targets by label:
 and traceability report; ``bazel test`` validates the full chain (see
 `Traceability Validation`_).
 
+The dependable element stages the pages of each ``dependability_analysis`` under
+its name as ``safety_analysis.rst`` and ``fta.puml``. List one
+``safety_analysis`` per ``dependability_analysis``; for several safety analyses,
+use several ``dependability_analysis`` targets in the ``dependable_element``.
+Items shared by several safety analyses (e.g. the same AoU) are kept once.
+
 For the complete attribute reference, see
+:ref:`failure_modes <rule-failure-modes>`,
+:ref:`fault_trees <rule-fault-trees>`,
 :ref:`safety_analysis <rule-safety-analysis>` and
 :ref:`dependability_analysis <rule-dependability-analysis>` in the rule index.
 
@@ -565,10 +597,11 @@ enclosing ``dependable_element``:
                              Mitigation / AoU / CompReq
 
 A root cause that is not referenced by any ``Mitigation.root_causes``,
-``AoU.root_causes`` (passed in ``safetymeasures``), or ``CompReq.derived_from``
+``AoU.root_causes`` (from an ``assumptions_of_use`` target in ``safety_measures``), or ``CompReq.derived_from``
 is reported as *missing reference to Component Requirements or Safety Measures*.
 
 Fixing a traceability error means ensuring the reference is explicit: the
-``Mitigation``/``CompReq``/``AoU`` must import the generated ``<name>_fta``
-package and reference the ``RootCause`` stub by name (e.g.
+``Mitigation``/``CompReq``/``AoU`` must import the generated ``<fta_package>``
+package (the ``fta_package`` of the ``fault_trees`` target) and reference the
+``RootCause`` stub by name (e.g.
 ``sample_safety_analysis_fta.JustBadLuck``).

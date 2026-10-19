@@ -6,14 +6,18 @@
         "Package": {
           "name": {
             "internal": "Core",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 15
           },
           "types": [
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "A",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "",
                 "package": "Core",
@@ -21,20 +25,23 @@
                   "file": "",
                   "line": 16
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             },
             {
-              "ClassDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "B",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "",
                 "package": "Core",
@@ -42,13 +49,16 @@
                   "file": "",
                   "line": 17
                 },
-                "is_abstract": false,
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null,
-                "extends": [],
-                "implements": []
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
               }
             }
           ],
@@ -60,7 +70,11 @@
         "Package": {
           "name": {
             "internal": "App",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 20
           },
           "types": [],
           "relationships": [],
@@ -68,14 +82,18 @@
             {
               "name": {
                 "internal": "UI",
-                "display": null
+                "alias": null
+              },
+              "source_location": {
+                "file": "",
+                "line": 21
               },
               "types": [
                 {
-                  "ClassDef": {
+                  "ClassLikeDef": {
                     "name": {
                       "internal": "Button",
-                      "display": null
+                      "alias": null
                     },
                     "namespace": "",
                     "package": "UI",
@@ -83,13 +101,16 @@
                       "file": "",
                       "line": 22
                     },
-                    "is_abstract": false,
                     "type_aliases": [],
                     "attributes": [],
                     "methods": [],
-                    "template_parameters": null,
-                    "extends": [],
-                    "implements": []
+                    "kind": {
+                      "Class": {
+                        "is_abstract": false,
+                        "extends": [],
+                        "implements": []
+                      }
+                    }
                   }
                 }
               ],

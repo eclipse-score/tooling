@@ -24,12 +24,13 @@ rust_library(
     deps = [
         "//plantuml/parser/puml_parser:class_diagram",
         "//plantuml/parser/puml_parser:parser_core",
+        "//plantuml/parser/puml_resolver:group_resolution",
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//plantuml/parser/puml_resolver:uid_normalization",
         "//tools/metamodel/class:class_diagram",
-        "@crates//:log",
-        "@crates//:serde",
-        "@crates//:thiserror",
+        "@crates_score_tooling//:log",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:thiserror",
     ],
 )
 
@@ -56,8 +57,8 @@ rust_test(
         "//plantuml/parser/puml_resolver:resolver_traits",
         "//plantuml/parser/puml_utils",
         "//tools/metamodel/class:class_diagram",
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:thiserror",
+        "@crates_score_tooling//:serde",
+        "@crates_score_tooling//:serde_json",
+        "@crates_score_tooling//:thiserror",
     ],
 )

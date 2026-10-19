@@ -81,6 +81,11 @@ fn negative_missing_unit_suite_case() {
 }
 
 #[test]
+fn negative_unit_name_differs_from_target_suite_case() {
+    assert_case("negative_unit_name_differs_from_target");
+}
+
+#[test]
 fn negative_extra_unit_suite_case() {
     assert_case("negative_extra_unit");
 }

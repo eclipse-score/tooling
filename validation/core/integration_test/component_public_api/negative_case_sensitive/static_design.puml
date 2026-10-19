@@ -13,15 +13,15 @@
 
 @startuml static_design
 
-package "Sample Seooc" as sample_seooc <<SEooC>> {
-    component "Component Example" as component_example <<component>> {
-        component "Unit 1" as unit_1 <<unit>>
+package sample_seooc <<SEooC>> {
+    component component_example <<component>> {
+        component unit_1 <<unit>>
     }
 
     portout sample_seooc_public_api_port
 }
 
-interface "SampleLibraryAPI" as SampleLibraryAPI
+interface SampleLibraryAPI
 sample_seooc_public_api_port )-d- SampleLibraryAPI
 
 @enduml

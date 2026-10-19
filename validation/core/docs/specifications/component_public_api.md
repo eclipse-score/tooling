@@ -40,9 +40,10 @@ Public API diagram entities must be declared as interfaces to be matched.
 Other entity types (e.g. a `class` with the same name) are not indexed as
 public API interfaces, so a same-named class does not satisfy the check.
 
-Matching is done by the public API diagram entity's **name** (not its fully
-qualified ID), compared case-sensitively against the static design interface's
-ID.
+Matching is done by the last segment of the public API diagram entity's id
+(its declared name; an `as` alias is a local key and is not used), not its
+fully qualified id, compared case-sensitively against the static design
+interface's id.
 
 ### Interface Declaration Consistency
 
@@ -56,16 +57,16 @@ case-sensitive.
 
 ```text
 ' static design diagram
-package "Sample SEooC" as sample_seooc <<SEooC>> {
+package sample_seooc <<SEooC>> {
 }
 
-interface "Sample Library API" as SampleLibraryAPI
+interface SampleLibraryAPI
 sample_seooc )- SampleLibraryAPI
 ```
 
 ```text
 ' public API diagram
-interface "Sample Library API" as SampleLibraryAPI <<interface>> {
+interface SampleLibraryAPI <<interface>> {
   +GetNumber(): int
 }
 ```
@@ -87,10 +88,10 @@ the public API diagram is covered by Interface Declaration Consistency.
 
 ```text
 ' static design diagram
-package "Sample SEooC" as sample_seooc <<SEooC>> {
+package sample_seooc <<SEooC>> {
 }
 
-interface "Sample Library API" as SampleLibraryAPI
+interface SampleLibraryAPI
 sample_seooc )- SampleLibraryAPI
 ```
 

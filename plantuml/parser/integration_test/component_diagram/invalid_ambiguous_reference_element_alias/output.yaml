@@ -15,4 +15,4 @@ invalid_ambiguous_reference_element_alias.puml:
     type: "AmbiguousReference"
     fields:
       reference: "Worker"
-      candidates: "Pkg.A.Worker, Pkg.B.Worker"
+      candidates: "Pkg.A.WorkerA, Pkg.B.WorkerB"

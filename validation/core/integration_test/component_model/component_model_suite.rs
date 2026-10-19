@@ -98,3 +98,23 @@ fn positive_three_file_merge_suite_case() {
 fn positive_overview_nested_public_interface_suite_case() {
     assert_case("positive_overview_nested_public_interface");
 }
+
+#[test]
+fn negative_top_level_component_suite_case() {
+    assert_case("negative_top_level_component");
+}
+
+#[test]
+fn negative_component_under_plain_package_suite_case() {
+    assert_case("negative_component_under_plain_package");
+}
+
+#[test]
+fn negative_unmerged_detail_declaration_suite_case() {
+    assert_case("negative_unmerged_detail_declaration");
+}
+
+#[test]
+fn positive_wrapperless_detail_suite_case() {
+    assert_case("positive_wrapperless_detail");
+}

@@ -63,6 +63,16 @@ fn positive_class_features() {
 }
 
 #[test]
+fn positive_free_function_features() {
+    assert_case("positive_free_function_features");
+}
+
+#[test]
+fn positive_shared_implementation_dependency() {
+    assert_case("positive_shared_implementation_dependency");
+}
+
+#[test]
 fn positive_method_features() {
     assert_case("positive_method_features");
 }
@@ -76,6 +86,16 @@ fn positive_method_final_features() {
 // fn positive_method_template_pack_features() {
 //     assert_case("positive_method_template_pack_features");
 // }
+
+#[test]
+fn positive_overview_and_detail_merge() {
+    assert_case("positive_overview_and_detail_merge");
+}
+
+#[test]
+fn positive_overview_relationship_merge() {
+    assert_case("positive_overview_relationship_merge");
+}
 
 #[test]
 fn positive_relationship_features() {
@@ -148,6 +168,11 @@ fn negative_duplicate_class_entity_input() {
 }
 
 #[test]
+fn negative_duplicate_class_entity_implementation_input() {
+    assert_case("negative_duplicate_class_entity_implementation_input");
+}
+
+#[test]
 fn negative_entity_type_mismatch() {
     assert_case("negative_entity_type_mismatch");
 }
@@ -170,6 +195,26 @@ fn negative_variable_visibility_mismatch() {
 #[test]
 fn negative_method_missing() {
     assert_case("negative_method_missing");
+}
+
+#[test]
+fn negative_free_function_missing() {
+    assert_case("negative_free_function_missing");
+}
+
+#[test]
+fn negative_free_function_parameter_type_mismatch() {
+    assert_case("negative_free_function_parameter_type_mismatch");
+}
+
+#[test]
+fn negative_free_function_overload_mismatch() {
+    assert_case("negative_free_function_overload_mismatch");
+}
+
+#[test]
+fn negative_free_function_overloads_missing() {
+    assert_case("negative_free_function_overloads_missing");
 }
 
 #[test]
@@ -218,8 +263,8 @@ fn negative_method_parameter_type_mismatch() {
 }
 
 #[test]
-fn negative_method_parameter_variadic_mismatch() {
-    assert_case("negative_method_parameter_variadic_mismatch");
+fn negative_method_parameter_variadic_pack_expansion_mismatch() {
+    assert_case("negative_method_parameter_variadic_pack_expansion_mismatch");
 }
 
 #[test]
@@ -230,6 +275,11 @@ fn negative_method_visibility_mismatch() {
 #[test]
 fn negative_relationship_missing() {
     assert_case("negative_relationship_missing");
+}
+
+#[test]
+fn negative_overview_relationship_missing() {
+    assert_case("negative_overview_relationship_missing");
 }
 
 #[test]

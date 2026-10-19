@@ -6,7 +6,11 @@
         "Namespace": {
           "name": {
             "internal": "App",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 15
           },
           "types": [],
           "relationships": [],
@@ -14,14 +18,18 @@
             {
               "name": {
                 "internal": "UI",
-                "display": null
+                "alias": null
+              },
+              "source_location": {
+                "file": "",
+                "line": 16
               },
               "types": [
                 {
-                  "ClassDef": {
+                  "ClassLikeDef": {
                     "name": {
                       "internal": "Button",
-                      "display": null
+                      "alias": null
                     },
                     "namespace": "UI",
                     "package": "",
@@ -29,13 +37,16 @@
                       "file": "",
                       "line": 17
                     },
-                    "is_abstract": false,
                     "type_aliases": [],
                     "attributes": [],
                     "methods": [],
-                    "template_parameters": null,
-                    "extends": [],
-                    "implements": []
+                    "kind": {
+                      "Class": {
+                        "is_abstract": false,
+                        "extends": [],
+                        "implements": []
+                      }
+                    }
                   }
                 }
               ],

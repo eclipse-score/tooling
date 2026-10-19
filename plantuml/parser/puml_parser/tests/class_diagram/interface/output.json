@@ -3,11 +3,11 @@
     "name": "",
     "elements": [
       {
-        "Types": {
-          "InterfaceDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "J",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -29,8 +29,11 @@
               }
             ],
             "methods": [],
-            "template_parameters": null,
-            "extends": []
+            "kind": {
+              "Interface": {
+                "extends": []
+              }
+            }
           }
         }
       }

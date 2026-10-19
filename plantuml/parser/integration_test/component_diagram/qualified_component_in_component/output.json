@@ -1,0 +1,24 @@
+{
+  "qualified_component_in_component.puml": {
+    "outer": {
+      "id": "outer",
+      "name": "outer",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [],
+      "source_location": { "file": "", "line": 15 }
+    },
+    "outer.a.b.C": {
+      "id": "outer.a.b.C",
+      "name": "a.b.C",
+      "alias": null,
+      "parent_id": "outer.a.b",
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [],
+      "source_location": { "file": "", "line": 16 }
+    }
+  }
+}

@@ -57,6 +57,26 @@ fn positive_exact_match_suite_case() {
 }
 
 #[test]
+fn positive_leaf_reference_suite_case() {
+    assert_case("positive_leaf_reference");
+}
+
+#[test]
+fn positive_qualified_reference_suite_case() {
+    assert_case("positive_qualified_reference");
+}
+
+#[test]
+fn positive_unit_without_alias_suite_case() {
+    assert_case("positive_unit_without_alias");
+}
+
+#[test]
+fn negative_ambiguous_leaf_reference_suite_case() {
+    assert_case("negative_ambiguous_leaf_reference");
+}
+
+#[test]
 fn positive_overview_preserves_unit_bindings_suite_case() {
     assert_case("positive_overview_preserves_unit_bindings");
 }

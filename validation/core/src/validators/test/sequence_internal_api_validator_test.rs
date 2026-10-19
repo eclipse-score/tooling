@@ -144,6 +144,39 @@ fn reports_sequence_function_missing_from_available_interfaces_with_component_co
 }
 
 #[test]
+fn resolves_leaf_participants_to_nested_units() {
+    let mut caller = unit_with_parent_id("u1", "comp_a");
+    caller.relations = vec![relation(
+        "InternalInterface",
+        ComponentRelationType::InterfaceBinding,
+        EndpointRole::Required,
+    )];
+    let mut callee = unit_with_parent_id("u2", "comp_a");
+    callee.relations = vec![relation(
+        "InternalInterface",
+        ComponentRelationType::InterfaceBinding,
+        EndpointRole::Provided,
+    )];
+    let component_diagrams = component_diagram(vec![
+        component("comp_a"),
+        caller,
+        callee,
+        interface("InternalInterface"),
+    ]);
+    let sequence_diagrams = sequence_calls(&[("u1", "u2", "GetData()")]);
+    let internal_api = internal_api_index(vec![("InternalInterface", vec!["GetData"])]);
+
+    let validation_result =
+        validate_with_component_context(component_diagrams, sequence_diagrams, &internal_api);
+
+    assert!(
+        validation_result.failures.is_empty(),
+        "{:?}",
+        validation_result.failures
+    );
+}
+
+#[test]
 fn reports_sequence_function_missing_when_shared_interface_has_no_direction_roles() {
     let component_diagrams = component_diagram(vec![
         unit_with_non_binding_interface("u1", "InternalInterface"),

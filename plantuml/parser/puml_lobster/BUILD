@@ -20,7 +20,7 @@ rust_library(
     deps = [
         "//tools/metamodel/class:class_diagram",
         "//tools/metamodel/component:component_diagram",
-        "@crates//:serde_json",
+        "@crates_score_tooling//:serde_json",
     ],
 )
 

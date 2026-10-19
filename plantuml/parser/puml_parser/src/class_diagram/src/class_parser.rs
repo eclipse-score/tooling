@@ -11,11 +11,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 use crate::class_ast::{
-    Arrow, Attribute, ClassDef, ClassUmlFile, ClassUmlTopLevel, Element, EnumDef, EnumItem,
-    EnumValue, InterfaceDef, Method, Name, Namespace, Package, Param, Relationship, StructDef,
-    TypeAlias, Visibility,
+    Arrow, Attribute, ClassLikeDef, ClassLikeKind, ClassUmlFile, ClassUmlTopLevel,
+    DeclarationCommon, EntityDef, EnumDef, EnumItem, EnumValue, Method, Name, Namespace, Package,
+    Param, Relationship, TypeAlias, TypeDefinition, Visibility,
 };
-use crate::class_traits::{TypeDef, WritableName};
 use crate::source_map::{
     normalize_multiline_member_signatures, remap_syntax_error_to_original_source, NormalizedContent,
 };
@@ -84,7 +83,7 @@ impl IgnoredObjectRegistry {
         self.ids.insert(Self::build_fqn(&name.internal, parent));
         self.names.insert(name.internal.clone());
 
-        if let Some(alias) = &name.display {
+        if let Some(alias) = &name.alias {
             self.names.insert(alias.clone());
         }
     }
@@ -105,6 +104,20 @@ impl IgnoredObjectRegistry {
     fn filters_relationship(&self, relationship: &Relationship, parent: &Option<String>) -> bool {
         self.contains_reference(&relationship.left, parent)
             || self.contains_reference(&relationship.right, parent)
+    }
+}
+
+#[derive(Clone, Copy)]
+enum TypeDefinitionScope {
+    Namespace,
+    Package,
+}
+impl TypeDefinitionScope {
+    fn assign(self, definition: &mut TypeDefinition, name: &str) {
+        match self {
+            Self::Namespace => definition.declaration_mut().namespace = name.to_string(),
+            Self::Package => definition.declaration_mut().package = name.to_string(),
+        }
     }
 }
 
@@ -141,59 +154,71 @@ impl ClassParseSession<'_> {
         vis
     }
 
+    /// A quoted alias (`X as "Label"`) is the name, the bare side the alias.
     fn parse_named(pair: pest::iterators::Pair<Rule>, name: &mut Name) {
-        let mut internal: Option<String> = None;
-        let mut display: Option<String> = None;
+        #[derive(Default)]
+        struct Parts {
+            internal: Option<String>,
+            alias: Option<String>,
+            alias_quoted: bool,
+        }
+
+        fn is_quoted(s: &str) -> bool {
+            s.starts_with('"') && s.ends_with('"') && s.len() >= 2
+        }
 
         fn strip_quotes(s: &str) -> String {
-            if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
+            if is_quoted(s) {
                 s[1..s.len() - 1].to_string()
             } else {
                 s.to_string()
             }
         }
 
-        fn walk(
-            pair: pest::iterators::Pair<Rule>,
-            internal: &mut Option<String>,
-            display: &mut Option<String>,
-        ) {
+        fn walk(pair: pest::iterators::Pair<Rule>, parts: &mut Parts) {
             match pair.as_rule() {
                 Rule::internal_name => {
                     let raw = pair.as_str().to_string();
                     let saw_inner = pair.clone().into_inner().next().is_some();
 
                     for inner in pair.into_inner() {
-                        walk(inner, internal, display);
+                        walk(inner, parts);
                     }
 
                     if !saw_inner {
-                        *internal = Some(strip_quotes(&raw));
+                        parts.internal = Some(strip_quotes(&raw));
                     }
                 }
-                Rule::STRING | Rule::class_qualified_name => {
-                    if internal.is_none() {
-                        *internal = Some(strip_quotes(pair.as_str()));
+                Rule::STRING | Rule::class_name_path => {
+                    if parts.internal.is_none() {
+                        parts.internal = Some(strip_quotes(pair.as_str()));
                     }
                 }
                 Rule::alias_clause => {
                     let mut inner = pair.into_inner();
                     if let Some(target) = inner.next() {
-                        *display = Some(strip_quotes(target.as_str()));
+                        parts.alias = Some(strip_quotes(target.as_str()));
+                        parts.alias_quoted = is_quoted(target.as_str());
                     }
                 }
                 _ => {
                     for inner in pair.into_inner() {
-                        walk(inner, internal, display);
+                        walk(inner, parts);
                     }
                 }
             }
         }
 
-        walk(pair, &mut internal, &mut display);
+        let mut parts = Parts::default();
+        walk(pair, &mut parts);
 
-        if let Some(internal) = internal {
-            name.write_name(&internal, display.as_deref());
+        if let Some(internal) = parts.internal {
+            match parts.alias {
+                Some(alias) if parts.alias_quoted => {
+                    name.write_name(alias, Some(internal));
+                }
+                alias => name.write_name(&internal, alias.as_deref()),
+            }
         }
     }
 
@@ -266,14 +291,11 @@ impl ClassParseSession<'_> {
         }
     }
 
-    fn parse_class_member_into<T>(
+    fn parse_class_member_into(
         &self,
         pair: pest::iterators::Pair<Rule>,
-        def: &mut T,
-    ) -> Result<(), ClassError>
-    where
-        T: TypeDef,
-    {
+        def: &mut ClassLikeDef,
+    ) -> Result<(), ClassError> {
         match pair.as_rule() {
             Rule::attribute => {
                 let is_type_alias = pair
@@ -282,13 +304,13 @@ impl ClassParseSession<'_> {
                     .any(|inner| inner.as_rule() == Rule::using_attribute);
 
                 if is_type_alias {
-                    def.type_aliases_mut().push(self.parse_type_alias(pair));
+                    def.members.type_aliases.push(self.parse_type_alias(pair));
                 } else {
-                    def.attributes_mut().push(self.parse_attribute(pair)?);
+                    def.members.attributes.push(self.parse_attribute(pair)?);
                 }
             }
             Rule::method => {
-                def.methods_mut().push(self.parse_method(pair));
+                def.members.methods.push(self.parse_method(pair));
             }
             _ => Err(ClassError::UnexpectedClassMember(format!(
                 "{:?}",
@@ -487,20 +509,18 @@ impl ClassParseSession<'_> {
         method
     }
 
-    fn walk_type_def_into<T>(
+    fn walk_class_like_def_into(
         &self,
         pair: pest::iterators::Pair<Rule>,
-        def: &mut T,
-    ) -> Result<(), ClassError>
-    where
-        T: TypeDef,
-    {
+        def: &mut ClassLikeDef,
+    ) -> Result<(), ClassError> {
         match pair.as_rule() {
             Rule::named => {
-                Self::parse_named(pair, def.name_mut());
+                Self::parse_named(pair, &mut def.declaration.name);
             }
             Rule::stereotype => {
-                def.stereotypes_mut()
+                def.declaration
+                    .stereotypes
                     .extend(Self::extract_stereotypes(pair));
             }
             Rule::class_body => {
@@ -516,7 +536,7 @@ impl ClassParseSession<'_> {
             }
             _ => {
                 for inner in pair.into_inner() {
-                    self.walk_type_def_into(inner, def)?;
+                    self.walk_class_like_def_into(inner, def)?;
                 }
             }
         }
@@ -524,13 +544,13 @@ impl ClassParseSession<'_> {
         Ok(())
     }
 
-    fn parse_type_def_into<T>(&self, pair: pest::iterators::Pair<Rule>) -> Result<T, ClassError>
-    where
-        T: TypeDef + Default,
-    {
-        let mut def = T::default();
+    fn parse_class_like_def(
+        &self,
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<ClassLikeDef, ClassError> {
+        let mut def = ClassLikeDef::default();
 
-        self.walk_type_def_into(pair, &mut def)?;
+        self.walk_class_like_def_into(pair, &mut def)?;
 
         Ok(def)
     }
@@ -552,7 +572,8 @@ impl ClassParseSession<'_> {
         name
     }
 
-    fn filter_relationships(
+    fn filter_visible_relationships(
+        &self,
         relationships: Vec<Relationship>,
         ignored_objects: &IgnoredObjectRegistry,
         parent: &Option<String>,
@@ -560,6 +581,11 @@ impl ClassParseSession<'_> {
         relationships
             .into_iter()
             .filter(|relationship| !ignored_objects.filters_relationship(relationship, parent))
+            .filter(|relationship| {
+                !self
+                    .ignored_notes
+                    .filters_endpoints(&relationship.left, &relationship.right)
+            })
             .collect()
     }
 
@@ -569,7 +595,10 @@ impl ClassParseSession<'_> {
         SourceLocation::new(self.source_file.clone(), original_line)
     }
 
-    fn parse_type_def(&self, pair: pest::iterators::Pair<Rule>) -> Result<Element, ClassError> {
+    fn parse_type_def(
+        &self,
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<TypeDefinition, ClassError> {
         debug_assert_eq!(pair.as_rule(), Rule::type_def);
 
         fn find_type_kind(pair: pest::iterators::Pair<Rule>) -> Option<String> {
@@ -591,10 +620,7 @@ impl ClassParseSession<'_> {
                 match pair.as_rule() {
                     Rule::extends_clause => {
                         for inner in pair.into_inner() {
-                            if matches!(
-                                inner.as_rule(),
-                                Rule::extends_target | Rule::class_qualified_name
-                            ) {
+                            if inner.as_rule() == Rule::extends_target {
                                 targets.push(inner.as_str().to_string());
                             }
                         }
@@ -617,10 +643,7 @@ impl ClassParseSession<'_> {
                 match pair.as_rule() {
                     Rule::implements_clause => {
                         for inner in pair.into_inner() {
-                            if matches!(
-                                inner.as_rule(),
-                                Rule::implements_target | Rule::class_qualified_name
-                            ) {
+                            if inner.as_rule() == Rule::implements_target {
                                 targets.push(inner.as_str().to_string());
                             }
                         }
@@ -725,7 +748,7 @@ impl ClassParseSession<'_> {
             raw_type_def: &str,
         ) -> Option<Vec<String>> {
             explicit.or_else(|| {
-                name.display
+                name.alias
                     .as_deref()
                     .and_then(infer_template_parameters_from_template_string)
                     .or_else(|| infer_template_parameters_from_template_string(&name.internal))
@@ -735,65 +758,55 @@ impl ClassParseSession<'_> {
 
         let raw_type_def = pair.as_str().to_string();
         let source_location = self.original_source_location(&pair);
-        let kind = find_type_kind(pair.clone()).expect("type_def must have type_kind");
+        let kind = find_type_kind(pair.clone())
+            .expect("type_def must have type_kind")
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
         let explicit_template_parameters = collect_type_template_parameters(pair.clone());
         let extends_targets = collect_extends_targets(pair.clone());
         let implements_targets = collect_implements_targets(pair.clone());
 
-        match kind.as_str() {
-            "abstract class" => {
-                let mut def = self.parse_type_def_into::<ClassDef>(pair)?;
-                def.source_location = source_location;
-                def.is_abstract = true;
-                def.template_parameters = resolve_type_template_parameters(
-                    explicit_template_parameters,
-                    &def.name,
-                    &raw_type_def,
-                );
-                def.extends = extends_targets;
-                def.implements = implements_targets;
-                Ok(Element::ClassDef(def))
-            }
-            "class" => {
-                let mut def = self.parse_type_def_into::<ClassDef>(pair)?;
-                def.source_location = source_location;
-                def.template_parameters = resolve_type_template_parameters(
-                    explicit_template_parameters,
-                    &def.name,
-                    &raw_type_def,
-                );
-                def.extends = extends_targets;
-                def.implements = implements_targets;
-                Ok(Element::ClassDef(def))
-            }
-            "struct" => {
-                let mut def = self.parse_type_def_into::<StructDef>(pair)?;
-                def.source_location = source_location;
-                def.template_parameters = resolve_type_template_parameters(
-                    explicit_template_parameters,
-                    &def.name,
-                    &raw_type_def,
-                );
-                Ok(Element::StructDef(def))
-            }
-            "interface" => {
-                let mut def = self.parse_type_def_into::<InterfaceDef>(pair)?;
-                def.source_location = source_location;
-                def.template_parameters = resolve_type_template_parameters(
-                    explicit_template_parameters,
-                    &def.name,
-                    &raw_type_def,
-                );
-                def.extends = extends_targets;
-                Ok(Element::InterfaceDef(def))
-            }
-            _ => unreachable!("unknown type_kind: {}", kind),
+        if kind == "entity" {
+            let def = self.parse_class_like_def(pair)?;
+            return Ok(TypeDefinition::EntityDef(EntityDef {
+                declaration: DeclarationCommon {
+                    source_location,
+                    ..def.declaration
+                },
+                methods: def.members.methods,
+            }));
         }
+
+        let mut def = self.parse_class_like_def(pair)?;
+        def.declaration.source_location = source_location;
+        def.template_parameters = resolve_type_template_parameters(
+            explicit_template_parameters,
+            &def.declaration.name,
+            &raw_type_def,
+        );
+        def.kind = match kind.as_str() {
+            "abstract class" | "class" => ClassLikeKind::Class {
+                is_abstract: kind == "abstract class",
+                extends: extends_targets,
+                implements: implements_targets,
+            },
+            "struct" => ClassLikeKind::Struct,
+            "interface" => ClassLikeKind::Interface {
+                extends: extends_targets,
+            },
+            _ => unreachable!("unknown type_kind: {}", kind),
+        };
+
+        Ok(TypeDefinition::ClassLikeDef(def))
     }
 
     fn parse_enum_def(&self, pair: pest::iterators::Pair<Rule>) -> EnumDef {
         let mut enum_def = EnumDef {
-            source_location: self.original_source_location(&pair),
+            declaration: DeclarationCommon {
+                source_location: self.original_source_location(&pair),
+                ..DeclarationCommon::default()
+            },
             ..EnumDef::default()
         };
 
@@ -801,10 +814,11 @@ impl ClassParseSession<'_> {
             match inner.as_rule() {
                 Rule::named => {
                     // enum_def.name = inner.as_str().trim().to_string();
-                    Self::parse_named(inner, &mut enum_def.name);
+                    Self::parse_named(inner, &mut enum_def.declaration.name);
                 }
                 Rule::stereotype => {
                     enum_def
+                        .declaration
                         .stereotypes
                         .extend(Self::extract_stereotypes(inner));
                 }
@@ -880,19 +894,26 @@ impl ClassParseSession<'_> {
                 Ok(vec![])
             }
             Rule::type_def => {
-                let type_def = self.parse_type_def(pair)?;
-                Ok(vec![ClassUmlTopLevel::Types(type_def)])
+                let type_definition = self.parse_type_def(pair)?;
+                Ok(vec![ClassUmlTopLevel::Type(type_definition)])
             }
+            Rule::enum_def => Ok(vec![ClassUmlTopLevel::Type(TypeDefinition::EnumDef(
+                self.parse_enum_def(pair),
+            ))]),
             Rule::unsupported_object_def => {
                 let ignored = Self::parse_ignored_object_name(pair);
                 self.ignored_objects.register(&ignored, &None);
                 Ok(vec![])
             }
-            Rule::enum_def => Ok(vec![ClassUmlTopLevel::Enum(self.parse_enum_def(pair))]),
             Rule::namespace_def => {
                 let (namespace, nested_ignored_objects) = self.parse_namespace(pair)?;
                 self.ignored_objects.merge(nested_ignored_objects);
                 Ok(vec![ClassUmlTopLevel::Namespace(namespace)])
+            }
+            Rule::package_def => {
+                let (package, nested_ignored_objects) = self.parse_package(pair)?;
+                self.ignored_objects.merge(nested_ignored_objects);
+                Ok(vec![ClassUmlTopLevel::Package(package)])
             }
             Rule::relationship => {
                 let source_location = self.original_source_location(&pair);
@@ -900,20 +921,57 @@ impl ClassParseSession<'_> {
                     .push(parse_relationship(pair, source_location));
                 Ok(vec![])
             }
-            Rule::package_def => {
-                let (package, nested_ignored_objects) = self.parse_package(pair)?;
-                self.ignored_objects.merge(nested_ignored_objects);
-                Ok(vec![ClassUmlTopLevel::Package(package)])
-            }
             _ => Ok(vec![]),
         }
+    }
+
+    fn parse_scoped_item(
+        &mut self,
+        pair: pest::iterators::Pair<Rule>,
+        scope_name: &str,
+        scope: TypeDefinitionScope,
+        ignored_objects: &mut IgnoredObjectRegistry,
+        relationships: &mut Vec<Relationship>,
+        definitions: &mut Vec<TypeDefinition>,
+    ) -> Result<(), ClassError> {
+        match pair.as_rule() {
+            Rule::note_declaration => {
+                if let Some(alias) = find_note_alias(pair) {
+                    self.ignored_notes.register(alias);
+                }
+            }
+            Rule::type_def => {
+                let mut definition = self.parse_type_def(pair)?;
+                scope.assign(&mut definition, scope_name);
+                definitions.push(definition);
+            }
+            Rule::enum_def => {
+                let mut definition = TypeDefinition::EnumDef(self.parse_enum_def(pair));
+                scope.assign(&mut definition, scope_name);
+                definitions.push(definition);
+            }
+            Rule::unsupported_object_def => {
+                let ignored = Self::parse_ignored_object_name(pair);
+                ignored_objects.register(&ignored, &Some(scope_name.to_string()));
+            }
+            Rule::relationship => {
+                let source_location = self.original_source_location(&pair);
+                relationships.push(parse_relationship(pair, source_location));
+            }
+            _ => {}
+        }
+
+        Ok(())
     }
 
     fn parse_namespace(
         &mut self,
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<(Namespace, IgnoredObjectRegistry), ClassError> {
-        let mut namespace = Namespace::default();
+        let mut namespace = Namespace {
+            source_location: self.original_source_location(&pair),
+            ..Namespace::default()
+        };
         let mut ignored_objects = IgnoredObjectRegistry::default();
         let mut relationships = Vec::new();
 
@@ -925,40 +983,20 @@ impl ClassParseSession<'_> {
                 Rule::top_level => {
                     for top_level_inner in Self::flatten_top_level(inner) {
                         match top_level_inner.as_rule() {
-                            Rule::note_declaration => {
-                                if let Some(alias) = find_note_alias(top_level_inner) {
-                                    self.ignored_notes.register(alias);
-                                }
-                            }
-                            Rule::type_def => {
-                                let mut type_def = self.parse_type_def(top_level_inner)?;
-                                type_def.set_namespace(namespace.name.internal.clone());
-                                namespace.types.push(type_def);
-                            }
-                            Rule::unsupported_object_def => {
-                                let ignored = Self::parse_ignored_object_name(top_level_inner);
-                                ignored_objects
-                                    .register(&ignored, &Some(namespace.name.internal.clone()));
-                            }
-                            Rule::enum_def => {
-                                let mut enum_def =
-                                    Element::EnumDef(self.parse_enum_def(top_level_inner));
-                                enum_def.set_namespace(namespace.name.internal.clone());
-                                namespace.types.push(enum_def);
-                            }
-                            Rule::relationship => {
-                                let source_location =
-                                    self.original_source_location(&top_level_inner);
-                                relationships
-                                    .push(parse_relationship(top_level_inner, source_location));
-                            }
                             Rule::namespace_def => {
                                 let (nested_namespace, nested_ignored_objects) =
                                     self.parse_namespace(top_level_inner)?;
                                 ignored_objects.merge(nested_ignored_objects);
                                 namespace.namespaces.push(nested_namespace);
                             }
-                            _ => (),
+                            _ => self.parse_scoped_item(
+                                top_level_inner,
+                                &namespace.name.internal,
+                                TypeDefinitionScope::Namespace,
+                                &mut ignored_objects,
+                                &mut relationships,
+                                &mut namespace.types,
+                            )?,
                         }
                     }
                 }
@@ -966,18 +1004,11 @@ impl ClassParseSession<'_> {
             }
         }
 
-        namespace.relationships = Self::filter_relationships(
+        namespace.relationships = self.filter_visible_relationships(
             relationships,
             &ignored_objects,
             &Some(namespace.name.internal.clone()),
-        )
-        .into_iter()
-        .filter(|relationship| {
-            !self
-                .ignored_notes
-                .filters_endpoints(&relationship.left, &relationship.right)
-        })
-        .collect();
+        );
 
         Ok((namespace, ignored_objects))
     }
@@ -986,7 +1017,10 @@ impl ClassParseSession<'_> {
         &mut self,
         pair: pest::iterators::Pair<Rule>,
     ) -> Result<(Package, IgnoredObjectRegistry), ClassError> {
-        let mut package = Package::default();
+        let mut package = Package {
+            source_location: self.original_source_location(&pair),
+            ..Package::default()
+        };
         let mut ignored_objects = IgnoredObjectRegistry::default();
         let mut relationships = Vec::new();
 
@@ -999,36 +1033,19 @@ impl ClassParseSession<'_> {
                 Rule::top_level => {
                     for t in Self::flatten_top_level(inner) {
                         match t.as_rule() {
-                            Rule::note_declaration => {
-                                if let Some(alias) = find_note_alias(t) {
-                                    self.ignored_notes.register(alias);
-                                }
-                            }
-                            Rule::type_def => {
-                                let mut r#type = self.parse_type_def(t)?;
-                                r#type.set_package(package.name.internal.clone());
-                                package.types.push(r#type);
-                            }
-                            Rule::unsupported_object_def => {
-                                let ignored = Self::parse_ignored_object_name(t);
-                                ignored_objects
-                                    .register(&ignored, &Some(package.name.internal.clone()));
-                            }
-                            Rule::enum_def => {
-                                let mut enum_def = Element::EnumDef(self.parse_enum_def(t));
-                                enum_def.set_package(package.name.internal.clone());
-                                package.types.push(enum_def);
-                            }
-                            Rule::relationship => {
-                                let source_location = self.original_source_location(&t);
-                                relationships.push(parse_relationship(t, source_location));
-                            }
                             Rule::package_def => {
                                 let (subpackage, nested_ignored_objects) = self.parse_package(t)?;
                                 ignored_objects.merge(nested_ignored_objects);
                                 package.packages.push(subpackage);
                             }
-                            _ => (),
+                            _ => self.parse_scoped_item(
+                                t,
+                                &package.name.internal,
+                                TypeDefinitionScope::Package,
+                                &mut ignored_objects,
+                                &mut relationships,
+                                &mut package.types,
+                            )?,
                         }
                     }
                 }
@@ -1036,18 +1053,11 @@ impl ClassParseSession<'_> {
             }
         }
 
-        package.relationships = Self::filter_relationships(
+        package.relationships = self.filter_visible_relationships(
             relationships,
             &ignored_objects,
             &Some(package.name.internal.clone()),
-        )
-        .into_iter()
-        .filter(|relationship| {
-            !self
-                .ignored_notes
-                .filters_endpoints(&relationship.left, &relationship.right)
-        })
-        .collect();
+        );
 
         Ok((package, ignored_objects))
     }
@@ -1187,18 +1197,12 @@ impl DiagramParser for PumlClassParser {
                     }
                 }
 
-                uml_file.relationships = ClassParseSession::filter_relationships(
-                    std::mem::take(&mut session.relationships),
+                let relationships = std::mem::take(&mut session.relationships);
+                uml_file.relationships = session.filter_visible_relationships(
+                    relationships,
                     &session.ignored_objects,
                     &None,
-                )
-                .into_iter()
-                .filter(|relationship| {
-                    !session
-                        .ignored_notes
-                        .filters_endpoints(&relationship.left, &relationship.right)
-                })
-                .collect();
+                );
             }
             Err(e) => {
                 return Err(ClassError::Base(remap_syntax_error_to_original_source(
@@ -1342,17 +1346,18 @@ mod tests {
             )
             .unwrap();
 
-        let ClassUmlTopLevel::Types(Element::ClassDef(class_def)) = &result.elements[0] else {
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) = &result.elements[0]
+        else {
             panic!("expected class element");
         };
 
-        assert_eq!(class_def.attributes.len(), 1);
-        assert_eq!(class_def.attributes[0].name, "");
+        assert_eq!(class_def.members.attributes.len(), 1);
+        assert_eq!(class_def.members.attributes[0].name, "");
         assert_eq!(
-            class_def.attributes[0].r#type.as_deref(),
+            class_def.members.attributes[0].r#type.as_deref(),
             Some("std::mutex")
         );
-        assert_eq!(class_def.attributes[0].source_location.line, 3);
+        assert_eq!(class_def.members.attributes[0].source_location.line, 3);
     }
 
     fn parse_single_class_member_file(member: &str) -> Result<ClassUmlFile, ClassError> {
@@ -1372,11 +1377,12 @@ mod tests {
         )
         .unwrap();
 
-        let ClassUmlTopLevel::Types(Element::ClassDef(class_def)) = &result.elements[0] else {
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) = &result.elements[0]
+        else {
             panic!("expected class element");
         };
 
-        let method = &class_def.methods[0];
+        let method = &class_def.members.methods[0];
         assert_eq!(
             method.params[0].param_type.as_deref(),
             Some("const safecpp::Scope<>&")
@@ -1392,12 +1398,13 @@ mod tests {
     fn test_parse_empty_template_args_in_attribute() {
         let result = parse_single_class_member_file("+scope : safecpp::Scope<>").unwrap();
 
-        let ClassUmlTopLevel::Types(Element::ClassDef(class_def)) = &result.elements[0] else {
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) = &result.elements[0]
+        else {
             panic!("expected class element");
         };
 
         assert_eq!(
-            class_def.attributes[0].r#type.as_deref(),
+            class_def.members.attributes[0].r#type.as_deref(),
             Some("safecpp::Scope<>")
         );
     }
@@ -1406,12 +1413,16 @@ mod tests {
     fn test_parse_const_qualifier_after_empty_template_args() {
         let result = parse_single_class_member_file("+Get(): Foo<> <<const>>").unwrap();
 
-        let ClassUmlTopLevel::Types(Element::ClassDef(class_def)) = &result.elements[0] else {
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) = &result.elements[0]
+        else {
             panic!("expected class element");
         };
 
-        assert_eq!(class_def.methods[0].r#type.as_deref(), Some("Foo<>"));
-        assert_eq!(class_def.methods[0].modifiers, vec!["<<const>>"]);
+        assert_eq!(
+            class_def.members.methods[0].r#type.as_deref(),
+            Some("Foo<>")
+        );
+        assert_eq!(class_def.members.methods[0].modifiers, vec!["<<const>>"]);
     }
 
     #[test]
@@ -1438,14 +1449,18 @@ mod tests {
             )
             .unwrap();
 
-        let ClassUmlTopLevel::Types(Element::ClassDef(class_def)) = &result.elements[0] else {
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) = &result.elements[0]
+        else {
             panic!("expected class element");
         };
 
-        assert_eq!(class_def.type_aliases.len(), 1);
-        assert_eq!(class_def.type_aliases[0].alias, "Byte");
-        assert_eq!(class_def.type_aliases[0].original_type, "std::uint8_t");
-        assert_eq!(class_def.type_aliases[0].source_location.line, 3);
+        assert_eq!(class_def.members.type_aliases.len(), 1);
+        assert_eq!(class_def.members.type_aliases[0].alias, "Byte");
+        assert_eq!(
+            class_def.members.type_aliases[0].original_type,
+            "std::uint8_t"
+        );
+        assert_eq!(class_def.members.type_aliases[0].source_location.line, 3);
     }
 
     #[test]
@@ -1515,6 +1530,178 @@ mod tests {
         let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
 
         assert_eq!(rel.right, ".B");
+    }
+
+    #[test]
+    fn test_parse_relationship_double_colon_root_marker_endpoint() {
+        let pair = PlantUmlCommonParser::parse(Rule::relationship, "::a::A --> ::b::B")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let rel = super::parse_relationship(pair, SourceLocation::new("test.puml", 1));
+
+        assert_eq!(rel.left, "::a::A");
+        assert_eq!(rel.right, "::b::B");
+    }
+
+    fn parse_class_diagram_body(body: &str) -> Result<ClassUmlFile, ClassError> {
+        let input = format!("@startuml\n{body}\n@enduml\n");
+        PumlClassParser.parse_file(
+            &std::rc::Rc::new(std::path::PathBuf::from("test.puml")),
+            &input,
+            LogLevel::Info,
+        )
+    }
+
+    /// Both separators and both root markers, for every qualified position.
+    const NAME_SPELLINGS: [&str; 6] = ["a.b.C", "a::b::C", "a.b::C", ".a.C", "::a::C", "::a.C"];
+
+    #[test]
+    fn test_declaration_names_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            for keyword in ["class", "struct", "interface", "abstract class"] {
+                let file = parse_class_diagram_body(&format!("{keyword} {spelling}"))
+                    .unwrap_or_else(|error| panic!("`{keyword} {spelling}`: {error:?}"));
+                let ClassUmlTopLevel::Type(element) = &file.elements[0] else {
+                    panic!("`{keyword} {spelling}`: expected a type element");
+                };
+                let name = match element {
+                    TypeDefinition::ClassLikeDef(def) => &def.declaration.name,
+                    TypeDefinition::EntityDef(def) => &def.declaration.name,
+                    TypeDefinition::EnumDef(def) => &def.declaration.name,
+                };
+                assert_eq!(name.internal, spelling, "`{keyword} {spelling}`");
+            }
+
+            let file = parse_class_diagram_body(&format!("enum {spelling}"))
+                .unwrap_or_else(|error| panic!("`enum {spelling}`: {error:?}"));
+            let ClassUmlTopLevel::Type(TypeDefinition::EnumDef(def)) = &file.elements[0] else {
+                panic!("`enum {spelling}`: expected an enum");
+            };
+            assert_eq!(def.declaration.name.internal, spelling);
+        }
+    }
+
+    #[test]
+    fn test_package_and_namespace_names_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            let file = parse_class_diagram_body(&format!("package {spelling} {{\n}}"))
+                .unwrap_or_else(|error| panic!("`package {spelling}`: {error:?}"));
+            let ClassUmlTopLevel::Package(package) = &file.elements[0] else {
+                panic!("`package {spelling}`: expected a package");
+            };
+            assert_eq!(package.name.internal, spelling);
+
+            let file = parse_class_diagram_body(&format!("namespace {spelling} {{\n}}"))
+                .unwrap_or_else(|error| panic!("`namespace {spelling}`: {error:?}"));
+            let ClassUmlTopLevel::Namespace(namespace) = &file.elements[0] else {
+                panic!("`namespace {spelling}`: expected a namespace");
+            };
+            assert_eq!(namespace.name.internal, spelling);
+        }
+    }
+
+    #[test]
+    fn test_extends_and_implements_targets_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            let file = parse_class_diagram_body(&format!(
+                "class X extends {spelling}, Y implements {spelling}, Z"
+            ))
+            .unwrap_or_else(|error| panic!("{spelling}: {error:?}"));
+            let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &file.elements[0]
+            else {
+                panic!("{spelling}: expected a class");
+            };
+            let ClassLikeKind::Class {
+                extends,
+                implements,
+                ..
+            } = &def.kind
+            else {
+                panic!("{spelling}: expected a class kind");
+            };
+            assert_eq!(extends, &[spelling, "Y"], "{spelling}");
+            assert_eq!(implements, &[spelling, "Z"], "{spelling}");
+        }
+    }
+
+    #[test]
+    fn test_abstract_class_accepts_multiple_spaces() {
+        let file = parse_class_diagram_body("abstract    class AbstractType").unwrap();
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &file.elements[0] else {
+            panic!("expected an abstract class");
+        };
+        let ClassLikeKind::Class { is_abstract, .. } = def.kind else {
+            panic!("expected a class kind");
+        };
+
+        assert!(is_abstract);
+    }
+
+    #[test]
+    fn test_relationship_endpoints_accept_both_separators_and_root_markers() {
+        for spelling in NAME_SPELLINGS {
+            let file = parse_class_diagram_body(&format!("{spelling} --> {spelling}"))
+                .unwrap_or_else(|error| panic!("{spelling}: {error:?}"));
+            assert_eq!(file.relationships.len(), 1, "{spelling}");
+            assert_eq!(file.relationships[0].left, spelling);
+            assert_eq!(file.relationships[0].right, spelling);
+        }
+    }
+
+    #[test]
+    fn test_malformed_qualified_names_are_rejected() {
+        for spelling in ["a..b", "a::", "a:::b", "::", ".", "a.", "a.::b"] {
+            for body in [
+                format!("class {spelling}"),
+                format!("package {spelling} {{\n}}"),
+                format!("class X extends {spelling}"),
+            ] {
+                let result = parse_class_diagram_body(&body);
+                assert!(result.is_err(), "`{body}` must not parse: {result:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_quoted_alias_is_the_name() {
+        let file = parse_class_diagram_body("class F as \"a::Foo\"\npackage p as \"b::q\" {\n}")
+            .expect("must parse");
+
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+        assert_eq!(def.declaration.name.internal, "a::Foo");
+        assert_eq!(def.declaration.name.alias.as_deref(), Some("F"));
+
+        let ClassUmlTopLevel::Package(package) = &file.elements[1] else {
+            panic!("expected a package");
+        };
+        assert_eq!(package.name.internal, "b::q");
+        assert_eq!(package.name.alias.as_deref(), Some("p"));
+    }
+
+    #[test]
+    fn test_quoted_name_with_bare_alias_keeps_roles() {
+        let file = parse_class_diagram_body("class \"a::Foo\" as F").expect("must parse");
+
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+        assert_eq!(def.declaration.name.internal, "a::Foo");
+        assert_eq!(def.declaration.name.alias.as_deref(), Some("F"));
+    }
+
+    #[test]
+    fn test_quoted_alias_is_the_name_even_when_the_name_is_quoted() {
+        let file = parse_class_diagram_body("class \"A\" as \"b::B\"").expect("must parse");
+
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &file.elements[0] else {
+            panic!("expected a class");
+        };
+        assert_eq!(def.declaration.name.internal, "b::B");
+        assert_eq!(def.declaration.name.alias.as_deref(), Some("A"));
     }
 
     #[test]

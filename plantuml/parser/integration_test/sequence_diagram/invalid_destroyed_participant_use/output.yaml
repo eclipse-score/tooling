@@ -15,4 +15,5 @@ invalid_destroyed_participant_use.puml:
     type: "DestroyedParticipantUse"
     fields:
       participant: "B"
+      uid: "B"
       line: "21"

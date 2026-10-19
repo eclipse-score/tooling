@@ -6,14 +6,18 @@
         "Namespace": {
           "name": {
             "internal": "aaa",
-            "display": null
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 15
           },
           "types": [
             {
-              "StructDef": {
+              "ClassLikeDef": {
                 "name": {
                   "internal": "Packet",
-                  "display": null
+                  "alias": null
                 },
                 "namespace": "aaa",
                 "package": "",
@@ -24,7 +28,7 @@
                 "type_aliases": [],
                 "attributes": [],
                 "methods": [],
-                "template_parameters": null
+                "kind": "Struct"
               }
             }
           ],
@@ -33,11 +37,11 @@
         }
       },
       {
-        "Types": {
-          "StructDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "Message",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -69,16 +73,16 @@
               }
             ],
             "methods": [],
-            "template_parameters": null
+            "kind": "Struct"
           }
         }
       },
       {
-        "Types": {
-          "StructDef": {
+        "Type": {
+          "ClassLikeDef": {
             "name": {
               "internal": "Node",
-              "display": null
+              "alias": null
             },
             "namespace": "",
             "package": "",
@@ -110,7 +114,7 @@
               }
             ],
             "methods": [],
-            "template_parameters": null
+            "kind": "Struct"
           }
         }
       }

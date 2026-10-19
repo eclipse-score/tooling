@@ -42,7 +42,8 @@ use std::path::{Path, PathBuf};
 /// A single element entry in the idmap.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdMapEntry {
-    /// PlantUML alias used in `url of <alias> is [[url]]` injection.
+    /// PlantUML code of the element in its own diagram, used only for the
+    /// `url of <alias> is [[url]]` injection; never matched across diagrams.
     pub alias: String,
     /// Fully-qualified identifier (FQN) for matching across diagrams.
     pub id: String,
@@ -57,6 +58,13 @@ pub struct IdMapFile {
     pub defines: Vec<IdMapEntry>,
     /// Elements referenced (leaf/relation endpoint) in this diagram.
     pub references: Vec<IdMapEntry>,
+    /// Ids may also be matched by their last segment (the written name).
+    #[serde(default)]
+    pub match_by_name: bool,
+}
+
+fn id_leaf(id: &str) -> &str {
+    id.rsplit('.').next().unwrap_or(id)
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +147,7 @@ fn comp_model_to_idmap(
         source: source.to_string(),
         defines,
         references,
+        match_by_name: true,
     }
 }
 
@@ -185,7 +194,8 @@ fn class_model_to_idmap(model: &ClassDiagram, source: &str) -> IdMapFile {
 
     for entity in &model.entities {
         let has_members = !entity.methods.is_empty() || !entity.variables.is_empty();
-        let matches_diagram_name = diagram_name == Some(entity.name.as_str());
+        let matches_diagram_name =
+            diagram_name.is_some_and(|dn| dn == entity.name || dn == id_leaf(&entity.id));
         let is_define = has_members || matches_diagram_name;
         if is_define {
             define_ids.insert(entity.id.clone());
@@ -229,7 +239,7 @@ fn class_model_to_idmap(model: &ClassDiagram, source: &str) -> IdMapFile {
             // synthetic namespace define.
             continue;
         }
-        let alias = ns.rsplit('.').next().unwrap_or(ns).to_string();
+        let alias = id_leaf(ns).to_string();
         define_ids.insert(ns.to_string());
         defines.push(IdMapEntry {
             alias,
@@ -284,26 +294,25 @@ fn class_model_to_idmap(model: &ClassDiagram, source: &str) -> IdMapFile {
         source: source.to_string(),
         defines,
         references,
+        match_by_name: true,
     }
-}
-
-/// Collect the unique participant names from a sequence tree.
-fn collect_participants(tree: &SequenceTree) -> HashSet<String> {
-    tree.participant_reference_names().collect()
 }
 
 /// Produce an [`IdMapFile`] from a resolved sequence diagram.
 ///
 /// Sequence diagrams have no "definition" elements — all participants are
 /// references (each participant links away to the component diagram that
-/// elaborates it).
+/// elaborates it). The id is the participant uid.
 fn sequence_model_to_idmap(model: &SequenceTree, source: &str) -> IdMapFile {
-    let participants = collect_participants(model);
-    let mut references: Vec<IdMapEntry> = participants
-        .into_iter()
-        .map(|name| IdMapEntry {
-            alias: name.clone(),
-            id: name,
+    let mut references: Vec<IdMapEntry> = model
+        .participants
+        .iter()
+        .map(|participant| IdMapEntry {
+            alias: participant
+                .alias
+                .clone()
+                .unwrap_or_else(|| participant.display_name.clone()),
+            id: participant.uid.clone(),
         })
         .collect();
     references.sort_by(|a, b| a.id.cmp(&b.id));
@@ -312,6 +321,7 @@ fn sequence_model_to_idmap(model: &SequenceTree, source: &str) -> IdMapFile {
         source: source.to_string(),
         defines: Vec::new(),
         references,
+        match_by_name: true,
     }
 }
 
@@ -321,6 +331,7 @@ fn empty_idmap(source: &str) -> IdMapFile {
         source: source.to_string(),
         defines: Vec::new(),
         references: Vec::new(),
+        match_by_name: false,
     }
 }
 
@@ -385,6 +396,8 @@ fn fta_model_to_idmap(model: &FtaModel, source: &str) -> IdMapFile {
         source: source.to_string(),
         defines,
         references,
+        // A TRLC `Package.Record` is the whole identity; its last segment is not.
+        match_by_name: false,
     }
 }
 
@@ -504,6 +517,7 @@ mod tests {
         SequenceParticipant {
             display_name: name.to_string(),
             alias: None,
+            uid: name.to_string(),
             participant_type: ParticipantType::Participant,
             source_location: SourceLocation::new("test.puml", 0),
             stereotype: None,
@@ -1012,6 +1026,56 @@ mod tests {
         assert!(!idmap.defines.iter().any(|e| e.id == "pkg.Leaf"));
     }
 
+    #[test]
+    fn class_diagram_name_matches_id_leaf_when_display_name_differs() {
+        // The written name (`name`) may be a display label; the id leaf still
+        // identifies the entity the diagram is named after.
+        let aliased = SimpleEntity {
+            id: "pkg.Proxy".to_string(),
+            name: "Display Label".to_string(),
+            ..Default::default()
+        };
+        let model = ClassDiagram {
+            name: "Proxy".to_string(),
+            entities: vec![aliased],
+            free_functions: vec![],
+        };
+
+        let idmap = class_model_to_idmap(&model, "pkg/proxy.puml");
+        assert!(idmap.defines.iter().any(|e| e.id == "pkg.Proxy"));
+        assert!(idmap.references.is_empty());
+    }
+
+    #[test]
+    fn match_by_name_is_set_for_name_based_diagrams_only() {
+        let component = comp_model_to_idmap(&component_map(vec![]), "pkg/c.puml", None);
+        assert!(component.match_by_name);
+
+        let class = class_model_to_idmap(
+            &ClassDiagram {
+                name: "d".to_string(),
+                entities: vec![],
+                free_functions: vec![],
+            },
+            "pkg/c.puml",
+        );
+        assert!(class.match_by_name);
+
+        let sequence = sequence_model_to_idmap(&sequence_tree(&[], vec![]), "pkg/s.puml");
+        assert!(sequence.match_by_name);
+
+        let fta = fta_model_to_idmap(&FtaModel { nodes: vec![] }, "pkg/f.puml");
+        assert!(!fta.match_by_name);
+        assert!(!empty_idmap("pkg/e.puml").match_by_name);
+    }
+
+    #[test]
+    fn match_by_name_defaults_to_false_when_absent_from_json() {
+        let parsed: IdMapFile =
+            serde_json::from_str(r#"{"source":"a.puml","defines":[],"references":[]}"#).unwrap();
+        assert!(!parsed.match_by_name);
+    }
+
     // ── FTA converter ──────────────────────────────────────────────────────
 
     fn fta_node(kind: NodeKind, gate_kind: Option<GateKind>, alias: &str) -> FtaNode {
@@ -1288,6 +1352,27 @@ mod tests {
         assert!(idmap.defines.is_empty());
         let ids: Vec<&str> = idmap.references.iter().map(|e| e.id.as_str()).collect();
         assert_eq!(ids, ["A", "B", "Deep", "Nested"]);
+    }
+
+    #[test]
+    fn sequence_participant_reference_uses_uid_as_id_and_alias_as_alias() {
+        let mut participant = sequence_participant("comp::unit");
+        participant.alias = Some("u".to_string());
+        participant.uid = "comp.unit".to_string();
+        let tree = SequenceTree {
+            name: None,
+            participants: vec![participant, sequence_participant("Bare")],
+            root: Block::default(),
+        };
+
+        let idmap = sequence_model_to_idmap(&tree, "pkg/seq.puml");
+
+        let entries: Vec<(&str, &str)> = idmap
+            .references
+            .iter()
+            .map(|e| (e.id.as_str(), e.alias.as_str()))
+            .collect();
+        assert_eq!(entries, [("Bare", "Bare"), ("comp.unit", "u")]);
     }
 
     #[test]

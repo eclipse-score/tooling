@@ -32,11 +32,11 @@ participant "core::runtime" as runtime
 participant "core::service::ResourceBuilder" as Builder
 participant "core::messaging" as messaging
 
-' Participants with stereotypes and newlines
-participant "<<Task>>\nTaskHandler" as TaskHandler
+' Participants with a namespace and a plain alias
+participant "core::TaskHandler" as TaskHandler
 
-' Participants with namespaces and generics
-participant "core::service::ProxyHandle<>" as ProxyHandle
+' Participants with namespaces
+participant "core::service::ProxyHandle" as ProxyHandle
 participant "platform::ServiceHost" as ServiceHost
 
 ' ========================================

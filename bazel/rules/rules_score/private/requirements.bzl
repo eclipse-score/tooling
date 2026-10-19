@@ -21,7 +21,7 @@ public-facing macros.
 
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo", "subrule_trlc_image_stage")
-load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FeatureRequirementsInfo", "SafetyAnalysisProviderInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FailureModesInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:rst_to_trlc.bzl", "rst_to_trlc")
 
 _DEFAULT_SPEC = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")
@@ -34,6 +34,7 @@ _REQ_KIND_TITLES = {
     "component": "Component Requirements",
     "assumed_system": "Assumed System Requirements",
     "aou": "Assumptions of Use",
+    "failure_mode": "Failure Modes",
 }
 
 # ============================================================================
@@ -57,6 +58,8 @@ def _requirements_impl(ctx):
     transitive_spec = []
     transitive_reqs = []
     for dep in ctx.attr.deps:
+        if ctx.attr.req_kind == "aou" and AssumptionsOfUseInfo in dep:
+            fail("{}: deps must not hold the assumptions_of_use target {}; its AoUs would be extracted as own AoUs".format(ctx.label, dep.label))
         trlc_info = dep[TrlcProviderInfo]
         transitive_spec.append(trlc_info.spec)
         transitive_reqs.append(trlc_info.reqs)
@@ -117,6 +120,11 @@ def _requirements_impl(ctx):
             aou_lobster = depset([lobster_file]),
             name = ctx.label.name,
         )
+    elif ctx.attr.req_kind == "failure_mode":
+        req_provider = FailureModesInfo(
+            srcs = depset([lobster_file]),
+            name = ctx.label.name,
+        )
     else:  # assumed_system
         req_provider = AssumedSystemRequirementsInfo(
             srcs = depset([lobster_file]),
@@ -129,9 +137,7 @@ def _requirements_impl(ctx):
 
     transitive_sphinx = [sphinx_srcs]
     for dep in ctx.attr.deps:
-        # safety_analysis deps only supply TRLC symbols; its docs belong to the
-        # dependability analysis section.
-        if SphinxSourcesInfo in dep and SafetyAnalysisProviderInfo not in dep:
+        if SphinxSourcesInfo in dep:
             transitive_sphinx.append(dep[SphinxSourcesInfo].deps)
 
     return [
@@ -173,7 +179,7 @@ _score_requirements_rule = rule(
             doc = "Other requirement targets whose TRLC records are needed for cross-reference parsing.",
         ),
         "req_kind": attr.string(
-            values = ["feature", "component", "assumed_system", "aou"],
+            values = ["feature", "component", "assumed_system", "aou", "failure_mode"],
             mandatory = True,
             doc = "Kind of requirements; determines which domain provider is emitted.",
         ),

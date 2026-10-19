@@ -55,6 +55,11 @@ fn positive_public_api_match_suite_case() {
 }
 
 #[test]
+fn positive_aliased_public_api_interface_suite_case() {
+    assert_case("positive_aliased_public_api_interface");
+}
+
+#[test]
 fn positive_overview_seooc_relation_merge_suite_case() {
     assert_case("positive_overview_seooc_relation_merge");
 }
