@@ -32,8 +32,7 @@ package "dependable_element" as de {
 
 note bottom of outofscope
   Rejected: "Not in certified scope
-  //third_party/foo:__subpackages__,
-  stopping at other"
+  //other/unrelated:thing"
 end note
 
 @enduml

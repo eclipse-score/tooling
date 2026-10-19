@@ -57,14 +57,15 @@ What is checked
 For each ``unit``, an aspect (``cc_dependencies_aspect``) walks the
 ``deps`` / ``implementation_deps`` / ``exported_deps`` attributes of its
 ``implementation`` targets and collects every transitively reached label.
-``dependable_element`` then checks each collected label against the tree of
-certified scopes built from all ``scope`` declarations in the element: a
-label is in scope if it (or an enclosing package / subpackage wildcard) was
-declared somewhere. Any dependency that is not covered fails the check with:
+``dependable_element`` then checks each collected label against all
+``scope`` declarations in the element plus the units' own ``implementation``
+targets: a label is in scope if it (or an enclosing package / subpackage
+wildcard) was declared somewhere. Any dependency that is not covered fails
+the check with:
 
 .. code-block:: text
 
-   Not in certified scope <label>, stopping at <path segment>
+   Not in certified scope <label>
 
 A certified scope that is declared more than once (e.g. by two units) is
 also rejected:
@@ -82,7 +83,7 @@ Implementation
    ├── cc_dependency_aspect.bzl   # CcDependencyInfo: transitive labels reached from a cc target
    ├── unit.bzl                   # CertifiedScope(transitive_scopes = scope attr)
    ├── component.bzl              # aggregates CertifiedScope + dependent_labels from children
-   └── dependable_element.bzl     # builds the scope tree and validates dependent_labels against it
+   └── dependable_element.bzl     # validates dependent_labels against certified scopes + unit implementations
 
 See the ``CertifiedScope``, ``UnitInfo.dependent_labels`` and
 ``ComponentInfo.dependent_labels`` providers in

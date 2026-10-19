@@ -1073,6 +1073,15 @@ def _cond_names(*conditioned_names):
     """
     return [name for condition, name in conditioned_names if condition]
 
+def _is_certified(label, targets, packages, subpackages):
+    if (label.package, label.name) in targets or label.package in packages:
+        return True
+    segments = label.package.split("/") if label.package else []
+    for i in range(len(segments) + 1):
+        if "/".join(segments[:i]) in subpackages:
+            return True
+    return False
+
 def _dependable_element_index_impl(ctx):
     """Generate index.rst file with references to all dependable element artifacts.
 
@@ -1353,63 +1362,43 @@ def _dependable_element_index_impl(ctx):
     # =========================================================================
 
     # Verify that all transitive implementation dependencies are within the
-    # certified scope declared for this dependable element.
+    # certified scope of this dependable element. Units implicitly certify
+    # their own implementation targets.
     # @todo: Make this check aware of the repository (@foo) for example.
-    certified_scopes = depset(transitive = collected_certified_scopes).to_list()
-    tree = {}
-    for certified_scope in certified_scopes:
+    certified_targets = {}
+    certified_packages = {}
+    certified_subpackages = {}
+    for certified_scope in depset(transitive = collected_certified_scopes).to_list():
         certified_scope = Label(certified_scope)
-        node = tree
-        path = certified_scope.package.split("/")
-        last_element = path.pop()
-        for path in path:
-            node = node.setdefault(path, default = {})
-
-        if type(node) == type([]):
-            if certified_scope.name in node:
-                msg = "The same scope is covered twice: {}".format(certified_scope)
-                if ctx.attr.maturity == "development":
-                    print("WARNING: " + msg)
-                    continue
-                fail(msg)
-            node.append(certified_scope.name)
+        if certified_scope.name == "__subpackages__":
+            covered, key = certified_subpackages, certified_scope.package
+        elif certified_scope.name == "__pkg__":
+            covered, key = certified_packages, certified_scope.package
         else:
-            inserted_element = node.setdefault(last_element, default = [])
-            if certified_scope.name in inserted_element:
-                msg = "The same scope is covered twice: {}".format(certified_scope)
-                if ctx.attr.maturity == "development":
-                    print("WARNING: " + msg)
-                    continue
-                fail(msg)
-            inserted_element.append(certified_scope.name)
+            covered, key = certified_targets, (certified_scope.package, certified_scope.name)
+        if key in covered:
+            msg = "The same scope is covered twice: {}".format(certified_scope)
+            if ctx.attr.maturity == "development":
+                print("WARNING: " + msg)
+                continue
+            fail(msg)
+        covered[key] = True
 
-    dependencies = depset(transitive = collected_dependent_labels).to_list()
-    for dep in dependencies:
-        node = tree
-        for path in dep.package.split("/"):
-            if type(node) == type([]):
-                if "__subpackages__" in node:
-                    break
-                elif dep.name in node:
-                    break
-                else:
-                    msg = "Not in certified scope {}, stopping at {}".format(dep, path)
-                    if ctx.attr.maturity == "development":
-                        print("WARNING: " + msg)
-                    else:
-                        fail(msg)
-                    break
+    # Forwarded via CertifiedScope so depending elements accept them too.
+    implicit_scopes = []
+    for unit_target in all_units.values():
+        for impl in unit_target[UnitInfo].implementation.to_list():
+            if not _is_certified(impl.label, certified_targets, certified_packages, certified_subpackages):
+                certified_targets[(impl.label.package, impl.label.name)] = True
+                implicit_scopes.append(str(impl.label))
 
-            child = node.get(path)
-            if child == None:
-                msg = "Not in certified scope {}, stopping at {}".format(dep, path)
-                if ctx.attr.maturity == "development":
-                    print("WARNING: " + msg)
-                else:
-                    fail(msg)
-                break
+    for dep in depset(transitive = collected_dependent_labels).to_list():
+        if not _is_certified(dep, certified_targets, certified_packages, certified_subpackages):
+            msg = "Not in certified scope {}".format(dep)
+            if ctx.attr.maturity == "development":
+                print("WARNING: " + msg)
             else:
-                node = child
+                fail(msg)
 
     # Integrity-level check: a dependable element must not depend on elements
     # with a lower integrity level than its own (D > C > B > A).
@@ -1893,7 +1882,7 @@ def _dependable_element_index_impl(ctx):
     return [
         DefaultInfo(files = depset(output_files)),
         SphinxIndexFileInfo(index_file = index_rst),
-        CertifiedScope(transitive_scopes = depset(transitive = collected_certified_scopes)),
+        CertifiedScope(transitive_scopes = depset(implicit_scopes, transitive = collected_certified_scopes)),
         DependableElementInfo(
             integrity_level = ctx.attr.integrity_level,
             label = ctx.label,
