@@ -16,15 +16,14 @@ Dependability Analysis build rules for S-CORE projects.
 
 A dependability analysis aggregates sub-analysis rules
 
-  * **safety_analysis**   – ``safety_analysis`` rule targets (failure modes, safety measures,
-                            and optional root cause FTA diagrams).
+  * **safety_analysis**   – ``safety_analysis`` rule targets (failure modes, root cause
+                            assessments, and optional root cause FTA diagrams).
   * **security_analysis** – security analysis rule targets (placeholder,
                             optional).
 
 The traceability test runs ``lobster-ci-report`` over Architecture <- Failure
-Modes <- Root Causes.  Coverage of root causes by safety measures is checked
-in the ``dependable_element`` traceability report, which also sees component
-requirements.
+Modes <- Root Causes.  Coverage of root causes by assessments is checked
+in the ``dependable_element`` traceability report.
 """
 
 load("@lobster//:lobster.bzl", "subrule_lobster_html_report", "subrule_lobster_report")
@@ -238,7 +237,7 @@ _dependability_analysis_test = rule(
             "safety_analysis": attr.label_list(
                 providers = [AnalysisInfo],
                 mandatory = False,
-                doc = "safety_analysis rule targets (failure modes + safety measures).",
+                doc = "safety_analysis rule targets (failure modes + assessments).",
             ),
             "security_analysis": attr.label_list(
                 providers = [AnalysisInfo],
@@ -294,7 +293,7 @@ def dependability_analysis(
 
     Aggregates up to three sub-analysis rules and validates the combined
     traceability chain (Architecture <- Failure Modes <- Root Causes) via
-    ``lobster-ci-report``.  Coverage of root causes by measures is checked by
+    ``lobster-ci-report``.  Coverage of root causes by assessments is checked by
     the ``dependable_element`` traceability report.
 
     The target is a Bazel **test rule**.  During ``bazel build`` it produces

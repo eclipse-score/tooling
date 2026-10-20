@@ -44,8 +44,10 @@ package "This dependable_element" {
             diagram
             line
         }
-        class Mitigation <<authored>> {
-            justification
+        class RootCauseAssessment <<authored>> {
+            safety
+            rationale
+            version
         }
         class "AoU\n(own)" as OwnAoU <<authored>>
     }
@@ -60,10 +62,10 @@ package "This dependable_element" {
 ' ── Generated from the $RootCause macros of the FTA diagrams ────────────────
 RootCause "1..*" --> FailureMode : failure_modes
 
-' ── Safety measures: every RootCause needs at least one ─────────────────────
-Mitigation "1..*" --> RootCause : root_causes\n(+ justification)
-OwnAoU "1..*" --> RootCause : root_causes\n(preventive measure)
-CompReq "0..*" --> RootCause : derived_from\n(control measure)
+' ── Assessment: every RootCause is covered by exactly one assessment ────────
+RootCauseAssessment "0..*" --> "1..*" RootCause : root_causes
+RootCauseAssessment "0..*" --> "0..*" OwnAoU : measures @version\n(preventive)
+RootCauseAssessment "0..*" --> "0..*" CompReq : measures @version\n(control)
 
 ' ── Requirement chain ───────────────────────────────────────────────────────
 CompReq --> FeatReq : derived_from
@@ -72,8 +74,13 @@ CompReq --> RecvAoU : derived_from\n(received AoU only)
 FeatReq --> AssumedSystemReq : derived_from
 
 note bottom of RootCause
-  Every RootCause needs at least one incoming
-  Mitigation, own AoU or CompReq.
+  Every RootCause is covered by exactly one
+  RootCauseAssessment.
+end note
+
+note bottom of RootCauseAssessment
+  No measures: the root causes do not apply
+  (the rationale says why).
 end note
 
 note bottom of OwnAoU

@@ -118,7 +118,7 @@ AnalysisInfo = provider(
     fields = {
         "name": "Name of the analysis target.",
         "lobster_files": "Dict mapping canonical lobster file names to File objects " +
-                         "(e.g. {'failuremodes.lobster': File, 'safetymeasures.lobster': File}).",
+                         "(e.g. {'failuremodes.lobster': File, 'assessments.lobster': File}).",
     },
 )
 
@@ -251,7 +251,7 @@ DependabilityAnalysisInfo = provider(
     doc = """Provider for dependability analysis artifacts.
 
     Aggregates sub-analyses:
-      * **safety_analysis**   – safety_analysis rule targets (FM + CM + optional root causes).
+      * **safety_analysis**   – safety_analysis rule targets (FM + assessments + optional root causes).
       * **security_analysis** – security analysis targets (placeholder).
     """,
     fields = {

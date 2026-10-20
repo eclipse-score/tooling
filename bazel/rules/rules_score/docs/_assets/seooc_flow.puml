@@ -37,7 +37,7 @@ rectangle "Unit Design Diagrams\n(.puml / .rst)" <<input>> as ud_in
 rectangle "Implementation\n(cc_library / py_library…)" <<input>> as impl_in
 rectangle "Tests\n(cc_test / py_test…)" <<input>> as tests_in
 rectangle "Failure Modes\n(.trlc)" <<input>> as fm_in
-rectangle "Safety Measures\n(.trlc)" <<input>> as cm_in
+rectangle "Root Cause Assessments\n(.trlc)" <<input>> as cm_in
 rectangle "FTA Diagrams\n(.puml)" <<input>> as fta_in
 
 ' ── Bazel Rules ─────────────────────────────────────────────────────────────

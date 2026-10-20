@@ -39,8 +39,8 @@ filegroup(
 )
 
 filegroup(
-    name = "safetymeasures_config",
-    srcs = ["lobster_safetymeasures.yaml"],
+    name = "assessments_config",
+    srcs = ["lobster_assessments.yaml"],
     visibility = ["//visibility:public"],
 )
 

@@ -44,15 +44,15 @@ skinparam component {
 ' ── Input artifacts ──────────────────────────────────────────────────────────
 package "Authored by the component team" {
     rectangle "failure_modes srcs\n(FailureMode records)"    <<src>> as fm_trlc
-    rectangle "mitigations.trlc\n(Mitigation records)"      <<src>> as sm_trlc
-    rectangle "aous.trlc\n(AoU records, root_causes)"       <<src>> as aou_trlc
+    rectangle "assessments.trlc\n(RootCauseAssessment records)" <<src>> as sm_trlc
+    rectangle "aous.trlc\n(AoU records)"                    <<src>> as aou_trlc
     rectangle "fta_*.puml\n(fault_trees srcs)"              <<src>> as fta_puml
 }
 package "Tooling defaults (rules_score / ScoreReq)" {
     rectangle "ScoreReq *.rsl\n(spec attr)"        <<def>> as rsl
     rectangle "fta_metamodel.puml\n(on PlantUML include path)" <<def>> as meta
     rectangle "safety_analysis.template.rst\n({body})"        <<def>> as tmpl
-    rectangle "fm/safetymeasures lobster\nconfigs"    <<def>> as lcfg
+    rectangle "fm/assessments lobster\nconfigs"      <<def>> as lcfg
 }
 
 ' ── failure_modes rule: one tool action ─────────────────────────────────────
@@ -79,19 +79,18 @@ package "Generated files" {
     rectangle "safety_analysis.rst"               <<gen>> as safety_analysis_rst
     rectangle "failure_modes lobster"                        <<gen>> as fm_lob
     rectangle "fta_root_causes.lobster" <<gen>> as ft_lob
-    rectangle "safetymeasures.lobster" <<gen>> as sm_lob
+    rectangle "assessments.lobster" <<gen>> as sm_lob
 }
 
 ' ── Providers ────────────────────────────────────────────────────────────────
 rectangle "TrlcProviderInfo + FaultTreesInfo\n────────────────\nfta_events.trlc, failure modes (deps)\nlobster_files, diagrams" <<prov>> as ftpi
 rectangle "SphinxSourcesInfo\n────────────────\nsrcs:     safety_analysis.rst\ndeps:     safety_analysis.rst\naux_srcs: fta_*.puml" <<prov>> as ssi
-rectangle "AnalysisInfo.lobster_files\n────────────────\nfailuremodes.lobster\nsafetymeasures.lobster\nfta_root_causes.lobster" <<prov>> as ai
+rectangle "AnalysisInfo.lobster_files\n────────────────\nfailuremodes.lobster\nassessments.lobster\nfta_root_causes.lobster" <<prov>> as ai
 rectangle "SafetyAnalysisProviderInfo\n────────────────\naou_targets (safety_measures)" <<prov>> as sapi
 
 ' ── Downstream rules + staging ───────────────────────────────────────────────
 component "dependability_analysis" <<tool>> as da
 component "dependable_element\n(own AoUs from aou_targets)"     <<tool>> as de
-component "assumptions_of_use\n(deps = [fault_trees])" <<tool>> as aou
 rectangle "dependability_analysis/\n  dfa.rst    <- toctree\n  safety_analysis.rst   <- toctree\n  fta_*.puml (.. uml::)" <<stage>> as stage
 
 ' ── Edges: inputs -> tools ───────────────────────────────────────────────────
@@ -142,7 +141,6 @@ aou_trlc   --> sapi
 ssi --> da : merge SphinxSourcesInfo
 ai  --> da : merge lobster_files
 sapi --> da : aou_targets
-ftpi --> aou : resolve AoU.root_causes\n(<fta_package>.<RootCause>)
 da  --> de
 de  --> stage : symlink srcs + aux_srcs\n(aux not indexed in toctree)
 
