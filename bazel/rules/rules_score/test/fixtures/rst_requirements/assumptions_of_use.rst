@@ -17,7 +17,6 @@ Assumptions of Use (RST)
 
 .. aou_req:: Operating Conditions
    :id: aou_req__rst_test__001
-   :root_causes: AouRootCauseFta.UserProvidedWrongConfiguration
    :safety: ASIL_B
    :status: valid
 

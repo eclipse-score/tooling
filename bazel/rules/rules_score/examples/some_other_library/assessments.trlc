@@ -1,0 +1,33 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package OtherLibraryAssessments
+
+import ScoreReq
+import OtherLibrary
+import other_library_fta
+
+ScoreReq.RootCauseAssessment CycleTimeExceededAssessed {
+    root_causes = [other_library_fta.CycleTimeExceeded]
+    measures = [OtherLibrary.TimingConstraint@1]
+    safety = ScoreReq.Asil.B
+    rationale = "The caller keeps invocations within the cycle time."
+    version = 1
+}
+
+ScoreReq.RootCauseAssessment MemoryBudgetExceededAssessed {
+    root_causes = [other_library_fta.MemoryBudgetExceeded]
+    measures = [OtherLibrary.SpaceConstraint@1]
+    safety = ScoreReq.Asil.B
+    rationale = "The caller keeps invocations within the memory budget."
+    version = 1
+}

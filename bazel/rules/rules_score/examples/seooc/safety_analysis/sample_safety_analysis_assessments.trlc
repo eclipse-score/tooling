@@ -1,0 +1,55 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+package SampleLibrary
+
+import ScoreReq
+import SampleType
+import sample_safety_analysis_fta
+
+ScoreReq.RootCauseAssessment ShmemCreatedWrongNameAssessed {
+    root_causes = [sample_safety_analysis_fta.ShmemCreatedWrongName]
+    measures = [SampleType.SampleAoU@1]
+    safety = ScoreReq.Asil.B
+    rationale = "The user prevents the wrong name through the assumption of use."
+    version = 1
+}
+
+ScoreReq.RootCauseAssessment JustBadLuckAssessed {
+    root_causes = [sample_safety_analysis_fta.JustBadLuck]
+    measures = []
+    safety = ScoreReq.Asil.B
+    rationale = "The component is deterministic and has no random behavior, so luck cannot influence its outcome."
+    version = 1
+}
+
+ScoreReq.RootCauseAssessment CookiesAndCoffeeAssessed {
+    root_causes = [
+        sample_safety_analysis_fta.NoMoreCookies,
+        sample_safety_analysis_fta.NoMoreCoffee
+    ]
+    measures = []
+    safety = ScoreReq.Asil.B
+    rationale = "Only family size cookie jars are ordered and an emergency coffee reserve is kept on hand, so these root causes do not apply."
+    version = 1
+}
+
+ScoreReq.RootCauseAssessment OverrunAssessed {
+    root_causes = [
+        sample_safety_analysis_fta.WatchdogTimer,
+        sample_safety_analysis_fta.DeadlineMonitor
+    ]
+    measures = []
+    safety = ScoreReq.Asil.D
+    rationale = "The component runs synchronously in the thread of its caller, without blocking calls or queues, so it has no execution time that could overrun and no response that could be late."
+    version = 1
+}

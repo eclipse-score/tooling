@@ -1401,15 +1401,15 @@ def _dependable_element_index_impl(ctx):
     # Lobster Traceability: Dependable Element Level
     # Builds the multi-level traceability report (Feature/Assumed-System
     # Requirements, Component Requirements, Unit Test, Test Case Coverage,
-    # Architecture, Public API, Failure Modes, Root Causes,
-    # Safety Measures).
+    # Architecture, Public API, Failure Modes, Root Causes, own Assumptions of
+    # Use, Root Cause Assessments).
     # The report is produced whenever any level has data; each level and its
     # `trace to:` coverage edges are emitted only when relevant. In release
     # mode every checking level (Unit Test, Test Case Coverage, Architecture,
-    # Failure Modes, Root Causes) is emitted even when empty, so a
+    # Failure Modes, Root Cause Assessments) is emitted even when empty, so a
     # missing unit test / coverage / architecture allocation / public API
-    # characterization / root cause fails the traceability check (see the
-    # strict handling below).
+    # characterization / root cause assessment fails the traceability check
+    # (see the strict handling below).
     # =========================================================================
 
     # Collect feature requirement .lobster files from requirements targets
@@ -1540,7 +1540,7 @@ def _dependable_element_index_impl(ctx):
     interface_req_list = public_api_lobster_list
     fm_list = sa_lobster_files.get("failuremodes.lobster", [])
     rc_list = sa_lobster_files.get("fta_root_causes.lobster", [])
-    safetymeasures_list = sa_lobster_files.get("safetymeasures.lobster", [])
+    assessment_list = sa_lobster_files.get("assessments.lobster", [])
 
     # =========================================================================
     # AoU Forwarding: collect own AoUs and received AoUs from deps
@@ -1552,6 +1552,7 @@ def _dependable_element_index_impl(ctx):
         for aou_target in _own_aou_targets(ctx)
     ]
     own_aou_lobster_depset = depset(transitive = own_aou_lobster_files)
+    own_aou_list = own_aou_lobster_depset.to_list()
 
     # Collect forwarded AoU lobster files from deps (received AoUs). The same
     # AoU can arrive along several paths; the merge keeps one item per tag,
@@ -1629,7 +1630,8 @@ def _dependable_element_index_impl(ctx):
         interface_req_list,
         fm_list,
         rc_list,
-        safetymeasures_list,
+        assessment_list,
+        own_aou_list,
     ])
 
     if has_any_lobster_input:
@@ -1649,10 +1651,11 @@ def _dependable_element_index_impl(ctx):
         #     -> check Public API coverage
         #   * Root Causes
         #     -> check Failure Modes coverage
-        #   * Safety Measures (Mitigation and AoU records)
-        #     -> check Root Causes coverage
-        # Component Requirements also check Root Causes coverage whenever they
-        # exist; a root cause is covered by either level (OR group below).
+        #   * Root Cause Assessments
+        #     -> check Root Causes and own Assumptions of Use coverage
+        # The assessments reference their component requirement measures by
+        # tag only; no `trace to:` edge points at Component Requirements, so
+        # a component requirement needs no assessment.
         # In development mode these checking levels are omitted when empty
         # instead, keeping the in-progress report free of noise.
         #
@@ -1670,7 +1673,7 @@ def _dependable_element_index_impl(ctx):
         has_public_api = bool(interface_req_list) or strict
         has_fm = bool(fm_list) or strict
         has_rc = bool(rc_list) or strict
-        has_sm = bool(safetymeasures_list) or strict
+        has_own_aou = bool(own_aou_list)
 
         lobster_config = ctx.actions.declare_file(ctx.label.name + "/de_traceability_config")
 
@@ -1717,8 +1720,6 @@ def _dependable_element_index_impl(ctx):
                     trace_to = _cond_names(
                         (has_feat_req, "Feature Requirements"),
                         (has_received_aou, "Received AoUs"),
-                        # lobster rejects a forward `trace to`; lobster_de.conf.tpl declares Root Causes first.
-                        (has_rc, "Root Causes"),
                     ),
                 ),
                 "{UNIT_TEST_BLOCK}": format_lobster_block(
@@ -1761,24 +1762,29 @@ def _dependable_element_index_impl(ctx):
                     rc_list,
                     trace_to = _cond_names((has_fm, "Failure Modes")),
                     emit_empty = strict,
-                    # Covered by a Mitigation/AoU (Safety Measures) or a
-                    # Component Requirement; either one suffices.
-                    requires = [_cond_names(
-                        (has_sm, "Safety Measures"),
-                        (has_comp_req, "Component Requirements"),
-                    )],
                 ),
-                "{SAFETYMEASURES_BLOCK}": format_lobster_block(
+                # Target level: every own AoU must be a measure of an assessment.
+                "{OWN_AOU_BLOCK}": format_lobster_block(
                     "requirements",
-                    "Safety Measures",
-                    safetymeasures_list,
-                    trace_to = _cond_names((has_rc, "Root Causes")),
+                    "Assumptions of Use",
+                    own_aou_list,
+                ),
+                # Checking level: lobster rejects a forward `trace to`, so
+                # lobster_de.conf.tpl declares its target levels first.
+                "{ASSESSMENT_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Root Cause Assessments",
+                    assessment_list,
+                    trace_to = _cond_names(
+                        (has_rc, "Root Causes"),
+                        (has_own_aou, "Assumptions of Use"),
+                    ),
                     emit_empty = strict,
                 ),
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + rc_list + safetymeasures_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
+        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + rc_list + assessment_list + own_aou_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_files = [lobster_config, lobster_report_file]
 

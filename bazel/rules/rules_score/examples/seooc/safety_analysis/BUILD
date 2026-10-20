@@ -34,8 +34,8 @@ failure_modes(
     srcs = ["sample_safety_analysis_failure_modes.trlc"],
 )
 
-# Root causes of the failure modes. Requirement targets (the AoUs in
-# //docs:sample_aous) list it in `deps` to reference the generated root causes.
+# Root causes of the failure modes. The assessments reference them as
+# `sample_safety_analysis_fta.<RootCause>`.
 fault_trees(
     name = "sample_fault_trees",
     srcs = [":sample_fta"],
@@ -44,15 +44,14 @@ fault_trees(
     deps = [":sample_failure_modes"],
 )
 
-# The failure modes with the measures addressing their root causes.
+# The failure modes with the assessments of their root causes. The AoUs in
+# `safety_measures` are the measures the assessments may list.
 safety_analysis(
     name = "sample_safety_analysis",
     arch_design = "//design:sample_seooc_design",
+    assessments = ["sample_safety_analysis_assessments.trlc"],
     failure_modes = [":sample_failure_modes"],
     fault_trees = ":sample_fault_trees",
-    safety_measures = [
-        "//docs:sample_aous",
-        "sample_safety_analysis_safetymeasures.trlc",
-    ],
+    safety_measures = ["//docs:sample_aous"],
     visibility = ["//visibility:public"],
 )

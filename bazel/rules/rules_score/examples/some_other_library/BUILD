@@ -38,7 +38,6 @@ assumptions_of_use(
     name = "other_library_aous",
     srcs = ["aous.trlc"],
     visibility = ["//visibility:public"],
-    deps = [":other_library_fault_trees"],
 )
 
 failure_modes(
@@ -56,6 +55,7 @@ fault_trees(
 safety_analysis(
     name = "other_library_safety_analysis",
     arch_design = ":sample_seooc_design",
+    assessments = ["assessments.trlc"],
     failure_modes = [":other_library_failure_modes"],
     fault_trees = ":other_library_fault_trees",
     safety_measures = [":other_library_aous"],

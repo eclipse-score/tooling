@@ -198,8 +198,7 @@ Complete Example
                         deps = [":sys_req"])
    component_requirements(name = "reqs", srcs = ["docs/reqs.trlc"],
                           deps = [":features"])
-   assumptions_of_use(name = "aous", srcs = ["docs/aous.trlc"],
-                      deps = [":my_fault_trees"])
+   assumptions_of_use(name = "aous", srcs = ["docs/aous.trlc"])
 
    # Architecture
    architectural_design(name = "arch",
@@ -213,9 +212,10 @@ Complete Example
         srcs = ["docs/fta.puml"],
         deps = [":my_failure_modes"])
    safety_analysis(name = "my_safety_analysis", arch_design = ":arch",
+        assessments     = ["docs/assessments.trlc"],
         failure_modes   = [":my_failure_modes"],
         fault_trees     = ":my_fault_trees",
-        safety_measures = [":aous", "docs/mitigations.trlc"])
+        safety_measures = [":aous"])
    dependability_analysis(name = "analysis", safety_analysis = [":my_safety_analysis"])
 
    # Implementation

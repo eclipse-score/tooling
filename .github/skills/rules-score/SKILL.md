@@ -40,7 +40,7 @@ Use this skill to coordinate; open the specialized skill for the actual work:
 | `.trlc` requirement records, `ScoreReq` model, traceability, `assumed_system_requirements` / `feature_requirements` / `component_requirements` / `assumptions_of_use` | **score-requirements** |
 | PlantUML diagrams, `architectural_design` / `unit` / `unit_design` / `component` / `dependable_element` structure, architecture/API/sequence validations | **score-architecture** |
 | GoogleTest `lobster-tracing` + Given-When-Then, `test_case_coverage.lock.yaml`, attaching tests | **score-testing** |
-| FMEA, `FailureMode` / `SafetyMeasure` / FTA, `safety_analysis` / `dependability_analysis` | **score-safety-analysis** |
+| FMEA, `FailureMode` / `RootCauseAssessment` / FTA, `safety_analysis` / `dependability_analysis` | **score-safety-analysis** |
 
 ---
 
@@ -182,9 +182,9 @@ FMEA, cross-module `deps`, and test-case coverage — see
    with `lobster-tracing` + Given-When-Then; add `test_case_coverage_lock` on components.
    *(score-testing)*
 4. **Safety analysis** → add `failure_modes`, `fault_trees` (FTA, `deps = [failure_modes]`) and
-   `safety_analysis` (`safety_measures`: Mitigation files + AoU / `component_requirements`
-   targets) and wrap it in a `dependability_analysis`. AoU targets and
-   `component_requirements` list `fault_trees` in `deps`; AoU targets passed as `safety_measures`
+   `safety_analysis` (`assessments`: `RootCauseAssessment` files; `safety_measures`: AoU /
+   `component_requirements` targets the assessments list) and wrap it in a
+   `dependability_analysis`. AoU targets passed as `safety_measures`
    are the element's own AoUs (derived, deduplicated, forwarded to dependees). *(score-safety-analysis)*
 5. **Assemble** → allocate `CompReq` to `component(requirements=…)` and `FeatReq` to
    `dependable_element(requirements=…)`; wire `architectural_design`, `components`,

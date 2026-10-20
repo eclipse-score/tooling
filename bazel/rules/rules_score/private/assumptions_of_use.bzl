@@ -26,8 +26,8 @@ feature_requirements, component_requirements, and assumed_system_requirements.
 
 Traceability to feature/assumed-system requirements is established at the
 dependable_element level (via its own `requirements` attribute), not here.
-Every AoU references the fault-tree root causes it addresses (`root_causes`),
-so the `fault_trees` target belongs in `deps`.
+The root causes an AoU addresses are listed by a `RootCauseAssessment`
+record of a `safety_analysis`, not by the AoU itself.
 """
 
 load("@trlc//:trlc.bzl", "trlc_requirements_test")
@@ -58,9 +58,8 @@ def assumptions_of_use(
             ``rst_to_trlc`` over ``aou_req`` directives), and/or labels to
             existing targets that already provide TrlcProviderInfo (e.g.
             ``trlc_requirements`` targets).
-        deps: List of the ``fault_trees`` target(s) providing the root causes
-            the AoUs reference, and optionally other requirement targets
-            (providing TrlcProviderInfo) needed for cross-reference parsing.
+        deps: Optional list of requirement targets (providing TrlcProviderInfo)
+            needed for cross-reference parsing.
         lobster_config: Lobster YAML configuration for AoU traceability
             extraction. Defaults to the standard S-CORE AoU config.
         visibility: Bazel visibility specification for the generated targets.
@@ -74,7 +73,6 @@ def assumptions_of_use(
         assumptions_of_use(
             name = "my_assumptions_of_use",
             srcs = ["assumptions_of_use.trlc"],
-            deps = [":my_fault_trees"],
         )
         ```
 
@@ -83,13 +81,11 @@ def assumptions_of_use(
         rst_to_trlc(
             name = "my_assumptions_of_use_trlc",
             srcs = ["docs/assumptions_of_use.rst"],
-            ref_package = "MyFaultTrees",
         )
 
         assumptions_of_use(
             name = "my_assumptions_of_use",
             srcs = [":my_assumptions_of_use_trlc"],
-            deps = [":my_fault_trees"],
         )
         ```
     """

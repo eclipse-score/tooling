@@ -47,6 +47,7 @@ load(
     "aou_derived_test",
     "aou_merged_test",
     "aou_none_test",
+    "assessment_config_test",
 )
 load(
     ":dependable_element_staged_path_collision_test.bzl",
@@ -77,6 +78,7 @@ load(
     "serve_target_test",
     "sphinx_module_test_suite",
 )
+load(":lobster_ci_report_test.bzl", "lobster_ci_report_test")
 load(
     ":lobster_config_test.bzl",
     "lobster_config_test_suite",
@@ -493,9 +495,10 @@ fault_trees(
 
 safety_analysis(
     name = "samplelibrary_safety_analysis",
-    # TODO: add failure modes and safety measures here
+    # TODO: add failure modes, assessments and safety measures here
     # failure_modes = [],
-    # safety_measures = [], # AoUs, requirements, Mitigation files
+    # assessments = [],
+    # safety_measures = [], # AoUs, component requirements
     arch_design = ":arch_design",
     fault_trees = ":samplelibrary_fault_trees",
 )
@@ -704,11 +707,10 @@ dependability_analysis(
     safety_analysis = [":multi_failure_mode_example_safety_analysis"],
 )
 
-# Regression fixture: an AoU referencing a generated fault-tree root cause
-# (`AouRootCauseFta.UserProvidedWrongConfiguration`). The AoU file is parsed
-# standalone by assumptions_of_use, so the fault_trees target must be in its
-# `deps` to make the generated package resolvable; passing the AoU target as
-# `safety_measures` makes the AoU count towards root-cause coverage.
+# Regression fixture: an own AoU assessing a generated fault-tree root cause
+# (`AouRootCauseFta.UserProvidedWrongConfiguration`). The assessment names the
+# root cause and the AoU; passing the AoU target as `safety_measures` makes
+# the AoU a measure of the analysis.
 failure_modes(
     name = "aou_root_cause_failure_modes",
     srcs = ["fixtures/aou_root_cause/failure_modes.trlc"],
@@ -724,12 +726,12 @@ fault_trees(
 assumptions_of_use(
     name = "aou_root_cause_aous",
     srcs = ["fixtures/aou_root_cause/aou.trlc"],
-    deps = [":aou_root_cause_fault_trees"],
 )
 
 safety_analysis(
     name = "aou_root_cause_safety_analysis",
     arch_design = ":arch_design_public_api_example",
+    assessments = ["fixtures/aou_root_cause/assessments.trlc"],
     failure_modes = [":aou_root_cause_failure_modes"],
     fault_trees = ":aou_root_cause_fault_trees",
     safety_measures = [":aou_root_cause_aous"],
@@ -741,20 +743,19 @@ dependability_analysis(
     safety_analysis = [":aou_root_cause_safety_analysis"],
 )
 
-# A component requirement measure derives from the AoU held in its deps; the
-# AoU is only used to resolve the reference, it is not a measure of the analysis.
+# A component requirement measure derives from the received AoU held in its
+# deps; the AoU is only used to resolve the reference, it is not a measure of
+# the analysis.
 component_requirements(
     name = "comp_req_measure_reqs",
     srcs = ["fixtures/comp_req_measure/comp_req.trlc"],
-    deps = [
-        ":aou_root_cause_aous",
-        ":aou_root_cause_fault_trees",
-    ],
+    deps = [":aou_root_cause_aous"],
 )
 
 safety_analysis(
     name = "comp_req_measure_safety_analysis",
     arch_design = ":arch_design_public_api_example",
+    assessments = ["fixtures/comp_req_measure/assessments.trlc"],
     failure_modes = [":aou_root_cause_failure_modes"],
     fault_trees = ":aou_root_cause_fault_trees",
     safety_measures = [":comp_req_measure_reqs"],
@@ -815,7 +816,7 @@ dependable_element(
 )
 
 # Regression fixture: component requirements and root causes in one element.
-# The DE lobster config lets "Component Requirements" trace to "Root Causes";
+# The DE lobster config lets "Root Cause Assessments" trace to "Root Causes";
 # lobster rejects that unless "Root Causes" is declared first.
 dependable_element(
     name = "comp_req_root_cause_example_lib",
@@ -1639,7 +1640,7 @@ aou_derived_test(
 )
 
 # Two safety analyses (under two dependability analyses) consuming the same
-# AoU target contribute it once.
+# AoU target contribute it once; only the first assesses the root cause.
 safety_analysis(
     name = "aou_root_cause_safety_analysis_dup",
     arch_design = ":arch_design_public_api_example",
@@ -2352,6 +2353,155 @@ dependable_element_test_case_coverage_lock_check_action_test(
     target_under_test = ":test_dependable_element_coverage_development_index",
 )
 
+# A release element with an own AoU assessing a root cause: the assessments
+# level traces to Root Causes and Assumptions of Use.
+dependable_element(
+    name = "assessment_release_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_public_api_example"],
+    components = [":test_component"],
+    dependability_analysis = [":aou_root_cause_dependability_analysis"],
+    integrity_level = "B",
+    maturity = "release",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+)
+
+assessment_config_test(
+    name = "assessment_config_own_aou_test",
+    expect_own_aou = True,
+    target_under_test = ":assessment_release_example_lib_index",
+)
+
+# A release element without AoUs and assessments still emits the (empty)
+# assessments level, so every root cause is reported as not assessed.
+assessment_config_test(
+    name = "assessment_config_no_aou_test",
+    expect_own_aou = False,
+    target_under_test = ":test_dependable_element_coverage_release_index",
+)
+
+# lobster-ci-report on release elements: each way an assessment can be
+# incomplete or stale is reported, the assessed element is not.
+lobster_ci_report_test(
+    name = "assessed_root_cause_ci_report_test",
+    index = ":assessment_release_example_lib_index",
+    lacks = ["missing reference to Root Cause Assessments"],
+)
+
+safety_analysis(
+    name = "unassessed_root_cause_safety_analysis",
+    arch_design = ":arch_design_public_api_example",
+    failure_modes = [":aou_root_cause_failure_modes"],
+    fault_trees = ":aou_root_cause_fault_trees",
+)
+
+dependability_analysis(
+    name = "unassessed_root_cause_dependability_analysis",
+    arch_design = ":arch_design_public_api_example",
+    safety_analysis = [":unassessed_root_cause_safety_analysis"],
+)
+
+dependable_element(
+    name = "unassessed_root_cause_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_public_api_example"],
+    components = [":test_component"],
+    dependability_analysis = [":unassessed_root_cause_dependability_analysis"],
+    integrity_level = "B",
+    maturity = "release",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+)
+
+lobster_ci_report_test(
+    name = "unassessed_root_cause_ci_report_test",
+    contains = [
+        "fta_events.trlc",
+        "missing reference to Root Cause Assessments",
+    ],
+    expect_ci_failure = True,
+    index = ":unassessed_root_cause_example_lib_index",
+)
+
+safety_analysis(
+    name = "unused_aou_safety_analysis",
+    arch_design = ":arch_design_public_api_example",
+    assessments = ["fixtures/aou_root_cause/assessments_unused_aou.trlc"],
+    failure_modes = [":aou_root_cause_failure_modes"],
+    fault_trees = ":aou_root_cause_fault_trees",
+    safety_measures = [":aou_root_cause_aous"],
+)
+
+dependability_analysis(
+    name = "unused_aou_dependability_analysis",
+    arch_design = ":arch_design_public_api_example",
+    safety_analysis = [":unused_aou_safety_analysis"],
+)
+
+dependable_element(
+    name = "unused_aou_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_public_api_example"],
+    components = [":test_component"],
+    dependability_analysis = [":unused_aou_dependability_analysis"],
+    integrity_level = "B",
+    maturity = "release",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+)
+
+lobster_ci_report_test(
+    name = "unused_aou_ci_report_test",
+    contains = [
+        "aou.trlc",
+        "missing reference to Root Cause Assessments",
+    ],
+    expect_ci_failure = True,
+    index = ":unused_aou_example_lib_index",
+)
+
+safety_analysis(
+    name = "stale_measure_version_safety_analysis",
+    arch_design = ":arch_design_public_api_example",
+    assessments = ["fixtures/aou_root_cause/assessments_stale_version.trlc"],
+    failure_modes = [":aou_root_cause_failure_modes"],
+    fault_trees = ":aou_root_cause_fault_trees",
+    safety_measures = [":aou_root_cause_aous"],
+)
+
+dependability_analysis(
+    name = "stale_measure_version_dependability_analysis",
+    arch_design = ":arch_design_public_api_example",
+    safety_analysis = [":stale_measure_version_safety_analysis"],
+)
+
+dependable_element(
+    name = "stale_measure_version_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_public_api_example"],
+    components = [":test_component"],
+    dependability_analysis = [":stale_measure_version_dependability_analysis"],
+    integrity_level = "B",
+    maturity = "release",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+)
+
+lobster_ci_report_test(
+    name = "stale_measure_version_ci_report_test",
+    contains = [
+        "assessments_stale_version.trlc",
+        "has version 1 (expected 2)",
+    ],
+    expect_ci_failure = True,
+    index = ":stale_measure_version_example_lib_index",
+)
+
 # Unit, Component, and Dependable Element test suite
 unit_component_test_suite(name = "unit_component_tests")
 
@@ -2408,7 +2558,6 @@ rst_to_trlc(
 assumptions_of_use(
     name = "aous_rst",
     srcs = [":aous_rst_trlc"],
-    deps = [":aou_root_cause_fault_trees"],
 )
 
 asr_rst_output_test(
@@ -2609,19 +2758,17 @@ puml_layout_test_suite(name = "puml_layout")
 # Safety Analysis Tools Unit Tests
 # ============================================================================
 
-# Validates the Measure type hierarchy (SafetyMeasure, Mitigation, AoU):
-# SafetyMeasure is abstract (only Mitigation extends it) and its "root_causes"
-# field is mandatory, tracing explicitly to a RootCause record instead of
-# name-matching the FTA $RootCause alias.
+# Validates the RootCauseAssessment type: an assessment lists the AoUs or
+# CompReqs addressing its root causes, or none when they do not apply.
 trlc_requirements(
-    name = "safety_measures_fixtures",
-    srcs = ["fixtures/seooc_test/safety_measures_fixtures.trlc"],
+    name = "root_cause_assessment_fixtures",
+    srcs = ["fixtures/seooc_test/root_cause_assessment_fixtures.trlc"],
     spec = ["@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model"],
 )
 
 trlc_requirements_test(
-    name = "safety_measures_types_test",
-    reqs = [":safety_measures_fixtures"],
+    name = "root_cause_assessment_types_test",
+    reqs = [":root_cause_assessment_fixtures"],
 )
 
 py_test(
@@ -2711,6 +2858,8 @@ test_suite(
         ":aou_in_aou_deps_fails_test",
         ":aou_merged_test",
         ":aou_none_test",
+        ":assessment_config_no_aou_test",
+        ":assessment_config_own_aou_test",
         ":comp_req_measure_builds",
         ":fta_default_package_test",
         ":lobster_config_tests",
