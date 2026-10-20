@@ -70,6 +70,21 @@ fn run_component_resolver_group_case(case_name: &str) {
 }
 
 #[test]
+fn test_interface_binding_syntax_regression() {
+    run_component_resolver_case("binding_sources");
+}
+
+#[test]
+fn test_positive_provided_directional_decorator() {
+    run_component_resolver_case("positive_provided_directional_decorator");
+}
+
+#[test]
+fn test_invalid_provided_directional_decorator() {
+    run_component_resolver_case("invalid_provided_directional_decorator");
+}
+
+#[test]
 fn test_group_implicit_parent_across_files() {
     run_component_resolver_group_case("group_implicit_parent_across_files");
 }
@@ -326,6 +341,11 @@ fn test_invalid_interface_left_generic_lollipop() {
 #[test]
 fn test_invalid_interface_left_inverse_generic_lollipop() {
     run_component_resolver_case("invalid_interface_left_inverse_generic_lollipop");
+}
+
+#[test]
+fn test_invalid_component_left_required_decorator() {
+    run_component_resolver_case("invalid_component_left_required_decorator");
 }
 
 #[test]

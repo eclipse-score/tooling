@@ -22,7 +22,7 @@ package "Pkg" as Pkg {
     interface "IProvided" as IProvided
     interface "IRequired" as IRequired
 
-    pOut )- IProvided : provides
+    pOut - IProvided : provides
     pIn -( IRequired : requires
 }
 

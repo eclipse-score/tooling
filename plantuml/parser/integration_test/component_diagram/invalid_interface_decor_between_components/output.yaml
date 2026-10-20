@@ -16,4 +16,4 @@ invalid_interface_decor_between_components.puml:
     fields:
       from: "A"
       to: "B"
-      reason: "Interface decorators '-(', ')-', and '--()' require exactly one Interface endpoint"
+      reason: "Interface decorators '-', '--', '-(', and '--()' require exactly one Interface endpoint"

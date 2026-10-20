@@ -21,6 +21,6 @@ interface "IRequired" as IRequired
 interface "IProvided" as IProvided
 
 p_in -( IRequired : requires
-p_out )- IProvided : provides
+p_out - IProvided : provides
 
 @enduml

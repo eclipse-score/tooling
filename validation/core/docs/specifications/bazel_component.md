@@ -185,7 +185,7 @@ The validator identifies elements by their **stereotype**, not by the PlantUML k
 | `<<component>>` | `component`, `package` | Architectural component | `component` |
 | `<<unit>>` | `component`, `package` | Leaf implementation unit | `unit` |
 
-Port declarations and interface bindings (`portin`/`portout`, `-(`/`)-`) are
+Port declarations and interface bindings (`portin`/`portout`, `-(`/`-`) are
 not validated by this validator; they are checked by the internal/public API
 and sequence validators instead.
 

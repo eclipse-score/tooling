@@ -16,6 +16,6 @@ package "Pkg" as Pkg {
     interface "IService" as IService
 }
 
-Pkg )- IService : invalid
+Pkg --() IService : invalid
 
 @enduml

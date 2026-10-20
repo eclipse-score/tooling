@@ -84,7 +84,7 @@ component unit_1 <<unit>>
 component unit_2 <<unit>>
 interface IData
 unit_1 -( IData
-unit_2 )- IData
+unit_2 - IData
 ```
 
 ```
@@ -116,7 +116,7 @@ component unit_1 <<unit>>
 component unit_2 <<unit>>
 interface IData
 unit_1 -( IData
-unit_2 )- IData
+unit_2 - IData
 ```
 
 ```text

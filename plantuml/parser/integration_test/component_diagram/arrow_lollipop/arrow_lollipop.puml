@@ -20,7 +20,7 @@ package "SampleSEooC" as SampleSEooC {
 
     interface IService
 
-    ComponentA )- IService : provides
+    ComponentA - IService : provides
     ComponentB -( IService : requires
 }
 

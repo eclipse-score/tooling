@@ -1,0 +1,117 @@
+{
+  "positive_provided_directional_decorator.puml": {
+    "C": {
+      "id": "C",
+      "name": "C",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Component",
+      "stereotype": null,
+      "relations": [
+        {
+          "target": "IPlain",
+          "annotation": null,
+          "relation_type": "InterfaceBinding",
+          "source_role": "Provided",
+          "source_location": {"file": "", "line": 23}
+        },
+        {
+          "target": "IUp",
+          "annotation": null,
+          "relation_type": "InterfaceBinding",
+          "source_role": "Provided",
+          "source_location": {"file": "", "line": 24}
+        },
+        {
+          "target": "IU",
+          "annotation": null,
+          "relation_type": "InterfaceBinding",
+          "source_role": "Provided",
+          "source_location": {"file": "", "line": 25}
+        },
+        {
+          "target": "IDown",
+          "annotation": null,
+          "relation_type": "InterfaceBinding",
+          "source_role": "Provided",
+          "source_location": {"file": "", "line": 26}
+        },
+        {
+          "target": "ILeft",
+          "annotation": null,
+          "relation_type": "InterfaceBinding",
+          "source_role": "Provided",
+          "source_location": {"file": "", "line": 27}
+        },
+        {
+          "target": "IRight",
+          "annotation": null,
+          "relation_type": "InterfaceBinding",
+          "source_role": "Provided",
+          "source_location": {"file": "", "line": 28}
+        }
+      ],
+      "source_location": {"file": "", "line": 15}
+    },
+    "IPlain": {
+      "id": "IPlain",
+      "name": "IPlain",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {"file": "", "line": 16}
+    },
+    "IUp": {
+      "id": "IUp",
+      "name": "IUp",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {"file": "", "line": 17}
+    },
+    "IU": {
+      "id": "IU",
+      "name": "IU",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {"file": "", "line": 18}
+    },
+    "IDown": {
+      "id": "IDown",
+      "name": "IDown",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {"file": "", "line": 19}
+    },
+    "ILeft": {
+      "id": "ILeft",
+      "name": "ILeft",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {"file": "", "line": 20}
+    },
+    "IRight": {
+      "id": "IRight",
+      "name": "IRight",
+      "alias": null,
+      "parent_id": null,
+      "comp_type": "Interface",
+      "stereotype": null,
+      "relations": [],
+      "source_location": {"file": "", "line": 21}
+    }
+  }
+}

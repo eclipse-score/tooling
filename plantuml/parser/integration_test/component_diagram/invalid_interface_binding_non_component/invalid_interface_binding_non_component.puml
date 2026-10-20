@@ -16,7 +16,7 @@ package "Pkg" as Pkg {
     actor "ActorA" as ActorA
     interface "IService" as IService
 
-    ActorA )- IService : invalid
+    ActorA --() IService : invalid
 }
 
 @enduml

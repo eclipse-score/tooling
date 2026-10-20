@@ -105,6 +105,7 @@ struct PendingRelation {
 
 #[derive(Clone)]
 struct ArrowAnalysis {
+    bare_provided_candidate: bool,
     has_provided_token: bool,
     has_required_token: bool,
     has_direction: bool,
@@ -260,39 +261,60 @@ impl ComponentResolver {
     }
 
     // Supported relation syntaxes:
-    // - Interface binding: `)-`, `-(`, `--()`
+    // - Interface binding: `-` or `--` (with an interface endpoint), `-(`, `--()`
     // - Directed: `-->`, `<--`, `..>`, `<..`
     // - Undirected: `--`, `..`
     fn parse_arrow(relation: &Relation) -> Result<ArrowAnalysis, ComponentResolverError> {
         let (left, right, middle) = Self::arrow_parts(&relation.arrow);
         let line = relation.arrow.line.raw.as_str();
 
-        let has_provided_token = left == ")" || left == "()" || middle == "()";
+        // Reject the legacy decorator before checking for mixed interface tokens.
+        if left == ")" {
+            return Err(ComponentResolverError::InvalidRelationship {
+                from: relation.lhs.clone(),
+                to: relation.rhs.clone(),
+                reason: "Unsupported interface decorator syntax: use '-', '--', '--()', or '-u-()' (Provided) or '-(' (Required); ')-' and '()--' are rejected".to_string(),
+            });
+        }
+
+        // Keep unsupported left-side `()` detectable for later validation.
+        // Bare dashes are classified using endpoint types in resolve_one_relation.
+        let has_provided_token = left == "()" || middle == "()" || right == "()";
         let has_required_token = middle == "(" || right == "(";
 
         if has_provided_token && has_required_token {
             return Err(ComponentResolverError::InvalidRelationship {
                 from: relation.lhs.clone(),
                 to: relation.rhs.clone(),
-                reason: "Mixed interface decorators are not allowed: cannot combine provided ')' with required '(' in one relation"
+                reason: "Mixed interface decorators are not allowed: cannot combine provided '()' with required '(' in one relation"
                     .to_string(),
             });
         }
 
         // A lollipop line may carry a direction hint, which adds a second dash
-        // segment: `)-u-` or `-u-(`.  The line field then contains `"--"` instead
+        // segment: `-up-()` or `-u-(`.  The line field then contains `"--"` instead
         // of `"-"`.  Direction is visual-only and does not affect semantics.
         let is_lollipop_line = line.chars().all(|c| c == '-') && !line.is_empty();
 
-        let is_canonical_provided =
-            is_lollipop_line && left == ")" && middle.is_empty() && right.is_empty();
-        let is_generic_lollipop_provided =
-            is_lollipop_line && left.is_empty() && middle == "()" && right.is_empty();
+        let bare_provided_candidate =
+            left.is_empty() && middle.is_empty() && right.is_empty() && is_lollipop_line;
+
+        // With a layout direction, the provided decorator must follow the line:
+        // `-up-()` is valid, but `-up()-` is not.
+        let has_layout_direction = relation
+            .arrow
+            .middle
+            .as_ref()
+            .is_some_and(|middle| middle.direction.is_some());
+        let is_generic_lollipop_provided = is_lollipop_line
+            && left.is_empty()
+            && ((middle == "()" && right.is_empty() && !has_layout_direction)
+                || (middle.is_empty() && right == "()"));
         let is_required = is_lollipop_line
             && left.is_empty()
             && ((middle == "(" && right.is_empty()) || (middle.is_empty() && right == "("));
 
-        let decor_role = if is_canonical_provided || is_generic_lollipop_provided {
+        let decor_role = if is_generic_lollipop_provided {
             Some(EndpointRole::Provided)
         } else if is_required {
             Some(EndpointRole::Required)
@@ -304,6 +326,7 @@ impl ComponentResolver {
         let reverse_direction = left.contains('<') && !right.contains('>');
 
         Ok(ArrowAnalysis {
+            bare_provided_candidate,
             has_provided_token,
             has_required_token,
             has_direction,
@@ -395,7 +418,7 @@ impl ComponentResolver {
             return Some(ComponentResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
-                reason: "Interface decorators '-(', ')-', and '--()' require exactly one Interface endpoint"
+                reason: "Interface decorators '-', '--', '-(', and '--()' require exactly one Interface endpoint"
                     .to_string(),
             });
         }
@@ -409,7 +432,7 @@ impl ComponentResolver {
             return Some(ComponentResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
-                reason: "Interface decorators '-(', ')-', and '--()' are not allowed between two interfaces"
+                reason: "Interface decorators '-', '--', '-(', and '--()' are not allowed between two interfaces"
                     .to_string(),
             });
         }
@@ -427,7 +450,7 @@ impl ComponentResolver {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
                 reason:
-                    "Decorator binding requires a Component or component-stereotyped element on the left and Interface on the right"
+                    "Interface bindings require an Interface and a Component or a Package stereotyped as 'component' or 'SEooC' (directly or through its port). Only explicit forms ('--()' or '-(') require the Interface on the right"
                         .to_string(),
             });
         }
@@ -444,7 +467,7 @@ impl ComponentResolver {
             return Some(ComponentResolverError::InvalidRelationship {
                 from: input.relation.lhs.clone(),
                 to: input.relation.rhs.clone(),
-                reason: "Unsupported interface decorator syntax: only ')-' and '--()' (Provided) plus '-(' (Required) are supported; '()--' is rejected"
+                reason: "Unsupported interface decorator syntax: use '-', '--', '--()', or '-u-()' (Provided) or '-(' (Required); ')-' and '()--' are rejected"
                     .to_string(),
             });
         }
@@ -454,7 +477,7 @@ impl ComponentResolver {
         input: &RelationValidationInput<'_>,
     ) -> Option<ComponentResolverError> {
         if let (Some(port_role), Some(decor_role)) = (input.src_port_role, input.decor_role) {
-            if port_role != decor_role {
+            if port_role != EndpointRole::None && port_role != decor_role {
                 return Some(ComponentResolverError::InvalidRelationship {
                     from: input.relation.lhs.clone(),
                     to: input.relation.rhs.clone(),
@@ -477,8 +500,25 @@ impl ComponentResolver {
         let mut source = self.resolve_ref_with_metadata(&relation.lhs, peers)?;
         let mut target = self.resolve_ref_with_metadata(&relation.rhs, peers)?;
 
-        let parsed_arrow = Self::parse_arrow(relation)?;
+        let mut parsed_arrow = Self::parse_arrow(relation)?;
         if parsed_arrow.reverse_direction {
+            std::mem::swap(&mut source, &mut target);
+        }
+
+        let source_is_interface = source.element_type == Some(ComponentType::Interface);
+        let target_is_interface = target.element_type == Some(ComponentType::Interface);
+        let is_bare_interface_binding =
+            parsed_arrow.bare_provided_candidate && (source_is_interface || target_is_interface);
+
+        // Bare solid lines involving an interface denote a provided binding.
+        if is_bare_interface_binding {
+            parsed_arrow.decor_role = Some(EndpointRole::Provided);
+            parsed_arrow.has_provided_token = true;
+        }
+
+        // Normalize bare bindings to component -> interface before checking ownership.
+        // Keep interface -> interface unchanged so validation rejects it.
+        if is_bare_interface_binding && source_is_interface && !target_is_interface {
             std::mem::swap(&mut source, &mut target);
         }
 

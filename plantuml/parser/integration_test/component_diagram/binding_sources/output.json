@@ -1,0 +1,98 @@
+{
+  "input.puml": {
+    "Plain": {
+      "id": "Plain", "name": "Plain", "alias": null, "parent_id": null,
+      "element_type": "Component", "stereotype": null,
+      "source_location": {"file": "", "line": 14},
+      "relations": [
+        {"target": "Bare", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 27}},
+        {"target": "Layout", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 28}},
+        {"target": "Styled", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 29}},
+        {"target": "DoubleBare", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 38}},
+        {"target": "DoubleLayout", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 39}},
+        {"target": "DoubleStyled", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 40}},
+        {"target": "Reverse", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 42}}
+      ]
+    },
+    "Unit": {
+      "id": "Unit", "name": "Unit", "alias": null, "parent_id": null,
+      "element_type": "Component", "stereotype": "unit",
+      "source_location": {"file": "", "line": 15},
+      "relations": [
+        {"target": "Bare", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 30}},
+        {"target": "Reverse", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 43}}
+      ]
+    },
+    "Comp": {
+      "id": "Comp", "name": "Comp", "alias": null, "parent_id": null,
+      "element_type": "Package", "stereotype": "component",
+      "source_location": {"file": "", "line": 16},
+      "relations": [
+        {"target": "Bare", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 31}},
+        {"target": "Reverse", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 44}}
+      ]
+    },
+    "Seooc": {
+      "id": "Seooc", "name": "Seooc", "alias": null, "parent_id": null,
+      "element_type": "Package", "stereotype": "SEooC",
+      "source_location": {"file": "", "line": 17},
+      "relations": [
+        {"target": "Bare", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 32}},
+        {"target": "Reverse", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 45}}
+      ]
+    },
+    "WithOut": {
+      "id": "WithOut", "name": "WithOut", "alias": null, "parent_id": null,
+      "element_type": "Component", "stereotype": null,
+      "source_location": {"file": "", "line": 18},
+      "relations": [
+        {"target": "Bare", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 33}},
+        {"target": "Reverse", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 46}}
+      ]
+    },
+    "WithPort": {
+      "id": "WithPort", "name": "WithPort", "alias": null, "parent_id": null,
+      "element_type": "Component", "stereotype": null,
+      "source_location": {"file": "", "line": 21},
+      "relations": [
+        {"target": "Bare", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 34}},
+        {"target": "Reverse", "annotation": "provides", "relation_type": "InterfaceBinding", "source_role": "Provided", "source_location": {"file": "", "line": 47}}
+      ]
+    },
+    "Bare": {
+      "id": "Bare", "name": "Bare", "alias": null, "parent_id": null,
+      "element_type": "Interface", "stereotype": null, "relations": [],
+      "source_location": {"file": "", "line": 24}
+    },
+    "Layout": {
+      "id": "Layout", "name": "Layout", "alias": null, "parent_id": null,
+      "element_type": "Interface", "stereotype": null, "relations": [],
+      "source_location": {"file": "", "line": 25}
+    },
+    "Styled": {
+      "id": "Styled", "name": "Styled", "alias": null, "parent_id": null,
+      "element_type": "Interface", "stereotype": null, "relations": [],
+      "source_location": {"file": "", "line": 26}
+    },
+    "DoubleBare": {
+      "id": "DoubleBare", "name": "DoubleBare", "alias": null, "parent_id": null,
+      "element_type": "Interface", "stereotype": null, "relations": [],
+      "source_location": {"file": "", "line": 35}
+    },
+    "DoubleLayout": {
+      "id": "DoubleLayout", "name": "DoubleLayout", "alias": null, "parent_id": null,
+      "element_type": "Interface", "stereotype": null, "relations": [],
+      "source_location": {"file": "", "line": 36}
+    },
+    "Reverse": {
+      "id": "Reverse", "name": "Reverse", "alias": null, "parent_id": null,
+      "element_type": "Interface", "stereotype": null, "relations": [],
+      "source_location": {"file": "", "line": 41}
+    },
+    "DoubleStyled": {
+      "id": "DoubleStyled", "name": "DoubleStyled", "alias": null, "parent_id": null,
+      "element_type": "Interface", "stereotype": null, "relations": [],
+      "source_location": {"file": "", "line": 37}
+    }
+  }
+}

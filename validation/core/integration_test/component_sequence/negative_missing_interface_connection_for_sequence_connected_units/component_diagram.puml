@@ -22,7 +22,7 @@ package package_a <<SEooC>> {
     interface CallerInterface
     interface CalleeInterface
     unit_1 -( CallerInterface
-    unit_2 )- CalleeInterface
+    unit_2 - CalleeInterface
 }
 
 @enduml

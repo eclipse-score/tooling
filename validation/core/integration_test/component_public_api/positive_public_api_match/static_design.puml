@@ -22,6 +22,6 @@ package sample_seooc <<SEooC>> {
 }
 
 interface SampleLibraryAPI
-sample_seooc_public_api_port )-d- SampleLibraryAPI
+sample_seooc_public_api_port -d- SampleLibraryAPI
 
 @enduml

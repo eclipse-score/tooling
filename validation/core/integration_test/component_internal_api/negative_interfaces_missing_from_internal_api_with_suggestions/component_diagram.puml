@@ -23,8 +23,8 @@ package package_a <<SEooC>> {
     interface InternalInterface
     unit_1 -( DiagnosticsInterface
     unit_1 -( InternalInterface
-    unit_2 )- DiagnosticsInterface
-    unit_2 )- InternalInterface
+    unit_2 - DiagnosticsInterface
+    unit_2 - InternalInterface
 }
 
 @enduml

@@ -20,7 +20,7 @@ package dynamic_example_seooc <<SEooC>> {
 
 interface TaskInterface
 Dispatcher -( TaskInterface
-Worker )- TaskInterface
+Worker - TaskInterface
 dynamic_example_seooc -( TaskInterface
 
 @enduml

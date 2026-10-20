@@ -28,6 +28,6 @@ note right of CE : elaborated in static_design.puml
 
 interface SampleLibraryAPI
 
-safety_software_seooc_example )-d- SampleLibraryAPI
+safety_software_seooc_example -d- SampleLibraryAPI
 
 @enduml

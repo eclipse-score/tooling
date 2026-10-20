@@ -283,7 +283,7 @@ Any component-type element (``<<SEooC>>``, ``<<component>>``, or ``<<unit>>``) c
 
     interface SampleLibraryAPI
 
-    safety_software_seooc_example )-d- SampleLibraryAPI
+    safety_software_seooc_example -d- SampleLibraryAPI
 
     @enduml
 
@@ -309,7 +309,7 @@ When an element needs an explicitly named, standalone binding point — for exam
     interface SampleLibraryAPI
 
     p_required -( RequiredInterface : requires
-    p_public   )- SampleLibraryAPI : provides
+    p_public   - SampleLibraryAPI : provides
 
     @enduml
 
@@ -337,7 +337,7 @@ repeated interfaces/relations:
     }
 
     interface SampleLibraryAPI
-    safety_software_seooc_example )-d- SampleLibraryAPI
+    safety_software_seooc_example -d- SampleLibraryAPI
 
     @enduml
 

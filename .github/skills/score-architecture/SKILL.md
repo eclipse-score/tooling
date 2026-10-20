@@ -201,13 +201,13 @@ package safety_software_seooc_example <<SEooC>> {
 
         interface InternalInterface
         unit_1 -l-( InternalInterface
-        unit_2 )-r- InternalInterface
+        unit_2 -r- InternalInterface
     }
 }
 
 interface SampleLibraryAPI
 
-safety_software_seooc_example )-d- SampleLibraryAPI
+safety_software_seooc_example -d- SampleLibraryAPI
 
 @enduml
 ```
@@ -219,7 +219,7 @@ target names, and `safety_software_seooc_example` matches the `dependable_elemen
 ### Interfaces & ports
 
 Any component-type element (`<<SEooC>>` or `<<component>>`) can bind an interface with lollipop
-syntax — `-(` for a **required** (incoming) binding and `)-` for a **provided** (outgoing) one.
+syntax — `-(` for a **required** (incoming) binding and `-`, `--`, or `--()` for a **provided** (outgoing) one.
 The `bazel_component` validator does not check interface bindings themselves, but the API and
 sequence validators do (see below).
 
@@ -237,7 +237,7 @@ interface IRequired
 interface IProvided
 
 p_in  -( IRequired : requires
-p_out )- IProvided : provides
+p_out - IProvided : provides
 ```
 
 - `portin` / `portout` must be declared **inside** the `<<SEooC>>` or `<<component>>` element.
@@ -297,7 +297,7 @@ namespace safety_software_seooc_example {
 ```
 
 - **Public API** interfaces must be top-level in the static diagram and bound from the `<<SEooC>>`
-  (e.g. `safety_software_seooc_example )-d- SampleLibraryAPI`); interfaces nested inside
+  (e.g. `safety_software_seooc_example -d- SampleLibraryAPI`); interfaces nested inside
   components/units are treated as *internal* API.
 - **Internal API** interfaces are modeled inside the owning element's `namespace` so their
   fully-qualified name reflects containment.
