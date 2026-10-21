@@ -32,7 +32,6 @@ def feature_requirements(
         deps = [],
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:feature_requirement"),
-        ref_package = "",
         image_srcs = [],
         **kwargs):
     """Define feature requirements following S-CORE process guidelines.
@@ -47,7 +46,8 @@ def feature_requirements(
     Args:
         name: The name of the target.
         srcs: List of .trlc source files containing FeatReq records as defined
-            in the S-CORE requirements model.
+            in the S-CORE requirements model. Targets generating .trlc files,
+            e.g. ``rst_to_trlc``, are accepted as well.
         deps: Optional list of requirement targets (e.g. assumed_system_requirements)
             whose TRLC records are needed for cross-reference parsing.  These
             targets must provide TrlcProviderInfo.
@@ -85,7 +85,6 @@ def feature_requirements(
         req_kind = "feature",
         lobster_config = lobster_config,
         spec = spec,
-        ref_package = ref_package,
         image_srcs = image_srcs,
         **kwargs
     )

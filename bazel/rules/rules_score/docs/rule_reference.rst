@@ -311,15 +311,11 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
    * - ``srcs``
      - label list
      - yes
-     - ``.trlc`` files (containing ``AoU`` records), ``.rst`` files, or labels to existing ``TrlcProviderInfo``-providing targets. Every ``aou_req`` directive of an ``.rst`` source needs ``:root_causes: <fta_package>.<RootCause>, ...``; a missing or unqualified value fails the conversion
+     - ``.trlc`` files (containing ``AoU`` records), targets generating them (e.g. :ref:`rst_to_trlc <rule-rst-to-trlc>`), or labels to existing ``TrlcProviderInfo``-providing targets
    * - ``deps``
      - label list
      - no
      - Other requirement targets (``TrlcProviderInfo``) needed for cross-reference parsing (default ``[]``). List the ``fault_trees`` target: every ``AoU`` references the generated ``<fta_package>.<RootCause>`` records it addresses (``root_causes``, mandatory). Other ``assumptions_of_use`` targets are rejected here, as their AoUs would be extracted as own AoUs.
-   * - ``ref_package``
-     - string
-     - no
-     - TRLC package prefix used for ``derived_from`` cross-references when converting RST sources (default ``None``)
    * - ``lobster_config``
      - label
      - no
@@ -330,6 +326,61 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
      - Bazel visibility
 
 **Generated targets:** ``<name>`` (documentation), ``<name>_test`` (TRLC validation)
+
+.. _rule-rst-to-trlc:
+
+rst_to_trlc
+~~~~~~~~~~~
+
+Converts sphinx-needs RST requirement directives (``assumed_system_req``,
+``feat_req``, ``comp_req``, ``aou_req``) to ``.trlc`` files, so requirements
+authored in RST can feed the requirement rules above.
+
+.. code-block:: python
+
+   rst_to_trlc(
+       name = "features_trlc",
+       srcs = ["docs/features.rst"],
+       ref_package = "AssumedSystemRequirements",
+   )
+
+   feature_requirements(
+       name = "features",
+       srcs = [":features_trlc"],
+       deps = [":sys_req"],
+   )
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``name``
+     - string
+     - yes
+     - Target name
+   * - ``srcs``
+     - label list
+     - yes
+     - ``.rst`` files containing the directives; each yields one ``.trlc`` file
+   * - ``package``
+     - string
+     - no
+     - TRLC package of the generated files (default: CamelCased source stem, e.g. ``index.rst`` -> ``Index``)
+   * - ``ref_package``
+     - string
+     - no
+     - TRLC package of the records referenced by ``:satisfies:`` / ``:derived_from:``. A single package applies to all references of all ``srcs``; use one ``rst_to_trlc`` target per referenced package
+
+Reference fields hold plain requirement ids; ``version==N`` filters pin the
+referenced version (default ``1``). Sphinx-needs-only filters without an id are
+rejected. Every ``aou_req`` needs ``:root_causes: <fta_package>.<RootCause>, ...``;
+a missing or unqualified value fails the conversion.
+
+**Provides:** ``DefaultInfo`` with the generated ``.trlc`` files; pass the target in ``srcs`` of ``assumed_system_requirements``, ``feature_requirements``, ``component_requirements`` or ``assumptions_of_use``.
 
 .. _rule-glossary:
 

@@ -89,7 +89,7 @@ are rendered under :doc:`tool_reference/index`.
        ``.inc`` files).
    * - **rst_to_trlc**
      - ``src/rst_to_trlc.py`` (local)
-     - ``score_requirements_rule`` macro
+     - ``rst_to_trlc`` rule
      - Converts RST requirement directives (``feat_req``, ``comp_req``, …) into
        ``.trlc`` records so requirements can be authored in either RST or TRLC.
    * - **PlantUML Parser**
