@@ -33,7 +33,6 @@ def test_specifications(
         lobster_config,
         deps = [],
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
-        ref_package = "",
         image_srcs = [],
         **kwargs):
     """Define test specifications following S-CORE process guidelines.
@@ -63,8 +62,6 @@ def test_specifications(
             Defaults to the S-CORE requirements model
             (``@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model``).
             Override this when using a custom requirements model that defines TestSpec.
-        ref_package: TRLC package prefix used for verifies cross-references
-            when converting RST sources.
         image_srcs: Image and diagram files (.svg, .png, or .puml) to stage
             next to the rendered RST.
         visibility: Bazel visibility specification for the generated targets.
@@ -96,7 +93,6 @@ def test_specifications(
         req_kind = "test_spec",
         lobster_config = lobster_config,
         spec = spec,
-        ref_package = ref_package,
         image_srcs = image_srcs,
         **kwargs
     )

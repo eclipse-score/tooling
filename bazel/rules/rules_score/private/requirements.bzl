@@ -34,6 +34,7 @@ _REQ_KIND_TITLES = {
     "assumed_system": "Assumed System Requirements",
     "aou": "Assumptions of Use",
     "failure_mode": "Failure Modes",
+    "test_spec": "Test Specifications",
 }
 
 # ============================================================================
@@ -136,6 +137,11 @@ def _requirements_impl(ctx):
             srcs = depset([lobster_file]),
             name = ctx.label.name,
         )
+    elif ctx.attr.req_kind == "test_spec":
+        req_provider = TestSpecificationsInfo(
+            srcs = depset([lobster_file]),
+            name = ctx.label.name,
+        )
     else:  # assumed_system
         req_provider = AssumedSystemRequirementsInfo(
             srcs = depset([lobster_file]),
@@ -191,7 +197,7 @@ _score_requirements_rule = rule(
             doc = "Other requirement targets whose TRLC records are needed for cross-reference parsing.",
         ),
         "req_kind": attr.string(
-            values = ["feature", "component", "assumed_system", "aou", "failure_mode"],
+            values = ["feature", "component", "assumed_system", "aou", "failure_mode", "test_spec"],
             mandatory = True,
             doc = "Kind of requirements; determines which domain provider is emitted.",
         ),
