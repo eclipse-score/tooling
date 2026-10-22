@@ -2673,6 +2673,41 @@ py_test(
 )
 
 py_test(
+    name = "test_metamodel_drift",
+    size = "small",
+    srcs = ["test_metamodel_drift.py"],
+    data = [
+        "fixtures/metamodel_drift/mapping.yaml",
+        "fixtures/metamodel_drift/metamodel.yaml",
+        "fixtures/metamodel_drift/tiny.rsl",
+    ],
+    deps = ["@score_tooling//bazel/rules/rules_score:metamodel_drift_lib"],
+)
+
+py_test(
+    name = "metamodel_drift_report_test",
+    size = "small",
+    srcs = ["test_metamodel_drift_report.py"],
+    args = [
+        "--rsl",
+        "$(rlocationpath @score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model.rsl)",
+        "--metamodel",
+        "$(rlocationpath @score_docs_as_code//src/extensions/score_metamodel:metamodel_yaml)",
+        "--mapping",
+        "$(rlocationpath @score_tooling//bazel/rules/rules_score/trlc/config:metamodel_mapping.yaml)",
+        "--fail-on",
+        "never",
+    ],
+    data = [
+        "@score_docs_as_code//src/extensions/score_metamodel:metamodel_yaml",
+        "@score_tooling//bazel/rules/rules_score/trlc/config:metamodel_mapping.yaml",
+        "@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model.rsl",
+    ],
+    main = "test_metamodel_drift_report.py",
+    deps = ["@score_tooling//bazel/rules/rules_score:metamodel_drift_lib"],
+)
+
+py_test(
     name = "test_trlc_rst_image_rendering",
     size = "small",
     srcs = ["trlc_rst_image_rendering_test.py"],
@@ -2708,6 +2743,7 @@ test_suite(
         ":lobster_config_tests",
         ":measure_deps_are_context_only_test",
         ":measure_spec_is_merged_test",
+        ":metamodel_drift_report_test",
         ":requirements_multi_spec_tests",
         ":requirements_rst_tests",
         ":rst_to_trlc_rule_tests",
@@ -2716,6 +2752,7 @@ test_suite(
         ":test_aou_forwarding_to_lobster",
         ":test_bazel_sphinx_needs",
         ":test_merge_lobster_items",
+        ":test_metamodel_drift",
         ":test_rst_to_trlc",
         ":test_safety_analysis_assembler",
         ":test_sphinx_html_merge",

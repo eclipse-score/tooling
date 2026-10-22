@@ -79,6 +79,29 @@ py_binary(
     visibility = ["//visibility:public"],
 )
 
+py_library(
+    name = "metamodel_drift_lib",
+    srcs = ["src/metamodel_drift.py"],
+    imports = ["src"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@trlc//trlc",
+        requirement("pyyaml"),
+    ],
+)
+
+py_binary(
+    name = "metamodel_drift",
+    srcs = ["src/metamodel_drift.py"],
+    imports = ["src"],
+    main = "src/metamodel_drift.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@trlc//trlc",
+        requirement("pyyaml"),
+    ],
+)
+
 # Arch-to-reqs-from-lobster tool: extracts requirements from component requirement .lobster files
 # and generates an architecture.lobster item representing the component's allocation
 py_binary(
