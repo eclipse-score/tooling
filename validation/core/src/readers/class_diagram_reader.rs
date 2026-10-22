@@ -256,6 +256,7 @@ fn read_entity(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<SimpleE
             entity.entity_type(),
             &format!("{path}:entity:{}", entity.id()),
         )?,
+        is_partial_specialization: entity.is_partial_specialization(),
         type_aliases: read_type_aliases(entity),
         variables: read_variables(entity, path)?,
         methods: read_methods(entity, path)?,

@@ -125,6 +125,7 @@ table SimpleEntity {
     relationships: [Relationship];
     source_location: SourceLocation (required);
     stereotypes: [string];
+    is_partial_specialization: bool = false;
 }
 
 table FreeFunctionDecl {

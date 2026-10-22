@@ -58,6 +58,8 @@ impl AstVisitor for ClassVisitor {
             Self::visit_class(&entity, semantic_parent.as_deref(), namespace.as_deref())
         {
             class_entity.template_parameters = template_params;
+            class_entity.is_partial_specialization =
+                entity.get_kind() == EntityKind::ClassTemplatePartialSpecialization;
             ctx.parsed_class_info.insert(builder.id.clone(), builder);
             ctx.types.insert(class_entity.id.clone(), class_entity);
         }

@@ -168,6 +168,11 @@ fn negative_duplicate_class_entity_input() {
 }
 
 #[test]
+fn negative_duplicate_partial_specialization_design_id() {
+    assert_case("negative_duplicate_partial_specialization_design_id");
+}
+
+#[test]
 fn negative_duplicate_class_entity_implementation_input() {
     assert_case("negative_duplicate_class_entity_implementation_input");
 }
@@ -315,4 +320,24 @@ fn negative_template_parameter_mismatch() {
 #[test]
 fn negative_template_parameter_pack_mismatch() {
     assert_case("negative_template_parameter_pack_mismatch");
+}
+
+#[test]
+fn positive_class_template_forms() {
+    assert_case("positive_class_template_forms");
+}
+
+#[test]
+fn positive_class_template_parameter_kinds() {
+    assert_case("positive_class_template_parameter_kinds");
+}
+
+#[test]
+fn negative_partial_specialization_interface_mismatch() {
+    assert_case("negative_partial_specialization_interface_mismatch");
+}
+
+#[test]
+fn positive_move_only_function_partial_specialization() {
+    assert_case("positive_move_only_function_partial_specialization");
 }

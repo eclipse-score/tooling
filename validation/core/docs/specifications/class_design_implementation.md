@@ -92,6 +92,33 @@ class Repository {
 }
 ```
 
+### Partial-Specialization Interface Matching
+
+A quoted class name may describe a C++ class-template partial-specialization
+pattern. The class identity is derived from that quoted name; for class-like
+declarations, the trailing template argument list is removed when constructing
+the entity ID. The PlantUML alias is only a reference path and does not define
+the entity ID. Consequently, different specialization patterns of the same
+primary class resolve to the same design entity ID.
+
+The validator matches that design entity against every implementation partial
+specialization with the same fully qualified base class name, then checks the
+declared interface on each match. Thus, one design declaration expresses a
+shared contract for all matching specializations. Adding multiple declarations
+for different specializations does not create separate contracts: they produce
+duplicate class IDs and validation fails before implementation comparison.
+The current model does not express different contracts for individual
+specializations.
+
+```text
+' One design entity; the interface is checked against each matching specialization.
+namespace amp {
+  class "move_only_function<ReturnType(ArgTypes...), Capacity, Alignment>" as move_only_function {
+    + empty() noexcept : bool
+  }
+}
+```
+
 ### Type Alias Consistency
 
 Every type alias modeled in the unit design entity must exist in the matching

@@ -19,7 +19,8 @@ use class_parser::Visibility as ParserVisibility;
 use class_parser::{
     Attribute, ClassLikeDef, ClassLikeKind, ClassUmlFile, ClassUmlTopLevel, EnumDef, EnumValue,
     Method as ParserMethod, Name, Namespace, Package, Param as ParserParam,
-    Relationship as ParserRelationship, TypeAlias as ParserTypeAlias, TypeDefinition,
+    Relationship as ParserRelationship, TemplateParameter as ParserTemplateParameter,
+    TypeAlias as ParserTypeAlias, TypeDefinition,
 };
 use group_resolution::{
     unique_peer_match, ImplicitParentError, NestedCandidate, TopLevelCandidate,
@@ -785,6 +786,7 @@ impl ClassResolver {
             enclosing_namespace_id: self.enclosing_namespace_id(&declared),
             stereotypes: stereotypes.clone(),
             entity_type,
+            is_partial_specialization: false,
             type_aliases: type_aliases.iter().map(Self::convert_type_alias).collect(),
             variables: attributes.iter().map(Self::convert_variable).collect(),
             methods: methods
@@ -876,29 +878,42 @@ impl ClassResolver {
     }
 
     fn convert_template_parameters(
-        parameters: &Option<Vec<String>>,
+        parameters: &Option<Vec<ParserTemplateParameter>>,
     ) -> Option<Vec<TemplateParameter>> {
         parameters.as_ref().map(|values| {
             values
                 .iter()
-                .map(|value| {
-                    let trimmed = value.trim();
-                    let (name, is_pack) = trimmed
-                        .strip_suffix("...")
-                        .map(|name| (name.trim(), true))
-                        .unwrap_or((trimmed, false));
-
-                    TemplateParameter::Type {
-                        name: name.to_string(),
+                .map(|parameter| match parameter {
+                    ParserTemplateParameter::Type { name, is_pack } => TemplateParameter::Type {
+                        name: name.clone(),
+                        is_pack: *is_pack,
+                    },
+                    ParserTemplateParameter::NonType {
+                        name,
+                        value_type,
                         is_pack,
-                    }
+                    } => TemplateParameter::NonType {
+                        name: name.clone(),
+                        value_type: value_type.clone(),
+                        is_pack: *is_pack,
+                    },
+                    ParserTemplateParameter::Template {
+                        name,
+                        parameters,
+                        is_pack,
+                    } => TemplateParameter::Template {
+                        name: name.clone(),
+                        parameters: Self::convert_template_parameters(&Some(parameters.clone()))
+                            .unwrap_or_default(),
+                        is_pack: *is_pack,
+                    },
                 })
                 .collect()
         })
     }
 
     fn convert_class_template_parameters(
-        parameters: &Option<Vec<String>>,
+        parameters: &Option<Vec<ParserTemplateParameter>>,
         methods: &[ParserMethod],
     ) -> Option<Vec<TemplateParameter>> {
         parameters.as_ref()?;
@@ -913,7 +928,7 @@ impl ClassResolver {
     }
 
     fn convert_template_parameters_with_pack_expansions(
-        parameters: &Option<Vec<String>>,
+        parameters: &Option<Vec<ParserTemplateParameter>>,
         params: &[ParserParam],
     ) -> Option<Vec<TemplateParameter>> {
         parameters.as_ref()?;
@@ -1017,6 +1032,7 @@ impl ClassResolver {
             enclosing_namespace_id: self.enclosing_namespace_id(&declared),
             stereotypes: def.declaration.stereotypes.clone(),
             entity_type: EntityType::Enum,
+            is_partial_specialization: false,
             type_aliases: vec![],
             variables: vec![],
             methods: vec![],

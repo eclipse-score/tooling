@@ -161,10 +161,19 @@ impl ClassDesignImplementationValidator {
     ) {
         for design_entity in design_classes.entities() {
             let normalized_design_id = normalize_qualified_name(&design_entity.id);
-            let Some(implementation_entity) = implementation_classes
-                .find_by_id(&design_entity.id)
-                .or_else(|| implementation_classes.find_by_id(&normalized_design_id))
-            else {
+            let implementation_entities = implementation_classes
+                .entities()
+                .filter(|entity| {
+                    if entity.is_partial_specialization {
+                        partial_specialization_matches_design(&entity.id, &normalized_design_id)
+                    } else {
+                        normalize_qualified_name(&entity.id)
+                            .eq_ignore_ascii_case(&normalized_design_id)
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if implementation_entities.is_empty() {
                 let suggested_class = best_string_suggestion(
                     &design_entity.id,
                     implementation_classes
@@ -176,10 +185,12 @@ impl ClassDesignImplementationValidator {
                     suggested_class.as_deref(),
                 ));
                 continue;
-            };
+            }
 
-            self.append_class_comparison_diagnostics(design_entity, implementation_entity);
-            self.check_entity(design_entity, implementation_entity);
+            for implementation_entity in implementation_entities {
+                self.append_class_comparison_diagnostics(design_entity, implementation_entity);
+                self.check_entity(design_entity, implementation_entity);
+            }
         }
     }
 
@@ -227,7 +238,9 @@ impl ClassDesignImplementationValidator {
             ));
         }
 
-        if design_entity.template_parameters != implementation_entity.template_parameters {
+        if !implementation_entity.is_partial_specialization
+            && design_entity.template_parameters != implementation_entity.template_parameters
+        {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
@@ -1117,9 +1130,15 @@ fn render_template_parameter(parameter: &TemplateParameter) -> String {
         TemplateParameter::Type { name, is_pack } => {
             render_quoted_template_parameter(name, *is_pack)
         }
-        TemplateParameter::NonType { name, is_pack, .. } => {
-            render_quoted_template_parameter(name, *is_pack)
-        }
+        TemplateParameter::NonType {
+            name,
+            value_type,
+            is_pack,
+        } => format!(
+            "\"{} {}\"",
+            value_type,
+            render_template_parameter_name(name, *is_pack)
+        ),
         TemplateParameter::Template {
             name,
             parameters,
@@ -1201,6 +1220,45 @@ fn normalize_type_name(type_name: &str) -> String {
 fn normalize_qualified_name(reference: &str) -> String {
     // TODO: Remove this workaround once class diagram and implementation parser UIDs use the same namespace separator.
     reference.trim().replace('.', "::")
+}
+
+fn partial_specialization_base_id(id: &str) -> Option<&str> {
+    let mut angle_depth = 0usize;
+    let mut specialization_arguments_start = None;
+
+    for (index, character) in id.char_indices() {
+        match character {
+            '<' if angle_depth == 0 => {
+                specialization_arguments_start = Some(index);
+                angle_depth = 1;
+            }
+            '<' => angle_depth += 1,
+            '>' if angle_depth > 0 => {
+                angle_depth -= 1;
+                if angle_depth == 0 {
+                    let suffix = id[index + character.len_utf8()..].trim_start();
+                    if suffix.is_empty() {
+                        return specialization_arguments_start.map(|start| id[..start].trim());
+                    }
+                    if suffix.starts_with("::") {
+                        specialization_arguments_start = None;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    None
+}
+
+fn partial_specialization_matches_design(
+    implementation_id: &str,
+    normalized_design_id: &str,
+) -> bool {
+    partial_specialization_base_id(implementation_id).is_some_and(|base_id| {
+        normalize_qualified_name(base_id).eq_ignore_ascii_case(normalized_design_id)
+    })
 }
 
 fn enum_literal_map(entity: &SimpleEntity) -> BTreeMap<&str, &EnumLiteral> {
@@ -1360,6 +1418,7 @@ mod tests {
             enclosing_namespace_id: enclosing_namespace_id.map(str::to_string),
             stereotypes: Vec::new(),
             entity_type: EntityType::Class,
+            is_partial_specialization: false,
             type_aliases: Vec::new(),
             variables: Vec::new(),
             methods: methods.into_iter().map(method).collect(),
@@ -1400,6 +1459,44 @@ mod tests {
             template_parameters: None,
             source_location: SourceLocation::new("test.puml", 1),
         }
+    }
+
+    #[test]
+    fn partial_specialization_base_id_strips_only_the_class_template_arguments() {
+        assert_eq!(
+            partial_specialization_base_id(
+                "amp::Outer<Policy>::move_only_function<ReturnType (ArgTypes...), Capacity>"
+            ),
+            Some("amp::Outer<Policy>::move_only_function")
+        );
+        assert_eq!(
+            partial_specialization_base_id("amp::move_only_function"),
+            None
+        );
+    }
+
+    #[test]
+    fn partial_specialization_matching_requires_the_complete_qualified_base_id() {
+        assert!(partial_specialization_matches_design(
+            "amp::move_only_function<ReturnType (ArgTypes...), Capacity, Alignment>",
+            "amp::move_only_function"
+        ));
+        assert!(!partial_specialization_matches_design(
+            "amp::move_only_function_extra<ReturnType (ArgTypes...), Capacity, Alignment>",
+            "amp::move_only_function"
+        ));
+        assert!(!partial_specialization_matches_design(
+            "other::move_only_function<ReturnType (ArgTypes...), Capacity, Alignment>",
+            "amp::move_only_function"
+        ));
+    }
+
+    #[test]
+    fn qualified_name_normalization_preserves_id_values_but_equates_separators() {
+        assert_eq!(
+            normalize_qualified_name("amp.move_only_function"),
+            normalize_qualified_name("amp::move_only_function")
+        );
     }
 
     #[test]
@@ -1456,6 +1553,11 @@ mod tests {
                 name: "T".to_string(),
                 is_pack: true,
             },
+            TemplateParameter::NonType {
+                name: "Capacity".to_string(),
+                value_type: "unsigned long".to_string(),
+                is_pack: false,
+            },
             TemplateParameter::Template {
                 name: "Factory".to_string(),
                 parameters: vec![TemplateParameter::NonType {
@@ -1469,7 +1571,7 @@ mod tests {
 
         assert_eq!(
             render_template_parameters(&template_parameters),
-            "[\"T...\", \"template <int Size> Factory\"]"
+            "[\"T...\", \"unsigned long Capacity\", \"template <int Size> Factory\"]"
         );
     }
 
