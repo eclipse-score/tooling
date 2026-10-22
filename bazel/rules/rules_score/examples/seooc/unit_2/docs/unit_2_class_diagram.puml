@@ -13,15 +13,20 @@
 
 @startuml unit_2_class_diagram
 
-' Detail of `Bar`. No namespace: the declaration matches the bodyless `Bar` of
-' unit_2_overview.puml (name, element type and stereotype) and is anchored onto
-' `unit_2`.
-class Bar <<final>> {
-    --
-    - foo_ : unique_ptr<unit_1::Foo>
-    --
-    + Bar(foo : unique_ptr<unit_1::Foo>)
-    + AssertNumber() : bool
+' Detail of Bar; Foo and the uses relationship are declared in
+' unit_2_overview.puml.
+namespace safety_software_seooc_example {
+    namespace component_example {
+        namespace unit_2 {
+            class Bar <<final>> {
+                --
+                - foo_ : unique_ptr<safety_software_seooc_example::component_example::unit_1::Foo>
+                --
+                + Bar(foo : unique_ptr<safety_software_seooc_example::component_example::unit_1::Foo>)
+                + AssertNumber() : bool
+            }
+        }
+    }
 }
 
 @enduml

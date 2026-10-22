@@ -15,6 +15,9 @@
 
 #include <gtest/gtest.h>
 
+namespace unit_1 = safety_software_seooc_example::component_example::unit_1;
+namespace unit_2 = safety_software_seooc_example::component_example::unit_2;
+
 TEST(Bar, AssertNumber) {
   ::testing::Test::RecordProperty(
       "lobster-tracing", "SampleComponent.REQ_COMP_003,SampleComponent.REQ_"

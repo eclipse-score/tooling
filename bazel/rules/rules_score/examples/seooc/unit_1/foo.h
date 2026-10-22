@@ -16,6 +16,16 @@
 
 #include <cstdint>
 
+namespace safety_software_seooc_example {
+namespace component_example {
+struct BindingType;
+struct Data;
+
+class InternalInterface {
+public:
+  virtual Data *GetData(BindingType binding) = 0;
+};
+
 namespace unit_1 {
 
 // trace: SampleComponent.REQ_COMP_002
@@ -28,5 +38,7 @@ public:
 };
 
 } // namespace unit_1
+} // namespace component_example
+} // namespace safety_software_seooc_example
 
 #endif // FOO_H

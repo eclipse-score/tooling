@@ -20,14 +20,38 @@ use strsim::jaro_winkler;
 
 pub(in crate::validators) const DEFAULT_SUGGESTION_THRESHOLD: f64 = 0.75;
 
+pub(in crate::validators) fn format_source_file(source_location: &SourceLocation) -> String {
+    let (file, _) = source_location.display();
+    if file.is_empty() {
+        "<unknown>".to_string()
+    } else {
+        file
+    }
+}
+
+pub(in crate::validators) fn format_source_line(source_location: &SourceLocation) -> String {
+    let (_, line) = source_location.display();
+    if line == 0 {
+        "<unknown>".to_string()
+    } else {
+        line.to_string()
+    }
+}
+
 pub(in crate::validators) fn format_name_list(names: &BTreeSet<String>) -> String {
     if names.is_empty() {
         return "<none>".to_string();
     }
 
-    names
-        .iter()
-        .map(|name| format!("\"{name}\""))
+    format_quoted_list(names.iter().map(String::as_str))
+}
+
+pub(in crate::validators) fn format_quoted_list<'a>(
+    values: impl IntoIterator<Item = &'a str>,
+) -> String {
+    values
+        .into_iter()
+        .map(|value| format!("\"{value}\""))
         .collect::<Vec<_>>()
         .join(", ")
 }
@@ -119,15 +143,31 @@ pub(in crate::validators) fn best_id_suggestion<'a>(
 #[cfg(test)]
 mod tests {
     use super::{
-        best_id_suggestion, best_string_suggestion, earliest_source_by_id,
-        DEFAULT_SUGGESTION_THRESHOLD,
+        best_id_suggestion, best_string_suggestion, earliest_source_by_id, format_name_list,
+        format_quoted_list, DEFAULT_SUGGESTION_THRESHOLD,
     };
     use source_location::SourceLocation;
+    use std::collections::BTreeSet;
     use strsim::jaro_winkler;
 
     #[test]
     fn best_string_suggestion_returns_none_for_empty_candidates() {
         assert_eq!(best_string_suggestion("Service", std::iter::empty()), None);
+    }
+
+    #[test]
+    fn format_quoted_list_preserves_order_and_duplicates() {
+        assert_eq!(
+            format_quoted_list(["second", "first", "second"]),
+            "\"second\", \"first\", \"second\""
+        );
+    }
+
+    #[test]
+    fn format_name_list_keeps_sorted_order_and_empty_marker() {
+        let names = BTreeSet::from(["second".to_string(), "first".to_string()]);
+        assert_eq!(format_name_list(&names), "\"first\", \"second\"");
+        assert_eq!(format_name_list(&BTreeSet::new()), "<none>");
     }
 
     #[test]

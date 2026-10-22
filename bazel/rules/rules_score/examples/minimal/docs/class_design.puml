@@ -15,10 +15,16 @@
 
 ' Class diagram for MyUnit — internal design of the key-value store unit.
 
-class MyUnit {
-    - store_ : std::unordered_map<std::string, std::string>
-    + configure(key : const string&, value : const string&) : void
-    + get(key : const string&) : string
+namespace my_element {
+    namespace MyComponent {
+        namespace MyUnit {
+            class KeyValueStore {
+                - store_ : std::unordered_map<std::string, std::string>
+                + configure(key : const string&, value : const string&) : void
+                + get(key : const string&) : string
+            }
+        }
+    }
 }
 
 @enduml
