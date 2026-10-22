@@ -122,12 +122,34 @@ def test_validate_specs_fails_with_empty_spec():
     assert not ok
     assert any("Suite:TestName" in line for line in issues)
     assert any("P.R" in line for line in issues)
+    assert "(given, then)" in issues[0]  # when is never reported as missing
 
 
 def test_validate_specs_fails_with_whitespace_only_spec():
     lock = _lock(_req("P.R", _tc(given="  ", when="  ", then="  ")))
     ok, issues = validate_specs(lock)
     assert not ok
+
+
+def test_validate_specs_passes_without_when():
+    lock = _lock(_req("P.R", _tc(when="")))
+    ok, issues = validate_specs(lock)
+    assert ok
+    assert issues == []
+
+
+def test_validate_specs_fails_without_given():
+    lock = _lock(_req("P.R", _tc(given="")))
+    ok, issues = validate_specs(lock)
+    assert not ok
+    assert "(given)" in issues[0]
+
+
+def test_validate_specs_fails_without_then():
+    lock = _lock(_req("P.R", _tc(then="  ")))
+    ok, issues = validate_specs(lock)
+    assert not ok
+    assert "(then)" in issues[0]
 
 
 def test_validate_specs_reports_all_missing():

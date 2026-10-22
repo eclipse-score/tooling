@@ -104,3 +104,10 @@ register_toolchains(
 
 bazel_dep(name = "trlc", version = "3.0.0")
 bazel_dep(name = "lobster", version = "1.0.4")
+
+# Lets the wiring test compare against the capability the rules were analyzed with.
+lobster_capabilities = use_extension(
+    "@score_tooling//bazel/rules/rules_score/private:lobster_capabilities.bzl",
+    "lobster_capabilities",
+)
+use_repo(lobster_capabilities, "lobster_capabilities")

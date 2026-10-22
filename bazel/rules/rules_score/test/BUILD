@@ -159,6 +159,7 @@ load(
     ":unit_component_test.bzl",
     "component_direct_asr_test",
     "component_excludes_feature_req_docs_test",
+    "component_gwt_derivation_wiring_test",
     "component_provider_test",
     "component_requirements_transitive_test",
     "component_sphinx_sources_test",
@@ -2316,6 +2317,13 @@ component_direct_asr_test(
 component_test_case_coverage_lock_test(
     name = "component_test_case_coverage_lock_test",
     target_under_test = ":test_component_with_test_case_coverage_lock",
+)
+
+# Verifies component() passes --derive-gwt-from-test-name to lobster-gtest exactly when
+# the resolved lobster version supports it.
+component_gwt_derivation_wiring_test(
+    name = "component_gwt_derivation_wiring_test",
+    target_under_test = ":test_component",
 )
 
 # Verifies ComponentInfo.requirements_transitive rolls up both the parent's
