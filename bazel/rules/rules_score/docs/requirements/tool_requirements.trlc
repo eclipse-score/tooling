@@ -92,6 +92,99 @@ section "Tool Requirements" {
 
     }
 
+    section "Root Cause Assessment" {
+
+        ToolQualification.ToolRequirement Render_Root_Cause_Assessments {
+            description = '''
+                The safety_analysis rule shall render, for every root cause
+                of its fault_trees, the ASIL, the rationale and the measures
+                (name, kind and version) of the RootCauseAssessment that
+                lists the root cause. It shall mark a root cause that no
+                assessment lists as "Not assessed", and a root cause whose
+                assessment has no measure as "Not applicable".
+            '''
+            mitigates = [Unassessed_Root_Cause_Accepted]
+            derived_from = [Render_Safety_Analyses]
+            satisfied_by = Tools.Docs
+        }
+
+        ToolQualification.ToolRequirement Reject_Inconsistent_Assessment_Asil {
+            description = '''
+                The safety_analysis rule shall fail the build when the ASIL
+                of a RootCauseAssessment is lower than the ASIL of a failure
+                mode of one of its root causes, or higher than the ASIL of
+                one of its measures, and the error message shall name the
+                assessment and the failure mode or measure.
+            '''
+            mitigates = [Underrated_Root_Cause_Assessment]
+            derived_from = [Aggregate_Safety_Analysis_Report]
+            satisfied_by = Tools.Bazel
+        }
+
+        ToolQualification.ToolRequirement Reject_Root_Cause_In_Multiple_Assessments {
+            description = '''
+                The safety_analysis rule shall fail the build when more than
+                one RootCauseAssessment lists the same root cause, and the
+                error message shall name the root cause and every assessment
+                that lists it.
+            '''
+            mitigates = [Ambiguous_Root_Cause_Assessment]
+            derived_from = [Aggregate_Safety_Analysis_Report]
+            satisfied_by = Tools.Bazel
+        }
+
+        ToolQualification.ToolRequirement Reject_Foreign_Assessment_References {
+            description = '''
+                The safety_analysis rule shall fail the build when a
+                RootCauseAssessment lists a root cause that its fault_trees
+                target does not generate, or a measure that is not an own
+                record of a target in its safety_measures, and the error
+                message shall name the assessment and the reference.
+            '''
+            mitigates = [Ambiguous_Root_Cause_Assessment]
+            derived_from = [Aggregate_Safety_Analysis_Report]
+            satisfied_by = Tools.Bazel
+        }
+
+        ToolQualification.ToolRequirement Reject_Non_Assessment_Records {
+            description = '''
+                The safety_analysis rule shall fail the build when a file
+                passed as assessments contains a record that is not a
+                RootCauseAssessment, and the error message shall name the
+                record.
+            '''
+            mitigates = [Ambiguous_Root_Cause_Assessment]
+            derived_from = [Aggregate_Safety_Analysis_Report]
+            satisfied_by = Tools.Bazel
+        }
+
+        ToolQualification.ToolRequirement Cover_Root_Causes_And_AoUs_By_Assessment {
+            description = '''
+                The lobster traceability report of a dependable element shall
+                require every root cause to be listed by a
+                RootCauseAssessment, and every own assumption of use to be
+                listed as a measure of one, so that the existing
+                lobster-ci-report test fails otherwise.
+            '''
+            mitigates = [Unassessed_Root_Cause_Accepted]
+            derived_from = [Aggregate_Safety_Analysis_Report, Gate_Traceability_At_Test_Time]
+            satisfied_by = Tools.Lobster
+        }
+
+        ToolQualification.ToolRequirement Pin_Assessed_Measure_Version {
+            description = '''
+                A RootCauseAssessment shall reference each of its measures
+                with the version of the measure, and the lobster
+                traceability report shall flag the reference as unresolved
+                when the measure has another version.
+            '''
+            mitigates = [Stale_Root_Cause_Assessment]
+            derived_from = [Aggregate_Safety_Analysis_Report]
+            satisfied_by = Tools.Lobster
+        }
+
+    }
+
     section "Architecture Parsing" {
 
         ToolQualification.ToolRequirement Reject_Invalid_PlantUML {
@@ -119,22 +212,6 @@ section "Tool Requirements" {
             mitigates = [Undetected_Missing_Traceability]
             derived_from = [Validate_Requirement_Chains]
             satisfied_by = Tools.Lobster
-        }
-
-    }
-
-    section "RST Requirements" {
-
-        ToolQualification.ToolRequirement Reject_Incomplete_RST_AoU {
-            description = '''
-                The RST requirements converter shall exit with a non-zero
-                return code, name the offending assumption of use, and write
-                no output when an assumption of use directive has no
-                root_causes field or a root cause that is not of the form
-                <fta_package>.<RootCause>.
-            '''
-            derived_from = [Author_Requirements_In_Rst_Or_Trlc]
-            satisfied_by = Tools.Bazel
         }
 
     }

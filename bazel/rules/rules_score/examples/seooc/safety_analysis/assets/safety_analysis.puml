@@ -21,8 +21,9 @@ object "Failure Mode" as FailureMode
 object "Root Cause" as RootCause
 object "Safety Goal" as SafetyGoal
 object "Measure" as Measure
-object "Mitigation" as Mitigation
+object "Component Requirement" as CompReq
 object "Assumption of Use\n(AoU)" as AoU
+object "Root Cause\nAssessment" as Assessment
 
 SafetyAnalysis <|-l- FMEA
 SafetyAnalysis <|-- FTA
@@ -37,10 +38,10 @@ SEooC "1" o-- "n" AoU
 FMEA ..> FailureMode : determine
 FTA ..> RootCause : determine
 
-Measure <|-- Mitigation
+Measure <|-- CompReq
 Measure <|-- AoU
-RootCause <-l- Mitigation : root_causes
-RootCause <-l- AoU : root_causes
+Assessment "1" --> "1..n" RootCause : root_causes
+Assessment "1" --> "0..n" Measure : measures
 
 
 

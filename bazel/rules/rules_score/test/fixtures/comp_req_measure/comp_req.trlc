@@ -14,12 +14,11 @@
 package CompReqMeasure
 
 import ScoreReq
-import AouRootCauseFta
 import AouRootCauseAous
 
 ScoreReq.CompReq ValidatesConfiguration {
     description = "The component shall validate its configuration"
     safety = ScoreReq.Asil.B
     version = 1
-    derived_from = [AouRootCauseFta.UserProvidedWrongConfiguration, AouRootCauseAous.ConfigurationIsCorrect@1]
+    derived_from = [AouRootCauseAous.ConfigurationIsCorrect@1]
 }

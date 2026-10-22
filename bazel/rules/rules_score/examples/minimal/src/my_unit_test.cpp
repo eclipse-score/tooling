@@ -17,7 +17,7 @@
 
 TEST(MyUnitTest, ConfigureAndGet) {
   ::testing::Test::RecordProperty(
-      "lobster-tracing", "MinimalExample.FEAT_001 MinimalExample.FEAT_002");
+      "lobster-tracing", "MinimalExample.FEAT_001,MinimalExample.FEAT_002");
 
   ::testing::Test::RecordProperty("given",
                                   "a default-constructed MyUnit instance");

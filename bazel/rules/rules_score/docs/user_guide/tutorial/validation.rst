@@ -33,7 +33,7 @@ src/my_unit_test.cpp
    :lines: 14-
 
 Each ``RecordProperty("lobster-tracing", "...")`` call names the requirement
-identifiers covered by that test case. The optional ``given``/``when``/``then``
+identifiers covered by that test case, separated by commas. The optional ``given``/``when``/``then``
 properties capture the Given-When-Then specification for that test case:
 
 * ``given`` — the initial state or precondition

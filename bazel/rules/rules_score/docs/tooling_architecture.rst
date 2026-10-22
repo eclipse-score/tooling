@@ -122,11 +122,11 @@ are rendered under :doc:`tool_reference/index`.
        (``src/safety_analysis_assembler.py``, local; links the ``TRLCRST`` library)
      - ``safety_analysis``
      - Assembles the failure-mode-centric ``safety_analysis.rst`` from ``fta_events.trlc``
-       plus the FailureMode / Mitigation / AoU / CompReq records in one
+       plus the FailureMode / RootCauseAssessment / AoU / CompReq records in one
        in-process TRLC parse: an overview table, one section per failure mode
-       (detail plus one card per root cause with the measures addressing it,
-       or a "No safety measure" flag), a section drawing every fault-tree
-       diagram once, and a list of all safety measures.  Links between records
+       (detail plus one card per root cause with the measures its assessment
+       lists, or a "No assessment" flag), a section drawing every fault-tree
+       diagram once, and a list of all measures.  Links between records
        are the typed TRLC references; coverage of them is checked by lobster.
    * - **Lobster**
      - ``@lobster//`` : ``lobster-trlc``, ``lobster-report``,
@@ -202,7 +202,7 @@ feed that pipeline:
 * **Requirements** (``.trlc``) → ``lobster-trlc`` → ``requirements.lobster``.
 * **Public API diagrams** (``public_api.puml``) → PlantUML parser →
   ``public_api.lobster`` (enables failure-mode-to-interface tracing).
-* **FMEA** (``failure_modes`` / ``mitigations.trlc``) → ``lobster-trlc``;
+* **FMEA** (``failure_modes`` / ``assessments.trlc``) → ``lobster-trlc``;
   **FTA** (``fta.puml``) → ``puml_cli`` (FTA mode) → ``fta_events.trlc`` →
   ``lobster-trlc`` → ``fta_root_causes.lobster``.
 * **Unit tests** (gtest) → ``gtest_report`` → ``<unit>.lobster``.
@@ -339,12 +339,12 @@ consumed by Sphinx.
    :alt: Safety analysis document pipeline
    :width: 100%
 
-The analysis is split in three rules so the measures that reference root causes
-(``assumptions_of_use``, ``component_requirements``) can depend on the generated
-``RootCause`` records without a dependency cycle: ``failure_modes`` holds the
-``FailureMode`` records, ``fault_trees`` (``deps = [failure_modes]``) produces the
-root causes, the measures list it in ``deps``, and ``safety_analysis`` consumes the
-failure modes, the fault trees and the measures (``safety_measures``).
+The analysis is split in three rules so the ``RootCauseAssessment`` records that
+reference root causes can depend on the generated ``RootCause`` records without a
+dependency cycle: ``failure_modes`` holds the ``FailureMode`` records,
+``fault_trees`` (``deps = [failure_modes]``) produces the root causes, and
+``safety_analysis`` consumes the failure modes, the fault trees, the
+assessments (``assessments``) and the measures they list (``safety_measures``).
 
 ``failure_modes`` runs ``lobster-trlc`` over its records into
 ``<name>.lobster``; it provides ``FailureModesInfo`` and ``TrlcProviderInfo``.
@@ -362,12 +362,13 @@ The ``fault_trees`` rule drives two actions:
 
 The ``safety_analysis`` rule drives two actions:
 
-#. **safety_analysis_assembler** consumes ``fta_events.trlc`` and parses the FailureMode /
-   Mitigation / AoU / CompReq ``.trlc`` records (with the ``.rsl`` spec for import
-   resolution) in a single in-process ``TRLCRST`` pass, expanding
+#. **safety_analysis_assembler** consumes ``fta_events.trlc`` and parses the
+   FailureMode / RootCauseAssessment / AoU / CompReq ``.trlc`` records (with
+   the ``.rsl`` spec for import resolution) in a single in-process ``TRLCRST``
+   pass, expanding
    ``safety_analysis.template.rst`` into ``safety_analysis.rst``.
-#. **lobster-trlc** turns the Mitigation and AoU records into
-   ``safetymeasures.lobster``; a ``CompReq`` measure is traced at its own level.
+#. **lobster-trlc** turns the RootCauseAssessment records into
+   ``assessments.lobster``; AoU and ``CompReq`` measures are traced at their own level.
 
 ``SphinxSourcesInfo`` of ``safety_analysis`` carries three depsets:
 
@@ -387,7 +388,7 @@ The ``safety_analysis`` rule drives two actions:
 
 The lobster outputs travel separately on ``AnalysisInfo.lobster_files`` (one
 ``AnalysisInfo`` per ``safety_analysis``: ``failuremodes.lobster``,
-``safetymeasures.lobster``, ``fta_root_causes.lobster``)
+``assessments.lobster``, ``fta_root_causes.lobster``)
 into the ``dependability_analysis`` traceability report.  The AoU targets passed
 as ``safety_measures`` travel on ``SafetyAnalysisProviderInfo.aou_targets``; the
 ``dependable_element`` derives its own AoUs from them (deduplicated by label),

@@ -10,21 +10,21 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-# lobster-trlc configuration for FMEA safety measure records (Mitigation and
-# AoU); CompReq is traced via the Component Requirements level instead.
+# lobster-trlc configuration for root cause assessments. An assessment traces
+# to the root causes it covers and to its versioned measures (AoU, CompReq).
 inputs:
   - .
+to-string-rules:
+  - package: ScoreReq
+    tuple-type: MeasureId
+    to-string:
+      - $(item)@$(version)
 conversion-rules:
   - package: ScoreReq
-    record-type: Mitigation
-    namespace: req
-    description-fields: description
-    tags:
-      - root_causes
-  - package: ScoreReq
-    record-type: AoU
+    record-type: RootCauseAssessment
     namespace: req
     version-field: version
-    description-fields: description
+    description-fields: rationale
     tags:
       - root_causes
+      - measures

@@ -80,6 +80,51 @@ section "Potential Errors" {
             impact_type = ToolQualification.Impact_Type.Safety
         }
 
+        ToolQualification.PotentialError Unassessed_Root_Cause_Accepted {
+            description = '''
+                A fault-tree root cause that no root cause assessment lists,
+                or an own assumption of use that no assessment uses, passes
+                the build, and the documentation shows no gap.
+            '''
+            impacts = ["Root cause without a safety argument delivered as part of the safety case"]
+            affects = [Render_Safety_Analyses, Aggregate_Safety_Analysis_Report]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
+        ToolQualification.PotentialError Ambiguous_Root_Cause_Assessment {
+            description = '''
+                A root cause is listed by several root cause assessments, or
+                an assessment lists a root cause or measure that does not
+                belong to its safety analysis, so the rendered argument does
+                not match the analysed fault trees and measures.
+            '''
+            impacts = ["Contradicting or foreign safety arguments in the delivered safety case"]
+            affects = [Render_Safety_Analyses, Aggregate_Safety_Analysis_Report]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
+        ToolQualification.PotentialError Stale_Root_Cause_Assessment {
+            description = '''
+                A measure changes, but the root cause assessment that
+                relies on its earlier version is not reviewed again.
+            '''
+            impacts = ["Safety argument based on an outdated measure"]
+            affects = [Aggregate_Safety_Analysis_Report]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
+        ToolQualification.PotentialError Underrated_Root_Cause_Assessment {
+            description = '''
+                A root cause of a failure mode is assessed with a lower
+                ASIL than the failure mode, or a root cause assessment
+                relies on a measure of a lower ASIL than its own, and the
+                build passes.
+            '''
+            impacts = ["Root cause of a high-ASIL failure mode closed by an argument or measure of a lower ASIL in the safety case"]
+            affects = [Render_Safety_Analyses, Aggregate_Safety_Analysis_Report]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
     }
 
     section "Architecture" {

@@ -80,7 +80,7 @@ in Bazel. Therefore following bazel rules are available:
    component(
        name = "MyComponent",
        components = [":MyUnit"],
-       requirements = [],
+       requirements = [":feature_requirements"],
        tests = [],
    )
 

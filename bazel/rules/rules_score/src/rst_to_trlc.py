@@ -67,7 +67,6 @@ _ALLOWED_RST_ATTRS: frozenset[str] = frozenset(
         "safety",  # → safety
         "satisfies",  # → derived_from cross-reference
         "derived_from",  # → derived_from cross-reference
-        "root_causes",  # → root_causes (AoU only)
         "rationale",  # → rationale (mandatory for AssumedSystemReq)
         "version",  # → version
     }
@@ -76,16 +75,12 @@ _ALLOWED_RST_ATTRS: frozenset[str] = frozenset(
 # TRLC types that require a rationale field.
 _ASSUMED_SYSTEM_REQ_TYPES = {"ScoreReq.AssumedSystemReq"}
 
-# TRLC types that require a root_causes field.
-_SAFETY_MEASURE_TYPES = {"ScoreReq.AoU"}
-
 _DEFAULT_SAFETY = "QM"
 _DEFAULT_VERSION = "1"
 _DEFAULT_REF_PACKAGE = "TODO_PACKAGE"
 _IMPORTS = ["ScoreReq"]
 
 _RE_MARKUP = re.compile(r"\*\*?(.*?)\*\*?")
-_RE_QUALIFIED_ROOT_CAUSE = re.compile(r"^[A-Za-z_]\w*\.[A-Za-z_]\w*$")
 _RE_DIRECTIVE = re.compile(r"^\.\.\s+([\w]+)::\s*(.*)")
 _RE_FIELD = re.compile(r"^\s+:([\w]+):\s*(.*)")  # noqa: E501
 _RE_REF = re.compile(r"(?P<id>[A-Za-z_]\w*)\s*(?P<filter>\[.*\])?")
@@ -185,35 +180,9 @@ def _collect_refs(name: str, fields: dict[str, str]) -> list[_Ref]:
     return refs
 
 
-def _collect_root_causes(fields: dict[str, str]) -> list[str]:
-    """Extract the fully qualified ``Package.RootCause`` names of the root_causes field."""
-    return [r.strip() for r in fields.get("root_causes", "").split(",") if r.strip()]
-
-
 def _record_name(item: dict[str, Any]) -> str:
     """TRLC record name of a parsed directive."""
     return item["fields"].get("id") or re.sub(r"\W+", "_", item["title"]).strip("_")
-
-
-def _require_root_causes(name: str, fields: dict[str, str]) -> list[str]:
-    """Return the root causes of AoU *name*; raise ValueError if missing or not ``Package.RootCause``."""
-    root_causes = _collect_root_causes(fields)
-    if not root_causes:
-        raise ValueError(f"AoU '{name}': missing mandatory ':root_causes:' field")
-    for root_cause in root_causes:
-        if not _RE_QUALIFIED_ROOT_CAUSE.match(root_cause):
-            raise ValueError(f"AoU '{name}': root cause '{root_cause}' is not of the form '<fta_package>.<RootCause>'")
-    return root_causes
-
-
-def _root_causes_of(item: dict[str, Any]) -> list[str]:
-    """Root causes of a directive: required for safety measures, rejected elsewhere."""
-    name = _record_name(item)
-    if DIRECTIVE_TO_TRLC[item["directive"]] in _SAFETY_MEASURE_TYPES:
-        return _require_root_causes(name, item["fields"])
-    if "root_causes" in item["fields"]:
-        raise ValueError(f"{item['directive']} '{name}': ':root_causes:' is only supported on 'aou_req'")
-    return []
 
 
 def parse_directives(content: str) -> list[dict[str, Any]]:
@@ -249,16 +218,10 @@ def render_trlc(directives: list[dict[str, Any]], package: str, ref_package: str
     imports = list(_IMPORTS)
     if any(refs_by_record) and ref_package and ref_package != _DEFAULT_REF_PACKAGE and ref_package not in imports:
         imports.append(ref_package)
-    root_causes_by_record = [_root_causes_of(item) for item in directives]
-    for root_causes in root_causes_by_record:
-        for root_cause in root_causes:
-            root_cause_package = root_cause.rsplit(".", 1)[0]
-            if root_cause_package not in imports and root_cause_package != package:
-                imports.append(root_cause_package)
     import_lines = [f"import {name}" for name in imports]
     lines_out = [_TRLC_HEADER, f"package {package}", "", *import_lines, ""]
 
-    for item, root_causes, refs in zip(directives, root_causes_by_record, refs_by_record):
+    for item, refs in zip(directives, refs_by_record):
         fields = item["fields"]
         trlc_type = DIRECTIVE_TO_TRLC[item["directive"]]
         name = _record_name(item)
@@ -275,9 +238,6 @@ def render_trlc(directives: list[dict[str, Any]], package: str, ref_package: str
         if refs:
             ref_list = ", ".join(f"{ref_package}.{ref.id}@{ref.version}" for ref in refs)
             lines_out.append(f"    derived_from = [{ref_list}]")
-
-        if trlc_type in _SAFETY_MEASURE_TYPES:
-            lines_out.append(f"    root_causes = [{', '.join(root_causes)}]")
 
         if trlc_type in _ASSUMED_SYSTEM_REQ_TYPES:
             rationale = fields.get("rationale", "TODO: add rationale")

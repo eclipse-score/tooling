@@ -22,7 +22,6 @@ to-string-rules:
     tuple-type: CompReqSourceId
     to-string:
       - $(item)@$(version)
-      - $(item)
 conversion-rules:
   - package: ScoreReq
     record-type: CompReq

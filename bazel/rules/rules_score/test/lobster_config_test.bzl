@@ -142,12 +142,12 @@ def lobster_config_test_suite(name):
     loadingtest.equals(
         env,
         "block_with_multiple_trace_to",
-        'activity "Root Causes" {\n  source: "rc.lobster";\n  trace to: "Failure Modes";\n  trace to: "Safety Measures";\n}',
+        'activity "Root Causes" {\n  source: "rc.lobster";\n  trace to: "Failure Modes";\n  trace to: "Public API";\n}',
         format_lobster_block(
             "activity",
             "Root Causes",
             [_fake_file("rc.lobster")],
-            trace_to = ["Failure Modes", "Safety Measures"],
+            trace_to = ["Failure Modes", "Public API"],
         ),
     )
 

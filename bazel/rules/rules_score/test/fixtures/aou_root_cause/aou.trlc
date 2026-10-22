@@ -11,17 +11,14 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-// Regression fixture: an AoU that prevents a generated fault-tree root cause
-// (package AouRootCauseFta). Resolving that reference needs the
-// fault_trees target in the `deps` of assumptions_of_use.
+// Regression fixture: an AoU that an assessment lists as measure of a
+// generated fault-tree root cause (see assessments.trlc).
 package AouRootCauseAous
 
 import ScoreReq
-import AouRootCauseFta
 
 ScoreReq.AoU ConfigurationIsCorrect {
     description = "The user shall provide a correct configuration"
     safety = ScoreReq.Asil.B
     version = 1
-    root_causes = [AouRootCauseFta.UserProvidedWrongConfiguration]
 }
