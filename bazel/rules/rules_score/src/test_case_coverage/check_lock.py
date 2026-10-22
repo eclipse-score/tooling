@@ -92,29 +92,21 @@ def compare_lock_files(
 
 
 def validate_specs(computed: LockFile) -> tuple[bool, list[str]]:
-    """Fail if any test case in *computed* is missing a GWT spec.
+    """Fail if any test case in *computed* lacks a ``given`` or ``then`` part.
 
-    A missing spec means the developer did not add ``given``/``when``/``then``
-    ``RecordProperty`` annotations to the test.  Coverage without a spec
-    cannot be meaningfully reviewed or approved.
+    ``when`` is optional, because a test name derived by lobster-gtest may omit it.
+    Coverage without ``given`` and ``then`` cannot be meaningfully reviewed or approved.
 
     Returns (ok, issue_lines).
     """
     issues: list[str] = []
     for req in computed.requirements:
         for tc in req.test_cases:
-            missing = [
-                name
-                for name, val in (
-                    ("given", tc.given),
-                    ("when", tc.when),
-                    ("then", tc.then),
-                )
-                if not val.strip()
-            ]
+            missing = [name for name, val in (("given", tc.given), ("then", tc.then)) if not val.strip()]
             if missing:
                 issues.append(
                     f"  ! [{req.id}] test missing GWT fields ({', '.join(missing)}): {tc.uid}\n"
-                    f"    Add RecordProperty('given'/'when'/'then') annotations."
+                    f"    Set RecordProperty 'given' and 'then' ('when' is optional). Alternatively, name the test "
+                    f"Given<X>[_When<Y>]_(Expect|Then)<Z> if lobster provides --derive-gwt-from-test-name."
                 )
     return len(issues) == 0, issues

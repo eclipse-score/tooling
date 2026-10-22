@@ -30,8 +30,8 @@ SCHEMA_VERSION: int = 3
 @dataclass
 class TestCase:
     uid: str  # "Suite:TestName" — matches gtest.lobster tag (without namespace)
-    given: str = ""  # :Given: text from RecordProperty annotation
-    when: str = ""  # :When: text
+    given: str = ""  # :Given: text from RecordProperty or the test name
+    when: str = ""  # :When: text; may be empty
     then: str = ""  # :Then: text
     # Populated only on the freshly *computed* side (never read from / written
     # to the committed lock YAML): it's the raw, unprefixed gtest tag, used by

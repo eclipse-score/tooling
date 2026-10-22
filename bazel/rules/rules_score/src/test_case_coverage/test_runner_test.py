@@ -25,17 +25,18 @@ _LABEL = "//pkg:cov"  # Bazel label set in all tests
 _PACKAGE = "//pkg"  # package extracted from _LABEL
 
 
-def _setup(tmp_path: Path, req_ids, uid=_UID):
+def _setup(tmp_path: Path, req_ids, uid=_UID, spec=_SPEC, committed=("g", "w", "t")):
     req_lobster = tmp_path / "reqs.lobster"
     write_req_lobster(req_lobster, req_ids)
     lm = tmp_path / "lobster_manifest.txt"
     lm.write_text(str(req_lobster) + "\n")
 
     gtest = tmp_path / "gtest.lobster"
-    write_gtest_lobster(gtest, uid, req_ids[0] if req_ids else "X")
+    write_gtest_lobster(gtest, uid, req_ids[0] if req_ids else "X", spec=spec)
 
     # uid in lock must include package prefix (as scan_gtest_lobster will produce)
     scoped_uid = f"{_PACKAGE}/{uid}"
+    given, when, then = committed
     lock_content = serialize(
         LockFile(
             schema_version=3,
@@ -43,7 +44,7 @@ def _setup(tmp_path: Path, req_ids, uid=_UID):
                 RequirementEntry(
                     id=req_ids[0] if req_ids else "X",
                     version="1",
-                    test_cases=[TestCase(uid=scoped_uid, given="g", when="w", then="t")],
+                    test_cases=[TestCase(uid=scoped_uid, given=given, when=when, then=then)],
                 )
             ],
         )
@@ -161,6 +162,48 @@ def test_allow_check_failures_suppresses_exit(tmp_path, monkeypatch):
     monkeypatch.setenv("TEST_CASE_COVERAGE_PACKAGE", _PACKAGE)
     monkeypatch.setenv("TEST_CASE_COVERAGE_LOBSTER_OUTPUT", str(lobster_out))
     runner_main(["--allow-check-failures"])  # must not raise
+
+
+def _set_env(monkeypatch, lm, gtest, lock, lobster_out):
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LOBSTER_MANIFEST", str(lm))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_GTEST_LOBSTER", str(gtest))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LOCK_FILE", str(lock))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LABEL", _LABEL)
+    monkeypatch.setenv("TEST_CASE_COVERAGE_PACKAGE", _PACKAGE)
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LOBSTER_OUTPUT", str(lobster_out))
+
+
+def test_spec_without_when_passes(tmp_path, monkeypatch):
+    lm, gtest, lock, lobster_out = _setup(tmp_path, ["P.R"], spec=":Given: g\n:Then: t", committed=("g", "", "t"))
+    _set_env(monkeypatch, lm, gtest, lock, lobster_out)
+    runner_main([])  # must not raise
+
+
+def test_missing_then_fails_without_drift(tmp_path, monkeypatch, capsys):
+    """The lock matches the tests, so only the missing Then can fail the run."""
+    lm, gtest, lock, lobster_out = _setup(tmp_path, ["P.R"], spec=":Given: g\n:When: w", committed=("g", "w", ""))
+    _set_env(monkeypatch, lm, gtest, lock, lobster_out)
+    with pytest.raises(SystemExit) as exc_info:
+        runner_main([])
+    assert exc_info.value.code == 1
+    assert "(then)" in capsys.readouterr().err
+    assert lobster_out.exists()  # artifact still written (D-6)
+
+
+def test_missing_given_fails_without_drift(tmp_path, monkeypatch, capsys):
+    lm, gtest, lock, lobster_out = _setup(tmp_path, ["P.R"], spec=":When: w\n:Then: t", committed=("", "w", "t"))
+    _set_env(monkeypatch, lm, gtest, lock, lobster_out)
+    with pytest.raises(SystemExit) as exc_info:
+        runner_main([])
+    assert exc_info.value.code == 1
+    assert "(given)" in capsys.readouterr().err
+
+
+def test_missing_then_allowed_with_allow_check_failures(tmp_path, monkeypatch):
+    lm, gtest, lock, lobster_out = _setup(tmp_path, ["P.R"], spec=":Given: g\n:When: w", committed=("g", "w", ""))
+    _set_env(monkeypatch, lm, gtest, lock, lobster_out)
+    runner_main(["--allow-check-failures"])  # must not raise
+    assert lobster_out.exists()
 
 
 if __name__ == "__main__":

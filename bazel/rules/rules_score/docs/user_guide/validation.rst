@@ -54,14 +54,50 @@ Call ``RecordProperty`` inside the test body next to the respective code blocks:
      - yes
      - Comma-separated requirement IDs; links the test to one or more ``CompReq`` records
    * - ``given``
-     - no
+     - with coverage lock
      - Initial state / precondition
    * - ``when``
      - no
      - Action or event under test
    * - ``then``
-     - no
+     - with coverage lock
      - Expected outcome
+
+A test case that is part of a coverage lock (see `Stating Coverage for test cases`_)
+needs a ``given`` and a ``then``. The ``when`` is always optional.
+
+Deriving Given/When/Then from the Test Name
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A test named ``[<Prefix>_]Given<X>[_When<Y>]_(Expect|Then)<Z>`` does not need the
+``given``/``when``/``then`` properties. Its name provides them. ``<Prefix>`` is
+alphanumeric, and ``<X>``, ``<Y>`` and ``<Z>`` are in CamelCase. Each of them becomes
+lowercase words separated by spaces:
+
+.. code-block:: cpp
+
+   TEST(Stack, GivenEmptyStack_WhenPopCalled_ExpectError) {
+       ::testing::Test::RecordProperty("lobster-tracing",
+                                       "SampleComponent.REQ_COMP_001");
+       ...
+   }
+
+This test has the Given ``empty stack``, the When ``pop called`` and the Then
+``error``.
+
+* The ``_When<Y>`` part is optional. ``GivenEmptyStack_ExpectError`` has no When.
+* For a value-parameterized test, the segments of the name are separated by ``/``
+  and the last segment that matches is used.
+* If a test sets any of ``given``, ``when`` or ``then`` to a non-blank value, its
+  name is ignored completely, so parts missing from the properties are not filled in
+  from the name. If the name also matches the pattern, lobster prints a warning. Set
+  all parts that the test needs, or none.
+* Deriving requires a ``lobster`` version that provides the option
+  ``--derive-gwt-from-test-name``. It is not available in lobster 1.0.6 and earlier,
+  where only the properties are used.
+* After a ``lobster`` upgrade that provides the option, the derived text of tests that
+  follow the pattern and set none of the properties changes. Their entries in the lock
+  become stale, so run ``bazel run //<pkg>:<name>.update`` and review the diff.
 
 A ``dependable_element`` report renders every annotated test on its **Unit
 Test** page at ``<dependable-element>_index/traceability_report/unit_test.html``.
@@ -77,6 +113,13 @@ Stating Coverage for test cases
 Coverage is declared through a committed ``test_case_coverage.lock.yaml`` file that lists,
 per requirement, every test case (uid + given/when/then) that covers it.
 Committing the file is stating the coverage claim.
+
+Every test case in the lock needs a Given and a Then, set through properties or
+derived from the test name. The When is optional and is stored as an empty string
+when absent. A test case without a Given or a Then is reported as an error. With
+``maturity = "release"`` on the ``dependable_element`` the error fails the build, with
+``"development"`` it is downgraded to a warning (see
+:doc:`../tool_reference/test_case_coverage`).
 
 In Bazel the yaml file can be linked to the ``component`` macro via the ``test_case_coverage_lock`` attribute:
 

@@ -42,8 +42,8 @@ class TestRecord:
 
     uid: str  # "Suite:TestName" (gtest tag without "gtest " prefix)
     lobster_traces: list[str] = field(default_factory=list)  # requirement IDs
-    given: str = ""  # :Given: text from RecordProperty annotation
-    when: str = ""  # :When: text
+    given: str = ""  # :Given: text from RecordProperty or the test name
+    when: str = ""  # :When: text; may be empty
     then: str = ""  # :Then: text
     gtest_tag: str = ""  # raw, unprefixed "Suite:TestName" tag — survives the
     # package-prefixing done to `uid` in scan_gtest_lobster, so it always
@@ -65,6 +65,9 @@ def _parse_gwt(text: str) -> tuple[str, str, str]:
         :Given: value
         :When: value
         :Then: value
+
+    A part that lobster-gtest did not emit, such as ``:When:`` for a test name
+    without ``_When<Y>``, yields an empty string.
 
     Handles a few real-world variations robustly:
 

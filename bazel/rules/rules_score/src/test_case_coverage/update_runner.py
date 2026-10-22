@@ -81,13 +81,13 @@ def main(argv: list[str] | None = None) -> None:
     # writes the lock anyway, mirroring test_runner's flag of the same name.
     spec_ok, spec_issues = validate_specs(lock)
     if not spec_ok:
-        logger.error("One or more test cases are missing GWT spec annotations:")
+        logger.error("One or more test cases are missing a Given or Then specification:")
         for line in spec_issues:
             logger.error(line)
         if not args.allow_check_failures:
             logger.error(
-                "Lock file NOT written. Add RecordProperty given/when/then "
-                "annotations, or pass --allow-check-failures to write anyway."
+                "Lock file NOT written. Add the missing Given/Then specification to the tests, "
+                "or pass --allow-check-failures to write anyway."
             )
             sys.exit(1)
 
