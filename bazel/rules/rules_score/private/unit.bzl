@@ -141,10 +141,12 @@ def _unit_impl(ctx):
         xml_files + implementation_class_fbs + [validation_log.file],
         transitive = [design_depset],
     )
+    certified_scopes = [impl.label for impl in ctx.attr.implementation]
+    certified_scopes.extend([Label(scope) for scope in ctx.attr.scope])
 
     return [
         DefaultInfo(files = all_files),
-        CertifiedScope(transitive_scopes = depset(ctx.attr.scope)),
+        CertifiedScope(transitive_scopes = depset(certified_scopes)),
         UnitInfo(
             name = ctx.label.name,
             design_name = ctx.attr.design_name or ctx.label.name,
@@ -155,7 +157,10 @@ def _unit_impl(ctx):
             implementation_sequence_fbs = depset(),
             implementation = depset(ctx.attr.implementation),
             tests = tests_depset,
-            dependent_labels = depset(transitive = collected_dependent_labels),
+            dependent_labels = depset([struct(
+                unit_label = ctx.label,
+                dependencies = depset(transitive = collected_dependent_labels),
+            )]),
             validation_log = validation_log,
         ),
         SphinxSourcesInfo(
@@ -281,7 +286,7 @@ def unit(
         name = name,
         unit_design = unit_design,
         implementation = implementation,
-        scope = scope,
+        scope = [str(native.package_relative_label(scope_entry)) for scope_entry in scope],
         tests = tests,
         design_name = design_name or "",
         testonly = testonly,

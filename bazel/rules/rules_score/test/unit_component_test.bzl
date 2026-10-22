@@ -20,7 +20,7 @@ Tests the new hierarchical structure for S-CORE process compliance:
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("@score_tooling//bazel/rules/rules_score:providers.bzl", "ComponentInfo", "SphinxSourcesInfo", "UnitInfo")
+load("@score_tooling//bazel/rules/rules_score:providers.bzl", "CertifiedScope", "ComponentInfo", "SphinxSourcesInfo", "UnitInfo")
 
 # ============================================================================
 # Unit Tests
@@ -68,6 +68,32 @@ def _unit_provider_test_impl(ctx):
     return analysistest.end(env)
 
 unit_provider_test = analysistest.make(_unit_provider_test_impl)
+
+def _unit_certified_scope_test_impl(ctx):
+    """Test that unit rule provides the complete certified scope set."""
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    asserts.true(
+        env,
+        CertifiedScope in target_under_test,
+        "Unit should provide CertifiedScope",
+    )
+
+    certified_scopes = target_under_test[CertifiedScope].transitive_scopes.to_list()
+    asserts.equals(
+        env,
+        {Label(scope): True for scope in ctx.attr.expected_scopes},
+        {scope: True for scope in certified_scopes},
+        "Certified scopes should exactly match the expected scopes",
+    )
+
+    return analysistest.end(env)
+
+unit_certified_scope_test = analysistest.make(
+    _unit_certified_scope_test_impl,
+    attrs = {"expected_scopes": attr.string_list(mandatory = True)},
+)
 
 def _unit_sphinx_sources_test_impl(ctx):
     """Test that unit rule provides SphinxSourcesInfo."""

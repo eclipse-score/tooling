@@ -42,8 +42,8 @@ patterns:
 ``scope`` is for dependencies that are *not* explicitly named as
 ``implementation`` targets themselves (e.g. third-party libraries pulled in
 transitively) but are still known and accepted as part of the unit. Every
-``unit`` and ``component`` also implicitly certifies its own explicitly named
-targets (``implementation``, nested ``components``).
+``unit`` also implicitly certifies its own ``implementation`` targets.
+Components aggregate the scopes of their units and nested components.
 
 Scopes are collected transitively: a ``component``'s certified scope is the
 union of its own units' and nested components' scopes, and a
@@ -57,14 +57,26 @@ What is checked
 For each ``unit``, an aspect (``cc_dependencies_aspect``) walks the
 ``deps`` / ``implementation_deps`` / ``exported_deps`` attributes of its
 ``implementation`` targets and collects every transitively reached label.
-``dependable_element`` then checks each collected label against the tree of
-certified scopes built from all ``scope`` declarations in the element: a
-label is in scope if it (or an enclosing package / subpackage wildcard) was
-declared somewhere. Any dependency that is not covered fails the check with:
+``dependable_element`` checks each collected dependency label against the
+combined certified scopes, including the units' own ``implementation``
+targets. A dependency is covered if any of the following applies:
+
+* Its exact target label is included.
+* Its package is covered by a ``__pkg__`` declaration.
+* Its package or an ancestor package is covered by a
+   ``__subpackages__`` declaration.
+
+All matches require the scope declaration and dependency to belong to
+the same repository.
+
+Uncovered dependencies are reported as warnings when the enclosing
+``dependable_element`` has ``maturity = "development"``; otherwise they
+fail the build. Each message identifies the originating unit and dependency:
 
 .. code-block:: text
 
-   Not in certified scope <label>, stopping at <path segment>
+   Unit <unit label> depends on <dependency label>, but the dependency
+   is not in any certified scope (<reason>).
 
 A certified scope that is declared more than once (e.g. by two units) is
 also rejected:
@@ -80,9 +92,10 @@ Implementation
 
    bazel/rules/rules_score/private/
    ├── cc_dependency_aspect.bzl   # CcDependencyInfo: transitive labels reached from a cc target
-   ├── unit.bzl                   # CertifiedScope(transitive_scopes = scope attr)
+   ├── unit.bzl                   # CertifiedScope: scope attr + implementation targets
    ├── component.bzl              # aggregates CertifiedScope + dependent_labels from children
-   └── dependable_element.bzl     # builds the scope tree and validates dependent_labels against it
+   ├── certified_scope.bzl        # builds the repository/package index and collects scope violations
+   └── dependable_element.bzl     # aggregates scopes and applies its maturity policy
 
 See the ``CertifiedScope``, ``UnitInfo.dependent_labels`` and
 ``ComponentInfo.dependent_labels`` providers in
