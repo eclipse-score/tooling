@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> None:
     # Step 3b: validate GWT specs (collect, don't exit yet — artifact must be written first)
     spec_ok, spec_issues = validate_specs(computed)
     if not spec_ok:
-        logger.error("One or more test cases are missing GWT spec annotations.")
+        logger.error("One or more test cases are missing a Given or Then specification.")
         for line in spec_issues:
             logger.error(line)
 

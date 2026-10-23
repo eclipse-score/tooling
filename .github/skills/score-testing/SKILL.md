@@ -85,13 +85,14 @@ TEST(MyUnitTest, ConfigureAndGet) {
 | Property | Required | Description |
 |----------|----------|-------------|
 | `lobster-tracing` | yes | One or more requirement IDs (`Package.RecordId`), linking the test to `CompReq` records. Multiple IDs are separated by whitespace (the docs also describe comma-separated). |
-| `given` | no | Initial state / precondition |
+| `given` | with coverage lock | Initial state / precondition |
 | `when` | no | Action or event under test |
-| `then` | no | Expected outcome |
+| `then` | with coverage lock | Expected outcome |
 
 - A test **without** `lobster-tracing` has no traceability and is excluded from coverage tracking.
 - The referenced IDs must resolve to `CompReq` records exposed through the component's
   `requirements` targets.
+- A test case in a coverage lock needs a Given and a Then; When is always optional.
 
 ```starlark
 cc_test(
@@ -107,6 +108,29 @@ unit(
     tests          = [":my_unit_test"],
 )
 ```
+
+### Given/When/Then from the test name
+
+A test named `[<Prefix>_]Given<X>[_When<Y>]_(Expect|Then)<Z>` needs no `given`/`when`/`then`
+properties; its name provides them. `<Prefix>` is alphanumeric; `<X>`, `<Y>`, `<Z>` are CamelCase and
+become lowercase words separated by spaces:
+
+```cpp
+// Given "empty stack", When "pop called", Then "error"
+TEST(Stack, GivenEmptyStack_WhenPopCalled_ExpectError) {
+  ::testing::Test::RecordProperty("lobster-tracing", "MinimalExample.FEAT_001");
+  ...
+}
+```
+
+- `_When<Y>` is optional; `GivenEmptyStack_ExpectError` has no When.
+- A test that sets any of the three properties to a non-blank value ignores its name completely, so
+  missing parts are not filled in from the name. If the name also matches, lobster prints a warning.
+  Set all needed parts, or none.
+- Needs a `lobster` version that provides `--derive-gwt-from-test-name`. It is not available in
+  lobster 1.0.6 and earlier, where only the properties are used.
+- After a `lobster` upgrade that provides the option, the lock entries of pattern-named tests without
+  properties become stale; run `bazel run //<pkg>:<component>.update` and review the diff.
 
 ---
 
@@ -140,7 +164,8 @@ requirements:
 
 - `requirements[].id` — matches the `lobster-tracing` value; extracted from the requirements targets.
 - `test_cases[].uid` — `//bazel_package/SuiteName:TestName`, a package-scoped gtest tag.
-- `given` / `when` / `then` — the GWT fields from `RecordProperty`; **any** change makes the lock stale.
+- `given` / `when` / `then` — the GWT fields from `RecordProperty` or the test name; **any** change
+  makes the lock stale. `given` and `then` must be non-blank; `when` may be empty and is stored as `''`.
 
 ### Two workflows keep the lock in sync
 
@@ -159,8 +184,8 @@ controls how strict it is:
 
 | `maturity` | Behavior |
 |------------|----------|
-| `"development"` | `--allow-check-failures`: lock-drift **and** missing-GWT-annotation errors are downgraded to warnings; the `.lobster` artifact is always produced. |
-| `"release"` | A drift or a missing GWT annotation fails the Bazel build action directly. |
+| `"development"` | `--allow-check-failures`: lock-drift **and** missing-Given/Then errors are downgraded to warnings; the `.lobster` artifact is always produced. |
+| `"release"` | A drift or a missing Given/Then fails the Bazel build action directly. |
 
 Switch back to `"release"` before certification.
 

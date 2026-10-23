@@ -38,6 +38,15 @@ bazel_dep(name = "flatbuffers", version = "25.9.23")
 bazel_dep(name = "download_utils", version = "1.2.2")
 bazel_dep(name = "trlc", version = "3.0.1")
 bazel_dep(name = "lobster", version = "1.0.6")
+
+# Probes which optional features the resolved lobster module provides, so that
+# the rules can keep working with versions that predate them.
+lobster_capabilities = use_extension(
+    "//bazel/rules/rules_score/private:lobster_capabilities.bzl",
+    "lobster_capabilities",
+)
+use_repo(lobster_capabilities, "lobster_capabilities")
+
 bazel_dep(name = "rules_distroless", version = "0.8.0")
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
 
