@@ -153,6 +153,15 @@ def test_empty_gwt_omits_text(tmp_path):
     assert item.get("text") is None
 
 
+def test_text_omits_empty_when(tmp_path):
+    computed = _make_lock(_req("P.R", _tc(given="g1", when="", then="t1")))
+    out = tmp_path / "out.lobster"
+    generate_lobster(computed, None, "//pkg:cov", out)
+    text = json.loads(out.read_text())["data"][0]["text"]
+    assert text.endswith(":Given: g1\n:Then: t1")
+    assert ":When:" not in text
+
+
 def test_requirement_with_no_test_cases_produces_no_activity(tmp_path):
     computed = _make_lock(_req("P.R"))  # no test cases
     out = tmp_path / "out.lobster"

@@ -20,7 +20,8 @@ Tests the new hierarchical structure for S-CORE process compliance:
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("@score_tooling//bazel/rules/rules_score:providers.bzl", "ComponentInfo", "SphinxSourcesInfo", "UnitInfo")
+load("@lobster_capabilities//:capabilities.bzl", "SUPPORTS_DERIVE_GWT_FROM_TEST_NAME")
+load("@score_tooling//bazel/rules/rules_score:providers.bzl", "CertifiedScope", "ComponentInfo", "SphinxSourcesInfo", "UnitInfo")
 
 # ============================================================================
 # Unit Tests
@@ -68,6 +69,32 @@ def _unit_provider_test_impl(ctx):
     return analysistest.end(env)
 
 unit_provider_test = analysistest.make(_unit_provider_test_impl)
+
+def _unit_certified_scope_test_impl(ctx):
+    """Test that unit rule provides the complete certified scope set."""
+    env = analysistest.begin(ctx)
+    target_under_test = analysistest.target_under_test(env)
+
+    asserts.true(
+        env,
+        CertifiedScope in target_under_test,
+        "Unit should provide CertifiedScope",
+    )
+
+    certified_scopes = target_under_test[CertifiedScope].transitive_scopes.to_list()
+    asserts.equals(
+        env,
+        {Label(scope): True for scope in ctx.attr.expected_scopes},
+        {scope: True for scope in certified_scopes},
+        "Certified scopes should exactly match the expected scopes",
+    )
+
+    return analysistest.end(env)
+
+unit_certified_scope_test = analysistest.make(
+    _unit_certified_scope_test_impl,
+    attrs = {"expected_scopes": attr.string_list(mandatory = True)},
+)
 
 def _unit_sphinx_sources_test_impl(ctx):
     """Test that unit rule provides SphinxSourcesInfo."""
@@ -287,6 +314,39 @@ def _component_test_case_coverage_lock_test_impl(ctx):
 
 component_test_case_coverage_lock_test = analysistest.make(_component_test_case_coverage_lock_test_impl)
 
+def _component_gwt_derivation_wiring_test_impl(ctx):
+    """
+    Given a component,
+    When the target is analyzed,
+    Then the lobster-gtest action carries ``--derive-gwt-from-test-name`` if and only if
+         the resolved lobster version supports it.
+    """
+    env = analysistest.begin(ctx)
+
+    gtest_action = None
+    for action in analysistest.target_actions(env):
+        if action.argv and action.argv[0].endswith("lobster-gtest"):
+            gtest_action = action
+            break
+
+    asserts.true(env, gtest_action != None, "Expected a lobster-gtest action to be registered")
+    if gtest_action == None:
+        return analysistest.end(env)
+
+    asserts.equals(
+        env,
+        SUPPORTS_DERIVE_GWT_FROM_TEST_NAME,
+        "--derive-gwt-from-test-name" in gtest_action.argv,
+        "flag presence must match lobster support (%s); argv was: %s" % (
+            SUPPORTS_DERIVE_GWT_FROM_TEST_NAME,
+            gtest_action.argv,
+        ),
+    )
+
+    return analysistest.end(env)
+
+component_gwt_derivation_wiring_test = analysistest.make(_component_gwt_derivation_wiring_test_impl)
+
 def _dependable_element_test_case_coverage_lock_check_action_test_impl(ctx):
     """
     Given a dependable_element wrapping a component with test_case_coverage_lock set,
@@ -380,6 +440,7 @@ def unit_component_test_suite(name):
             ":component_excludes_feature_req_docs_test",
             ":component_direct_asr_test",
             ":component_test_case_coverage_lock_test",
+            ":component_gwt_derivation_wiring_test",
             ":component_requirements_transitive_test",
             ":test_case_coverage_lock_check_action_release_test",
             ":test_case_coverage_lock_check_action_development_test",

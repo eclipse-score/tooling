@@ -57,9 +57,15 @@ architectural_design(
 )
 
 cc_library(
+    name = "my_unit_hdr",
+    srcs = [],
+    hdrs = ["src/my_unit.h"],
+)
+
+cc_library(
     name = "my_unit_lib",
     srcs = ["src/my_unit.cpp"],
-    hdrs = ["src/my_unit.h"],
+    deps = [":my_unit_hdr"],
 )
 
 cc_test(
@@ -78,7 +84,7 @@ unit_design(
 
 unit(
     name = "MyUnit",
-    scope = ["//:my_unit_lib"],
+    scope = [":my_unit_hdr"],
     tests = [":my_unit_test"],
     unit_design = [":MyUnit_design"],
     implementation = [":my_unit_lib"],

@@ -277,13 +277,55 @@ section "Tool Requirements" {
 
         ToolQualification.ToolRequirement Parse_GWT_Annotations {
             description = '''
-                The tool shall parse GTest XML result files, extracting
-                RecordProperty values for the keys lobster-tracing, given, when,
-                and then on a per-TEST, per-TEST_F, and per-TEST_P basis. A test case
-                without a given, when, or then property shall be included with an
-                empty string for each missing field.
+                The tool shall read the requirement references and the given,
+                when, and then parts of every test case from the gtest.lobster
+                file that lobster-gtest produces from the GTest XML result
+                files. A test case without a given, when, or then part shall be
+                included with an empty string for each missing part.
             '''
             derived_from = [Detect_Specification_Drift, Detect_Coverage_Set_Changes]
+            satisfied_by = Tools.TestCaseCoverage
+        }
+
+        ToolQualification.ToolRequirement Enable_GWT_Derivation {
+            description = '''
+                The component rule shall pass the option
+                --derive-gwt-from-test-name to lobster-gtest when the resolved
+                lobster version provides that option, and shall omit it
+                otherwise.
+            '''
+            derived_from = [Detect_Specification_Drift]
+            satisfied_by = Tools.Bazel
+        }
+
+        ToolQualification.ToolRequirement Derive_GWT_From_Test_Name {
+            description = '''
+                With the option --derive-gwt-from-test-name, lobster-gtest
+                shall derive the given, when, and then parts of a test case
+                from its test name, if the name matches
+                [<Prefix>_]Given<X>[_When<Y>]_(Expect|Then)<Z>. <Prefix> is
+                alphanumeric, and <X>, <Y>, and <Z> are in CamelCase. Each
+                derived part is its CamelCase text converted to lowercase
+                words separated by spaces. A test case whose name has no When
+                part shall have an empty when field. A test case that sets a
+                non-blank given, when, or then RecordProperty shall take all
+                three parts from its RecordProperty values only, and its
+                name shall be ignored.
+            '''
+            derived_from = [Detect_Specification_Drift]
+            satisfied_by = Tools.Lobster
+        }
+
+        ToolQualification.ToolRequirement Require_Given_And_Then {
+            description = '''
+                The tool shall report every linked test case whose given or
+                then field is empty or blank as an error naming the requirement
+                identifier, the test uid, and the missing fields. An empty
+                when field shall not be reported. The error shall fail the
+                test action, and shall prevent the .update command from
+                writing the lock file, unless check failures are allowed.
+            '''
+            derived_from = [Declare_Complete_Coverage, Detect_Specification_Drift]
             satisfied_by = Tools.TestCaseCoverage
         }
 

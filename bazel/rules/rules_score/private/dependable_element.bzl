@@ -52,6 +52,11 @@ load(
     "collect_current_architecture_aspect",
 )
 load(
+    "//bazel/rules/rules_score/private:certified_scope.bzl",
+    "build_scope_index",
+    "collect_scope_violations",
+)
+load(
     "//bazel/rules/rules_score/private:lobster_config.bzl",
     "MERGE_LOBSTER_ITEMS_ATTR",
     "format_lobster_block",
@@ -1073,6 +1078,17 @@ def _cond_names(*conditioned_names):
     """
     return [name for condition, name in conditioned_names if condition]
 
+def _apply_certification_violations(maturity, violations):
+    """Apply the caller-owned maturity policy to one validation phase."""
+    if not violations:
+        return
+
+    if maturity == "development":
+        for violation in violations:
+            print("WARNING: " + violation)
+    else:
+        fail("\n".join(violations))
+
 def _dependable_element_index_impl(ctx):
     """Generate index.rst file with references to all dependable element artifacts.
 
@@ -1229,6 +1245,8 @@ def _dependable_element_index_impl(ctx):
 
             if comp_info.dependent_labels:
                 collected_dependent_labels.append(comp_info.dependent_labels)
+        elif UnitInfo in comp_target:
+            collected_dependent_labels.append(comp_target[UnitInfo].dependent_labels)
         if CertifiedScope in comp_target:
             collected_certified_scopes.append(comp_target[CertifiedScope].transitive_scopes)
 
@@ -1354,62 +1372,13 @@ def _dependable_element_index_impl(ctx):
 
     # Verify that all transitive implementation dependencies are within the
     # certified scope declared for this dependable element.
-    # @todo: Make this check aware of the repository (@foo) for example.
     certified_scopes = depset(transitive = collected_certified_scopes).to_list()
-    tree = {}
-    for certified_scope in certified_scopes:
-        certified_scope = Label(certified_scope)
-        node = tree
-        path = certified_scope.package.split("/")
-        last_element = path.pop()
-        for path in path:
-            node = node.setdefault(path, default = {})
-
-        if type(node) == type([]):
-            if certified_scope.name in node:
-                msg = "The same scope is covered twice: {}".format(certified_scope)
-                if ctx.attr.maturity == "development":
-                    print("WARNING: " + msg)
-                    continue
-                fail(msg)
-            node.append(certified_scope.name)
-        else:
-            inserted_element = node.setdefault(last_element, default = [])
-            if certified_scope.name in inserted_element:
-                msg = "The same scope is covered twice: {}".format(certified_scope)
-                if ctx.attr.maturity == "development":
-                    print("WARNING: " + msg)
-                    continue
-                fail(msg)
-            inserted_element.append(certified_scope.name)
-
     dependencies = depset(transitive = collected_dependent_labels).to_list()
-    for dep in dependencies:
-        node = tree
-        for path in dep.package.split("/"):
-            if type(node) == type([]):
-                if "__subpackages__" in node:
-                    break
-                elif dep.name in node:
-                    break
-                else:
-                    msg = "Not in certified scope {}, stopping at {}".format(dep, path)
-                    if ctx.attr.maturity == "development":
-                        print("WARNING: " + msg)
-                    else:
-                        fail(msg)
-                    break
-
-            child = node.get(path)
-            if child == None:
-                msg = "Not in certified scope {}, stopping at {}".format(dep, path)
-                if ctx.attr.maturity == "development":
-                    print("WARNING: " + msg)
-                else:
-                    fail(msg)
-                break
-            else:
-                node = child
+    scope_index = build_scope_index(certified_scopes)
+    _apply_certification_violations(
+        ctx.attr.maturity,
+        collect_scope_violations(scope_index, dependencies),
+    )
 
     # Integrity-level check: a dependable element must not depend on elements
     # with a lower integrity level than its own (D > C > B > A).

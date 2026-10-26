@@ -57,10 +57,10 @@ Two phases
 
   * ``maturity = "development"`` — ``--allow-check-failures`` is passed so
     the ``.lobster`` artifact is always produced even when coverage drifts.
-    Both lock-drift failures **and** missing-GWT-annotation errors are
+    Both lock-drift failures **and** missing Given/Then errors are
     downgraded to warnings;
   * ``maturity = "release"`` — no ``--allow-check-failures``; a drift or
-    missing GWT annotation fails the Bazel build action directly.  The
+    a missing Given or Then fails the Bazel build action directly.  The
     ``.lobster`` artifact is physically written before the action exits, but
     Bazel marks the action as failed.
 
@@ -133,5 +133,10 @@ reviewing ``git diff``.
    * - ``test_cases[].uid``
      - ``//bazel_package/SuiteName:TestName`` — package-scoped gtest tag
    * - ``test_cases[].given`` / ``when`` / ``then``
-     - Individual GWT fields from ``RecordProperty`` annotations; any change
-       makes the lock stale
+     - Individual GWT fields from ``RecordProperty`` annotations or the test
+       name; any change makes the lock stale. ``given`` and ``then`` must be
+       non-blank. ``when`` may be empty and is then stored as ``''``
+
+Upgrading ``lobster`` to a version that derives the GWT fields from test names
+changes the text of tests that follow the naming pattern and set no properties.
+Run ``.update`` and review the diff, see :doc:`../user_guide/validation`.
