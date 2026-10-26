@@ -223,6 +223,10 @@ def test_parse_gwt_missing_trailing_space():
     assert _parse_gwt(":Given:g\n:When:\n:Then: t") == ("g", "", "t")
 
 
+def test_parse_gwt_without_when_line():
+    assert _parse_gwt(":Given: g\n:Then: t") == ("g", "", "t")
+
+
 def test_parse_gwt_multiline_value_is_joined():
     text = ":Given: first line\nsecond line\n:When: w\n:Then: t"
     given, when, then = _parse_gwt(text)

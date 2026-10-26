@@ -102,6 +102,19 @@ def test_update_allow_check_failures_writes_despite_missing_spec(tmp_path, monke
     assert lock.exists()
 
 
+def test_update_writes_lock_for_spec_without_when(tmp_path, monkeypatch):
+    lm, gtest, lock = _setup(tmp_path, ["P.R"])
+    write_gtest_lobster(gtest, _UID, "P.R", spec=":Given: g\n:Then: t")
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LOBSTER_MANIFEST", str(lm))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_GTEST_LOBSTER", str(gtest))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LOCK_FILE_WORKSPACE_PATH", str(lock))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LABEL", "//pkg:cov")
+    monkeypatch.setenv("TEST_CASE_COVERAGE_PACKAGE", "//pkg")
+    update_main([])  # must not raise
+    test_case = deserialize(lock.read_text()).requirements[0].test_cases[0]
+    assert (test_case.given, test_case.when, test_case.then) == ("g", "", "t")
+
+
 def test_update_missing_env_exits_1(monkeypatch):
     for var in (
         "TEST_CASE_COVERAGE_LOBSTER_MANIFEST",

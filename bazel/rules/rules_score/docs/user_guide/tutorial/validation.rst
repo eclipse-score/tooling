@@ -45,6 +45,10 @@ They are picked up the same way as ``lobster-tracing`` — as plain
 traceability report. Test cases without them are still traced, but show up
 without a Given-When-Then specification.
 
+Instead of the properties, a test can be named
+``[<Prefix>_]Given<X>[_When<Y>]_(Expect|Then)<Z>`` so that its name provides the
+specification. See :doc:`../validation` for the rules.
+
 BUILD
 ------
 
