@@ -75,6 +75,10 @@ load(
     _sphinx_module = "sphinx_module",
 )
 load(
+    "//bazel/rules/rules_score/private:test_specifications.bzl",
+    _test_specifications = "test_specifications",
+)
+load(
     "//bazel/rules/rules_score/private:unit.bzl",
     _unit = "unit",
 )
@@ -96,6 +100,7 @@ filter_execpath = _filter_execpath
 rst_to_trlc = _rst_to_trlc
 safety_analysis = _safety_analysis
 sphinx_module = _sphinx_module
+test_specifications = _test_specifications
 unit = _unit
 unit_design = _unit_design
 component = _component
