@@ -1,0 +1,61 @@
+/*******************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+
+// Every component requirement lowers the ASIL of at least one upstream requirement.
+package AsilInvalidComp
+
+import ScoreReq
+import AsilUpstream
+import AsilValid
+
+ScoreReq.CompReq CompQmFromFeatB {
+    description = "QM from feature B."
+    safety = ScoreReq.Asil.QM
+    version = 1
+    derived_from = [AsilValid.FeatBFromB@1]
+}
+
+ScoreReq.CompReq CompBFromFeatD {
+    description = "B from feature D."
+    safety = ScoreReq.Asil.B
+    version = 1
+    derived_from = [AsilValid.FeatDFromD@1]
+}
+
+ScoreReq.CompReq CompBFromAsrD {
+    description = "B directly from assumed system requirement D."
+    safety = ScoreReq.Asil.B
+    version = 1
+    derived_from = [AsilUpstream.AsrD@1]
+}
+
+ScoreReq.CompReq CompQmFromAouB {
+    description = "QM from received AoU B."
+    safety = ScoreReq.Asil.QM
+    version = 1
+    derived_from = [AsilUpstream.AouB@1]
+}
+
+ScoreReq.CompReq CompBFromAouD {
+    description = "B from received AoU D."
+    safety = ScoreReq.Asil.B
+    version = 1
+    derived_from = [AsilUpstream.AouD@1]
+}
+
+ScoreReq.CompReq CompBFromRootCauseAndFeatD {
+    description = "B from a root cause and feature D; the feature lowers the ASIL."
+    safety = ScoreReq.Asil.B
+    version = 1
+    derived_from = [AsilUpstream.RootCauseB, AsilValid.FeatDFromD@1]
+}

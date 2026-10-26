@@ -168,6 +168,8 @@ Requirement          → description (Markup_String), version (Integer),
 - `note` is optional and non-normative.
 - The model does **not** enforce a "shall/should" keyword check (unlike some downstream
   projects). Still, write requirements with "shall" for clarity.
+- `FeatReq` and `CompReq` must not have a lower `safety` than any upstream requirement
+  in `derived_from` (`QM < B < D`); `trlc --verify` fails otherwise.
 
 ### Versioned reference tuples
 

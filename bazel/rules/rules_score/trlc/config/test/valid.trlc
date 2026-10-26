@@ -1,0 +1,109 @@
+/*******************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+
+// Every requirement keeps or raises the ASIL of all its upstream requirements.
+package AsilValid
+
+import ScoreReq
+import AsilUpstream
+
+ScoreReq.FeatReq FeatQmFromQm {
+    description = "QM from QM."
+    safety = ScoreReq.Asil.QM
+    version = 1
+    derived_from = [AsilUpstream.AsrQm@1]
+}
+
+ScoreReq.FeatReq FeatBFromB {
+    description = "B from B."
+    safety = ScoreReq.Asil.B
+    version = 1
+    derived_from = [AsilUpstream.AsrB@1]
+}
+
+ScoreReq.FeatReq FeatDFromB {
+    description = "D from B, level raised."
+    safety = ScoreReq.Asil.D
+    version = 1
+    derived_from = [AsilUpstream.AsrB@1]
+}
+
+ScoreReq.FeatReq FeatDFromD {
+    description = "D from D."
+    safety = ScoreReq.Asil.D
+    version = 1
+    derived_from = [AsilUpstream.AsrD@1]
+}
+
+ScoreReq.FeatReq FeatBFromQmAndB {
+    description = "B from QM and B."
+    safety = ScoreReq.Asil.B
+    version = 1
+    derived_from = [AsilUpstream.AsrQm@1, AsilUpstream.AsrB@1]
+}
+
+ScoreReq.CompReq CompQmFromFeatQm {
+    description = "QM from feature QM."
+    safety = ScoreReq.Asil.QM
+    version = 1
+    derived_from = [FeatQmFromQm@1]
+}
+
+ScoreReq.CompReq CompBFromFeatB {
+    description = "B from feature B."
+    safety = ScoreReq.Asil.B
+    version = 1
+    derived_from = [FeatBFromB@1]
+}
+
+ScoreReq.CompReq CompDFromFeatB {
+    description = "D from feature B, level raised."
+    safety = ScoreReq.Asil.D
+    version = 1
+    derived_from = [FeatBFromB@1]
+}
+
+ScoreReq.CompReq CompDFromFeatD {
+    description = "D from feature D."
+    safety = ScoreReq.Asil.D
+    version = 1
+    derived_from = [FeatDFromD@1]
+}
+
+ScoreReq.CompReq CompDFromFeatBAndD {
+    description = "D from features B and D."
+    safety = ScoreReq.Asil.D
+    version = 1
+    derived_from = [FeatBFromB@1, FeatDFromD@1]
+}
+
+ScoreReq.CompReq CompDFromAsrD {
+    description = "D directly from assumed system requirement D."
+    safety = ScoreReq.Asil.D
+    version = 1
+    derived_from = [AsilUpstream.AsrD@1]
+}
+
+ScoreReq.CompReq CompBFromAouB {
+    description = "B from received AoU B."
+    safety = ScoreReq.Asil.B
+    version = 1
+    derived_from = [AsilUpstream.AouB@1]
+}
+
+ScoreReq.CompReq CompQmFromRootCause {
+    description = "A root cause has no ASIL and imposes no constraint."
+    safety = ScoreReq.Asil.QM
+    version = 1
+    derived_from = [AsilUpstream.RootCauseB]
+}

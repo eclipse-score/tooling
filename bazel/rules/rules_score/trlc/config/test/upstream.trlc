@@ -1,0 +1,66 @@
+/*******************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+
+package AsilUpstream
+
+import ScoreReq
+
+ScoreReq.AssumedSystemReq AsrQm {
+    description = "System-level requirement without safety relevance."
+    rationale = "Fixture."
+    safety = ScoreReq.Asil.QM
+    version = 1
+}
+
+ScoreReq.AssumedSystemReq AsrB {
+    description = "System-level requirement at ASIL B."
+    rationale = "Fixture."
+    safety = ScoreReq.Asil.B
+    version = 1
+}
+
+ScoreReq.AssumedSystemReq AsrD {
+    description = "System-level requirement at ASIL D."
+    rationale = "Fixture."
+    safety = ScoreReq.Asil.D
+    version = 1
+}
+
+ScoreReq.FailureMode FailureModeB {
+    guidewords = [ScoreReq.Guideword.LossOfFunction]
+    description = "The function is lost."
+    failureeffect = "No response."
+    safety = ScoreReq.Asil.B
+    version = 1
+}
+
+ScoreReq.RootCause RootCauseB {
+    title = "Wrong configuration"
+    diagram = "fixture.puml"
+    line = 1
+    failure_modes = [FailureModeB]
+}
+
+ScoreReq.AoU AouB {
+    description = "The user shall provide a correct configuration."
+    safety = ScoreReq.Asil.B
+    version = 1
+    root_causes = [RootCauseB]
+}
+
+ScoreReq.AoU AouD {
+    description = "The user shall provide a correct configuration at ASIL D."
+    safety = ScoreReq.Asil.D
+    version = 1
+    root_causes = [RootCauseB]
+}
