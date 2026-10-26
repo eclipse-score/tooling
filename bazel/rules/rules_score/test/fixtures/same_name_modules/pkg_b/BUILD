@@ -11,17 +11,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@score_tooling//bazel/rules/rules_score:rules_score.bzl", "unit")
+load("@score_tooling//bazel/rules/rules_score:rules_score.bzl", "sphinx_module")
 
 package(default_visibility = ["//:__pkg__"])
 
-# Deliberately named the same as //fixtures/same_name_units/pkg_b:dup_unit --
-# see :same_name_units_repro in test/BUILD.
-unit(
-    name = "dup_unit",
+# Deliberately named the same as the module in //fixtures/same_name_modules/pkg_a --
+# see :same_name_modules_lib in test/BUILD.
+sphinx_module(
+    name = "dup_lib",
     testonly = True,
-    maturity = "development",
-    tests = [],
-    unit_design = [],
-    implementation = ["//:mock_lib1"],
+    srcs = ["index.rst"],
+    index = "index.rst",
 )

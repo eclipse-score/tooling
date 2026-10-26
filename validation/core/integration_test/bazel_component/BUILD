@@ -32,6 +32,7 @@ filegroup(
         "//validation/core/integration_test/bazel_component/positive_case_insensitive:case_data",
         "//validation/core/integration_test/bazel_component/positive_component:case_data",
         "//validation/core/integration_test/bazel_component/positive_multi_file_component:case_data",
+        "//validation/core/integration_test/bazel_component/positive_same_name_distinct_design_name:case_data",
     ],
 )
 

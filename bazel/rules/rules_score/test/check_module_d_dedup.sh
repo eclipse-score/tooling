@@ -13,12 +13,10 @@
 # *******************************************************************************
 set -euo pipefail
 
-# End-to-end regression test for the diamond-dependency HTML-merge
-# flattening: module_d_lib is a dep of both module_b_lib and module_c_lib
-# (never directly of module_a_lib), so before the fix its HTML was copied
-# once per path that reached it -- nested under module_b_lib/module_d_lib/
-# AND module_c_lib/module_d_lib/, never at the top level. After the fix it
-# must land exactly once, flat, at the top level of the merged site.
+# End-to-end test for diamond-dependency HTML merging: module_d_lib is a dep
+# of both module_b_lib and module_c_lib (never directly of module_a_lib). Its
+# HTML must land exactly once, flat, at its label path (_main/module_d_lib) in
+# the merged site, not nested under module_b_lib/ or module_c_lib/.
 # TODO: pass the HTML dir via args instead of using a hardcoded relative path,
 # e.g. args = ["$(rootpath :module_a_lib)"] in the sh_test.
 html_dir="./module_a_lib/html"
@@ -28,18 +26,18 @@ if [[ ! -d "$html_dir" ]]; then
     exit 1
 fi
 
-if [[ ! -f "$html_dir/module_d_lib/index.html" ]]; then
-    echo "Error: Expected flat, top-level $html_dir/module_d_lib/index.html not found" >&2
+if [[ ! -f "$html_dir/_main/module_d_lib/index.html" ]]; then
+    echo "Error: Expected flat $html_dir/_main/module_d_lib/index.html not found" >&2
     exit 1
 fi
 
-if [[ -d "$html_dir/module_b_lib/module_d_lib" ]]; then
-    echo "Error: module_d_lib was duplicated, nested under module_b_lib/" >&2
+if [[ -d "$html_dir/_main/module_b_lib/_main/module_d_lib" ]]; then
+    echo "Error: module_d_lib was duplicated, nested under _main/module_b_lib/" >&2
     exit 1
 fi
 
-if [[ -d "$html_dir/module_c_lib/module_d_lib" ]]; then
-    echo "Error: module_d_lib was duplicated, nested under module_c_lib/" >&2
+if [[ -d "$html_dir/_main/module_c_lib/_main/module_d_lib" ]]; then
+    echo "Error: module_d_lib was duplicated, nested under _main/module_c_lib/" >&2
     exit 1
 fi
 

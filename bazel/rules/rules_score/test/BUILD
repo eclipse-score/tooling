@@ -55,8 +55,11 @@ load(
     "architecture_json_test",
 )
 load(
+    ":dependable_element_staged_files_test.bzl",
+    "staged_files_test",
+)
+load(
     ":dependable_element_staged_path_collision_test.bzl",
-    "cross_label_collision_fails_test",
     "same_label_collision_fails_test",
 )
 load(
@@ -66,9 +69,7 @@ load(
 )
 load(
     ":dependable_element_unit_staging_test.bzl",
-    "same_name_units_fail_test",
     "unit_design_collision_fails_test",
-    "unit_same_puml_names_test",
 )
 load(
     ":html_generation_test.bzl",
@@ -282,6 +283,20 @@ sphinx_module(
     deps = [":module_b_lib"],
 )
 
+# Two dependency modules with the same name in different packages: each must
+# land in its own <repo>/<package>/<name> directory of the merged site instead
+# of overwriting the other. See :same_name_modules_test.
+sphinx_module(
+    name = "same_name_modules_lib",
+    testonly = True,
+    srcs = ["fixtures/same_name_modules/index.rst"],
+    index = "fixtures/same_name_modules/index.rst",
+    deps = [
+        "//fixtures/same_name_modules/pkg_a:dup_lib",
+        "//fixtures/same_name_modules/pkg_b:dup_lib",
+    ],
+)
+
 # Fixture with allow_persistent_workers = True, used only to assert on the
 # resulting Sphinx-build action argv: the HTML pass must drop "--jobs auto"
 # (see worker_enabled in sphinx_module.bzl's _add_sphinx_args), while the
@@ -436,14 +451,11 @@ same_label_collision_fails_test(
     target_under_test = ":staged_path_same_label_collision_repro_index",
 )
 
-# Regression fixture: two distinct labels from different packages that
-# happen to share a target name ("dup") stage to the same relative path
-# (each gets a "dup/" prefix -- see _process_artifact_type) from two
-# different source labels -- must fail analysis with _check_staged_path's
-# cross-label message; see
-# :staged_path_cross_label_collision_fails_test below.
+# Two distinct labels from different packages that share a target name
+# ("dup") stage under their own <repo>/<package>/<name>/ prefix, so they do
+# not collide; see :staged_path_same_name_labels_test below.
 dependable_element(
-    name = "staged_path_cross_label_collision_repro",
+    name = "staged_path_same_name_labels_repro",
     architectural_design = [],
     checklists = [
         "//fixtures/staged_path_collision/pkg_a:dup",
@@ -459,9 +471,13 @@ dependable_element(
     deps = [],
 )
 
-cross_label_collision_fails_test(
-    name = "staged_path_cross_label_collision_fails_test",
-    target_under_test = ":staged_path_cross_label_collision_repro_index",
+staged_files_test(
+    name = "staged_path_same_name_labels_test",
+    suffixes = [
+        "/checklists/_main/fixtures/staged_path_collision/pkg_a/dup/content.rst",
+        "/checklists/_main/fixtures/staged_path_collision/pkg_b/dup/content.rst",
+    ],
+    target_under_test = ":staged_path_same_name_labels_repro_index",
 )
 
 # Wraps both crash-repro architectural_design targets above in a real
@@ -1045,7 +1061,7 @@ dependable_element(
 toplevel_unit_linked_test(
     name = "toplevel_unit_linked_test",
     target_under_test = ":toplevel_unit_example_lib_index",
-    unit_name = "leaf_unit",
+    unit_path = "_main/leaf_unit",
 )
 
 cc_library(
@@ -1078,8 +1094,8 @@ toplevel_unit_scope_fails_test(
 )
 
 # Regression fixture: two units whose designs both ship a "class_diagram.puml"
-# and a "design.rst". Each unit stages under its own units/<unit>/ directory,
-# so the two must not collide; checked by :unit_same_puml_names_test.
+# and a "design.rst". Each unit stages under its own label path, so the two
+# must not collide; checked by :unit_same_puml_names_test.
 unit_design(
     name = "same_puml_unit_a_design",
     static = [
@@ -1141,13 +1157,17 @@ dependable_element(
     deps = [],
 )
 
-unit_same_puml_names_test(
+staged_files_test(
     name = "unit_same_puml_names_test",
-    target_under_test = ":same_puml_example_lib_index",
-    unit_names = [
-        "same_puml_unit_a",
-        "same_puml_unit_b",
+    suffixes = [
+        "/units/_main/same_puml_unit_a/index.rst",
+        "/units/_main/same_puml_unit_a/class_diagram.puml",
+        "/units/_main/same_puml_unit_a/design.rst.inc",
+        "/units/_main/same_puml_unit_b/index.rst",
+        "/units/_main/same_puml_unit_b/class_diagram.puml",
+        "/units/_main/same_puml_unit_b/design.rst.inc",
     ],
+    target_under_test = ":same_puml_example_lib_index",
 )
 
 # Rendered HTML: each unit page shows its own diagram and no design fragment
@@ -1157,10 +1177,34 @@ sh_test(
     srcs = ["check_unit_design_render.sh"],
     args = [
         "$(rootpath :same_puml_example_lib_doc)",
-        "same_puml_unit_a:unit_a",
-        "same_puml_unit_b:unit_b",
+        "units/_main/same_puml_unit_a:unit_a",
+        "units/_main/same_puml_unit_b:unit_b",
     ],
     data = [":same_puml_example_lib_doc"],
+)
+
+# A dependable_element embedded into a foreign Sphinx tree through its _rst
+# library, as docs/sphinx in a consuming repo does, must keep every
+# component -> unit link and unit diagram working. Not built with -W: the
+# test toolchain's theme rejects options set by the docs-as-code bundle.
+sphinx_module(
+    name = "embed_host_doc",
+    testonly = True,
+    srcs = ["fixtures/embed_host/index.rst"],
+    docs_library_deps = [":same_puml_example_lib_rst"],
+    index = "fixtures/embed_host/index.rst",
+    strip_prefix = "fixtures/embed_host/",
+)
+
+sh_test(
+    name = "embedded_dependable_element_rendered_test",
+    srcs = ["check_unit_design_render.sh"],
+    args = [
+        "$(rootpath :embed_host_doc)",
+        "docs/sphinx/same_puml_example_lib_index/units/_main/same_puml_unit_a:unit_a",
+        "docs/sphinx/same_puml_example_lib_index/units/_main/same_puml_unit_b:unit_b",
+    ],
+    data = [":embed_host_doc"],
 )
 
 # Regression fixture: one unit whose design ships two diagrams with the same
@@ -1196,29 +1240,120 @@ unit_design_collision_fails_test(
     target_under_test = ":same_puml_clash_repro_index",
 )
 
-# Regression fixture: two distinct units from different packages share the
-# target name "dup_unit", so they would share units/dup_unit/ -- analysis must
-# fail instead of silently dropping one; see :same_name_units_fail_test.
+# Two units from different packages share the target name "dup_unit". Each
+# stages and renders under its own label path; only design_name (dup_unit_a /
+# dup_unit_b) tells them apart in the architecture diagram.
+architectural_design(
+    name = "arch_design_same_name_units",
+    static = ["fixtures/same_name_targets/units_overview.puml"],
+)
+
 dependable_element(
-    name = "same_name_units_repro",
+    name = "same_name_units_lib",
     testonly = True,
-    architectural_design = [":arch_design_leaf_unit_example"],
+    architectural_design = [":arch_design_same_name_units"],
     components = [
-        "//fixtures/same_name_units/pkg_a:dup_unit",
-        "//fixtures/same_name_units/pkg_b:dup_unit",
+        "//fixtures/same_name_targets/pkg_a:dup_unit",
+        "//fixtures/same_name_targets/pkg_b:dup_unit",
     ],
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
     maturity = "development",
     requirements = [":feat_req"],
-    tags = ["manual"],
     tests = [],
     deps = [],
 )
 
-same_name_units_fail_test(
-    name = "same_name_units_fail_test",
-    target_under_test = ":same_name_units_repro_index",
+staged_files_test(
+    name = "same_name_units_staged_test",
+    suffixes = [
+        "/units/_main/fixtures/same_name_targets/pkg_a/dup_unit/index.rst",
+        "/units/_main/fixtures/same_name_targets/pkg_b/dup_unit/index.rst",
+    ],
+    target_under_test = ":same_name_units_lib_index",
+)
+
+sh_test(
+    name = "same_name_units_rendered_test",
+    srcs = ["check_pages_exist.sh"],
+    args = [
+        "$(rootpath :same_name_units_lib_doc)",
+        "units/_main/fixtures/same_name_targets/pkg_a/dup_unit/index.html",
+        "units/_main/fixtures/same_name_targets/pkg_b/dup_unit/index.html",
+    ],
+    data = [":same_name_units_lib_doc"],
+)
+
+sh_test(
+    name = "same_name_units_validation_test",
+    srcs = ["check_validation_passes.sh"],
+    args = [
+        "dependable_element.same_name_units_lib_index.log",
+        "$(rootpaths :same_name_units_lib_index)",
+    ],
+    data = [
+        "lib/find_runfile.sh",
+        ":same_name_units_lib_index",
+    ],
+)
+
+# Same for two components named "dup_comp" (each wrapping its own "dup_unit").
+architectural_design(
+    name = "arch_design_same_name_components",
+    static = ["fixtures/same_name_targets/components_overview.puml"],
+)
+
+dependable_element(
+    name = "same_name_components_lib",
+    testonly = True,
+    architectural_design = [":arch_design_same_name_components"],
+    components = [
+        "//fixtures/same_name_targets/pkg_a:dup_comp",
+        "//fixtures/same_name_targets/pkg_b:dup_comp",
+    ],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+staged_files_test(
+    name = "same_name_components_staged_test",
+    suffixes = [
+        "/components/_main/fixtures/same_name_targets/pkg_a/dup_comp/index.rst",
+        "/components/_main/fixtures/same_name_targets/pkg_b/dup_comp/index.rst",
+        "/units/_main/fixtures/same_name_targets/pkg_a/dup_unit/index.rst",
+        "/units/_main/fixtures/same_name_targets/pkg_b/dup_unit/index.rst",
+    ],
+    target_under_test = ":same_name_components_lib_index",
+)
+
+sh_test(
+    name = "same_name_components_rendered_test",
+    srcs = ["check_pages_exist.sh"],
+    args = [
+        "$(rootpath :same_name_components_lib_doc)",
+        "components/_main/fixtures/same_name_targets/pkg_a/dup_comp/index.html",
+        "components/_main/fixtures/same_name_targets/pkg_b/dup_comp/index.html",
+        "units/_main/fixtures/same_name_targets/pkg_a/dup_unit/index.html",
+        "units/_main/fixtures/same_name_targets/pkg_b/dup_unit/index.html",
+    ],
+    data = [":same_name_components_lib_doc"],
+)
+
+sh_test(
+    name = "same_name_components_validation_test",
+    srcs = ["check_validation_passes.sh"],
+    args = [
+        "dependable_element.same_name_components_lib_index.log",
+        "$(rootpaths :same_name_components_lib_index)",
+    ],
+    data = [
+        "lib/find_runfile.sh",
+        ":same_name_components_lib_index",
+    ],
 )
 
 sh_test(
@@ -1905,6 +2040,15 @@ sh_test(
     tags = ["manual"],
 )
 
+# Same-named dependency modules from different packages must both be present,
+# each at its own label path, with their own content.
+sh_test(
+    name = "same_name_modules_test",
+    srcs = ["check_same_name_modules.sh"],
+    args = ["$(rootpath :same_name_modules_lib)"],
+    data = [":same_name_modules_lib"],
+)
+
 # Regression test at the level of the actual staged RST that Sphinx will read:
 # an authored index.rst *composes* with the generated toctree (its title/prose
 # is included, the diagram wrapper is still listed) -- see plan_view_layout()'s
@@ -1966,7 +2110,9 @@ seooc_artifacts_copied_test(
     target_under_test = ":seooc_test_lib_index",
 )
 
-# Regression test: generated submodule links must point to <dep>_doc/index.html.
+# Regression test: generated submodule links must point to
+# <repo>/<package>/<dep>_doc/index.html, and that page must exist in the
+# merged HTML.
 sh_test(
     name = "seooc_tests_dep_links_use_doc_dir",
     srcs = ["check_seooc_dep_links.sh"],
@@ -1978,6 +2124,16 @@ sh_test(
         "lib/find_runfile.sh",
         ":seooc_test_lib_index",
     ],
+)
+
+sh_test(
+    name = "seooc_tests_dep_pages_merged",
+    srcs = ["check_pages_exist.sh"],
+    args = [
+        "$(rootpath :seooc_test_lib_doc)",
+        "_main/dep_seooc_lib_doc/index.html",
+    ],
+    data = [":seooc_test_lib_doc"],
 )
 
 # Regression test: clickable_plantuml must actually inject a working link
@@ -2239,6 +2395,7 @@ test_suite(
         ":seooc_tests_all_sources_relocated",
         ":seooc_tests_artifacts_copied",
         ":seooc_tests_dep_links_use_doc_dir",
+        ":seooc_tests_dep_pages_merged",
         ":seooc_tests_index_file_provider",
         ":seooc_tests_index_generation",
         ":seooc_tests_multi_index_files_exist",
@@ -2881,6 +3038,13 @@ test_suite(
         ":requirements_multi_spec_tests",
         ":requirements_rst_tests",
         ":rst_to_trlc_rule_tests",
+        ":same_name_components_rendered_test",
+        ":same_name_components_staged_test",
+        ":same_name_components_validation_test",
+        ":same_name_modules_test",
+        ":same_name_units_rendered_test",
+        ":same_name_units_staged_test",
+        ":same_name_units_validation_test",
         ":seooc_tests",
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",

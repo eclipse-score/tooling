@@ -61,6 +61,11 @@ fn positive_multi_file_component_suite_case() {
 }
 
 #[test]
+fn positive_same_name_distinct_design_name_suite_case() {
+    assert_case("positive_same_name_distinct_design_name");
+}
+
+#[test]
 fn negative_multi_file_extra_component_suite_case() {
     assert_case("negative_multi_file_extra_component");
 }

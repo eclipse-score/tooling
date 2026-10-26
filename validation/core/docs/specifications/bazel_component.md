@@ -108,7 +108,9 @@ component component_example <<component>> {
 
 In the common case, components nested directly under the dependable element use
 the dependable element name as parent. More deeply nested components use their
-immediate enclosing component name as parent.
+immediate enclosing component name as parent. For a nested component that name
+is its `design_name`, not its target short name, so same-named targets in
+different packages stay distinct as long as their `design_name`s differ.
 *(Requirements: {requirement:downstream-ref}`Tools.BazelComponentNameCaseInsensitive`, {requirement:downstream-ref}`Tools.BazelComponentParentContext`)*
 
 ### Bazel Label Format Validation

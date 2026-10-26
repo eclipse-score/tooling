@@ -15,9 +15,8 @@ load("@score_tooling//bazel/rules/rules_score:rules_score.bzl", "unit_design")
 
 package(default_visibility = ["//:__pkg__"])
 
-# Sub-package: the design/ copies keep their a/ and b/ subdirectories, so only
-# the copies staged next to the unit page collide -- see
-# :unit_design_collision_fails_test in test/BUILD.
+# Sub-package: both diagrams are staged by basename next to the unit page, so
+# they collide -- see :unit_design_collision_fails_test in test/BUILD.
 unit_design(
     name = "design",
     static = [
