@@ -982,7 +982,7 @@ def _collect_architecture_components(ctx):
         ctx: Rule context
 
     Returns:
-        Dict mapping component/unit names to their architecture entries
+        Dict mapping label strings to architecture entries, including the dependable element
     """
 
     # Collect architecture info from aspect on components
@@ -1007,12 +1007,15 @@ def _collect_architecture_components(ctx):
     if de_units:
         de_entry["units"] = de_units
 
-    # Guard against silently overwriting a key already collected by the aspect
-    if ctx.attr.module_name in all_components:
-        fail("module_name '{}' conflicts with an existing component key collected by the architecture aspect".format(ctx.attr.module_name))
-    all_components[ctx.attr.module_name] = de_entry
+    de_label = str(ctx.label.same_package_label(ctx.attr.module_name))
+    all_components[de_label] = de_entry
 
     return all_components
+
+# Test-only access to the collector for architecture label-key regression tests.
+dependable_element_test_helpers = struct(
+    collect_architecture_components = _collect_architecture_components,
+)
 
 def _run_validation(ctx, arch_json, static_fbs_files):
     """Run the dependable-element validation profile.

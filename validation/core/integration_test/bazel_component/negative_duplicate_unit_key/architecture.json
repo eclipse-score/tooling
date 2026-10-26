@@ -1,22 +1,22 @@
 {
   "components": {
-    "safety_software_seooc_example": {
+    "@//bazel/rules/rules_score/examples/seooc:safety_software_seooc_example": {
       "units": [],
       "components": [
         {
-          "label": "@//pkg:component_example",
+          "label": "@//bazel/rules/rules_score/examples/seooc:component_example",
           "design_name": "component_example"
         }
       ]
     },
-    "@//pkg:component_example": {
+    "@//bazel/rules/rules_score/examples/seooc:component_example": {
       "units": [
         {
-          "label": "@//pkg_a/unit_1:unit_1",
+          "label": "@//bazel/rules/rules_score/examples/seooc/pkg_a/unit_1:unit_1",
           "design_name": "unit_1"
         },
         {
-          "label": "@//pkg_b/unit_1:unit_1",
+          "label": "@//bazel/rules/rules_score/examples/seooc/pkg_b/unit_1:unit_1",
           "design_name": "unit_1"
         }
       ],

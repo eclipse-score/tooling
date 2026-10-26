@@ -12,6 +12,6 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  [Design] Bazel label "@//pkg:" does not define a target.
-    Bazel label : "@//pkg:"
-    Fix         : Add a target name after ':' in Bazel label "@//pkg:".
+  [Design] Bazel label "@//bazel/rules/rules_score/examples/seooc:" does not define a target.
+    Bazel label : "@//bazel/rules/rules_score/examples/seooc:"
+    Fix         : Add a target name after ':' in Bazel label "@//bazel/rules/rules_score/examples/seooc:".

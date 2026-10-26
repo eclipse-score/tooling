@@ -50,6 +50,11 @@ load(
     "assessment_config_test",
 )
 load(
+    ":dependable_element_architecture_test.bzl",
+    "architecture_collection_test_suite",
+    "architecture_json_test",
+)
+load(
     ":dependable_element_staged_path_collision_test.bzl",
     "cross_label_collision_fails_test",
     "same_label_collision_fails_test",
@@ -174,6 +179,14 @@ load(
 )
 
 package(default_visibility = ["//visibility:public"])
+
+architecture_collection_test_suite(name = "architecture_collection_test_suite")
+
+architecture_json_test(
+    name = "architecture_public_label_test",
+    module_name = "test_dependable_element_nested",
+    target_under_test = ":test_dependable_element_nested_index",
+)
 
 # ============================================================================
 # Sphinx Toolchain — uses score_docs_as_code so score_metamodel is importable

@@ -1,10 +1,10 @@
 {
   "components": {
-    "safety_software_seooc_example": {
+    "@//bazel/rules/rules_score/examples/seooc:safety_software_seooc_example": {
       "units": [],
       "components": [
         {
-          "label": "@//pkg:",
+          "label": "@//bazel/rules/rules_score/examples/seooc:",
           "design_name": ""
         }
       ]
