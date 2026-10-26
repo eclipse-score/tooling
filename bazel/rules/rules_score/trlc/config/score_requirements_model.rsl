@@ -54,7 +54,8 @@ type AssumedSystemReq "System-level requirement received from the wider operatio
 }
 
 tuple AssumedSystemReqId {
-    item    AssumedSystemReq
+    // Single-member union: TRLC resolves inherited fields (safety) only on union prefixes.
+    item    [AssumedSystemReq]
     separator @
     version Integer
 }
@@ -62,6 +63,15 @@ tuple AssumedSystemReqId {
 type FeatReq "High-level feature requirement derived from one or more AssumedSystemReq items." extends RequirementSafety {
     derived_from "One or more versioned references to the AssumedSystemReq items this feature requirement is derived from."
                  AssumedSystemReqId[1 .. *]
+}
+
+// ASIL order is QM < B < D; revisit when Asil gains a level.
+checks FeatReq {
+    (forall upstream in derived_from =>
+        not ((upstream.item.safety == Asil.B and safety == Asil.QM) or
+             (upstream.item.safety == Asil.D and safety != Asil.D))),
+      error "ASIL of a derived requirement must not be lower than that of its upstream requirement",
+      safety
 }
 
 tuple FeatReqId {
@@ -172,6 +182,15 @@ tuple CompReqSourceId {
 type CompReq "Component-level requirement allocated to a specific software component. Acts as a control measure when a RootCauseAssessment lists it." extends RequirementSafety {
     derived_from "Versioned references to the FeatReq, AssumedSystemReq or received AoU items this component requirement is derived from. An AoU reference is only for AoUs received from another dependable_element (listed in this target's deps); the element's own AoUs are never a derived_from source."
                 CompReqSourceId[1 .. *]
+}
+
+// RootCause has no ASIL, so a root-cause upstream imposes no constraint.
+checks CompReq {
+    (forall upstream in derived_from =>
+        not ((upstream.item.safety == Asil.B and safety == Asil.QM) or
+             (upstream.item.safety == Asil.D and safety != Asil.D))),
+      error "ASIL of a derived requirement must not be lower than that of its upstream requirement",
+      safety
 }
 
 tuple CompReqId {

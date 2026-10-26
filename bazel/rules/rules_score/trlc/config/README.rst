@@ -66,3 +66,15 @@ enforced by LOBSTER at the dependable-element level.
 
 - ``FeatReq.derived_from`` accepts ``AssumedSystemReqId`` tuples (mandatory)
 - ``CompReq.derived_from`` accepts ``FeatReqId`` tuples (optional)
+
+ASIL Non-Degradation
+--------------------
+
+With ``QM < B < D``, ``FeatReq`` and ``CompReq`` checks (``trlc --verify``) reject a
+requirement whose ``safety`` is lower than that of any upstream requirement it
+references in ``derived_from``. Fault-tree ``RootCause`` upstreams carry no ASIL and
+impose no constraint.
+
+Tests for the checks live in ``test/``. TRLC reports ``union_single_type`` and
+``union_partial_field_access`` lint warnings for the tuple item types that carry them;
+these are expected.

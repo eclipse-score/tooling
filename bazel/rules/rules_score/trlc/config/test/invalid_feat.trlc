@@ -1,0 +1,46 @@
+/*******************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+
+// Every feature requirement lowers the ASIL of at least one upstream requirement.
+package AsilInvalidFeat
+
+import ScoreReq
+import AsilUpstream
+
+ScoreReq.FeatReq FeatQmFromB {
+    description = "QM from B."
+    safety = ScoreReq.Asil.QM
+    version = 1
+    derived_from = [AsilUpstream.AsrB@1]
+}
+
+ScoreReq.FeatReq FeatBFromD {
+    description = "B from D."
+    safety = ScoreReq.Asil.B
+    version = 1
+    derived_from = [AsilUpstream.AsrD@1]
+}
+
+ScoreReq.FeatReq FeatQmFromD {
+    description = "QM from D."
+    safety = ScoreReq.Asil.QM
+    version = 1
+    derived_from = [AsilUpstream.AsrD@1]
+}
+
+ScoreReq.FeatReq FeatBFromQmAndD {
+    description = "B from QM and D; one lowered upstream is enough."
+    safety = ScoreReq.Asil.B
+    version = 1
+    derived_from = [AsilUpstream.AsrQm@1, AsilUpstream.AsrD@1]
+}
