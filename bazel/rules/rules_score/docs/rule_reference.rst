@@ -262,7 +262,7 @@ testable within that component.
    * - ``deps``
      - label list
      - no
-     - ``feature_requirements`` or ``assumed_system_requirements`` targets for ``derived_from`` resolution. Also list the ``assumptions_of_use`` target of a *received* AoU and the ``fault_trees`` target of referenced ``<fta_package>.<RootCause>`` records (default ``[]``)
+     - ``feature_requirements`` or ``assumed_system_requirements`` targets for ``derived_from`` resolution. Also list the ``assumptions_of_use`` target of a *received* AoU (default ``[]``)
    * - ``image_srcs``
      - label list
      - no
@@ -315,7 +315,7 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
    * - ``deps``
      - label list
      - no
-     - Other requirement targets (``TrlcProviderInfo``) needed for cross-reference parsing (default ``[]``). List the ``fault_trees`` target: every ``AoU`` references the generated ``<fta_package>.<RootCause>`` records it addresses (``root_causes``, mandatory). Other ``assumptions_of_use`` targets are rejected here, as their AoUs would be extracted as own AoUs.
+     - Other requirement targets (``TrlcProviderInfo``) needed for cross-reference parsing (default ``[]``). Other ``assumptions_of_use`` targets are rejected here, as their AoUs would be extracted as own AoUs.
    * - ``lobster_config``
      - label
      - no
@@ -377,8 +377,7 @@ authored in RST can feed the requirement rules above.
 
 Reference fields hold plain requirement ids; ``version==N`` filters pin the
 referenced version (default ``1``). Sphinx-needs-only filters without an id are
-rejected. Every ``aou_req`` needs ``:root_causes: <fta_package>.<RootCause>, ...``;
-a missing or unqualified value fails the conversion.
+rejected.
 
 **Provides:** ``DefaultInfo`` with the generated ``.trlc`` files; pass the target in ``srcs`` of ``assumed_system_requirements``, ``feature_requirements``, ``component_requirements`` or ``assumptions_of_use``.
 
@@ -749,17 +748,18 @@ safety_analysis
 ~~~~~~~~~~~~~~~
 
 Stage 3 of the safety analysis: renders the FMEA page from the
-``failure_modes``, a ``fault_trees`` target and the measures that address the
-root causes.
+``failure_modes``, a ``fault_trees`` target, the ``RootCauseAssessment``
+records of the root causes and the measures they list.
 
 .. code-block:: python
 
    safety_analysis(
        name            = "my_safety_analysis",
        arch_design     = ":arch",
+       assessments     = ["docs/assessments.trlc"],
        failure_modes   = [":my_failure_modes"],
        fault_trees     = ":my_fault_trees",
-       safety_measures = [":aous", "docs/mitigations.trlc"],
+       safety_measures = [":aous"],
    )
 
 .. list-table::
@@ -774,6 +774,10 @@ root causes.
      - string
      - yes
      - Target name
+   * - ``assessments``
+     - label list
+     - no
+     - ``.trlc`` files holding the ``RootCauseAssessment`` records (default ``[]``). Any other record type in such a file is rejected. Every root cause is listed by exactly one assessment; a root cause without one is reported by the ``dependable_element`` traceability report (and fails it at ``maturity = "release"``). An assessment lists its measures with their version; a measure must be an ``AoU`` or ``CompReq`` of ``safety_measures``. The ``safety`` ASIL of an assessment is at least the ASIL of the failure modes of its root causes and at most the ASIL of its measures.
    * - ``failure_modes``
      - label list
      - no
@@ -785,7 +789,7 @@ root causes.
    * - ``safety_measures``
      - label list
      - no
-     - Measures addressing the root causes (default ``[]``): ``assumptions_of_use`` / ``component_requirements`` targets and ``.trlc`` files containing ``Mitigation`` records (any other record type in such a file is rejected). Only the records of these entries are rendered and traced; the targets in their ``deps`` are used to resolve references only. The ``assumptions_of_use`` targets listed here are the *own* AoUs of the ``dependable_element`` whose ``dependability_analysis`` includes this target: they are rendered in the safety analysis, forwarded to dependees, and shown once however many safety analyses list them. An ``assumptions_of_use`` target that no ``safety_analysis`` lists here is neither rendered nor forwarded.
+     - Measures the assessments list (default ``[]``): ``assumptions_of_use`` / ``component_requirements`` targets. Only the records of these targets are rendered and traced; the targets in their ``deps`` are used to resolve references only. The ``assumptions_of_use`` targets listed here are the *own* AoUs of the ``dependable_element`` whose ``dependability_analysis`` includes this target: they are rendered in the safety analysis, forwarded to dependees, and shown once however many safety analyses list them. An ``assumptions_of_use`` target that no ``safety_analysis`` lists here is neither rendered nor forwarded.
    * - ``arch_design``
      - label
      - yes

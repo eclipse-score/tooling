@@ -93,7 +93,7 @@ unit(
 component(
     name = "MyComponent",
     components = [":MyUnit"],
-    requirements = [],
+    requirements = [":feature_requirements"],
     tests = [],
 )
 

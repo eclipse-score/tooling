@@ -14,21 +14,22 @@
 
 The page is pivoted around the safety chain: an overview summary table followed
 by one section per failure mode, each containing the failure-mode detail and one
-card per root cause (``RootCause``) of that failure mode, holding the measures
-(``Mitigation``, ``AoU``, ``CompReq``) that address it.  A "Fault Trees" section
-shows every fault-tree diagram once.  Failure modes without a root cause and
-measures not referencing any generated root cause still render, so nothing is
-dropped.
+card per root cause (``RootCause``) of that failure mode, holding the rationale
+and the measures (``AoU``, ``CompReq``) of its ``RootCauseAssessment``.  A
+"Fault Trees" section shows every fault-tree diagram once.  Failure modes
+without a root cause and measures no assessment lists still render, so nothing
+is dropped.
 
-A fault-tree root cause is addressed by any of three measure kinds: a
-``Mitigation`` or ``AoU`` referencing it directly via their ``root_causes``
-field, or a ``CompReq`` referencing it as one item in its ``derived_from`` (a
-control measure).
+Each root cause is listed by exactly one ``RootCauseAssessment`` (``root_causes``
+field), which names the measures addressing it (``measures`` field: an ``AoU``
+or a ``CompReq`` and its version).  A root cause without an assessment renders
+as "Not assessed"; an assessment without measures as "Not applicable".
 
-All links (``RootCause`` -> ``FailureMode``, measure -> ``RootCause``) are
-regular, strongly-typed TRLC references (see ``puml_fta::render_trlc_stub``), so
-a single in-process TRLC parse (via the extended ``TRLCRST`` library) backs the
-whole page.  Coverage of the links is checked by lobster, not here.
+All links (``RootCause`` -> ``FailureMode``, assessment -> ``RootCause`` /
+measure) are regular, strongly-typed TRLC references (see
+``puml_fta::render_trlc_stub``), so a single in-process TRLC parse (via the
+extended ``TRLCRST`` library) backs the whole page.  Coverage of the links is
+checked by lobster; this tool only rejects inconsistent inputs.
 """
 
 import argparse
@@ -62,19 +63,15 @@ _FAULT_TREES_TITLE = "Fault Trees"
 _SAFETY_MEASURES_TITLE = "Safety Measures"
 _ROOT_CAUSES_TITLE = "Root Causes"
 
-# TRLC record types that count as a measure addressing a fault-tree root
-# cause (RootCause): Mitigation/AoU via their own root_causes field, CompReq
-# indirectly via a RootCause item inside its derived_from.
-_MEASURE_KINDS = ("Mitigation", "AoU", "CompReq")
+# TRLC record types an assessment lists as measures addressing a root cause.
+_MEASURE_KINDS = ("AoU", "CompReq")
 
 # Measure kind -> sphinx-design badge role and human-readable label.
 _MEASURE_KIND_BADGE = {
-    "Mitigation": "bdg-warning",
     "AoU": "bdg-info",
     "CompReq": "bdg-success",
 }
 _MEASURE_KIND_LABEL = {
-    "Mitigation": "Mitigation",
     "AoU": "Assumption of Use",
     "CompReq": "Control Measure",
 }
@@ -85,7 +82,10 @@ _ASIL_BADGE = {
     "B": "bdg-warning",
     "D": "bdg-danger",
 }
+# ASIL values from lowest to highest.
+_ASIL_ORDER = ("QM", "B", "D")
 _DEFAULT_BADGE = "bdg-secondary"
+_VERSION_BADGE = "bdg-light"
 _GUIDEWORD_BADGE = "bdg-info"
 
 
@@ -178,6 +178,36 @@ def _badge(role: str, text: str) -> str:
     return f":{role}:`{text}`"
 
 
+def _asil_badge(safety: str) -> str:
+    return _badge(_ASIL_BADGE.get(safety, _DEFAULT_BADGE), f"ASIL {safety}")
+
+
+# ---------------------------------------------------------------------------
+# Record queries
+# ---------------------------------------------------------------------------
+
+
+def _measures_of_assessment(assessment: object) -> list[str]:
+    """Fqns of the measures an assessment lists (``MeasureId.item``)."""
+    return [m.get("item") for m in assessment.to_python_dict().get("measures") or []]
+
+
+def _pinned_versions(assessment: object) -> dict[str, int]:
+    """``{measure fqn: version}`` an assessment pins (``MeasureId.version``)."""
+    return {m.get("item"): m.get("version") for m in assessment.to_python_dict().get("measures") or []}
+
+
+def _assessments_by_root_cause(obj_map: dict) -> dict[str, list[str]]:
+    """``{root cause fqn: [assessment fqn, ...]}`` over all ``RootCauseAssessment`` records."""
+    result: dict[str, list[str]] = {}
+    for fqn, obj in obj_map.items():
+        if obj.n_typ.name != "RootCauseAssessment":
+            continue
+        for rc_fqn in dict.fromkeys(obj.to_python_dict().get("root_causes") or []):
+            result.setdefault(rc_fqn, []).append(fqn)
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Element renderers — each returns a directive node (or None)
 # ---------------------------------------------------------------------------
@@ -193,8 +223,7 @@ def _attr_grid(obj: object) -> _Directive | None:
         items.append(_grid_item(_badge(_GUIDEWORD_BADGE, guideword), {"class": "sd-text-center"}))
     safety = fields.get("safety")
     if safety:
-        role = _ASIL_BADGE.get(safety, _DEFAULT_BADGE)
-        items.append(_grid_item(_badge(role, f"ASIL {safety}"), {"class": "sd-text-center"}))
+        items.append(_grid_item(_asil_badge(safety), {"class": "sd-text-center"}))
     for field_name, label in (
         ("interface", "Interface"),
         ("failureeffect", "Failure Effect"),
@@ -214,20 +243,26 @@ def _description_card(renderer: TRLCRST, fqn: str) -> _Directive | None:
     return _grid([_card("Description", description)], columns=1)
 
 
-def _measure_card(renderer: TRLCRST, fqn: str, obj: object) -> _Directive:
-    """One measure card: bold ID with an inline kind badge and (if present) an
-    ASIL badge, then description.
+def _measure_card(
+    renderer: TRLCRST, fqn: str, obj: object, unused: bool = False, version: int | None = None
+) -> _Directive:
+    """One measure card: bold ID with an inline kind badge, an ASIL badge and a
+    version badge (if present), then description.
 
     Both the ID line and the description are direct text content of the card
     (not nested grids), so they align at the same indentation as the Description
-    card body above.
+    card body above.  An *unused* measure, which no assessment lists, is flagged.
+    *version* is the version an assessment pins; it defaults to the record's own.
     """
     kind = obj.n_typ.name
     fields = obj.to_python_dict()
     kind_badge = _badge(_MEASURE_KIND_BADGE.get(kind, _DEFAULT_BADGE), _MEASURE_KIND_LABEL.get(kind, kind))
     safety = fields.get("safety", "")
-    safety_badge = " " + _badge(_ASIL_BADGE.get(safety, _DEFAULT_BADGE), f"ASIL {safety}") if safety else ""
-    header_text = f"**{obj.name}** {kind_badge}{safety_badge}"
+    safety_badge = " " + _asil_badge(safety) if safety else ""
+    shown_version = version if version is not None else fields.get("version")
+    version_badge = " " + _badge(_VERSION_BADGE, f"v{shown_version}") if shown_version is not None else ""
+    unused_badge = " " + _badge("bdg-warning", "Not in an assessment") if unused else ""
+    header_text = f"**{obj.name}** {kind_badge}{safety_badge}{version_badge}{unused_badge}"
     description = renderer.field_value_for(fqn, "description")
     body: list = [header_text]
     if description:
@@ -235,19 +270,46 @@ def _measure_card(renderer: TRLCRST, fqn: str, obj: object) -> _Directive:
     return _card("", body)
 
 
-def _measures_grid(renderer: TRLCRST, obj_map: dict, measures: list[str]) -> _Directive | None:
-    cards = [_measure_card(renderer, fqn, obj_map[fqn]) for fqn in measures if fqn in obj_map]
+def _measures_grid(
+    renderer: TRLCRST,
+    obj_map: dict,
+    measures: list[str],
+    unused: set[str] | None = None,
+    versions: dict[str, int] | None = None,
+) -> _Directive | None:
+    cards = [
+        _measure_card(renderer, fqn, obj_map[fqn], fqn in (unused or ()), (versions or {}).get(fqn))
+        for fqn in measures
+        if fqn in obj_map
+    ]
     return _grid(cards, columns=1) if cards else None
 
 
-def _root_cause_card(renderer: TRLCRST, obj_map: dict, rc_fqn: str, diagrams: dict[str, str]) -> _Directive:
-    """One root-cause card: title, source diagram/line, and the measures addressing it."""
+def _assessment_blocks(renderer: TRLCRST, obj_map: dict, assessment_fqn: str | None) -> list:
+    """Card body for the assessment of a root cause: name, rationale and measures."""
+    if assessment_fqn is None:
+        return [_badge("bdg-danger", "Not assessed")]
+    assessment = obj_map[assessment_fqn]
+    measures = _measures_of_assessment(assessment)
+    header = f"**{assessment.name}** {_asil_badge(assessment.to_python_dict()['safety'])}"
+    if not measures:
+        header += " " + _badge("bdg-secondary", "Not applicable")
+    return [
+        header,
+        renderer.field_value_for(assessment_fqn, "rationale"),
+        _measures_grid(renderer, obj_map, measures, versions=_pinned_versions(assessment)),
+    ]
+
+
+def _root_cause_card(
+    renderer: TRLCRST, obj_map: dict, rc_fqn: str, diagrams: dict[str, str], assessments: dict[str, str]
+) -> _Directive:
+    """One root-cause card: title, source diagram/line, and its assessment."""
     fields = obj_map[rc_fqn].to_python_dict()
     diagram = fields.get("diagram", "")
     source = _ref_text(diagrams[diagram], diagram) if diagram in diagrams else _escape(diagram)
     body: list = [f"Source: {source}, line {fields.get('line')}"]
-    measures = _measures_grid(renderer, obj_map, _measures_for_root_cause(obj_map, rc_fqn))
-    body.append(measures if measures is not None else _badge("bdg-danger", "No safety measure"))
+    body.extend(_assessment_blocks(renderer, obj_map, assessments.get(rc_fqn)))
     return _card(_escape(fields.get("title", "")), body)
 
 
@@ -260,13 +322,18 @@ def _root_causes_for_failure_mode(obj_map: dict, fm_fqn: str) -> list[str]:
     ]
 
 
-def _fm_dropdown(renderer: TRLCRST, obj_map: dict, fqn: str, diagrams: dict[str, str]) -> _Directive:
+def _fm_dropdown(
+    renderer: TRLCRST, obj_map: dict, fqn: str, diagrams: dict[str, str], assessments: dict[str, str]
+) -> _Directive:
     """One collapsible failure-mode dropdown.
 
     The Root Causes part is omitted for a failure mode no fault tree covers.
     """
     body = [_attr_grid(obj_map[fqn]), _description_card(renderer, fqn)]
-    cards = [_root_cause_card(renderer, obj_map, rc, diagrams) for rc in _root_causes_for_failure_mode(obj_map, fqn)]
+    cards = [
+        _root_cause_card(renderer, obj_map, rc, diagrams, assessments)
+        for rc in _root_causes_for_failure_mode(obj_map, fqn)
+    ]
     if cards:
         body.append(_Directive("rubric", _ROOT_CAUSES_TITLE))
         body.append(_grid(cards, columns=1))
@@ -278,29 +345,6 @@ def _fm_dropdown(renderer: TRLCRST, obj_map: dict, fqn: str, diagrams: dict[str,
 # ---------------------------------------------------------------------------
 
 
-def _measures_for_root_cause(obj_map: dict, rc_fqn: str) -> list[str]:
-    """Mitigation/AoU/CompReq fqns that address *rc_fqn* (a RootCause root cause).
-
-    ``Mitigation`` and ``AoU`` reference root causes directly via their
-    ``root_causes`` field.  ``CompReq`` references them indirectly, as one
-    item among the FeatReq/AssumedSystemReq/AoU/RootCause union inside its
-    ``derived_from`` ``CompReqSourceId`` tuples -- only tuple items that
-    resolve to *rc_fqn* count as a control measure for this root cause.
-    """
-    result = []
-    for fqn, obj in obj_map.items():
-        kind = obj.n_typ.name
-        fields = obj.to_python_dict()
-        if kind in ("Mitigation", "AoU"):
-            if rc_fqn in (fields.get("root_causes") or []):
-                result.append(fqn)
-        elif kind == "CompReq":
-            sources = fields.get("derived_from") or []
-            if any(src.get("item") == rc_fqn for src in sources):
-                result.append(fqn)
-    return result
-
-
 def _render_overview(renderer: TRLCRST, fm_fqns: list[str]) -> str:
     if not fm_fqns:
         return ""
@@ -308,8 +352,10 @@ def _render_overview(renderer: TRLCRST, fm_fqns: list[str]) -> str:
     return _heading(_OVERVIEW_TITLE, "-") + "\n" + table
 
 
-def _render_failure_modes(renderer: TRLCRST, obj_map: dict, fm_fqns: list[str], diagrams: dict[str, str]) -> str:
-    dropdowns = [_fm_dropdown(renderer, obj_map, fqn, diagrams) for fqn in fm_fqns]
+def _render_failure_modes(
+    renderer: TRLCRST, obj_map: dict, fm_fqns: list[str], diagrams: dict[str, str], assessments: dict[str, str]
+) -> str:
+    dropdowns = [_fm_dropdown(renderer, obj_map, fqn, diagrams, assessments) for fqn in fm_fqns]
     body = "\n\n".join(d.render() for d in dropdowns)
     return _heading(_FAILURE_MODES_TITLE, "-") + "\n" + body + "\n"
 
@@ -324,35 +370,90 @@ def _render_fault_trees(diagrams: dict[str, str]) -> str:
     return "\n".join(parts)
 
 
-def _render_measures(renderer: TRLCRST, obj_map: dict, measure_fqns: list[str]) -> str:
+def _render_measures(renderer: TRLCRST, obj_map: dict, measure_fqns: list[str], unused: set[str]) -> str:
     if not measure_fqns:
         return ""
-    grid = _measures_grid(renderer, obj_map, measure_fqns)
+    grid = _measures_grid(renderer, obj_map, measure_fqns, unused)
     body = grid.render() if grid is not None else ""
     return _heading(_SAFETY_MEASURES_TITLE, "-") + "\n" + body + "\n"
 
 
-def _check_inputs(obj_map: dict, mitigation_files: list[str]) -> list[str]:
-    """Input errors: a root cause whose failure mode is not rendered, or a
-    non-Mitigation record in a ``--mitigations`` file.
+def _safety(obj: object) -> str:
+    return obj.to_python_dict()["safety"]
 
-    Only records of the source files are in *obj_map*; a failure mode parsed for
-    reference resolution only is therefore reported.
+
+def _asil_errors(fqn: str, assessment: object, obj_map: dict) -> list[str]:
+    """ASIL of *assessment* below a failure mode of its root causes or above a measure.
+
+    References missing from *obj_map* are reported by ``_check_inputs`` itself.
+    """
+    fields = assessment.to_python_dict()
+    safety = fields["safety"]
+    rank = _ASIL_ORDER.index(safety)
+    errors = []
+    for rc_fqn in fields.get("root_causes") or []:
+        root_cause = obj_map.get(rc_fqn)
+        for fm_fqn in (root_cause.to_python_dict().get("failure_modes") or []) if root_cause else []:
+            fm = obj_map.get(fm_fqn)
+            if fm is not None and _ASIL_ORDER.index(_safety(fm)) > rank:
+                errors.append(
+                    f"RootCauseAssessment {fqn} has ASIL {safety}, below ASIL {_safety(fm)} "
+                    f"of failure mode {fm_fqn} of root cause {rc_fqn}"
+                )
+    for measure_fqn in _measures_of_assessment(assessment):
+        measure = obj_map.get(measure_fqn)
+        if measure is not None and _ASIL_ORDER.index(_safety(measure)) < rank:
+            errors.append(
+                f"RootCauseAssessment {fqn} has ASIL {safety}, above ASIL {_safety(measure)} of measure {measure_fqn}"
+            )
+    return errors
+
+
+def _check_inputs(obj_map: dict, assessment_files: list[str]) -> list[str]:
+    """Input errors.
+
+    * a root cause whose failure mode is not rendered;
+    * a record that is not a ``RootCauseAssessment`` in an ``--assessments`` file;
+    * an assessment root cause that no fault tree generates;
+    * an assessment measure that is not an own AoU / CompReq of ``safety_measures``;
+    * an assessment ASIL below that of a failure mode of its root causes or above that of a measure;
+    * a root cause listed by more than one assessment.
+
+    Only records of the source files are in *obj_map*; a record parsed for
+    reference resolution only (failure mode, measure of a dependency) is
+    therefore reported.
     """
     errors = []
     fm_fqns = {fqn for fqn, obj in obj_map.items() if obj.n_typ.name == "FailureMode"}
-    mitigation_paths = {os.path.abspath(f) for f in mitigation_files}
+    rc_fqns = {fqn for fqn, obj in obj_map.items() if obj.n_typ.name == "RootCause"}
+    measure_fqns = {fqn for fqn, obj in obj_map.items() if obj.n_typ.name in _MEASURE_KINDS}
+    assessment_paths = {os.path.abspath(f) for f in assessment_files}
     for fqn, obj in obj_map.items():
         kind = obj.n_typ.name
+        if kind != "RootCauseAssessment" and os.path.abspath(obj.location.file_name) in assessment_paths:
+            errors.append(f"{kind} {fqn} is in an assessments file; only RootCauseAssessment records belong there")
+            continue
         if kind == "RootCause":
             for fm_fqn in obj.to_python_dict().get("failure_modes") or []:
                 if fm_fqn not in fm_fqns:
                     errors.append(f"RootCause {fqn} references failure mode {fm_fqn}, which is not in failure_modes")
-        if kind != "Mitigation" and os.path.abspath(obj.location.file_name) in mitigation_paths:
-            errors.append(
-                f"{kind} {fqn} is in a mitigations file; only Mitigation records belong there "
-                "(pass AoU / CompReq records via an assumptions_of_use / component_requirements target)"
-            )
+        elif kind == "RootCauseAssessment":
+            for rc_fqn in obj.to_python_dict().get("root_causes") or []:
+                if rc_fqn not in rc_fqns:
+                    errors.append(
+                        f"RootCauseAssessment {fqn} references root cause {rc_fqn}, "
+                        "which is not generated by the fault_trees target"
+                    )
+            for measure_fqn in _measures_of_assessment(obj):
+                if measure_fqn not in measure_fqns:
+                    errors.append(
+                        f"RootCauseAssessment {fqn} lists measure {measure_fqn}, "
+                        "which is not an AoU or CompReq of the safety_measures targets"
+                    )
+            errors.extend(_asil_errors(fqn, obj, obj_map))
+    for rc_fqn, assessment_fqns in _assessments_by_root_cause(obj_map).items():
+        if len(assessment_fqns) > 1:
+            errors.append(f"RootCause {rc_fqn} is listed by several assessments: {', '.join(sorted(assessment_fqns))}")
     return errors
 
 
@@ -361,13 +462,21 @@ def _build_body(renderer: TRLCRST, title: str, fta_package: str, diagram_names: 
     fm_fqns = [fqn for fqn, obj in obj_map.items() if obj.n_typ.name == "FailureMode"]
     measure_fqns = [fqn for fqn, obj in obj_map.items() if obj.n_typ.name in _MEASURE_KINDS]
     diagrams = {name: _diagram_anchor(fta_package, name) for name in sorted(set(diagram_names))}
+    by_root_cause = _assessments_by_root_cause(obj_map)
+    assessments = {rc_fqn: fqns[0] for rc_fqn, fqns in by_root_cause.items()}
+    listed = {
+        measure_fqn
+        for fqn, obj in obj_map.items()
+        if obj.n_typ.name == "RootCauseAssessment"
+        for measure_fqn in _measures_of_assessment(obj)
+    }
 
     sections = [
         _heading(title, "="),
         _render_overview(renderer, fm_fqns),
-        _render_failure_modes(renderer, obj_map, fm_fqns, diagrams),
+        _render_failure_modes(renderer, obj_map, fm_fqns, diagrams, assessments),
         _render_fault_trees(diagrams),
-        _render_measures(renderer, obj_map, measure_fqns),
+        _render_measures(renderer, obj_map, measure_fqns, set(measure_fqns) - listed),
     ]
     return "\n".join(s for s in sections if s)
 
@@ -397,10 +506,10 @@ def main() -> None:
     )
     parser.add_argument("--failuremodes", nargs="*", default=[], help="FailureMode .trlc files.")
     parser.add_argument(
-        "--mitigations",
+        "--assessments",
         nargs="*",
         default=[],
-        help="Mitigation .trlc files; any other record type in them is an error.",
+        help="RootCauseAssessment .trlc files; any other record type in them is an error.",
     )
     parser.add_argument(
         "--safetymeasures",
@@ -426,7 +535,7 @@ def main() -> None:
 
     logging.basicConfig(level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s")
 
-    source_files = list(args.failuremodes) + list(args.mitigations) + list(args.safetymeasures) + [args.fta_events]
+    source_files = list(args.failuremodes) + list(args.assessments) + list(args.safetymeasures) + [args.fta_events]
     renderer = TRLCRST(
         input_directory=None,
         source_files=source_files,
@@ -438,7 +547,7 @@ def main() -> None:
         logger.error("TRLC parse error: %s", exc)
         sys.exit(1)
 
-    errors = _check_inputs(renderer.objects_by_fqn(), args.mitigations)
+    errors = _check_inputs(renderer.objects_by_fqn(), args.assessments)
     if errors:
         for error in errors:
             logger.error("%s", error)

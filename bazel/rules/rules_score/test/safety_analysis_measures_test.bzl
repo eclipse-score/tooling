@@ -41,7 +41,7 @@ def _measure_deps_are_context_only_test_impl(ctx):
 
     # A component requirement measure derives from an AoU held in its deps.
     # That AoU is parsed for reference resolution only: it is not rendered and
-    # lobster-trlc, which only extracts Mitigation / AoU records, never sees it.
+    # is no input of the assessments lobster extraction as a measure.
     assembler = _action_with_output(env, "safety_analysis.rst")
     if assembler == None:
         asserts.true(env, False, "assembler action not found")
@@ -52,8 +52,13 @@ def _measure_deps_are_context_only_test_impl(ctx):
         ["comp_req.trlc"],
         _basenames(_flag_values(argv, "--safetymeasures")),
     )
+    asserts.equals(
+        env,
+        ["assessments.trlc"],
+        _basenames(_flag_values(argv, "--assessments")),
+    )
     asserts.true(env, "aou.trlc" in _basenames(_flag_values(argv, "--dep-files")))
-    asserts.equals(env, None, _action_with_output(env, "safetymeasures.lobster"))
+    asserts.true(env, _action_with_output(env, "assessments.lobster") != None)
     return analysistest.end(env)
 
 measure_deps_are_context_only_test = analysistest.make(_measure_deps_are_context_only_test_impl)

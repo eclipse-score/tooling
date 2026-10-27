@@ -60,9 +60,10 @@ So the single steps are:
    violation of an overarching safety goal.
 2. **Analyze effects and causes** — decompose the identified failure modes
    into their root causes using a Fault Tree Analysis (FTA).
-3. **Define countermeasures** — for every root cause, close it with a
-   ``Mitigation``, a ``CompReq``, or push the obligation outward with an
-   ``AoU``, and trace it back through the FTA to the root cause.
+3. **Assess every root cause** — for every root cause, a
+   ``RootCauseAssessment`` argues why it is sufficiently addressed: by a
+   ``CompReq``, by an ``AoU`` that pushes the obligation outward, or by a
+   rationale alone when it does not apply.
 4. **Wire and validate** — bundle the resulting artifacts in Bazel and let the
    traceability check verify that they are consistently linked.
 
@@ -107,9 +108,9 @@ artifacts that must be linked together:
      - PlantUML (``.puml``)
      - Fault Tree Analysis: structural decomposition of each failure mode into root causes
      - Step 2
-   * - **Safety Measures**
+   * - **Root Cause Assessments**
      - TRLC (``.trlc``)
-     - Countermeasures that address the root causes identified in the FTA
+     - Per root cause: the measures (``AoU`` / ``CompReq``) that address it, or the reason it does not apply
      - Step 3
 
 The artifacts are linked as follows:
@@ -123,8 +124,9 @@ The artifacts are linked as follows:
 - Every ``$RootCause`` leaf in an FTA diagram gets a plain-identifier alias. A
   dedicated tool generates a ``RootCause`` stub for each such alias; the stub
   lists the ``FailureMode`` record(s) of its fault tree in ``failure_modes``. A
-  ``Mitigation``/``CompReq``/``AoU`` then references the stub explicitly from
-  its ``root_causes``/``derived_from`` field.
+  ``RootCauseAssessment`` references the stub explicitly from its
+  ``root_causes`` field and lists the measures addressing it in ``measures``.
+  The measures themselves (``AoU``, ``CompReq``) never reference a root cause.
 
 The figure shows all record links; arrows point from the referencing record to
 the referenced one:
@@ -276,7 +278,7 @@ so that the procedure definitions are available.
    * - ``$RootCause(name, alias, connection)``
      - A root cause (leaf node). ``alias`` is a plain TRLC identifier — it
        becomes the record name of a generated ``RootCause`` stub, referenced
-       explicitly from a measure's ``root_causes``/``derived_from`` field in
+       explicitly from a ``RootCauseAssessment``'s ``root_causes`` field in
        Step 3. ``connection`` is the alias of the parent gate.
    * - ``$AndGate(alias, connection)``
      - AND gate: all children must occur for the parent to occur.
@@ -361,99 +363,115 @@ For example, the fault tree for ``SampleLibrary.SampleFailureMode`` (the
 
 ``JustBadLuck`` alone is sufficient to cause the failure mode (OR gate),
 whereas ``NoMoreCookies`` and ``NoMoreCoffee`` must occur together (AND gate)
-to cause the intermediate event. Each of these root causes needs a measure in
-Step 3.
+to cause the intermediate event. Each of these root causes needs an assessment
+in Step 3.
 
-Step 3 — Choose a countermeasure for every root cause
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Step 3 — Assess every root cause
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Every ``$RootCause`` needs to be addressed by at least one of the following.
-Pick the path by *who* closes the root cause:
+Every ``$RootCause`` is covered by exactly one ``RootCauseAssessment``. The
+assessment names the root cause(s) it covers, argues in its ``rationale`` why
+they are sufficiently addressed, and lists the ``measures`` that address them.
+Pick the measures by *who* closes the root cause:
 
 .. list-table::
    :header-rows: 1
    :widths: 24 46 30
 
-   * - Type
+   * - Measure
      - Use when the root cause is closed by…
-     - Closed via
-   * - ``Mitigation``
+     - Listed in
+   * - *(none)*
      - a reasoning why the root cause cannot occur at all (due to system design, ...)
-     - ``root_causes`` + mandatory ``justification``
+     - ``measures = []`` + ``rationale``
    * - ``CompReq``
      - a runtime/design measure, implemented and tested like any other component requirement.
-     - ``derived_from`` referencing the ``RootCause``
+     - ``measures`` (versioned)
    * - ``AoU`` (Assumption of Use)
      - an obligation only the **integrator/caller** can guarantee, not the SEooC.
-     - mandatory ``root_causes``
+     - ``measures`` (versioned)
 
-Recording measures (TRLC)
-^^^^^^^^^^^^^^^^^^^^^^^^^
+The measures do not reference the root causes: a ``CompReq`` derives from a
+feature requirement as usual, and an ``AoU`` is a plain condition.
 
-Each measure imports the generated ``<fta_package>`` package and references the
-``RootCause`` stub(s) it addresses explicitly from its
-``root_causes``/``derived_from`` field. For example, the following
-``Mitigation`` records (from ``sample_safety_analysis_safetymeasures.trlc``)
-address the ``JustBadLuck``, ``NoMoreCookies``, and ``NoMoreCoffee`` root
-causes from the FTA diagram in Step 2:
+Recording assessments (TRLC)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The assessments import the generated ``<fta_package>`` package and reference
+the ``RootCause`` stubs they cover explicitly from ``root_causes``. For
+example, the following records (from
+``sample_safety_analysis_assessments.trlc``) assess the root causes from the
+FTA diagram in Step 2:
 
 .. code-block:: text
 
     package SampleLibrary
 
     import ScoreReq
+    import SampleType
     import sample_safety_analysis_fta
 
-    ScoreReq.Mitigation JustBadLuck{
+    ScoreReq.RootCauseAssessment ShmemCreatedWrongNameAssessed {
+        root_causes = [sample_safety_analysis_fta.ShmemCreatedWrongName]
+        measures = [SampleType.SampleAoU@1]
         safety = ScoreReq.Asil.B
-        description = "Sometimes, the dark side wins. We shall be prepared for that."
-        justification = "This root cause is outside our control; no active measure can prevent it."
+        rationale = "The user prevents the wrong name through the assumption of use."
         version = 1
+    }
+
+    ScoreReq.RootCauseAssessment JustBadLuckAssessed {
         root_causes = [sample_safety_analysis_fta.JustBadLuck]
+        measures = []
+        safety = ScoreReq.Asil.B
+        rationale = "The component is deterministic and has no random behavior, so luck cannot influence its outcome."
+        version = 1
     }
 
-    ScoreReq.Mitigation NoMoreCookies{
+    ScoreReq.RootCauseAssessment CookiesAndCoffeeAssessed {
+        root_causes = [
+            sample_safety_analysis_fta.NoMoreCookies,
+            sample_safety_analysis_fta.NoMoreCoffee
+        ]
+        measures = []
         safety = ScoreReq.Asil.B
-        description = "We shall only order family size cookie jars"
-        justification = "Ordering only family size jars keeps the reserve stable, so this root cause does not apply."
+        rationale = "Only family size cookie jars are ordered and an emergency coffee reserve is kept on hand, so these root causes do not apply."
         version = 1
-        root_causes = [sample_safety_analysis_fta.NoMoreCookies]
-    }
-
-    ScoreReq.Mitigation NoMoreCoffee{
-        safety = ScoreReq.Asil.B
-        description = "We shall keep a coffee reserve for emergencies"
-        justification = "An emergency reserve is kept on hand, so this root cause does not apply."
-        version = 1
-        root_causes = [sample_safety_analysis_fta.NoMoreCoffee]
     }
 
 The alias ``JustBadLuck`` in the FTA diagram matches the ``RootCause`` stub
-``sample_safety_analysis_fta.JustBadLuck`` referenced from the ``Mitigation``'s
-``root_causes`` — and likewise for ``NoMoreCookies``/``NoMoreCoffee``. This
-explicit reference is how the traceability link is established (there is no
-implicit name-matching between the diagram alias and the ``Mitigation``
-record's own name).
+``sample_safety_analysis_fta.JustBadLuck`` referenced from ``root_causes``.
+This explicit reference is how the traceability link is established (there is
+no implicit name-matching between the diagram alias and the assessment's own
+name).
 
-A ``CompReq``
-can reference the generated ``RootCause`` stub directly in its
-``derived_from`` list (closing it via a normal, implemented-and-tested
-component requirement instead of a dedicated safety measure), or an ``AoU``
-can reference it via its mandatory ``root_causes`` field (pushing the
-obligation out to the integrator). The traceability report of the enclosing
-``dependable_element`` flags a root cause that is covered by none of
-``Mitigation``, ``CompReq``, or ``AoU``; with ``maturity = "release"`` this
-fails ``bazel test`` of the ``dependable_element``.
+Rules for assessments:
+
+- A root cause is covered by exactly one assessment. Several root causes that
+  share the same argument may be grouped into one assessment (as
+  ``CookiesAndCoffeeAssessed`` above); listing a root cause in two
+  assessments fails the build.
+- ``measures`` is mandatory. An empty list is the explicit statement that the
+  root causes do not apply; the ``rationale`` then has to say why.
+- ``safety`` is mandatory. It is at least the ASIL of the failure modes of the
+  covered root causes and at most the ASIL of each listed measure; otherwise
+  the build fails.
+- A measure is an ``AoU`` or ``CompReq`` of the targets in ``safety_measures``
+  and carries the version it was reviewed at (``Package.Name@1``). After a
+  version change of the measure the reference no longer resolves, which forces
+  a new review of the assessment.
+- The traceability report of the enclosing ``dependable_element`` flags a root
+  cause without assessment, and an own ``AoU`` that no assessment lists; with
+  ``maturity = "release"`` this fails ``bazel test`` of the
+  ``dependable_element``.
 
 An ``AoU`` is how you *push an obligation outward* when the SEooC cannot close a
 root cause itself — it must be forwarded to the integrating project (see
 :doc:`assumptions_of_use`).
 
-The reverse direction is different: a ``CompReq`` lists an ``AoU`` in
-``derived_from`` only for an AoU *received* from another ``dependable_element``
-(one of this element's ``deps``). The element's own AoUs are never a
-``derived_from`` source; they close a root cause through their own
-``root_causes`` field.
+A ``CompReq`` lists an ``AoU`` in ``derived_from`` only for an AoU *received*
+from another ``dependable_element`` (one of this element's ``deps``). The
+element's own AoUs are never a ``derived_from`` source; they close a root
+cause by being listed in an assessment.
 
 Step 4 — Wire the analysis into Bazel
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -493,24 +511,20 @@ Step 4 — Wire the analysis into Bazel
    safety_analysis(
        name = "sample_safety_analysis",
        arch_design = "//design:sample_seooc_design",
+       assessments = ["sample_safety_analysis_assessments.trlc"],
        failure_modes = [":sample_failure_modes"],
        fault_trees = ":sample_fault_trees",
-       safety_measures = [
-           "//docs:sample_aous",
-           "sample_safety_analysis_safetymeasures.trlc",
-       ],
+       safety_measures = ["//docs:sample_aous"],
        visibility = ["//visibility:public"],
    )
 
 The analysis is split in three targets to avoid a dependency cycle: the
 ``failure_modes`` target holds the ``FailureMode`` records, the ``fault_trees``
 target generates the ``<fta_package>`` package with the ``RootCause`` records
-referencing them, the measures reference those records, and the
-``safety_analysis`` target lists the failure modes and the measures. Every
-``AoU`` references a root cause, so each ``assumptions_of_use`` target lists the
-``fault_trees`` target in its ``deps`` (so the generated package resolves when
-the AoU file is parsed) and is passed in the ``safety_measures`` of the
-``safety_analysis`` (so it counts as a measure of the root cause):
+referencing them, and the ``safety_analysis`` target lists the failure modes,
+the assessments (which reference the root causes) and the measures they list.
+The measures (``assumptions_of_use`` / ``component_requirements`` targets) do
+not reference the root causes, so they need no ``fault_trees`` dep:
 
 .. code-block:: starlark
    :caption: bazel/rules/rules_score/examples/seooc/docs/BUILD
@@ -518,12 +532,14 @@ the AoU file is parsed) and is passed in the ``safety_measures`` of the
    assumptions_of_use(
        name = "sample_aous",
        srcs = ["aous.trlc"],
-       deps = ["//safety_analysis:sample_fault_trees"],
    )
 
-Raw ``.trlc`` files in ``safety_measures`` may only hold ``Mitigation``
-records, and a root cause whose failure mode is not in ``failure_modes`` fails
-the build.
+Raw ``.trlc`` files in ``assessments`` may only hold ``RootCauseAssessment``
+records. The build fails when an assessment references a root cause that no
+``fault_trees`` target generates, lists a measure that is not an ``AoU`` or
+``CompReq`` of ``safety_measures``, or when a root cause is listed by more than
+one assessment. A root cause whose failure mode is not in ``failure_modes``
+fails the build too.
 
 The ``dependable_element`` derives its own AoUs from the ``safety_measures`` of its
 safety analyses, so the AoU reaches the dependees once, however many safety
@@ -594,14 +610,14 @@ enclosing ``dependable_element``:
 
                                        $RootCause
                                             |
-                             Mitigation / AoU / CompReq
+                               RootCauseAssessment
 
-A root cause that is not referenced by any ``Mitigation.root_causes``,
-``AoU.root_causes`` (from an ``assumptions_of_use`` target in ``safety_measures``), or ``CompReq.derived_from``
-is reported as *missing reference to Component Requirements or Safety Measures*.
+A root cause that is not listed in the ``root_causes`` of any
+``RootCauseAssessment`` is reported as *missing reference to Root Cause
+Assessments*. An own ``AoU`` (from an ``assumptions_of_use`` target in
+``safety_measures``) that no assessment lists is reported the same way.
 
 Fixing a traceability error means ensuring the reference is explicit: the
-``Mitigation``/``CompReq``/``AoU`` must import the generated ``<fta_package>``
-package (the ``fta_package`` of the ``fault_trees`` target) and reference the
-``RootCause`` stub by name (e.g.
-``sample_safety_analysis_fta.JustBadLuck``).
+assessment must import the generated ``<fta_package>`` package (the
+``fta_package`` of the ``fault_trees`` target) and reference the ``RootCause``
+stub by name (e.g. ``sample_safety_analysis_fta.JustBadLuck``).

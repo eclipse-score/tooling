@@ -1,0 +1,93 @@
+/********************************************************************************
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+
+// Fixture exercising the RootCauseAssessment type: every fault-tree root cause
+// (RootCause) is assessed by one RootCauseAssessment, which lists the AoUs
+// (preventive) or CompReqs (control) addressing it, or none when the root
+// cause does not apply.
+
+package TestRootCauseAssessment
+
+import ScoreReq
+
+ScoreReq.FailureMode SomeFailureMode {
+    guidewords    = [ScoreReq.Guideword.LossOfFunction]
+    failureeffect = "Some effect"
+    safety        = ScoreReq.Asil.B
+    description   = "A failure mode backing this fixture's fault tree"
+    version       = 1
+}
+
+ScoreReq.RootCause PreventedRootCause {
+    title         = "Root cause prevented by an AoU"
+    diagram       = "n/a"
+    line          = 1
+    failure_modes = [TestRootCauseAssessment.SomeFailureMode]
+}
+
+ScoreReq.RootCause ControlledRootCause {
+    title         = "Root cause controlled by a component requirement"
+    diagram       = "n/a"
+    line          = 2
+    failure_modes = [TestRootCauseAssessment.SomeFailureMode]
+}
+
+ScoreReq.RootCause NotApplicableRootCause {
+    title         = "Root cause that does not apply"
+    diagram       = "n/a"
+    line          = 3
+    failure_modes = [TestRootCauseAssessment.SomeFailureMode]
+}
+
+ScoreReq.AoU SomeAoU {
+    safety      = ScoreReq.Asil.B
+    description = "An assumption of use that prevents a root cause"
+    version     = 1
+}
+
+ScoreReq.AoU ReceivedAoU {
+    safety      = ScoreReq.Asil.B
+    description = "An assumption of use received from another element"
+    version     = 1
+}
+
+ScoreReq.CompReq SomeCompReq {
+    safety       = ScoreReq.Asil.B
+    description  = "A component requirement that controls a root cause"
+    version      = 1
+    derived_from = [TestRootCauseAssessment.ReceivedAoU@1]
+}
+
+ScoreReq.RootCauseAssessment PreventedAssessment {
+    root_causes = [TestRootCauseAssessment.PreventedRootCause]
+    measures    = [TestRootCauseAssessment.SomeAoU@1]
+    safety      = ScoreReq.Asil.B
+    rationale   = "The AoU prevents the root cause."
+    version     = 1
+}
+
+ScoreReq.RootCauseAssessment ControlledAssessment {
+    root_causes = [TestRootCauseAssessment.ControlledRootCause]
+    measures    = [TestRootCauseAssessment.SomeCompReq@1]
+    safety      = ScoreReq.Asil.B
+    rationale   = "The component requirement controls the root cause."
+    version     = 1
+}
+
+ScoreReq.RootCauseAssessment NotApplicableAssessment {
+    root_causes = [TestRootCauseAssessment.NotApplicableRootCause]
+    measures    = []
+    safety      = ScoreReq.Asil.B
+    rationale   = "The root cause cannot occur in this context."
+    version     = 1
+}

@@ -16,9 +16,9 @@ Assumptions of Use
 ===================
 
 Conditions that the *integrating project* must satisfy when using your SEooC.
-Every own ``AoU`` references the FTA ``RootCause`` records it closes in its
-mandatory ``root_causes`` field, pushing the obligation to prevent them out to
-the integrator.
+An own ``AoU`` closes FTA root causes when a ``RootCauseAssessment`` lists it
+in its ``measures``, pushing the obligation to prevent them out to the
+integrator. The ``AoU`` itself does not reference a root cause.
 
 Traceability to requirements is established at the Bazel level via the ``deps``
 attribute on the ``assumptions_of_use`` rule — there is no TRLC ``derived_from``
@@ -32,13 +32,11 @@ however, declare that it implements a received AoU by referencing it from its ow
     package SampleType
 
     import ScoreReq
-    import sample_safety_analysis_fta
 
     ScoreReq.AoU SampleAoU {
         description = "It shall be made sure that shared memory segments are never created with the wrong name (ShmemCreatedWrongName)"
         safety      = ScoreReq.Asil.B
         version     = 1
-        root_causes = [sample_safety_analysis_fta.ShmemCreatedWrongName]
     }
 
 .. code-block:: starlark
@@ -47,7 +45,6 @@ however, declare that it implements a received AoU by referencing it from its ow
    assumptions_of_use(
        name = "sample_aous",
        srcs = ["aous.trlc"],
-       deps = ["//safety_analysis:sample_fault_trees"],
    )
 
 The ``dependable_element`` has no AoU attribute: its own AoUs are the
@@ -57,47 +54,42 @@ The ``dependable_element`` has no AoU attribute: its own AoUs are the
 Preventing a root cause
 -----------------------
 
-An own ``AoU`` closes a root cause of a ``safety_analysis`` fault tree by
-referencing the generated ``RootCause`` record in ``root_causes``:
+An own ``AoU`` closes a root cause of a ``safety_analysis`` fault tree when a
+``RootCauseAssessment`` lists it, with its version, in ``measures``:
 
 .. code-block:: text
-   :caption: aou.trlc
+   :caption: assessments.trlc
 
-    package SampleType
+    package SampleLibrary
 
     import ScoreReq
+    import SampleType
     import sample_safety_analysis_fta
 
-    ScoreReq.AoU SampleAoU {
-        description = "The user shall provide a correct configuration"
-        safety      = ScoreReq.Asil.B
-        version     = 1
+    ScoreReq.RootCauseAssessment UserConfigurationAssessed {
         root_causes = [sample_safety_analysis_fta.UserProvidedWrongConfiguration]
+        measures    = [SampleType.SampleAoU@1]
+        safety      = ScoreReq.Asil.B
+        rationale   = "The user provides a correct configuration."
+        version     = 1
     }
 
-The generated ``<fta_package>`` package only exists as output of the
-``fault_trees`` target, so the ``assumptions_of_use`` target lists it in
-``deps``. The ``safety_analysis`` target lists the same ``assumptions_of_use``
-target in ``safety_measures``, which counts the AoU as a measure of the root cause:
+The ``safety_analysis`` target lists the ``assumptions_of_use`` target in
+``safety_measures`` and the assessments in ``assessments``. The
+``assumptions_of_use`` target needs no ``fault_trees`` dep:
 
 .. code-block:: starlark
-
-   fault_trees(
-       name = "sample_fault_trees",
-       fta_package = "sample_safety_analysis_fta",
-       # ...
-   )
 
    assumptions_of_use(
        name = "sample_aous",
        srcs = ["aou.trlc"],
-       deps = [":sample_fault_trees"],  # resolves sample_safety_analysis_fta
    )
 
    safety_analysis(
        name = "sample_safety_analysis",
+       assessments = ["assessments.trlc"],
        fault_trees = ":sample_fault_trees",
-       safety_measures = [":sample_aous"],  # counts the AoU as a measure of the root cause
+       safety_measures = [":sample_aous"],
        # ...
    )
 

@@ -156,27 +156,7 @@ type RootCause "A fault-tree root cause (leaf node), generated from a $RootCause
                   FailureMode[1 .. *]
 }
 
-// Measures
-// --------
-//
-// Every fault-tree root cause (RootCause) must be addressed by at least one
-// concrete measure: a CompReq (control measure, via derived_from), an AoU
-// (preventive measure, via root_causes) or a Mitigation (via root_causes,
-// arguing the root cause does not apply). SafetyMeasure itself is never
-// instantiated directly -- it only exists so Mitigation and AoU inherit the
-// mandatory root_causes field.
-
-abstract type SafetyMeasure "Base type for measures that address one or more fault-tree root causes." extends RequirementSafety {
-    root_causes  "Fault-tree root causes that this measure addresses."
-                 RootCause[1 .. *]
-}
-
-type Mitigation "Argues that a fault-tree root cause does not apply in this context, rather than actively preventing or controlling it." extends SafetyMeasure {
-    justification "Explanation of why this root cause cannot occur, or is otherwise irrelevant, in this context."
-                  String
-}
-
-type AoU "Assumption of Use — a safety-relevant condition that a user must fulfil. Acts as a preventive measure for the fault-tree root causes it addresses." extends SafetyMeasure {
+type AoU "Assumption of Use — a safety-relevant condition that a user must fulfil. Acts as a preventive measure when a RootCauseAssessment lists it." extends RequirementSafety {
 }
 
 ///////////////////////////////
@@ -184,13 +164,13 @@ type AoU "Assumption of Use — a safety-relevant condition that a user must ful
 ///////////////////////////////
 
 tuple CompReqSourceId {
-    item    [FeatReq, AssumedSystemReq, AoU, RootCause]
+    item    [FeatReq, AssumedSystemReq, AoU]
     separator @
-    version optional Integer
+    version Integer
 }
 
-type CompReq "Component-level requirement allocated to a specific software component. Acts as a control measure when derived_from references a fault-tree root cause (RootCause)." extends RequirementSafety {
-    derived_from "Versioned references to the FeatReq, AssumedSystemReq, received AoU, or fault-tree RootCause (root cause, unversioned) items this component requirement is derived from. An AoU reference is only for AoUs received from another dependable_element (listed in this target's deps); the element's own AoUs are never a derived_from source. Omit only for component-internal requirements with no feature-level parent."
+type CompReq "Component-level requirement allocated to a specific software component. Acts as a control measure when a RootCauseAssessment lists it." extends RequirementSafety {
+    derived_from "Versioned references to the FeatReq, AssumedSystemReq or received AoU items this component requirement is derived from. An AoU reference is only for AoUs received from another dependable_element (listed in this target's deps); the element's own AoUs are never a derived_from source."
                 CompReqSourceId[1 .. *]
 }
 
@@ -198,6 +178,34 @@ tuple CompReqId {
     item    CompReq
     separator @
     version Integer
+}
+
+///////////////////////////////
+// Root Cause Assessments
+///////////////////////////////
+
+// Every fault-tree root cause (RootCause) is assessed by exactly one
+// RootCauseAssessment. The measures are AoUs (preventive) or CompReqs
+// (control); an assessment without measures argues that the root cause does
+// not apply. The measures do not reference the root causes.
+
+tuple MeasureId {
+    item    [AoU, CompReq]
+    separator @
+    version Integer
+}
+
+type RootCauseAssessment "Argues why fault-tree root causes are sufficiently addressed by measures, or do not apply." {
+    root_causes "Fault-tree root causes this assessment covers. A root cause is covered by exactly one assessment."
+                RootCause[1 .. *]
+    measures    "Versioned AoUs and CompReqs addressing the root causes; empty when the root causes do not apply."
+                MeasureId[0 .. *]
+    safety      "ASIL of this assessment: at least the ASIL of the failure modes of its root causes, at most the ASIL of each listed measure."
+                Asil
+    rationale   "Why the measures suffice, or why the root causes do not apply."
+                Markup_String
+    version     "Monotonically increasing version counter. Increment on every content change."
+                Integer
 }
 
 ///////////////////////////////

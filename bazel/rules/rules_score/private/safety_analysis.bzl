@@ -14,9 +14,9 @@
 """
 Safety analysis (FMEA – Failure Mode and Effects Analysis) build rules for S-CORE projects.
 
-The analysis is split into stages so that the measures addressing a root
-cause (AoUs, component requirements) can reference the root causes without a
-Bazel dependency cycle:
+The analysis is split into stages: the measures (AoUs, component requirements)
+do not reference the root causes; the assessments in ``safety_analysis``
+reference both:
 
   1. ``failure_modes`` – the ``FailureMode`` records and their lobster file
      (see ``failure_modes.bzl``).
@@ -27,40 +27,41 @@ Bazel dependency cycle:
      ``fta_events.trlc`` — the generated ``ScoreReq.RootCause`` records, each
      linking to the ``FailureMode`` records of its tree (see
      ``puml_fta::render_trlc_stub``).  The root-cause lobster file is produced
-     here.  Requirement targets (``assumptions_of_use``,
-     ``component_requirements``) list it in ``deps`` to resolve
+     here.  The assessments reference the root causes as
      ``<fta_package>.<RootCause>``.
-  3. ``safety_analysis`` – the page.  Takes the failure modes, the fault trees
-     and the ``safety_measures``: the measure targets (``assumptions_of_use`` /
-     ``component_requirements``) and ``Mitigation`` ``.trlc`` files that address
-     the root causes.
+  3. ``safety_analysis`` – the page.  Takes the failure modes, the fault trees,
+     the ``safety_measures`` (``assumptions_of_use`` / ``component_requirements``
+     targets) and the ``assessments``: ``.trlc`` files holding the
+     ``RootCauseAssessment`` records that argue why each root cause is
+     addressed by measures, or does not apply.
 
 ``safety_analysis`` generates a single, failure-mode-centric
 ``safety_analysis.rst`` page: an overview summary table followed by one section
 per failure mode.  Each section carries the full failure-mode safety attributes
-and one card per root cause (``RootCause``) listing the measures
-(``Mitigation``, ``AoU``, ``CompReq``) that address it.  A "Fault Trees" section
+and one card per root cause (``RootCause``) with the rationale and the measures
+(``AoU``, ``CompReq``) of its assessment.  A "Fault Trees" section
 shows every fault-tree diagram once (``.. uml::``).
-Failure modes not covered by any fault tree, and measures not referencing any
-generated root cause, are still rendered so nothing is dropped.
+Failure modes not covered by any fault tree, and measures no assessment lists,
+are still rendered so nothing is dropped.
 
 Pipeline of ``safety_analysis``:
 
   1. **Assembly** (``safety_analysis_assembler``) – a single in-process TRLC parse (via
      the extended ``TRLCRST`` library) over ``fta_events.trlc`` plus the
-     FailureMode / Mitigation / AoU records renders the overview table, the
-     root-cause cards and the fault-tree diagrams into ``safety_analysis.rst``.
+     FailureMode / RootCauseAssessment / AoU / CompReq records renders the
+     overview table, the root-cause cards and the fault-tree diagrams into
+     ``safety_analysis.rst``.
      Each source diagram is staged (symlinked) alongside ``safety_analysis.rst``,
      unmodified, so ``.. uml:: <basename>`` resolves in the Sphinx tree.
-  2. **Lobster** (``lobster-trlc``) – safety-measure (Mitigation / AoU)
-     traceability, driven by real TRLC references (``root_causes``) rather than
+  2. **Lobster** (``lobster-trlc``) – root cause assessment traceability,
+     driven by real TRLC references (``root_causes``, ``measures``) rather than
      alias-name matching.
 
 The ``.puml`` diagrams travel as ``aux_srcs`` so Sphinx can
 resolve ``.. uml::`` without adding them to the toctree.
 
 ``AnalysisInfo`` carries all lobster traceability files (failuremodes,
-safetymeasures, fta_root_causes) as a ``lobster_files`` dict
+assessments, fta_root_causes) as a ``lobster_files`` dict
 keyed by canonical filename.  ``SafetyAnalysisProviderInfo`` carries the AoU
 targets consumed as measures; the ``dependable_element`` derives its own AoUs
 from them.  All Sphinx source files travel
@@ -88,7 +89,7 @@ def _default_fta_package(label):
 
     A ``_fta`` suffix is appended: TRLC rejects packages whose name is "too
     similar" (same modulo case/underscores) to another declared package, and
-    FailureMode/SafetyMeasure packages conventionally use a PascalCase form
+    FailureMode/RootCauseAssessment packages conventionally use a PascalCase form
     of the very same target name (e.g. target ``my_safety_analysis`` + package
     ``MySafetyAnalysis``) -- using the bare sanitized name here would then always
     collide with that package.
@@ -223,27 +224,13 @@ def _fault_trees_impl(ctx):
             diagrams = diagrams,
             lobster_files = lobster_files,
         ),
-        # Lets requirement targets (assumptions_of_use, component_requirements)
-        # list this target in `deps` to resolve `<fta_package>.<RootCause>`.
+        # Lets safety_analysis resolve `<fta_package>.<RootCause>`.
         TrlcProviderInfo(
             spec = spec,
             reqs = depset([fta_events_trlc]),
             deps = fm_files,
         ),
     ]
-
-def _split_safety_measures(ctx):
-    """Split ``safety_measures`` into measure targets and raw Mitigation files."""
-    measure_targets = []
-    mitigation_files = []
-    for target in ctx.attr.safety_measures:
-        if AssumptionsOfUseInfo in target or ComponentRequirementsInfo in target:
-            measure_targets.append(target)
-        elif TrlcProviderInfo in target:
-            fail("{}: safety_measures entry {} must be an assumptions_of_use or component_requirements target, or a Mitigation .trlc file".format(ctx.label, target.label))
-        else:
-            mitigation_files.extend(target[DefaultInfo].files.to_list())
-    return measure_targets, mitigation_files
 
 def _safety_analysis_impl(ctx):
     fault_trees = ctx.attr.fault_trees[FaultTreesInfo]
@@ -270,26 +257,18 @@ def _safety_analysis_impl(ctx):
         ctx.actions.symlink(output = staged, target_file = src)
         diagram_aux_files.append(staged)
 
-    # The records of the measure targets are rendered and traced. The TRLC they
-    # resolve against (their deps) is only parsed, so records held there (e.g. a
+    # The records of the measure targets are rendered. The TRLC they resolve
+    # against (their deps) is only parsed, so records held there (e.g. a
     # received AoU a component requirement derives from) are not treated as
     # measures of this analysis. The fault-tree files are passed separately.
-    measure_targets, mitigation_files = _split_safety_measures(ctx)
+    measure_targets = ctx.attr.safety_measures
+    aou_targets = [m for m in measure_targets if AssumptionsOfUseInfo in m]
+    assessment_files = ctx.files.assessments
     infos = [measure[TrlcProviderInfo] for measure in measure_targets]
     spec_files = depset(ctx.files.spec, transitive = [fault_trees_trlc.spec] + [info.spec for info in fm_infos + infos]).to_list()
-    known = {f.path: True for f in fta_and_fm_files + mitigation_files + spec_files}
-    aou_targets = [m for m in measure_targets if AssumptionsOfUseInfo in m]
+    known = {f.path: True for f in fta_and_fm_files + assessment_files + spec_files}
     measure_files = _unseen_files([info.reqs for info in infos], known)
     context_files = _unseen_files([info.deps for info in infos], known)
-
-    # lobster-trlc registers every input and extracts Mitigation / AoU records
-    # only, so it gets the AoU measures plus the context they need to parse; a
-    # component requirement measure is traced via its own level.
-    aou_paths = {
-        f.path: True
-        for f in depset(transitive = [m[TrlcProviderInfo].reqs for m in aou_targets] + [m[TrlcProviderInfo].deps for m in aou_targets]).to_list()
-    }
-    lobster_measure_files = mitigation_files + [f for f in measure_files + context_files if f.path in aou_paths]
 
     # 1. Assemble safety_analysis.rst from the generated FTA stub + TRLC records (single in-process parse).
     safety_analysis_rst = ctx.actions.declare_file("{}/safety_analysis.rst".format(ctx.label.name))
@@ -305,9 +284,9 @@ def _safety_analysis_impl(ctx):
     if failuremode_files:
         args.add("--failuremodes")
         args.add_all(failuremode_files)
-    if mitigation_files:
-        args.add("--mitigations")
-        args.add_all(mitigation_files)
+    if assessment_files:
+        args.add("--assessments")
+        args.add_all(assessment_files)
     if measure_files:
         args.add("--safetymeasures")
         args.add_all(measure_files)
@@ -318,7 +297,7 @@ def _safety_analysis_impl(ctx):
     ctx.actions.run(
         inputs = depset(
             failuremode_files +
-            mitigation_files +
+            assessment_files +
             measure_files +
             dep_files +
             [fta_events_trlc, ctx.file._template],
@@ -330,7 +309,7 @@ def _safety_analysis_impl(ctx):
     )
 
     # 2. Lobster traceability: failure modes (merged over the failure_modes
-    # targets), root causes (from the fault trees) and Mitigation / AoU records.
+    # targets), root causes (from the fault trees) and the assessments.
     lobster_files = dict(fault_trees.lobster_files)
     fm_lobster_files, _ = merge_lobster_files(
         ctx,
@@ -340,16 +319,13 @@ def _safety_analysis_impl(ctx):
     if fm_lobster_files:
         lobster_files["failuremodes.lobster"] = fm_lobster_files[0]
 
-    safetymeasures_lobster = None
-    if lobster_measure_files:
-        safetymeasures_lobster = _lobster_trlc(
+    if assessment_files:
+        lobster_files["assessments.lobster"] = _lobster_trlc(
             ctx,
-            lobster_measure_files + fta_and_fm_files + spec_files,
-            ctx.file._safetymeasures_lobster_config,
-            "safetymeasures.lobster",
+            assessment_files + fta_and_fm_files + measure_files + context_files + spec_files,
+            ctx.file._assessments_lobster_config,
+            "assessments.lobster",
         )
-    if safetymeasures_lobster:
-        lobster_files["safetymeasures.lobster"] = safetymeasures_lobster
 
     # The .puml diagrams are referenced inline via ``.. uml::`` but
     # must not be toctree documents, so they travel as aux_srcs (symlinked
@@ -448,11 +424,17 @@ _safety_analysis = rule(
                 doc = "``fault_trees`` target providing the root causes.",
             ),
             "safety_measures": attr.label_list(
-                allow_files = [".trlc"],
+                providers = [[AssumptionsOfUseInfo], [ComponentRequirementsInfo]],
                 mandatory = False,
                 doc = "Measures addressing the root causes: ``assumptions_of_use`` / ``component_requirements`` " +
-                      "targets and ``Mitigation`` ``.trlc`` files. " +
-                      "Only the own records of a target are rendered and traced; the targets in its ``deps`` are used to resolve references only.",
+                      "targets. Only the own records of a target are rendered; the targets in its ``deps`` are used to resolve references only.",
+            ),
+            "assessments": attr.label_list(
+                allow_files = [".trlc"],
+                mandatory = False,
+                doc = "``.trlc`` files with the ``RootCauseAssessment`` records of this analysis. " +
+                      "Every root cause is listed by exactly one assessment; the measures of an " +
+                      "assessment are own records of ``safety_measures``.",
             ),
             "spec": attr.label_list(
                 allow_files = [".rsl", ".trlc"],
@@ -477,12 +459,12 @@ _safety_analysis = rule(
                 executable = True,
                 allow_files = True,
                 cfg = "exec",
-                doc = "lobster-trlc executable used to generate the safety measure lobster file.",
+                doc = "lobster-trlc executable used to generate the assessments lobster file.",
             ),
-            "_safetymeasures_lobster_config": attr.label(
-                default = Label("//bazel/rules/rules_score/lobster/config:safetymeasures_config"),
+            "_assessments_lobster_config": attr.label(
+                default = Label("//bazel/rules/rules_score/lobster/config:assessments_config"),
                 allow_single_file = True,
-                doc = "lobster-trlc YAML config for Mitigation / AoU records.",
+                doc = "lobster-trlc YAML config for RootCauseAssessment records.",
             ),
             "_template": attr.label(
                 default = Label("//bazel/rules/rules_score:templates/safety_analysis.template.rst"),
@@ -512,10 +494,9 @@ def fault_trees(
     (``fta_events.trlc``, package ``fta_package``), each linking to the
     ``FailureMode`` records of its tree.
 
-    The target emits ``TrlcProviderInfo`` (FTA stub; failure modes as deps), so
-    the ``assumptions_of_use`` or ``component_requirements`` targets that
-    reference these root causes list it in their ``deps``.  A ``safety_analysis``
-    target consumes it via ``fault_trees``.
+    The target emits ``TrlcProviderInfo`` (FTA stub; failure modes as deps).
+    A ``safety_analysis`` target consumes it via ``fault_trees``; its
+    ``assessments`` reference the root causes.
 
     Args:
         name: Target name.
@@ -545,24 +526,26 @@ def safety_analysis(
         fault_trees,
         failure_modes = [],
         safety_measures = [],
+        assessments = [],
         spec = None,
         **kwargs):
     """Define a safety analysis (FMEA - Failure Mode and Effects Analysis) following S-CORE process guidelines.
 
     Generates a single, failure-mode-centric ``safety_analysis.rst`` page: an overview
     summary table followed by one section per failure mode (failure-mode detail and
-    one card per root cause with its measures), plus the fault-tree diagrams.
+    one card per root cause with its assessment), plus the fault-tree diagrams.
 
-    ``Mitigation``, ``AoU`` (own, preventive measure) and ``CompReq`` (control
-    measure) records reference a root cause via ``root_causes``/``derived_from``.
-    Pass the targets holding the ``AoU`` / ``CompReq`` records and the
-    ``Mitigation`` files as ``safety_measures``; they appear on the page and in
-    the traceability report.  The ``AoU`` targets among them are the AoUs the
-    ``dependable_element`` exposes and forwards to its dependees.
+    Every root cause is assessed by a ``RootCauseAssessment`` record in
+    ``assessments``: a rationale plus the ``AoU`` (own, preventive measure) /
+    ``CompReq`` (control measure) records that address it, or no measures when the
+    root cause does not apply. Pass the targets holding those records as
+    ``safety_measures``; they appear on the page and in the traceability report.
+    The ``AoU`` targets among them are the AoUs the ``dependable_element`` exposes
+    and forwards to its dependees.
 
     This is a **build-only** rule.  The combined traceability test
     (FM + FTA root causes) is owned by the ``dependability_analysis`` that wraps
-    this target; root-cause coverage by measures is checked by the
+    this target; root-cause coverage by assessments is checked by the
     ``dependable_element`` traceability report.
 
     Args:
@@ -573,10 +556,12 @@ def safety_analysis(
         failure_modes: ``failure_modes`` targets whose records are rendered and
             traced. Every failure mode a root cause references must be listed.
         safety_measures: ``assumptions_of_use`` / ``component_requirements``
-            targets and ``Mitigation`` ``.trlc`` files addressing the root
-            causes. Only the own records of a target are rendered and traced;
-            the targets in its ``deps`` are used to resolve references. Other
-            record types in a ``.trlc`` file are rejected.
+            targets whose records the assessments list as measures. Only the
+            own records of a target are rendered; the targets in its ``deps``
+            are used to resolve references.
+        assessments: ``.trlc`` files holding the ``RootCauseAssessment`` records.
+            Each root cause is listed by exactly one assessment; other record
+            types in these files are rejected.
         spec: TRLC model specification files (``.rsl``) for resolving imports.
             Defaults to the S-CORE requirements model. Override only when using
             a custom TRLC schema.
@@ -588,6 +573,7 @@ def safety_analysis(
         fault_trees = fault_trees,
         failure_modes = failure_modes,
         safety_measures = safety_measures,
+        assessments = assessments,
         arch_design = arch_design,
         **kwargs
     )

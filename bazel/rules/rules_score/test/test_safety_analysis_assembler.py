@@ -63,9 +63,9 @@ class _FakeRenderer:
 
 
 def _objs():
-    """FailureMode/Mitigation records plus a single RootCause for ``Lib.FM_A``
-    addressed by ``Lib.CM_1``; ``Lib.FM_Orphan``/``Lib.CM_Orphan`` are not
-    referenced by any root cause."""
+    """FailureMode/AoU records, a single RootCause for ``Lib.FM_A`` assessed by
+    ``Lib.Asm_A`` (measure ``Lib.AoU_1``); ``Lib.FM_Orphan``/``Lib.AoU_Orphan``
+    are not referenced by any root cause / assessment."""
     return {
         "Lib.FM_A": _Obj(
             "FM_A",
@@ -79,27 +79,47 @@ def _objs():
             },
         ),
         "Lib.FM_Orphan": _Obj("FM_Orphan", "FailureMode", {"safety": "QM", "guideword": "TooLate"}),
-        "Lib.CM_1": _Obj(
-            "CM_1",
-            "Mitigation",
-            {"safety": "B", "description": "cm one", "root_causes": ["Lib.RC_A"]},
-        ),
-        "Lib.CM_Orphan": _Obj("CM_Orphan", "Mitigation", {"safety": "D"}),
+        "Lib.AoU_1": _Obj("AoU_1", "AoU", {"safety": "B", "description": "aou one", "version": 3}),
+        "Lib.AoU_Orphan": _Obj("AoU_Orphan", "AoU", {"safety": "D"}),
         "Lib.RC_A": _Obj(
             "RC_A",
             "RootCause",
             {"title": "Root cause A", "diagram": "fta_a.puml", "line": 2, "failure_modes": ["Lib.FM_A"]},
         ),
+        "Lib.Asm_A": _assessment("Asm_A", ["Lib.RC_A"], ["Lib.AoU_1"], "asm a rationale"),
     }
+
+
+def _assessment(name, root_causes, measures, rationale="rationale", file_name="x.trlc", safety="B"):
+    return _Obj(
+        name,
+        "RootCauseAssessment",
+        {
+            "root_causes": root_causes,
+            "measures": [{"item": m, "version": 1} for m in measures],
+            "safety": safety,
+            "rationale": rationale,
+            "version": 1,
+        },
+        file_name=file_name,
+    )
+
+
+def _root_cause(name, line=3):
+    return _Obj(
+        name,
+        "RootCause",
+        {"title": f"Root cause {name}", "diagram": "fta_a.puml", "line": line, "failure_modes": ["Lib.FM_A"]},
+    )
 
 
 _DIAGRAMS = ["fta_a.puml"]
 
 
 def _objs_no_fta():
-    """FailureMode/Mitigation records only, no generated RootCause
+    """FailureMode/AoU records only, no generated RootCause
     records at all (mirrors an ``safety_analysis()`` target with no ``root_causes`` diagrams)."""
-    return {fqn: obj for fqn, obj in _objs().items() if obj.n_typ.name in ("FailureMode", "Mitigation")}
+    return {fqn: obj for fqn, obj in _objs().items() if obj.n_typ.name in ("FailureMode", "AoU")}
 
 
 class AnchorTest(unittest.TestCase):
@@ -128,39 +148,33 @@ class ChainDerivationTest(unittest.TestCase):
     def setUp(self):
         self.obj_map = _objs()
 
-    def test_measures_for_root_cause_finds_matching_measures(self):
-        self.assertEqual(fa._measures_for_root_cause(self.obj_map, "Lib.RC_A"), ["Lib.CM_1"])
+    def test_assessments_by_root_cause_maps_root_cause_to_assessment(self):
+        self.assertEqual(fa._assessments_by_root_cause(self.obj_map), {"Lib.RC_A": ["Lib.Asm_A"]})
 
-    def test_measures_for_root_cause_includes_aou_type(self):
+    def test_assessments_by_root_cause_maps_grouped_root_causes_to_one_assessment(self):
         obj_map = dict(self.obj_map)
-        obj_map["Lib.Aou_1"] = _Obj("Aou_1", "AoU", {"root_causes": ["Lib.RC_A"]})
-        self.assertCountEqual(
-            fa._measures_for_root_cause(obj_map, "Lib.RC_A"),
-            ["Lib.CM_1", "Lib.Aou_1"],
-        )
-
-    def test_measures_for_root_cause_includes_compreq_type(self):
-        obj_map = dict(self.obj_map)
-        obj_map["Lib.Cr_1"] = _Obj(
-            "Cr_1",
-            "CompReq",
-            {"derived_from": [{"item": "Lib.RC_A", "version": None}]},
-        )
-        self.assertCountEqual(
-            fa._measures_for_root_cause(obj_map, "Lib.RC_A"),
-            ["Lib.CM_1", "Lib.Cr_1"],
+        obj_map["Lib.RC_B"] = _root_cause("RC_B")
+        obj_map["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A", "Lib.RC_B"], ["Lib.AoU_1"])
+        self.assertEqual(
+            fa._assessments_by_root_cause(obj_map),
+            {"Lib.RC_A": ["Lib.Asm_A"], "Lib.RC_B": ["Lib.Asm_A"]},
         )
 
-    def test_measures_for_root_cause_compreq_other_union_members_ignored(self):
+    def test_assessments_by_root_cause_ignores_repeated_root_cause_in_one_assessment(self):
         obj_map = dict(self.obj_map)
-        # A CompReq derived from a FeatReq/AssumedSystemReq/AoU (not this
-        # RootCause) must not count as covering it.
-        obj_map["Lib.Cr_Unrelated"] = _Obj(
-            "Cr_Unrelated",
-            "CompReq",
-            {"derived_from": [{"item": "Lib.SomeFeatReq", "version": 1}]},
-        )
-        self.assertEqual(fa._measures_for_root_cause(obj_map, "Lib.RC_A"), ["Lib.CM_1"])
+        obj_map["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A", "Lib.RC_A"], [])
+        self.assertEqual(fa._assessments_by_root_cause(obj_map), {"Lib.RC_A": ["Lib.Asm_A"]})
+
+    def test_measures_of_assessment_returns_measure_items(self):
+        assessment = _assessment("Asm", ["Lib.RC_A"], ["Lib.AoU_1", "Lib.CR_1"])
+        self.assertEqual(fa._measures_of_assessment(assessment), ["Lib.AoU_1", "Lib.CR_1"])
+
+    def test_measures_of_assessment_without_measures_is_empty(self):
+        self.assertEqual(fa._measures_of_assessment(_assessment("Asm", ["Lib.RC_A"], [])), [])
+
+    def test_pinned_versions_maps_measure_to_pinned_version(self):
+        assessment = _assessment("Asm", ["Lib.RC_A"], ["Lib.AoU_1", "Lib.CR_1"])
+        self.assertEqual(fa._pinned_versions(assessment), {"Lib.AoU_1": 1, "Lib.CR_1": 1})
 
     def test_root_causes_for_failure_mode_finds_matching_root_causes(self):
         self.assertEqual(fa._root_causes_for_failure_mode(self.obj_map, "Lib.FM_A"), ["Lib.RC_A"])
@@ -180,22 +194,91 @@ class CheckInputsTest(unittest.TestCase):
         self.assertIn("Lib.RC_A", errors[0])
         self.assertIn("Lib.FM_A", errors[0])
 
-    def test_mitigation_in_mitigations_file_is_accepted(self):
+    def test_assessment_in_assessments_file_is_accepted(self):
         objs = _objs()
-        objs["Lib.CM_1"] = _Obj("CM_1", "Mitigation", {"root_causes": ["Lib.RC_A"]}, file_name="m.trlc")
-        self.assertEqual(fa._check_inputs(objs, ["m.trlc"]), [])
+        objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], ["Lib.AoU_1"], file_name="a.trlc")
+        self.assertEqual(fa._check_inputs(objs, ["a.trlc"]), [])
 
-    def test_non_mitigation_in_mitigations_file_is_reported(self):
+    def test_non_assessment_in_assessments_file_is_reported(self):
         objs = _objs()
-        objs["Lib.Aou_1"] = _Obj("Aou_1", "AoU", {"root_causes": ["Lib.RC_A"]}, file_name="m.trlc")
-        errors = fa._check_inputs(objs, ["m.trlc"])
+        objs["Lib.AoU_1"] = _Obj("AoU_1", "AoU", {"safety": "B"}, file_name="a.trlc")
+        errors = fa._check_inputs(objs, ["a.trlc"])
         self.assertEqual(len(errors), 1)
-        self.assertIn("AoU Lib.Aou_1", errors[0])
+        self.assertIn("AoU Lib.AoU_1", errors[0])
 
-    def test_non_mitigation_outside_mitigations_file_is_accepted(self):
+    def test_root_cause_in_assessments_file_is_reported(self):
         objs = _objs()
-        objs["Lib.Aou_1"] = _Obj("Aou_1", "AoU", {"root_causes": ["Lib.RC_A"]}, file_name="a.trlc")
-        self.assertEqual(fa._check_inputs(objs, ["m.trlc"]), [])
+        objs["Lib.RC_A"] = _Obj(
+            "RC_A",
+            "RootCause",
+            {"title": "Root cause A", "diagram": "fta_a.puml", "line": 2, "failure_modes": ["Lib.FM_A"]},
+            file_name="a.trlc",
+        )
+        errors = fa._check_inputs(objs, ["a.trlc"])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("RootCause Lib.RC_A", errors[0])
+
+    def test_non_assessment_outside_assessments_file_is_accepted(self):
+        objs = _objs()
+        objs["Lib.AoU_1"] = _Obj("AoU_1", "AoU", {"safety": "B"}, file_name="m.trlc")
+        self.assertEqual(fa._check_inputs(objs, ["a.trlc"]), [])
+
+    def test_root_cause_in_several_assessments_is_reported(self):
+        objs = _objs()
+        objs["Lib.Asm_B"] = _assessment("Asm_B", ["Lib.RC_A"], [])
+        errors = fa._check_inputs(objs, [])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Lib.RC_A", errors[0])
+        self.assertIn("Lib.Asm_A", errors[0])
+        self.assertIn("Lib.Asm_B", errors[0])
+
+    def test_grouped_assessment_is_accepted(self):
+        objs = _objs()
+        objs["Lib.RC_B"] = _root_cause("RC_B")
+        objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A", "Lib.RC_B"], ["Lib.AoU_1"])
+        self.assertEqual(fa._check_inputs(objs, []), [])
+
+    def test_assessment_root_cause_not_generated_is_reported(self):
+        objs = _objs()
+        objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A", "Lib.RC_Foreign"], ["Lib.AoU_1"])
+        errors = fa._check_inputs(objs, [])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Lib.Asm_A", errors[0])
+        self.assertIn("Lib.RC_Foreign", errors[0])
+
+    def test_assessment_measure_outside_safety_measures_is_reported(self):
+        objs = _objs()
+        objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], ["Lib.AoU_1", "Lib.AoU_Foreign"])
+        errors = fa._check_inputs(objs, [])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Lib.Asm_A", errors[0])
+        self.assertIn("Lib.AoU_Foreign", errors[0])
+
+    def test_assessment_without_measures_is_accepted(self):
+        objs = _objs()
+        objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], [])
+        self.assertEqual(fa._check_inputs(objs, []), [])
+
+    def test_assessment_asil_below_failure_mode_is_reported(self):
+        objs = _objs()
+        objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], [], safety="QM")
+        errors = fa._check_inputs(objs, [])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Lib.Asm_A has ASIL QM, below ASIL B", errors[0])
+        self.assertIn("Lib.FM_A", errors[0])
+        self.assertIn("Lib.RC_A", errors[0])
+
+    def test_assessment_asil_above_measure_is_reported(self):
+        objs = _objs()
+        objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], ["Lib.AoU_1"], safety="D")
+        errors = fa._check_inputs(objs, [])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Lib.Asm_A has ASIL D, above ASIL B of measure Lib.AoU_1", errors[0])
+
+    def test_assessment_asil_above_failure_mode_without_measures_is_accepted(self):
+        objs = _objs()
+        objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], [], safety="D")
+        self.assertEqual(fa._check_inputs(objs, []), [])
 
 
 class BuildBodyTest(unittest.TestCase):
@@ -226,14 +309,18 @@ class BuildBodyTest(unittest.TestCase):
         # Description as a prominent card.
         self.assertIn(".. grid-item-card:: Description", body)
         self.assertIn("fm a description", body)
-        # Root Causes rubric with one card per root cause: title, source, measures.
+        # Root Causes rubric with one card per root cause: title, source, assessment.
         self.assertIn(".. rubric:: Root Causes", body)
         self.assertIn(".. grid-item-card:: Root cause A", body)
         self.assertIn("Source: :ref:`fta_a.puml <safety-analysis-lib-diagram-fta-a-puml>`, line 2", body)
+        # Assessment: bold name and rationale in the root cause card.
+        self.assertIn("**Asm_A**", body)
+        self.assertIn("asm a rationale", body)
+        self.assertNotIn("Not applicable", body)
         # Measure card: bold ID with inline kind + ASIL badges in the card body (no card title).
         self.assertIn(".. grid-item-card::\n", body)
-        self.assertIn("**CM_1**", body)
-        self.assertIn(":bdg-warning:`Mitigation`", body)
+        self.assertIn("**AoU_1**", body)
+        self.assertIn(":bdg-info:`Assumption of Use`", body)
         self.assertIn(":bdg-warning:`ASIL B`", body)
         # Attribute grid uses a gutter to separate the badge row from the cards.
         self.assertIn(":gutter: 3", body)
@@ -254,15 +341,51 @@ class BuildBodyTest(unittest.TestCase):
         body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
         self.assertIn("Source: x\\*y.puml, line 2", body)
 
-    def test_root_cause_without_measure_is_flagged(self):
+    def test_root_cause_without_assessment_is_flagged(self):
         objs = _objs()
-        objs["Lib.RC_B"] = _Obj(
-            "RC_B",
-            "RootCause",
-            {"title": "Root cause B", "diagram": "fta_a.puml", "line": 3, "failure_modes": ["Lib.FM_A"]},
-        )
+        objs["Lib.RC_B"] = _root_cause("RC_B")
         body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
-        self.assertEqual(body.count(":bdg-danger:`No safety measure`"), 1)
+        self.assertEqual(body.count(":bdg-danger:`Not assessed`"), 1)
+
+    def test_assessment_without_measures_is_rendered_as_not_applicable(self):
+        objs = _objs()
+        objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], [], "does not apply")
+        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        self.assertEqual(body.count(":bdg-secondary:`Not applicable`"), 1)
+        self.assertIn("does not apply", body)
+        self.assertNotIn("Not assessed", body)
+
+    def test_grouped_assessment_is_rendered_in_each_root_cause_card(self):
+        objs = _objs()
+        objs["Lib.RC_B"] = _root_cause("RC_B")
+        objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A", "Lib.RC_B"], ["Lib.AoU_1"], "shared rationale")
+        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        self.assertEqual(body.count("**Asm_A**"), 2)
+        self.assertEqual(body.count("shared rationale"), 2)
+
+    def test_assessment_card_shows_pinned_measure_version(self):
+        body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
+        self.assertEqual(body.count(":bdg-light:`v1`"), 1)
+
+    def test_assessment_card_shows_assessment_asil(self):
+        objs = _objs()
+        objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], ["Lib.AoU_1"], safety="D")
+        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        self.assertIn("**Asm_A** :bdg-danger:`ASIL D`", body)
+
+    def test_measures_section_shows_record_version(self):
+        body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
+        self.assertEqual(body.count(":bdg-light:`v3`"), 1)
+
+    def test_measure_without_version_has_no_version_badge(self):
+        objs = {"Lib.AoU_Orphan": _objs()["Lib.AoU_Orphan"]}
+        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", [])
+        self.assertIn("**AoU_Orphan**", body)
+        self.assertNotIn(":bdg-light:", body)
+
+    def test_unlisted_measure_is_flagged_in_measures_section(self):
+        body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
+        self.assertEqual(body.count(":bdg-warning:`Not in an assessment`"), 1)
 
     def test_root_cause_title_is_escaped(self):
         objs = _objs()
@@ -277,9 +400,9 @@ class BuildBodyTest(unittest.TestCase):
     def test_global_measures_section_lists_all(self):
         body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
         self.assertIn("Safety Measures\n---------------", body)
-        self.assertIn("**CM_1**", body)
-        self.assertIn("**CM_Orphan**", body)
-        self.assertIn(":bdg-warning:`Mitigation`", body)
+        self.assertIn("**AoU_1**", body)
+        self.assertIn("**AoU_Orphan**", body)
+        self.assertIn(":bdg-info:`Assumption of Use`", body)
 
     def test_failure_mode_without_root_cause_has_no_root_causes_rubric(self):
         body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
@@ -295,8 +418,8 @@ class BuildBodyTest(unittest.TestCase):
         self.assertNotIn("Fault Trees", body)
 
 
-# Minimal self-contained TRLC model: defines the FailureMode / SafetyMeasure /
-# Mitigation / AoU / CompReq / RootCause types the assembler keys
+# Minimal self-contained TRLC model: defines the FailureMode / AoU / CompReq /
+# RootCause / RootCauseAssessment types the assembler keys
 # on, so main() runs a real TRLCRST parse (catching contract drift the
 # _FakeRenderer cannot). Everything lives in one package (unlike the real
 # ScoreReq model) since this test does not need to exercise cross-package
@@ -304,9 +427,15 @@ class BuildBodyTest(unittest.TestCase):
 _RSL = """\
 package TestSafetyAnalysis
 
+enum Asil {
+    QM
+    B
+    D
+}
+
 type FailureMode {
     guideword optional String
-    safety optional String
+    safety Asil
     interface optional String
     failureeffect optional String
     description optional String
@@ -319,28 +448,28 @@ type RootCause {
     failure_modes FailureMode [1..*]
 }
 
-abstract type SafetyMeasure {
-    safety optional String
+type AoU {
+    safety Asil
     description optional String
-    root_causes RootCause [1..*]
-}
-
-type Mitigation extends SafetyMeasure {
-}
-
-type AoU extends SafetyMeasure {
-}
-
-tuple CompReqSourceId {
-    item RootCause
-    separator @
-    version optional Integer
 }
 
 type CompReq {
-    safety optional String
+    safety Asil
     description optional String
-    derived_from CompReqSourceId [1..*]
+}
+
+tuple MeasureId {
+    item [AoU, CompReq]
+    separator @
+    version Integer
+}
+
+type RootCauseAssessment {
+    root_causes RootCause [1..*]
+    measures MeasureId [0..*]
+    safety Asil
+    rationale Markup_String
+    version Integer
 }
 """
 
@@ -349,20 +478,19 @@ package TestSafetyAnalysis
 
 FailureMode FmA {
     guideword = "TooLate"
-    safety = "ASIL_D"
+    safety = Asil.D
     interface = "Lib.Api"
     failureeffect = "downstream timeout"
     description = "fm a description"
 }
 """
 
-_MITIGATION_TRLC = """\
+_AOU_TRLC = """\
 package TestSafetyAnalysis
 
-Mitigation CmA {
-    safety = "ASIL_D"
-    description = "cm a description"
-    root_causes = [TestSafetyAnalysis.RcA]
+AoU AouA {
+    safety = Asil.D
+    description = "aou a description"
 }
 """
 
@@ -370,8 +498,46 @@ _COMPREQ_TRLC = """\
 package TestSafetyAnalysis
 
 CompReq CrB {
+    safety = Asil.D
     description = "cr b description"
-    derived_from = [TestSafetyAnalysis.RcB@1]
+}
+"""
+
+_ASSESSMENTS_TRLC = """\
+package TestSafetyAnalysis
+
+RootCauseAssessment AsmA {
+    root_causes = [TestSafetyAnalysis.RcA]
+    measures = [TestSafetyAnalysis.AouA@1]
+    safety = Asil.D
+    rationale = "asm a rationale"
+    version = 1
+}
+
+RootCauseAssessment AsmB {
+    root_causes = [TestSafetyAnalysis.RcB]
+    measures = [TestSafetyAnalysis.CrB@1]
+    safety = Asil.D
+    rationale = "asm b rationale"
+    version = 1
+}
+
+RootCauseAssessment AsmNotApplicable {
+    root_causes = [TestSafetyAnalysis.RcNotApplicable]
+    measures = []
+    safety = Asil.D
+    rationale = "does not apply here"
+    version = 1
+}
+"""
+
+_DUPLICATE_ASSESSMENT = """
+RootCauseAssessment AsmDuplicate {
+    root_causes = [TestSafetyAnalysis.RcA]
+    measures = []
+    safety = Asil.D
+    rationale = "duplicate"
+    version = 1
 }
 """
 
@@ -392,18 +558,25 @@ RootCause RcB {
     failure_modes = [TestSafetyAnalysis.FmA]
 }
 
-RootCause RcUncovered {
-    title = "Root cause uncovered"
+RootCause RcNotApplicable {
+    title = "Root cause not applicable"
     diagram = "a.puml"
     line = 4
+    failure_modes = [TestSafetyAnalysis.FmA]
+}
+
+RootCause RcUnassessed {
+    title = "Root cause unassessed"
+    diagram = "a.puml"
+    line = 5
     failure_modes = [TestSafetyAnalysis.FmA]
 }
 """
 
 
 class MainIntegrationTest(unittest.TestCase):
-    """End-to-end main(): real TRLCRST parse of failuremodes + safetymeasures +
-    fta_events.trlc -> safety_analysis.rst."""
+    """End-to-end main(): real TRLCRST parse of failuremodes + assessments +
+    safetymeasures + fta_events.trlc -> safety_analysis.rst."""
 
     def _write(self, directory, name, content):
         path = os.path.join(directory, name)
@@ -423,8 +596,9 @@ class MainIntegrationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             rsl = self._write(tmp, "types.rsl", _RSL)
             fm = self._write(tmp, "fm.trlc", _FM_TRLC)
-            cm = self._write(tmp, "cm.trlc", _MITIGATION_TRLC)
+            aou = self._write(tmp, "aou.trlc", _AOU_TRLC)
             cr = self._write(tmp, "cr.trlc", _COMPREQ_TRLC)
+            asm = self._write(tmp, "asm.trlc", _ASSESSMENTS_TRLC)
             fta = self._write(tmp, "fta_events.trlc", _FTA_TRLC)
             template = self._write(tmp, "tmpl.rst", "{body}\n")
             out = os.path.join(tmp, "safety_analysis.rst")
@@ -446,9 +620,10 @@ class MainIntegrationTest(unittest.TestCase):
                     "a.puml",
                     "--failuremodes",
                     fm,
-                    "--mitigations",
-                    cm,
+                    "--assessments",
+                    asm,
                     "--safetymeasures",
+                    aou,
                     cr,
                     "--dep-files",
                     rsl,
@@ -471,16 +646,23 @@ class MainIntegrationTest(unittest.TestCase):
             self.assertIn("Safety Measures", rst)
             # Real rendered record content (proves TRLCRST actually parsed).
             self.assertIn("fm a description", rst)
-            self.assertIn("cm a description", rst)
+            self.assertIn("aou a description", rst)
+            self.assertIn("asm a rationale", rst)
             # CompReq rendered as a kind-badged control measure.
             self.assertIn("cr b description", rst)
             self.assertIn(":bdg-success:`Control Measure`", rst)
+            # The assessments pin both measures at version 1.
+            self.assertEqual(rst.count(":bdg-light:`v1`"), 2)
+            self.assertIn("**AsmA** :bdg-danger:`ASIL D`", rst)
 
-            # RcA is addressed by the Mitigation, RcB by the CompReq; RcUncovered
-            # by neither and is the only root cause flagged.
-            self.assertEqual(rst.count(":bdg-danger:`No safety measure`"), 1)
+            # RcA/RcB are assessed with measures, RcNotApplicable without
+            # measures, RcUnassessed has no assessment at all.
+            self.assertEqual(rst.count(":bdg-secondary:`Not applicable`"), 1)
+            self.assertIn("does not apply here", rst)
+            self.assertEqual(rst.count(":bdg-danger:`Not assessed`"), 1)
+            self.assertEqual(rst.count(":bdg-warning:`Not in an assessment`"), 0)
 
-    def _assemble(self, tmp, failuremodes=(), mitigations=(), spec=()):
+    def _assemble(self, tmp, failuremodes=(), assessments=(), safetymeasures=(), spec=()):
         rsl = self._write(tmp, "types.rsl", _RSL)
         fta = self._write(tmp, "fta_events.trlc", _FTA_TRLC)
         template = self._write(tmp, "tmpl.rst", "{body}\n")
@@ -498,8 +680,10 @@ class MainIntegrationTest(unittest.TestCase):
             fta,
             "--failuremodes",
             *failuremodes,
-            "--mitigations",
-            *mitigations,
+            "--assessments",
+            *assessments,
+            "--safetymeasures",
+            *safetymeasures,
             "--dep-files",
             rsl,
             *spec,
@@ -513,16 +697,42 @@ class MainIntegrationTest(unittest.TestCase):
                 self._assemble(tmp, spec=[fm])
             self.assertEqual(ctx.exception.code, 1)
 
-    def test_non_mitigation_in_mitigations_file_exits_nonzero(self):
+    def test_non_assessment_in_assessments_file_exits_nonzero(self):
         with tempfile.TemporaryDirectory() as tmp:
             fm = self._write(tmp, "fm.trlc", _FM_TRLC)
-            aou = self._write(
-                tmp,
-                "aou.trlc",
-                "package TestSafetyAnalysis\n\nAoU AouA {\n    root_causes = [TestSafetyAnalysis.RcA]\n}\n",
-            )
+            aou = self._write(tmp, "aou.trlc", _AOU_TRLC)
             with self.assertRaises(SystemExit) as ctx:
-                self._assemble(tmp, failuremodes=[fm], mitigations=[aou])
+                self._assemble(tmp, failuremodes=[fm], assessments=[aou])
+            self.assertEqual(ctx.exception.code, 1)
+
+    def test_assessment_asil_below_failure_mode_exits_nonzero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fm = self._write(tmp, "fm.trlc", _FM_TRLC)
+            aou = self._write(tmp, "aou.trlc", _AOU_TRLC)
+            cr = self._write(tmp, "cr.trlc", _COMPREQ_TRLC)
+            asm = self._write(tmp, "asm.trlc", _ASSESSMENTS_TRLC.replace("safety = Asil.D", "safety = Asil.B"))
+            with self.assertRaises(SystemExit) as ctx:
+                self._assemble(tmp, failuremodes=[fm], assessments=[asm], safetymeasures=[aou, cr])
+            self.assertEqual(ctx.exception.code, 1)
+
+    def test_root_cause_in_several_assessments_exits_nonzero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fm = self._write(tmp, "fm.trlc", _FM_TRLC)
+            aou = self._write(tmp, "aou.trlc", _AOU_TRLC)
+            asm = self._write(tmp, "asm.trlc", _ASSESSMENTS_TRLC + _DUPLICATE_ASSESSMENT)
+            with self.assertRaises(SystemExit) as ctx:
+                self._assemble(tmp, failuremodes=[fm], assessments=[asm], safetymeasures=[aou])
+            self.assertEqual(ctx.exception.code, 1)
+
+    def test_measure_outside_safety_measures_exits_nonzero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fm = self._write(tmp, "fm.trlc", _FM_TRLC)
+            aou = self._write(tmp, "aou.trlc", _AOU_TRLC)
+            cr = self._write(tmp, "cr.trlc", _COMPREQ_TRLC)
+            asm = self._write(tmp, "asm.trlc", _ASSESSMENTS_TRLC)
+            # The AoU / CompReq are only parsed for reference resolution, so they are no own measures.
+            with self.assertRaises(SystemExit) as ctx:
+                self._assemble(tmp, failuremodes=[fm], assessments=[asm], spec=[aou, cr])
             self.assertEqual(ctx.exception.code, 1)
 
     def test_malformed_fta_events_exits_nonzero(self):

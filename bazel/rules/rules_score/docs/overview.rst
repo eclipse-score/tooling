@@ -101,7 +101,7 @@ target two layers of checks apply:
 - **S-CORE requirements model**  enforces the
   derivation chain ``AssumedSystemReq → FeatReq → CompReq``, requires an ``Asil`` safety
   classification and defines the safety-analysis
-  vocabulary (``FailureMode`` with HAZOP ``Guideword``\ s, ``SafetyMeasure``,
+  vocabulary (``FailureMode`` with HAZOP ``Guideword``\ s, ``RootCauseAssessment``,
   ``AoU``) used by ``safety_analysis``/``assumptions_of_use``.
 
 Architecture consistency (build)
@@ -173,7 +173,7 @@ Traceability (test)
 ``bazel test`` runs ``lobster-ci-report`` over the merged requirement /
 architecture / test / safety-analysis graph — assumed-system and feature
 requirements, component requirements, architecture, public API, unit tests,
-failure modes, safety measures, root causes, and AoUs — and fails if any item
+failure modes, root causes, root cause assessments, and AoUs — and fails if any item
 lacks full up/down traceability.
 
 .. graphviz::
@@ -192,18 +192,19 @@ lacks full up/down traceability.
       "Architecture" [fillcolor="#4CAF50", fontcolor="white"];
       "Public API" [fillcolor="#4CAF50", fontcolor="white"];
       "Failure Modes" [fillcolor="#2196F3", fontcolor="white"];
-      "Safety Measures" [fillcolor="#2196F3", fontcolor="white"];
+      "Assumptions of Use" [fillcolor="#2196F3", fontcolor="white"];
       "Root Causes" [fillcolor="#FF9800", fontcolor="white"];
+      "Root Cause Assessments" [fillcolor="#2196F3", fontcolor="white"];
       "Forwarded AoUs" -> "Received AoUs";
       "Component Requirements" -> "Feature Requirements";
       "Component Requirements" -> "Received AoUs";
-      "Component Requirements" -> "Root Causes";
       "Unit Test" -> "Component Requirements";
       "Test Case Coverage" -> "Component Requirements";
       "Architecture" -> "Component Requirements";
       "Failure Modes" -> "Public API";
       "Root Causes" -> "Failure Modes";
-      "Safety Measures" -> "Root Causes";
+      "Root Cause Assessments" -> "Root Causes";
+      "Root Cause Assessments" -> "Assumptions of Use";
    }
 
 Execution Overview (Current Behavior)
