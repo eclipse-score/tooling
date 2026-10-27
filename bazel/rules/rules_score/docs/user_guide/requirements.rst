@@ -258,6 +258,7 @@ The validation catches:
 - **Type errors** — wrong value types for fields (e.g. a string where an enum is expected)
 - **Mandatory field violations** — missing ``description``, ``safety``, or ``version``
 - **Broken cross-references** — a ``derived_from`` or ``satisfies`` pointing to a non-existent record
+- **ASIL degradation** — a ``FeatReq`` or ``CompReq`` with a lower ``safety`` than a requirement it is derived from
 - **Unknown fields** — fields not defined in the S-CORE requirements model
 
 To run the validation for a single target:
