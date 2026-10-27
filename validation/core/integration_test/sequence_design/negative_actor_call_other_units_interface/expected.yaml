@@ -1,0 +1,21 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains:
+  - |
+    [Method] Sequence function "Stop" from actor call "User" -> "package_a.component_a.unit_1" : "Stop" in the sequence diagram not found in the public API diagram.
+      Sequence call        : "User" -> "package_a.component_a.unit_1" : "Stop"
+      Sequence source file : "validation/core/integration_test/sequence_design/negative_actor_call_other_units_interface/sequence_diagram.puml"
+      Sequence source line : 21
+      Detail               : "package_a.component_a.unit_1" provides public API interface(s) "IController"; none declares the method
+      Fix                  : Add method "Stop" to a public API interface in the public API diagram, or call a declared public API operation in sequence call "User" -> "package_a.component_a.unit_1" : "Stop".

@@ -13,36 +13,47 @@
 
 //! Validation: compare sequence-diagram usage with methods declared by
 //! internal API interfaces. Method names are checked against related shared
-//! interfaces only when component context is available.
+//! interfaces only when component context is available. Messages from a gate
+//! to an element are checked against the interfaces the element provides
+//! (internal API or public API). Calls to or from a component lifeline are
+//! checked against the interfaces both ends share.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::shared::{
-    best_string_suggestion, build_observed_call_contexts, build_unit_bindings, extract_method_name,
-    format_name_list, format_sequence_call, intersect_interfaces, SequenceCallContext,
-    UnitBindings, UnitInterfaces,
+    best_string_suggestion, build_container_units, build_observed_call_contexts,
+    build_unit_bindings, extract_method_name, format_name_list, format_sequence_call,
+    intersect_interfaces, SequenceCallContext, UnitBindings, UnitInterfaces,
 };
 use crate::models::{
-    ComponentDiagramArchitecture, InternalApiIndex, InternalApiInterface, LogicComponentExt,
-    SequenceDiagramIndex,
+    ComponentDiagramArchitecture, Environment, InternalApiIndex, InternalApiInterface,
+    LogicComponentExt, PublicApiIndex, SequenceDiagramIndex,
 };
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
 
-/// Run sequence-vs-internal-API method and coverage validation.
+/// Run sequence-vs-internal-API method and coverage validation. `public_api`
+/// supplies the methods of public interfaces bound in the component diagram.
 pub fn validate_sequence_internal_api(
     sequence_diagram: &SequenceDiagramIndex,
     internal_api_diagram: &InternalApiIndex,
     component_diagram: Option<&ComponentDiagramArchitecture>,
+    public_api: Option<&PublicApiIndex>,
 ) -> ValidationResult {
-    SequenceInternalApiValidator::new(sequence_diagram, internal_api_diagram, component_diagram)
-        .run()
+    SequenceInternalApiValidator::new(
+        sequence_diagram,
+        internal_api_diagram,
+        component_diagram,
+        public_api,
+    )
+    .run()
 }
 
 struct SequenceInternalApiValidator<'a> {
     sequence_diagram: &'a SequenceDiagramIndex,
     internal_api_interfaces_by_id: BTreeMap<String, &'a InternalApiInterface>,
     component_context: Option<ComponentContext>,
+    public_api: Option<&'a PublicApiIndex>,
     result: ValidationResult,
 }
 
@@ -50,6 +61,7 @@ struct ComponentContext {
     observed_call_contexts: Vec<SequenceCallContext>,
     unit_bindings: UnitBindings,
     all_interfaces: BTreeSet<String>,
+    units_with_missing_internal_api_interfaces: BTreeSet<String>,
 }
 
 impl<'a> SequenceInternalApiValidator<'a> {
@@ -57,17 +69,25 @@ impl<'a> SequenceInternalApiValidator<'a> {
         sequence_diagram: &'a SequenceDiagramIndex,
         internal_api_diagram: &'a InternalApiIndex,
         component_diagram: Option<&ComponentDiagramArchitecture>,
+        public_api: Option<&'a PublicApiIndex>,
     ) -> Self {
         let internal_api_interfaces_by_id =
             build_internal_api_interfaces_by_id(internal_api_diagram);
         let component_context = component_diagram.map(|component_diagram| {
-            build_component_context(component_diagram, sequence_diagram, internal_api_diagram)
+            build_component_context(
+                component_diagram,
+                sequence_diagram,
+                internal_api_diagram,
+                &internal_api_interfaces_by_id,
+                public_api,
+            )
         });
 
         Self {
             sequence_diagram,
             internal_api_interfaces_by_id,
             component_context,
+            public_api,
             result: ValidationResult::default(),
         }
     }
@@ -88,18 +108,11 @@ impl<'a> SequenceInternalApiValidator<'a> {
         let Some(component_context) = self.component_context.as_ref() else {
             return;
         };
-        let units_with_missing_internal_api_interfaces =
-            collect_units_with_missing_internal_api_interfaces(
-                &component_context.unit_bindings,
-                &self.internal_api_interfaces_by_id,
-            );
 
         let mut seen_calls = BTreeSet::new();
         let mut consistency_errors = Vec::new();
 
         for call_context in &component_context.observed_call_contexts {
-            let is_self_call = call_context.caller_unit == call_context.callee_unit;
-
             let method_name = extract_method_name(&call_context.method);
             if method_name.is_empty() {
                 continue;
@@ -115,6 +128,20 @@ impl<'a> SequenceInternalApiValidator<'a> {
                 continue;
             }
 
+            if call_context.involves_environment() {
+                // Actor messages are checked against the public API and
+                // external systems are not checked; only gate messages
+                // into an element are checked here.
+                if let Some(error) =
+                    self.check_gate_call(component_context, call_context, method_name)
+                {
+                    consistency_errors.push(error);
+                }
+                continue;
+            }
+
+            let is_self_call = call_context.caller_unit == call_context.callee_unit;
+
             if let Some(error) = self.check_method_exists_in_internal_api(
                 component_context,
                 call_context,
@@ -124,17 +151,28 @@ impl<'a> SequenceInternalApiValidator<'a> {
                 continue;
             }
 
-            if is_self_call {
-                // Self-calls are not checked for cross-unit role consistency.
+            if is_self_call || call_context.ends_overlap() {
+                // Self-calls and calls between an element and its own part
+                // are not checked for cross-unit role consistency.
                 continue;
             }
 
-            if let Some(error) = self.check_cross_unit_call_consistency(
-                component_context,
-                &units_with_missing_internal_api_interfaces,
-                call_context,
-                method_name,
-            ) {
+            if call_context.involves_container {
+                // A component or SEooC lifeline has no interface roles of
+                // its own; only the shared interfaces are checked.
+                if let Some(error) = self.check_container_call_consistency(
+                    component_context,
+                    call_context,
+                    method_name,
+                ) {
+                    consistency_errors.push(error);
+                }
+                continue;
+            }
+
+            if let Some(error) =
+                self.check_cross_unit_call_consistency(component_context, call_context, method_name)
+            {
                 consistency_errors.push(error);
             }
         }
@@ -144,23 +182,117 @@ impl<'a> SequenceInternalApiValidator<'a> {
         }
     }
 
+    /// Interfaces of `interface_ids` that declare `method_name` in the
+    /// internal API or the public API diagram.
+    fn interfaces_declaring(
+        &self,
+        interface_ids: &BTreeSet<String>,
+        method_name: &str,
+    ) -> BTreeSet<String> {
+        interface_ids
+            .iter()
+            .filter(|interface_id| self.interface_declares_method(interface_id, method_name))
+            .cloned()
+            .collect()
+    }
+
+    fn interface_declares_method(&self, interface_id: &str, method_name: &str) -> bool {
+        self.internal_api_interfaces_by_id
+            .get(interface_id)
+            .is_some_and(|interface| interface.method_names.contains(method_name))
+            || self.public_api.is_some_and(|public_api| {
+                public_api.interface_declares_method(interface_id, method_name)
+            })
+    }
+
+    /// Methods declared by `interface_ids` in the internal API or the public
+    /// API diagram.
+    fn method_candidates(&self, interface_ids: &BTreeSet<String>) -> BTreeSet<String> {
+        let mut method_names = BTreeSet::new();
+
+        for interface_id in interface_ids {
+            if let Some(interface) = self
+                .internal_api_interfaces_by_id
+                .get(interface_id.as_str())
+            {
+                method_names.extend(interface.method_names.iter().cloned());
+            }
+            if let Some(public_api) = self.public_api {
+                method_names.extend(
+                    public_api
+                        .interface_method_names(interface_id)
+                        .map(str::to_string),
+                );
+            }
+        }
+
+        method_names
+    }
+
+    /// A message from a gate to an element must name an operation of an
+    /// interface the element provides.
+    fn check_gate_call(
+        &self,
+        component_context: &ComponentContext,
+        call_context: &SequenceCallContext,
+        method_name: &str,
+    ) -> Option<String> {
+        if call_context.caller_environment != Some(Environment::Gate)
+            || call_context.callee_environment.is_some()
+            || call_context.callee_contained_units.is_empty()
+        {
+            return None;
+        }
+
+        if call_context.callee_contained_units.iter().any(|unit_id| {
+            component_context
+                .units_with_missing_internal_api_interfaces
+                .contains(unit_id)
+        }) {
+            // The component-internal-api validator reports missing interface declarations first.
+            return None;
+        }
+
+        let provided_interfaces = &call_context.callee_provided_interfaces;
+        if !self
+            .interfaces_declaring(provided_interfaces, method_name)
+            .is_empty()
+        {
+            return None;
+        }
+
+        let candidate_method_names = self.method_candidates(provided_interfaces);
+        let suggested_method = best_string_suggestion(
+            method_name,
+            candidate_method_names.iter().map(String::as_str),
+        );
+
+        Some(format_gate_call_error(
+            call_context,
+            method_name,
+            suggested_method.as_deref(),
+        ))
+    }
+
     fn check_method_exists_in_internal_api(
         &self,
         component_context: &ComponentContext,
         call_context: &SequenceCallContext,
         method_name: &str,
     ) -> Option<String> {
-        let matching_interfaces = matching_interfaces_with_method(
-            &self.internal_api_interfaces_by_id,
-            &component_context.all_interfaces,
-            method_name,
-        );
+        let matching_interfaces =
+            self.interfaces_declaring(&component_context.all_interfaces, method_name);
 
         if matching_interfaces.is_empty() {
-            let candidate_method_names = collect_method_candidates_for_interfaces(
-                &self.internal_api_interfaces_by_id,
-                &component_context.all_interfaces,
-            );
+            if call_context.involves_container
+                && self
+                    .public_api
+                    .is_some_and(|public_api| public_api.declares_method(method_name))
+            {
+                return None;
+            }
+
+            let candidate_method_names = self.method_candidates(&component_context.all_interfaces);
             let suggested_method = best_string_suggestion(
                 method_name,
                 candidate_method_names.iter().map(String::as_str),
@@ -179,7 +311,6 @@ impl<'a> SequenceInternalApiValidator<'a> {
     fn check_cross_unit_call_consistency(
         &self,
         component_context: &ComponentContext,
-        units_with_missing_internal_api_interfaces: &BTreeSet<String>,
         call_context: &SequenceCallContext,
         method_name: &str,
     ) -> Option<String> {
@@ -188,36 +319,31 @@ impl<'a> SequenceInternalApiValidator<'a> {
             return None;
         }
 
-        if units_with_missing_internal_api_interfaces.contains(&call_context.caller_unit)
-            || units_with_missing_internal_api_interfaces.contains(&call_context.callee_unit)
+        if component_context
+            .units_with_missing_internal_api_interfaces
+            .contains(&call_context.caller_unit)
+            || component_context
+                .units_with_missing_internal_api_interfaces
+                .contains(&call_context.callee_unit)
         {
             // The component-internal-api validator reports missing interface declarations first.
             return None;
         }
 
-        let caller_matching_interfaces = matching_interfaces_with_method(
-            &self.internal_api_interfaces_by_id,
-            &call_context.caller_interfaces,
-            method_name,
-        );
-        let callee_matching_interfaces = matching_interfaces_with_method(
-            &self.internal_api_interfaces_by_id,
-            &call_context.callee_interfaces,
-            method_name,
-        );
+        let caller_matching_interfaces =
+            self.interfaces_declaring(&call_context.caller_interfaces, method_name);
+        let callee_matching_interfaces =
+            self.interfaces_declaring(&call_context.callee_interfaces, method_name);
 
         let shared_method_interfaces =
             intersect_interfaces(&caller_matching_interfaces, &callee_matching_interfaces);
 
         if shared_method_interfaces.is_empty() {
-            let shared_interface_ids = collect_shared_internal_api_interface_ids(
-                &self.internal_api_interfaces_by_id,
-                call_context,
+            let shared_interface_ids = intersect_interfaces(
+                &call_context.caller_interfaces,
+                &call_context.callee_interfaces,
             );
-            let candidate_method_names = collect_method_candidates_for_interfaces(
-                &self.internal_api_interfaces_by_id,
-                &shared_interface_ids,
-            );
+            let candidate_method_names = self.method_candidates(&shared_interface_ids);
             let suggested_method = best_string_suggestion(
                 method_name,
                 candidate_method_names.iter().map(String::as_str),
@@ -236,6 +362,58 @@ impl<'a> SequenceInternalApiValidator<'a> {
             method_name,
             &shared_method_interfaces,
         )
+    }
+
+    /// A call to or from a component or SEooC lifeline must name an operation
+    /// of an interface both ends share. Roles are not checked.
+    fn check_container_call_consistency(
+        &self,
+        component_context: &ComponentContext,
+        call_context: &SequenceCallContext,
+        method_name: &str,
+    ) -> Option<String> {
+        if !call_context.has_shared_interfaces() {
+            // The structural component-sequence validator reports missing shared interface relations.
+            return None;
+        }
+
+        if call_context
+            .caller_contained_units
+            .iter()
+            .chain(&call_context.callee_contained_units)
+            .any(|unit_id| {
+                component_context
+                    .units_with_missing_internal_api_interfaces
+                    .contains(unit_id)
+            })
+        {
+            // The component-internal-api validator reports missing interface declarations first.
+            return None;
+        }
+
+        let shared_interface_ids = intersect_interfaces(
+            &call_context.caller_interfaces,
+            &call_context.callee_interfaces,
+        );
+        if !self
+            .interfaces_declaring(&shared_interface_ids, method_name)
+            .is_empty()
+        {
+            return None;
+        }
+
+        let candidate_method_names = self.method_candidates(&shared_interface_ids);
+        let suggested_method = best_string_suggestion(
+            method_name,
+            candidate_method_names.iter().map(String::as_str),
+        );
+
+        Some(format_sequence_method_consistency_error(
+            call_context,
+            method_name,
+            "sequence function name was not found in the related interface methods",
+            suggested_method.as_deref(),
+        ))
     }
 
     fn check_cross_unit_call_role_consistency(
@@ -298,7 +476,7 @@ impl<'a> SequenceInternalApiValidator<'a> {
     }
 
     fn check_interface_method_coverage(&mut self) {
-        let exercised_method_names = collect_exercised_method_names(self.sequence_diagram);
+        let exercised_method_names = self.collect_exercised_method_names();
 
         for interface in self.internal_api_interfaces_by_id.values().copied() {
             let missing_methods: BTreeSet<String> = interface
@@ -317,6 +495,64 @@ impl<'a> SequenceInternalApiValidator<'a> {
                     &missing_methods,
                 ));
         }
+    }
+
+    /// Internal API operations are exercised by calls between elements and by
+    /// gate messages into an element that pass the gate-call check. Calls
+    /// with an actor or external system, and calls to a gate, do not count.
+    fn collect_exercised_method_names(&self) -> BTreeSet<String> {
+        let mut exercised_method_names = BTreeSet::new();
+
+        match &self.component_context {
+            Some(component_context) => {
+                for call_context in &component_context.observed_call_contexts {
+                    let method_name = extract_method_name(&call_context.method);
+                    if !method_name.is_empty()
+                        && exercises_internal_api(
+                            call_context.caller_environment,
+                            call_context.callee_environment,
+                            || {
+                                self.check_gate_call(component_context, call_context, method_name)
+                                    .is_none()
+                            },
+                        )
+                    {
+                        exercised_method_names.insert(method_name.to_string());
+                    }
+                }
+            }
+            None => {
+                for call in self.sequence_diagram.observed_calls() {
+                    let method_name = extract_method_name(&call.method);
+                    if !method_name.is_empty()
+                        && exercises_internal_api(
+                            call.caller_environment,
+                            call.callee_environment,
+                            || true,
+                        )
+                    {
+                        exercised_method_names.insert(method_name.to_string());
+                    }
+                }
+            }
+        }
+
+        exercised_method_names
+    }
+}
+
+/// `gate_call_is_valid` is only evaluated for a message from a gate to an
+/// element.
+fn exercises_internal_api(
+    caller_environment: Option<Environment>,
+    callee_environment: Option<Environment>,
+    gate_call_is_valid: impl FnOnce() -> bool,
+) -> bool {
+    match (caller_environment, callee_environment) {
+        (Some(Environment::Actor | Environment::External), _)
+        | (_, Some(Environment::Actor | Environment::External | Environment::Gate)) => false,
+        (Some(Environment::Gate), None) => gate_call_is_valid(),
+        (None, None) => true,
     }
 }
 
@@ -369,22 +605,48 @@ fn append_debug_log(
     for interface_id in internal_api_interfaces_by_id.keys() {
         diagnostics.debug(|| format!("  {interface_id}"));
     }
+
+    if !sequence_diagram.skipped_messages().is_empty() {
+        diagnostics
+            .debug(|| "Sequence messages not checked (reply, create or delete):".to_string());
+        for message in sequence_diagram.skipped_messages() {
+            diagnostics.debug(|| {
+                format!(
+                    "  {} -> {} : {} ({:?})",
+                    message.sender, message.receiver, message.message, message.kind
+                )
+            });
+        }
+    }
 }
 
 fn build_component_context(
     component_diagram: &ComponentDiagramArchitecture,
     sequence_diagram: &SequenceDiagramIndex,
     internal_api_diagram: &InternalApiIndex,
+    internal_api_interfaces_by_id: &BTreeMap<String, &InternalApiInterface>,
+    public_api: Option<&PublicApiIndex>,
 ) -> ComponentContext {
     let unit_bindings = build_unit_bindings(component_diagram);
+    let container_units = build_container_units(component_diagram);
     let all_interfaces = build_all_interfaces(component_diagram, internal_api_diagram);
-    let observed_call_contexts =
-        build_observed_call_contexts(sequence_diagram.observed_calls(), &unit_bindings);
+    let observed_call_contexts = build_observed_call_contexts(
+        sequence_diagram.observed_calls(),
+        &unit_bindings,
+        &container_units,
+    );
+    let units_with_missing_internal_api_interfaces =
+        collect_units_with_missing_internal_api_interfaces(
+            &unit_bindings,
+            internal_api_interfaces_by_id,
+            public_api,
+        );
 
     ComponentContext {
         observed_call_contexts,
         unit_bindings,
         all_interfaces,
+        units_with_missing_internal_api_interfaces,
     }
 }
 
@@ -408,46 +670,6 @@ fn build_all_interfaces(
     interface_ids
 }
 
-fn matching_interfaces_with_method(
-    internal_api_interfaces_by_id: &BTreeMap<String, &InternalApiInterface>,
-    interface_ids: &BTreeSet<String>,
-    method_name: &str,
-) -> BTreeSet<String> {
-    interface_ids
-        .iter()
-        .filter(|interface_id| {
-            internal_api_interfaces_by_id
-                .get(interface_id.as_str())
-                .is_some_and(|interface| interface.method_names.contains(method_name))
-        })
-        .cloned()
-        .collect()
-}
-
-fn collect_method_candidates_for_interfaces(
-    internal_api_interfaces_by_id: &BTreeMap<String, &InternalApiInterface>,
-    interface_ids: &BTreeSet<String>,
-) -> BTreeSet<String> {
-    interface_ids
-        .iter()
-        .filter_map(|interface_id| internal_api_interfaces_by_id.get(interface_id.as_str()))
-        .flat_map(|interface| interface.method_names.iter().cloned())
-        .collect()
-}
-
-fn collect_shared_internal_api_interface_ids(
-    internal_api_interfaces_by_id: &BTreeMap<String, &InternalApiInterface>,
-    call_context: &SequenceCallContext,
-) -> BTreeSet<String> {
-    intersect_interfaces(
-        &call_context.caller_interfaces,
-        &call_context.callee_interfaces,
-    )
-    .into_iter()
-    .filter(|interface_id| internal_api_interfaces_by_id.contains_key(interface_id.as_str()))
-    .collect()
-}
-
 fn role_interfaces(bindings: &UnitInterfaces) -> BTreeSet<String> {
     bindings
         .required_interfaces
@@ -468,34 +690,24 @@ fn build_internal_api_interfaces_by_id(
     interfaces_by_id
 }
 
+/// Units binding an interface that has neither an internal API nor a public
+/// API declaration.
 fn collect_units_with_missing_internal_api_interfaces(
     unit_bindings: &UnitBindings,
     internal_api_interfaces_by_id: &BTreeMap<String, &InternalApiInterface>,
+    public_api: Option<&PublicApiIndex>,
 ) -> BTreeSet<String> {
     unit_bindings
         .iter()
         .filter(|(_, bindings)| {
             bindings.all_interfaces.iter().any(|interface_id| {
                 !internal_api_interfaces_by_id.contains_key(interface_id.as_str())
+                    && !public_api
+                        .is_some_and(|public_api| public_api.declares_interface(interface_id))
             })
         })
         .map(|(unit_id, _)| unit_id.clone())
         .collect()
-}
-
-fn collect_exercised_method_names(sequence_diagram: &SequenceDiagramIndex) -> BTreeSet<String> {
-    let mut exercised_method_names = BTreeSet::new();
-
-    for call in sequence_diagram.observed_calls() {
-        let method_name = extract_method_name(&call.method);
-        if method_name.is_empty() {
-            continue;
-        }
-
-        exercised_method_names.insert(method_name.to_string());
-    }
-
-    exercised_method_names
 }
 
 fn format_interface_method_coverage_error(
@@ -517,6 +729,45 @@ fn format_interface_method_coverage_error(
         .fix(format!(
             "add sequence interactions for functions {missing_functions} in the sequence diagram, or remove function declarations {missing_functions} in internal API interface \"{}\"",
             interface.id
+        ))
+        .build()
+}
+
+fn format_gate_call_error(
+    call_context: &SequenceCallContext,
+    method_name: &str,
+    suggested_method: Option<&str>,
+) -> String {
+    let sequence_call = format_sequence_call(
+        &call_context.caller_unit,
+        &call_context.callee_unit,
+        method_name,
+    );
+    let (source_file, source_line) = call_context.source_location.display();
+
+    let mut error = ErrorBuilder::new(ErrorCategory::Method)
+        .title(format!(
+            "sequence function \"{method_name}\" from gate message {sequence_call} in the sequence diagram is not declared on an interface provided by the callee"
+        ))
+        .field("sequence call", sequence_call.clone())
+        .field("sequence source file", format!("\"{source_file}\""))
+        .field("sequence source line", source_line.to_string())
+        .field(
+            "detail",
+            format!(
+                "no interface provided by \"{}\" declares the method",
+                call_context.callee_unit
+            ),
+        );
+
+    if let Some(suggested_method) = suggested_method {
+        error = error.suggest(method_name, Some("method"), suggested_method);
+    }
+
+    error
+        .fix(format!(
+            "add method \"{method_name}\" to an internal API or public API interface provided by \"{}\", or remove sequence function \"{method_name}\" in sequence call {sequence_call} in the sequence diagram",
+            call_context.callee_unit
         ))
         .build()
 }

@@ -38,6 +38,8 @@ The current implementation supports these validation flows:
   sequence interactions. When component input is also available, it uses that
   component context to check sequence function names against related shared
   interfaces.
+5. `SequencePublicApi`: checks that calls from an actor to the SEooC and
+  callbacks to an actor use public API interfaces and methods.
 
 The CLI dispatches to the selected validation profile. Each profile owns its
 input schema, reads the models it needs, and runs the validators that are

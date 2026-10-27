@@ -29,6 +29,7 @@ integration_test/
 ├── component_internal_api/      # ComponentInternalApi cases
 ├── component_public_api/        # ComponentPublicApi cases
 ├── sequence_internal_api/       # SequenceInternalApi cases
+├── sequence_design/             # Sequence participants, gate messages, public API boundary cases
 ├── class_design_implementation/ # ClassDesignImplementation suite, cases, and test binary
 ├── class_design_sequence/       # ClassDesignSequence suite, cases, and test binary
 ├── src/                         # Rust crate sources for shared test_framework
@@ -63,6 +64,7 @@ navigate at runtime:
 |----------|-----------------------|
 | `component/` | `ArchitecturalDesignInfo.static` |
 | `internal_api/` | `ArchitecturalDesignInfo.internal_api`, when present |
+| `public_api/` | `ArchitecturalDesignInfo.public_api`, when present |
 | `sequence/` | `ArchitecturalDesignInfo.dynamic` |
 | `unit_design_class/` | `UnitDesignInfo.static` |
 | `unit_design_sequence/` | `UnitDesignInfo.dynamic` |
@@ -205,6 +207,22 @@ the validator under test.
 └── expected.yaml
 ```
 
+### SequenceDesign cases
+
+Each case contains only the diagram files it needs. The suite forwards every
+present category (`component`, `sequence`, `internal_api`, `public_api`) to
+the `architectural-design` profile.
+
+```
+<case>/
+├── BUILD                 # architectural_design + provider_fbs_fixture_bundle + case_data
+├── sequence_diagram.puml # one or more sequence diagrams
+├── component_diagram.puml        # optional
+├── internal_api_diagram.puml     # optional
+├── public_api_diagram.puml       # optional
+└── expected.yaml
+```
+
 ### `expected.yaml` format
 
 ```yaml
@@ -237,6 +255,7 @@ bazel test //validation/core/integration_test/component_sequence:component_seque
 bazel test //validation/core/integration_test/component_internal_api:component_internal_api_integration_test
 bazel test //validation/core/integration_test/component_public_api:component_public_api_integration_test
 bazel test //validation/core/integration_test/sequence_internal_api:sequence_internal_api_integration_test
+bazel test //validation/core/integration_test/sequence_design:sequence_design_integration_test
 bazel test //validation/core/integration_test/class_design_implementation:class_design_implementation_integration_test
 bazel test //validation/core/integration_test/class_design_sequence:class_design_sequence_integration_test
 ```

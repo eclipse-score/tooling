@@ -30,6 +30,15 @@ enum ParticipantType : byte {
     Collections = 7
 }
 
+/// The UML message sort of an interaction.
+enum MessageKind : byte {
+    SynchCall = 0,
+    AsynchCall = 1,
+    Reply = 2,
+    Create = 3,
+    Delete = 4
+}
+
 /// A message interaction between two participants.
 table Interaction {
     /// Sending participant
@@ -40,6 +49,8 @@ table Interaction {
     message: string;
     /// Source location for this interaction
     source_location: SourceLocation (required);
+    /// Message sort (call, signal, reply, create, delete)
+    kind: MessageKind = SynchCall;
 }
 
 enum LifecycleAction : byte {
