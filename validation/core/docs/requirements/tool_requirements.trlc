@@ -122,9 +122,12 @@ section "Tool Requirements" {
                 description = '''The validator shall report an error when a
                 unit defined in the component diagram is not referenced by
                 any participant in the sequence diagrams, when a participant
-                uid in a sequence diagram does not match any unit id in the
-                component diagram, or when a participant uid matches multiple
-                unit ids ambiguously.'''
+                uid in a sequence diagram does not match any unit, component
+                or SEooC id in the component diagram, or when a participant
+                uid matches multiple unit ids or multiple component ids
+                ambiguously. A participant that matches a component or SEooC
+                is a black box and shall not count as a reference to the
+                units it contains.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
@@ -132,11 +135,77 @@ section "Tool Requirements" {
             ToolQualification.ToolRequirement ComponentSequenceInterfaceConnectionConsistency {
                 description = '''The validator shall report an error when two
                 units are connected through an interface in the component
-                diagram but no function-call interaction between those units
-                appears in any sequence diagram, or when a cross-unit
-                function call appears in a sequence diagram but the component
-                diagram does not define a shared interface between those
-                units.'''
+                diagram but no function-call interaction between exactly
+                those two units appears in any sequence diagram, or when a
+                function call between elements appears in a sequence diagram
+                but the component diagram does not define a shared interface
+                between them. The interfaces of a component or SEooC
+                participant are the interfaces of the units it contains, and
+                a call with a component or SEooC participant shall not count
+                as a function-call interaction between the units it
+                contains.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+        }
+
+        section "Sequence Diagram Semantics" {
+
+            ToolQualification.ToolRequirement SequenceEnvironmentParticipants {
+                description = '''The validators shall treat a sequence
+                participant declared as `actor` or with the `<<external>>`
+                stereotype (in any letter case) as part of the environment:
+                it shall not be required to match a unit, class or component,
+                and messages to or from it shall not be checked against unit
+                interfaces. Such a declaration in any sequence diagram shall
+                apply to the participant uid in all sequence diagrams, and the
+                validator shall report an error when one uid is declared as an
+                actor in one place and as `<<external>>` in another, or when
+                an environment participant uses the uid of a unit, component
+                or SEooC of the component diagram.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement SequenceMessageKinds {
+                description = '''The validators shall treat only
+                synchronous and asynchronous messages as operation calls.
+                Only the `>>` and `<<` arrowheads shall make a message
+                asynchronous. Reply messages and messages with the create
+                (`**`) or delete (`!!`) marker shall not be matched against an
+                API and shall not count for interface coverage. A `create`
+                statement shall not change the kind of a message.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement SequenceGateMessages {
+                description = '''The validators shall treat a message
+                without sender or receiver as a call from or to an unspecified
+                environment. A message from such an environment to an element
+                shall use a method declared on an interface the called
+                element provides, in the internal API or the public API, and
+                shall count as a use of that method for interface coverage
+                only when it does. A message to such an environment shall not
+                be checked against an API and shall not count for interface
+                coverage.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement SequencePublicApiBoundary {
+                description = '''When a public API is provided, the
+                validator shall report an error when a call from an actor to
+                an element of the SEooC uses a method not declared on a public
+                API interface the element provides, or when a callback from an
+                element of the SEooC to an actor is labelled with neither the
+                name of a public API interface the element requires nor one of
+                its methods, whether or not internal API diagrams are
+                provided. The scope of an element shall follow its interface
+                roles in the component diagram; without a component diagram or
+                a bound public interface, the whole public API shall be used by
+                name.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
@@ -150,7 +219,11 @@ section "Tool Requirements" {
                 diagrams are provided, the validator shall report an error
                 when a function used in a sequence interaction is not declared
                 in any shared interface of the participating units as defined
-                in the component diagram.'''
+                in the component diagram. A call with a component or SEooC
+                participant shall pass when the function is declared, in the
+                internal API or the public API, on an interface shared by both
+                ends; the interface roles of such a call shall not be
+                checked.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
@@ -172,7 +245,8 @@ section "Tool Requirements" {
                 diagrams are provided, the validator shall report an error
                 when a function declared in a validated interface is never
                 called in any sequence interaction. Self-calls count as valid
-                usage.'''
+                usage; calls with an actor or external system, calls to a
+                gate and rejected gate messages do not.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }

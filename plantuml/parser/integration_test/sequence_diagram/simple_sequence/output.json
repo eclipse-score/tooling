@@ -61,6 +61,7 @@
                         "sender": "ComponentB",
                         "receiver": "ComponentA",
                         "message": "Return Result",
+                        "kind": "Reply",
                         "source_location": {
                           "file": "",
                           "line": 22
@@ -94,6 +95,7 @@
                         "sender": "ComponentC",
                         "receiver": "ComponentB",
                         "message": "Return Result",
+                        "kind": "Reply",
                         "source_location": {
                           "file": "",
                           "line": 25
@@ -121,6 +123,7 @@
                                 "sender": "ComponentC",
                                 "receiver": "ComponentB",
                                 "message": "Return Result",
+                                "kind": "Reply",
                                 "source_location": {
                                   "file": "",
                                   "line": 29
@@ -150,6 +153,7 @@
                                               "sender": "ComponentC",
                                               "receiver": "ComponentB",
                                               "message": "Return Result",
+                                              "kind": "Reply",
                                               "source_location": {
                                                 "file": "",
                                                 "line": 32
@@ -195,6 +199,7 @@
                                 "sender": "ComponentC",
                                 "receiver": "ComponentB",
                                 "message": "Return Result",
+                                "kind": "Reply",
                                 "source_location": {
                                   "file": "",
                                   "line": 38
@@ -224,6 +229,7 @@
                                               "sender": "ComponentC",
                                               "receiver": "ComponentB",
                                               "message": "Return Result",
+                                              "kind": "Reply",
                                               "source_location": {
                                                 "file": "",
                                                 "line": 41
@@ -257,6 +263,7 @@
                                               "sender": "ComponentC",
                                               "receiver": "ComponentB",
                                               "message": "Return Result",
+                                              "kind": "Reply",
                                               "source_location": {
                                                 "file": "",
                                                 "line": 44
@@ -304,6 +311,7 @@
                                     "sender": "ComponentC",
                                     "receiver": "ComponentB",
                                     "message": "Return Result",
+                                    "kind": "Reply",
                                     "source_location": {
                                       "file": "",
                                       "line": 50
@@ -325,6 +333,7 @@
                         "sender": "ComponentB",
                         "receiver": "ComponentA",
                         "message": "Return Result",
+                        "kind": "Reply",
                         "source_location": {
                           "file": "",
                           "line": 53

@@ -60,7 +60,16 @@ pub(in crate::validators) fn format_sequence_call(
     format!("\"{caller_unit}\" -> \"{callee_unit}\" : \"{method_name}\"")
 }
 
+const CALL_OPERATOR: &str = "operator()";
+
+/// Method name of a sequence message label, without the argument list.
+/// The call operator keeps its parentheses, as in the class diagrams.
 pub(in crate::validators) fn extract_method_name(method: &str) -> &str {
+    let method = method.trim();
+    if method.starts_with(CALL_OPERATOR) {
+        return CALL_OPERATOR;
+    }
+
     method.split('(').next().unwrap_or(method).trim()
 }
 
@@ -119,11 +128,25 @@ pub(in crate::validators) fn best_id_suggestion<'a>(
 #[cfg(test)]
 mod tests {
     use super::{
-        best_id_suggestion, best_string_suggestion, earliest_source_by_id,
+        best_id_suggestion, best_string_suggestion, earliest_source_by_id, extract_method_name,
         DEFAULT_SUGGESTION_THRESHOLD,
     };
     use source_location::SourceLocation;
     use strsim::jaro_winkler;
+
+    #[test]
+    fn extract_method_name_strips_the_argument_list() {
+        assert_eq!(extract_method_name("Run(int x)"), "Run");
+        assert_eq!(extract_method_name(" Run "), "Run");
+        assert_eq!(extract_method_name("Run"), "Run");
+    }
+
+    #[test]
+    fn extract_method_name_keeps_the_call_operator() {
+        assert_eq!(extract_method_name("operator()"), "operator()");
+        assert_eq!(extract_method_name("operator()(int x)"), "operator()");
+        assert_eq!(extract_method_name("operator<(int x)"), "operator<");
+    }
 
     #[test]
     fn best_string_suggestion_returns_none_for_empty_candidates() {

@@ -19,6 +19,7 @@ use crate::readers::{ClassDiagramReader, ComponentDiagramReader, SequenceDiagram
 use crate::validators::{
     validate_component_anchoring, validate_component_internal_api, validate_component_public_api,
     validate_component_sequence, validate_sequence_internal_api,
+    validate_sequence_public_api_boundary,
 };
 use crate::ValidationResult;
 use serde::Deserialize;
@@ -61,6 +62,15 @@ fn registered_validators<'a>(
             Some(validate_sequence_internal_api(
                 sequence,
                 internal_api,
+                component.as_ref(),
+                public_api.as_ref(),
+            ))
+        }),
+        Box::new(move || {
+            let (sequence, public_api) = (sequence.as_ref()?, public_api.as_ref()?);
+            Some(validate_sequence_public_api_boundary(
+                sequence,
+                public_api,
                 component.as_ref(),
             ))
         }),

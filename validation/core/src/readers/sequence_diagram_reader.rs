@@ -17,9 +17,9 @@ use std::fs;
 
 use sequence_fbs::sequence_metamodel as fb_sequence;
 use sequence_logic::{
-    Block, Branch, BranchCase, EarlyExit, Interaction, LifecycleAction, Loop, Node, Parallel,
-    ParallelBranch, ParticipantLifecycle, ParticipantType, Reference, SequenceParticipant,
-    SequenceTree,
+    Block, Branch, BranchCase, EarlyExit, Interaction, LifecycleAction, Loop, MessageKind, Node,
+    Parallel, ParallelBranch, ParticipantLifecycle, ParticipantType, Reference,
+    SequenceParticipant, SequenceTree,
 };
 
 use crate::models::SequenceDiagramInputs;
@@ -38,6 +38,17 @@ fn map_participant_type(value: fb_sequence::ParticipantType) -> Result<Participa
         fb_sequence::ParticipantType::Database => Ok(ParticipantType::Database),
         fb_sequence::ParticipantType::Collections => Ok(ParticipantType::Collections),
         other => Err(format!("unsupported participant type {:?}", other)),
+    }
+}
+
+fn map_message_kind(value: fb_sequence::MessageKind) -> Result<MessageKind, String> {
+    match value {
+        fb_sequence::MessageKind::SynchCall => Ok(MessageKind::SynchCall),
+        fb_sequence::MessageKind::AsynchCall => Ok(MessageKind::AsynchCall),
+        fb_sequence::MessageKind::Reply => Ok(MessageKind::Reply),
+        fb_sequence::MessageKind::Create => Ok(MessageKind::Create),
+        fb_sequence::MessageKind::Delete => Ok(MessageKind::Delete),
+        other => Err(format!("unsupported message kind {:?}", other)),
     }
 }
 
@@ -117,6 +128,8 @@ fn read_node_item(item: fb_sequence::NodeItem<'_>, node_path: &str) -> Result<No
                     .receiver()
                     .map(|receiver| receiver.to_string().into()),
                 message: interaction.message().map(|s| s.to_string()),
+                kind: map_message_kind(interaction.kind())
+                    .map_err(|err| format!("{node_path}: {err}"))?,
                 source_location: to_source_location(
                     interaction.source_location().file(),
                     interaction.source_location().line(),

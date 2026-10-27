@@ -13,12 +13,12 @@
 
 use crate::models::{
     ComponentDiagramInputs, ComponentRelationType, ComponentType, EndpointRole, InternalApiIndex,
-    LogicComponent, LogicRelation, SequenceDiagramInputs,
+    LogicComponent, LogicRelation, PublicApiIndex, SequenceDiagramInputs,
 };
 use class_diagram::{ClassDiagram, EntityType, Method, SimpleEntity, Visibility};
 use component_diagram::SourceLocation;
 use sequence_logic::{
-    Block, Interaction, Node, ParticipantType, SequenceParticipant, SequenceTree,
+    Block, Interaction, MessageKind, Node, ParticipantType, SequenceParticipant, SequenceTree,
 };
 
 // Common fixtures
@@ -175,6 +175,7 @@ pub(super) fn sequence_calls(calls: &[(&str, &str, &str)]) -> SequenceDiagramInp
                             sender: Some((*caller).to_string().into()),
                             receiver: Some((*callee).to_string().into()),
                             message: Some((*method).to_string()),
+                            kind: Default::default(),
                             source_location: dummy_source_location(),
                         })
                     })
@@ -195,6 +196,51 @@ fn sequence_participant(participant: &str) -> SequenceParticipant {
     }
 }
 
+pub(super) fn actor_participant(uid: &str) -> SequenceParticipant {
+    SequenceParticipant {
+        participant_type: ParticipantType::Actor,
+        ..sequence_participant(uid)
+    }
+}
+
+pub(super) fn external_participant(uid: &str) -> SequenceParticipant {
+    SequenceParticipant {
+        stereotype: Some("external".to_string()),
+        ..sequence_participant(uid)
+    }
+}
+
+pub(super) fn element_participant(uid: &str) -> SequenceParticipant {
+    sequence_participant(uid)
+}
+
+/// A diagram with explicit participants; `None` endpoints are gates.
+pub(super) fn sequence_of(
+    participants: Vec<SequenceParticipant>,
+    calls: &[(Option<&str>, Option<&str>, &str, MessageKind)],
+) -> SequenceDiagramInputs {
+    SequenceDiagramInputs {
+        diagrams: vec![SequenceTree {
+            name: Some("seq".to_string()),
+            participants,
+            root: Block {
+                items: calls
+                    .iter()
+                    .map(|(caller, callee, method, kind)| {
+                        Node::Interaction(Interaction {
+                            sender: caller.map(|caller| caller.to_string().into()),
+                            receiver: callee.map(|callee| callee.to_string().into()),
+                            message: Some((*method).to_string()),
+                            kind: *kind,
+                            source_location: dummy_source_location(),
+                        })
+                    })
+                    .collect(),
+            },
+        }],
+    }
+}
+
 // Class diagram API fixtures.
 
 pub(super) fn internal_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> InternalApiIndex {
@@ -212,6 +258,23 @@ pub(super) fn internal_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> Internal
     }];
 
     InternalApiIndex::build_index(&diagrams)
+}
+
+pub(super) fn public_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> PublicApiIndex {
+    let diagrams = vec![ClassDiagram {
+        name: "public_api".to_string(),
+        entities: interfaces
+            .into_iter()
+            .map(|(interface_name, methods)| {
+                let mut interface = class_interface(interface_name, None);
+                interface.methods = methods.into_iter().map(method).collect();
+                interface
+            })
+            .collect(),
+        free_functions: Vec::new(),
+    }];
+
+    PublicApiIndex::build_index(&diagrams)
 }
 
 pub(super) fn class_interface(name: &str, namespace: Option<&str>) -> SimpleEntity {

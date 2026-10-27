@@ -21,6 +21,7 @@ mod component_internal_api_validator;
 mod component_public_api_validator;
 mod component_sequence_validator;
 mod sequence_internal_api_validator;
+mod sequence_public_api_boundary_validator;
 mod shared;
 
 #[cfg(test)]
@@ -35,3 +36,4 @@ pub use component_internal_api_validator::validate_component_internal_api;
 pub use component_public_api_validator::validate_component_public_api;
 pub use component_sequence_validator::validate_component_sequence;
 pub use sequence_internal_api_validator::validate_sequence_internal_api;
+pub use sequence_public_api_boundary_validator::validate_sequence_public_api_boundary;

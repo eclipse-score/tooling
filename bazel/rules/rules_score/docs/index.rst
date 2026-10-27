@@ -49,6 +49,9 @@ Rules SCORE for Bazel
    tool_reference/specs/component_public_api
    tool_reference/specs/component_sequence
    tool_reference/specs/sequence_internal_api
+   tool_reference/specs/sequence_public_api
+   tool_reference/specs/class_design_sequence
+   tool_reference/specs/sequence_design
 
 .. toctree::
    :maxdepth: 2

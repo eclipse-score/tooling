@@ -569,7 +569,6 @@ cross_diagram_cases!(
     qualified_reference,
     qualified_in_nested_scope,
     doc_4_trap_prose_label,
-    doc_6_external_endpoint,
     errors_participants,
     errors_listed_file,
     unit_to_class_link,

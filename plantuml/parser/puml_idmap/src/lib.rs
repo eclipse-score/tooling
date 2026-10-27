@@ -477,6 +477,7 @@ mod tests {
             sender: Some(sender.to_string().into()),
             receiver: Some(receiver.to_string().into()),
             message: Some("call".to_string()),
+            kind: Default::default(),
             source_location: SourceLocation::new("test.puml", 0),
         })
     }

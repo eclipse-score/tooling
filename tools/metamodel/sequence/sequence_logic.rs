@@ -111,11 +111,26 @@ pub struct Branch {
     pub cases: Vec<BranchCase>,
 }
 
+/// The UML message sort of an [`Interaction`].
+///
+/// PlantUML:
+///     `->` synchronous call, `->>` asynchronous call or signal,
+///     `-->` / `-->>` reply, `->**` create, `->!!` delete
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum MessageKind {
+    #[default]
+    SynchCall,
+    AsynchCall,
+    Reply,
+    Create,
+    Delete,
+}
+
 /// A message between two participants.
 ///
 /// PlantUML:
 ///     1) A -> B : foo()
-///     2) return xxx
+///     2) A --> B : result
 /// C++:
 ///     class A {
 ///         void func(B& b) { b.foo(); }
@@ -127,6 +142,8 @@ pub struct Interaction {
     /// None represents a PlantUML lost/found endpoint.
     pub receiver: Option<ParticipantId>,
     pub message: Option<String>,
+    #[serde(default)]
+    pub kind: MessageKind,
     pub source_location: SourceLocation,
 }
 

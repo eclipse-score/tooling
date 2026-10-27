@@ -30,10 +30,21 @@ the participating units.
 
 All comparisons are case-sensitive.
 
-Only direct function calls (solid arrows, e.g. `unit_1 -> unit_2 : GetData()`)
-are validated. Return/response interactions (dashed arrows, e.g.
-`unit_2 --> unit_1 : Ack`) are not checked against the internal API and do not
-contribute to interface coverage.
+Only operation calls (synchronous `->` and asynchronous `->>` messages, e.g.
+`unit_1 -> unit_2 : GetData()`) are validated. Replies (dashed arrows, e.g.
+`unit_2 --> unit_1 : Ack`), create and delete messages are not checked against
+the internal API and do not contribute to interface coverage.
+
+Calls involving an environment participant (`actor`, `<<external>>`) are not
+checked for method-name or role consistency. A message from a gate to an
+element is checked against the interfaces that element provides, in the
+internal API or the public API (Method-Name Consistency); a message to a gate
+is not checked. A call with a component/SEooC lifeline is checked for the
+method name only: the method shall be declared, in the internal API or the
+public API, on an interface shared by both ends. Interface roles are not
+checked for it.
+Actor-to-SEooC calls and callbacks are checked by the Sequence Public API
+validator (`sequence_public_api.md`), independent of the internal API diagrams.
 
 Participants are linked to component-diagram units by uid: a qualified uid
 equals a unit id, a single-segment uid matches the unique unit whose id ends in
@@ -66,7 +77,12 @@ For cross-unit calls, the method must be declared on a shared interface of the
 participating units as defined in the component diagram. For self-calls, the
 method must be declared on one of the available interfaces, where "available"
 means any interface from either the component diagram or the internal API
-diagram (not limited to interfaces bound to that unit).
+diagram (not limited to interfaces bound to that unit). For a message from a
+gate to an element, the method must be declared on an interface the element
+provides (the union of the interfaces its units provide for a component or
+SEooC), in the internal API or the public API. For a call with a component or
+SEooC lifeline, the method must be declared on an interface shared by both
+ends.
 *(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceInternalApiMethodNameConsistency`)*
 
 This check is deferred (no error is raised by this validator) in two cases,
@@ -74,9 +90,10 @@ because another validator is responsible for reporting the root cause:
 
 - Cross-unit calls between units that share no interface at all — reported by
   the `component_sequence` validator's Interface-Connection Consistency check.
-- Calls involving a unit whose component-diagram interface reference is not
-  declared in the internal API diagram — reported by the
-  `component_internal_api` validator's Interface Declaration Consistency check.
+- Calls involving a unit that binds an interface declared in neither the
+  internal API diagram nor the public API diagram — reported by the
+  `component_internal_api` validator's Interface Declaration Consistency check
+  or by the `component_public_api` validator.
 
 ```text
 ' component diagram
@@ -136,7 +153,9 @@ interface IData <<interface>> {
 ### Interface Coverage
 
 Every function declared in an Internal API interface must be called in at least
-one sequence interaction. Self-calls count as valid usage.
+one sequence interaction. Self-calls and gate messages into an element count as
+valid usage when they pass the Method-Name check; calls from or to actors and
+`<<external>>` participants, and messages to a gate, do not.
 *(Requirement: {requirement:downstream-ref}`Tools.ComponentSequenceInternalApiInterfaceCoverage`)*
 
 Coverage is computed globally: every method declared on every internal API
@@ -166,6 +185,7 @@ unit_1 -> unit_2 : SetData(d)
 | Failure case | Validation rule |
 |---|---|
 | Method not declared in related interface | Method-Name Consistency |
+| Gate message method not declared on the callee or in the public API | Method-Name Consistency |
 | Invalid consumer/provider roles | Consumer/Provider Role Consistency |
 | Internal API interface function not exercised | Interface Coverage |
 
