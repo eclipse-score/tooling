@@ -62,9 +62,13 @@ Call ``RecordProperty`` inside the test body next to the respective code blocks:
    * - ``then``
      - with coverage lock
      - Expected outcome
+   * - ``test-spec``
+     - no
+     - Bazel label of a ``test_specification`` target; replaces ``given``/``when``/``then``
+       (see `Formal Test Specification (RST)`_)
 
 A test case that is part of a coverage lock (see `Stating Coverage for test cases`_)
-needs a ``given`` and a ``then``. The ``when`` is always optional.
+needs a ``given`` and a ``then``, or a ``test-spec``. The ``when`` is always optional.
 
 Deriving Given/When/Then from the Test Name
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -101,22 +105,140 @@ This test has the Given ``empty stack``, the When ``pop called`` and the Then
 
 A ``dependable_element`` report renders every annotated test on its **Unit
 Test** page at ``<dependable-element>_index/traceability_report/unit_test.html``.
-The entry shows its Given/When/Then text, links to the traced requirements, and
-links back to the test source.
+The entry shows its Given/When/Then text (or its ``test-spec`` reference), links to
+the traced requirements, and links back to the test source.
 
 A test without ``lobster-tracing`` has no traceability and is not included in
 coverage tracking.
+
+Formal Test Specification (RST)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Given/When/Then fits short unit tests. For more complex scenarios, such as
+multi-step or higher-order tests, a test case can reference a formal test
+specification written in RST instead. The specification lives in its own file, is
+reviewed like any other document, and its content is part of the coverage lock.
+
+One RST file holds exactly one test specification. Several test cases may reference
+the same specification. The file has this structure (the underline characters are
+free to choose, comments such as a copyright header are allowed):
+
+.. code-block:: rst
+
+   Read operation returns a stable value
+   =====================================
+
+   Test Goal
+   ---------
+   Show that the read operation returns the expected value, independent of how
+   often and through which kind of reference it is called.
+
+   Test Focus
+   ----------
+   - interface behavior of ``Foo::GetNumber``
+   - repeated reads through mutable and const references
+
+   Test Steps
+   ----------
+
+   Step 1: First read
+   ~~~~~~~~~~~~~~~~~~
+   :Precondition: A default-constructed ``Foo`` instance exists.
+   :Action: Call ``GetNumber`` once.
+   :Expected: The returned value is 42.
+
+   Step 2: Repeated read through a const reference
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   :Action: Call ``GetNumber`` again through a const reference.
+   :Expected: The returned value is still 42.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 15 60
+
+   * - Section / field
+     - Required
+     - Description
+   * - Title
+     - yes
+     - Exactly one top-level section; its subsections are the ones below
+   * - ``Test Goal``
+     - yes
+     - What the test shall show
+   * - ``Test Focus``
+     - no
+     - Aspects the test concentrates on, e.g. fault injection or boundary values
+   * - ``Test Steps``
+     - yes
+     - One subsection per step (at least one), each with a field list
+   * - ``:Precondition:``
+     - no
+     - State that must hold before the step
+   * - ``:Action:``
+     - yes
+     - What the step does
+   * - ``:Expected:``
+     - yes
+     - The expected outcome of the step
+
+Any other content (unknown sections or fields, text outside the sections) is an
+error, so that everything a reviewer reads in the file also ends up in the lock.
+
+Declare the file with a ``test_specification`` target and list it in the
+``test_specs`` of the unit whose tests reference it:
+
+.. code-block:: starlark
+
+   test_specification(
+       name = "get_number_spec",
+       src = "get_number_spec.rst",
+   )
+
+   unit(
+       name = "unit_1",
+       ...
+       tests = [":unit_1_test"],
+       test_specs = [":get_number_spec"],
+   )
+
+A test case references the specification by its Bazel label with the
+``test-spec`` property. Only labels are accepted, for example
+``//unit_1:get_number_spec`` (``//unit_1:get_number_spec.rst``, the label of the
+RST file, works as well):
+
+.. code-block:: cpp
+
+   TEST(Foo, GetNumberRepeatedly) {
+       ::testing::Test::RecordProperty("lobster-tracing",
+                                       "SampleComponent.REQ_COMP_001");
+       ::testing::Test::RecordProperty("test-spec", "//unit_1:get_number_spec");
+       ...
+   }
+
+* The RST format is checked when the ``test_specification`` target, or a unit that
+  lists it, is built. A malformed file fails the build, independent of ``maturity``.
+* A ``test-spec`` that does not resolve to a ``test_specification`` in the
+  ``test_specs`` of the component's units is reported like a missing Given/Then.
+* A specification replaces Given/When/Then completely. If the test also sets
+  ``given``/``when``/``then`` or its name follows the Given/When/Then pattern, that
+  text is ignored and a warning is printed.
+* Specifications from a repository other than the main repository are not supported
+  yet.
+
+The traceability report shows the specification with its goal, focus and a table
+of the steps.
 
 Stating Coverage for test cases
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Coverage is declared through a committed ``test_case_coverage.lock.yaml`` file that lists,
-per requirement, every test case (uid + given/when/then) that covers it.
-Committing the file is stating the coverage claim.
+per requirement, every test case (uid + given/when/then, or its formal test
+specification) that covers it. Committing the file is stating the coverage claim.
 
 Every test case in the lock needs a Given and a Then, set through properties or
-derived from the test name. The When is optional and is stored as an empty string
-when absent. A test case without a Given or a Then is reported as an error. With
+derived from the test name, or a resolvable ``test-spec``. The When is optional and
+is stored as an empty string when absent. A test case without a Given or a Then and
+without a ``test-spec`` is reported as an error. With
 ``maturity = "release"`` on the ``dependable_element`` the error fails the build, with
 ``"development"`` it is downgraded to a warning (see
 :doc:`../tool_reference/test_case_coverage`).
@@ -138,17 +260,18 @@ Two complementary workflows keep the lock file in sync:
   ``test_case_coverage.lock.yaml`` in the source tree.
 * **``bazel test //…``** — the build action recomputes coverage from the same
   test results and **compares** it against the committed lock. Any drift (new
-  test, removed test, changed GWT text, version bump) fails the build until the
-  lock is refreshed and re-committed.
+  test, removed test, changed GWT text or test specification, version bump) fails
+  the build until the lock is refreshed and re-committed.
 
 When a ``dependable_element`` report is built, this claim is rendered on its
 **Test Case Coverage** page at
 ``<dependable-element>_index/traceability_report/test_case_coverage.html``.
-Each requirement entry shows its coverage status and GWT text, with links to the
-individual traced test cases.
+Each requirement entry shows its coverage status and the GWT text or test
+specification, with links to the individual traced test cases.
 
-For example, the SEooC example's lock records two tests covering one component
-requirement:
+For example, the SEooC example's lock records three tests covering one component
+requirement. ``GetNumberRepeatedly`` references a formal test specification, so
+its entry holds a ``spec`` instead of ``given``/``when``/``then``:
 
 .. code-block:: yaml
 
@@ -162,6 +285,20 @@ requirement:
            given: a default-constructed Foo instance
            when: GetNumber is called
            then: it returns 42
+         - uid: //Foo:GetNumberRepeatedly
+           spec:
+             ref: //unit_1:get_number_spec
+             goal: Show that the read operation of the numeric value management interface returns the expected uint8_t value, independent of how often and through which kind of reference it is called.
+             focus: |-
+               - interface behavior of Foo::GetNumber
+               - repeated reads through mutable and const references
+             steps:
+               - precondition: A default-constructed Foo instance exists.
+                 action: Call GetNumber once.
+                 expected: The returned value is 42.
+               - precondition: ''
+                 action: Call GetNumber again through a const reference to the same instance.
+                 expected: The returned value is still 42.
          - uid: //Foo:GetNumberViaConstInstance
            given: a const default-constructed Foo instance
            when: GetNumber is called through a const reference

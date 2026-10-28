@@ -92,6 +92,11 @@ are rendered under :doc:`tool_reference/index`.
      - ``rst_to_trlc`` rule
      - Converts RST requirement directives (``feat_req``, ``comp_req``, …) into
        ``.trlc`` records so requirements can be authored in either RST or TRLC.
+   * - **parse_test_spec**
+     - ``src/test_case_coverage/parse_test_spec.py`` (local)
+     - ``test_specification`` rule
+     - Validates a formal RST test specification (Test Goal, Test Focus, Test
+       Steps) and writes it as normalized JSON for the test case coverage runners.
    * - **PlantUML Parser**
      - ``@score_tooling//plantuml/parser:parser`` (Rust)
      - ``architectural_design``, ``unit_design``

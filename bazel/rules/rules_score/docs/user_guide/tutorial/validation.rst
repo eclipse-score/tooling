@@ -24,6 +24,8 @@ should focus more on integration and system testing, while on ``unit`` level, th
 Instead, test intent is captured as a **Given-When-Then** description right
 next to the code as record properties in the test name/body itself. The specification will
 then be rendered in the traceability report, together with the test results and coverage information.
+For more complex scenarios, a test can reference a formal test specification in RST
+instead (see `Optional: Formal Test Specification`_).
 
 src/my_unit_test.cpp
 ----------------------
@@ -76,5 +78,63 @@ Run the tests with:
 .. code-block:: bash
 
    bazel test //:my_unit_test
+
+Optional: Formal Test Specification
+-----------------------------------
+
+When Given-When-Then is too short to describe a test, write the specification as an
+RST file with the sections ``Test Goal``, ``Test Focus`` (optional) and ``Test Steps``.
+Each step has the fields ``:Precondition:`` (optional), ``:Action:`` and ``:Expected:``:
+
+.. code-block:: rst
+
+   Read operation returns a stable value
+   =====================================
+
+   Test Goal
+   ---------
+   Show that the read operation returns the expected value, independent of how
+   often and through which kind of reference it is called.
+
+   Test Focus
+   ----------
+   - repeated reads through mutable and const references
+
+   Test Steps
+   ----------
+
+   Step 1: First read
+   ~~~~~~~~~~~~~~~~~~
+   :Precondition: A default-constructed ``Foo`` instance exists.
+   :Action: Call ``GetNumber`` once.
+   :Expected: The returned value is 42.
+
+Declare it with ``test_specification``, list it in the unit's ``test_specs`` and
+reference its label from the test instead of ``given``/``when``/``then``:
+
+.. code-block:: starlark
+
+   test_specification(
+       name = "get_number_spec",
+       src = "get_number_spec.rst",
+   )
+
+   unit(
+       name = "unit_1",
+       ...
+       tests = [":unit_1_test"],
+       test_specs = [":get_number_spec"],
+   )
+
+.. code-block:: cpp
+
+   TEST(Foo, GetNumberRepeatedly) {
+       ::testing::Test::RecordProperty("lobster-tracing",
+                                       "SampleComponent.REQ_COMP_001");
+       ::testing::Test::RecordProperty("test-spec", "//unit_1:get_number_spec");
+       ...
+   }
+
+``bazel build`` checks the RST format; see :doc:`../validation` for all rules.
 
 → Full guide: :doc:`../validation`

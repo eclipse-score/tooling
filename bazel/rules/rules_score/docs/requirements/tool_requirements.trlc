@@ -354,13 +354,41 @@ section "Tool Requirements" {
 
         ToolQualification.ToolRequirement Parse_GWT_Annotations {
             description = '''
-                The tool shall read the requirement references and the given,
-                when, and then parts of every test case from the gtest.lobster
-                file that lobster-gtest produces from the GTest XML result
-                files. A test case without a given, when, or then part shall be
-                included with an empty string for each missing part.
+                The tool shall read the requirement references, the given,
+                when, and then parts, and the test-spec reference of every test
+                case from the gtest.lobster file that lobster-gtest produces
+                from the GTest XML result files. A test case without a given,
+                when, or then part shall be included with an empty string for
+                each missing part.
             '''
             derived_from = [Detect_Specification_Drift, Detect_Coverage_Set_Changes]
+            satisfied_by = Tools.TestCaseCoverage
+        }
+
+        ToolQualification.ToolRequirement Validate_Test_Specification {
+            description = '''
+                The test_specification rule shall fail the build for an RST
+                file that does not consist of exactly one title section with
+                a non-empty Test Goal section, an optional Test Focus section,
+                and a Test Steps section with at least one step subsection.
+                Each step shall consist of one field list with an optional
+                Precondition and a non-empty Action and Expected field. Any
+                other section, field, or text, and any RST warning or error,
+                shall fail the build, independent of the maturity.
+            '''
+            derived_from = [Formal_Test_Specification]
+            satisfied_by = Tools.TestCaseCoverage
+        }
+
+        ToolQualification.ToolRequirement Resolve_Test_Specification {
+            description = '''
+                For a test case with a test-spec reference, the tool shall
+                look up the test_specification by its Bazel label among the
+                test_specs of the component's units, and shall use its test
+                goal, test focus, and test steps instead of the given, when,
+                and then parts, which shall be ignored with a warning.
+            '''
+            derived_from = [Formal_Test_Specification, Detect_Specification_Drift]
             satisfied_by = Tools.TestCaseCoverage
         }
 
@@ -395,10 +423,13 @@ section "Tool Requirements" {
 
         ToolQualification.ToolRequirement Require_Given_And_Then {
             description = '''
-                The tool shall report every linked test case whose given or
-                then field is empty or blank as an error naming the requirement
-                identifier, the test uid, and the missing fields. An empty
-                when field shall not be reported. The error shall fail the
+                The tool shall report every linked test case without a
+                test-spec reference whose given or then field is empty or
+                blank as an error naming the requirement identifier, the test
+                uid, and the missing fields. An empty when field shall not be
+                reported. A test-spec reference that does not resolve to a
+                test_specification shall be reported as an error naming the
+                requirement identifier, the test uid, and the reference. The error shall fail the
                 test action, and shall prevent the .update command from
                 writing the lock file, unless check failures are allowed.
             '''
@@ -422,8 +453,11 @@ section "Tool Requirements" {
                 identifier and an ordered list of linked test cases. Each test
                 case entry shall contain: a uid in the format
                 "//bazel_package/SuiteName:TestName" (package-scoped gtest tag)
-                and the individual given, when, and then strings as separate
-                fields.
+                and either the individual given, when, and then strings as
+                separate fields, or, for a test case with a test
+                specification, a spec field holding the label, test goal, test
+                focus, and test steps (precondition, action, expected) of the
+                test specification. An entry with both shall be rejected.
             '''
             derived_from = [Detect_Specification_Drift, Declare_Complete_Coverage]
             satisfied_by = Tools.TestCaseCoverage
@@ -444,7 +478,8 @@ section "Tool Requirements" {
                 The .update Bazel run target shall extract requirement identifiers
                 from the TrlcProviderInfo target, parse GTest XML result files for
                 lobster-tracing-linked test cases, build the spec from
-                given/when/then, and overwrite the committed lock file.
+                given/when/then or the referenced test specification, and
+                overwrite the committed lock file.
             '''
             derived_from = [Semi_Automated_Lock_Update]
             satisfied_by = Tools.TestCaseCoverage
