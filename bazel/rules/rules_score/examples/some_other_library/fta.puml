@@ -22,4 +22,8 @@ $OrGate("OG1", "OtherLibraryFmea.ComputeOverloaded")
 $RootCause("Cycle time exceeded", "CycleTimeExceeded", "OG1")
 $RootCause("Memory budget exceeded", "MemoryBudgetExceeded", "OG1")
 
+$FailureMode("Compute reads invalid input", "OtherLibraryFmea.InvalidInputRead")
+$OrGate("OG2", "OtherLibraryFmea.InvalidInputRead")
+$RootCause("Input is null, expired, or concurrently modified", "InvalidInputPointer", "OG2")
+
 @enduml

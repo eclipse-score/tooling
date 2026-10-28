@@ -90,3 +90,7 @@ requirements:
         given: the Foo class definition
         when: querying the size of Foo
         then: it stays far below the 10 MB budget
+  - id: SampleComponentExtra.REQ_COMP_EXTRA_004
+    version: '1'
+    description: The numeric value manager shall supply every Compute call with the address of a call-local const uint8_t object whose lifetime encloses the synchronous call
+    test_cases: []

@@ -19,6 +19,11 @@ from pathlib import Path
 from typing import Any
 
 
+def _lobster_tag_id(analysis_label: str) -> str:
+    """Convert a canonical Bazel label to a LOBSTER ID, retaining repository identity."""
+    return analysis_label.removeprefix("@@")
+
+
 def generate_lobster_json(
     requirements: list[str],
     analysis_passed: bool,
@@ -35,7 +40,7 @@ def generate_lobster_json(
         requirements: List of requirement identifiers (strings)
         analysis_passed: True if the assertion passed, False otherwise
         results_file_path: Path to the manual analysis results file (for location info)
-        analysis_label: Bazel label of the manual analysis target
+        analysis_label: Canonical Bazel label of the manual analysis target
 
     Returns:
         JSON string in lobster-act-trace format (version 3)
@@ -45,7 +50,7 @@ def generate_lobster_json(
     analysis_status = "ok" if analysis_passed else "fail"
     items: list[dict[str, Any]] = [
         {
-            "tag": f"manualanalysis {analysis_label}",
+            "tag": f"manualanalysis {_lobster_tag_id(analysis_label)}",
             "location": {
                 "kind": "file",
                 "file": results_file_path,

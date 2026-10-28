@@ -220,4 +220,33 @@ section "Use Cases" {
         affected_tools = [Tools.TestCaseCoverage, Tools.Bazel]
     }
 
+    ToolQualification.UseCase Perform_Manual_Analysis {
+        description = '''
+            As a reviewer I want to follow a defined manual analysis procedure
+            and retain my answers, command outcomes and final assertion so
+            that the review evidence is auditable and incomplete or negative
+            analyses are rejected by the verification test.
+        '''
+        affected_tools = [Tools.ManualAnalysis, Tools.Bazel]
+    }
+
+    ToolQualification.UseCase Detect_Stale_Manual_Analysis {
+        description = '''
+            As a safety engineer I want verification to detect changes to the
+            reviewed context, procedure, results or relevant build configuration
+            so that outdated manual analysis evidence cannot pass unnoticed.
+        '''
+        affected_tools = [Tools.ManualAnalysis, Tools.Bazel]
+    }
+
+    ToolQualification.UseCase Trace_Manual_Analysis_Evidence {
+        description = '''
+            As a project integrator I want manual analysis evidence and its
+            verification outcome to be exported with links to the reviewed
+            requirements so that traceability tooling can consume both passing
+            and failing outcomes without confusing traceability completeness
+            with verification success.
+        '''
+        affected_tools = [Tools.ManualAnalysis, Tools.Lobster, Tools.Bazel]
+    }
 }
