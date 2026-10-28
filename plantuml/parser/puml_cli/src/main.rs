@@ -11,34 +11,32 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
+mod fta;
+mod inputs;
+mod parsing;
+mod resolving;
+mod sinks;
+
 use clap::{ArgGroup, Parser, ValueEnum};
 use env_logger::Builder;
 use log::debug;
-use serde::Serialize;
-use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::collections::HashSet;
+use std::path::PathBuf;
 use std::rc::Rc;
 
-use activity_diagram::ActivityDiagram;
-use activity_serializer::ActivitySerializer;
-use class_serializer::ClassSerializer;
-use component_serializer::ComponentSerializer;
-use sequence_serializer::SequenceSerializer;
+use puml_parser::Preprocessor;
+use puml_utils::LogLevel;
 
-use puml_fta::{merge_root_causes, render_trlc_stub, FaultTree, FtaModel};
-use puml_idmap::{write_empty_idmap_to_file, write_idmap_to_file, IdMapModel};
-use puml_lobster::{write_lobster_to_file, LobsterModel};
-use puml_parser::{
-    DiagramParser, ErrorLocation, Preprocessor, ProcedureParserService, PumlActivityParser,
-    PumlClassParser, PumlComponentParser, PumlSequenceParser,
+use crate::fta::run_fta;
+use crate::inputs::{
+    collect_input_files, output_naming_path, output_source_path, require_one_per_file_or_none,
+    validate_output_stem, validate_source_name, validate_trlc_package,
 };
-use puml_resolver::{
-    ActivityResolver, ClassResolver, ComponentResolver, DiagramResolver, DiagramSource,
-    SequenceResolver,
+use crate::parsing::{parse_puml_file, DiagramType, ParsedDiagram};
+use crate::resolving::resolve_parsed_diagrams;
+use crate::sinks::{
+    create_output_dir, DiagramOutput, FbsSink, IdmapSink, OutputSink, PublicApiSink,
 };
-use puml_utils::{write_fbs_to_file, write_json_to_file, LogLevel};
 
 /// CLI wrapper for LogLevel that implements ValueEnum
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -95,13 +93,17 @@ struct Args {
     #[arg(long)]
     fbs_output_dir: Option<String>,
 
-    /// Output directory for generated lobster files (optional).
-    /// When set, a <stem>.lobster is written for each diagram that resolves
-    /// to a Component or Class model (independent of --fbs-output-dir).
-    /// On resolve errors a placeholder empty .lobster is written so the
-    /// build output set is always complete.
-    #[arg(long)]
-    lobster_output_dir: Option<String>,
+    /// Output file for the generated public API TRLC (optional).
+    /// When set, it holds the ``ApiMethod`` records of the public methods and
+    /// free functions of all input class diagrams (see ``--api-package``);
+    /// any other diagram kind among the inputs is an error.
+    #[arg(long, requires = "api_package")]
+    api_output_file: Option<String>,
+
+    /// TRLC package name of the ``--api-output-file``; a TRLC identifier.
+    /// Required together with ``--api-output-file``.
+    #[arg(long, requires = "api_output_file")]
+    api_package: Option<String>,
 
     /// Output directory for Fault-Tree-Analysis artifacts (optional).
     /// When set, every input diagram is treated as an FTA and
@@ -110,12 +112,12 @@ struct Args {
     /// FlatBuffers / component processing is performed in this mode.
     #[arg(
         long,
-        conflicts_with_all = ["fbs_output_dir", "lobster_output_dir", "source_name", "output_stem"]
+        conflicts_with_all = ["fbs_output_dir", "api_output_file", "source_name", "output_stem"]
     )]
     fta_output_dir: Option<String>,
 
-    /// TRLC package name for the generated ``fta_events.trlc`` stub file.
-    /// Required together with ``--fta-output-dir``.
+    /// TRLC package name for the generated ``fta_events.trlc`` stub file; a
+    /// TRLC identifier. Required together with ``--fta-output-dir``.
     #[arg(long)]
     fta_package: Option<String>,
 
@@ -140,24 +142,6 @@ struct Args {
     output_stem: Vec<String>,
 }
 
-#[derive(Copy, Clone, ValueEnum, Debug)]
-enum DiagramType {
-    None,
-    Activity,
-    Component,
-    Deployment,
-    Class,
-    Sequence,
-}
-
-#[derive(Debug, Serialize)]
-enum ParsedDiagram {
-    Activity(puml_parser::RawActivityDiagram),
-    Component(puml_parser::CompPumlDocument),
-    Class(puml_parser::ClassUmlFile),
-    Sequence(puml_parser::SeqPumlDocument),
-}
-
 fn main() {
     if let Err(e) = run() {
         eprintln!("{e}");
@@ -180,6 +164,7 @@ fn execute(args: &Args, log_level: LogLevel) -> Result<(), Box<dyn std::error::E
         let Some(fta_package) = &args.fta_package else {
             return Err("--fta-package is required together with --fta-output-dir".into());
         };
+        validate_trlc_package("fta-package", fta_package)?;
         return run_fta(args, dir, fta_package, log_level);
     }
 
@@ -194,18 +179,83 @@ fn execute(args: &Args, log_level: LogLevel) -> Result<(), Box<dyn std::error::E
         validate_output_stem(stem)?;
     }
 
-    let fbs_output_dir = prepare_output_dir(&args.fbs_output_dir)?;
-    let lobster_output_dir = prepare_output_dir(&args.lobster_output_dir)?;
-    let idmap_output_dir = prepare_output_dir(&args.idmap_output_dir)?;
+    let mut sinks = build_sinks(args, log_level)?;
+    let (inputs, parsed) = load_diagrams(args, log_level, &mut sinks)?;
 
-    let emit_debug_json = log_level.to_level_filter() >= log::LevelFilter::Debug;
+    debug!("Resolving {} diagram(s)", parsed.len());
+    let source_files: Vec<String> = inputs.iter().map(|d| d.source_file.clone()).collect();
+    let resolved_diagrams = resolve_parsed_diagrams(&source_files, &parsed)
+        .map_err(|e| format!("Resolve error: {e}"))?;
 
-    // Two input files with the same file stem (in different directories) would
-    // otherwise silently overwrite each other's `<stem>.idmap.json`; track the
-    // output paths already claimed this run and fail fast on a collision.
-    let mut seen_idmap_outputs: HashSet<PathBuf> = HashSet::new();
+    for (input, resolved) in inputs.iter().zip(&resolved_diagrams) {
+        debug!(
+            "Successfully resolved PlantUML document: {}",
+            input.source_file
+        );
+        let output = DiagramOutput {
+            naming_path: &input.naming_path,
+            source_file: &input.source_file,
+            diagram_name: input.diagram_name.as_deref(),
+            resolved,
+        };
+        for sink in sinks.iter_mut() {
+            sink.write(&output)?;
+        }
+    }
+    for sink in sinks.iter_mut() {
+        sink.finish()?;
+    }
 
-    let file_list = collect_files_from_args(args)?;
+    debug!("Parsing completed");
+    Ok(())
+}
+
+/// The sink of every output flag that is set.
+fn build_sinks(
+    args: &Args,
+    log_level: LogLevel,
+) -> Result<Vec<Box<dyn OutputSink>>, Box<dyn std::error::Error>> {
+    let mut sinks: Vec<Box<dyn OutputSink>> = Vec::new();
+
+    if let Some(dir) = &args.fbs_output_dir {
+        let emit_debug_json = log_level.to_level_filter() >= log::LevelFilter::Debug;
+        sinks.push(Box::new(FbsSink::new(
+            create_output_dir(dir)?,
+            emit_debug_json,
+        )));
+    }
+    if let (Some(file), Some(package)) = (&args.api_output_file, &args.api_package) {
+        validate_trlc_package("api-package", package)?;
+        sinks.push(Box::new(PublicApiSink::new(
+            PathBuf::from(file),
+            package.clone(),
+        )));
+    }
+    if let Some(dir) = &args.idmap_output_dir {
+        sinks.push(Box::new(IdmapSink::new(create_output_dir(dir)?)));
+    }
+
+    Ok(sinks)
+}
+
+/// What the outputs need to know about an input besides its resolved model.
+struct InputDiagram {
+    /// Path whose file stem names the output files.
+    naming_path: PathBuf,
+    /// Source path embedded in the outputs.
+    source_file: String,
+    /// The `@startuml <name>` of a component diagram; the resolver drops it.
+    diagram_name: Option<String>,
+}
+
+/// Collects, preprocesses and parses the input files, showing each parsed
+/// diagram to `sinks`. Both results hold one entry per input, in input order.
+fn load_diagrams(
+    args: &Args,
+    log_level: LogLevel,
+    sinks: &mut [Box<dyn OutputSink>],
+) -> Result<(Vec<InputDiagram>, Vec<ParsedDiagram>), Box<dyn std::error::Error>> {
+    let file_list = collect_input_files(&args.file, args.folders.as_deref())?;
 
     if file_list.is_empty() {
         return Err("No valid PUML files found.".into());
@@ -228,726 +278,40 @@ fn execute(args: &Args, log_level: LogLevel) -> Result<(), Box<dyn std::error::E
     }
 
     debug!("Parsing started");
-    let mut naming_paths: Vec<PathBuf> = Vec::with_capacity(file_list.len());
-    let mut source_files: Vec<String> = Vec::with_capacity(file_list.len());
-    let mut diagram_names: Vec<Option<String>> = Vec::with_capacity(file_list.len());
-    let mut parsed_diagrams: Vec<ParsedDiagram> = Vec::with_capacity(file_list.len());
-
+    let mut inputs = Vec::with_capacity(file_list.len());
+    let mut parsed_diagrams = Vec::with_capacity(file_list.len());
     for (i, (path, content)) in preprocessed.iter().enumerate() {
-        // `naming_path` names the output files; `source_file` is the path
-        // embedded in outputs. Parsers only stamp `source_path` into
-        // `SourceLocation`s, so a path built from `source_file` suffices.
+        // Parsers only stamp `source_path` into `SourceLocation`s, so a path
+        // built from `source_file` suffices.
         let output_stem = args.output_stem.get(i).map(String::as_str);
         let source_name = args.source_name.get(i).map(String::as_str);
         let naming_path = output_naming_path(output_stem, path).into_owned();
         let (source_file, source_path) = output_source_path(source_name, path);
 
-        let parsed_content = parse_puml_file(&source_path, content, log_level, args.diagram_type)
+        let parsed = parse_puml_file(&source_path, content, log_level, args.diagram_type)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
-        if emit_debug_json {
-            if let Some(ref dir) = fbs_output_dir {
-                write_json_to_file(&parsed_content, &naming_path, dir, "raw.ast")?;
-            }
+        for sink in sinks.iter_mut() {
+            sink.parsed(&naming_path, &parsed)?;
         }
 
-        // The resolver discards the `@startuml <name>`; keep it.
-        diagram_names.push(match &parsed_content {
+        let diagram_name = match &parsed {
             ParsedDiagram::Component(doc) => doc.name.clone(),
             _ => None,
+        };
+        inputs.push(InputDiagram {
+            naming_path,
+            source_file,
+            diagram_name,
         });
-        naming_paths.push(naming_path);
-        source_files.push(source_file);
-        parsed_diagrams.push(parsed_content);
+        parsed_diagrams.push(parsed);
     }
-
-    debug!("Resolving {} diagram(s)", parsed_diagrams.len());
-    let resolved_diagrams = resolve_parsed_diagrams(&source_files, &parsed_diagrams)
-        .map_err(|e| format!("Resolve error: {e}"))?;
-
-    for (i, logic_result) in resolved_diagrams.into_iter().enumerate() {
-        let path = &file_list[i];
-        let naming_path = &naming_paths[i];
-        let source_file = &source_files[i];
-
-        debug!(
-            "Successfully resolved PlantUML document: {}",
-            path.display()
-        );
-        if emit_debug_json {
-            if let Some(ref dir) = fbs_output_dir {
-                write_json_to_file(&logic_result, naming_path, dir, "logic.ast")?;
-            }
-        }
-
-        let fbs_buffer = serialize_resolved_diagram(&logic_result);
-        if let Some(ref dir) = fbs_output_dir {
-            write_fbs_to_file(&fbs_buffer, naming_path, dir)?;
-        }
-
-        if let Some(ldir) = &lobster_output_dir {
-            let lobster_model = match &logic_result {
-                ResolvedDiagram::Component(model) => LobsterModel::Component(model),
-                ResolvedDiagram::Class(model) => LobsterModel::Class(model),
-                ResolvedDiagram::Activity(_) => LobsterModel::Empty,
-                ResolvedDiagram::Sequence(_) => LobsterModel::Empty,
-            };
-            write_lobster_to_file(lobster_model, naming_path, source_file, ldir)?;
-        }
-
-        if let Some(idir) = &idmap_output_dir {
-            claim_idmap_output(naming_path, idir, &mut seen_idmap_outputs, "input")?;
-
-            match idmap_model_for(&logic_result) {
-                Some(idmap_model) => {
-                    write_idmap_to_file(
-                        idmap_model,
-                        naming_path,
-                        Some(source_file),
-                        diagram_names[i].as_deref(),
-                        idir,
-                    )?;
-                }
-                None => {
-                    write_empty_idmap_to_file(naming_path, Some(source_file), idir)?;
-                }
-            }
-        }
-    }
-
-    debug!("Parsing completed");
-    Ok(())
-}
-
-/// Resolves the diagrams of each kind in `parsed` as one group; `names` (one
-/// per diagram) attribute errors to files. Results keep the order of `parsed`.
-fn resolve_parsed_diagrams(
-    names: &[String],
-    parsed: &[ParsedDiagram],
-) -> Result<Vec<ResolvedDiagram>, Box<dyn std::error::Error>> {
-    let mut activity = Vec::new();
-    let mut component = Vec::new();
-    let mut class = Vec::new();
-    let mut sequence = Vec::new();
-    for (i, doc) in parsed.iter().enumerate() {
-        match doc {
-            ParsedDiagram::Activity(d) => activity.push((i, d)),
-            ParsedDiagram::Component(d) => component.push((i, d)),
-            ParsedDiagram::Class(d) => class.push((i, d)),
-            ParsedDiagram::Sequence(d) => sequence.push((i, d)),
-        }
-    }
-
-    let mut results: Vec<Option<ResolvedDiagram>> = (0..parsed.len()).map(|_| None).collect();
-    resolve_bucket::<ActivityResolver>(names, &activity, ResolvedDiagram::Activity, &mut results)?;
-    resolve_bucket::<ComponentResolver>(
-        names,
-        &component,
-        ResolvedDiagram::Component,
-        &mut results,
-    )?;
-    resolve_bucket::<ClassResolver>(names, &class, ResolvedDiagram::Class, &mut results)?;
-    resolve_bucket::<SequenceResolver>(names, &sequence, ResolvedDiagram::Sequence, &mut results)?;
-
-    Ok(results
-        .into_iter()
-        .map(|r| r.expect("every diagram is in exactly one bucket"))
-        .collect())
-}
-
-/// Resolves the `(index, document)` entries of one kind as a group and stores
-/// each result at its index.
-fn resolve_bucket<R>(
-    names: &[String],
-    bucket: &[(usize, &R::Document)],
-    wrap: fn(R::Output) -> ResolvedDiagram,
-    results: &mut [Option<ResolvedDiagram>],
-) -> Result<(), Box<dyn std::error::Error>>
-where
-    R: DiagramResolver + Default,
-{
-    if bucket.is_empty() {
-        return Ok(());
-    }
-    let sources: Vec<DiagramSource<'_, R::Document>> = bucket
-        .iter()
-        .map(|&(i, document)| DiagramSource {
-            name: names[i].as_str(),
-            document,
-        })
-        .collect();
-    let resolved = R::resolve_group(&sources)?;
-    for (&(i, _), output) in bucket.iter().zip(resolved) {
-        results[i] = Some(wrap(output));
-    }
-    Ok(())
-}
-
-/// Creates the output directory of an `--*-output-dir` flag, if given.
-fn prepare_output_dir(dir: &Option<String>) -> Result<Option<PathBuf>, Box<dyn std::error::Error>> {
-    match dir {
-        Some(dir) => {
-            let p = PathBuf::from(dir);
-            fs::create_dir_all(&p)?;
-            Ok(Some(p))
-        }
-        None => Ok(None),
-    }
-}
-
-/// Claims `naming_path`'s `<stem>.idmap.json` path; errors if another
-/// `input_kind` file claimed it this run.
-fn claim_idmap_output(
-    naming_path: &Path,
-    idir: &Path,
-    seen_idmap_outputs: &mut HashSet<PathBuf>,
-    input_kind: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let output_path = puml_idmap::idmap_output_path(naming_path, idir);
-    if !seen_idmap_outputs.insert(output_path.clone()) {
-        return Err(format!(
-            "duplicate idmap output {}: multiple {} files map to the \
-             same <stem>.idmap.json in {}; rename one of the inputs so \
-             their file stems differ",
-            output_path.display(),
-            input_kind,
-            idir.display(),
-        )
-        .into());
-    }
-    Ok(())
-}
-
-/// FTA processing pipeline: parse the fault-tree macro calls straight from
-/// each source diagram (the metamodel's ``!procedure`` definitions carry no
-/// fault-tree topology themselves) and emit the generated ``fta_events.trlc``
-/// stub. Diagrams are analysis-only here; they are staged/rendered as-authored
-/// by the Bazel rule, not rewritten by this pipeline.
-fn run_fta(
-    args: &Args,
-    output_dir: &str,
-    fta_package: &str,
-    log_level: LogLevel,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let out = PathBuf::from(output_dir);
-    fs::create_dir_all(&out)?;
-
-    let inputs = collect_files_from_args(args)?;
-    if inputs.is_empty() {
-        return Err("No valid PUML files found.".into());
-    }
-
-    // Process inputs in a deterministic order for reproducible output.
-    let mut sorted: Vec<Rc<PathBuf>> = inputs.into_iter().collect();
-    sorted.sort();
-
-    let mut all_trees: Vec<FaultTree> = Vec::new();
-    // Fault trees reference each diagram by basename; two inputs sharing a
-    // basename (in different directories) would be indistinguishable downstream.
-    let mut seen_basenames: HashSet<String> = HashSet::new();
-    // Mirrors the collision guard in the main resolve path: two input files
-    // whose file *stem* collides (independent of the basename check above,
-    // which only fires on an exact basename match) would otherwise silently
-    // overwrite each other's `<stem>.idmap.json`.
-    let mut seen_idmap_outputs: HashSet<PathBuf> = HashSet::new();
-    // Created once up front (rather than per-file inside the loop below) since
-    // the directory is the same for every file this run.
-    if let Some(ref idir_str) = args.idmap_output_dir {
-        fs::create_dir_all(idir_str)?;
-    }
-
-    for file in &sorted {
-        let basename = file.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
-            format!(
-                "input path has no valid UTF-8 file name: {}",
-                file.display()
-            )
-        })?;
-        // The metamodel carries only `!procedure` definitions, no fault tree.
-        if basename == "fta_metamodel.puml" {
-            continue;
-        }
-        if !seen_basenames.insert(basename.to_string()) {
-            return Err(format!(
-                "duplicate FTA diagram basename {:?}: inputs in different directories \
-                 would be indistinguishable in {}",
-                basename, output_dir,
-            )
-            .into());
-        }
-
-        // Analysis only: the fault-tree topology comes entirely from the
-        // `$FailureMode(...)` / `$RootCause(...)` / gate macro *calls*, which the
-        // procedure parser reads straight from the source (the `!include
-        // fta_metamodel.puml` line is inert text).  The diagram is rendered
-        // as-authored by Sphinx/PlantUML, which finds the metamodel via the
-        // toolchain's global `plantuml.include.path`.
-        let source = fs::read_to_string(file.as_path())?;
-        let parsed = ProcedureParserService.parse_file(file, &source, log_level)?;
-        let model =
-            FtaModel::from_procedure_file(&parsed).map_err(|e| format!("FTA {basename}: {e}"))?;
-        all_trees.extend(model.fault_trees(basename)?);
-
-        if let Some(ref idir_str) = args.idmap_output_dir {
-            let idir = PathBuf::from(idir_str);
-            claim_idmap_output(file, &idir, &mut seen_idmap_outputs, "FTA input")?;
-            let source_file = source_path_for_output(file);
-            write_idmap_to_file(
-                IdMapModel::Fta(&model),
-                file,
-                Some(&source_file),
-                None,
-                &idir,
-            )?;
-        }
-
-        debug!("Processed FTA diagram: {}", file.display());
-    }
-
-    let root_causes = merge_root_causes(&all_trees)?;
-    fs::write(
-        out.join("fta_events.trlc"),
-        render_trlc_stub(fta_package, &root_causes),
-    )?;
-    Ok(())
-}
-
-fn serialize_resolved_diagram(resolved_content: &ResolvedDiagram) -> Vec<u8> {
-    match resolved_content {
-        ResolvedDiagram::Activity(resolved_content) => {
-            ActivitySerializer::serialize(resolved_content)
-        }
-        ResolvedDiagram::Component(resolved_content) => {
-            ComponentSerializer::serialize(resolved_content)
-        }
-        ResolvedDiagram::Class(resolved_content) => ClassSerializer::serialize(resolved_content),
-        ResolvedDiagram::Sequence(resolved_content) => {
-            SequenceSerializer::serialize(resolved_content)
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub enum ResolvedDiagram {
-    Activity(ActivityDiagram),
-    Component(HashMap<String, component_diagram::LogicComponent>),
-    Class(class_diagram::ClassDiagram),
-    Sequence(sequence_logic::SequenceTree),
-}
-
-/// Map a resolved diagram to the `IdMapModel` variant used to build its
-/// `.idmap.json`, or `None` for diagram kinds with no linkable elements
-/// (currently only `Activity`), which the caller must route to
-/// [`write_empty_idmap_to_file`] instead.
-fn idmap_model_for(resolved: &ResolvedDiagram) -> Option<IdMapModel<'_>> {
-    match resolved {
-        ResolvedDiagram::Component(model) => Some(IdMapModel::Component(model)),
-        ResolvedDiagram::Class(model) => Some(IdMapModel::Class(model)),
-        ResolvedDiagram::Sequence(model) => Some(IdMapModel::Sequence(model)),
-        ResolvedDiagram::Activity(_) => None,
-    }
-}
-
-/// Resolves one diagram alone.
-#[cfg(test)]
-fn resolve_single(parsed: ParsedDiagram) -> Result<ResolvedDiagram, Box<dyn std::error::Error>> {
-    resolve_parsed_diagrams(&[String::new()], &[parsed]).map(|mut resolved| resolved.remove(0))
-}
-
-fn parse_with_parser<P>(
-    parser: &mut P,
-    path: &Rc<PathBuf>,
-    content: &str,
-    log_level: LogLevel,
-) -> Result<P::Output, Box<dyn std::error::Error>>
-where
-    P: DiagramParser,
-    P::Output: std::fmt::Debug,
-    P::Error: std::error::Error + 'static,
-{
-    let parsed_content = parser
-        .parse_file(path, content, log_level)
-        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-
-    debug!("Successfully parsed PlantUML document: {}", path.display());
-    Ok(parsed_content)
-}
-
-// lobster-trace: Tools.ArchitectureModelingSyntax
-fn parse_puml_file(
-    path: &Rc<PathBuf>,
-    content: &str,
-    log_level: LogLevel,
-    diagram_type: DiagramType,
-) -> Result<ParsedDiagram, Box<dyn std::error::Error>> {
-    match diagram_type {
-        DiagramType::Activity => {
-            parse_with_parser(&mut PumlActivityParser, path, content, log_level)
-                .map(ParsedDiagram::Activity)
-        }
-        DiagramType::Component | DiagramType::Deployment => {
-            match PumlComponentParser.parse_file(path, content, log_level) {
-                Ok(doc) => {
-                    debug!("Successfully parsed PlantUML document: {}", path.display());
-                    Ok(ParsedDiagram::Component(doc))
-                }
-                Err(component_err) => {
-                    Err(diagnose_wrong_kind(path, content, log_level, component_err))
-                }
-            }
-        }
-        DiagramType::Class => parse_with_parser(&mut PumlClassParser, path, content, log_level)
-            .map(ParsedDiagram::Class),
-        DiagramType::Sequence => {
-            parse_with_parser(&mut PumlSequenceParser, path, content, log_level)
-                .map(ParsedDiagram::Sequence)
-        }
-        DiagramType::None => parse_in_order(path, content, log_level),
-    }
-}
-
-type ParseAttempt<'a> = (&'a str, Box<dyn std::error::Error>, Option<(usize, usize)>);
-
-/// Names the kind of a file that is not a Component diagram, when another
-/// parser accepts it; otherwise returns the component parse error.
-fn diagnose_wrong_kind(
-    path: &Rc<PathBuf>,
-    content: &str,
-    log_level: LogLevel,
-    component_err: <PumlComponentParser as DiagramParser>::Error,
-) -> Box<dyn std::error::Error>
-where
-    <PumlComponentParser as DiagramParser>::Error: std::error::Error + 'static,
-{
-    let kind = if PumlClassParser.parse_file(path, content, log_level).is_ok() {
-        "Class"
-    } else if PumlActivityParser
-        .parse_file(path, content, log_level)
-        .is_ok()
-    {
-        "Activity"
-    } else if PumlSequenceParser
-        .parse_file(path, content, log_level)
-        .is_ok()
-    {
-        "Sequence"
-    } else {
-        return Box::new(component_err);
-    };
-    format!(
-        "{}: expected a Component diagram, found a {kind} diagram",
-        path.display()
-    )
-    .into()
-}
-
-fn parse_in_order(
-    path: &Rc<PathBuf>,
-    content: &str,
-    log_level: LogLevel,
-) -> Result<ParsedDiagram, Box<dyn std::error::Error>> {
-    // Each attempt records the parser name, the boxed error, and the source
-    // location extracted from the concrete type before boxing.
-    let mut attempts: Vec<ParseAttempt<'_>> = Vec::new();
-
-    match PumlComponentParser.parse_file(path, content, log_level) {
-        Ok(doc) => {
-            debug!("Successfully detected as Component diagram");
-            return Ok(ParsedDiagram::Component(doc));
-        }
-        Err(e) => {
-            let loc = e.error_location();
-            debug!("Component parser failed at {:?}: {}", loc, e);
-            attempts.push(("Component", Box::new(e), loc));
-        }
-    }
-
-    match PumlActivityParser.parse_file(path, content, log_level) {
-        Ok(doc) => {
-            debug!("Successfully detected as Activity diagram");
-            return Ok(ParsedDiagram::Activity(doc));
-        }
-        Err(e) => {
-            let loc = e.error_location();
-            debug!("Activity parser failed at {:?}: {}", loc, e);
-            attempts.push(("Activity", Box::new(e), loc));
-        }
-    }
-
-    match PumlClassParser.parse_file(path, content, log_level) {
-        Ok(doc) => {
-            debug!("Successfully detected as Class diagram");
-            return Ok(ParsedDiagram::Class(doc));
-        }
-        Err(e) => {
-            let loc = e.error_location();
-            debug!("Class parser failed at {:?}: {}", loc, e);
-            attempts.push(("Class", Box::new(e), loc));
-        }
-    }
-
-    match PumlSequenceParser.parse_file(path, content, log_level) {
-        Ok(doc) => {
-            debug!("Successfully detected as Sequence diagram");
-            return Ok(ParsedDiagram::Sequence(doc));
-        }
-        Err(e) => {
-            let loc = e.error_location();
-            debug!("Sequence parser failed at {:?}: {}", loc, e);
-            attempts.push(("Sequence", Box::new(e), loc));
-        }
-    }
-
-    // The parser that reached the furthest line is the most informative one.
-    let best = attempts
-        .iter()
-        .max_by_key(|(_, _, loc)| loc.map_or(0, |(line, _)| line));
-
-    let tried_names: Vec<&str> = attempts.iter().map(|(n, _, _)| *n).collect();
-
-    let detail = match best {
-        Some((best_name, best_err, Some((line_no, _col)))) => {
-            let source_line = content
-                .lines()
-                .nth(line_no - 1)
-                .unwrap_or("<unknown>")
-                .trim();
-            format!(
-                "\n  Parsers tried: {}\n  Parser with longest match: {}\n  Failed at line {}: {}\n  Error: {}",
-                tried_names.join(", "),
-                best_name,
-                line_no,
-                source_line,
-                best_err,
-            )
-        }
-        Some((best_name, best_err, None)) => {
-            format!(
-                "\n  Parsers tried: {}\n  Parser with longest match: {}\n  Error: {}",
-                tried_names.join(", "),
-                best_name,
-                best_err,
-            )
-        }
-        None => String::new(),
-    };
-
-    Err(format!(
-        "Failed to parse {} with any available parser{}",
-        path.display(),
-        detail,
-    )
-    .into())
-}
-
-/// Collects the input files, deduplicated: every `--file` in the given order,
-/// then the `--folders` files sorted. All of them are resolved as one group
-/// per diagram kind.
-fn collect_files_from_args(args: &Args) -> Result<Vec<Rc<PathBuf>>, Box<dyn std::error::Error>> {
-    let mut ordered: Vec<Rc<PathBuf>> = Vec::new();
-    let mut seen: HashSet<Rc<PathBuf>> = HashSet::new();
-
-    for file_path in &args.file {
-        let abs_path = Rc::new(resolve_puml_file(Path::new(file_path))?);
-        if !seen.insert(Rc::clone(&abs_path)) {
-            return Err(format!("Duplicate --file entry: {file_path}").into());
-        }
-        ordered.push(abs_path);
-    }
-
-    if let Some(folder_path) = &args.folders {
-        let mut folder_files: HashSet<Rc<PathBuf>> = HashSet::new();
-        collect_puml_files_from_folder(Path::new(folder_path), &mut folder_files)?;
-        let mut folder_files: Vec<Rc<PathBuf>> = folder_files.into_iter().collect();
-        folder_files.sort();
-        for path in folder_files {
-            if seen.insert(Rc::clone(&path)) {
-                ordered.push(path);
-            }
-        }
-    }
-
-    Ok(ordered)
-}
-
-fn resolve_path(path: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    if path.is_absolute() {
-        return Ok(path.to_path_buf());
-    }
-
-    // When running with 'bazel run', use BUILD_WORKSPACE_DIRECTORY
-    let base_dir = match std::env::var("BUILD_WORKSPACE_DIRECTORY") {
-        Ok(dir) => PathBuf::from(dir),
-        Err(_) => std::env::current_dir()?,
-    };
-
-    Ok(base_dir.join(path))
-}
-
-/// Rejects a per-file flag given neither zero times nor once per input file.
-fn require_one_per_file_or_none(
-    values: &[String],
-    file_count: usize,
-    flag_name: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if !values.is_empty() && values.len() != file_count {
-        return Err(format!(
-            "--{flag_name} must be given exactly once per input file (in the same \
-             order as --file) or not at all; got {file_count} input file(s), \
-             {} --{flag_name}",
-            values.len(),
-        )
-        .into());
-    }
-    Ok(())
-}
-
-/// Validate a user-supplied `--source-name` value.
-///
-/// Rejects empty strings and absolute paths: an absolute path would leak the
-/// local machine's directory layout into build outputs (breaking build
-/// reproducibility) and would defeat the whole purpose of the flag, which is
-/// to supply a *stable, workspace-relative* key for cross-diagram matching.
-fn validate_source_name(name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    if name.is_empty() {
-        return Err("--source-name must not be empty".into());
-    }
-    if Path::new(name).is_absolute() {
-        return Err(format!(
-            "--source-name must be a workspace-relative path, got an absolute path: {name}"
-        )
-        .into());
-    }
-    Ok(())
-}
-
-fn source_path_for_output(path: &Path) -> String {
-    let workspace_root = std::env::var("BUILD_WORKSPACE_DIRECTORY")
-        .ok()
-        .map(PathBuf::from)
-        .or_else(|| std::env::current_dir().ok());
-
-    // Prefer a stable, workspace-relative path so the embedded `source` is
-    // reproducible across machines and portable outside Bazel.
-    if let Some(root) = workspace_root {
-        if let Ok(rel) = path.strip_prefix(&root) {
-            return rel.to_string_lossy().into_owned();
-        }
-    }
-
-    // Already relative: keep it verbatim (still portable).
-    if path.is_relative() {
-        return path.to_string_lossy().into_owned();
-    }
-
-    // Absolute path outside the workspace: never embed the machine-specific
-    // absolute path — it leaks local directory layout and breaks build
-    // reproducibility. Fall back to the file name only.
-    path.file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.to_string_lossy().into_owned())
-}
-
-/// Validate a user-supplied `--output-stem` value.
-///
-/// Unlike `--source-name` (a full relative path embedded *inside* outputs),
-/// this becomes the output *filename* stem itself, so it must be a single
-/// path component: rejects empty strings and anything containing a `/` or
-/// resolving to `.`/`..`.
-fn validate_output_stem(stem: &str) -> Result<(), Box<dyn std::error::Error>> {
-    if stem.is_empty() {
-        return Err("--output-stem must not be empty".into());
-    }
-    let mut components = Path::new(stem).components();
-    let is_single_normal_component =
-        matches!(components.next(), Some(std::path::Component::Normal(_)))
-            && components.next().is_none();
-    if !is_single_normal_component {
-        return Err(format!(
-            "--output-stem must be a single path component (no '/', '.', or '..'), got: {stem}"
-        )
-        .into());
-    }
-    Ok(())
-}
-
-/// Compute the corrected, stable `source_file` string (embedded *inside*
-/// outputs) and the `Rc<PathBuf>` that parsers use to stamp `SourceLocation`s,
-/// for one input `path`.
-///
-/// With `--source-name`, both derive from that name so every `SourceLocation`
-/// carries the corrected path too. Without it, `source_file` is
-/// `source_path_for_output(path)` and `SourceLocation`s keep using `path`
-/// itself.
-fn output_source_path(source_name: Option<&str>, path: &Rc<PathBuf>) -> (String, Rc<PathBuf>) {
-    match source_name {
-        Some(name) => {
-            let source_file = name.to_string();
-            let source_path = Rc::new(PathBuf::from(&source_file));
-            (source_file, source_path)
-        }
-        None => (source_path_for_output(path), Rc::clone(path)),
-    }
-}
-
-/// Compute the path whose file stem drives every output *filename* for one
-/// input `path` (the `write_*_to_file` helpers all derive their output name
-/// from a passed-in path's file stem alone).
-///
-/// `output_stem` (`--output-stem`) overrides the stem outright; otherwise
-/// `path` itself is used unchanged.
-fn output_naming_path<'a>(output_stem: Option<&str>, path: &'a Path) -> Cow<'a, Path> {
-    match output_stem {
-        Some(stem) => Cow::Owned(path.with_file_name(stem)),
-        None => Cow::Borrowed(path),
-    }
-}
-
-/// Resolve a `--file`/folder-entry path to an absolute path, checking it is
-/// an existing `.puml` file.
-fn resolve_puml_file(path: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let abs_path = resolve_path(path)?;
-
-    if !abs_path.is_file() {
-        return Err(format!("Path is not a file: {}", path.display()).into());
-    }
-    if abs_path.extension().and_then(|ext| ext.to_str()) != Some("puml") {
-        return Err(format!("File is not a .puml file: {}", path.display()).into());
-    }
-    Ok(abs_path)
-}
-
-fn collect_puml_files_from_folder(
-    dir: &Path,
-    file_list: &mut HashSet<Rc<PathBuf>>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let abs_dir = resolve_path(dir)?;
-
-    if !abs_dir.is_dir() {
-        return Err(format!("Path is not a directory: {}", dir.display()).into());
-    }
-    collect_puml_files(&abs_dir, file_list)?;
-    Ok(())
-}
-
-fn collect_puml_files(
-    dir: &Path,
-    file_list: &mut HashSet<Rc<PathBuf>>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            collect_puml_files(&path, file_list)?;
-        } else if path.extension().and_then(|ext| ext.to_str()) == Some("puml") {
-            file_list.insert(Rc::new(path.to_path_buf()));
-        }
-    }
-    Ok(())
+    Ok((inputs, parsed_diagrams))
 }
 
 #[cfg(test)]
 mod sequence_pipeline_tests {
     use super::*;
+    use crate::resolving::resolve_single;
 
     /// Parsing a sequence diagram must succeed end-to-end (parse → resolve).
     /// Before the fix this returned Err("Sequence diagrams not implemented").
@@ -977,6 +341,7 @@ B --> A : reply
 #[cfg(test)]
 mod group_pipeline_tests {
     use super::*;
+    use crate::resolving::ResolvedDiagram;
 
     fn parse(name: &str, content: &str, diagram_type: DiagramType) -> ParsedDiagram {
         let path = Rc::new(PathBuf::from(name));
@@ -1077,6 +442,8 @@ mod group_pipeline_tests {
 mod cli_input_tests {
     use super::*;
     use clap::Parser;
+    use std::fs;
+    use std::path::Path;
 
     fn unique_dir(tag: &str) -> PathBuf {
         let nanos = std::time::SystemTime::now()
@@ -1118,7 +485,7 @@ mod cli_input_tests {
             dir.to_str().unwrap(),
             "--diagram-type",
             "component",
-            "--lobster-output-dir",
+            "--fbs-output-dir",
             out.to_str().unwrap(),
         ]);
 
@@ -1217,9 +584,11 @@ mod cli_input_tests {
                 .unwrap_or_else(|| panic!("{kind} diagram must not parse as Component"))
                 .to_string();
 
-            assert_eq!(
-                error,
-                format!("d.puml: expected a Component diagram, found a {kind} diagram")
+            assert!(
+                error.starts_with(&format!(
+                    "d.puml: expected a Component diagram, found a {kind} diagram\n  Component parser error: "
+                )),
+                "{error}"
             );
         }
     }
@@ -1230,6 +599,8 @@ mod fta_pipeline_tests {
     use super::*;
     use clap::Parser;
     use puml_utils::LogLevel;
+    use std::fs;
+    use std::path::Path;
 
     // Minimal metamodel: just enough procedure definitions for the include
     // expander to inline.  Topology is read from the original macro calls, so
@@ -1522,6 +893,12 @@ mod fta_pipeline_tests {
 #[cfg(test)]
 mod idmap_wiring_tests {
     use super::*;
+    use crate::inputs::source_path_for_output;
+    use crate::resolving::{resolve_single, ResolvedDiagram};
+    use crate::sinks::{idmap_model_for, serialize_resolved_diagram};
+    use puml_idmap::{write_empty_idmap_to_file, write_idmap_to_file};
+    use std::fs;
+    use std::path::Path;
 
     fn unique_dir(tag: &str) -> PathBuf {
         let nanos = std::time::SystemTime::now()
@@ -1909,5 +1286,184 @@ mod idmap_wiring_tests {
         assert_eq!(component_ref_id, "package_a.InternalInterface");
 
         cleanup_dir(&dir);
+    }
+}
+
+#[cfg(test)]
+mod public_api_tests {
+    use super::*;
+    use clap::Parser;
+    use std::fs;
+    use std::path::Path;
+
+    const CLASS_DIAGRAM: &str = "@startuml\n\
+        namespace score.mw {\n\
+        interface Skeleton {\n\
+        + OfferService() : Result\n\
+        + OfferService(int) : Result\n\
+        - Hidden()\n\
+        }\n\
+        }\n\
+        @enduml\n";
+
+    fn unique_dir(tag: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!(
+            "puml_cli_api_{}_{}_{}",
+            tag,
+            std::process::id(),
+            nanos
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn run(file: &Path, out: &Path, diagram_type: &str) -> Result<(), String> {
+        run_with_package(file, out, diagram_type, "Pkg_api")
+    }
+
+    fn run_with_package(
+        file: &Path,
+        out: &Path,
+        diagram_type: &str,
+        package: &str,
+    ) -> Result<(), String> {
+        let args = Args::parse_from([
+            "puml_cli",
+            "--file",
+            file.to_str().unwrap(),
+            "--source-name",
+            "pkg/api.puml",
+            "--diagram-type",
+            diagram_type,
+            "--api-output-file",
+            out.join("public_api.trlc").to_str().unwrap(),
+            "--api-package",
+            package,
+        ]);
+        execute(&args, LogLevel::Warn).map_err(|e| e.to_string())
+    }
+
+    #[test]
+    fn class_diagram_emits_api_method_records() {
+        let dir = unique_dir("emit");
+        let file = dir.join("api.puml");
+        fs::write(&file, CLASS_DIAGRAM).unwrap();
+        let out = dir.join("out");
+
+        run(&file, &out, "class").unwrap();
+
+        let trlc = fs::read_to_string(out.join("public_api.trlc")).unwrap();
+        fs::remove_dir_all(&dir).ok();
+        assert!(trlc.contains("package Pkg_api\n"), "got: {trlc}");
+        assert!(trlc.contains("import ScoreReq\n"), "got: {trlc}");
+        assert!(
+            trlc.contains("ScoreReq.ApiMethod score_mw_Skeleton_OfferService {"),
+            "got: {trlc}"
+        );
+        assert!(trlc.contains("diagram = \"pkg/api.puml\""), "got: {trlc}");
+        assert!(
+            trlc.contains(
+                "signatures = [\"`Result score::mw::Skeleton::OfferService()`\", \
+                 \"`Result score::mw::Skeleton::OfferService(int)`\"]"
+            ),
+            "got: {trlc}"
+        );
+        assert!(!trlc.contains("Hidden"), "got: {trlc}");
+    }
+
+    #[test]
+    fn non_class_diagrams_are_rejected() {
+        let dir = unique_dir("non_class");
+        let file = dir.join("c.puml");
+        fs::write(&file, "@startuml\ncomponent A <<component>>\n@enduml").unwrap();
+
+        let result = run(&file, &dir.join("out"), "none");
+
+        fs::remove_dir_all(&dir).ok();
+        assert_eq!(
+            result.unwrap_err(),
+            "pkg/api.puml: the public API is collected from class diagrams, found a Component diagram"
+        );
+    }
+
+    #[test]
+    fn explicit_class_type_rejects_other_diagram_kinds() {
+        let dir = unique_dir("explicit_type");
+        let file = dir.join("c.puml");
+        fs::write(&file, "@startuml\ncomponent A <<component>>\n@enduml").unwrap();
+
+        let result = run(&file, &dir.join("out"), "class");
+
+        fs::remove_dir_all(&dir).ok();
+        let error = result.unwrap_err();
+        assert!(
+            error.starts_with(
+                "pkg/api.puml: expected a Class diagram, found a Component diagram\n  Class parser error: "
+            ),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn package_must_be_a_trlc_identifier() {
+        let dir = unique_dir("package");
+        let file = dir.join("api.puml");
+        fs::write(&file, CLASS_DIAGRAM).unwrap();
+
+        let result = run_with_package(&file, &dir.join("out"), "class", "_pkg");
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(result
+            .unwrap_err()
+            .starts_with("--api-package must be a TRLC identifier"));
+    }
+
+    #[test]
+    fn colliding_record_names_fail_the_run() {
+        let dir = unique_dir("collision");
+        let file = dir.join("api.puml");
+        fs::write(
+            &file,
+            "@startuml\nclass A {\n+ GetX()\n+ get_x()\n}\n@enduml\n",
+        )
+        .unwrap();
+
+        let result = run(&file, &dir.join("out"), "class");
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.unwrap_err().contains("A_get_x"));
+    }
+
+    #[test]
+    fn api_flags_require_each_other() {
+        assert!(
+            Args::try_parse_from(["puml_cli", "--file", "a.puml", "--api-output-file", "out"])
+                .is_err()
+        );
+        assert!(
+            Args::try_parse_from(["puml_cli", "--file", "a.puml", "--api-package", "P"]).is_err()
+        );
+    }
+
+    #[test]
+    fn api_output_conflicts_with_fta_mode() {
+        assert!(Args::try_parse_from([
+            "puml_cli",
+            "--file",
+            "a.puml",
+            "--fta-output-dir",
+            "out",
+            "--fta-package",
+            "F",
+            "--api-output-file",
+            "out",
+            "--api-package",
+            "P",
+        ])
+        .is_err());
     }
 }

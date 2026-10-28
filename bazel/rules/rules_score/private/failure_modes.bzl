@@ -37,7 +37,9 @@ def failure_modes(
         name: The name of the target.
         srcs: List of ``.trlc`` files containing ``ScoreReq.FailureMode`` records.
         deps: Optional targets (providing TrlcProviderInfo) needed to parse the
-            records.
+            records. List the ``architectural_design`` target whose
+            ``public_api.trlc`` the ``interface`` field references, and any
+            other target whose records are referenced.
         lobster_config: Lobster YAML configuration for FailureMode traceability
             extraction. Defaults to the standard S-CORE failure mode config.
         **kwargs: Additional arguments (e.g. ``visibility``, ``tags``).

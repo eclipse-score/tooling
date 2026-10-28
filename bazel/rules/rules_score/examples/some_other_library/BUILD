@@ -26,6 +26,7 @@ load(
 
 architectural_design(
     name = "sample_seooc_design",
+    package = "other_library_api",
     public_api = [
         "public_api.puml",
     ],
@@ -43,6 +44,7 @@ assumptions_of_use(
 failure_modes(
     name = "other_library_failure_modes",
     srcs = ["failure_modes.trlc"],
+    deps = [":sample_seooc_design"],
 )
 
 fault_trees(
@@ -54,7 +56,6 @@ fault_trees(
 
 safety_analysis(
     name = "other_library_safety_analysis",
-    arch_design = ":sample_seooc_design",
     assessments = ["assessments.trlc"],
     failure_modes = [":other_library_failure_modes"],
     fault_trees = ":other_library_fault_trees",

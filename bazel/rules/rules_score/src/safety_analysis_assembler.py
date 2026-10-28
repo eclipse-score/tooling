@@ -50,12 +50,13 @@ _LEVEL_MAP = {
     "debug": logging.DEBUG,
 }
 
-# Overview summary table columns (one row per failure mode).
-_FM_TABLE_COLUMNS = {
-    "guideword": "Guideword",
-    "safety": "ASIL",
-    "interface": "Interface",
-}
+# Overview summary table (one row per failure mode): header and field of each
+# column after the failure-mode name.
+_OVERVIEW_COLUMNS = (
+    ("Guidewords", "guidewords"),
+    ("ASIL", "safety"),
+    ("Interface", "interface"),
+)
 
 _OVERVIEW_TITLE = "Overview"
 _FAILURE_MODES_TITLE = "Failure Modes"
@@ -213,24 +214,30 @@ def _assessments_by_root_cause(obj_map: dict) -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 
 
+def _code_list(values: list[str]) -> str:
+    """*values* (record names, enum literals) as comma-separated literals."""
+    return ", ".join(f"``{value}``" for value in values)
+
+
 def _attr_grid(obj: object) -> _Directive | None:
-    """FM attributes: guideword/ASIL as centred chips (no card chrome),
-    interface/failure-effect as titled cards; a gutter separates the rows."""
+    """FM attributes: guidewords/ASIL as centred chips (no card chrome),
+    interface/failure-effect as titled cards; a gutter separates the rows.
+    """
     fields = obj.to_python_dict()
     items = []
-    guideword = fields.get("guideword")
-    if guideword:
-        items.append(_grid_item(_badge(_GUIDEWORD_BADGE, guideword), {"class": "sd-text-center"}))
+    guidewords = fields.get("guidewords")
+    if guidewords:
+        chips = " ".join(_badge(_GUIDEWORD_BADGE, guideword) for guideword in guidewords)
+        items.append(_grid_item(chips, {"class": "sd-text-center"}))
     safety = fields.get("safety")
     if safety:
         items.append(_grid_item(_asil_badge(safety), {"class": "sd-text-center"}))
-    for field_name, label in (
-        ("interface", "Interface"),
-        ("failureeffect", "Failure Effect"),
-    ):
-        value = fields.get(field_name)
-        if value:
-            items.append(_card(label, value))
+    interface = fields.get("interface")
+    if interface:
+        items.append(_card("Interface", _code_list(interface)))
+    failure_effect = fields.get("failureeffect")
+    if failure_effect:
+        items.append(_card("Failure Effect", failure_effect))
     return _grid(items, columns=2, gutter=3) if items else None
 
 
@@ -345,11 +352,20 @@ def _fm_dropdown(
 # ---------------------------------------------------------------------------
 
 
-def _render_overview(renderer: TRLCRST, fm_fqns: list[str]) -> str:
+def _render_overview(obj_map: dict, fm_fqns: list[str]) -> str:
     if not fm_fqns:
         return ""
-    table = renderer.render_table_to_string(_FM_TABLE_COLUMNS, fqns=fm_fqns, name_header="Failure Mode", link_fn=_ref)
-    return _heading(_OVERVIEW_TITLE, "-") + "\n" + table
+    lines = [".. list-table::", "   :header-rows: 1", "", "   * - Failure Mode"]
+    lines.extend(f"     - {header}" for header, _ in _OVERVIEW_COLUMNS)
+    for fqn in fm_fqns:
+        obj = obj_map[fqn]
+        fields = obj.to_python_dict()
+        lines.append(f"   * - {_ref(fqn, obj.name)}")
+        for _, field_name in _OVERVIEW_COLUMNS:
+            value = fields.get(field_name) or ""
+            lines.append(f"     - {_code_list(value) if isinstance(value, list) else value}")
+    lines.append("")
+    return _heading(_OVERVIEW_TITLE, "-") + "\n" + "\n".join(lines) + "\n"
 
 
 def _render_failure_modes(
@@ -473,7 +489,7 @@ def _build_body(renderer: TRLCRST, title: str, fta_package: str, diagram_names: 
 
     sections = [
         _heading(title, "="),
-        _render_overview(renderer, fm_fqns),
+        _render_overview(obj_map, fm_fqns),
         _render_failure_modes(renderer, obj_map, fm_fqns, diagrams, assessments),
         _render_fault_trees(diagrams),
         _render_measures(renderer, obj_map, measure_fqns, set(measure_fqns) - listed),

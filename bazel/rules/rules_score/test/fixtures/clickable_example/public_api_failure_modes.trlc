@@ -13,6 +13,7 @@
 package PublicApiExampleSafetyAnalysis
 
 import ScoreReq
+import package_pub_api
 
 ScoreReq.FailureMode PublicInterfaceFailure {
     guidewords = [ScoreReq.Guideword.LossOfFunction]
@@ -20,5 +21,5 @@ ScoreReq.FailureMode PublicInterfaceFailure {
     failureeffect = "Callers never receive a response"
     version = 1
     safety = ScoreReq.Asil.B
-    interface = "package_pub.PublicInterface"
+    interface = [package_pub_api.package_pub_PublicInterface_Send]
 }

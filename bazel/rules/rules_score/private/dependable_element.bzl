@@ -1752,7 +1752,7 @@ def _dependable_element_index_impl(ctx):
                     emit_empty = strict,
                 ),
                 "{PUBLIC_API_BLOCK}": format_lobster_block(
-                    "implementation",
+                    "requirements",
                     "Public API",
                     interface_req_list,
                     emit_empty = strict,

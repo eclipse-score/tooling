@@ -32,6 +32,7 @@ filegroup(
 failure_modes(
     name = "sample_failure_modes",
     srcs = ["sample_safety_analysis_failure_modes.trlc"],
+    deps = ["//design:sample_seooc_design"],
 )
 
 # Root causes of the failure modes. The assessments reference them as
@@ -48,7 +49,6 @@ fault_trees(
 # `safety_measures` are the measures the assessments may list.
 safety_analysis(
     name = "sample_safety_analysis",
-    arch_design = "//design:sample_seooc_design",
     assessments = ["sample_safety_analysis_assessments.trlc"],
     failure_modes = [":sample_failure_modes"],
     fault_trees = ":sample_fault_trees",

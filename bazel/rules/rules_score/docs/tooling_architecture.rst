@@ -101,7 +101,9 @@ are rendered under :doc:`tool_reference/index`.
      - ``@score_tooling//plantuml/parser:parser`` (Rust)
      - ``architectural_design``, ``unit_design``
      - Parses ``.puml`` diagrams into a FlatBuffers AST (``.fbs.bin``, one
-       ``root_type`` per diagram kind), extracts interface ``.lobster`` items,
+       ``root_type`` per diagram kind), emits ``public_api.trlc`` (one
+       ``ApiMethod`` TRLC record per public method of the ``public_api`` class
+       diagrams; see ``--api-output-file``),
        and emits ``.idmap.json`` sidecars recording the *defines/references*
        roles of each element.  The ``clickable_plantuml`` Sphinx extension reads
        these sidecars to resolve cross-diagram links without a separate linker
@@ -206,10 +208,11 @@ feed that pipeline:
 
 * **Requirements** (``.trlc``) → ``lobster-trlc`` → ``requirements.lobster``.
 * **Public API diagrams** (``public_api.puml``) → PlantUML parser →
-  ``public_api.lobster`` (enables failure-mode-to-interface tracing).
+  ``public_api.trlc`` (``ApiMethod`` records) → ``lobster-trlc`` →
+  ``<architectural_design>.lobster`` (enables failure-mode-to-interface tracing).
 * **FMEA** (``failure_modes`` / ``assessments.trlc``) → ``lobster-trlc``;
   **FTA** (``fta.puml``) → ``puml_cli`` (FTA mode) → ``fta_events.trlc`` →
-  ``lobster-trlc`` → ``fta_root_causes.lobster``.
+  ``lobster-trlc`` → ``<fault_trees>.lobster``.
 * **Unit tests** (gtest) → ``gtest_report`` → ``<unit>.lobster``.
 
 Lobster report assembly (``dependable_element``)
@@ -365,7 +368,7 @@ The ``fault_trees`` rule drives two actions:
    fta_metamodel.puml``; the metamodel is on PlantUML's global include path
    (shipped in the docs toolchain runfiles), so it resolves at render time.
 #. **lobster-trlc** turns the generated ``RootCause`` records into
-   ``fta_root_causes.lobster``. The ``failure_modes`` files travel as inputs, so the
+   ``<fault_trees>.lobster`` (``AnalysisInfo.lobster_files["fta_root_causes.lobster"]``). The ``failure_modes`` files travel as inputs, so the
    ``import``s of ``fta_events.trlc`` resolve.
 
 The ``safety_analysis`` rule drives two actions:
@@ -376,7 +379,7 @@ The ``safety_analysis`` rule drives two actions:
    pass, expanding
    ``safety_analysis.template.rst`` into ``safety_analysis.rst``.
 #. **lobster-trlc** turns the RootCauseAssessment records into
-   ``assessments.lobster``; AoU and ``CompReq`` measures are traced at their own level.
+   ``<safety_analysis>.lobster`` (``AnalysisInfo.lobster_files["assessments.lobster"]``); AoU and ``CompReq`` measures are traced at their own level.
 
 ``SphinxSourcesInfo`` of ``safety_analysis`` carries three depsets:
 

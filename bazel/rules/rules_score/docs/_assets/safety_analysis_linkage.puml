@@ -36,9 +36,7 @@ package "Other dependable_element (listed in deps)" {
 
 package "This dependable_element" {
     package "Safety analysis" {
-        class FailureMode <<authored>> {
-            interface
-        }
+        class FailureMode <<authored>>
         class RootCause <<generated>> {
             title
             diagram
@@ -52,12 +50,23 @@ package "This dependable_element" {
         class "AoU\n(own)" as OwnAoU <<authored>>
     }
 
+    package "Architecture" {
+        class ApiMethod <<generated>> {
+            diagram
+            line
+            signatures
+        }
+    }
+
     package "Requirements" {
         class CompReq <<authored>>
         class FeatReq <<authored>>
         class AssumedSystemReq <<authored>>
     }
 }
+
+' ── Generated from the public API class diagrams (public_api.trlc) ──────────
+FailureMode "0..*" --> "1..*" ApiMethod : interface
 
 ' ── Generated from the $RootCause macros of the FTA diagrams ────────────────
 RootCause "1..*" --> FailureMode : failure_modes

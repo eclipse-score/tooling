@@ -21,7 +21,6 @@ participant "PumlClassParser" as class
 participant "PumlComponentParser" as component
 participant "ComponentResolver" as resolver
 participant "ComponentSerializer" as serializer
-participant "puml_lobster" as lobster
 
 activate Cli
 
@@ -86,12 +85,5 @@ activate serializer
 serializer --> Cli: Vec<u8>
 deactivate serializer
 destroy serializer
-
-opt lobster_output_dir provided
-    Cli -> lobster: model_to_lobster(&components, source_path)
-    activate lobster
-    lobster --> Cli: JSON
-    deactivate lobster
-end
 
 @enduml

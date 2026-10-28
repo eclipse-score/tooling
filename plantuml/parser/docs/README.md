@@ -130,10 +130,10 @@ Interface(
 
 | Crate | Responsibility |
 |---|---|
-| `puml_utils` | Shared utilities: `LogLevel` enum, file writing helpers |
+| `puml_utils` | Shared utilities: `LogLevel` enum, file writing helpers, TRLC file writer |
 | `puml_parser` | Preprocessor (include expansion) + Class / Component / Sequence diagram parsers |
 | `puml_resolver` | Resolves raw AST into logical model (`ComponentResolver`, `DiagramResolver` trait) |
-| `puml_lobster` | Converts the resolved model to LOBSTER traceability JSON |
+| `puml_api` | Collects the public methods of the resolved class model and renders them as `ScoreReq.ApiMethod` TRLC records |
 | `puml_cli` | CLI argument parsing and orchestration of all phases |
 
 ### Shared Dependencies

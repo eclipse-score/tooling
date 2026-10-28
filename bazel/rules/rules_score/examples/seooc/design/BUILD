@@ -26,6 +26,7 @@ architectural_design(
         "internal_api.puml",
         "internal_api_detail.puml",
     ],
+    package = "sample_seooc_api",
     public_api = [
         "public_api.puml",
         "public_api.rst",

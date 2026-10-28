@@ -78,8 +78,8 @@ package "Generated files" {
     rectangle "fta_events.trlc\n(RootCause stubs)" <<gen>> as fta_events
     rectangle "safety_analysis.rst"               <<gen>> as safety_analysis_rst
     rectangle "failure_modes lobster"                        <<gen>> as fm_lob
-    rectangle "fta_root_causes.lobster" <<gen>> as ft_lob
-    rectangle "assessments.lobster" <<gen>> as sm_lob
+    rectangle "<fault_trees>.lobster" <<gen>> as ft_lob
+    rectangle "<safety_analysis>.lobster" <<gen>> as sm_lob
 }
 
 ' ── Providers ────────────────────────────────────────────────────────────────

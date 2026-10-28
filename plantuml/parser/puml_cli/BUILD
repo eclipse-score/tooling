@@ -12,15 +12,24 @@
 # *******************************************************************************
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 
+_SRCS = [
+    "src/fta.rs",
+    "src/inputs.rs",
+    "src/main.rs",
+    "src/parsing.rs",
+    "src/resolving.rs",
+    "src/sinks.rs",
+]
+
 rust_binary(
     name = "puml_cli",
-    srcs = ["src/main.rs"],
+    srcs = _SRCS,
     crate_root = "src/main.rs",
     visibility = ["//visibility:public"],
     deps = [
+        "//plantuml/parser/puml_api",
         "//plantuml/parser/puml_fta",
         "//plantuml/parser/puml_idmap",
-        "//plantuml/parser/puml_lobster",
         "//plantuml/parser/puml_parser",
         "//plantuml/parser/puml_resolver",
         "//plantuml/parser/puml_utils",
@@ -42,12 +51,12 @@ rust_binary(
 
 rust_test(
     name = "puml_cli_test",
-    srcs = ["src/main.rs"],
+    srcs = _SRCS,
     crate_root = "src/main.rs",
     deps = [
+        "//plantuml/parser/puml_api",
         "//plantuml/parser/puml_fta",
         "//plantuml/parser/puml_idmap",
-        "//plantuml/parser/puml_lobster",
         "//plantuml/parser/puml_parser",
         "//plantuml/parser/puml_resolver",
         "//plantuml/parser/puml_utils",

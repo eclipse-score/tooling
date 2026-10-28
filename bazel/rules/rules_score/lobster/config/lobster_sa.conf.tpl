@@ -1,10 +1,10 @@
-implementation "Architecture" {
-{ARCH_SOURCES}
+requirements "Public API" {
+{PUBLIC_API_SOURCES}
 }
 
 requirements "Failure Modes" {
 {FM_SOURCES}
-  trace to: "Architecture";
+  trace to: "Public API";
 }
 
 activity "Root Causes" {

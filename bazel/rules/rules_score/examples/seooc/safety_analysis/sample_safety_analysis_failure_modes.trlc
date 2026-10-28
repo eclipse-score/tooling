@@ -13,6 +13,7 @@
 package SampleLibrary
 
 import ScoreReq
+import sample_seooc_api
 
 ScoreReq.FailureMode SampleFailureMode{
     guidewords = [ScoreReq.Guideword.LossOfFunction]
@@ -20,7 +21,7 @@ ScoreReq.FailureMode SampleFailureMode{
     failureeffect = "The world as we know it will end"
     version = 1
     safety = ScoreReq.Asil.B
-    interface = "safety_software_seooc_example.SampleLibraryAPI.GetNumber"
+    interface = [sample_seooc_api.safety_software_seooc_example_SampleLibraryAPI_GetNumber]
 }
 
 ScoreReq.FailureMode SampleFailureMode2{
@@ -29,5 +30,5 @@ ScoreReq.FailureMode SampleFailureMode2{
     failureeffect = "Downstream consumers time out"
     version = 1
     safety = ScoreReq.Asil.D
-    interface = "safety_software_seooc_example.SampleLibraryAPI.GetNumber"
+    interface = [sample_seooc_api.safety_software_seooc_example_SampleLibraryAPI_GetNumber]
 }

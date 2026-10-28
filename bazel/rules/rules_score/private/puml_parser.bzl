@@ -62,7 +62,7 @@ def disambiguated_stems(ctx, files):
         stems[f.path] = stem
     return stems
 
-def run_puml_parser(ctx, files, stems, diagram_type = None, emit_lobster = False, progress_label = None):
+def run_puml_parser(ctx, files, stems, diagram_type = None, public_api_package = None, progress_label = None):
     """Runs `puml_cli` once for a whole `.puml` file list, so the files resolve
     as one group.
 
@@ -79,27 +79,33 @@ def run_puml_parser(ctx, files, stems, diagram_type = None, emit_lobster = False
         diagram_type: Optional CLI `--diagram-type` value (e.g. "component");
             `None` leaves detection to the parser. With a value, a diagram of
             another kind fails the action.
-        emit_lobster: When `True`, also produce a `.lobster` per file.
+        public_api_package: When set, the files are public API class diagrams:
+            declares `{label}/public_api.trlc` (TRLC package
+            `public_api_package`) holding their `ScoreReq.ApiMethod` records.
+            Use with `diagram_type = "class"`.
         progress_label: Optional group description for the progress message;
             defaults to `str(ctx.label)`.
     Returns:
-        Tuple of (fbs_outputs, lobster_outputs, idmap_outputs), one entry per
-        `.puml` file in `files`, in order. `lobster_outputs` is empty unless
-        `emit_lobster`.
+        Struct with `fbs` and `idmap` (output File lists, one entry per
+        `.puml` file in `files`, in order) and `public_api` (the declared
+        `public_api.trlc` File, or `None` without `public_api_package` or
+        `.puml` files).
     """
     puml_files = [f for f in files if f.extension == "puml"]
+
     if not puml_files:
-        return [], [], []
+        return struct(fbs = [], idmap = [], public_api = None)
+
+    public_api = None
+    if public_api_package:
+        public_api = ctx.actions.declare_file("{}/public_api.trlc".format(ctx.label.name))
 
     fbs_outputs = []
-    lobster_outputs = []
     idmap_outputs = []
     arguments = []
     for f in puml_files:
         stem = stems[f.path]
         fbs_outputs.append(ctx.actions.declare_file("{}/{}.fbs.bin".format(ctx.label.name, stem)))
-        if emit_lobster:
-            lobster_outputs.append(ctx.actions.declare_file("{}/{}.lobster".format(ctx.label.name, stem)))
         idmap_outputs.append(ctx.actions.declare_file("{}/{}.idmap.json".format(ctx.label.name, stem)))
         arguments.extend([
             "--file",
@@ -121,15 +127,17 @@ def run_puml_parser(ctx, files, stems, diagram_type = None, emit_lobster = False
         "--log-level",
         get_log_level(ctx),
     ])
-    if emit_lobster:
-        arguments.extend(["--lobster-output-dir", lobster_outputs[0].dirname])
+    api_outputs = []
+    if public_api:
+        api_outputs.append(public_api)
+        arguments.extend(["--api-output-file", public_api.path, "--api-package", public_api_package])
 
     ctx.actions.run(
         inputs = puml_files,
-        outputs = fbs_outputs + lobster_outputs + idmap_outputs,
+        outputs = fbs_outputs + idmap_outputs + api_outputs,
         executable = ctx.executable._puml_parser,
         arguments = arguments,
         progress_message = "Parsing PlantUML diagram group: %s" % (progress_label or str(ctx.label)),
     )
 
-    return fbs_outputs, lobster_outputs, idmap_outputs
+    return struct(fbs = fbs_outputs, idmap = idmap_outputs, public_api = public_api)

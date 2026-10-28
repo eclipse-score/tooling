@@ -19,9 +19,14 @@ documentation following S-CORE process guidelines. Architectural design
 documents describe the software architecture including static and dynamic views.
 
 The rule automatically invokes the PlantUML parser on .puml files
-to produce FlatBuffers binary representations of the parsed diagrams.
+to produce FlatBuffers binary representations of the parsed diagrams. The
+class diagrams of the `public_api` view also yield a `public_api.trlc` of
+`ScoreReq.ApiMethod` records (one per public method name, overloads collapsed,
+and one per free function), which `FailureMode.interface` references.
 """
 
+load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
+load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:puml_parser.bzl", "disambiguated_stems", "run_puml_parser")
 load("//bazel/rules/rules_score/private:puml_utils.bzl", "emit_view_navigation", "plan_view_layout")
@@ -34,7 +39,9 @@ load("//bazel/rules/rules_score/private:views.bzl", "ARCH_VIEWS")
 # ============================================================================
 
 # Views passed as `--diagram-type` to `puml_cli`; every other view autodetects.
+# `public_api` is class diagrams only: the API records come from them.
 _VIEW_DIAGRAM_TYPES = {
+    "public_api": "class",
     "static": "component",
 }
 
@@ -104,19 +111,22 @@ def _architectural_design_impl(ctx):
     Collects architectural design artifacts including static, dynamic, public
     API, and internal API diagrams, runs the PlantUML parser on .puml files to
     generate FlatBuffers binaries, and provides them through the
-    ArchitecturalDesignInfo provider.
+    ArchitecturalDesignInfo provider. The class diagrams of the public API
+    view also yield the `ApiMethod` records, provided as TrlcProviderInfo.
 
-    The diagram type (component, class, sequence) is auto-detected by the
-    parser and encoded in the FlatBuffers binary via its schema root_type.
+    The `static` view accepts component diagrams only and the `public_api` view
+    class diagrams only (the parser fails the action otherwise); the other
+    views are auto-detected. The diagram type (component, class, sequence) is
+    encoded in the FlatBuffers binary via its schema root_type.
 
     Args:
         ctx: Rule context
 
     Returns:
-        List of providers including DefaultInfo, ArchitecturalDesignInfo, SphinxSourcesInfo
+        List of providers including DefaultInfo, ArchitecturalDesignInfo, TrlcProviderInfo, SphinxSourcesInfo
     """
 
-    # All diagrams of this target share one flat fbs/lobster/idmap namespace
+    # All diagrams of this target share one flat fbs/idmap namespace
     # (keyed by ctx.label.name), so stems must be disambiguated across all
     # four views together, not per-view.
     stems = disambiguated_stems(
@@ -124,31 +134,40 @@ def _architectural_design_impl(ctx):
         ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api,
     )
 
+    api_package = ctx.attr.package
+    has_api_diagrams = any([f.extension == "puml" for f in ctx.files.public_api])
+    if has_api_diagrams and not api_package:
+        fail("{}: `package` is required with `public_api` diagrams; failure mode files import it".format(ctx.label))
+    if api_package and not has_api_diagrams:
+        fail("{}: `package` is only used with `public_api` .puml diagrams".format(ctx.label))
+
     view_fbs = {}
-    view_lobster = {}
     view_idmap = {}
     view_root_indexes = {}
     view_source_files = []
     view_sphinx_srcs = []
     root_index_files = []
     view_aux_docs = []
+    api_trlc = None
 
     for view_name, root_title in ARCH_VIEWS:
         view_files = getattr(ctx.files, view_name)
 
         # One `puml_cli` action per view: its diagrams resolve as one group, so
         # `static` may split a decomposition across an overview and detail files.
-        fbs_list, lobster_list, idmap_list = run_puml_parser(
+        is_public_api = view_name == "public_api"
+        parsed = run_puml_parser(
             ctx,
             view_files,
             stems,
             diagram_type = _VIEW_DIAGRAM_TYPES.get(view_name),
-            emit_lobster = True,
+            public_api_package = api_package if is_public_api else None,
             progress_label = "{} ({})".format(ctx.label, view_name),
         )
-        view_fbs[view_name] = fbs_list
-        view_lobster[view_name] = lobster_list
-        view_idmap[view_name] = idmap_list
+        view_fbs[view_name] = parsed.fbs
+        view_idmap[view_name] = parsed.idmap
+        if is_public_api:
+            api_trlc = parsed.public_api
 
         # Reconcile generated wrappers/indexes against any hand-authored
         # rst/md pages before staging anything -- see plan_view_layout for
@@ -198,7 +217,12 @@ def _architectural_design_impl(ctx):
     dynamic_fbs = depset(view_fbs["dynamic"])
     public_api_fbs = depset(view_fbs["public_api"])
     internal_api_fbs = depset(view_fbs["internal_api"])
-    public_api_lobster = depset(view_lobster["public_api"])
+
+    # `ApiMethod` traceability exists only with public API diagrams.
+    public_api_lobster = []
+    if api_trlc:
+        api_lobster, _ = subrule_lobster_trlc([api_trlc] + ctx.files._spec, ctx.file._api_methods_lobster_config)
+        public_api_lobster = [api_lobster]
 
     all_source_files = depset(transitive = view_source_files)
 
@@ -234,7 +258,7 @@ def _architectural_design_impl(ctx):
     sphinx_aux_srcs = depset(view_aux_docs)
 
     return [
-        DefaultInfo(files = depset([validation_log.file], transitive = [all_source_files])),
+        DefaultInfo(files = depset([validation_log.file] + ([api_trlc] if api_trlc else []), transitive = [all_source_files])),
         ArchitecturalDesignInfo(
             static = static_fbs,
             dynamic = dynamic_fbs,
@@ -242,8 +266,14 @@ def _architectural_design_impl(ctx):
             internal_api = internal_api_fbs,
             view_root_indexes = view_root_indexes,
             name = ctx.label.name,
-            public_api_lobster_files = public_api_lobster,
+            public_api_lobster_files = depset(public_api_lobster),
             validation_logs = [validation_log],
+        ),
+        # Lets `failure_modes` resolve `<package>.<ApiMethod>`.
+        TrlcProviderInfo(
+            spec = depset(ctx.files._spec),
+            reqs = depset([api_trlc] if api_trlc else []),
+            deps = depset(),
         ),
         # Each view's root index is the only top-level toctree entry;
         # everything else (wrappers, sub-indexes, idmap sidecars, colocated
@@ -275,10 +305,13 @@ def _architectural_design_attrs():
         "public_api": attr.label_list(
             allow_files = [".puml", ".svg", ".rst", ".md"],
             mandatory = False,
-            doc = "Public API diagrams (parsed identically to static/dynamic). " +
-                  "Classified separately so their lobster items are exposed via " +
-                  "public_api_lobster_files, enabling failure-mode-to-interface " +
-                  "traceability at the dependable element level.",
+            doc = "Public API class diagrams (.puml; the .svg/.rst/.md pages are staged as documentation). " +
+                  "The diagrams yield the ScoreReq.ApiMethod records " +
+                  "(one per public method name, overloads collapsed, and one " +
+                  "per free function) that FailureMode.interface references; " +
+                  "their lobster items are exposed via public_api_lobster_files, " +
+                  "enabling failure-mode-to-interface traceability at the " +
+                  "dependable element level.",
         ),
         "internal_api": attr.label_list(
             allow_files = [".puml", ".svg", ".rst", ".md"],
@@ -292,11 +325,26 @@ def _architectural_design_attrs():
             values = ["release", "development"],
             doc = "Maturity level of the architectural design. 'release' treats validation findings as errors; 'development' emits warnings and continues.",
         ),
+        "package": attr.string(
+            default = "",
+            doc = "TRLC package of the generated public_api.trlc (the ApiMethod records). " +
+                  "Required with `public_api` diagrams; failure mode files `import` it.",
+        ),
+        "_spec": attr.label_list(
+            allow_files = [".rsl", ".trlc"],
+            default = [Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")],
+            doc = "S-CORE requirements model (.rsl) defining ApiMethod.",
+        ),
         "_puml_parser": attr.label(
             default = Label("@score_tooling//plantuml/parser:parser"),
             executable = True,
             cfg = "exec",
-            doc = "PlantUML parser tool that generates FlatBuffers/lobster/idmap files from .puml files",
+            doc = "PlantUML parser tool that generates FlatBuffers/idmap/ApiMethod TRLC files from .puml files",
+        ),
+        "_api_methods_lobster_config": attr.label(
+            default = Label("//bazel/rules/rules_score/lobster/config:api_methods_config"),
+            allow_single_file = True,
+            doc = "lobster-trlc YAML config for ApiMethod records.",
         ),
         "_puml_rst_template": attr.label(
             default = Label("//bazel/rules/rules_score:templates/puml_diagram.template.rst"),
@@ -313,6 +361,7 @@ _architectural_design = rule(
     doc = "Collects architectural design documents and diagrams for S-CORE process compliance. " +
           "Automatically parses PlantUML files to produce FlatBuffers binary representations.",
     attrs = _architectural_design_attrs(),
+    subrules = [subrule_lobster_trlc],
 )
 
 # ============================================================================
@@ -354,11 +403,17 @@ def architectural_design(
             .png, .svg) or documentation files (.rst, .md) containing dynamic
             architecture views such as sequence diagrams, activity diagrams,
             or state diagrams as defined in the S-CORE process.
-        public_api: Optional list of .puml files describing the public interface
-            of this element. These are parsed identically to static/dynamic
-            diagrams but classified separately so their lobster items are
-            exposed via public_api_lobster_files, enabling failure-mode-to-
-            interface traceability at the dependable element level.
+        public_api: Optional list of .puml class diagrams describing the public
+            interface of this element, classified separately from the other
+            views: the diagrams yield the
+            ScoreReq.ApiMethod records (one per public method name, overloads
+            collapsed, and one per free function) that FailureMode.interface
+            references, and their lobster items are exposed via
+            public_api_lobster_files, enabling failure-mode-to-interface
+            traceability at the dependable element level. A `failure_modes`
+            target lists this target in its `deps` to resolve the records.
+            Constructors and destructors are public methods like any other and
+            get a record each.
         internal_api: Optional list of .puml files describing internal
             interfaces of this element. These are parsed identically to
             static/dynamic diagrams but classified separately so their
@@ -367,6 +422,9 @@ def architectural_design(
         maturity: Maturity level of the architectural design. Use
             "development" to write validation findings without failing the
             Bazel action.
+        package: TRLC package of the generated `public_api.trlc` (passed via
+            kwargs); required with `public_api` diagrams. Failure mode files
+            `import` it.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:

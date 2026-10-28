@@ -13,6 +13,7 @@
 package MultiFailureModeExampleSafetyAnalysis
 
 import ScoreReq
+import package_pub_api
 
 ScoreReq.FailureMode MessageLost {
     guidewords = [ScoreReq.Guideword.LossOfFunction]
@@ -20,7 +21,7 @@ ScoreReq.FailureMode MessageLost {
     failureeffect = "Receiver never gets the message"
     version = 1
     safety = ScoreReq.Asil.B
-    interface = "package_pub.PublicInterface"
+    interface = [package_pub_api.package_pub_PublicInterface_Send]
 }
 
 ScoreReq.FailureMode MessagePartiallyDelivered {
@@ -29,7 +30,7 @@ ScoreReq.FailureMode MessagePartiallyDelivered {
     failureeffect = "Receiver processes incomplete data"
     version = 1
     safety = ScoreReq.Asil.B
-    interface = "package_pub.PublicInterface"
+    interface = [package_pub_api.package_pub_PublicInterface_Send]
 }
 
 ScoreReq.FailureMode MessageCorrupted {
@@ -38,5 +39,5 @@ ScoreReq.FailureMode MessageCorrupted {
     failureeffect = "Receiver processes wrong data"
     version = 1
     safety = ScoreReq.Asil.B
-    interface = "package_pub.PublicInterface"
+    interface = [package_pub_api.package_pub_PublicInterface_Send]
 }
