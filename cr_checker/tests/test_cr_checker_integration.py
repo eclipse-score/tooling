@@ -599,3 +599,61 @@ def test_main_modified_only_ignores_untouched_noncompliant_files(tmp_path, monke
     exit_code = cr_checker.main(["-t", str(REAL_TEMPLATES_FILE), "-c", str(config_file), "--modified-only"])
 
     assert exit_code == 1  # only changed_noncompliant.py is reported
+
+
+def test_list_modified_files_honors_pathspecs(tmp_path):
+    cr_checker = load_cr_checker_module()
+    init_git_repo(tmp_path)
+    (tmp_path / "keep").mkdir()
+    (tmp_path / "skip").mkdir()
+    (tmp_path / "keep" / "a.py").write_text("print('before')\n", encoding="utf-8")
+    (tmp_path / "skip" / "b.py").write_text("print('before')\n", encoding="utf-8")
+    _git(["add", "."], tmp_path)
+    _git(["commit", "-q", "-m", "baseline"], tmp_path)
+    (tmp_path / "keep" / "a.py").write_text("print('after')\n", encoding="utf-8")
+    (tmp_path / "skip" / "b.py").write_text("print('after')\n", encoding="utf-8")
+
+    only_keep = cr_checker.list_modified_files(str(tmp_path), ["keep"])
+    exclude_skip = cr_checker.list_modified_files(str(tmp_path), [":(exclude)skip/**"])
+
+    assert {f.relative_to(tmp_path).as_posix() for f in only_keep} == {"keep/a.py"}
+    assert {f.relative_to(tmp_path).as_posix() for f in exclude_skip} == {"keep/a.py"}
+
+
+def test_main_modified_only_honors_exclude_pathspec(tmp_path, monkeypatch):
+    """An excluded modified file is neither reported nor rewritten by
+    `--modified-only`, same as in whole-repo mode."""
+    cr_checker = load_cr_checker_module()
+    init_git_repo(tmp_path)
+    config_file = write_config(tmp_path, "Author")
+    excluded = tmp_path / "skills" / "SKILL.md"
+    excluded.parent.mkdir()
+    excluded.write_text("# Title\n", encoding="utf-8")
+    _git(["add", "."], tmp_path)
+    _git(["commit", "-q", "-m", "baseline"], tmp_path)
+    excluded.write_text("# Title\n\nmore\n", encoding="utf-8")
+
+    monkeypatch.setenv("BUILD_WORKSPACE_DIRECTORY", str(tmp_path))
+    base = ["-t", str(REAL_TEMPLATES_FILE), "-c", str(config_file), "--modified-only"]
+    exclude = ":(exclude)skills/**"
+
+    assert cr_checker.main([*base, exclude]) == 0
+    assert cr_checker.main([*base, "--fix", exclude]) == 0
+    assert excluded.read_text(encoding="utf-8") == "# Title\n\nmore\n"
+    # Without the exclusion the same file is reported.
+    assert cr_checker.main(base) == 1
+
+
+def test_main_fix_then_check_md_file_with_frontmatter(tmp_path):
+    """End-to-end: `--fix` places the header after the frontmatter, leaving
+    the file starting with `---`, and a following check is clean."""
+    cr_checker = load_cr_checker_module()
+    config_file = write_config(tmp_path, "Author")
+    frontmatter = "---\nname: x\ndescription: y\n---\n\n"
+    doc = tmp_path / "SKILL.md"
+    doc.write_text(frontmatter + "# Title\n", encoding="utf-8")
+    args = ["-t", str(REAL_TEMPLATES_FILE), "-c", str(config_file), str(doc)]
+
+    assert cr_checker.main([*args, "--fix"]) == 1
+    assert doc.read_text(encoding="utf-8").startswith(frontmatter + "<!--")
+    assert cr_checker.main(args) == 0

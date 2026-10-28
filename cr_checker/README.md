@@ -52,11 +52,11 @@ python cr_checker.py -t <template_file> [options] <inputs>
 - **-e**, **--extensions**: List of file extensions to filter, e.g., -e py cpp.
 - **--use_memory_map**: Use memory-mapped file reading for large files (check mode only; `--fix` always reads the whole file).
 - **--encoding**: File encoding (default is utf-8).
-- **--offset**: Force this many characters (plus any trailing blank lines) at the start of the file to be treated as a recognized preamble, overriding auto-detection. Character-based, not byte-based. Rarely needed: a leading shebang is detected and preserved automatically; use this only for other preamble kinds the tool doesn't (yet) recognize.
+- **--offset**: Force this many characters (plus any trailing blank lines) at the start of the file to be treated as a recognized preamble, overriding auto-detection. Character-based, not byte-based. Rarely needed: a leading shebang (and, in `.md` files, a leading `---` YAML frontmatter block of up to 2048 characters) is detected and preserved automatically; use this only for other preamble kinds the tool doesn't (yet) recognize.
 - **-f**, **--fix**: Setting script into fix mode where copyright header will be added to the files if it's missing from same.
 - **--remove-offset**: Number of characters to remove before appending proper copyright header (works only with `--fix` option).
 - **--force**: With `--fix`, also rewrite headers whose similarity to the template is below the auto-fix threshold (normally left untouched and only reported, since they may be a genuinely different license text). Never affects a duplicate-header file or one with a genuine SPDX license mismatch, both of which always require manual review. Ignored without `--fix`.
-- **--modified-only**: Only check files that differ from `HEAD` (staged and/or unstaged), e.g. for a fast, incremental pre-commit run. Takes precedence over `inputs`.
+- **--modified-only**: Only check files that differ from `HEAD` (staged and/or unstaged), e.g. for a fast, incremental pre-commit run. `inputs` still apply: only modified files matching them (including `:(exclude)` pathspecs) are checked.
 - **inputs**: Directories or files to parse, or a parameter file prefixed with @ that lists files or directories. Optional -- when omitted, the whole repository (per `git ls-files`) is checked.
 
 > NOTE: Option `--remove-offset` can have severe consequences if the offset is miscalculated. Use with **extreme caution**.
