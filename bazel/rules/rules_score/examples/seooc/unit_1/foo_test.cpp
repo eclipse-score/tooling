@@ -30,6 +30,19 @@ TEST(Foo, GetNumber) {
   EXPECT_EQ(unit.GetNumber(), 42u);
 }
 
+// Specified by a formal RST test specification instead of Given/When/Then.
+TEST(Foo, GetNumberRepeatedly) {
+  ::testing::Test::RecordProperty("lobster-tracing",
+                                  "SampleComponent.REQ_COMP_001");
+  ::testing::Test::RecordProperty("test-spec", "//unit_1:get_number_spec");
+
+  unit_1::Foo unit{};
+  EXPECT_EQ(unit.GetNumber(), 42u);
+
+  const unit_1::Foo& const_ref = unit;
+  EXPECT_EQ(const_ref.GetNumber(), 42u);
+}
+
 TEST(Foo, IsFinal) {
   ::testing::Test::RecordProperty("lobster-tracing",
                                   "SampleComponent.REQ_COMP_002");
