@@ -1475,6 +1475,17 @@ def _dependable_element_index_impl(ctx):
             content = "\n".join([f.path for f in req_files]) + "\n",
         )
 
+        # Manifest of the test_specification JSON files that test cases may
+        # reference via RecordProperty("test-spec", ...).
+        test_spec_files = cov_info.test_spec_files.to_list()
+        cov_spec_manifest = ctx.actions.declare_file(
+            "{}/test_case_coverage/{}.spec_manifest.txt".format(ctx.label.name, comp_path),
+        )
+        ctx.actions.write(
+            output = cov_spec_manifest,
+            content = "".join([f.path + "\n" for f in test_spec_files]),
+        )
+
         cov_lobster = ctx.actions.declare_file(
             "{}/test_case_coverage/{}.lobster".format(ctx.label.name, comp_path),
         )
@@ -1485,12 +1496,13 @@ def _dependable_element_index_impl(ctx):
 
         ctx.actions.run(
             executable = ctx.executable._test_runner,
-            inputs = depset(req_files + [gtest_lobster, cov_req_manifest, lock_file]),
+            inputs = depset(req_files + test_spec_files + [gtest_lobster, cov_req_manifest, cov_spec_manifest, lock_file]),
             outputs = [cov_lobster],
             arguments = cov_args,
             env = {
                 "TEST_CASE_COVERAGE_LOBSTER_MANIFEST": cov_req_manifest.path,
                 "TEST_CASE_COVERAGE_GTEST_LOBSTER": gtest_lobster.path,
+                "TEST_CASE_COVERAGE_SPEC_MANIFEST": cov_spec_manifest.path,
                 "TEST_CASE_COVERAGE_LOCK_FILE": lock_file.path,
                 "TEST_CASE_COVERAGE_LABEL": str(comp_target.label),
                 "TEST_CASE_COVERAGE_PACKAGE": "//" + comp_target.label.package,

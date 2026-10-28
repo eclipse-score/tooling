@@ -58,13 +58,20 @@ def _component_update_impl(ctx):
 
     # Reuse the gtest.lobster already produced by the main component target,
     # instead of running subrule_lobster_gtest a second time.
-    gtest_lobster_file = ctx.attr.component[ComponentTestCaseCoverageInfo].gtest_lobster_file
+    cov_info = ctx.attr.component[ComponentTestCaseCoverageInfo]
+    gtest_lobster_file = cov_info.gtest_lobster_file
+    test_spec_files = cov_info.test_spec_files.to_list()
 
     # Write a runfiles manifest (short paths) — used by the runner at bazel run time.
     runfiles_manifest = ctx.actions.declare_file("{}_req_lobster_runfiles_manifest.txt".format(ctx.label.name))
     ctx.actions.write(
         output = runfiles_manifest,
         content = "\n".join([f.short_path for f in req_lobster_files]) + "\n",
+    )
+    spec_manifest = ctx.actions.declare_file("{}_test_spec_runfiles_manifest.txt".format(ctx.label.name))
+    ctx.actions.write(
+        output = spec_manifest,
+        content = "".join([f.short_path + "\n" for f in test_spec_files]),
     )
 
     # The lock file is written back to the source tree by update_runner using
@@ -80,7 +87,7 @@ def _component_update_impl(ctx):
         is_executable = True,
     )
 
-    all_inputs = req_lobster_files + [gtest_lobster_file, runfiles_manifest]
+    all_inputs = req_lobster_files + test_spec_files + [gtest_lobster_file, runfiles_manifest, spec_manifest]
     runfiles = ctx.runfiles(files = all_inputs)
     runfiles = runfiles.merge(ctx.attr._update_runner[DefaultInfo].default_runfiles)
 
@@ -92,6 +99,7 @@ def _component_update_impl(ctx):
         RunEnvironmentInfo(environment = {
             "TEST_CASE_COVERAGE_LOBSTER_MANIFEST": runfiles_manifest.short_path,
             "TEST_CASE_COVERAGE_GTEST_LOBSTER": gtest_lobster_file.short_path,
+            "TEST_CASE_COVERAGE_SPEC_MANIFEST": spec_manifest.short_path,
             # Package-relative path; update_runner prepends $BUILD_WORKSPACE_DIRECTORY.
             # NOTE: ctx.label.package is "" for targets defined at the repo
             # root — do not unconditionally prepend "/", or the path becomes
@@ -235,11 +243,15 @@ def _component_impl(ctx):
     # and unit test results from units (to be converted to gtest.lobster below)
     # -------------------------------------------------------------------------
     collected_unit_test_files = []
+    collected_test_specs = []
     collected_tests = []
     collected_architecture = []
     for component in ctx.attr.components:
         if UnitInfo in component:
             collected_unit_test_files.append(component[UnitInfo].tests)
+            collected_test_specs.append(component[UnitInfo].test_specs)
+        if ComponentTestCaseCoverageInfo in component:
+            collected_test_specs.append(component[ComponentTestCaseCoverageInfo].test_spec_files)
         if ComponentInfo in component:
             if component[ComponentInfo].tests:
                 collected_tests.append(component[ComponentInfo].tests)
@@ -356,6 +368,7 @@ def _component_impl(ctx):
         ComponentTestCaseCoverageInfo(
             gtest_lobster_file = gtest_lobster_file,
             test_case_coverage_lock_file = ctx.file.test_case_coverage_lock,
+            test_spec_files = depset(transitive = collected_test_specs),
         ),
         # SphinxSourcesInfo: RST sources from component requirements + transitive sources from sub-components/units
         SphinxSourcesInfo(

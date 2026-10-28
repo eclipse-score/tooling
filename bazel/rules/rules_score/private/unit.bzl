@@ -23,7 +23,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@lobster//:lobster.bzl", "subrule_gtest_report")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", "rust_common")
-load("//bazel/rules/rules_score:providers.bzl", "CcDependencyInfo", "CertifiedScope", "SphinxSourcesInfo", "UnitDesignInfo", "UnitInfo")
+load("//bazel/rules/rules_score:providers.bzl", "CcDependencyInfo", "CertifiedScope", "SphinxSourcesInfo", "TestSpecificationInfo", "UnitDesignInfo", "UnitInfo")
 load("//cpp/libclang:cpp_parser.bzl", "cpp_parser_action_internal_attrs", "cpp_parser_action_toolchains", "cpp_parser_target_aspects", "has_cpp_parser_inputs", "run_cpp_parser_action")
 load(":cc_dependency_aspect.bzl", "cc_dependencies_aspect")
 load(":validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
@@ -157,6 +157,7 @@ def _unit_impl(ctx):
             implementation_sequence_fbs = depset(),
             implementation = depset(ctx.attr.implementation),
             tests = tests_depset,
+            test_specs = depset([spec[TestSpecificationInfo].spec_json for spec in ctx.attr.test_specs]),
             dependent_labels = depset([struct(
                 unit_label = ctx.label,
                 dependencies = depset(transitive = collected_dependent_labels),
@@ -199,6 +200,11 @@ _unit_attrs = {
         cfg = "exec",
         doc = "Test targets that verify the unit (cc_test, py_test, rust_test, etc.)",
     ),
+    "test_specs": attr.label_list(
+        default = [],
+        providers = [TestSpecificationInfo],
+        doc = "test_specification targets that test cases of this unit reference via RecordProperty('test-spec', '<label>').",
+    ),
     "maturity": attr.string(
         default = "release",
         values = ["release", "development"],
@@ -232,6 +238,7 @@ def unit(
         unit_design,
         implementation,
         tests,
+        test_specs = [],
         scope = [],
         design_name = None,
         testonly = True,
@@ -254,6 +261,9 @@ def unit(
             but not explicitly named in the implementation list. Default is empty list.
         tests: List of labels to Bazel test targets (cc_test, rust_test, etc.)
             that verify the unit implementation.
+        test_specs: Optional list of labels to test_specification targets. A test
+            case references one of them with RecordProperty("test-spec", "<label>")
+            instead of Given/When/Then.
         design_name: Optional name matched against the PlantUML component-diagram
             alias, decoupled from the Bazel target name (analogous to py_binary's
             `main`). Defaults to name.
@@ -288,6 +298,7 @@ def unit(
         implementation = implementation,
         scope = [str(native.package_relative_label(scope_entry)) for scope_entry in scope],
         tests = tests,
+        test_specs = test_specs,
         design_name = design_name or "",
         testonly = testonly,
         **kwargs
