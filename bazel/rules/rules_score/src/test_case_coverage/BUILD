@@ -12,6 +12,7 @@
 # *******************************************************************************
 
 load("@pip_lobster_bazel//:requirements.bzl", lobster_requirement = "requirement")
+load("@pip_rules_score//:requirements.bzl", rules_score_requirement = "requirement")
 load("@pip_tooling//:requirements.bzl", tooling_requirement = "requirement")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 
@@ -58,6 +59,39 @@ py_library(
 )
 
 py_library(
+    name = "test_spec",
+    srcs = ["test_spec.py"],
+    imports = [".."],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":compute_lock",
+        ":read_gtest_lobster",
+    ],
+)
+
+py_library(
+    name = "parse_test_spec_lib",
+    srcs = ["parse_test_spec.py"],
+    imports = [".."],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":compute_lock",
+        rules_score_requirement("docutils"),
+    ],
+)
+
+# Used by the test_specification rule to validate an RST test specification
+# and convert it to the normalized JSON consumed by the runners.
+py_binary(
+    name = "parse_test_spec",
+    srcs = ["parse_test_spec.py"],
+    imports = [".."],
+    main = "parse_test_spec.py",
+    visibility = ["//visibility:public"],
+    deps = [":parse_test_spec_lib"],
+)
+
+py_library(
     name = "runner_common",
     srcs = ["runner_common.py"],
     imports = [".."],
@@ -65,6 +99,7 @@ py_library(
     deps = [
         ":compute_lock",
         ":read_gtest_lobster",
+        ":test_spec",
     ],
 )
 
@@ -180,6 +215,26 @@ py_test(
     imports = [".."],
     deps = [
         ":test_runner_lib",
+        tooling_requirement("pytest"),
+    ],
+)
+
+py_test(
+    name = "parse_test_spec_test",
+    srcs = ["parse_test_spec_test.py"],
+    imports = [".."],
+    deps = [
+        ":parse_test_spec_lib",
+        tooling_requirement("pytest"),
+    ],
+)
+
+py_test(
+    name = "test_spec_test",
+    srcs = ["test_spec_test.py"],
+    imports = [".."],
+    deps = [
+        ":test_spec",
         tooling_requirement("pytest"),
     ],
 )

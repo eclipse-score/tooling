@@ -28,8 +28,10 @@ from pathlib import Path
 from test_case_coverage.compute_lock import LockFile, RequirementMeta, compute_lock
 from test_case_coverage.read_gtest_lobster import (
     read_req_metadata_from_lobster_files,
+    resolve_path,
     scan_gtest_lobster,
 )
+from test_case_coverage.test_spec import load_test_spec_manifest
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +45,23 @@ def require_env(name: str) -> str:
     return value
 
 
+def optional_spec_manifest() -> Path | None:
+    """Return the resolved ``TEST_CASE_COVERAGE_SPEC_MANIFEST`` path, or None if unset."""
+    raw = os.environ.get("TEST_CASE_COVERAGE_SPEC_MANIFEST")
+    return resolve_path(raw) if raw else None
+
+
 def scan_and_compute(
     lobster_manifest: Path,
     gtest_lobster_path: Path,
     package: str,
     label: str,
+    spec_manifest: Path | None = None,
 ) -> tuple[list[RequirementMeta], LockFile]:
     """Extract requirement metadata, scan gtest.lobster, and compute the lock.
+
+    *spec_manifest* lists the ``.test_spec.json`` files of the
+    ``test_specification`` targets that test cases may reference.
 
     Emits a ``WARNING`` to stderr for every requirement with zero linked test
     cases found in the scanned XML files.
@@ -70,5 +82,16 @@ def scan_and_compute(
                 req_id,
             )
 
-    computed = compute_lock(req_metadata, by_req)
+    specs = load_test_spec_manifest(spec_manifest)
+    for records in by_req.values():
+        for record in records:
+            if record.spec_ref and (record.given or record.when or record.then):
+                logger.warning(
+                    "[%s] %s references test-spec %r; its given/when/then is ignored.",
+                    label,
+                    record.uid,
+                    record.spec_ref,
+                )
+
+    computed = compute_lock(req_metadata, by_req, specs)
     return req_metadata, computed

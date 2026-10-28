@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 from test_case_coverage.check_lock import compare_lock_files, validate_specs
-from test_case_coverage.compute_lock import SCHEMA_VERSION, LockFile, RequirementEntry, TestCase
+from test_case_coverage.compute_lock import SCHEMA_VERSION, LockFile, RequirementEntry, TestCase, TestSpec, TestStep
 
 
 def _lock(*reqs):
@@ -166,6 +166,48 @@ def test_validate_specs_empty_lock_passes():
     ok, issues = validate_specs(_lock())
     assert ok
     assert issues == []
+
+
+# ---------------------------------------------------------------------------
+# Formal test specification (test-spec)
+# ---------------------------------------------------------------------------
+
+_SPEC = TestSpec(ref="//pkg:spec", goal="goal", steps=(TestStep(action="a", expected="e"),))
+
+
+def _spec_tc(spec=_SPEC, uid="Suite:TestName"):
+    return TestCase(uid=uid, spec=spec)
+
+
+def test_identical_spec_passes():
+    ok, diff = compare_lock_files(_lock(_req("P.R", _spec_tc())), _lock(_req("P.R", _spec_tc())))
+    assert ok, diff
+
+
+def test_spec_step_changed_fails():
+    changed = TestSpec(ref="//pkg:spec", goal="goal", steps=(TestStep(action="a", expected="other"),))
+    ok, diff = compare_lock_files(_lock(_req("P.R", _spec_tc())), _lock(_req("P.R", _spec_tc(changed))))
+    assert not ok
+    assert len(diff) == 1
+    assert "test-spec steps changed" in diff[0]
+
+
+def test_switch_from_gwt_to_spec_fails():
+    ok, diff = compare_lock_files(_lock(_req("P.R", _tc())), _lock(_req("P.R", _spec_tc())))
+    assert not ok
+    assert "from given/when/then to test-spec //pkg:spec" in diff[0]
+
+
+def test_validate_specs_passes_with_test_spec():
+    ok, issues = validate_specs(_lock(_req("P.R", _spec_tc())))
+    assert ok, issues
+
+
+def test_validate_specs_fails_with_unresolved_test_spec():
+    tc = TestCase(uid="Suite:TestName", spec_ref="//pkg:missing")
+    ok, issues = validate_specs(_lock(_req("P.R", tc)))
+    assert not ok
+    assert "'//pkg:missing' does not resolve" in issues[0]
 
 
 if __name__ == "__main__":

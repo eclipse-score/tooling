@@ -448,6 +448,24 @@ def test_scan_multi_trace_appears_in_each(tmp_path):
     assert len(by_req["P.B"]) == 1
 
 
+# ---------------------------------------------------------------------------
+# test-spec reference
+# ---------------------------------------------------------------------------
+
+
+def test_read_extracts_test_spec_ref(tmp_path):
+    p = _write_gtest_lobster(tmp_path, [("S:T", ["P.R"], ":Test-spec: //pkg:spec")])
+    records = read_gtest_lobster(p)
+    assert records[0].spec_ref == "//pkg:spec"
+    assert (records[0].given, records[0].when, records[0].then) == ("", "", "")
+
+
+def test_read_extracts_test_spec_ref_next_to_gwt(tmp_path):
+    p = _write_gtest_lobster(tmp_path, [("S:T", ["P.R"], ":Given: g\n:Then: t\n:Test-spec: //pkg:spec")])
+    record = read_gtest_lobster(p)[0]
+    assert (record.given, record.then, record.spec_ref) == ("g", "t", "//pkg:spec")
+
+
 if __name__ == "__main__":
     import sys
 

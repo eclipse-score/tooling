@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from test_case_coverage.compute_lock import LockFile, TestCase
+from test_case_coverage.compute_lock import LockFile, TestCase, TestSpec
 
 
 def _req_map_by_uid(lock: LockFile) -> dict[str, dict[str, TestCase]]:
@@ -36,7 +36,7 @@ def compare_lock_files(
     Checks (in order per requirement):
     1. Requirement added / removed.
     2. Version changed (triggers re-approval).
-    3. Test cases added / removed / GWT changed.
+    3. Test cases added / removed / GWT or test specification changed.
 
     Description is intentionally excluded from comparison (display only).
     diff_lines is empty when ok is True.
@@ -76,6 +76,7 @@ def compare_lock_files(
             else:
                 comm_tc = comm_tests[uid]
                 comp_tc = comp_tests[uid]
+                diff.extend(_spec_diff(req_id, uid, comm_tc.spec, comp_tc.spec))
                 for field_name, comm_val, comp_val in (
                     ("given", comm_tc.given, comp_tc.given),
                     ("when", comm_tc.when, comp_tc.when),
@@ -91,22 +92,58 @@ def compare_lock_files(
     return len(diff) == 0, diff
 
 
-def validate_specs(computed: LockFile) -> tuple[bool, list[str]]:
-    """Fail if any test case in *computed* lacks a ``given`` or ``then`` part.
+def _spec_diff(req_id: str, uid: str, committed: TestSpec | None, computed: TestSpec | None) -> list[str]:
+    """Describe how the test specification of one test case changed."""
+    if committed == computed:
+        return []
+    if committed is None or computed is None:
+        before = "given/when/then" if committed is None else f"test-spec {committed.ref}"
+        after = "given/when/then" if computed is None else f"test-spec {computed.ref}"
+        return [f"  ~ [{req_id}] specification changed from {before} to {after}: {uid}"]
+    lines = []
+    for field_name, comm_val, comp_val in (
+        ("ref", committed.ref, computed.ref),
+        ("goal", committed.goal, computed.goal),
+        ("focus", committed.focus, computed.focus),
+        ("steps", committed.steps, computed.steps),
+    ):
+        if comm_val != comp_val:
+            lines.append(
+                f"  ~ [{req_id}] test-spec {field_name} changed: {uid}\n"
+                f"      lockfile: {comm_val!r}\n"
+                f"      testcase: {comp_val!r}"
+            )
+    return lines
 
-    ``when`` is optional, because a test name derived by lobster-gtest may omit it.
-    Coverage without ``given`` and ``then`` cannot be meaningfully reviewed or approved.
+
+def validate_specs(computed: LockFile) -> tuple[bool, list[str]]:
+    """Fail if any test case in *computed* is not specified.
+
+    A test case is specified either by a resolved ``test-spec`` reference, or
+    by a ``given`` and a ``then`` part. ``when`` is optional, because a test
+    name derived by lobster-gtest may omit it. Coverage without a specification
+    cannot be meaningfully reviewed or approved.
 
     Returns (ok, issue_lines).
     """
     issues: list[str] = []
     for req in computed.requirements:
         for tc in req.test_cases:
+            if tc.spec is not None:
+                continue
+            if tc.spec_ref:
+                issues.append(
+                    f"  ! [{req.id}] test-spec {tc.spec_ref!r} does not resolve: {tc.uid}\n"
+                    f"    Reference a test_specification target by its Bazel label (e.g. //pkg:my_spec) "
+                    f"and add it to the unit's test_specs."
+                )
+                continue
             missing = [name for name, val in (("given", tc.given), ("then", tc.then)) if not val.strip()]
             if missing:
                 issues.append(
                     f"  ! [{req.id}] test missing GWT fields ({', '.join(missing)}): {tc.uid}\n"
                     f"    Set RecordProperty 'given' and 'then' ('when' is optional). Alternatively, name the test "
-                    f"Given<X>[_When<Y>]_(Expect|Then)<Z> if lobster provides --derive-gwt-from-test-name."
+                    f"Given<X>[_When<Y>]_(Expect|Then)<Z> if lobster provides --derive-gwt-from-test-name, "
+                    f"or reference a test_specification with RecordProperty 'test-spec'."
                 )
     return len(issues) == 0, issues

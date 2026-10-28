@@ -23,6 +23,9 @@ TEST_CASE_COVERAGE_LOCK_FILE_WORKSPACE_PATH
     Workspace-relative path of the committed lock YAML file to overwrite.
     Distinct from ``TEST_CASE_COVERAGE_LOCK_FILE`` (used by test_runner),
     which points to a resolvable file rather than a workspace-relative one.
+TEST_CASE_COVERAGE_SPEC_MANIFEST
+    Optional. Path to a newline-delimited file listing the ``.test_spec.json``
+    files of the test_specification targets referenced via ``test-spec``.
 TEST_CASE_COVERAGE_LABEL
     Bazel label of the test_case_coverage target (used in log output only).
 """
@@ -37,7 +40,7 @@ from pathlib import Path
 from test_case_coverage.check_lock import validate_specs
 from test_case_coverage.compute_lock import serialize
 from test_case_coverage.read_gtest_lobster import resolve_path
-from test_case_coverage.runner_common import require_env, scan_and_compute
+from test_case_coverage.runner_common import optional_spec_manifest, require_env, scan_and_compute
 
 logger = logging.getLogger(__name__)
 
@@ -71,22 +74,28 @@ def main(argv: list[str] | None = None) -> None:
     package = os.environ.get("TEST_CASE_COVERAGE_PACKAGE", "")
 
     # Steps 1-3: extract requirement metadata, scan gtest.lobster, compute lock
-    req_metadata, lock = scan_and_compute(lobster_manifest, gtest_lobster_path, package=package, label=label)
+    req_metadata, lock = scan_and_compute(
+        lobster_manifest,
+        gtest_lobster_path,
+        package=package,
+        label=label,
+        spec_manifest=optional_spec_manifest(),
+    )
     if not req_metadata:
         logger.warning("[%s] No CompReq requirement IDs found in lobster manifest.", label)
 
-    # Step 3b: validate GWT specs -- same severity as test_runner (ERROR + exit)
+    # Step 3b: validate GWT / test-spec -- same severity as test_runner (ERROR + exit)
     # so `.update` cannot silently write a lock file that the check step
     # (test_runner) would then reject for missing specs. --allow-check-failures
     # writes the lock anyway, mirroring test_runner's flag of the same name.
     spec_ok, spec_issues = validate_specs(lock)
     if not spec_ok:
-        logger.error("One or more test cases are missing a Given or Then specification:")
+        logger.error("One or more test cases are missing a specification (Given/Then or test-spec):")
         for line in spec_issues:
             logger.error(line)
         if not args.allow_check_failures:
             logger.error(
-                "Lock file NOT written. Add the missing Given/Then specification to the tests, "
+                "Lock file NOT written. Add the missing Given/Then or test-spec to the tests, "
                 "or pass --allow-check-failures to write anyway."
             )
             sys.exit(1)
