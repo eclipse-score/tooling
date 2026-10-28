@@ -158,12 +158,14 @@ $RootCause("<Root cause label 2>", "<RootCauseAlias2>", "OG1")
 | `$AndGate(alias, connection)` | All children required | parent alias |
 | `$RootCause(name, alias, connection)` | Root cause / leaf — `alias` must be a **plain TRLC identifier** (no dotted `Package.Name`) | enclosing gate alias |
 | `$IntermediateEvent(name, alias, connection)` | Intermediate cause | parent gate alias |
-| `$TransferInGate(name, alias, connection)` | Link to sub-tree | parent alias |
+| `$TransferInGate(alias, connection)` | Transfer in the root causes of another tree; `alias` is a `FailureMode` FQN covered by that tree's `$FailureMode` (any of `fm1`..`fm8`) | parent alias |
 
 **Rules:**
 - `$RootCause` alias is a plain identifier; the `puml_cli` FTA parser auto-generates a `fta_events.trlc` stub (imported as `<fta_package>`, default derived from the target label) containing a `RootCause` record named after that alias (its `failure_modes` lists the `FailureMode`s of the tree's `$FailureMode` root) — a `RootCauseAssessment` references it explicitly (e.g. `root_causes = [sample_safety_analysis_fta.JustBadLuck]`); there is no implicit name-matching.
 - Build top-down in the file: `$FailureMode` first, then gates, then `$RootCause` leaves.
 - The same `$RootCause` alias may appear in multiple FTAs (shared root cause).
+- `$TransferInGate` target must be covered by exactly one `$FailureMode` in the `srcs` of the same `fault_trees` target (other diagrams or the same one); unknown, ambiguous or cyclic targets fail the build. The transferring tree also inherits the root causes of the target tree (transitively).
+- `$TransferInGate` limits: the alias must be a failure-mode FQN (free labels such as `Transfer1` fail); no transfer into another `fault_trees` target; the alias is also the PlantUML shape name, so gates of one diagram with the same target share one triangle, and a gate cannot name `fm1` of a `$FailureMode` in its own diagram (name `fm2`..`fm8` or use a separate diagram). An inherited root cause is assessed once, and its assessment ASIL must be at least that of every failure mode of every tree it is part of.
 - `$OrGate` is the default for independent root causes; use `$AndGate` only when all causes must co-occur.
 
 ## Step 3 — Write Root Cause Assessments (`assessments.trlc`)

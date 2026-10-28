@@ -187,12 +187,14 @@ Given the resolved model of one `.puml` diagram:
    - The diagram's `@startuml <name>` matches its alias, display name or the
      last segment of its id (component and class diagrams).
    - It is a `$FailureMode` node — the tree root whose `connection` is `None`,
-     never used as a relation source (FTA diagrams).
+     never used as a relation source (FTA diagrams). Each failure-mode FQN of
+     the node is a define.
 2. **references** – Elements that link away to another diagram:
    - Top-level leaf boxes and relation endpoints (component diagrams).
    - All participants (sequence diagrams — no defines in sequence).
-   - `$TransferInGate` nodes whose alias is a TRLC-style FQN
-     (`Package.Record`) referencing another diagram's failure-mode node (FTA diagrams).
+   - `$TransferInGate` nodes; the alias is the TRLC FQN (`Package.Record`) of
+     a failure mode covered by another fault tree, which links to the diagram
+     defining it (FTA diagrams).
    - Internal FTA nodes (`$RootCause`, `$IntermediateEvent`, `$AndGate`,
      `$OrGate`) are omitted — they do not cross-link to other diagrams.
 

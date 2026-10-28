@@ -49,15 +49,15 @@ pub enum NodeKind {
 /// Which specific gate macro produced a [`NodeKind::Gate`] node.
 ///
 /// `NodeKind::Gate` alone does not distinguish an internal `$AndGate`/`$OrGate`
-/// from a `$TransferInGate` (which links to another diagram's failure mode).
+/// from a `$TransferInGate` (which links to another fault tree's failure mode).
 /// Consumers that need that distinction (e.g. `puml_idmap`) must match on this
 /// field rather than guessing from the node's `alias` shape.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum GateKind {
     And,
     Or,
-    /// Transfers into another diagram's failure mode; `alias` is that
-    /// failure mode's TRLC fully-qualified name.
+    /// Transfers into another fault tree; `alias` is the TRLC fully-qualified
+    /// name of any failure mode that tree's `$FailureMode` covers.
     TransferIn,
 }
 
@@ -91,18 +91,31 @@ pub struct FtaModel {
     pub nodes: Vec<FtaNode>,
 }
 
-/// A root cause as seen in one fault tree of one diagram.
+/// A root cause as seen in one fault tree.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TreeRootCause {
     /// TRLC identifier (the `$RootCause` alias).
     pub name: String,
     pub title: String,
-    /// Source line of the `$RootCause` call.
+    /// Basename of the diagram holding the `$RootCause` call.
+    pub diagram: String,
+    /// Source line of the `$RootCause` call in `diagram`.
+    pub line: usize,
+}
+
+/// A `$TransferInGate` of one fault tree.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TreeTransfer {
+    /// TRLC fully-qualified name of the failure mode the gate transfers into.
+    pub target: String,
+    /// Source line of the `$TransferInGate` call.
     pub line: usize,
 }
 
 /// One fault tree: a `$FailureMode` call plus the root causes reachable from
-/// it.  Produced per diagram by [`FtaModel::fault_trees`].
+/// it.  Produced per diagram by [`FtaModel::fault_trees`] with its own root
+/// causes only; [`merge_root_causes`] adds the root causes of every tree it
+/// transfers into.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FaultTree {
     /// Basename of the source `.puml` diagram.
@@ -110,6 +123,7 @@ pub struct FaultTree {
     /// TRLC fully-qualified names of the failure modes the top node covers.
     pub failure_modes: Vec<String>,
     pub root_causes: Vec<TreeRootCause>,
+    pub transfers: Vec<TreeTransfer>,
 }
 
 /// One generated `RootCause` TRLC record (see [`render_trlc_stub`]), merged
@@ -140,6 +154,12 @@ pub enum FtaError {
     )]
     InvalidFailureModeFqn { line: usize, fm_fqn: String },
     #[error(
+        "FTA macro $TransferInGate at line {line}: alias {alias:?} is not a valid TRLC \
+         fully-qualified name (expected the 'Package.Name' of a failure mode of the fault tree \
+         to transfer into)"
+    )]
+    InvalidTransferInAlias { line: usize, alias: String },
+    #[error(
         "FTA {diagram}:{line}: $RootCause alias {alias:?} must be a plain TRLC identifier -- \
          dotted 'Package.Name' aliases are no longer supported for root causes"
     )]
@@ -148,6 +168,40 @@ pub enum FtaError {
         line: usize,
         alias: String,
     },
+    #[error(
+        "FTA {diagram}:{line}: $TransferInGate {alias:?} has the same alias as another node of \
+         the diagram (e.g. the first failure mode of a $FailureMode), so PlantUML would draw both \
+         as one shape; transfer into another failure mode of that tree ($FailureMode fm2..fm8) \
+         or move that tree into its own diagram"
+    )]
+    TransferAliasCollision {
+        diagram: String,
+        line: usize,
+        alias: String,
+    },
+    #[error(
+        "FTA {diagram}:{line}: $TransferInGate {target:?} does not name a failure mode of any \
+         $FailureMode in the diagrams of this fault_trees target"
+    )]
+    UnknownTransferTarget {
+        diagram: String,
+        line: usize,
+        target: String,
+    },
+    #[error(
+        "FTA {diagram}:{line}: $TransferInGate {target:?} is ambiguous; it is covered by \
+         several $FailureMode calls ({owners})"
+    )]
+    AmbiguousTransferTarget {
+        diagram: String,
+        line: usize,
+        target: String,
+        owners: String,
+    },
+    #[error(
+        "FTA $TransferInGate cycle (failure mode, diagram:line of its transferring gate): {cycle}"
+    )]
+    TransferCycle { cycle: String },
     #[error(
         "FTA root cause {name:?} has a different title in {first_diagram} ({first_title:?}) than \
          in {second_diagram} ({second_title:?}); use the same title everywhere the same root \
@@ -160,6 +214,10 @@ pub enum FtaError {
         second_diagram: String,
         second_title: String,
     },
+}
+
+fn is_transfer_in(node: &FtaNode) -> bool {
+    node.gate_kind == Some(GateKind::TransferIn)
 }
 
 /// Legacy guardrail (ported from `safety_analysis_tools.py`): a TRLC
@@ -264,10 +322,17 @@ impl FtaModel {
                         TRANSFER_IN_GATE => GateKind::TransferIn,
                         _ => unreachable!("matched only by the outer arm pattern"),
                     };
+                    let alias = string_arg(call, 0)?;
+                    if gate_kind == GateKind::TransferIn && !is_valid_trlc_fqn(&alias) {
+                        return Err(FtaError::InvalidTransferInAlias {
+                            line: line.unwrap_or(0),
+                            alias,
+                        });
+                    }
                     FtaNode {
                         kind: NodeKind::Gate,
                         name: None,
-                        alias: string_arg(call, 0)?,
+                        alias,
                         connection: Some(string_arg(call, 1)?),
                         gate_kind: Some(gate_kind),
                         failure_modes: Vec::new(),
@@ -290,9 +355,11 @@ impl FtaModel {
     /// Index nodes by alias for O(1) parent lookups during the upward walk.
     /// On a duplicate alias the last node wins; a warning is emitted so
     /// malformed diagrams with repeated aliases are visible in the build log.
+    /// `$TransferInGate` nodes are left out: nothing connects below them and
+    /// their alias is a failure-mode name that may repeat or equal another node's.
     fn alias_index(&self) -> HashMap<&str, &FtaNode> {
         let mut map = HashMap::with_capacity(self.nodes.len());
-        for node in &self.nodes {
+        for node in self.nodes.iter().filter(|n| !is_transfer_in(n)) {
             if let Some(prev) = map.insert(node.alias.as_str(), node) {
                 warn!(
                     "FTA diagram has duplicate alias {:?} at lines {} and {}; \
@@ -329,14 +396,26 @@ impl FtaModel {
     }
 
     /// Assemble the fault trees of this diagram: one per `$FailureMode` call,
-    /// holding the root causes reachable from it.  Root causes that do not
-    /// connect to any failure mode are dropped with a `warn!` naming the
-    /// alias, diagram and line so a malformed fault tree is visible in the
-    /// build log rather than quietly losing a root cause from the safety
-    /// chain.  A tree left without any root cause also warns: its failure
-    /// modes stay uncovered in the traceability report.
+    /// holding its own root causes and `$TransferInGate` targets.  Root causes
+    /// and transfer gates that do not connect to any failure mode are dropped
+    /// with a `warn!` naming the alias, diagram and line so a malformed fault
+    /// tree is visible in the build log rather than quietly losing a root cause
+    /// from the safety chain.  A transfer gate whose alias equals another
+    /// node's alias is an error (PlantUML would merge both into one shape).
+    /// Transfers are linked across trees by [`merge_root_causes`].
     pub fn fault_trees(&self, puml_basename: &str) -> Result<Vec<FaultTree>, FtaError> {
         let by_alias = self.alias_index();
+        if let Some(gate) = self
+            .iter_kind(NodeKind::Gate)
+            .filter(|g| is_transfer_in(g))
+            .find(|g| by_alias.contains_key(g.alias.as_str()))
+        {
+            return Err(FtaError::TransferAliasCollision {
+                diagram: puml_basename.to_string(),
+                line: gate.line.unwrap_or(0),
+                alias: gate.alias.clone(),
+            });
+        }
         let tops: Vec<&FtaNode> = self.iter_kind(NodeKind::FailureMode).collect();
         let mut trees: Vec<FaultTree> = tops
             .iter()
@@ -344,6 +423,7 @@ impl FtaModel {
                 diagram: puml_basename.to_string(),
                 failure_modes: top.failure_modes.clone(),
                 root_causes: Vec::new(),
+                transfers: Vec::new(),
             })
             .collect();
 
@@ -371,32 +451,213 @@ impl FtaModel {
                     tree.root_causes.push(TreeRootCause {
                         name: rc.alias.clone(),
                         title: rc.name.clone().unwrap_or_default(),
+                        diagram: puml_basename.to_string(),
                         line,
                     });
                 }
             }
         }
 
-        for tree in trees.iter().filter(|t| t.root_causes.is_empty()) {
-            warn!(
-                "FTA {}: failure mode(s) {:?} have no root cause; they stay uncovered \
-                 in the traceability report",
-                puml_basename, tree.failure_modes,
-            );
+        let transfer_gates = self.iter_kind(NodeKind::Gate).filter(|g| is_transfer_in(g));
+        for gate in transfer_gates {
+            let line = gate.line.unwrap_or(0);
+            let Some(top) = self.root_for(gate, &by_alias) else {
+                warn!(
+                    "FTA {}:{}: transfer gate {:?} does not connect to any failure mode; \
+                     it is ignored",
+                    puml_basename, line, gate.alias,
+                );
+                continue;
+            };
+            for (tree, tree_top) in trees.iter_mut().zip(&tops) {
+                if tree_top.alias == top.alias
+                    && !tree.transfers.iter().any(|t| t.target == gate.alias)
+                {
+                    tree.transfers.push(TreeTransfer {
+                        target: gate.alias.clone(),
+                        line,
+                    });
+                }
+            }
         }
 
         Ok(trees)
     }
 }
 
+/// Link every `$TransferInGate` to the fault tree whose `$FailureMode` covers
+/// the gate's target failure mode, and give each tree the root causes of all
+/// trees it transfers into, directly or transitively.  `trees` must hold the
+/// trees of every diagram of one `fault_trees` target.
+///
+/// Fails when a target is covered by no tree or by several, or when transfers
+/// form a cycle (including a tree transferring into itself).  Warns about each
+/// tree that still has no root cause afterwards.
+fn resolve_transfers(trees: &mut [FaultTree]) -> Result<(), FtaError> {
+    let edges = transfer_edges(trees)?;
+    if let Some(cycle) = find_cycle(&edges) {
+        return Err(FtaError::TransferCycle {
+            cycle: describe_cycle(trees, &cycle),
+        });
+    }
+
+    let own: Vec<Vec<TreeRootCause>> = trees.iter().map(|t| t.root_causes.clone()).collect();
+    for (i, tree) in trees.iter_mut().enumerate() {
+        let mut reachable = vec![false; own.len()];
+        let mut pending = edges[i].clone();
+        while let Some(j) = pending.pop() {
+            if !std::mem::replace(&mut reachable[j], true) {
+                pending.extend(&edges[j]);
+            }
+        }
+        for j in (0..own.len()).filter(|&j| reachable[j]) {
+            for rc in &own[j] {
+                if !tree.root_causes.iter().any(|r| r.name == rc.name) {
+                    tree.root_causes.push(rc.clone());
+                }
+            }
+        }
+    }
+
+    for tree in trees.iter().filter(|t| t.root_causes.is_empty()) {
+        warn!(
+            "FTA {}: failure mode(s) {:?} have no root cause; they stay uncovered \
+             in the traceability report",
+            tree.diagram, tree.failure_modes,
+        );
+    }
+    Ok(())
+}
+
+/// `edges[i]` lists the trees tree `i` transfers into (de-duplicated, in
+/// transfer order).
+fn transfer_edges(trees: &[FaultTree]) -> Result<Vec<Vec<usize>>, FtaError> {
+    let mut owners: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (i, tree) in trees.iter().enumerate() {
+        for fm in &tree.failure_modes {
+            owners.entry(fm.as_str()).or_default().push(i);
+        }
+    }
+
+    let mut edges: Vec<Vec<usize>> = vec![Vec::new(); trees.len()];
+    for (i, tree) in trees.iter().enumerate() {
+        for transfer in &tree.transfers {
+            let candidates = owners.get(transfer.target.as_str()).map(Vec::as_slice);
+            let target_tree = match candidates {
+                None | Some([]) => {
+                    return Err(FtaError::UnknownTransferTarget {
+                        diagram: tree.diagram.clone(),
+                        line: transfer.line,
+                        target: transfer.target.clone(),
+                    });
+                }
+                Some([single]) => *single,
+                Some(several) => {
+                    let owners = several
+                        .iter()
+                        .map(|&j| trees[j].diagram.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    return Err(FtaError::AmbiguousTransferTarget {
+                        diagram: tree.diagram.clone(),
+                        line: transfer.line,
+                        target: transfer.target.clone(),
+                        owners,
+                    });
+                }
+            };
+            if !edges[i].contains(&target_tree) {
+                edges[i].push(target_tree);
+            }
+        }
+    }
+    Ok(edges)
+}
+
+/// `a (x.puml:3) -> b (y.puml:7) -> a`: each tree with the line of its gate
+/// that leads to the next tree of `cycle` (first and last entries equal).
+fn describe_cycle(trees: &[FaultTree], cycle: &[usize]) -> String {
+    let mut steps: Vec<String> = cycle
+        .windows(2)
+        .map(|pair| {
+            let (from, to) = (&trees[pair[0]], &trees[pair[1]]);
+            let line = from
+                .transfers
+                .iter()
+                .find(|t| to.failure_modes.contains(&t.target))
+                .map_or(0, |t| t.line);
+            format!("{} ({}:{})", from.failure_modes[0], from.diagram, line)
+        })
+        .collect();
+    steps.push(trees[cycle[0]].failure_modes[0].clone());
+    steps.join(" -> ")
+}
+
+/// First cycle found in the directed graph, as a node path whose first and
+/// last entries are the same node.
+fn find_cycle(edges: &[Vec<usize>]) -> Option<Vec<usize>> {
+    #[derive(Clone, Copy, PartialEq)]
+    enum State {
+        Unvisited,
+        OnPath,
+        Done,
+    }
+
+    let mut state = vec![State::Unvisited; edges.len()];
+    // (node, index of the next outgoing edge to follow)
+    let mut path: Vec<(usize, usize)> = Vec::new();
+    for start in 0..edges.len() {
+        if state[start] != State::Unvisited {
+            continue;
+        }
+        state[start] = State::OnPath;
+        path.push((start, 0));
+        while let Some(frame) = path.last_mut() {
+            let node = frame.0;
+            let Some(&next) = edges[node].get(frame.1) else {
+                state[node] = State::Done;
+                path.pop();
+                continue;
+            };
+            frame.1 += 1;
+            match state[next] {
+                State::Unvisited => {
+                    state[next] = State::OnPath;
+                    path.push((next, 0));
+                }
+                State::OnPath => {
+                    let from = path
+                        .iter()
+                        .position(|&(n, _)| n == next)
+                        .expect("an on-path node is on the path");
+                    let mut cycle: Vec<usize> = path[from..].iter().map(|&(n, _)| n).collect();
+                    cycle.push(next);
+                    return Some(cycle);
+                }
+                State::Done => {}
+            }
+        }
+    }
+    None
+}
+
 /// Merge the root causes of every fault tree of one `fta_package` into a
 /// single, deduplicated set (one entry per root-cause name, sorted by name): a
 /// root cause shared by several trees keeps a single record with its
-/// `failure_modes` merged. Returns an error when the same root cause carries
-/// two different titles.
+/// `failure_modes` merged. `trees` must hold the trees of every diagram of one
+/// `fault_trees` target: each tree first gains the root causes of the trees its
+/// `$TransferInGate`s lead to, directly or transitively (an inherited root
+/// cause keeps the diagram and line of its own `$RootCause` call).
+///
+/// Fails when a transfer target is covered by no tree or by several, when
+/// transfers form a cycle (including a tree transferring into itself), or when
+/// the same root cause carries two different titles.  Warns about each tree
+/// that has no root cause.
 pub fn merge_root_causes(trees: &[FaultTree]) -> Result<Vec<RootCauseStub>, FtaError> {
+    let mut trees = trees.to_vec();
+    resolve_transfers(&mut trees)?;
     let mut merged: BTreeMap<String, RootCauseStub> = BTreeMap::new();
-    for tree in trees {
+    for tree in &trees {
         for rc in &tree.root_causes {
             let Some(existing) = merged.get_mut(&rc.name) else {
                 merged.insert(
@@ -404,7 +665,7 @@ pub fn merge_root_causes(trees: &[FaultTree]) -> Result<Vec<RootCauseStub>, FtaE
                     RootCauseStub {
                         name: rc.name.clone(),
                         title: rc.title.clone(),
-                        diagram: tree.diagram.clone(),
+                        diagram: rc.diagram.clone(),
                         line: rc.line,
                         failure_modes: tree.failure_modes.clone(),
                     },
@@ -416,7 +677,7 @@ pub fn merge_root_causes(trees: &[FaultTree]) -> Result<Vec<RootCauseStub>, FtaE
                     name: rc.name.clone(),
                     first_diagram: existing.diagram.clone(),
                     first_title: existing.title.clone(),
-                    second_diagram: tree.diagram.clone(),
+                    second_diagram: rc.diagram.clone(),
                     second_title: rc.title.clone(),
                 });
             }
@@ -711,6 +972,7 @@ $RootCause("No More Coffee", "NoMoreCoffee", "AG2")
             vec![TreeRootCause {
                 name: "Cm".into(),
                 title: "cm".into(),
+                diagram: "d.puml".into(),
                 line: 3,
             }]
         );
@@ -766,10 +1028,229 @@ $RootCause("No More Coffee", "NoMoreCoffee", "AG2")
                 .map(|(name, title, line)| TreeRootCause {
                     name: name.to_string(),
                     title: title.to_string(),
+                    diagram: diagram.into(),
                     line: *line,
                 })
                 .collect(),
+            transfers: Vec::new(),
         }
+    }
+
+    fn transferring(mut tree: FaultTree, targets: &[&str]) -> FaultTree {
+        tree.transfers = targets
+            .iter()
+            .enumerate()
+            .map(|(i, target)| TreeTransfer {
+                target: target.to_string(),
+                line: 10 + i,
+            })
+            .collect();
+        tree
+    }
+
+    fn root_cause_names(tree: &FaultTree) -> Vec<&str> {
+        let mut names: Vec<&str> = tree.root_causes.iter().map(|r| r.name.as_str()).collect();
+        names.sort_unstable();
+        names
+    }
+
+    #[test]
+    fn transfer_in_gate_alias_must_be_a_trlc_fqn() {
+        let file = ProcedureFile {
+            stmts: vec![mk_call(TRANSFER_IN_GATE, &["Transfer1", "Lib.Fm"], 4)],
+        };
+        let err = FtaModel::from_procedure_file(&file).unwrap_err();
+        assert!(matches!(
+            err,
+            FtaError::InvalidTransferInAlias { line: 4, .. }
+        ));
+    }
+
+    #[test]
+    fn fault_tree_collects_transfer_targets_of_its_gates() {
+        let model = model_from_stmts(vec![
+            mk_call(FAILURE_MODE, &["FM", "Lib.Fm"], 1),
+            mk_call(OR_GATE, &["OG", "Lib.Fm"], 2),
+            mk_call(TRANSFER_IN_GATE, &["Other.Fm", "OG"], 3),
+            mk_call(TRANSFER_IN_GATE, &["Other.Fm", "OG"], 4),
+            mk_call(TRANSFER_IN_GATE, &["Third.Fm", "Lib.Fm"], 5),
+        ]);
+        let trees = model.fault_trees("d.puml").expect("fault trees");
+        assert_eq!(trees.len(), 1);
+        let targets: Vec<(&str, usize)> = trees[0]
+            .transfers
+            .iter()
+            .map(|t| (t.target.as_str(), t.line))
+            .collect();
+        assert_eq!(targets, vec![("Other.Fm", 3), ("Third.Fm", 5)]);
+    }
+
+    #[test]
+    fn fault_trees_ignore_dangling_transfer_gate() {
+        let model = model_from_stmts(vec![
+            mk_call(FAILURE_MODE, &["FM", "Lib.Fm"], 1),
+            mk_call(TRANSFER_IN_GATE, &["Other.Fm", "MissingGate"], 2),
+        ]);
+        let trees = model.fault_trees("d.puml").expect("fault trees");
+        assert!(trees[0].transfers.is_empty());
+    }
+
+    #[test]
+    fn fault_trees_reject_transfer_gate_aliasing_first_failure_mode_of_diagram() {
+        let model = model_from_stmts(vec![
+            mk_call(FAILURE_MODE, &["FM A", "Lib.A"], 1),
+            mk_call(OR_GATE, &["OG", "Lib.A"], 2),
+            mk_call(TRANSFER_IN_GATE, &["Lib.B", "OG"], 3),
+            mk_call(FAILURE_MODE, &["FM B", "Lib.B"], 4),
+        ]);
+        let err = model.fault_trees("d.puml").unwrap_err();
+        assert!(matches!(
+            &err,
+            FtaError::TransferAliasCollision { diagram, line: 3, alias }
+                if diagram == "d.puml" && alias == "Lib.B"
+        ));
+    }
+
+    #[test]
+    fn fault_trees_allow_transfer_gates_sharing_an_alias() {
+        let model = model_from_stmts(vec![
+            mk_call(FAILURE_MODE, &["FM A", "Lib.A"], 1),
+            mk_call(OR_GATE, &["OG1", "Lib.A"], 2),
+            mk_call(OR_GATE, &["OG2", "Lib.A"], 3),
+            mk_call(TRANSFER_IN_GATE, &["Lib.B", "OG1"], 4),
+            mk_call(TRANSFER_IN_GATE, &["Lib.B", "OG2"], 5),
+        ]);
+        let trees = model.fault_trees("d.puml").expect("fault trees");
+        assert_eq!(trees[0].transfers.len(), 1);
+    }
+
+    #[test]
+    fn same_diagram_transfer_into_non_first_failure_mode_inherits_root_causes() {
+        let model = model_from_stmts(vec![
+            mk_call(FAILURE_MODE, &["FM A", "Lib.A"], 1),
+            mk_call(OR_GATE, &["OGA", "Lib.A"], 2),
+            mk_call(TRANSFER_IN_GATE, &["Lib.B2", "OGA"], 3),
+            mk_call(FAILURE_MODE, &["FM B", "Lib.B1", "Lib.B2"], 4),
+            mk_call(OR_GATE, &["OGB", "Lib.B1"], 5),
+            mk_call(ROOT_CAUSE, &["cause b", "CmB", "OGB"], 6),
+        ]);
+        let mut trees = model.fault_trees("d.puml").expect("fault trees");
+        resolve_transfers(&mut trees).expect("resolve");
+        assert_eq!(root_cause_names(&trees[0]), vec!["CmB"]);
+        assert_eq!(trees[0].root_causes[0].diagram, "d.puml");
+    }
+
+    #[test]
+    fn resolve_transfers_inherits_root_causes_of_target_tree() {
+        let mut trees = vec![
+            transferring(tree("a.puml", &["Lib.A"], &[("CmA", "a", 1)]), &["Lib.B"]),
+            tree("b.puml", &["Lib.B"], &[("CmB", "b", 2)]),
+        ];
+        resolve_transfers(&mut trees).expect("resolve");
+        assert_eq!(root_cause_names(&trees[0]), vec!["CmA", "CmB"]);
+        assert_eq!(root_cause_names(&trees[1]), vec!["CmB"]);
+    }
+
+    #[test]
+    fn resolve_transfers_accepts_any_failure_mode_of_the_target_tree() {
+        let mut trees = vec![
+            transferring(tree("a.puml", &["Lib.A"], &[]), &["Lib.B2"]),
+            tree("b.puml", &["Lib.B1", "Lib.B2"], &[("CmB", "b", 2)]),
+        ];
+        resolve_transfers(&mut trees).expect("resolve");
+        assert_eq!(root_cause_names(&trees[0]), vec!["CmB"]);
+    }
+
+    #[test]
+    fn resolve_transfers_follows_chains_regardless_of_tree_order() {
+        let mut trees = vec![
+            tree("c.puml", &["Lib.C"], &[("CmC", "c", 3)]),
+            transferring(tree("b.puml", &["Lib.B"], &[("CmB", "b", 2)]), &["Lib.C"]),
+            transferring(tree("a.puml", &["Lib.A"], &[("CmA", "a", 1)]), &["Lib.B"]),
+        ];
+        resolve_transfers(&mut trees).expect("resolve");
+        assert_eq!(root_cause_names(&trees[0]), vec!["CmC"]);
+        assert_eq!(root_cause_names(&trees[1]), vec!["CmB", "CmC"]);
+        assert_eq!(root_cause_names(&trees[2]), vec!["CmA", "CmB", "CmC"]);
+    }
+
+    #[test]
+    fn resolve_transfers_keeps_shared_root_cause_once() {
+        let mut trees = vec![
+            transferring(
+                tree("a.puml", &["Lib.A"], &[("Shared", "s", 1)]),
+                &["Lib.B", "Lib.C"],
+            ),
+            transferring(
+                tree("b.puml", &["Lib.B"], &[("Shared", "s", 2)]),
+                &["Lib.C"],
+            ),
+            tree("c.puml", &["Lib.C"], &[("Shared", "s", 3)]),
+        ];
+        resolve_transfers(&mut trees).expect("resolve");
+        assert_eq!(root_cause_names(&trees[0]), vec!["Shared"]);
+        assert_eq!(trees[0].root_causes[0].diagram, "a.puml");
+    }
+
+    #[test]
+    fn resolve_transfers_links_trees_of_the_same_diagram() {
+        let mut trees = vec![
+            transferring(tree("d.puml", &["Lib.A"], &[]), &["Lib.B"]),
+            tree("d.puml", &["Lib.B"], &[("CmB", "b", 2)]),
+        ];
+        resolve_transfers(&mut trees).expect("resolve");
+        assert_eq!(root_cause_names(&trees[0]), vec!["CmB"]);
+    }
+
+    #[test]
+    fn resolve_transfers_rejects_unknown_target() {
+        let mut trees = vec![transferring(
+            tree("a.puml", &["Lib.A"], &[("CmA", "a", 1)]),
+            &["Lib.Missing"],
+        )];
+        let err = resolve_transfers(&mut trees).unwrap_err();
+        assert!(matches!(
+            err,
+            FtaError::UnknownTransferTarget { line: 10, .. }
+        ));
+    }
+
+    #[test]
+    fn resolve_transfers_rejects_ambiguous_target() {
+        let mut trees = vec![
+            transferring(tree("a.puml", &["Lib.A"], &[]), &["Lib.B"]),
+            tree("b1.puml", &["Lib.B"], &[("Cm1", "1", 1)]),
+            tree("b2.puml", &["Lib.B"], &[("Cm2", "2", 1)]),
+        ];
+        let err = resolve_transfers(&mut trees).unwrap_err();
+        let FtaError::AmbiguousTransferTarget { owners, .. } = err else {
+            panic!("expected AmbiguousTransferTarget, got {err:?}");
+        };
+        assert_eq!(owners, "b1.puml, b2.puml");
+    }
+
+    #[test]
+    fn resolve_transfers_rejects_cycle() {
+        let mut trees = vec![
+            transferring(tree("a.puml", &["Lib.A"], &[]), &["Lib.B"]),
+            transferring(tree("b.puml", &["Lib.B"], &[]), &["Lib.C", "Lib.A"]),
+            tree("c.puml", &["Lib.C"], &[]),
+        ];
+        let err = resolve_transfers(&mut trees).unwrap_err();
+        let FtaError::TransferCycle { cycle } = err else {
+            panic!("expected TransferCycle, got {err:?}");
+        };
+        assert_eq!(cycle, "Lib.A (a.puml:10) -> Lib.B (b.puml:11) -> Lib.A");
+    }
+
+    #[test]
+    fn resolve_transfers_rejects_transfer_into_own_tree() {
+        let mut trees = vec![transferring(
+            tree("a.puml", &["Lib.A1", "Lib.A2"], &[("CmA", "a", 1)]),
+            &["Lib.A2"],
+        )];
+        let err = resolve_transfers(&mut trees).unwrap_err();
+        assert!(matches!(err, FtaError::TransferCycle { .. }));
     }
 
     #[test]
@@ -792,6 +1273,32 @@ $RootCause("No More Coffee", "NoMoreCoffee", "AG2")
             merged[0].failure_modes,
             vec!["Lib.FmA".to_string(), "Lib.FmB".to_string()]
         );
+    }
+
+    #[test]
+    fn merge_root_causes_attributes_inherited_root_cause_to_its_origin() {
+        let trees = vec![
+            transferring(tree("a.puml", &["Lib.A"], &[]), &["Lib.B"]),
+            tree("b.puml", &["Lib.B"], &[("CmB", "b", 7)]),
+        ];
+        let merged = merge_root_causes(&trees).expect("merge");
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].diagram, "b.puml");
+        assert_eq!(merged[0].line, 7);
+        assert_eq!(
+            merged[0].failure_modes,
+            vec!["Lib.A".to_string(), "Lib.B".to_string()]
+        );
+    }
+
+    #[test]
+    fn merge_root_causes_rejects_unresolvable_transfer() {
+        let trees = vec![transferring(
+            tree("a.puml", &["Lib.A"], &[]),
+            &["Lib.Missing"],
+        )];
+        let err = merge_root_causes(&trees).unwrap_err();
+        assert!(matches!(err, FtaError::UnknownTransferTarget { .. }));
     }
 
     #[test]
