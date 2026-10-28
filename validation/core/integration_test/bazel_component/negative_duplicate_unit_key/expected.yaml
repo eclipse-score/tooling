@@ -15,6 +15,6 @@ error_contains: |
   [Design] Unit "unit_1" is defined more than once in Bazel.
     Name               : "unit_1"
     Parent             : component_example
-    First bazel label  : @//pkg_a/unit_1:unit_1
-    Second bazel label : @//pkg_b/unit_1:unit_1
+    First bazel label  : @//bazel/rules/rules_score/examples/seooc/pkg_a/unit_1:unit_1
+    Second bazel label : @//bazel/rules/rules_score/examples/seooc/pkg_b/unit_1:unit_1
     Fix                : Keep only one Bazel unit definition for "unit_1" under "component_example", or rename one of the duplicate Bazel targets.

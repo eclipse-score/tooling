@@ -15,6 +15,6 @@ error_contains: |
   [Design] Component "component_example" is defined more than once in Bazel.
     Name               : "component_example"
     Parent             : safety_software_seooc_example
-    First bazel label  : @//pkg_a:component_example
-    Second bazel label : @//pkg_b:component_example
+    First bazel label  : @//bazel/rules/rules_score/examples/seooc/pkg_a:component_example
+    Second bazel label : @//bazel/rules/rules_score/examples/seooc/pkg_b:component_example
     Fix                : Keep only one Bazel component definition for "component_example" under "safety_software_seooc_example", or rename one of the duplicate Bazel targets.
