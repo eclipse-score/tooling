@@ -335,28 +335,15 @@ fn empty_idmap(source: &str) -> IdMapFile {
     }
 }
 
-/// Return `true` when `alias` is a 2-part TRLC fully-qualified name of the form
-/// `Package.Record`, where each part is a valid identifier (leading ASCII
-/// letter or `_`, followed by ASCII alphanumerics or `_`).
-fn is_trlc_fqn(alias: &str) -> bool {
-    let parts: Vec<&str> = alias.split('.').collect();
-    if parts.len() != 2 {
-        return false;
-    }
-    parts.iter().all(|part| {
-        let mut chars = part.chars();
-        let first_ok = matches!(chars.next(), Some(c) if c.is_ascii_alphabetic() || c == '_');
-        first_ok && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
-    })
-}
-
 /// Produce an [`IdMapFile`] from a resolved FTA model.
 ///
 /// A node is a **define** when it is the tree's failure mode (`NodeKind::FailureMode`,
-/// `connection` is `None` — a relation sink never used as a source).
+/// `connection` is `None` — a relation sink never used as a source); it defines
+/// every failure-mode FQN it covers, so a `$TransferInGate` can name any of them.
 /// A gate node is a **reference** only when [`FtaNode::gate_kind`] is
-/// `GateKind::TransferIn` (a `$TransferInGate` pointing to another diagram's
-/// failure mode); `GateKind::And`/`GateKind::Or` gates are internal and produce
+/// `GateKind::TransferIn` (a `$TransferInGate` naming a failure mode of another
+/// fault tree; a link to its own diagram is dropped by the consumer);
+/// `GateKind::And`/`GateKind::Or` gates are internal and produce
 /// no cross-diagram link. All other nodes (root-cause/intermediate events) are
 /// likewise internal.
 fn fta_model_to_idmap(model: &FtaModel, source: &str) -> IdMapFile {
@@ -366,20 +353,12 @@ fn fta_model_to_idmap(model: &FtaModel, source: &str) -> IdMapFile {
     for node in &model.nodes {
         match node.kind {
             NodeKind::FailureMode => {
-                defines.push(IdMapEntry {
+                defines.extend(node.failure_modes.iter().map(|fm| IdMapEntry {
                     alias: node.alias.clone(),
-                    id: node.alias.clone(),
-                });
+                    id: fm.clone(),
+                }));
             }
             NodeKind::Gate if node.gate_kind == Some(GateKind::TransferIn) => {
-                if !is_trlc_fqn(&node.alias) {
-                    log::warn!(
-                        "FTA $TransferInGate {:?} does not look like a TRLC \
-                         fully-qualified name (expected 'Package.Record'); \
-                         emitting it as a reference anyway",
-                        node.alias,
-                    );
-                }
                 references.push(IdMapEntry {
                     alias: node.alias.clone(),
                     id: node.alias.clone(),
@@ -1090,11 +1069,19 @@ mod tests {
         }
     }
 
+    fn fta_failure_mode(fqns: &[&str]) -> FtaNode {
+        FtaNode {
+            alias: fqns[0].to_string(),
+            failure_modes: fqns.iter().map(|f| f.to_string()).collect(),
+            ..fta_node(NodeKind::FailureMode, None, fqns[0])
+        }
+    }
+
     #[test]
     fn fta_failure_mode_is_define_and_transfer_gate_is_reference() {
         let model = FtaModel {
             nodes: vec![
-                fta_node(NodeKind::FailureMode, None, "pkg.TopFailure"),
+                fta_failure_mode(&["pkg.TopFailure"]),
                 // $TransferInGate: alias is a foreign top-event FQN → reference.
                 fta_node(
                     NodeKind::Gate,
@@ -1122,26 +1109,16 @@ mod tests {
     }
 
     #[test]
-    fn is_trlc_fqn_accepts_two_part_identifiers_and_rejects_others() {
-        // Valid: exactly two identifier parts.
-        assert!(is_trlc_fqn("Package.Record"));
-        assert!(is_trlc_fqn("_priv.R1"));
-        assert!(is_trlc_fqn("a1.b2"));
+    fn fta_failure_mode_defines_every_covered_failure_mode() {
+        let model = FtaModel {
+            nodes: vec![fta_failure_mode(&["pkg.Zed", "pkg.Alpha", "pkg.Mid"])],
+        };
 
-        // Invalid: wrong number of parts.
-        assert!(!is_trlc_fqn("NoDot"));
-        assert!(!is_trlc_fqn("a.b.c"));
-        assert!(!is_trlc_fqn(""));
+        let idmap = fta_model_to_idmap(&model, "pkg/fta.puml");
 
-        // Invalid: empty parts.
-        assert!(!is_trlc_fqn(".Record"));
-        assert!(!is_trlc_fqn("Package."));
-
-        // Invalid: bad leading character or illegal characters.
-        assert!(!is_trlc_fqn("1bad.Name"));
-        assert!(!is_trlc_fqn("good.2bad"));
-        assert!(!is_trlc_fqn("has space.Name"));
-        assert!(!is_trlc_fqn("dash-ed.Name"));
+        let define_ids: Vec<&str> = idmap.defines.iter().map(|e| e.id.as_str()).collect();
+        assert_eq!(define_ids, ["pkg.Alpha", "pkg.Mid", "pkg.Zed"]);
+        assert!(idmap.defines.iter().all(|e| e.alias == "pkg.Zed"));
     }
 
     // ── Public write_idmap_to_file dispatch ─────────────────────────────────

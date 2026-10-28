@@ -286,9 +286,13 @@ so that the procedure definitions are available.
    * - ``$OrGate(alias, connection)``
      - OR gate: any single child is sufficient for the parent to occur.
        ``connection`` is the alias of the parent node.
-   * - ``$TransferInGate(name, alias, connection)``
-     - Transfer-in gate linking to another FTA sub-tree. ``connection`` is the
-       alias of the parent node.
+   * - ``$TransferInGate(alias, connection)``
+     - Transfer-in gate: the root causes of another fault tree count as
+       causes of this tree. ``alias`` is the fully-qualified TRLC name
+       (``Package.RecordName``) of any failure mode the other tree's
+       ``$FailureMode`` covers (``fm1`` .. ``fm8``). ``connection`` is the
+       alias of the parent node. See :ref:`fta-transfer-in` for the
+       limitations.
 
 Each element points to its **parent** via the ``connection`` parameter — the
 arrow goes *from* the element *up* to the parent. Declare the tree from the top
@@ -365,6 +369,56 @@ For example, the fault tree for ``SampleLibrary.SampleFailureMode`` (the
 whereas ``NoMoreCookies`` and ``NoMoreCoffee`` must occur together (AND gate)
 to cause the intermediate event. Each of these root causes needs an assessment
 in Step 3.
+
+.. _fta-transfer-in:
+
+Transferring into another fault tree
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``$TransferInGate(alias, connection)`` reuses a fault tree instead of copying
+it: the root causes of the tree whose ``$FailureMode`` covers ``alias``, and of
+every tree that tree transfers into in turn, become root causes of the
+transferring tree.
+
+.. code-block:: text
+
+    ' message_lost_fta.puml
+    $FailureMode("Message lost", "MessagePassing.MessageLost")
+    $OrGate("OG1", "MessagePassing.MessageLost")
+    $TransferInGate("MessagePassing.ChannelBroken", "OG1")
+
+    ' channel_broken_fta.puml
+    $FailureMode("Channel broken", "MessagePassing.ChannelBroken")
+    ...
+
+An inherited root cause is generated and assessed once (Step 3), keeps the
+diagram and line of its own ``$RootCause`` call, and lists the failure modes of
+every tree it is part of. The ASIL of its assessment must be at least that of
+the highest of these failure modes, so adding a transfer can make an existing
+assessment fail the ASIL check.
+
+Limitations:
+
+* Only the ``alias`` identifies the target; there is no separate label. The
+  triangle is drawn without text; with ``clickable_plantuml`` it links to the
+  diagram that defines the target.
+* ``alias`` must be a failure-mode name (``Package.RecordName``). Free labels
+  such as ``Transfer1`` fail the build.
+* The target tree must be in a diagram of the same ``fault_trees`` target (the
+  same diagram or another one of its ``srcs``). Transfers into another
+  ``fault_trees`` target are not possible.
+* A target that no ``$FailureMode`` covers, that several ``$FailureMode`` calls
+  cover, or that leads back to the transferring tree (also through other
+  trees) fails the build.
+* ``alias`` is also the PlantUML name of the triangle. Several gates of one
+  diagram naming the same target therefore share one triangle that is linked
+  to each of their parents.
+* For the same reason, a gate cannot name the first failure mode (``fm1``) of
+  a ``$FailureMode`` of its own diagram: both would be one shape, so the build
+  fails. Name another failure mode (``fm2`` .. ``fm8``) of that tree or move
+  the tree into its own diagram.
+* A gate whose ``connection`` does not lead to a ``$FailureMode`` is ignored
+  with a warning.
 
 Step 3 — Assess every root cause
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

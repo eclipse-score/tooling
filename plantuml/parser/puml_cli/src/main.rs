@@ -483,7 +483,8 @@ fn run_fta(
         // toolchain's global `plantuml.include.path`.
         let source = fs::read_to_string(file.as_path())?;
         let parsed = ProcedureParserService.parse_file(file, &source, log_level)?;
-        let model = FtaModel::from_procedure_file(&parsed)?;
+        let model =
+            FtaModel::from_procedure_file(&parsed).map_err(|e| format!("FTA {basename}: {e}"))?;
         all_trees.extend(model.fault_trees(basename)?);
 
         if let Some(ref idir_str) = args.idmap_output_dir {
@@ -1240,6 +1241,9 @@ mod fta_pipeline_tests {
         !procedure $OrGate($alias, $connection)\n\
         rectangle \" \" as $alias\n\
         !endprocedure\n\
+        !procedure $TransferInGate($alias, $connection)\n\
+        rectangle \" \" as $alias\n\
+        !endprocedure\n\
         !procedure $RootCause($name, $alias, $connection)\n\
         usecase \"$name\" as $alias\n\
         !endprocedure\n\
@@ -1330,6 +1334,165 @@ mod fta_pipeline_tests {
         assert!(trlc.contains("failure_modes = [Lib.FmA]"));
         assert!(trlc.contains("ScoreReq.RootCause CmB {"));
         assert!(trlc.contains("failure_modes = [Lib.FmB]"));
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    fn transfer_diagram(fm_fqn: &str, targets: &[&str]) -> String {
+        let gates: String = targets
+            .iter()
+            .map(|target| format!("$TransferInGate(\"{target}\", \"OG\")\n"))
+            .collect();
+        format!(
+            "@startuml\n!include fta_metamodel.puml\n\
+             $FailureMode(\"transferring\", \"{fm_fqn}\")\n\
+             $OrGate(\"OG\", \"{fm_fqn}\")\n{gates}@enduml\n",
+        )
+    }
+
+    fn run_transfer_fta(tag: &str, diagrams: &[(&str, String)]) -> (PathBuf, Result<(), String>) {
+        let dir = unique_dir(tag);
+        write(&dir.join("fta_metamodel.puml"), TEST_METAMODEL);
+        let files: Vec<PathBuf> = diagrams
+            .iter()
+            .map(|(name, content)| {
+                let path = dir.join(name);
+                write(&path, content);
+                path
+            })
+            .collect();
+        let refs: Vec<&Path> = files.iter().map(PathBuf::as_path).collect();
+        let out = dir.join("out");
+        let args = args_for(&out, &refs);
+        let result = run_fta(&args, out.to_str().unwrap(), "TestFta", LogLevel::Warn)
+            .map_err(|e| e.to_string());
+        (dir, result)
+    }
+
+    #[test]
+    fn run_fta_transfer_gate_inherits_root_causes_across_diagrams() {
+        let (dir, result) = run_transfer_fta(
+            "transfer",
+            &[
+                ("a_fta.puml", transfer_diagram("Lib.FmA", &["Lib.FmB2"])),
+                (
+                    "b_fta.puml",
+                    "@startuml\n!include fta_metamodel.puml\n\
+                     $FailureMode(\"FM B\", \"Lib.FmB1\", \"Lib.FmB2\")\n\
+                     $OrGate(\"OG\", \"Lib.FmB1\")\n\
+                     $RootCause(\"a control measure\", \"CmB\", \"OG\")\n@enduml\n"
+                        .to_string(),
+                ),
+            ],
+        );
+        result.expect("run_fta");
+
+        let trlc = fs::read_to_string(dir.join("out").join("fta_events.trlc")).unwrap();
+        assert!(trlc.contains("ScoreReq.RootCause CmB {"));
+        assert!(trlc.contains("failure_modes = [Lib.FmA, Lib.FmB1, Lib.FmB2]"));
+        assert!(trlc.contains("// b_fta.puml:5\n"), "{trlc}");
+        assert!(
+            trlc.contains("diagram = \"b_fta.puml\"\n  line = 5\n"),
+            "{trlc}"
+        );
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn run_fta_transfer_gate_into_non_first_failure_mode_of_same_diagram() {
+        let (dir, result) = run_transfer_fta(
+            "transfer_same_diagram",
+            &[(
+                "a_fta.puml",
+                "@startuml\n!include fta_metamodel.puml\n\
+                 $FailureMode(\"FM A\", \"Lib.FmA\")\n\
+                 $OrGate(\"OGA\", \"Lib.FmA\")\n\
+                 $TransferInGate(\"Lib.FmB2\", \"OGA\")\n\
+                 $FailureMode(\"FM B\", \"Lib.FmB1\", \"Lib.FmB2\")\n\
+                 $OrGate(\"OGB\", \"Lib.FmB1\")\n\
+                 $RootCause(\"a control measure\", \"CmB\", \"OGB\")\n@enduml\n"
+                    .to_string(),
+            )],
+        );
+        result.expect("run_fta");
+
+        let trlc = fs::read_to_string(dir.join("out").join("fta_events.trlc")).unwrap();
+        assert!(
+            trlc.contains("failure_modes = [Lib.FmA, Lib.FmB1, Lib.FmB2]"),
+            "{trlc}"
+        );
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn run_fta_rejects_transfer_gate_aliasing_failure_mode_of_same_diagram() {
+        let (dir, result) = run_transfer_fta(
+            "transfer_alias_collision",
+            &[(
+                "a_fta.puml",
+                "@startuml\n!include fta_metamodel.puml\n\
+                 $FailureMode(\"FM A\", \"Lib.FmA\")\n\
+                 $OrGate(\"OGA\", \"Lib.FmA\")\n\
+                 $TransferInGate(\"Lib.FmB\", \"OGA\")\n\
+                 $FailureMode(\"FM B\", \"Lib.FmB\")\n\
+                 $OrGate(\"OGB\", \"Lib.FmB\")\n\
+                 $RootCause(\"a control measure\", \"CmB\", \"OGB\")\n@enduml\n"
+                    .to_string(),
+            )],
+        );
+        let err = result.unwrap_err();
+        assert!(err.contains("a_fta.puml:5"), "{err}");
+        assert!(err.contains("Lib.FmB"), "{err}");
+        assert!(err.contains("same alias"), "{err}");
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn run_fta_rejects_transfer_to_unknown_failure_mode() {
+        let (dir, result) = run_transfer_fta(
+            "transfer_unknown",
+            &[
+                ("a_fta.puml", transfer_diagram("Lib.FmA", &["Lib.Missing"])),
+                ("b_fta.puml", diagram("FM B", "Lib.FmB", "CmB")),
+            ],
+        );
+        let err = result.unwrap_err();
+        assert!(err.contains("a_fta.puml"), "{err}");
+        assert!(err.contains("Lib.Missing"), "{err}");
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn run_fta_rejects_transfer_gate_without_failure_mode_fqn() {
+        let (dir, result) = run_transfer_fta(
+            "transfer_alias",
+            &[("a_fta.puml", transfer_diagram("Lib.FmA", &["Transfer1"]))],
+        );
+        let err = result.unwrap_err();
+        assert!(err.contains("a_fta.puml"), "{err}");
+        assert!(err.contains("Transfer1"), "{err}");
+        assert!(err.contains("fully-qualified"), "{err}");
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn run_fta_rejects_transfer_cycle_across_diagrams() {
+        let (dir, result) = run_transfer_fta(
+            "transfer_cycle",
+            &[
+                ("a_fta.puml", transfer_diagram("Lib.FmA", &["Lib.FmB"])),
+                ("b_fta.puml", transfer_diagram("Lib.FmB", &["Lib.FmA"])),
+            ],
+        );
+        let err = result.unwrap_err();
+        assert!(err.contains("cycle"), "{err}");
+        assert!(err.contains("a_fta.puml:"), "{err}");
+        assert!(err.contains("b_fta.puml:"), "{err}");
 
         fs::remove_dir_all(&dir).ok();
     }
