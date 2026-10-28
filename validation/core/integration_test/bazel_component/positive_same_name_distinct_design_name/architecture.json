@@ -1,0 +1,35 @@
+{
+  "components": {
+    "safety_software_seooc_example": {
+      "units": [],
+      "components": [
+        {
+          "label": "@//pkg_a:component_example",
+          "design_name": "component_a"
+        },
+        {
+          "label": "@//pkg_b:component_example",
+          "design_name": "component_b"
+        }
+      ]
+    },
+    "@//pkg_a:component_example": {
+      "units": [
+        {
+          "label": "@//pkg_a/unit_1:unit_1",
+          "design_name": "unit_1"
+        }
+      ],
+      "components": []
+    },
+    "@//pkg_b:component_example": {
+      "units": [
+        {
+          "label": "@//pkg_b/unit_1:unit_1",
+          "design_name": "unit_1"
+        }
+      ],
+      "components": []
+    }
+  }
+}

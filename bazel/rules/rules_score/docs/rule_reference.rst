@@ -914,6 +914,11 @@ diagram.
 
 **Generated targets:** ``<name>`` (provides ``UnitInfo``; no standalone test — the listed ``tests`` run via ``bazel test //pkg:...`` directly)
 
+In the generated documentation a unit is identified by its full label, so units
+from different packages may share a ``name``. ``design_name`` (default ``name``)
+only matches the unit against the static architecture diagram; within one parent
+it must be unique (case-insensitive).
+
 .. _rule-component:
 
 component
@@ -971,6 +976,9 @@ diagram.
      - Bazel visibility
 
 **Generated targets:** ``<name>`` (provides ``ComponentInfo``; no standalone test — the listed ``tests`` run via ``bazel test //pkg:...`` directly)
+
+As for ``unit``, the full label identifies a component in the generated
+documentation and ``design_name`` only matches the static architecture diagram.
 
 .. _rule-dependable-element:
 

@@ -56,6 +56,7 @@ load(
     "build_scope_index",
     "collect_scope_violations",
 )
+load("//bazel/rules/rules_score/private:label_path.bzl", _label_path = "label_path", _repo_segment = "repo_segment")
 load(
     "//bazel/rules/rules_score/private:lobster_config.bzl",
     "MERGE_LOBSTER_ITEMS_ATTR",
@@ -108,14 +109,14 @@ _COMPONENT_UNITS_SECTION_TEMPLATE = """Units
 
 _UNIT_TEMPLATE = """
 
-{unit_name}
+{title}
 {underline}
 
 {design_section}{implementation_section}{tests_section}"""
 
 _COMPONENT_TEMPLATE = """
 
-{component_name}
+{title}
 {underline}
 
 {requirements_section}{units_section}{implementation_section}{tests_section}"""
@@ -146,6 +147,14 @@ def _make_toctree(caption, entries, maxdepth = 1):
         caption = caption,
         entries = "\n   ".join(entries),
     )
+
+def _label_string(label):
+    repo = "@" + _repo_segment(label) if label.repo_name else ""
+    return "{}//{}:{}".format(repo, label.package, label.name)
+
+def _label_title(label):
+    """Return `label` as an RST inline literal, so a trailing `_` or `*` stays plain text."""
+    return "``" + _label_string(label) + "``"
 
 def _get_sphinx_files(target):
     return target[SphinxSourcesInfo].deps.to_list()
@@ -291,7 +300,7 @@ def _check_staged_path(seen_paths, declared_relative_path, source_label, errors)
 
     Args:
         seen_paths: Dict from declared relative path (e.g.
-            "architectural_design/foo/index.rst") to the label (as a string)
+            "architectural_design/_main/pkg/foo/index.rst") to the label (as a string)
             that already staged it this rule instantiation; mutated in place.
         declared_relative_path: The path this file is about to be staged at,
             relative to `ctx.label.name`.
@@ -316,7 +325,7 @@ def _check_staged_path(seen_paths, declared_relative_path, source_label, errors)
             )
         else:
             errors.append(
-                "'{}' would be staged by both {} and {}; rename one of the conflicting files, or give the colliding label its own subdirectory".format(
+                "'{}' would be staged by both {} and {}; rename one of the conflicting files".format(
                     declared_relative_path,
                     existing,
                     source_label,
@@ -469,11 +478,11 @@ def _process_architectural_design_files(ctx, label, seen_paths, errors, path_pre
             across every artifact section this dependable_element stages
             (see _process_artifact_files); mutated in place.
         errors: List collecting collision messages; mutated in place.
-        path_prefix: Prefix (the target name, e.g. "my_arch_design/") inserted
-            before each file's relative path. Applied whether or not a second
-            architectural_design label is attached, so the staged layout --
-            and therefore the generated HTML URLs -- keeps the same shape as
-            the dependable_element grows.
+        path_prefix: Prefix (the label path, e.g. "_main/pkg/my_arch_design/")
+            inserted before each file's relative path. Applied whether or not
+            a second architectural_design label is attached, so the staged
+            layout -- and therefore the generated HTML URLs -- keeps the same
+            shape as the dependable_element grows.
 
     Returns:
         Tuple of (output_files, refs_by_view, unclassified_refs), where
@@ -659,14 +668,11 @@ def _process_artifact_type(ctx, artifact_name, seen_paths, errors):
     # Each label's files are staged relative to its own common_dir (see
     # _find_common_directory), so 2+ labels can genuinely resolve the same
     # relative path (e.g. two "checklists" labels each exporting a top-level
-    # "checklist.md") even though this artifact type has no per-directory
-    # index.rst of its own. Namespacing under each label's own target name
-    # keeps the staged layout -- and therefore the generated HTML URLs --
-    # the same shape whether one label is attached or several. The
-    # _check_staged_path safety net below still catches the residual case of
-    # two labels sharing a target *name* from different packages.
+    # "checklist.md"). Namespacing under each label's own <repo>/<package>/<name>
+    # keeps those apart, and the staged layout -- and therefore the generated
+    # HTML URLs -- the same shape whether one label is attached or several.
     for label in attr_list:
-        path_prefix = "{}/".format(label.label.name)
+        path_prefix = _label_path(label.label) + "/"
         label_outputs, label_refs = _process_artifact_files(
             ctx,
             artifact_name,
@@ -698,17 +704,13 @@ def _process_deps(ctx):
     # Generate RST bullet list with links to submodule HTML
     links = []
     for dep in ctx.attr.deps:
-        dep_name = dep.label.name
-
-        # Create a link to the merged HTML index directory.
-        # The merge step uses the sphinx_module target label name as directory,
-        # i.e. "<module_name>" + _DOC_TARGET_SUFFIX for dependable_element deps.
-        # Use underscores in name for readability, convert to spaces for display
-        display_name = dep_name.replace("_", " ").title()
+        # The merge step places each dep's HTML at the label path of its
+        # sphinx_module target, i.e. _label_path(dep.label) + _DOC_TARGET_SUFFIX
+        # for dependable_element deps.
         links.append(
             "* `{} <{}{}{}>`_".format(
-                display_name,
-                dep_name,
+                _label_string(dep.label),
+                _label_path(dep.label),
                 _DOC_TARGET_SUFFIX,
                 "/index.html",
             ),
@@ -716,21 +718,17 @@ def _process_deps(ctx):
 
     return "\n".join(links)
 
-def _get_component_names(components):
-    return [c.label.name for c in components]
-
-def _register_unit(visited_units, unit_target):
-    """Add a unit to `visited_units` by name; fail if another unit owns the name."""
-    unit_name = unit_target.label.name
-    existing = visited_units.get(unit_name)
-    if existing == None:
-        visited_units[unit_name] = unit_target
-    elif existing.label != unit_target.label:
-        fail("units {} and {} share the name '{}'; unit names must be unique within a dependable_element".format(
+def _add_unit(units, unit_target):
+    """Add `unit_target` to `units` by doc path; fail if another unit owns that path."""
+    unit_path = _label_path(unit_target.label)
+    existing = units.get(unit_path)
+    if existing != None and existing.label != unit_target.label:
+        fail("units {} and {} share the doc path '{}'; rename one of them".format(
             existing.label,
             unit_target.label,
-            unit_name,
+            unit_path,
         ))
+    units[unit_path] = unit_target
 
 def _collect_units_recursive(components, visited_units = None):
     """Iteratively collect all units from components, handling nested components.
@@ -739,10 +737,10 @@ def _collect_units_recursive(components, visited_units = None):
 
     Args:
         components: List of component targets
-        visited_units: Dict of unit names already visited (for deduplication)
+        visited_units: Dict of unit doc paths already visited (for deduplication)
 
     Returns:
-        Dict mapping unit names to unit targets
+        Dict mapping unit doc paths (see _label_path) to unit targets
     """
     if visited_units == None:
         visited_units = {}
@@ -766,24 +764,24 @@ def _collect_units_recursive(components, visited_units = None):
             for nested in nested_components:
                 # Check if nested item is a unit or component
                 if UnitInfo in nested:
-                    _register_unit(visited_units, nested)
+                    _add_unit(visited_units, nested)
                 elif ComponentInfo in nested:
                     # Add nested component to queue for processing
                     to_process.append(nested)
 
             # Check if this is directly a unit
         elif UnitInfo in comp_target:
-            _register_unit(visited_units, comp_target)
+            _add_unit(visited_units, comp_target)
 
     return visited_units
 
-def _generate_unit_doc(ctx, unit_target, unit_name):
+def _generate_unit_doc(ctx, unit_target, unit_path):
     """Generate RST documentation for a single unit.
 
     Args:
         ctx: Rule context
         unit_target: The unit target
-        unit_name: Name of the unit
+        unit_path: Doc path of the unit (see _label_path)
 
     Returns:
         Tuple of (rst_file, list_of_output_files)
@@ -791,7 +789,7 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
     unit_info = unit_target[UnitInfo]
 
     # Per-unit directory: same-named files of different units can't collide.
-    unit_dir = "units/" + unit_name
+    unit_dir = "units/" + unit_path
     unit_rst = ctx.actions.declare_file(ctx.label.name + "/" + unit_dir + "/index.rst")
 
     # Collect design files - unit_design depset contains File objects
@@ -803,34 +801,26 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
         doc_files = _filter_doc_files(unit_info.unit_design.to_list())
 
         if doc_files:
-            # Find common directory
             common_dir = _find_common_directory(doc_files)
 
             for f in doc_files:
-                relative_path = _compute_relative_path(f, common_dir)
-                if _check_staged_path(seen_paths, unit_dir + "/design/" + relative_path, f.short_path, staging_errors):
+                if _is_document_file(f):
+                    # ".inc" keeps Sphinx from building the fragment as a page of its own.
+                    staged_path = _compute_relative_path(f, common_dir) + ".inc"
+                else:
+                    # Included fragments resolve .. uml:: and .. image:: paths
+                    # against the unit page, so assets are staged beside it.
+                    staged_path = f.basename
+
+                if _check_staged_path(seen_paths, unit_dir + "/" + staged_path, f.short_path, staging_errors):
                     continue
-                output_file = _create_artifact_symlink(
-                    ctx,
-                    unit_dir + "/design",
-                    f,
-                    relative_path,
-                )
-                design_files.append(output_file)
+                design_files.append(_create_artifact_symlink(ctx, unit_dir, f, staged_path))
 
                 if _is_document_file(f):
-                    # Inline the design RST directly into the unit page.
-                    include_path = "design/" + relative_path
-                    design_include_lines.append(".. include:: " + include_path)
+                    design_include_lines.append(".. include:: " + staged_path)
+                    if f.extension == "md":
+                        design_include_lines.append("   :parser: myst_parser.sphinx_")
                     design_include_lines.append("")
-                elif f.extension == "puml":
-                    # sphinxcontrib-plantuml resolves .. uml:: paths relative to
-                    # the *including* document (the unit page), not the included
-                    # RST, so the PUML is also staged next to the unit page.
-                    if _check_staged_path(seen_paths, unit_dir + "/" + f.basename, f.short_path, staging_errors):
-                        continue
-                    sibling = _create_artifact_symlink(ctx, unit_dir, f, f.basename)
-                    design_files.append(sibling)
 
     if staging_errors:
         fail("unit {}: {}".format(unit_target.label, "; ".join(staging_errors)))
@@ -848,7 +838,8 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
             test_names.append(test.short_path)
 
     # Generate RST content using template
-    underline = "=" * len(unit_name)
+    title = _label_title(unit_target.label)
+    underline = "=" * len(title)
 
     # Generate sections from template constants
     design_section = ""
@@ -859,7 +850,7 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
 
     implementation_section = ""
     if impl_names:
-        impl_list = "\n".join(["- ``" + str(impl) + "``" for impl in impl_names])
+        impl_list = "\n".join(["- " + _label_title(impl) for impl in impl_names])
         implementation_section = "\n" + _IMPLEMENTATION_SECTION_TEMPLATE.format(
             entity_type = "unit",
             implementation_list = impl_list,
@@ -875,7 +866,7 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
 
     # Generate unit RST content from template constant
     unit_content = _UNIT_TEMPLATE.format(
-        unit_name = unit_name,
+        title = title,
         underline = underline,
         design_section = design_section,
         implementation_section = implementation_section,
@@ -889,14 +880,14 @@ def _generate_unit_doc(ctx, unit_target, unit_name):
 
     return (unit_rst, design_files)
 
-def _generate_component_doc(ctx, comp_target, comp_name, unit_names):
+def _generate_component_doc(ctx, comp_target, comp_path, unit_paths):
     """Generate RST documentation for a single component.
 
     Args:
         ctx: Rule context
         comp_target: The component target
-        comp_name: Name of the component
-        unit_names: List of unit names that belong to this component
+        comp_path: Doc path of the component (see _label_path)
+        unit_paths: List of unit doc paths that belong to this component
 
     Returns:
         Tuple of (rst_file, list_of_output_files)
@@ -904,7 +895,8 @@ def _generate_component_doc(ctx, comp_target, comp_name, unit_names):
     comp_info = comp_target[ComponentInfo]
 
     # Create RST file for this component
-    comp_rst = ctx.actions.declare_file(ctx.label.name + "/components/" + comp_name + ".rst")
+    comp_dir = "components/" + comp_path
+    comp_rst = ctx.actions.declare_file(ctx.label.name + "/" + comp_dir + "/index.rst")
 
     # Collect requirements files from SphinxSourcesInfo (ComponentInfo.requirements holds
     # only lobster traceability files; Sphinx docs are carried via SphinxSourcesInfo)
@@ -921,19 +913,20 @@ def _generate_component_doc(ctx, comp_target, comp_name, unit_names):
                 relative_path = _compute_relative_path(f, common_dir)
                 output_file = _create_artifact_symlink(
                     ctx,
-                    "components/" + comp_name + "_requirements",
+                    comp_dir + "/requirements",
                     f,
                     relative_path,
                 )
                 req_files.append(output_file)
 
                 if _is_document_file(f):
-                    doc_path = comp_name + "_requirements/" + relative_path
+                    doc_path = "requirements/" + relative_path
                     doc_ref = doc_path.removesuffix(".rst").removesuffix(".md")
                     req_refs.append("   " + doc_ref)
 
     # Generate RST content using template
-    underline = "=" * len(comp_name)
+    title = _label_title(comp_target.label)
+    underline = "=" * len(title)
 
     # Generate sections from template constants
     requirements_section = ""
@@ -943,8 +936,11 @@ def _generate_component_doc(ctx, comp_target, comp_name, unit_names):
         ) + "\n"
 
     units_section = ""
-    if unit_names:
-        unit_toctree_refs = "\n".join(["   ../units/" + name + "/index" for name in unit_names])
+    if unit_paths:
+        # Relative: an absolute "/units/..." would resolve against the root of
+        # whatever Sphinx tree embeds this page.
+        to_srcdir = "../" * (comp_path.count("/") + 2)
+        unit_toctree_refs = "\n".join(["   " + to_srcdir + "units/" + path + "/index" for path in unit_paths])
         units_section = "\n" + _COMPONENT_UNITS_SECTION_TEMPLATE.format(
             unit_toctree_refs = unit_toctree_refs,
         ) + "\n"
@@ -953,7 +949,7 @@ def _generate_component_doc(ctx, comp_target, comp_name, unit_names):
 
     # Generate component RST content from template constant
     component_content = _COMPONENT_TEMPLATE.format(
-        component_name = comp_name,
+        title = title,
         underline = underline,
         requirements_section = requirements_section,
         units_section = units_section,
@@ -1135,7 +1131,7 @@ def _dependable_element_index_impl(ctx):
         artifacts_by_type[artifact_name] = refs
 
     # Own AoUs are the safety analyses' measures, namespaced like every other
-    # artifact type under each target's own name.
+    # artifact type under each target's own <repo>/<package>/<name>.
     own_aou_refs = []
     for aou_target in _own_aou_targets(ctx):
         label_files, label_refs = _process_artifact_files(
@@ -1144,7 +1140,7 @@ def _dependable_element_index_impl(ctx):
             aou_target,
             seen_paths = seen_staged_paths,
             errors = staging_errors,
-            path_prefix = "{}/".format(aou_target.label.name),
+            path_prefix = _label_path(aou_target.label) + "/",
         )
         output_files.extend(label_files)
         own_aou_refs.extend(label_refs)
@@ -1154,13 +1150,11 @@ def _dependable_element_index_impl(ctx):
 
     if ctx.attr.architectural_design:
         # Namespace every architectural_design label's output under its own
-        # "<target_name>/" subdirectory, so a dependable_element's staged
-        # layout -- and therefore its generated HTML URLs -- keeps the same
-        # shape however many labels are attached. The _check_staged_path
-        # safety net below still catches the residual case of two labels
-        # sharing a target *name* from different packages.
+        # "<repo>/<package>/<name>/" subdirectory, so a dependable_element's
+        # staged layout -- and therefore its generated HTML URLs -- keeps the
+        # same shape however many labels are attached.
         for ad_target in ctx.attr.architectural_design:
-            path_prefix = "{}/".format(ad_target.label.name)
+            path_prefix = _label_path(ad_target.label) + "/"
             ad_files, view_refs, u_refs = _process_architectural_design_files(
                 ctx,
                 ad_target,
@@ -1174,9 +1168,9 @@ def _dependable_element_index_impl(ctx):
             arch_unclassified_refs.extend(u_refs)
 
     # Collect feature_requirements refs from requirements targets that
-    # carry FeatureRequirementsInfo. Namespaced under each label's own target
-    # name, matching the staged layout of architectural_design and every
-    # other artifact type.
+    # carry FeatureRequirementsInfo. Namespaced under each label's own path,
+    # matching the staged layout of architectural_design and every other
+    # artifact type.
     feature_req_refs = []
     for req_target in ctx.attr.requirements:
         if FeatureRequirementsInfo in req_target:
@@ -1186,7 +1180,7 @@ def _dependable_element_index_impl(ctx):
                 req_target,
                 seen_paths = seen_staged_paths,
                 errors = staging_errors,
-                path_prefix = "{}/".format(req_target.label.name),
+                path_prefix = _label_path(req_target.label) + "/",
             )
             output_files.extend(label_files)
             feature_req_refs.extend(label_refs)
@@ -1203,7 +1197,7 @@ def _dependable_element_index_impl(ctx):
                 req_target,
                 seen_paths = seen_staged_paths,
                 errors = staging_errors,
-                path_prefix = "{}/".format(req_target.label.name),
+                path_prefix = _label_path(req_target.label) + "/",
             )
             output_files.extend(label_files)
             assumed_system_req_refs.extend(label_refs)
@@ -1216,8 +1210,8 @@ def _dependable_element_index_impl(ctx):
 
     # Generate a dedicated RST page for each unit. Unit pages are referenced
     # via toctree from the component RST page (see _generate_component_doc).
-    for unit_name, unit_target in all_units.items():
-        unit_rst, unit_files = _generate_unit_doc(ctx, unit_target, unit_name)
+    for unit_path, unit_target in all_units.items():
+        unit_rst, unit_files = _generate_unit_doc(ctx, unit_target, unit_path)
         output_files.append(unit_rst)
         output_files.extend(unit_files)
 
@@ -1229,22 +1223,22 @@ def _dependable_element_index_impl(ctx):
     for comp_target in ctx.attr.components:
         if ComponentInfo in comp_target:
             comp_info = comp_target[ComponentInfo]
-            comp_name = comp_info.name
+            comp_path = _label_path(comp_target.label)
 
-            # Collect direct unit names for this component's RST page
-            comp_unit_names = []
+            # Collect unit doc paths for this component's RST page
+            comp_unit_paths = []
             for nested in comp_info.components.to_list():
                 if UnitInfo in nested:
-                    comp_unit_names.append(nested.label.name)
+                    comp_unit_paths.append(_label_path(nested.label))
                 elif ComponentInfo in nested:
                     # For nested components, collect their units recursively
                     nested_units = _collect_units_recursive([nested])
-                    comp_unit_names.extend(nested_units.keys())
+                    comp_unit_paths.extend(nested_units.keys())
 
-            comp_rst, comp_files = _generate_component_doc(ctx, comp_target, comp_name, comp_unit_names)
+            comp_rst, comp_files = _generate_component_doc(ctx, comp_target, comp_path, comp_unit_paths)
             output_files.append(comp_rst)
             output_files.extend(comp_files)
-            component_refs.append(comp_name)
+            component_refs.append(comp_path)
 
             if comp_info.dependent_labels:
                 collected_dependent_labels.append(comp_info.dependent_labels)
@@ -1261,13 +1255,13 @@ def _dependable_element_index_impl(ctx):
     # Reference component pages directly in the outer toctree, avoiding an
     # intermediate components/index.rst that would repeat "Components" in the
     # Sphinx sidebar navigation.
-    component_entries = ["components/" + name for name in component_refs]
+    component_entries = ["components/" + path + "/index" for path in component_refs]
 
     # Units listed directly in components have no parent component page, so
     # link their pages from the Components section.
     for comp_target in ctx.attr.components:
         if UnitInfo in comp_target and ComponentInfo not in comp_target:
-            component_entries.append("units/" + comp_target.label.name + "/index")
+            component_entries.append("units/" + _label_path(comp_target.label) + "/index")
 
     # Generate submodule links for the index page
     deps_links = _process_deps(ctx)
@@ -1467,17 +1461,14 @@ def _dependable_element_index_impl(ctx):
             # ctx.actions.run, which would produce an opaque analysis error.
             fail("ComponentTestCaseCoverageInfo.gtest_lobster_file is missing for {}".format(comp_target.label))
         lock_file = cov_info.test_case_coverage_lock_file
-        comp_name = comp_info.name
 
-        # Package-qualify the discriminator used in declared output paths:
-        # two components in different packages can share the same target
-        # name (e.g. both named "component_example"), and comp_name alone
-        # would collide.
-        comp_unique = "{}_{}".format(comp_target.label.package.replace("/", "_"), comp_name) if comp_target.label.package else comp_name
+        # Label path keeps same-named components from different packages or
+        # repos apart.
+        comp_path = _label_path(comp_target.label)
 
         # Write req lobster manifest (exec paths — used inside the build action sandbox)
         cov_req_manifest = ctx.actions.declare_file(
-            "{}/test_case_coverage_req_manifest_{}.txt".format(ctx.label.name, comp_unique),
+            "{}/test_case_coverage/{}.manifest.txt".format(ctx.label.name, comp_path),
         )
         ctx.actions.write(
             output = cov_req_manifest,
@@ -1485,7 +1476,7 @@ def _dependable_element_index_impl(ctx):
         )
 
         cov_lobster = ctx.actions.declare_file(
-            "{}/test_case_coverage_{}.lobster".format(ctx.label.name, comp_unique),
+            "{}/test_case_coverage/{}.lobster".format(ctx.label.name, comp_path),
         )
 
         cov_args = []

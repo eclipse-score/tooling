@@ -471,6 +471,103 @@ mod tests {
         let _ = errs;
     }
 
+    fn named_ref(label: &str, design_name: &str) -> BazelEntityRef {
+        BazelEntityRef {
+            label: label.to_string(),
+            design_name: design_name.to_string(),
+        }
+    }
+
+    fn entry(units: Vec<BazelEntityRef>, components: Vec<BazelEntityRef>) -> BazelInputEntry {
+        BazelInputEntry { units, components }
+    }
+
+    #[test]
+    fn test_same_named_components_with_distinct_design_names_match() {
+        let mut components = BTreeMap::new();
+        components.insert(
+            "my_de".to_string(),
+            entry(
+                vec![],
+                vec![
+                    named_ref("@//a:dup", "dup_a"),
+                    named_ref("@//b:dup", "dup_b"),
+                ],
+            ),
+        );
+        components.insert(
+            "@//a:dup".to_string(),
+            entry(vec![named_ref("@//a/u:unit_1", "unit_1")], vec![]),
+        );
+        components.insert(
+            "@//b:dup".to_string(),
+            entry(vec![named_ref("@//b/u:unit_1", "unit_1")], vec![]),
+        );
+        let diagram = diagram(vec![
+            entity("my_de", None, Some("SEooC")),
+            entity("my_de.dup_a", Some("my_de"), Some("component")),
+            entity("my_de.dup_a.unit_1", Some("my_de.dup_a"), Some("unit")),
+            entity("my_de.dup_b", Some("my_de"), Some("component")),
+            entity("my_de.dup_b.unit_1", Some("my_de.dup_b"), Some("unit")),
+        ]);
+        let errs = run_arch_validation(&BazelInput { components }, &diagram);
+        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
+    }
+
+    #[test]
+    fn test_same_named_components_without_design_name_collide() {
+        let mut components = BTreeMap::new();
+        components.insert(
+            "my_de".to_string(),
+            entry(
+                vec![],
+                vec![named_ref("@//a:dup", "dup"), named_ref("@//b:dup", "dup")],
+            ),
+        );
+        components.insert(
+            "@//a:dup".to_string(),
+            entry(vec![named_ref("@//a/u:unit_1", "unit_1")], vec![]),
+        );
+        components.insert(
+            "@//b:dup".to_string(),
+            entry(vec![named_ref("@//b/u:unit_2", "unit_2")], vec![]),
+        );
+        let mut result = ValidationResult::default();
+        let _ = BazelInput { components }.to_bazel_architecture(&mut result);
+        assert!(
+            result
+                .failures
+                .iter()
+                .any(|m| m.contains("Component \"dup\" is defined more than once in Bazel.")),
+            "Expected duplicate component error, got: {:?}",
+            result.failures
+        );
+    }
+
+    #[test]
+    fn test_units_keyed_by_parent_design_name() {
+        let mut components = BTreeMap::new();
+        components.insert(
+            "my_de".to_string(),
+            entry(vec![], vec![named_ref("@//pkg:comp_a", "renamed_comp")]),
+        );
+        components.insert(
+            "@//pkg:comp_a".to_string(),
+            entry(vec![named_ref("@//pkg/u1:unit_1", "unit_1")], vec![]),
+        );
+        let diagram = diagram(vec![
+            entity("my_de", None, Some("SEooC")),
+            entity("my_de.renamed_comp", Some("my_de"), Some("component")),
+            entity(
+                "my_de.renamed_comp.unit_1",
+                Some("my_de.renamed_comp"),
+                Some("unit"),
+            ),
+        ]);
+        let errs = run_arch_validation(&BazelInput { components }, &diagram);
+        assert!(errs.is_empty(), "Expected pass, got: {:?}", errs.failures);
+    }
+
     #[test]
     fn test_missing_seooc_error_mentions_seooc_stereotype() {
         let arch = make_arch(vec![("my_de", vec![], vec![])]);

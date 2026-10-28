@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
@@ -32,33 +32,44 @@ pub struct BazelInput {
 impl BazelInput {
     /// Build a [`BazelArchitecture`] index from this architecture JSON.
     ///
-    /// A pre-pass collects all **full** labels of components that appear as
-    /// children of another component so that only their exact label is used
-    /// for child-suppression - preventing a top-level component from being
-    /// silently treated as nested just because another target in a different
-    /// package shares the same short name.
+    /// A pre-pass maps the **full** label of every nested component to its
+    /// `design_name`, so only an exact label match marks a component as nested -
+    /// a top-level component is never treated as nested just because another
+    /// target in a different package shares the same short name.
+    ///
+    /// Children are keyed by their parent's diagram name: the `design_name`
+    /// for nested components, the target short name for dependable elements.
     pub fn to_bazel_architecture(&self, result: &mut ValidationResult) -> BazelArchitecture {
         let mut seooc_set = BTreeMap::new();
         let mut comp_set = BTreeMap::new();
         let mut unit_set = BTreeMap::new();
 
-        let child_labels: BTreeSet<String> = self
+        let child_design_names: BTreeMap<String, &str> = self
             .components
             .values()
             .flat_map(|entry| entry.components.iter())
-            .map(|component| component.label.to_lowercase())
+            .map(|component| {
+                (
+                    component.label.to_lowercase(),
+                    component.design_name.as_str(),
+                )
+            })
             .collect();
 
         for (comp_label, entry) in &self.components {
+            let child_design_name = child_design_names.get(&comp_label.to_lowercase());
             let comp_key = match label_short_name(comp_label) {
-                Ok(name) => name.to_lowercase(),
+                Ok(short_name) => child_design_name
+                    .copied()
+                    .unwrap_or(short_name)
+                    .to_lowercase(),
                 Err(msg) => {
                     result.add_failure(msg);
                     continue;
                 }
             };
 
-            if !child_labels.contains(&comp_label.to_lowercase()) {
+            if child_design_name.is_none() {
                 // Top-level entries are dependable elements (SEooC).
                 let key = (comp_key.clone(), None);
                 if let Some(prev) = seooc_set.insert(key.clone(), comp_label.clone()) {
@@ -170,7 +181,7 @@ fn duplicate_bazel_entity_error(
 
     let fix = match parent {
         Some(parent) => format!(
-            "keep only one Bazel {kind} definition for \"{name}\" under \"{parent}\", or rename one of the duplicate Bazel targets"
+            "keep only one Bazel {kind} definition for \"{name}\" under \"{parent}\", or give one of the duplicates a distinct design_name"
         ),
         None => format!(
             "keep only one Bazel {kind} definition for \"{name}\", or rename one of the duplicate Bazel targets"

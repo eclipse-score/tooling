@@ -301,8 +301,11 @@ role in a spec file can link directly to the requirement definition page in the
 dependency's HTML.
 
 After the HTML build, ``src/sphinx_html_merge.py`` copies each dependency's
-output directory into ``<name>/html/<dep-name>/`` so the final site is
-self-contained.
+output directory into ``<name>/html/<repo>/<package>/<dep-name>/`` (the
+dependency's label path; ``<repo>`` is ``_main`` for the main repository and the
+module name for an external module) so
+the final site is self-contained and same-named dependencies from different
+packages or repositories stay apart.
 
 .. code-block:: text
 
@@ -316,8 +319,8 @@ self-contained.
                                                      │
                                               <name>/html/
                                               ├── index.html
-                                              ├── dep1/     ← merged
-                                              └── dep2/     ← merged
+                                              ├── <repo>/<pkg>/dep1/   ← merged
+                                              └── <repo>/<pkg>/dep2/   ← merged
 
 .. _safety-analysis-doc-pipeline:
 

@@ -27,14 +27,14 @@ def _toplevel_unit_linked_test_impl(ctx):
         entries = {s: v for s, v in actions[0].substitutions.items()}["{entries}"]
         asserts.true(
             env,
-            "units/{}/index".format(ctx.attr.unit_name) in entries,
+            "units/{}/index".format(ctx.attr.unit_path) in entries,
             "top-level unit page missing from components toctree: " + entries,
         )
     return analysistest.end(env)
 
 toplevel_unit_linked_test = analysistest.make(
     _toplevel_unit_linked_test_impl,
-    attrs = {"unit_name": attr.string(mandatory = True)},
+    attrs = {"unit_path": attr.string(mandatory = True)},
 )
 
 def _toplevel_unit_scope_fails_test_impl(ctx):

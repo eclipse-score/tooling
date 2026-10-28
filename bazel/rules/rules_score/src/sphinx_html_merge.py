@@ -16,16 +16,16 @@
 
 This script merges Sphinx HTML documentation from multiple modules into a single
 output directory. It copies the main module's HTML as-is, then copies every
-transitively required module's *own* (unmerged) HTML into a subdirectory --
-flat, one level deep, one copy per module regardless of how many dependency
-paths reach it. sphinx_module.bzl is responsible for passing --dep as the
+transitively required module's *own* (unmerged) HTML into a subdirectory at the
+module's label path (<repo>/<package>/<name>) -- flat, one copy per module
+regardless of how many dependency paths reach it. sphinx_module.bzl is responsible for passing --dep as the
 transitive closure (SphinxModuleInfo.transitive_modules), with each --dep
 pointing at that module's own_html_dir rather than its (possibly
 further-merged) html_dir -- this script has no way to tell the two apart and
 would duplicate a diamond dependency if handed the latter.
 
 Usage:
-    sphinx_html_merge.py --output OUTPUT_DIR --main MAIN_HTML_DIR [--dep NAME:PATH ...]
+    sphinx_html_merge.py --output OUTPUT_DIR --main MAIN_HTML_DIR [--dep PATH:DIR ...]
 """
 
 import argparse
@@ -86,7 +86,7 @@ def _restore_blocks(content, blocks):
 BUILD_ARTIFACT_DIRS = {".doctrees"}
 
 
-def copy_html_files(src_dir, dst_dir, is_dependency=False, sibling_modules=None):
+def copy_html_files(src_dir, dst_dir, is_dependency=False, sibling_modules=None, module_depth=0):
     """Copy HTML and related files from src to dst, with optional link fixing.
 
     Args:
@@ -99,12 +99,15 @@ def copy_html_files(src_dir, dst_dir, is_dependency=False, sibling_modules=None)
                      dropped (the merged site uses one shared _static/ at the
                      root) and their internal links rewritten for the new
                      nesting depth.
-        sibling_modules: Set of other module directory names to rewrite intra-site
-                        links for (e.g. href="other_module/..." needs a "../" prefix
-                        added for the new nesting depth). Only meaningful when
+        sibling_modules: Set of other module paths to rewrite intra-site
+                        links for (e.g. href="<repo>/<package>/<name>/..." needs a
+                        "../" prefix added for the new nesting depth). Only meaningful when
                         is_dependency is True. src_dir is always a module's own,
                         unmerged HTML now (never another module's already-merged
                         tree), so there is nothing nested under it to skip.
+        module_depth: Number of path segments of the module directory below the
+                      site root (e.g. 3 for <repo>/<package>/<name>; 0 for the
+                      main module). Only meaningful when is_dependency is True.
     """
     src_path = Path(src_dir)
     dst_path = Path(dst_dir)
@@ -143,7 +146,7 @@ def copy_html_files(src_dir, dst_dir, is_dependency=False, sibling_modules=None)
                 # this page now sits below the merged site root, so compute
                 # the prefix once and share it.
                 depth = len(relative_path.parents) - 1
-                parent_prefix = "../" * (depth + 1)
+                parent_prefix = "../" * (depth + module_depth)
 
                 if module_pattern is not None:
 
@@ -203,7 +206,8 @@ def merge_html_dirs(output_dir, main_html_dir, dependencies, extra_static=None):
     Args:
         output_dir: Target output directory
         main_html_dir: Main module's HTML directory to copy as-is
-        dependencies: List of (name, path) tuples for dependency modules
+        dependencies: List of (path, html_dir) tuples for dependency modules; path
+                      is the module's directory below output_dir
         extra_static: List of (src_file, dest_subpath) tuples for extra files to
                       place in output/_static/.  These are copied AFTER the main
                       HTML so they overwrite any theme-provided files if needed.
@@ -221,20 +225,21 @@ def merge_html_dirs(output_dir, main_html_dir, dependencies, extra_static=None):
         shutil.copy2(src_file, dst)
         logging.info("Copied extra static %s → _static/%s", src_file, dest_subpath)
 
-    # Collect all dependency names for intra-site link rewriting.
-    dep_names = [name for name, _ in dependencies]
+    # Collect all dependency paths for intra-site link rewriting.
+    dep_paths = [path for path, _ in dependencies]
 
     # Then copy each dependency into a subdirectory with link fixing
-    for dep_name, dep_html_dir in dependencies:
-        dep_output = output_path / dep_name
-        logging.info("Copying dependency %s from %s to %s", dep_name, dep_html_dir, dep_output)
+    for dep_path, dep_html_dir in dependencies:
+        dep_output = output_path / dep_path
+        logging.info("Copying dependency %s from %s to %s", dep_path, dep_html_dir, dep_output)
         # Other modules in this merge, to rewrite intra-site links for.
-        sibling_modules = set(n for n in dep_names if n != dep_name)
+        sibling_modules = set(p for p in dep_paths if p != dep_path)
         copy_html_files(
             dep_html_dir,
             dep_output,
             is_dependency=True,
             sibling_modules=sibling_modules,
+            module_depth=len(Path(dep_path).parts),
         )
 
 
@@ -246,8 +251,8 @@ def main():
         "--dep",
         action="append",
         default=[],
-        metavar="NAME:PATH",
-        help="Dependency HTML directory in format NAME:PATH",
+        metavar="PATH:DIR",
+        help="Dependency HTML directory in format PATH:DIR; PATH is the module's directory below the output (<repo>/<package>/<name>)",
     )
     parser.add_argument(
         "--extra-static",
@@ -271,11 +276,11 @@ def main():
     dependencies = []
     for dep_spec in args.dep:
         if ":" not in dep_spec:
-            logging.error("Invalid dependency format '%s', expected NAME:PATH", dep_spec)
+            logging.error("Invalid dependency format '%s', expected PATH:DIR", dep_spec)
             return 1
 
-        name, path = dep_spec.split(":", 1)
-        dependencies.append((name, path))
+        dep_path, html_dir = dep_spec.split(":", 1)
+        dependencies.append((dep_path, html_dir))
 
     # Parse extra static files
     extra_static = []

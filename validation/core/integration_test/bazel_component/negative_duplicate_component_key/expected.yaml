@@ -17,4 +17,4 @@ error_contains: |
     Parent             : safety_software_seooc_example
     First bazel label  : @//bazel/rules/rules_score/examples/seooc/pkg_a:component_example
     Second bazel label : @//bazel/rules/rules_score/examples/seooc/pkg_b:component_example
-    Fix                : Keep only one Bazel component definition for "component_example" under "safety_software_seooc_example", or rename one of the duplicate Bazel targets.
+    Fix                : Keep only one Bazel component definition for "component_example" under "safety_software_seooc_example", or give one of the duplicates a distinct design_name.

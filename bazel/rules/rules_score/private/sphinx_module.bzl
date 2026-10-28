@@ -21,6 +21,7 @@ load("@rules_python//python:py_binary.bzl", "py_binary")
 load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load("@rules_python//sphinxdocs/private:sphinx_docs_library_info.bzl", "SphinxDocsLibraryInfo")
 load("//bazel/rules/rules_score:providers.bzl", "FilteredExecpathInfo", "SphinxIndexFileInfo", "SphinxModuleInfo", "SphinxNeedsInfo")
+load("//bazel/rules/rules_score/private:label_path.bzl", "label_path")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 _SPHINX_SERVE_MAIN_SRC = Label("@rules_python//sphinxdocs/private:sphinx_server.py")
@@ -354,7 +355,7 @@ def _score_needs_impl(ctx):
     # can never resolve.
     transitive_needs_modules = [dep[SphinxNeedsInfo].needs_modules for dep in ctx.attr.deps if SphinxNeedsInfo in dep]
     needs_modules = depset(
-        [struct(name = _needs_output_prefix(ctx.label.name), needs_json_file = needs_output)],
+        [struct(path = _needs_output_prefix(label_path(ctx.label)), needs_json_file = needs_output)],
         transitive = transitive_needs_modules,
     )
     return [
@@ -364,7 +365,7 @@ def _score_needs_impl(ctx):
         SphinxNeedsInfo(
             needs_json_file = needs_output,  # Direct file only
             needs_json_files = needs_json_files,  # Transitive depset
-            needs_modules = needs_modules,  # Transitive, self-inclusive, keyed by base module name
+            needs_modules = needs_modules,  # Transitive, self-inclusive, keyed by module label path
         ),
     ]
 
@@ -387,16 +388,16 @@ def _score_html_impl(ctx):
     # Built from the full transitive closure (each direct needs-dep's own
     # SphinxNeedsInfo.needs_modules is already self-inclusive), not just
     # direct deps -- a :need: reference more than one hop away could
-    # otherwise never resolve. base_url = module.name (no path prefix) is
-    # only truthful because the HTML merge below is flat: every transitive
-    # module lands at that exact depth-1 path in the published site,
-    # regardless of how many dependency hops away it is.
+    # otherwise never resolve. base_url = module.path is only truthful because
+    # the HTML merge below is flat: every transitive module lands at its own
+    # <repo>/<package>/<name> path from the site root, regardless of how many
+    # dependency hops away it is.
     transitive_needs_modules = depset(
         transitive = [dep[SphinxNeedsInfo].needs_modules for dep in ctx.attr.needs if SphinxNeedsInfo in dep],
     ).to_list()
     needs_external_needs = {
-        module.name: {
-            "base_url": module.name,  # Relative path to the subdirectory where dep HTML is copied
+        module.path: {
+            "base_url": module.path,  # Relative path to the subdirectory where dep HTML is copied
             "json_path": module.needs_json_file.path,
             "id_prefix": "",
             "css_class": "",
@@ -564,7 +565,7 @@ def _score_html_impl(ctx):
     ).to_list()
     for module in transitive_modules_from_deps:
         merge_inputs.append(module.own_html_dir)
-        merge_args.extend(["--dep", module.name + ":" + module.own_html_dir.path])
+        merge_args.extend(["--dep", module.path + ":" + module.own_html_dir.path])
 
     # Auto-detect static files from srcs: any file whose short_path contains
     # '/_static/' is a static asset that Sphinx may not copy correctly in the
@@ -596,7 +597,7 @@ def _score_html_impl(ctx):
             # Reuses the already-flattened transitive_modules_from_deps list
             # collected above for the merge step, plus this module itself.
             transitive_modules = depset(
-                [struct(name = ctx.label.name, own_html_dir = sphinx_html_output)] +
+                [struct(path = label_path(ctx.label), own_html_dir = sphinx_html_output)] +
                 transitive_modules_from_deps,
             ),
         ),
@@ -680,13 +681,14 @@ def sphinx_module(
         **kwargs):
     """Build a Sphinx module with transitive HTML dependencies.
     This rule builds documentation modules into complete HTML sites with
-    transitive dependency collection. Each dependency's HTML is copied into a
-    <dep_name>/ subdirectory of the merged site for intersphinx/sphinx-needs
-    cross-referencing.
+    transitive dependency collection. Each dependency's HTML is copied into
+    its own <repo>/<package>/<name>/ subdirectory of the merged site for
+    intersphinx/sphinx-needs cross-referencing.
 
     Generates targets:
     * `<name>`: The merged HTML site (this module's own HTML plus every
-      transitive dependency's HTML, each under a `<dep_name>/` subdirectory).
+      transitive dependency's HTML, each under its `<repo>/<package>/<name>/`
+      subdirectory; `<repo>` is `_main` for the main repository).
     * `<name>.serve`: A binary that locally serves `<name>`'s HTML output,
       for previewing docs during development (`bazel run //:<name>.serve`).
     * `<name>_needs`: This module's `needs.json` build (see SphinxNeedsInfo).

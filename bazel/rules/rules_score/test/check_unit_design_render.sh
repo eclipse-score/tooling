@@ -13,11 +13,14 @@
 # *******************************************************************************
 set -euo pipefail
 
-# Usage: check_unit_design_render.sh <html dir rootpath> <unit>:<marker>...
+# Usage: check_unit_design_render.sh <html dir rootpath> <unit page dir>:<marker>...
 #
-# Asserts, for every unit, that units/<unit>/index.html exists, that its
-# design fragments are not rendered as standalone pages, and that the diagram
-# on the page is the unit's own (its SVG contains <marker>).
+# Asserts, for every unit page directory (relative to the HTML root, ending in
+# units/<repo>/<package>/<name>), that index.html exists, that another page
+# links to it (a unit missing from every toctree is orphaned), and that the
+# diagram on the page is the unit's own (its SVG contains <marker>). Design
+# fragments must not be rendered as standalone pages: index.html is the only
+# page there.
 
 html_dir="${TEST_SRCDIR}/${TEST_WORKSPACE}/$1"
 shift
@@ -28,18 +31,25 @@ fail() {
 }
 
 for spec in "$@"; do
-    unit="${spec%%:*}"
+    unit_rel="${spec%%:*}"
+    unit_dir="${html_dir}/${unit_rel}"
     marker="${spec#*:}"
-    page="${html_dir}/units/${unit}/index.html"
+    page="${unit_dir}/index.html"
 
     [[ -f "${page}" ]] || fail "missing ${page}"
-    [[ ! -e "${html_dir}/units/${unit}/design" ]] ||
-        fail "design fragments of ${unit} were rendered as standalone pages"
+
+    linking_pages="$(grep -RlF --include='*.html' "units/${unit_rel#*units/}/index.html" "${html_dir}" |
+        grep -vxF "${page}" || true)"
+    [[ -n "${linking_pages}" ]] || fail "no page links to ${page}"
+
+    standalone="$(find -L "${unit_dir}" -name '*.html' ! -name index.html)"
+    [[ -z "${standalone}" ]] ||
+        fail "design fragments were rendered as standalone pages: ${standalone}"
 
     svg_ref="$(grep -o '_images/plantuml-[0-9a-f]*\.svg' "${page}" | head -1 || true)"
     [[ -n "${svg_ref}" ]] || fail "${page} references no rendered diagram"
     grep -q "${marker}" "${html_dir}/${svg_ref}" ||
-        fail "diagram on ${unit}'s page does not contain '${marker}'"
+        fail "diagram on ${page} does not contain '${marker}'"
 done
 
 echo "✓ every unit page renders its own diagram"

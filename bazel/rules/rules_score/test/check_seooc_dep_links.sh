@@ -26,8 +26,8 @@ shift
 
 index_file=$(find_runfile "${expected_suffix}" "$@")
 
-if ! grep -Fq '* `Dep Seooc Lib <dep_seooc_lib_doc/index.html>`_' "${index_file}"; then
-    echo "Error: expected submodule link to dep_seooc_lib_doc/index.html in ${index_file}" >&2
+if ! grep -Fq '* `//:dep_seooc_lib <_main/dep_seooc_lib_doc/index.html>`_' "${index_file}"; then
+    echo "Error: expected submodule link to _main/dep_seooc_lib_doc/index.html in ${index_file}" >&2
     exit 1
 fi
 

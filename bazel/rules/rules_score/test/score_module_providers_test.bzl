@@ -61,7 +61,7 @@ def _transitive_modules_dedup_test_impl(ctx):
     score_info = target_under_test[SphinxModuleInfo]
     transitive_modules = score_info.transitive_modules.to_list()
 
-    matches = [m for m in transitive_modules if m.name == "module_d_lib"]
+    matches = [m for m in transitive_modules if m.path == "_main/module_d_lib"]
     asserts.equals(
         env,
         1,

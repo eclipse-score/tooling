@@ -160,12 +160,13 @@ def unit_design(
         visibility: Bazel visibility specification for the generated targets.
 
     RST Fragment Convention:
-        Design RST files are inlined into the generated unit page via
-        ``.. include::``.  Because the parent document already uses ``=``
+        Design RST and Markdown files are inlined into the generated unit page
+        via ``.. include::``.  Because the parent document already uses ``=``
         (section title) and ``-`` (subsection), any title inside the design
         RST **must** use a heading character that has not yet appeared — such
         as ``^`` — so it becomes a sub-subsection rather than a top-level
-        section::
+        section.  Diagrams and images are staged next to the unit page, so
+        reference them by basename::
 
             My Diagram Title
             ^^^^^^^^^^^^^^^^

@@ -14,4 +14,4 @@
 Content B
 =========
 
-Fixture content for :staged_path_cross_label_collision_repro (package b).
+Fixture content for :staged_path_same_name_labels_test (package b).

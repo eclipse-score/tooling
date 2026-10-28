@@ -296,9 +296,12 @@ SphinxModuleInfo = provider(
                         "contributes its own_html_dir, never another module's " +
                         "already-merged html_dir, so a diamond dependency doesn't " +
                         "get copied once per path to it.",
-        "transitive_modules": "Depset of struct(name, own_html_dir), one entry per " +
+        "transitive_modules": "Depset of struct(path, own_html_dir), one entry per " +
                               "module transitively required by this one, including " +
-                              "this module itself. Self-inclusive union: each dep's " +
+                              "this module itself. path is <repo>/<package>/<name> " +
+                              "of the module label (<repo> is _main for the main " +
+                              "repository), the module's directory in the merged " +
+                              "site. Self-inclusive union: each dep's " +
                               "own transitive_modules already contains itself, so " +
                               "unioning deps' depsets yields the full flat closure " +
                               "without this module needing to add each dep " +
@@ -311,13 +314,15 @@ SphinxNeedsInfo = provider(
     fields = {
         "needs_json_file": "Direct needs.json file for this module",
         "needs_json_files": "Depset of needs.json files including transitive dependencies",
-        "needs_modules": "Depset of struct(name, needs_json_file), one entry per " +
+        "needs_modules": "Depset of struct(path, needs_json_file), one entry per " +
                          "module transitively required by this one, including this " +
-                         "module itself. Self-inclusive union, same shape/rationale " +
+                         "module itself. path is the module label path, see " +
+                         "SphinxModuleInfo.transitive_modules. Self-inclusive union, " +
+                         "same shape/rationale " +
                          "as SphinxModuleInfo.transitive_modules -- used to build " +
                          "needs_external_needs.json from the full transitive closure " +
                          "(direct deps only would miss a need defined more than one " +
-                         "hop away), with base_url = <module_name> truthful for every " +
+                         "hop away), with base_url = <path> truthful for every " +
                          "entry only because the HTML merge is flat.",
     },
 )

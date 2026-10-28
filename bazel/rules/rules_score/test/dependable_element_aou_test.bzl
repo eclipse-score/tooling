@@ -31,7 +31,7 @@ def _aou_derived_test_impl(ctx):
         1,
         len(target[ForwardedAoUInfo].own_aou_lobster.to_list()),
     )
-    staged = [p for p in _staged_aou_paths(target) if "/assumptions_of_use/aou_root_cause_aous/" in p]
+    staged = [p for p in _staged_aou_paths(target) if "/assumptions_of_use/_main/aou_root_cause_aous/" in p]
     asserts.true(env, staged, "AoU measure of the safety analysis must be staged for Sphinx")
     return analysistest.end(env)
 

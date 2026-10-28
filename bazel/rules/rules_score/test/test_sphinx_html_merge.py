@@ -221,6 +221,64 @@ class TestMergeHtmlDirs(unittest.TestCase):
         content = (self.output / "guide" / "page.html").read_text()
         self.assertIn('href="dep_a/index.html">link', content)
 
+    def test_multi_segment_dep_path_counts_every_segment_for_depth(self) -> None:
+        """A dependency placed at <repo>/<package>/<name> sits three levels
+        below the site root, so its _static and sibling-module links must
+        climb three levels plus the page's own depth. Only hrefs that start
+        with the sibling's full path (authored relative to the site root) are
+        rewritten.
+        """
+        main = self.root / "main"
+        _write(main / "index.html", "<html></html>")
+
+        dep_a = self.root / "dep_a"
+        _write(
+            dep_a / "sub" / "page.html",
+            '<link href="_static/theme.css"><a href="_main/pkg/dep_b/index.html">link</a>',
+        )
+
+        dep_b = self.root / "dep_b"
+        _write(dep_b / "index.html", "<html></html>")
+
+        merge_html_dirs(
+            self.output,
+            main,
+            [("_main/pkg/dep_a", dep_a), ("_main/pkg/dep_b", dep_b)],
+        )
+
+        content = (self.output / "_main" / "pkg" / "dep_a" / "sub" / "page.html").read_text()
+        self.assertIn('href="../../../../_static/theme.css"', content)
+        self.assertIn('href="../../../../_main/pkg/dep_b/index.html"', content)
+        self.assertTrue((self.output / "_main" / "pkg" / "dep_b" / "index.html").exists())
+
+    def test_same_name_deps_with_different_paths_stay_apart(self) -> None:
+        """Two dependencies sharing a final name but differing in path must
+        each keep their own content.
+        """
+        main = self.root / "main"
+        _write(main / "index.html", "<html></html>")
+
+        dep_a = self.root / "dep_a"
+        _write(dep_a / "index.html", "<html>from pkg_a</html>")
+
+        dep_b = self.root / "dep_b"
+        _write(dep_b / "index.html", "<html>from pkg_b</html>")
+
+        merge_html_dirs(
+            self.output,
+            main,
+            [("_main/pkg_a/dup", dep_a), ("_main/pkg_b/dup", dep_b)],
+        )
+
+        self.assertEqual(
+            (self.output / "_main" / "pkg_a" / "dup" / "index.html").read_text(),
+            "<html>from pkg_a</html>",
+        )
+        self.assertEqual(
+            (self.output / "_main" / "pkg_b" / "dup" / "index.html").read_text(),
+            "<html>from pkg_b</html>",
+        )
+
     def test_literal_href_text_in_code_block_is_not_rewritten(self) -> None:
         """Regression test: a <pre>/<code> block showing example markup that
         happens to contain the literal text `href="dep_b/..."` (e.g. a code
