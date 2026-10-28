@@ -13,6 +13,7 @@
 
 //! Adapters from libclang entities and types to visitor-local concepts.
 
+pub(crate) mod class_collection;
 pub(crate) mod exception_specification;
 pub(crate) mod scope;
 pub(crate) mod source_filter;

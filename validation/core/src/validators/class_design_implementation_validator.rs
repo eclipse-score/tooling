@@ -19,8 +19,8 @@ use crate::models::ClassEntityIndex;
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::ValidationResult;
 use class_diagram::{
-    EnumLiteral, FreeFunctionDecl, MemberVariable, Method, Relationship, SimpleEntity,
-    TemplateParameter, TypeAlias,
+    ClassTemplateKind, EnumLiteral, FreeFunctionDecl, MemberVariable, Method, Relationship,
+    SimpleEntity, TemplateParameter, TypeAlias,
 };
 use source_location::SourceLocation;
 use std::collections::BTreeMap;
@@ -164,10 +164,35 @@ impl ClassDesignImplementationValidator {
     ) {
         for design_entity in design_classes.entities() {
             let normalized_design_id = normalize_qualified_name(&design_entity.id);
-            let Some(implementation_entity) = implementation_classes
-                .find_by_id(&design_entity.id)
-                .or_else(|| implementation_classes.find_by_id(&normalized_design_id))
-            else {
+            let mut implementation_entities = implementation_classes
+                .entities()
+                .filter(|entity| {
+                    if is_specialization(entity.template_kind) {
+                        specialization_matches_design(&entity.id, &normalized_design_id)
+                    } else {
+                        normalize_qualified_name(&entity.id)
+                            .eq_ignore_ascii_case(&normalized_design_id)
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if implementation_entities
+                .iter()
+                .any(|entity| is_specialization(entity.template_kind))
+            {
+                // A defined primary can be a rejection-only fallback rather than the
+                // interface described by the design. Keep it only when its parameters
+                // match, but continue to check every matching specialization.
+                implementation_entities.retain(|entity| {
+                    entity.template_kind != ClassTemplateKind::Primary
+                        || template_parameters_match(
+                            &design_entity.template_parameters,
+                            &entity.template_parameters,
+                        )
+                });
+            }
+
+            if implementation_entities.is_empty() {
                 let suggested_class = best_string_suggestion(
                     &design_entity.id,
                     implementation_classes
@@ -179,10 +204,12 @@ impl ClassDesignImplementationValidator {
                     suggested_class.as_deref(),
                 ));
                 continue;
-            };
+            }
 
-            self.append_class_comparison_diagnostics(design_entity, implementation_entity);
-            self.check_entity(design_entity, implementation_entity);
+            for implementation_entity in implementation_entities {
+                self.append_class_comparison_diagnostics(design_entity, implementation_entity);
+                self.check_entity(design_entity, implementation_entity);
+            }
         }
     }
 
@@ -230,7 +257,14 @@ impl ClassDesignImplementationValidator {
             ));
         }
 
-        if !template_parameters_match(
+        if is_specialization(implementation_entity.template_kind) {
+            self.result.diagnostics.debug(|| {
+                format!(
+                    "Skipping class template-parameter check for design entity {:?} and implementation specialization {:?}: matched by fully qualified base name only; specialization arguments are not validated",
+                    design_entity.id, implementation_entity.id,
+                )
+            });
+        } else if !template_parameters_match(
             &design_entity.template_parameters,
             &implementation_entity.template_parameters,
         ) {
@@ -274,6 +308,7 @@ impl ClassDesignImplementationValidator {
                 )),
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
+                    implementation_entity,
                     "type_alias",
                     &design_alias.alias,
                     best_string_suggestion(
@@ -304,6 +339,7 @@ impl ClassDesignImplementationValidator {
                 ),
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
+                    implementation_entity,
                     "variable",
                     &design_variable.name,
                     best_string_suggestion(
@@ -393,6 +429,7 @@ impl ClassDesignImplementationValidator {
                         ),
                         None => self.result.add_failure(Self::format_missing_member(
                             design_entity,
+                            implementation_entity,
                             "method",
                             &key,
                             best_string_suggestion(
@@ -518,6 +555,7 @@ impl ClassDesignImplementationValidator {
                 )),
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
+                    implementation_entity,
                     "enum_literal",
                     &design_literal.name,
                     best_string_suggestion(
@@ -561,6 +599,7 @@ impl ClassDesignImplementationValidator {
                         .collect::<Vec<_>>();
                     self.result.add_failure(Self::format_missing_member(
                         design_entity,
+                        implementation_entity,
                         "relationship",
                         &display_name,
                         best_string_suggestion(
@@ -671,6 +710,7 @@ impl ClassDesignImplementationValidator {
 
     fn format_missing_member(
         design_entity: &SimpleEntity,
+        implementation_entity: &SimpleEntity,
         member_type: &str,
         member_name: &str,
         suggested_member: Option<&str>,
@@ -692,6 +732,27 @@ impl ClassDesignImplementationValidator {
                 design_entity.id
             ));
 
+        let error = if is_specialization(implementation_entity.template_kind) {
+            error
+                .field(
+                    "implementation entity",
+                    format!("\"{}\"", implementation_entity.id),
+                )
+                .field(
+                    "implementation source file",
+                    format!(
+                        "\"{}\"",
+                        source_file(&implementation_entity.source_location)
+                    ),
+                )
+                .field(
+                    "implementation source line",
+                    source_line(&implementation_entity.source_location),
+                )
+        } else {
+            error
+        };
+
         let error = if let Some(suggested_member) = suggested_member {
             error.suggest(member_name, Some(member_type), suggested_member)
         } else {
@@ -711,7 +772,7 @@ impl ClassDesignImplementationValidator {
     ) -> String {
         let field_reference = format_field_reference(field, field_reference_style);
 
-        ErrorBuilder::new(ErrorCategory::Implementation)
+        let error = ErrorBuilder::new(ErrorCategory::Implementation)
             .title(format!(
                 "field {field_reference} on entity \"{}\" differs between the unit design and the C++ class implementation",
                 design_entity.id,
@@ -723,7 +784,18 @@ impl ClassDesignImplementationValidator {
                 "design source file",
                 format!("\"{}\"", source_file(&design_entity.source_location)),
             )
-            .field("design source line", source_line(&design_entity.source_location))
+            .field("design source line", source_line(&design_entity.source_location));
+
+        let error = if is_specialization(implementation_entity.template_kind) {
+            error.field(
+                "implementation entity",
+                format!("\"{}\"", implementation_entity.id),
+            )
+        } else {
+            error
+        };
+
+        error
             .field("implementation value", implementation_value)
             .field(
                 "implementation source file",
@@ -1294,6 +1366,52 @@ fn normalize_qualified_name(reference: &str) -> String {
     reference.trim().replace('.', "::")
 }
 
+fn is_specialization(kind: ClassTemplateKind) -> bool {
+    matches!(
+        kind,
+        ClassTemplateKind::PartialSpecialization | ClassTemplateKind::ExplicitSpecialization
+    )
+}
+
+fn specialization_base_id(id: &str) -> &str {
+    trailing_template_arguments_start(id).map_or(id, |start| id[..start].trim())
+}
+
+fn trailing_template_arguments_start(id: &str) -> Option<usize> {
+    let mut angle_depth = 0usize;
+    let mut specialization_arguments_start = None;
+
+    for (index, character) in id.char_indices() {
+        match character {
+            '<' if angle_depth == 0 => {
+                specialization_arguments_start = Some(index);
+                angle_depth = 1;
+            }
+            '<' => angle_depth += 1,
+            '>' if angle_depth > 0 => {
+                angle_depth -= 1;
+                if angle_depth == 0 {
+                    let suffix = id[index + character.len_utf8()..].trim_start();
+                    if suffix.is_empty() {
+                        return specialization_arguments_start;
+                    }
+                    if suffix.starts_with("::") {
+                        specialization_arguments_start = None;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    None
+}
+
+fn specialization_matches_design(implementation_id: &str, normalized_design_id: &str) -> bool {
+    normalize_qualified_name(specialization_base_id(implementation_id))
+        .eq_ignore_ascii_case(normalized_design_id)
+}
+
 fn enum_literal_map(entity: &SimpleEntity) -> BTreeMap<&str, &EnumLiteral> {
     entity
         .enum_literals
@@ -1451,6 +1569,7 @@ mod tests {
             enclosing_namespace_id: enclosing_namespace_id.map(str::to_string),
             stereotypes: Vec::new(),
             entity_type: EntityType::Class,
+            template_kind: ClassTemplateKind::NonTemplate,
             type_aliases: Vec::new(),
             variables: Vec::new(),
             methods: methods.into_iter().map(method).collect(),
@@ -1491,6 +1610,62 @@ mod tests {
             template_parameters: None,
             source_location: SourceLocation::new("test.puml", 1),
         }
+    }
+
+    #[test]
+    fn specialization_base_id_strips_only_the_class_template_arguments() {
+        assert_eq!(
+            specialization_base_id(
+                "amp::Outer<Policy>::move_only_function<ReturnType (ArgTypes...), Capacity>"
+            ),
+            "amp::Outer<Policy>::move_only_function"
+        );
+        assert_eq!(
+            specialization_base_id("amp::move_only_function"),
+            "amp::move_only_function"
+        );
+        assert_eq!(
+            specialization_base_id("amp::Outer<Policy>::move_only_function"),
+            "amp::Outer<Policy>::move_only_function"
+        );
+    }
+
+    #[test]
+    fn trailing_template_arguments_start_finds_only_the_final_argument_list() {
+        assert_eq!(trailing_template_arguments_start("amp::Box<int>"), Some(8));
+        assert_eq!(
+            trailing_template_arguments_start("amp::Outer<Policy>::Box<int>"),
+            Some("amp::Outer<Policy>::Box".len())
+        );
+        assert_eq!(trailing_template_arguments_start("amp::Box"), None);
+        assert_eq!(
+            trailing_template_arguments_start("amp::Outer<Policy>::Box"),
+            None
+        );
+    }
+
+    #[test]
+    fn specialization_matching_requires_the_complete_qualified_base_id() {
+        assert!(specialization_matches_design(
+            "amp::move_only_function<ReturnType (ArgTypes...), Capacity, Alignment>",
+            "amp::move_only_function"
+        ));
+        assert!(!specialization_matches_design(
+            "amp::move_only_function_extra<ReturnType (ArgTypes...), Capacity, Alignment>",
+            "amp::move_only_function"
+        ));
+        assert!(!specialization_matches_design(
+            "other::move_only_function<ReturnType (ArgTypes...), Capacity, Alignment>",
+            "amp::move_only_function"
+        ));
+    }
+
+    #[test]
+    fn qualified_name_normalization_preserves_id_values_but_equates_separators() {
+        assert_eq!(
+            normalize_qualified_name("amp.move_only_function"),
+            normalize_qualified_name("amp::move_only_function")
+        );
     }
 
     #[test]
@@ -1923,6 +2098,99 @@ mod tests {
             .failures
             .iter()
             .any(|message| message.contains("[Member] Method \"run()\" from entity \"Sample\" in the unit design not found in the C++ class implementation.")));
+    }
+
+    #[test]
+    fn primary_template_is_filtered_only_with_matching_partial_specializations() {
+        for (primary_parameters_match, include_partials, expected_failures) in
+            [(false, true, 0), (true, true, 1), (false, false, 2)]
+        {
+            let mut design_entity = entity("amp.move_only_function", vec!["empty"]);
+            design_entity.template_parameters = Some(vec![TemplateParameter::Type {
+                name: "ReturnType".to_string(),
+                is_pack: false,
+            }]);
+            let primary = SimpleEntity {
+                template_kind: ClassTemplateKind::Primary,
+                template_parameters: Some(vec![TemplateParameter::Type {
+                    name: if primary_parameters_match {
+                        "ReturnType"
+                    } else {
+                        "Signature"
+                    }
+                    .to_string(),
+                    is_pack: false,
+                }]),
+                ..entity("amp::move_only_function", vec![])
+            };
+            let mut entities = vec![primary];
+            if include_partials {
+                entities.extend([
+                    SimpleEntity {
+                        template_kind: ClassTemplateKind::PartialSpecialization,
+                        ..entity(
+                            "amp::move_only_function<R(Args...), Capacity, Alignment>",
+                            vec!["empty"],
+                        )
+                    },
+                    SimpleEntity {
+                        template_kind: ClassTemplateKind::PartialSpecialization,
+                        ..entity(
+                            "amp::move_only_function<R (*)(Args...), Capacity, Alignment>",
+                            vec!["empty"],
+                        )
+                    },
+                ]);
+            }
+
+            let result =
+                validate_class_design_implementation(&index(vec![design_entity]), &index(entities));
+
+            assert_eq!(
+                result.failures.len(),
+                expected_failures,
+                "{:?}",
+                result.failures,
+            );
+            if expected_failures > 0 {
+                assert!(result
+                    .failures
+                    .iter()
+                    .any(|message| { message.contains("Method \"empty()\"") }));
+            }
+            assert_eq!(
+                result
+                    .failures
+                    .iter()
+                    .any(|message| { message.contains("template_parameters") }),
+                !primary_parameters_match && !include_partials,
+            );
+        }
+    }
+
+    #[test]
+    fn specializations_match_base_id_and_skip_class_template_parameters() {
+        let mut design_entity = entity("demo.Box", vec!["run"]);
+        design_entity.template_parameters = Some(vec![TemplateParameter::Type {
+            name: "T".to_string(),
+            is_pack: false,
+        }]);
+        let design = index(vec![design_entity]);
+        for (template_kind, id) in [
+            (ClassTemplateKind::PartialSpecialization, "demo::Box<T*>"),
+            (ClassTemplateKind::ExplicitSpecialization, "demo::Box<int>"),
+        ] {
+            let implementation = index(vec![SimpleEntity {
+                template_kind,
+                ..entity(id, vec!["run"])
+            }]);
+            let result = validate_class_design_implementation(&design, &implementation);
+            assert!(
+                result.is_empty(),
+                "{template_kind:?}: {:?}",
+                result.failures
+            );
+        }
     }
 
     #[test]

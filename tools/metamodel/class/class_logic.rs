@@ -49,13 +49,18 @@ pub struct SimpleEntity {
     /// Type of entity (class, struct, interface, enum, etc.)
     pub entity_type: EntityType,
 
+    /// The C++ class-template declaration kind, independent of its parameters.
+    #[serde(default, skip_serializing_if = "ClassTemplateKind::is_non_template")]
+    pub template_kind: ClassTemplateKind,
+
     // aliased type with using keyword also called annotation in plantuml
     pub type_aliases: Vec<TypeAlias>,
     pub variables: Vec<MemberVariable>,
     /// Methods (member functions)
     pub methods: Vec<Method>,
-    /// Template parameters for generic types (empty option means not templated) empty vector means
-    /// template is an empty bracket like template<> which can be encountered during explicit template specialization
+    /// Declared template parameters, when available. An empty vector represents
+    /// `template<>`; None can also occur for an explicit specialization parsed by
+    /// libclang. Use template_kind rather than parameter presence to classify C++ templates.
     pub template_parameters: Option<Vec<TemplateParameter>>,
 
     /// Enum literals (only for Enum entity_type)
@@ -66,6 +71,23 @@ pub struct SimpleEntity {
 
     /// Debug info for display in case of mismatch
     pub source_location: SourceLocation,
+}
+
+/// Distinguishes ordinary classes from class templates and their specializations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "PascalCase")]
+pub enum ClassTemplateKind {
+    #[default]
+    NonTemplate,
+    Primary,
+    PartialSpecialization,
+    ExplicitSpecialization,
+}
+
+impl ClassTemplateKind {
+    pub fn is_non_template(&self) -> bool {
+        matches!(self, Self::NonTemplate)
+    }
 }
 
 /// The type of entity in a class diagram
@@ -362,6 +384,7 @@ mod tests {
             enclosing_namespace_id: Some("Core".to_string()),
             stereotypes: Vec::new(),
             entity_type: EntityType::Class,
+            template_kind: ClassTemplateKind::NonTemplate,
             variables: vec![MemberVariable {
                 name: "name".to_string(),
                 data_type: Some("string".to_string()),
@@ -388,6 +411,20 @@ mod tests {
         let json = serde_json::to_string_pretty(&entity).unwrap();
         let deserialized: SimpleEntity = serde_json::from_str(&json).unwrap();
         assert_eq!(entity, deserialized);
+    }
+
+    #[test]
+    fn entity_template_kind_defaults_to_non_template_and_is_omitted() {
+        let entity = SimpleEntity::default();
+        let json = serde_json::to_value(&entity).unwrap();
+
+        assert!(json.get("template_kind").is_none());
+        assert_eq!(
+            serde_json::from_value::<SimpleEntity>(json)
+                .unwrap()
+                .template_kind,
+            ClassTemplateKind::NonTemplate
+        );
     }
 
     #[test]

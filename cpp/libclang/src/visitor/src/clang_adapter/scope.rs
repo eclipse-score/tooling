@@ -83,9 +83,12 @@ pub(crate) fn is_type_scope(kind: EntityKind) -> bool {
     )
 }
 
-fn type_scope_name(entity: &Entity) -> Option<String> {
+pub(crate) fn type_scope_name(entity: &Entity) -> Option<String> {
     match entity.get_kind() {
         EntityKind::ClassTemplatePartialSpecialization => {
+            entity.get_display_name().or_else(|| entity.get_name())
+        }
+        kind if is_type_scope(kind) && entity.get_template().is_some() => {
             entity.get_display_name().or_else(|| entity.get_name())
         }
         kind if is_type_scope(kind) => entity.get_name(),

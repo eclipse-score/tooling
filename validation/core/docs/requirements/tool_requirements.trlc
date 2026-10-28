@@ -250,7 +250,19 @@ section "Tool Requirements" {
                 description = '''The validator shall report an error when
                 template parameters modeled on a unit design entity or method
                 differ from the template parameters on the matching
-                implementation entity or method.'''
+                implementation entity or method, except for class template
+                parameters of implementation partial and explicit full
+                specializations. These specializations are matched by fully
+                qualified base name only; their specialization arguments are
+                not validated against the design. Method template parameters
+                remain subject to this consistency check. When matching partial
+                or explicit full specializations exist, a matching primary
+                template is included in implementation consistency checks only
+                if its template parameters match the design. Without matching
+                specializations, the primary template is checked normally,
+                including template-parameter mismatches. Ordinary non-template
+                classes are not subject to this primary-template filtering
+                rule.'''
                 derived_from = [UseCases.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }

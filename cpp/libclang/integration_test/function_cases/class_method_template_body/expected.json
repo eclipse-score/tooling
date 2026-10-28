@@ -60,6 +60,7 @@
       "name": "Holder",
       "enclosing_namespace_id": "amp",
       "entity_type": "Class",
+      "template_kind": "Primary",
       "enum_literals": [],
       "methods": [
         {

@@ -32,6 +32,13 @@ enum EntityType : byte {
     Enum = 4
 }
 
+enum ClassTemplateKind : byte {
+    NonTemplate = 0,
+    Primary = 1,
+    PartialSpecialization = 2,
+    ExplicitSpecialization = 3
+}
+
 enum RelationType : byte {
     Inheritance = 0,
     Implementation = 1,
@@ -125,6 +132,7 @@ table SimpleEntity {
     relationships: [Relationship];
     source_location: SourceLocation (required);
     stereotypes: [string];
+    template_kind: ClassTemplateKind = NonTemplate;
 }
 
 table FreeFunctionDecl {

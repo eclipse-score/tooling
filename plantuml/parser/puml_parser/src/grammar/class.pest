@@ -142,10 +142,12 @@ type_def_decl = { type_kind ~ named ~ type_decl_suffix* }
 object_def_decl = { object_keyword ~ named ~ type_decl_suffix* }
 object_keyword = @{ "object" ~ keyword_boundary }
 type_decl_suffix = _{ extends_clause | implements_clause | link_annotation | stereotype | color }
-template_param = { explicit_type_template_param | template_template_param | non_type_template_param | legacy_type_template_param }
+template_param = { explicit_type_template_param | template_template_param | non_type_template_param | function_signature_template_param | legacy_type_template_param }
+
 template_template_param = { template_keyword ~ "<" ~ template_template_param_list ~ ">" ~ explicit_type_template_param }
 template_template_param_list = _{ template_template_inner_param ~ ("," ~ template_template_inner_param)* }
 template_template_inner_param = { explicit_type_template_param | template_template_param | non_type_template_param | legacy_type_template_param }
+
 // Non-type parameters share one shape: type, optional pack marker, optional name.
 non_type_template_param = {
     non_type_template_param_type ~ varargs? ~ identifier? ~ template_param_boundary
@@ -176,6 +178,12 @@ legacy_type_template_param = { identifier ~ varargs? }
 template_param_list = _{ "<" ~ template_param ~ ("," ~ template_param)* ~ ">" }
 type_generic_param_list = { template_param_list }
 type_generic_param_list_exact = { SOI ~ type_generic_param_list ~ EOI }
+
+// Accept specialization arguments containing function signatures, but do not
+// infer template parameter metadata for a list containing such a signature.
+function_signature_template_param = { identifier ~ "(" ~ function_signature_template_arg_list? ~ ")" }
+function_signature_template_arg_list = { function_signature_template_arg ~ ("," ~ function_signature_template_arg)* }
+function_signature_template_arg = { identifier ~ varargs? }
 
 extends_clause = { "extends" ~ extends_target ~ ("," ~ extends_target)* }
 extends_target = { class_name_path }

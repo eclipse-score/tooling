@@ -313,7 +313,7 @@ impl PublicApiIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use class_diagram::{ClassDiagram, Method, SimpleEntity, Visibility};
+    use class_diagram::{ClassDiagram, ClassTemplateKind, Method, SimpleEntity, Visibility};
     use source_location::SourceLocation;
 
     fn method(name: &str) -> Method {
@@ -335,6 +335,7 @@ mod tests {
             enclosing_namespace_id: None,
             stereotypes: Vec::new(),
             entity_type: EntityType::Class,
+            template_kind: ClassTemplateKind::NonTemplate,
             type_aliases: Vec::new(),
             variables: Vec::new(),
             methods: Vec::new(),
@@ -521,6 +522,7 @@ mod tests {
                     enclosing_namespace_id: Some("InternalAPI".to_string()),
                     stereotypes: Vec::new(),
                     entity_type: EntityType::Interface,
+                    template_kind: ClassTemplateKind::NonTemplate,
                     type_aliases: Vec::new(),
                     variables: Vec::new(),
                     methods: vec![method("GetData")],
@@ -535,6 +537,7 @@ mod tests {
                     enclosing_namespace_id: Some("InternalAPI".to_string()),
                     stereotypes: Vec::new(),
                     entity_type: EntityType::Class,
+                    template_kind: ClassTemplateKind::NonTemplate,
                     type_aliases: Vec::new(),
                     variables: Vec::new(),
                     methods: vec![method("IgnoreMe")],
@@ -571,6 +574,7 @@ mod tests {
                     enclosing_namespace_id: Some("InternalAPI".to_string()),
                     stereotypes: Vec::new(),
                     entity_type: EntityType::Interface,
+                    template_kind: ClassTemplateKind::NonTemplate,
                     type_aliases: Vec::new(),
                     variables: Vec::new(),
                     methods: vec![method("GetData")],
@@ -585,6 +589,7 @@ mod tests {
                     enclosing_namespace_id: Some("InternalAPI".to_string()),
                     stereotypes: Vec::new(),
                     entity_type: EntityType::Interface,
+                    template_kind: ClassTemplateKind::NonTemplate,
                     type_aliases: Vec::new(),
                     variables: Vec::new(),
                     methods: vec![method("GetData1")],

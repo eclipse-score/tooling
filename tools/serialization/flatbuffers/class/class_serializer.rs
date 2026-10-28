@@ -12,9 +12,9 @@
 // *******************************************************************************
 
 use class_diagram::{
-    ClassDiagram, EntityType, EnumLiteral, FreeFunctionDecl, FunctionArgument, MemberVariable,
-    Method, MethodModifier, RelationType, Relationship, SimpleEntity, SourceLocation,
-    TemplateParameter, TypeAlias, Visibility,
+    ClassDiagram, ClassTemplateKind, EntityType, EnumLiteral, FreeFunctionDecl, FunctionArgument,
+    MemberVariable, Method, MethodModifier, RelationType, Relationship, SimpleEntity,
+    SourceLocation, TemplateParameter, TypeAlias, Visibility,
 };
 use class_fbs::class_metamodel as fb;
 use flatbuffers::FlatBufferBuilder;
@@ -132,6 +132,7 @@ impl ClassSerializer {
                 enum_literals: Some(enum_literals_offset),
                 relationships: Some(entity_relationships_offset),
                 source_location: Some(source_location_offset),
+                template_kind: Self::map_template_kind(entity.template_kind),
             },
         )
     }
@@ -427,6 +428,19 @@ impl ClassSerializer {
             EntityType::Interface => fb::EntityType::Interface,
             EntityType::AbstractClass => fb::EntityType::AbstractClass,
             EntityType::Enum => fb::EntityType::Enum,
+        }
+    }
+
+    fn map_template_kind(kind: ClassTemplateKind) -> fb::ClassTemplateKind {
+        match kind {
+            ClassTemplateKind::NonTemplate => fb::ClassTemplateKind::NonTemplate,
+            ClassTemplateKind::Primary => fb::ClassTemplateKind::Primary,
+            ClassTemplateKind::PartialSpecialization => {
+                fb::ClassTemplateKind::PartialSpecialization
+            }
+            ClassTemplateKind::ExplicitSpecialization => {
+                fb::ClassTemplateKind::ExplicitSpecialization
+            }
         }
     }
 

@@ -139,6 +139,9 @@ impl ClassParseSession<'_> {
                 Rule::template_template_inner_param => {
                     parse_parameter(pair.into_inner().next().unwrap())
                 }
+                // A signature identifies a specialization argument list, not
+                // template parameters. Discard metadata for the whole list.
+                Rule::function_signature_template_param => None,
                 Rule::legacy_type_template_param | Rule::explicit_type_template_param => {
                     let mut name = String::new();
                     let mut is_pack = false;
@@ -1539,6 +1542,70 @@ mod tests {
     }
 
     #[test]
+    fn test_function_signature_class_arguments_do_not_infer_template_parameters() {
+        for signature in [
+            "ReturnType()",
+            "ReturnType(ArgType)",
+            "ReturnType(ArgTypes...)",
+            "ReturnType(A, Bs...)",
+        ] {
+            for arguments in [
+                signature.to_string(),
+                format!("{signature}, Capacity, Alignment"),
+                format!("Capacity, {signature}, Alignment"),
+                format!("Capacity, Alignment, {signature}"),
+            ] {
+                for declaration in [
+                    format!("class move_only_function<{arguments}>"),
+                    format!("class \"move_only_function<{arguments}>\" as move_only_function"),
+                    format!("class move_only_function as \"move_only_function<{arguments}>\""),
+                    format!("class \"<<template>>\\n<{arguments}>\" as move_only_function"),
+                    format!("class move_only_function as \"<<template>>\\n<{arguments}>\""),
+                ] {
+                    let file = parse_class_diagram_body(&declaration).expect(&declaration);
+                    let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) =
+                        &file.elements[0]
+                    else {
+                        panic!("expected a class");
+                    };
+
+                    assert!(def.template_parameters.is_none(), "{declaration}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_function_signature_method_arguments_do_not_infer_template_parameters() {
+        for signature in ["R()", "R(A)", "R(Args...)", "R(A, Bs...)"] {
+            for arguments in [
+                signature.to_string(),
+                format!("{signature}, T, U"),
+                format!("T, {signature}, U"),
+                format!("T, U, {signature}"),
+            ] {
+                for member in [
+                    format!("+Run<{arguments}>()"),
+                    format!("+Run()<{arguments}>"),
+                ] {
+                    let file = parse_single_class_member_file(&member).expect(&member);
+                    let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) =
+                        &file.elements[0]
+                    else {
+                        panic!("expected a class");
+                    };
+
+                    assert_eq!(def.members.methods.len(), 1, "{member}");
+                    assert!(
+                        def.members.methods[0].template_parameters.is_none(),
+                        "{member}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn test_quoted_class_arguments_do_not_infer_template_parameters() {
         for name in [
             "vector<int>",
@@ -1841,6 +1908,7 @@ mod tests {
             ("int** P", non_type_parameter("int**", "P", false)),
             ("int*& R", non_type_parameter("int*&", "R", false)),
             ("int * P", non_type_parameter("int *", "P", false)),
+            ("int & R", non_type_parameter("int &", "R", false)),
             ("int*... Ps", non_type_parameter("int*", "Ps", true)),
             ("int&... Rs", non_type_parameter("int&", "Rs", true)),
             ("const int* P", non_type_parameter("const int*", "P", false)),

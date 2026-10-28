@@ -5,6 +5,7 @@
       "name": "ContainerOwner",
       "enclosing_namespace_id": null,
       "entity_type": "Class",
+      "template_kind": "Primary",
       "enum_literals": [],
       "methods": [
         {
@@ -50,6 +51,7 @@
       "name": "FixedBuffer",
       "enclosing_namespace_id": null,
       "entity_type": "Class",
+      "template_kind": "Primary",
       "enum_literals": [],
       "methods": [
         {
@@ -202,6 +204,7 @@
       "name": "UnnamedTypePack",
       "enclosing_namespace_id": null,
       "entity_type": "Class",
+      "template_kind": "Primary",
       "enum_literals": [],
       "methods": [],
       "relationships": [],
@@ -221,6 +224,7 @@
       "name": "UnnamedValuePack",
       "enclosing_namespace_id": null,
       "entity_type": "Class",
+      "template_kind": "Primary",
       "enum_literals": [],
       "methods": [],
       "relationships": [],
@@ -240,6 +244,7 @@
       "name": "UnnamedTemplatePack",
       "enclosing_namespace_id": null,
       "entity_type": "Class",
+      "template_kind": "Primary",
       "enum_literals": [],
       "methods": [],
       "relationships": [],
@@ -265,6 +270,7 @@
       "name": "UnnamedTemplateOwner",
       "enclosing_namespace_id": null,
       "entity_type": "Class",
+      "template_kind": "Primary",
       "enum_literals": [],
       "methods": [],
       "relationships": [],
