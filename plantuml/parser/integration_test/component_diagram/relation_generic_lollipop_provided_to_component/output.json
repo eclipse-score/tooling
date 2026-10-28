@@ -17,6 +17,20 @@
                       "file": "",
                       "line": 19
                     }
+                },
+                {
+                    "target": "Pkg.IDoubleDash",
+                    "annotation": "provides",
+                    "relation_type": "InterfaceBinding",
+                    "source_role": "Provided",
+                    "source_location": {"file": "", "line": 22}
+                },
+                {
+                    "target": "Pkg.ISingleDash",
+                    "annotation": "provides",
+                    "relation_type": "InterfaceBinding",
+                    "source_role": "Provided",
+                    "source_location": {"file": "", "line": 23}
                 }
             ],
             "source_location": {
@@ -36,6 +50,26 @@
               "file": "",
               "line": 17
             }
+        },
+        "Pkg.IDoubleDash": {
+          "id": "Pkg.IDoubleDash",
+          "name": "IDoubleDash",
+          "alias": null,
+          "parent_id": "Pkg",
+          "comp_type": "Interface",
+          "stereotype": null,
+          "relations": [],
+          "source_location": {"file": "", "line": 20}
+        },
+        "Pkg.ISingleDash": {
+          "id": "Pkg.ISingleDash",
+          "name": "ISingleDash",
+          "alias": null,
+          "parent_id": "Pkg",
+          "comp_type": "Interface",
+          "stereotype": null,
+          "relations": [],
+          "source_location": {"file": "", "line": 21}
         },
         "Pkg": {
             "id": "Pkg",

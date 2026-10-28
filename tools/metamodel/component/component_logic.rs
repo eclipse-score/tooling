@@ -79,7 +79,7 @@ pub enum ComponentRelationType {
     Association,
     /// Dependency (uses/calls) `..>`, `-->`
     Dependency,
-    /// Interface, `port --() Interface`, `-(`, `)-`
+    /// Interface binding, `Component - Interface`, `Component -- Interface`, `port --() Interface`, `-(`
     InterfaceBinding,
 }
 

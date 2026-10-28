@@ -21,7 +21,7 @@ package package_a <<SEooC>> {
 
     interface InternalInterface
     Unit1 -( InternalInterface
-    Unit2 )- InternalInterface
+    Unit2 - InternalInterface
 }
 
 @enduml

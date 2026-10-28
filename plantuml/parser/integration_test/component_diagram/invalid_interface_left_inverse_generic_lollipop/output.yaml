@@ -16,4 +16,4 @@ invalid_interface_left_inverse_generic_lollipop.puml:
     fields:
       from: "IProvided"
       to: "A"
-      reason: "Unsupported interface decorator syntax: only ')-' and '--()' (Provided) plus '-(' (Required) are supported; '()--' is rejected"
+      reason: "Unsupported interface decorator syntax: use '-', '--', '--()', or '-u-()' (Provided) or '-(' (Required); ')-' and '()--' are rejected"

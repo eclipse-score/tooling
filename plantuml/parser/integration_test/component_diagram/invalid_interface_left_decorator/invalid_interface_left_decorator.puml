@@ -16,7 +16,7 @@ package "Pkg" as Pkg {
     interface "IProvided" as IProvided
     component "A" as A <<component>>
 
-    IProvided )- A : invalid
+    IProvided --() A : invalid
 }
 
 @enduml

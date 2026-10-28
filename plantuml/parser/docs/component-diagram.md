@@ -126,6 +126,10 @@ Line style does not change the logical relation category, and text after `:` is 
 relation annotation. For consistency and readability, prefer the forward forms `A --> B` and
 `A ..> B`.
 
+Bare `-` and `--` have the same semantics: between non-interface elements they are
+associations; when an interface endpoint is involved, both forms are instead validated as
+provided-interface bindings, as described below.
+
 #### Interface bindings
 
 Provided and required interface bindings are supported only with a `component` or qualifying
@@ -141,14 +145,20 @@ interface ResponseApi
 
 incoming -( RequestApi : requires
 outgoing - ResponseApi : provides
+Gateway -- ResponseApi : also provides
 Gateway --() ResponseApi : also provides
 ```
 
-`-` denotes a provided-interface binding. `-(` denotes a required-interface binding. The generic
+`-` and `--` denote a provided-interface binding. `-(` denotes a required-interface binding. The generic
 lollipop form `Component --() Interface` is also resolved as a provided binding. When a source
 port is used, its role must agree with the binding form: `portin` with `-(` and `portout` with
-`-` or `--()`. PlantUML direction hints on interface-binding lines affect rendering only, not the
+`-`, `--`, or `--()`. PlantUML direction hints on interface-binding lines affect rendering only, not the
 resolved role or endpoints.
+
+For a provided binding, layout hints and line styles affect rendering only; for example
+`Gateway -up- ResponseApi` and `Gateway --[bold]-- ResponseApi` remain provided bindings.
+The former `Component )- Interface` spelling is no
+longer supported and is rejected, rather than treated as an association.
 
 ## Content accepted but not included in the logical model
 

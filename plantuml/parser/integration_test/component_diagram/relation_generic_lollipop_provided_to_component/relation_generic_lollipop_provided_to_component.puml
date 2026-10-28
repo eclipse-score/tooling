@@ -17,6 +17,10 @@ package "Pkg" as Pkg {
     interface "IService" as IService
 
     ComponentA --() IService : provides
+    interface IDoubleDash
+    interface ISingleDash
+    ComponentA -- IDoubleDash : provides
+    ComponentA - ISingleDash : provides
 }
 
 @enduml

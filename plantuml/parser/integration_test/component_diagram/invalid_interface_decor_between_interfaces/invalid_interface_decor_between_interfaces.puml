@@ -16,7 +16,7 @@ package "Pkg" as Pkg {
     interface "ILeft" as ILeft
     interface "IRight" as IRight
 
-    ILeft )- IRight : invalid
+    ILeft --() IRight : invalid
 }
 
 @enduml

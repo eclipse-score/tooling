@@ -20,6 +20,6 @@ package sample_seooc <<SEooC>> {
 }
 
 interface SampleLibraryAPI
-sample_seooc )-d- SampleLibraryAPI
+sample_seooc -d- SampleLibraryAPI
 
 @enduml

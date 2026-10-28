@@ -16,4 +16,4 @@ invalid_mixed_interface_decor.puml:
     fields:
       from: "pOut"
       to: "IAny"
-      reason: "Mixed interface decorators are not allowed: cannot combine provided ')' with required '(' in one relation"
+      reason: "Mixed interface decorators are not allowed: cannot combine provided '()' with required '(' in one relation"

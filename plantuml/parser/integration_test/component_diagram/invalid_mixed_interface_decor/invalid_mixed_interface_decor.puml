@@ -19,7 +19,7 @@ package "Pkg" as Pkg {
 
     interface "IAny" as IAny
 
-    pOut )--( IAny : mixed
+    pOut --()( IAny : mixed
 }
 
 @enduml

@@ -16,4 +16,4 @@ invalid_interface_left_generic_lollipop.puml:
     fields:
       from: "IProvided"
       to: "A"
-      reason: "Decorator binding requires a Component or component-stereotyped element on the left and Interface on the right"
+      reason: "Interface bindings require an Interface and a Component or a Package stereotyped as 'component' or 'SEooC' (directly or through its port). Only explicit forms ('--()' or '-(') require the Interface on the right"

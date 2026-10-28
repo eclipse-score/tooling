@@ -23,7 +23,7 @@ package package_a <<SEooC>> {
     interface CallerOnlyInterface
 
     unit_1 -( SharedInterface
-    unit_2 )- SharedInterface
+    unit_2 - SharedInterface
     unit_1 -( CallerOnlyInterface
 }
 

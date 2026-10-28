@@ -61,7 +61,7 @@ package sample_seooc <<SEooC>> {
 }
 
 interface SampleLibraryAPI
-sample_seooc )- SampleLibraryAPI
+sample_seooc - SampleLibraryAPI
 ```
 
 ```text
@@ -92,7 +92,7 @@ package sample_seooc <<SEooC>> {
 }
 
 interface SampleLibraryAPI
-sample_seooc )- SampleLibraryAPI
+sample_seooc - SampleLibraryAPI
 ```
 
 The validator collects relationships from SEooC entities and checks whether the
@@ -100,7 +100,7 @@ public API interface is a relation target. Relations from components or units do
 not satisfy this rule. Any PlantUML relation type (interface binding, plain
 association, or dependency) and any endpoint role (required, provided, or
 none) is accepted as long as the SEooC entity is the source and the public API
-interface is the target; the validator does not require the `)-`/`-(`
+interface is the target; the validator does not require the `-`/`-(`
 interface-binding notation specifically.
 
 ## Failure Cases
