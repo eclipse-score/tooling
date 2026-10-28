@@ -1,0 +1,25 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+requirements:
+  - "SampleComponentExtra.REQ_COMP_EXTRA_004"
+steps:
+  - action:
+    description: Compare OtherLibrary.ValidInputPointer@1 with REQ_COMP_EXTRA_004 and record how non-nullness, lifetime, and absence of concurrent modification are covered.
+  - action:
+    description: Enumerate all Compute calls in unit_1 and review the argument object, pointer escapes, lifetime, and possible writers. Confirm the reviewed call sites cover the unit_1 implementation target.
+  - action:
+    description: Inspect the dependency Compute contract and implementation to confirm the read is synchronous and the pointer is neither retained nor passed to asynchronous work.
+  - assertion:
+    description: Do all reviewed unit_1 calls satisfy the received AoU through REQ_COMP_EXTRA_004, with no uncovered call sites or unresolved findings?
+    positive: Yes
+    negative: No

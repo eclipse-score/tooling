@@ -1,0 +1,32 @@
+{
+  "analysis": "manual_analysis/received_space_constraint/analysis.yaml",
+  "results": [
+    {
+      "type": "action",
+      "description": "Compare OtherLibrary.SpaceConstraint@1 with REQ_COMP_EXTRA_003. Record the budget unit, measured resource, system boundary, and whether the limit applies per call, per instance, or to aggregate peak memory. Record any unresolved ambiguity.",
+      "result": "SpaceConstraint says invocations must not exceed 10 MB. It does not define the measured memory, decimal versus binary unit, or whether the limit is per invocation or aggregate. REQ_COMP_EXTRA_003 refers to the interface memory footprint but does not resolve these ambiguities. Upstream clarification is required. This is coding-assistant example evidence, not independent human approval."
+    },
+    {
+      "type": "action",
+      "description": "Review Foo and Compute for object storage, dynamic allocation, stack use, pointer retention, and asynchronous work. Distinguish source-level observations from a complete runtime memory bound.",
+      "result": "Foo has no data members. GetNumber creates one call-local const uint8_t and passes its address to Compute. Compute returns the dereferenced value without allocating, retaining the pointer, or scheduling work. These observations do not determine total stack, binary, allocator, or concurrent execution memory. sizeof(Foo) alone cannot establish the unspecified budget."
+    },
+    {
+      "type": "action",
+      "description": "Identify required evidence for maximum concurrency, object lifetimes, target ABI, stack sizes, allocator overhead, and other memory included by the agreed boundary. Record missing evidence rather than assuming it.",
+      "result": "The review context has no agreed deployment memory boundary, concurrency limit, target-specific stack bound, or system memory accounting. Which additional evidence is necessary depends on clarification of the AoU. No missing platform values are assumed."
+    },
+    {
+      "type": "action",
+      "description": "If the contract and evidence are sufficient, derive a conservative peak bound and compare it with the budget in consistent units. Otherwise explain why no acceptance comparison can yet be made.",
+      "result": "No valid acceptance comparison can be made until the unit and boundary are agreed and their corresponding worst-case evidence is available. The analysis is complete as a gap assessment, but satisfaction of the AoU remains unproven."
+    },
+    {
+      "type": "assertion",
+      "description": "Is SpaceConstraint fully defined and demonstrably satisfied through REQ_COMP_EXTRA_003, with a justified peak bound and no unresolved assumptions?",
+      "answer": "No",
+      "passed": false,
+      "justification": "Not demonstrated, rather than demonstrated budget violation. Clarify the upstream contract, refine and version the local requirement as needed, collect evidence for the agreed boundary, and repeat the review. An up-to-date lock must not turn this negative conclusion into a passing result."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+requirements:
+  - "SampleComponentExtra.REQ_COMP_EXTRA_003"
+steps:
+  - action:
+    description: Compare OtherLibrary.SpaceConstraint@1 with REQ_COMP_EXTRA_003. Record the budget unit, measured resource, system boundary, and whether the limit applies per call, per instance, or to aggregate peak memory. Record any unresolved ambiguity.
+  - action:
+    description: Review Foo and Compute for object storage, dynamic allocation, stack use, pointer retention, and asynchronous work. Distinguish source-level observations from a complete runtime memory bound.
+  - action:
+    description: Identify required evidence for maximum concurrency, object lifetimes, target ABI, stack sizes, allocator overhead, and other memory included by the agreed boundary. Record missing evidence rather than assuming it.
+  - action:
+    description: If the contract and evidence are sufficient, derive a conservative peak bound and compare it with the budget in consistent units. Otherwise explain why no acceptance comparison can yet be made.
+  - assertion:
+    description: Is SpaceConstraint fully defined and demonstrably satisfied through REQ_COMP_EXTRA_003, with a justified peak bound and no unresolved assumptions?
+    positive: Yes
+    negative: No

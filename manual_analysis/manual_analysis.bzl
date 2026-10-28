@@ -143,7 +143,11 @@ def _manual_analysis_update_impl(ctx):
         target_file = workspace_results_file,
     )
 
-    runfiles = ctx.runfiles(files = input_files + manifests + [lock_file, results_file])
+    runfiles_inputs = input_files + manifests + [lock_file, results_file]
+    runfiles = ctx.runfiles(
+        files = runfiles_inputs,
+        root_symlinks = {file.path: file for file in runfiles_inputs},
+    )
     runfiles = runfiles.merge(ctx.attr._manual_analysis_update_runner[DefaultInfo].default_runfiles)
 
     executable = ctx.actions.declare_file(
@@ -162,11 +166,11 @@ def _manual_analysis_update_impl(ctx):
             runfiles = runfiles,
         ),
         RunEnvironmentInfo(environment = {
-            "MANUAL_ANALYSIS_FILES_MANIFEST": manifests[0].short_path,
-            "MANUAL_ANALYSIS_RULES_MANIFEST": manifests[1].short_path,
-            "MANUAL_ANALYSIS_LOCK_FILE": lock_file.short_path,
-            "MANUAL_ANALYSIS_YAML": analysis_file.short_path,
-            "MANUAL_ANALYSIS_RESULTS_FILE": results_file.short_path,
+            "MANUAL_ANALYSIS_FILES_MANIFEST": manifests[0].path,
+            "MANUAL_ANALYSIS_RULES_MANIFEST": manifests[1].path,
+            "MANUAL_ANALYSIS_LOCK_FILE": lock_file.path,
+            "MANUAL_ANALYSIS_YAML": analysis_file.path,
+            "MANUAL_ANALYSIS_RESULTS_FILE": results_file.path,
         }),
     ]
 
@@ -220,7 +224,6 @@ def _manual_analysis_test_impl(ctx):
         "MANUAL_ANALYSIS_COMMITTED_LOCK": lock_file.short_path,
         "MANUAL_ANALYSIS_YAML": analysis_file.short_path,
         "MANUAL_ANALYSIS_RESULTS_FILE": results_file.short_path,
-        "MANUAL_ANALYSIS_LOBSTER_OUTPUT": "{}.lobster".format(ctx.label.name),
         "MANUAL_ANALYSIS_LABEL": str(ctx.label),
     }
 
@@ -329,6 +332,11 @@ manual_analysis = macro(
             doc = "Results file to capture interactive manual-analysis outcomes",
             mandatory = True,
             allow_single_file = True,
+            configurable = False,
+        ),
+        "tags": attr.string_list(
+            doc = "Tags forwarded to the review test and update target.",
+            default = [],
             configurable = False,
         ),
     },
