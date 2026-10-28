@@ -647,6 +647,89 @@ def test_classify_shebang_preamble_is_not_misplaced(tmp_path):
     assert layout.leading_junk == ""
 
 
+# --- YAML frontmatter preamble (md only) ---
+
+
+def test_match_frontmatter_consumes_block_through_closing_delimiter():
+    cr_checker = load_cr_checker_module()
+    frontmatter = "---\nname: x\ndescription: y\n---\n"
+
+    consumed = cr_checker._match_frontmatter(frontmatter + "\n# Title\n")
+
+    assert consumed == len(frontmatter)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "# Title\n---\nname: x\n---\n",
+        "---\nname: x\nno closing delimiter\n",
+        "----\nname: x\n----\n",
+    ],
+)
+def test_match_frontmatter_rejects_non_frontmatter(text):
+    cr_checker = load_cr_checker_module()
+
+    assert cr_checker._match_frontmatter(text) == 0
+
+
+def test_match_frontmatter_rejects_block_longer_than_max():
+    cr_checker = load_cr_checker_module()
+    text = "---\n" + "k: v\n" * cr_checker.FRONTMATTER_MAX_CHARS + "---\n"
+
+    assert cr_checker._match_frontmatter(text) == 0
+
+
+def test_locate_header_recognizes_frontmatter_only_for_md():
+    cr_checker = load_cr_checker_module()
+    text = "---\nname: x\n---\n\n# Title\n"
+
+    assert cr_checker.locate_header(text, extension="md").prefix_kind == "frontmatter"
+    assert cr_checker.locate_header(text, extension="yaml").prefix_kind is None
+    assert cr_checker.locate_header(text).prefix_kind is None
+
+
+def test_classify_md_header_after_frontmatter_is_compliant():
+    cr_checker = load_cr_checker_module()
+    header_template = load_template("md")
+    header = header_template.format(year=datetime.now().year, author="Author")
+    content = "---\nname: x\n---\n\n" + header + "# Title\n"
+
+    layout = cr_checker.locate_header(content, extension="md")
+    status, _ = cr_checker.classify(layout, header_template, None)
+
+    assert status is cr_checker.Status.COMPLIANT
+    assert layout.leading_junk == ""
+
+
+def test_process_files_accepts_md_header_after_frontmatter(tmp_path):
+    cr_checker = load_cr_checker_module()
+    header_template = load_template("md")
+    header = header_template.format(year=datetime.now().year, author="Author")
+    doc = tmp_path / "SKILL.md"
+    doc.write_text("---\nname: x\n---\n\n" + header + "# Title\n", encoding="utf-8")
+
+    results = cr_checker.process_files([doc], {"md": header_template}, False)
+
+    assert results["missing"] == 0
+    assert results["misplaced"] == 0
+
+
+def test_process_files_fix_inserts_md_header_after_frontmatter(tmp_path):
+    cr_checker = load_cr_checker_module()
+    header_template = load_template("md")
+    config = write_config(tmp_path, "Author")
+    doc = tmp_path / "SKILL.md"
+    doc.write_text("---\nname: x\n---\n\n# Title\n", encoding="utf-8")
+
+    results = cr_checker.process_files([doc], {"md": header_template}, True, config=config)
+
+    expected_header = header_template.format(year=datetime.now().year, author="Author")
+    assert results["missing"] == 1
+    assert results["fixed"] == 1
+    assert doc.read_text(encoding="utf-8") == "---\nname: x\n---\n\n" + expected_header + "\n# Title\n"
+
+
 # --- COPYRIGHT_BLOCK_PATTERN precision (avoid false-positive "blocks") -----
 
 

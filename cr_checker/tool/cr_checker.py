@@ -34,6 +34,9 @@ from pathlib import Path
 from rapidfuzz import fuzz
 
 BYTES_TO_READ = 4 * 1024
+# Longest YAML frontmatter block recognized as a preamble; longer ones are ignored so
+# check mode (bounded read window) and fix mode (whole file) always agree.
+FRONTMATTER_MAX_CHARS = 2 * 1024
 DEFAULT_AUTHOR = "Contributors to the Eclipse Foundation"
 
 BORDER_FILL_PATTERN = re.compile(r"([/*#'\-=+])\1{4,}")
@@ -376,27 +379,49 @@ def _match_shebang(text):
     return len(text) if line_end == -1 else line_end + 1
 
 
+FRONTMATTER_PATTERN = re.compile(r"---[ \t]*\n.*?^---[ \t]*(?:\n|\Z)", re.DOTALL | re.MULTILINE)
+
+
+def _match_frontmatter(text):
+    """Prefix matcher: returns the char length of a leading ``---`` delimited
+    YAML frontmatter block (including its closing line's newline), or 0 if
+    `text` doesn't start with one that closes within `FRONTMATTER_MAX_CHARS`.
+    """
+    match = FRONTMATTER_PATTERN.match(text)
+    if not match or match.end() > FRONTMATTER_MAX_CHARS:
+        return 0
+    return match.end()
+
+
 # Ordered registry of recognized "must stay above the header" preamble kinds.
-# Each entry is (name, matcher) where matcher(text) returns the number of
-# characters it consumes at the current start-of-file position, or 0 if it
-# doesn't apply. This is the single place to extend with new preamble kinds
-# later (e.g. a PEP 263 encoding cookie, an XML declaration, ...) without
-# touching the scanning/classification/fix logic itself. Currently only the
-# shebang is recognized.
+# Each entry is (name, extensions, matcher): matcher(text) returns the number
+# of characters it consumes at the start of the file, or 0 if it doesn't
+# apply; `extensions` restricts it to those `extension_key` values (None =
+# every file type). This is the single place to extend with new preamble
+# kinds (e.g. a PEP 263 encoding cookie, an XML declaration, ...) without
+# touching the scanning/classification/fix logic itself.
 PREFIX_MATCHERS = [
-    ("shebang", _match_shebang),
+    ("shebang", None, _match_shebang),
+    ("frontmatter", frozenset({"md"}), _match_frontmatter),
 ]
 
 
-def _match_prefix(text):
+def _match_prefix(text, extension=None):
     """Runs the prefix matcher registry once at the top of `text`.
+
+    Args:
+        text (str): The LF-normalized file content.
+        extension (str | None): The file's `extension_key`, used to select
+                                the matchers that apply to it.
 
     Returns:
         tuple(int, str | None): the char offset where the recognized preamble
         (plus any immediately trailing blank lines) ends, and its kind (e.g.
         "shebang"), or (0, None) if nothing matched.
     """
-    for name, matcher in PREFIX_MATCHERS:
+    for name, extensions, matcher in PREFIX_MATCHERS:
+        if extensions is not None and extension not in extensions:
+            continue
         consumed = matcher(text)
         if consumed:
             return _skip_blank_lines(text, consumed), name
@@ -549,7 +574,7 @@ def _find_blocks(text, start):
     return blocks
 
 
-def locate_header(text, manual_prefix_offset=0):
+def locate_header(text, manual_prefix_offset=0, extension=None):
     """Scans `text` once and returns where everything is (see `HeaderLayout`).
 
     Shared verbatim by both the check path (`classify`) and the fix path
@@ -567,6 +592,9 @@ def locate_header(text, manual_prefix_offset=0):
                                     be treated as the recognized preamble --
                                     an escape hatch for preamble kinds the
                                     registry doesn't (yet) recognize.
+        extension (str | None): The file's `extension_key`; selects the
+                                preamble matchers that apply (see
+                                `PREFIX_MATCHERS`).
 
     Returns:
         HeaderLayout: see above.
@@ -574,7 +602,7 @@ def locate_header(text, manual_prefix_offset=0):
     if manual_prefix_offset:
         prefix_end, prefix_kind = _skip_blank_lines(text, manual_prefix_offset), "manual"
     else:
-        prefix_end, prefix_kind = _match_prefix(text)
+        prefix_end, prefix_kind = _match_prefix(text, extension)
 
     blocks = _find_blocks(text, prefix_end)
 
@@ -897,7 +925,7 @@ def list_tracked_files(base_dir, pathspecs=None):
     return [base / os.fsdecode(rel) for rel in result.stdout.split(b"\0") if rel]
 
 
-def list_modified_files(base_dir):
+def list_modified_files(base_dir, pathspecs=None):
     """Lists files added, copied, modified, or renamed relative to ``HEAD``.
 
     Used by ``--modified-only`` for fast, incremental runs (e.g. a
@@ -912,6 +940,9 @@ def list_modified_files(base_dir):
 
     Args:
         base_dir (str): Repository root to run git in.
+        pathspecs (list, optional): git pathspecs (files, directories, globs,
+                                    ``:(exclude)`` magic) restricting the
+                                    listing. ``None`` lists every modified file.
 
     Returns:
         list[Path]: Absolute paths to the modified files.
@@ -926,6 +957,9 @@ def list_modified_files(base_dir):
         "-z",
         "HEAD",
     ]
+    if pathspecs:
+        cmd.append("--")
+        cmd.extend(pathspecs)
 
     LOGGER.debug("Listing modified files with: %s", " ".join(cmd))
     result = subprocess.run(cmd, capture_output=True, check=True)
@@ -1147,12 +1181,12 @@ def _log_status(item, status, layout, similarity, template):
 
 def _process_file_check(item, template, encoding, offset, use_mmap, config, results):
     """Read-only path: classifies the file's header state and logs/tallies it."""
-    header_window = max(BYTES_TO_READ, 2 * len(template))
+    header_window = max(BYTES_TO_READ, FRONTMATTER_MAX_CHARS + 2 * len(template))
     raw = load_header_text(item, header_window, encoding, use_mmap)
     text, _ = _strip_bom(raw)
     text = _normalize_line_endings(text)
 
-    layout = locate_header(text, manual_prefix_offset=offset)
+    layout = locate_header(text, manual_prefix_offset=offset, extension=extension_key(item))
     status, similarity = classify(layout, template, config)
     _log_status(item, status, layout, similarity, template)
     _tally(status, results)
@@ -1173,7 +1207,7 @@ def _process_file_fix(item, template, encoding, offset, remove_offset, config, r
     line_ending = _detect_line_ending(text)
     text = _normalize_line_endings(text)
 
-    layout = locate_header(text, manual_prefix_offset=offset)
+    layout = locate_header(text, manual_prefix_offset=offset, extension=extension_key(item))
     status, similarity = classify(layout, template, config)
     _log_status(item, status, layout, similarity, template)
     _tally(status, results)
@@ -1412,10 +1446,10 @@ def parse_arguments(argv):
         dest="modified_only",
         action="store_true",
         help="Only check files that differ from HEAD (staged and/or unstaged), "
-        "e.g. for a fast, incremental pre-commit run. Takes precedence "
-        "over 'inputs' (including any 'srcs' pathspec baked into a "
-        "Bazel target's args), so the same whole-repo target used by CI "
-        "can be reused for incremental, modified-files-only runs.",
+        "e.g. for a fast, incremental pre-commit run. 'inputs' (including any "
+        "'srcs' pathspec baked into a Bazel target's args) further restrict "
+        "the set, so the same whole-repo target used by CI can be reused for "
+        "incremental, modified-files-only runs.",
     )
 
     return parser.parse_args(argv)
@@ -1478,7 +1512,7 @@ def main(argv=None):
             base_dir = workspace or Path.cwd()
             files = [
                 f
-                for f in list_modified_files(base_dir)
+                for f in list_modified_files(base_dir, args.inputs or None)
                 if not f.is_symlink() and f.is_file() and _matches_extension(f, args.extensions)
             ]
         else:
