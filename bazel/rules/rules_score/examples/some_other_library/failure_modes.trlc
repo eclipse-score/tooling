@@ -22,3 +22,12 @@ ScoreReq.FailureMode ComputeOverloaded {
     safety = ScoreReq.Asil.B
     interface = "other_seooc.OtherLibraryAPI.Compute"
 }
+
+ScoreReq.FailureMode InvalidInputRead {
+    guidewords = [ScoreReq.Guideword.Wrong]
+    description = "Compute reads through an invalid or concurrently modified input pointer"
+    failureeffect = "The caller receives an incorrect value or execution fails"
+    version = 1
+    safety = ScoreReq.Asil.B
+    interface = "other_seooc.OtherLibraryAPI.Compute"
+}

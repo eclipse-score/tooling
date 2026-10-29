@@ -14,6 +14,12 @@
 load("@score_tooling//bazel/rules/rules_score:rules_score.bzl", "assumed_system_requirements", "component_requirements", "feature_requirements")
 load("@score_tooling//validation/ai_checker:ai_checker.bzl", "trlc_requirements_ai_test")
 
+filegroup(
+    name = "received_aou_manual_analysis_sources",
+    srcs = ["component_requirements_extra.trlc"],
+    visibility = ["//manual_analysis:__subpackages__"],
+)
+
 assumed_system_requirements(
     name = "assumed_system_requirements",
     srcs = [
@@ -60,7 +66,7 @@ component_requirements(
     deps = [
         ":assumed_system_requirements",
         ":feature_requirements",
-        # AoU received from other_seooc and handled locally (SpaceConstraint).
+        # AoU received from other_seooc and handled locally(SpaceConstraint, ValidInputPointer).
         "@some_other_library//:other_library_aous",
     ],
 )

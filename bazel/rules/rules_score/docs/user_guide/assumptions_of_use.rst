@@ -218,15 +218,18 @@ example lives in ``examples/some_other_library``, ``examples/seooc``, and
 
 ::
 
-    other_seooc                     → defines AoUs: OtherLibrary.TimingConstraint, OtherLibrary.SpaceConstraint
+    other_seooc                     → defines AoUs: OtherLibrary.TimingConstraint,
+                                                    OtherLibrary.SpaceConstraint,
+                                                    OtherLibrary.ValidInputPointer
         ↑ (deps)
     safety_software_seooc_example   → defines own AoU: SampleType.SampleAoU (auto-forwarded)
-                                     → handles received SpaceConstraint locally via derived_from
-                                     → chain-forwards received TimingConstraint via aou_forwarding.yaml
+                                    → handles received ValidInputPointer locally via derived_from
+                                    → allocates received SpaceConstraint locally (validation remains unresolved)
+                                    → chain-forwards received TimingConstraint via aou_forwarding.yaml
         ↑ (deps)
     integrator_seooc                → receives SampleType.SampleAoU (auto-forwarded)
                                        and OtherLibrary.TimingConstraint (chain-forwarded)
-                                     → handles both locally via derived_from (no further dependees)
+                                    → handles both locally via derived_from (no further dependees)
 
 .. code-block:: starlark
    :caption: examples/seooc/BUILD

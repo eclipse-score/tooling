@@ -89,6 +89,7 @@ load(
     ":lobster_config_test.bzl",
     "lobster_config_test_suite",
 )
+load(":manual_analysis_test.bzl", "manual_analysis_missing_output_test", "manual_analysis_report_test", "manual_evidence")
 load(
     ":puml_layout_test.bzl",
     "puml_layout_test_suite",
@@ -1737,6 +1738,88 @@ dependable_element(
     maturity = "development",
     requirements = [":feat_req"],
     tests = [],  # Empty for testing
+)
+
+manual_evidence(
+    name = "manual_evidence",
+    testonly = True,
+)
+
+manual_evidence(
+    name = "manual_evidence_json",
+    testonly = True,
+    extension = ".json",
+)
+
+manual_evidence(
+    name = "manual_evidence_runfiles",
+    testonly = True,
+    extension = ".json",
+    runfiles_only = True,
+)
+
+dependable_element(
+    name = "test_dependable_element_manual_analysis",
+    architectural_design = [":arch_design_elem"],
+    components = [":test_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    manual_analysis = [":manual_evidence"],
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+)
+
+dependable_element(
+    name = "test_dependable_element_manual_analysis_release",
+    architectural_design = [":arch_design_elem"],
+    components = [":test_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    manual_analysis = [
+        ":manual_evidence",
+        ":manual_evidence_json",
+    ],
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+)
+
+manual_analysis_report_test(
+    name = "manual_analysis_report_test",
+    target_under_test = ":test_dependable_element_manual_analysis_index",
+)
+
+manual_analysis_report_test(
+    name = "manual_analysis_report_release_test",
+    expect_coverage = True,
+    extra_evidence = ["manual_evidence_json.json"],
+    target_under_test = ":test_dependable_element_manual_analysis_release_index",
+)
+
+manual_analysis_report_test(
+    name = "manual_analysis_report_disabled_test",
+    expect_manual_analysis = False,
+    target_under_test = ":test_dependable_element_index",
+)
+
+dependable_element(
+    name = "test_dependable_element_manual_analysis_runfiles",
+    architectural_design = [":arch_design_elem"],
+    components = [":test_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    manual_analysis = [":manual_evidence_runfiles"],
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+)
+
+manual_analysis_missing_output_test(
+    name = "manual_analysis_missing_output_test",
+    target_under_test = ":test_dependable_element_manual_analysis_runfiles_index",
 )
 
 # Dependable elements wrapping a test_case_coverage_lock component — used to verify the

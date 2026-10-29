@@ -24,6 +24,15 @@ load(
     "unit",
 )
 
+filegroup(
+    name = "input_pointer_review_sources",
+    srcs = [
+        "aous.trlc",
+        "public_api.puml",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 architectural_design(
     name = "sample_seooc_design",
     public_api = [
@@ -101,6 +110,7 @@ dependable_element(
 cc_library(
     name = "some_other_library",
     srcs = [],
+    hdrs = ["other_library.h"],
     visibility = ["//visibility:public"],
     deps = [],
 )

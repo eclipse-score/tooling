@@ -10,10 +10,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load(
-    "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
-    "unit",
-)
+load("@score_tooling//bazel/rules/rules_score:rules_score.bzl", "unit")
+load("@score_tooling//manual_analysis:context_from_cc_library.bzl", "manual_analysis_context_from_cc_library")
 
 unit(
     name = "unit_1",
@@ -38,6 +36,12 @@ cc_library(
     hdrs = ["foo.h"],
     visibility = ["//visibility:public"],
     deps = ["@some_other_library"],
+)
+
+manual_analysis_context_from_cc_library(
+    name = "manual_analysis_context",
+    library = ":unit_1_lib",
+    visibility = ["//manual_analysis:__subpackages__"],
 )
 
 cc_test(

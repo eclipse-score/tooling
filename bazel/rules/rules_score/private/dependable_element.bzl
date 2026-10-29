@@ -23,6 +23,7 @@ assumptions of use, requirements, design, and safety analysis.
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load(
     "@lobster//:lobster.bzl",
+    "LobsterProvider",
     "subrule_lobster_html_report",
     "subrule_lobster_report",
 )
@@ -1608,6 +1609,18 @@ def _dependable_element_index_impl(ctx):
     lobster_rst_dir = None
     lobster_files = []
 
+    manual_analysis_by_path = {}
+    for target in ctx.attr.manual_analysis:
+        files_by_path = {
+            file.path: file
+            for file in target[DefaultInfo].files.to_list()
+        }
+        for path in target[LobsterProvider].lobster_input.values():
+            if path not in files_by_path:
+                fail("manual_analysis target {} must export LOBSTER input '{}' in DefaultInfo.files".format(target.label, path))
+            manual_analysis_by_path[path] = files_by_path[path]
+    manual_analysis_files = manual_analysis_by_path.values()
+
     # Generate whenever there is at least one lobster input; individual
     # levels (e.g. Feature Requirements, Failure Modes) are all optional and
     # each one, along with any `trace to:` line pointing at it, is only
@@ -1619,6 +1632,7 @@ def _dependable_element_index_impl(ctx):
         received_aou_list,
         comp_req_list,
         comp_test_list,
+        manual_analysis_files,
         coverage_lobster_files,
         comp_arch_list,
         interface_req_list,
@@ -1675,7 +1689,12 @@ def _dependable_element_index_impl(ctx):
             template = ctx.file._lobster_de_template,
             output = lobster_config,
             substitutions = {
-                "{FEAT_REQ_BLOCK}": format_lobster_block("requirements", "Feature Requirements", feat_req_list),
+                "{FEAT_REQ_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Feature Requirements",
+                    feat_req_list,
+                    requires = [["Component Requirements"]] if manual_analysis_files and has_comp_req else [],
+                ),
                 # Target level: every item here must be covered, either by a
                 # Component Requirement (`derived_from`) or by being
                 # further chain-forwarded (Forwarded AoUs, below). Without the
@@ -1711,6 +1730,15 @@ def _dependable_element_index_impl(ctx):
                     "requirements",
                     "Component Requirements",
                     comp_req_list,
+                    requires = [
+                        [level, "Manual Analysis"] if level != "Architecture" else [level]
+                        for present, level in [
+                            (comp_test_list or strict, "Unit Test"),
+                            (coverage_lobster_files or strict, "Test Case Coverage"),
+                            (comp_arch_list or strict, "Architecture"),
+                        ]
+                        if present
+                    ] if manual_analysis_files else [],
                     trace_to = _cond_names(
                         (has_feat_req, "Feature Requirements"),
                         (has_received_aou, "Received AoUs"),
@@ -1729,6 +1757,15 @@ def _dependable_element_index_impl(ctx):
                     coverage_lobster_files,
                     trace_to = _cond_names((has_comp_req, "Component Requirements")),
                     emit_empty = strict,
+                ),
+                "{MANUAL_ANALYSIS_BLOCK}": format_lobster_block(
+                    "activity",
+                    "Manual Analysis",
+                    manual_analysis_files,
+                    trace_to = _cond_names(
+                        (has_comp_req, "Component Requirements"),
+                        (has_feat_req, "Feature Requirements"),
+                    ),
                 ),
                 "{ARCH_BLOCK}": format_lobster_block(
                     "implementation",
@@ -1778,7 +1815,7 @@ def _dependable_element_index_impl(ctx):
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + rc_list + assessment_list + own_aou_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
+        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + rc_list + assessment_list + own_aou_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files + manual_analysis_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_files = [lobster_config, lobster_report_file]
 
@@ -1910,6 +1947,11 @@ def _dependable_element_index_attrs():
         "checklists": attr.label_list(
             default = [],
             doc = "Safety checklists targets or files.",
+        ),
+        "manual_analysis": attr.label_list(
+            default = [],
+            providers = [LobsterProvider],
+            doc = "Manual analysis evidence declared by LobsterProvider and exported in DefaultInfo.files.",
         ),
         "glossary": attr.label_list(
             default = [],
@@ -2139,6 +2181,7 @@ def dependable_element(
         generate_html_report = False,
         testonly = True,
         docs_prefix = "docs/sphinx/",
+        manual_analysis = [],
         **kwargs):
     """Define a dependable element (Safety Element out of Context - SEooC) following S-CORE process guidelines.
 
@@ -2170,6 +2213,10 @@ def dependable_element(
             depend on elements with a lower integrity level than its own.
         checklists: Optional list of labels to .rst or .md files containing
             safety checklists and verification documents.
+        manual_analysis: Optional manual analysis targets whose LOBSTER evidence
+            traces to component or feature requirements in the aggregated report.
+            Every LobsterProvider input must also be exported in DefaultInfo.files;
+            evidence available only through runfiles is not supported.
         glossary: Optional list of labels to .rst files containing
             terminology and definitions for the dependable element.
         deps: Optional list of other module targets this element depends on.
@@ -2227,6 +2274,7 @@ def dependable_element(
         architectural_design = architectural_design,
         dependability_analysis = dependability_analysis,
         checklists = checklists,
+        manual_analysis = manual_analysis,
         glossary = glossary,
         tests = tests,
         deps = deps,

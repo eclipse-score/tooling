@@ -12,9 +12,13 @@
  ********************************************************************************/
 
 #include "unit_1/foo.h"
+#include "other_library.h"
 
 namespace unit_1 {
 
 // trace: SampleComponent.REQ_COMP_001 SampleLibraryAPI.GetNumber
-std::uint8_t Foo::GetNumber() const { return 42u; }
+std::uint8_t Foo::GetNumber() const {
+	const std::uint8_t value{42u};
+	return other_seooc::OtherLibraryAPI::Compute(&value);
+}
 } // namespace unit_1
