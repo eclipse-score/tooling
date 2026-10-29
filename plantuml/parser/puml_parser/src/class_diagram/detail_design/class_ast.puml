@@ -21,7 +21,7 @@ skinparam classAttributeIconSize 0
 ' ========================
 class ClassLikeDef {
   declaration: DeclarationCommon
-  template_parameters: Option<Vec<String>>
+  template_parameters: Option<Vec<TemplateParameter>>
   members: ClassLikeMembers
   kind: ClassLikeKind
 }
@@ -103,7 +103,7 @@ class ClassUmlFile {
 class Method {
   visibility: Visibility
   name: String
-  template_parameters: Option<Vec<String>>
+  template_parameters: Option<Vec<TemplateParameter>>
   params: Vec<Param>
   type: Option<String>
   modifiers: Vec<String>

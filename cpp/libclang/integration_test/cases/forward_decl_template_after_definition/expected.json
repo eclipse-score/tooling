@@ -6,6 +6,7 @@
             "enclosing_namespace_id": "svc",
             "stereotypes": [],
             "entity_type": "Interface",
+            "template_kind": "Primary",
             "type_aliases": [],
             "variables": [],
             "methods": [

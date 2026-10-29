@@ -38,3 +38,24 @@ class ContainerOwner
   public:
     Container<int> values();
 };
+
+template <template <typename> class>
+class UnnamedTemplateOwner
+{
+};
+
+template <typename /* unnamed pack */
+          ...>
+class UnnamedTypePack
+{
+};
+
+template <int...>
+class UnnamedValuePack
+{
+};
+
+template <template <typename> class...>
+class UnnamedTemplatePack
+{
+};

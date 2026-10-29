@@ -19,7 +19,8 @@ use class_diagram::{
 };
 
 use crate::callable_declaration::parse_template_parameters;
-use crate::clang_adapter::scope::{namespace_id, semantic_parent_id};
+use crate::clang_adapter::class_collection::{classify_class, ClassCollectionDecision};
+use crate::clang_adapter::scope::{namespace_id, semantic_parent_id, type_scope_name};
 use crate::clang_adapter::source_location::parse_source_location;
 use crate::context::{
     CallableDeclarationKey, CallableOwnerKey, ExtractedMethodDeclaration, ParsedBaseClass,
@@ -32,6 +33,18 @@ use crate::visitor::AstVisitor;
 pub struct ClassVisitor;
 impl AstVisitor for ClassVisitor {
     fn visit(ctx: &mut VisitContext, entity: Entity) {
+        let template_kind = match classify_class(&entity) {
+            ClassCollectionDecision::Collect(kind) => kind,
+            ClassCollectionDecision::SkipInstantiation => return,
+            ClassCollectionDecision::Unknown => {
+                log::warn!(
+                    "cannot classify template-associated class {:?} at {:?}; skipping class collection",
+                    entity.get_display_name(),
+                    parse_source_location(&entity),
+                );
+                return;
+            }
+        };
         let semantic_parent = semantic_parent_id(&entity);
 
         if !entity.is_definition() {
@@ -58,6 +71,7 @@ impl AstVisitor for ClassVisitor {
             Self::visit_class(&entity, semantic_parent.as_deref(), namespace.as_deref())
         {
             class_entity.template_parameters = template_params;
+            class_entity.template_kind = template_kind;
             ctx.parsed_class_info.insert(builder.id.clone(), builder);
             ctx.types.insert(class_entity.id.clone(), class_entity);
         }
@@ -196,13 +210,7 @@ impl ClassVisitor {
 }
 
 fn class_entity_id(entity: &Entity, namespace: Option<&str>, name: &str) -> String {
-    let base_name = if entity.get_kind() == EntityKind::ClassTemplatePartialSpecialization {
-        entity
-            .get_display_name()
-            .unwrap_or_else(|| name.to_string())
-    } else {
-        name.to_string()
-    };
+    let base_name = type_scope_name(entity).unwrap_or_else(|| name.to_string());
 
     match namespace {
         Some(ns) if !ns.is_empty() => format!("{ns}::{base_name}"),

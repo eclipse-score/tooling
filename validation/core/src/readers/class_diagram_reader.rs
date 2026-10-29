@@ -20,9 +20,9 @@ use class_fbs::class_metamodel as fb_class;
 use crate::models::ClassDiagramInputs;
 use crate::readers::{to_source_location, Reader};
 use class_diagram::{
-    ClassDiagram, EntityType, EnumLiteral, FreeFunctionDecl, FunctionArgument, MemberVariable,
-    Method, MethodModifier, RelationType, Relationship, SimpleEntity, TemplateParameter, TypeAlias,
-    Visibility,
+    ClassDiagram, ClassTemplateKind, EntityType, EnumLiteral, FreeFunctionDecl, FunctionArgument,
+    MemberVariable, Method, MethodModifier, RelationType, Relationship, SimpleEntity,
+    TemplateParameter, TypeAlias, Visibility,
 };
 
 pub struct ClassDiagramReader;
@@ -256,6 +256,7 @@ fn read_entity(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<SimpleE
             entity.entity_type(),
             &format!("{path}:entity:{}", entity.id()),
         )?,
+        template_kind: read_template_kind(entity, &format!("{path}:entity:{}", entity.id()))?,
         type_aliases: read_type_aliases(entity),
         variables: read_variables(entity, path)?,
         methods: read_methods(entity, path)?,
@@ -386,6 +387,23 @@ fn map_entity_type(value: fb_class::EntityType, context: &str) -> Result<EntityT
         fb_class::EntityType::AbstractClass => Ok(EntityType::AbstractClass),
         fb_class::EntityType::Enum => Ok(EntityType::Enum),
         _ => Err(unsupported_enum(context, "entity_type", value)),
+    }
+}
+
+fn read_template_kind(
+    entity: fb_class::SimpleEntity<'_>,
+    context: &str,
+) -> Result<ClassTemplateKind, String> {
+    match entity.template_kind() {
+        fb_class::ClassTemplateKind::NonTemplate => Ok(ClassTemplateKind::NonTemplate),
+        fb_class::ClassTemplateKind::Primary => Ok(ClassTemplateKind::Primary),
+        fb_class::ClassTemplateKind::PartialSpecialization => {
+            Ok(ClassTemplateKind::PartialSpecialization)
+        }
+        fb_class::ClassTemplateKind::ExplicitSpecialization => {
+            Ok(ClassTemplateKind::ExplicitSpecialization)
+        }
+        value => Err(unsupported_enum(context, "template_kind", value)),
     }
 }
 

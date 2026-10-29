@@ -19,8 +19,8 @@ use crate::models::ClassEntityIndex;
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::ValidationResult;
 use class_diagram::{
-    EnumLiteral, FreeFunctionDecl, MemberVariable, Method, Relationship, SimpleEntity,
-    TemplateParameter, TypeAlias,
+    ClassTemplateKind, EnumLiteral, FreeFunctionDecl, MemberVariable, Method, Relationship,
+    SimpleEntity, TemplateParameter, TypeAlias,
 };
 use source_location::SourceLocation;
 use std::collections::BTreeMap;
@@ -122,7 +122,10 @@ impl ClassDesignImplementationValidator {
             ));
         }
 
-        if design_function.template_parameters != implementation_function.template_parameters {
+        if !template_parameters_match(
+            &design_function.template_parameters,
+            &implementation_function.template_parameters,
+        ) {
             self.result.add_failure(Self::format_free_function_mismatch(
                 design_function,
                 implementation_function,
@@ -161,10 +164,35 @@ impl ClassDesignImplementationValidator {
     ) {
         for design_entity in design_classes.entities() {
             let normalized_design_id = normalize_qualified_name(&design_entity.id);
-            let Some(implementation_entity) = implementation_classes
-                .find_by_id(&design_entity.id)
-                .or_else(|| implementation_classes.find_by_id(&normalized_design_id))
-            else {
+            let mut implementation_entities = implementation_classes
+                .entities()
+                .filter(|entity| {
+                    if is_specialization(entity.template_kind) {
+                        specialization_matches_design(&entity.id, &normalized_design_id)
+                    } else {
+                        normalize_qualified_name(&entity.id)
+                            .eq_ignore_ascii_case(&normalized_design_id)
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if implementation_entities
+                .iter()
+                .any(|entity| is_specialization(entity.template_kind))
+            {
+                // A defined primary can be a rejection-only fallback rather than the
+                // interface described by the design. Keep it only when its parameters
+                // match, but continue to check every matching specialization.
+                implementation_entities.retain(|entity| {
+                    entity.template_kind != ClassTemplateKind::Primary
+                        || template_parameters_match(
+                            &design_entity.template_parameters,
+                            &entity.template_parameters,
+                        )
+                });
+            }
+
+            if implementation_entities.is_empty() {
                 let suggested_class = best_string_suggestion(
                     &design_entity.id,
                     implementation_classes
@@ -176,10 +204,12 @@ impl ClassDesignImplementationValidator {
                     suggested_class.as_deref(),
                 ));
                 continue;
-            };
+            }
 
-            self.append_class_comparison_diagnostics(design_entity, implementation_entity);
-            self.check_entity(design_entity, implementation_entity);
+            for implementation_entity in implementation_entities {
+                self.append_class_comparison_diagnostics(design_entity, implementation_entity);
+                self.check_entity(design_entity, implementation_entity);
+            }
         }
     }
 
@@ -227,7 +257,17 @@ impl ClassDesignImplementationValidator {
             ));
         }
 
-        if design_entity.template_parameters != implementation_entity.template_parameters {
+        if is_specialization(implementation_entity.template_kind) {
+            self.result.diagnostics.debug(|| {
+                format!(
+                    "Skipping class template-parameter check for design entity {:?} and implementation specialization {:?}: matched by fully qualified base name only; specialization arguments are not validated",
+                    design_entity.id, implementation_entity.id,
+                )
+            });
+        } else if !template_parameters_match(
+            &design_entity.template_parameters,
+            &implementation_entity.template_parameters,
+        ) {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
@@ -268,6 +308,7 @@ impl ClassDesignImplementationValidator {
                 )),
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
+                    implementation_entity,
                     "type_alias",
                     &design_alias.alias,
                     best_string_suggestion(
@@ -298,6 +339,7 @@ impl ClassDesignImplementationValidator {
                 ),
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
+                    implementation_entity,
                     "variable",
                     &design_variable.name,
                     best_string_suggestion(
@@ -387,6 +429,7 @@ impl ClassDesignImplementationValidator {
                         ),
                         None => self.result.add_failure(Self::format_missing_member(
                             design_entity,
+                            implementation_entity,
                             "method",
                             &key,
                             best_string_suggestion(
@@ -441,7 +484,10 @@ impl ClassDesignImplementationValidator {
             implementation_method,
         );
 
-        if design_method.template_parameters != implementation_method.template_parameters {
+        if !template_parameters_match(
+            &design_method.template_parameters,
+            &implementation_method.template_parameters,
+        ) {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
@@ -509,6 +555,7 @@ impl ClassDesignImplementationValidator {
                 )),
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
+                    implementation_entity,
                     "enum_literal",
                     &design_literal.name,
                     best_string_suggestion(
@@ -552,6 +599,7 @@ impl ClassDesignImplementationValidator {
                         .collect::<Vec<_>>();
                     self.result.add_failure(Self::format_missing_member(
                         design_entity,
+                        implementation_entity,
                         "relationship",
                         &display_name,
                         best_string_suggestion(
@@ -662,6 +710,7 @@ impl ClassDesignImplementationValidator {
 
     fn format_missing_member(
         design_entity: &SimpleEntity,
+        implementation_entity: &SimpleEntity,
         member_type: &str,
         member_name: &str,
         suggested_member: Option<&str>,
@@ -683,6 +732,27 @@ impl ClassDesignImplementationValidator {
                 design_entity.id
             ));
 
+        let error = if is_specialization(implementation_entity.template_kind) {
+            error
+                .field(
+                    "implementation entity",
+                    format!("\"{}\"", implementation_entity.id),
+                )
+                .field(
+                    "implementation source file",
+                    format!(
+                        "\"{}\"",
+                        source_file(&implementation_entity.source_location)
+                    ),
+                )
+                .field(
+                    "implementation source line",
+                    source_line(&implementation_entity.source_location),
+                )
+        } else {
+            error
+        };
+
         let error = if let Some(suggested_member) = suggested_member {
             error.suggest(member_name, Some(member_type), suggested_member)
         } else {
@@ -702,7 +772,7 @@ impl ClassDesignImplementationValidator {
     ) -> String {
         let field_reference = format_field_reference(field, field_reference_style);
 
-        ErrorBuilder::new(ErrorCategory::Implementation)
+        let error = ErrorBuilder::new(ErrorCategory::Implementation)
             .title(format!(
                 "field {field_reference} on entity \"{}\" differs between the unit design and the C++ class implementation",
                 design_entity.id,
@@ -714,7 +784,18 @@ impl ClassDesignImplementationValidator {
                 "design source file",
                 format!("\"{}\"", source_file(&design_entity.source_location)),
             )
-            .field("design source line", source_line(&design_entity.source_location))
+            .field("design source line", source_line(&design_entity.source_location));
+
+        let error = if is_specialization(implementation_entity.template_kind) {
+            error.field(
+                "implementation entity",
+                format!("\"{}\"", implementation_entity.id),
+            )
+        } else {
+            error
+        };
+
+        error
             .field("implementation value", implementation_value)
             .field(
                 "implementation source file",
@@ -884,8 +965,88 @@ fn methods_match(design_method: &Method, implementation_method: &Method) -> bool
             == normalized_optional_type(&implementation_method.return_type)
         && design_method.visibility == implementation_method.visibility
         && parameters_match(&design_method.parameters, &implementation_method.parameters)
-        && design_method.template_parameters == implementation_method.template_parameters
+        && template_parameters_match(
+            &design_method.template_parameters,
+            &implementation_method.template_parameters,
+        )
         && design_method.modifiers == implementation_method.modifiers
+}
+
+fn template_parameters_match(
+    design: &Option<Vec<TemplateParameter>>,
+    implementation: &Option<Vec<TemplateParameter>>,
+) -> bool {
+    match (design, implementation) {
+        (None, None) => true,
+        (Some(design), Some(implementation)) => {
+            template_parameter_lists_match(design, implementation)
+        }
+        _ => false,
+    }
+}
+
+fn template_parameter_lists_match(
+    design: &[TemplateParameter],
+    implementation: &[TemplateParameter],
+) -> bool {
+    design.len() == implementation.len()
+        && design
+            .iter()
+            .zip(implementation)
+            .all(|(design, implementation)| {
+                // Omitting a name in the design leaves only that name unconstrained.
+                if !design.name().is_empty() && design.name() != implementation.name() {
+                    return false;
+                }
+
+                match (design, implementation) {
+                    (
+                        TemplateParameter::Type {
+                            is_pack: design_pack,
+                            ..
+                        },
+                        TemplateParameter::Type {
+                            is_pack: implementation_pack,
+                            ..
+                        },
+                    ) => design_pack == implementation_pack,
+                    (
+                        TemplateParameter::NonType {
+                            value_type: design_type,
+                            is_pack: design_pack,
+                            ..
+                        },
+                        TemplateParameter::NonType {
+                            value_type: implementation_type,
+                            is_pack: implementation_pack,
+                            ..
+                        },
+                    ) => {
+                        design_pack == implementation_pack
+                            && normalize_non_type_template_parameter_type(design_type)
+                                == normalize_non_type_template_parameter_type(implementation_type)
+                    }
+                    (
+                        TemplateParameter::Template {
+                            parameters: design_parameters,
+                            is_pack: design_pack,
+                            ..
+                        },
+                        TemplateParameter::Template {
+                            parameters: implementation_parameters,
+                            is_pack: implementation_pack,
+                            ..
+                        },
+                    ) => {
+                        design_pack == implementation_pack
+                            && template_parameter_lists_match(
+                                design_parameters,
+                                implementation_parameters,
+                            )
+                    }
+                    _ => false,
+                }
+            })
 }
 
 fn parameters_match(
@@ -1029,7 +1190,10 @@ fn free_functions_match(
             &design_function.parameters,
             &implementation_function.parameters,
         )
-        && design_function.template_parameters == implementation_function.template_parameters
+        && template_parameters_match(
+            &design_function.template_parameters,
+            &implementation_function.template_parameters,
+        )
 }
 
 fn render_optional_value<T, F>(value: Option<T>, default: &str, format_value: F) -> String
@@ -1113,28 +1277,13 @@ fn render_template_parameters(template_parameters: &Option<Vec<TemplateParameter
 }
 
 fn render_template_parameter(parameter: &TemplateParameter) -> String {
-    match parameter {
-        TemplateParameter::Type { name, is_pack } => {
-            render_quoted_template_parameter(name, *is_pack)
+    let content = match parameter {
+        TemplateParameter::Type { name, is_pack } => render_template_parameter_name(name, *is_pack),
+        TemplateParameter::NonType { .. } | TemplateParameter::Template { .. } => {
+            render_template_parameter_content(parameter)
         }
-        TemplateParameter::NonType { name, is_pack, .. } => {
-            render_quoted_template_parameter(name, *is_pack)
-        }
-        TemplateParameter::Template {
-            name,
-            parameters,
-            is_pack,
-        } => format!(
-            "\"template <{}> {}{}\"",
-            render_template_parameter_list(parameters),
-            name,
-            template_pack_marker(*is_pack)
-        ),
-    }
-}
-
-fn render_quoted_template_parameter(name: &str, is_pack: bool) -> String {
-    format!("\"{}\"", render_template_parameter_name(name, is_pack))
+    };
+    format!("\"{content}\"")
 }
 
 fn render_template_parameter_name(name: &str, is_pack: bool) -> String {
@@ -1148,31 +1297,35 @@ fn render_template_parameter_list(parameters: &[TemplateParameter]) -> String {
 fn render_template_parameter_content(parameter: &TemplateParameter) -> String {
     match parameter {
         TemplateParameter::Type { name, is_pack } => {
-            format!(
-                "typename {}",
-                render_template_parameter_name(name, *is_pack)
-            )
+            render_template_parameter_declaration("typename", name, *is_pack)
         }
         TemplateParameter::NonType {
             name,
             value_type,
             is_pack,
-        } => format!(
-            "{} {}",
-            value_type,
-            render_template_parameter_name(name, *is_pack)
-        ),
+        } => render_template_parameter_declaration(value_type, name, *is_pack),
         TemplateParameter::Template {
             name,
             parameters,
             is_pack,
-        } => format!(
-            "template <{}> typename {}{}",
-            render_template_parameter_list(parameters),
+        } => render_template_parameter_declaration(
+            &format!(
+                "template <{}> typename",
+                render_template_parameter_list(parameters)
+            ),
             name,
-            template_pack_marker(*is_pack)
+            *is_pack,
         ),
     }
+}
+
+fn render_template_parameter_declaration(prefix: &str, name: &str, is_pack: bool) -> String {
+    let mut declaration = format!("{}{}", prefix.trim(), template_pack_marker(is_pack));
+    if !name.is_empty() {
+        declaration.push(' ');
+        declaration.push_str(name);
+    }
+    declaration
 }
 
 fn template_pack_marker(is_pack: bool) -> &'static str {
@@ -1185,6 +1338,16 @@ fn template_pack_marker(is_pack: bool) -> &'static str {
 
 fn normalized_optional_type(type_name: &Option<String>) -> Option<String> {
     type_name.as_deref().map(normalize_type_name)
+}
+
+fn normalize_non_type_template_parameter_type(type_name: &str) -> String {
+    // Preserve existing behavior for potentially literal-bearing expressions.
+    // Whitespace within literals is significant and must not be collapsed.
+    if type_name.contains('"') || type_name.contains('\'') {
+        return normalize_type_name(type_name);
+    }
+
+    normalize_type_name(&type_name.split_whitespace().collect::<Vec<_>>().join(" "))
 }
 
 fn normalize_type_name(type_name: &str) -> String {
@@ -1201,6 +1364,52 @@ fn normalize_type_name(type_name: &str) -> String {
 fn normalize_qualified_name(reference: &str) -> String {
     // TODO: Remove this workaround once class diagram and implementation parser UIDs use the same namespace separator.
     reference.trim().replace('.', "::")
+}
+
+fn is_specialization(kind: ClassTemplateKind) -> bool {
+    matches!(
+        kind,
+        ClassTemplateKind::PartialSpecialization | ClassTemplateKind::ExplicitSpecialization
+    )
+}
+
+fn specialization_base_id(id: &str) -> &str {
+    trailing_template_arguments_start(id).map_or(id, |start| id[..start].trim())
+}
+
+fn trailing_template_arguments_start(id: &str) -> Option<usize> {
+    let mut angle_depth = 0usize;
+    let mut specialization_arguments_start = None;
+
+    for (index, character) in id.char_indices() {
+        match character {
+            '<' if angle_depth == 0 => {
+                specialization_arguments_start = Some(index);
+                angle_depth = 1;
+            }
+            '<' => angle_depth += 1,
+            '>' if angle_depth > 0 => {
+                angle_depth -= 1;
+                if angle_depth == 0 {
+                    let suffix = id[index + character.len_utf8()..].trim_start();
+                    if suffix.is_empty() {
+                        return specialization_arguments_start;
+                    }
+                    if suffix.starts_with("::") {
+                        specialization_arguments_start = None;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    None
+}
+
+fn specialization_matches_design(implementation_id: &str, normalized_design_id: &str) -> bool {
+    normalize_qualified_name(specialization_base_id(implementation_id))
+        .eq_ignore_ascii_case(normalized_design_id)
 }
 
 fn enum_literal_map(entity: &SimpleEntity) -> BTreeMap<&str, &EnumLiteral> {
@@ -1360,6 +1569,7 @@ mod tests {
             enclosing_namespace_id: enclosing_namespace_id.map(str::to_string),
             stereotypes: Vec::new(),
             entity_type: EntityType::Class,
+            template_kind: ClassTemplateKind::NonTemplate,
             type_aliases: Vec::new(),
             variables: Vec::new(),
             methods: methods.into_iter().map(method).collect(),
@@ -1400,6 +1610,62 @@ mod tests {
             template_parameters: None,
             source_location: SourceLocation::new("test.puml", 1),
         }
+    }
+
+    #[test]
+    fn specialization_base_id_strips_only_the_class_template_arguments() {
+        assert_eq!(
+            specialization_base_id(
+                "amp::Outer<Policy>::move_only_function<ReturnType (ArgTypes...), Capacity>"
+            ),
+            "amp::Outer<Policy>::move_only_function"
+        );
+        assert_eq!(
+            specialization_base_id("amp::move_only_function"),
+            "amp::move_only_function"
+        );
+        assert_eq!(
+            specialization_base_id("amp::Outer<Policy>::move_only_function"),
+            "amp::Outer<Policy>::move_only_function"
+        );
+    }
+
+    #[test]
+    fn trailing_template_arguments_start_finds_only_the_final_argument_list() {
+        assert_eq!(trailing_template_arguments_start("amp::Box<int>"), Some(8));
+        assert_eq!(
+            trailing_template_arguments_start("amp::Outer<Policy>::Box<int>"),
+            Some("amp::Outer<Policy>::Box".len())
+        );
+        assert_eq!(trailing_template_arguments_start("amp::Box"), None);
+        assert_eq!(
+            trailing_template_arguments_start("amp::Outer<Policy>::Box"),
+            None
+        );
+    }
+
+    #[test]
+    fn specialization_matching_requires_the_complete_qualified_base_id() {
+        assert!(specialization_matches_design(
+            "amp::move_only_function<ReturnType (ArgTypes...), Capacity, Alignment>",
+            "amp::move_only_function"
+        ));
+        assert!(!specialization_matches_design(
+            "amp::move_only_function_extra<ReturnType (ArgTypes...), Capacity, Alignment>",
+            "amp::move_only_function"
+        ));
+        assert!(!specialization_matches_design(
+            "other::move_only_function<ReturnType (ArgTypes...), Capacity, Alignment>",
+            "amp::move_only_function"
+        ));
+    }
+
+    #[test]
+    fn qualified_name_normalization_preserves_id_values_but_equates_separators() {
+        assert_eq!(
+            normalize_qualified_name("amp.move_only_function"),
+            normalize_qualified_name("amp::move_only_function")
+        );
     }
 
     #[test]
@@ -1450,11 +1716,262 @@ mod tests {
     }
 
     #[test]
-    fn template_parameter_formatting_includes_pack_and_nested_parameters() {
+    fn template_parameter_matching_only_relaxes_omitted_design_names() {
+        let ty = |name: &str, is_pack| TemplateParameter::Type {
+            name: name.to_string(),
+            is_pack,
+        };
+        let value = |name: &str, value_type: &str, is_pack| TemplateParameter::NonType {
+            name: name.to_string(),
+            value_type: value_type.to_string(),
+            is_pack,
+        };
+        let nested = |name: &str, inner| TemplateParameter::Template {
+            name: name.to_string(),
+            parameters: vec![inner],
+            is_pack: false,
+        };
+        let assert_match = |design, implementation, expected| {
+            assert_eq!(
+                template_parameters_match(&design, &implementation),
+                expected,
+                "design: {design:?}, implementation: {implementation:?}",
+            );
+        };
+
+        // List presence, length and positional matching are independent of name relaxation.
+        for (design, implementation, expected) in [
+            (None, None, true),
+            (None, Some(vec![ty("T", false)]), false),
+            (Some(vec![]), None, false),
+            (Some(vec![]), Some(vec![]), true),
+            (Some(vec![ty("", false)]), Some(vec![]), false),
+            (
+                Some(vec![ty("T", false), ty("", false)]),
+                Some(vec![ty("U", false), ty("", false)]),
+                false,
+            ),
+            (
+                Some(vec![ty("T", false), ty("", false)]),
+                Some(vec![ty("", false), ty("", false)]),
+                false,
+            ),
+            (
+                Some(vec![ty("T", false), ty("", false)]),
+                Some(vec![ty("", false), ty("T", false)]),
+                false,
+            ),
+            (
+                Some(vec![ty("T", false), ty("", false)]),
+                Some(vec![ty("T", false)]),
+                false,
+            ),
+            (
+                Some(vec![ty("", false), value("", "int", false)]),
+                Some(vec![value("N", "int", false), ty("T", false)]),
+                false,
+            ),
+        ] {
+            assert_match(design, implementation, expected);
+        }
+
+        // Each parameter rule is checked alone and after a matching prefix parameter.
+        // An empty name is unnamed; is_pack is explicit in both constructors.
+        for (design, implementation, expected) in [
+            // Type names: omission is allowed only on the design side.
+            (ty("", false), ty("", false), true),
+            (ty("", false), ty("T", false), true),
+            (ty("T", false), ty("T", false), true),
+            (ty("T", false), ty("U", false), false),
+            (ty("T", false), ty("", false), false),
+            // Packs and parameter kinds remain constrained even without a name.
+            (ty("", true), ty("Ts", true), true),
+            (ty("", false), ty("Ts", true), false),
+            (ty("", true), ty("T", false), false),
+            (ty("", false), value("N", "int", false), false),
+            // Non-type parameters compare normalized types, names and pack flags.
+            (value("", "int", false), value("N", "int", false), true),
+            (value("", "int", false), value("N", "long", false), false),
+            (
+                value("", "unsigned  long", false),
+                value("N", "unsigned long", false),
+                true,
+            ),
+            (
+                value("N", "unsigned\t long   *", false),
+                value("N", "unsigned long*", false),
+                true,
+            ),
+            (
+                value("N", "const\t Widget   &", false),
+                value("N", "const Widget&", false),
+                true,
+            ),
+            (
+                value("N", "size_t", false),
+                value("N", " ::std::size_t \t", false),
+                true,
+            ),
+            (
+                value("", "vehicle.Payload*", false),
+                value("P", " vehicle::Payload * ", false),
+                true,
+            ),
+            (
+                value("N", "size_t", false),
+                value("M", "std::size_t", false),
+                false,
+            ),
+            (
+                value("", "size_t", true),
+                value("Ns", "std::size_t", false),
+                false,
+            ),
+            (
+                value("", "size_t", false),
+                value("Ns", "std::size_t", true),
+                false,
+            ),
+        ] {
+            assert_match(
+                Some(vec![design.clone()]),
+                Some(vec![implementation.clone()]),
+                expected,
+            );
+            assert_match(
+                Some(vec![ty("T", false), design]),
+                Some(vec![ty("T", false), implementation]),
+                expected,
+            );
+        }
+
+        // Template-template parameters apply the same constraints recursively.
+        for (design, implementation, expected) in [
+            // Template-template parameters allow omitted outer and inner design names.
+            (nested("", ty("", false)), nested("C", ty("U", false)), true),
+            // An explicit outer template-template parameter name must match.
+            (
+                nested("C", ty("", false)),
+                nested("D", ty("U", false)),
+                false,
+            ),
+            // An explicit nested parameter name must also match recursively.
+            (
+                nested("C", ty("T", false)),
+                nested("C", ty("U", false)),
+                false,
+            ),
+            // Omitting nested names does not allow a different nested parameter kind.
+            (
+                nested("", ty("", false)),
+                nested("C", value("N", "int", false)),
+                false,
+            ),
+            // Value-type normalization also applies recursively.
+            (
+                nested("", nested("", value("", "size_t", false))),
+                nested("C", nested("D", value("N", " std::size_t ", false))),
+                true,
+            ),
+        ] {
+            assert_match(Some(vec![design]), Some(vec![implementation]), expected);
+        }
+    }
+
+    #[test]
+    fn template_parameter_formatting_handles_kinds_packs_and_lists() {
+        let assert_declaration = |parameter: &TemplateParameter, expected: &str| {
+            assert_eq!(
+                render_template_parameter_content(parameter),
+                expected,
+                "parameter: {parameter:?}"
+            );
+            let nested = TemplateParameter::Template {
+                name: "Factory".to_string(),
+                parameters: vec![parameter.clone()],
+                is_pack: false,
+            };
+            assert_eq!(
+                render_template_parameters(&Some(vec![nested])),
+                format!("[\"template <{expected}> typename Factory\"]"),
+                "nested parameter: {parameter:?}"
+            );
+        };
+
+        // Type parameters use declarations when nested and shorthand at the top level.
+        for (name, is_pack, declaration, shorthand) in [
+            ("", false, "typename", ""),
+            ("T", false, "typename T", "T"),
+            ("", true, "typename...", "..."),
+            ("Ts", true, "typename... Ts", "Ts..."),
+        ] {
+            let parameter = TemplateParameter::Type {
+                name: name.to_string(),
+                is_pack,
+            };
+            assert_declaration(&parameter, declaration);
+            assert_eq!(
+                render_template_parameter(&parameter),
+                format!("\"{shorthand}\""),
+                "parameter: {parameter:?}"
+            );
+        }
+
+        // Non-type parameters trim outer whitespace without normalizing type spelling.
+        for (value_type, name, is_pack, expected) in [
+            (" \tint\t ", "", false, "int"),
+            (" \tint\t ", "N", false, "int N"),
+            (" \tint\t ", "", true, "int..."),
+            (" \tint\t ", "Ns", true, "int... Ns"),
+            (" \t::std::size_t\t ", "Ns", true, "::std::size_t... Ns"),
+            (" unsigned  long ", "N", false, "unsigned  long N"),
+        ] {
+            let parameter = TemplateParameter::NonType {
+                name: name.to_string(),
+                value_type: value_type.to_string(),
+                is_pack,
+            };
+            assert_declaration(&parameter, expected);
+            assert_eq!(
+                render_template_parameter(&parameter),
+                format!("\"{expected}\""),
+                "parameter: {parameter:?}"
+            );
+        }
+
+        // Template-template parameters use declarations at every nesting level.
+        for (name, is_pack, expected) in [
+            ("", false, "template <typename> typename"),
+            ("C", false, "template <typename> typename C"),
+            ("", true, "template <typename> typename..."),
+            ("Cs", true, "template <typename> typename... Cs"),
+        ] {
+            let parameter = TemplateParameter::Template {
+                name: name.to_string(),
+                parameters: vec![TemplateParameter::Type {
+                    name: String::new(),
+                    is_pack: false,
+                }],
+                is_pack,
+            };
+            assert_declaration(&parameter, expected);
+            assert_eq!(
+                render_template_parameter(&parameter),
+                format!("\"{expected}\""),
+                "parameter: {parameter:?}"
+            );
+        }
+
+        // Mixed lists preserve order and combine all three parameter kinds.
         let template_parameters = Some(vec![
             TemplateParameter::Type {
                 name: "T".to_string(),
                 is_pack: true,
+            },
+            TemplateParameter::NonType {
+                name: "Capacity".to_string(),
+                value_type: "unsigned long".to_string(),
+                is_pack: false,
             },
             TemplateParameter::Template {
                 name: "Factory".to_string(),
@@ -1466,10 +1983,9 @@ mod tests {
                 is_pack: false,
             },
         ]);
-
         assert_eq!(
             render_template_parameters(&template_parameters),
-            "[\"T...\", \"template <int Size> Factory\"]"
+            "[\"T...\", \"unsigned long Capacity\", \"template <int Size> typename Factory\"]"
         );
     }
 
@@ -1488,6 +2004,41 @@ mod tests {
         assert_eq!(
             relationship_display_name(&relationship),
             "vehicle::Engine -> Composition -> vehicle::Manufacturer"
+        );
+    }
+
+    #[test]
+    fn non_type_whitespace_normalization_collapses_whitespace() {
+        for (type_name, expected) in [
+            ("unsigned  long", "unsigned long"),
+            (" \tunsigned\t  long  ", "unsigned long"),
+            ("unsigned\t long   *", "unsigned long*"),
+            ("const\t Widget   &", "const Widget&"),
+        ] {
+            assert_eq!(
+                normalize_non_type_template_parameter_type(type_name),
+                expected,
+                "type_name: {type_name:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn non_type_whitespace_normalization_preserves_literal_behavior() {
+        for type_name in [
+            "Tag<\"a  b\">",
+            "Tag<' '>",
+            "Tag<R\"delim(a  b)delim\">",
+            "Tag<\"a * b\">",
+        ] {
+            assert_eq!(
+                normalize_non_type_template_parameter_type(type_name),
+                normalize_type_name(type_name),
+            );
+        }
+        assert_ne!(
+            normalize_non_type_template_parameter_type("Tag<\"a  b\">"),
+            normalize_non_type_template_parameter_type("Tag<\"a b\">"),
         );
     }
 
@@ -1547,6 +2098,99 @@ mod tests {
             .failures
             .iter()
             .any(|message| message.contains("[Member] Method \"run()\" from entity \"Sample\" in the unit design not found in the C++ class implementation.")));
+    }
+
+    #[test]
+    fn primary_template_is_filtered_only_with_matching_partial_specializations() {
+        for (primary_parameters_match, include_partials, expected_failures) in
+            [(false, true, 0), (true, true, 1), (false, false, 2)]
+        {
+            let mut design_entity = entity("amp.move_only_function", vec!["empty"]);
+            design_entity.template_parameters = Some(vec![TemplateParameter::Type {
+                name: "ReturnType".to_string(),
+                is_pack: false,
+            }]);
+            let primary = SimpleEntity {
+                template_kind: ClassTemplateKind::Primary,
+                template_parameters: Some(vec![TemplateParameter::Type {
+                    name: if primary_parameters_match {
+                        "ReturnType"
+                    } else {
+                        "Signature"
+                    }
+                    .to_string(),
+                    is_pack: false,
+                }]),
+                ..entity("amp::move_only_function", vec![])
+            };
+            let mut entities = vec![primary];
+            if include_partials {
+                entities.extend([
+                    SimpleEntity {
+                        template_kind: ClassTemplateKind::PartialSpecialization,
+                        ..entity(
+                            "amp::move_only_function<R(Args...), Capacity, Alignment>",
+                            vec!["empty"],
+                        )
+                    },
+                    SimpleEntity {
+                        template_kind: ClassTemplateKind::PartialSpecialization,
+                        ..entity(
+                            "amp::move_only_function<R (*)(Args...), Capacity, Alignment>",
+                            vec!["empty"],
+                        )
+                    },
+                ]);
+            }
+
+            let result =
+                validate_class_design_implementation(&index(vec![design_entity]), &index(entities));
+
+            assert_eq!(
+                result.failures.len(),
+                expected_failures,
+                "{:?}",
+                result.failures,
+            );
+            if expected_failures > 0 {
+                assert!(result
+                    .failures
+                    .iter()
+                    .any(|message| { message.contains("Method \"empty()\"") }));
+            }
+            assert_eq!(
+                result
+                    .failures
+                    .iter()
+                    .any(|message| { message.contains("template_parameters") }),
+                !primary_parameters_match && !include_partials,
+            );
+        }
+    }
+
+    #[test]
+    fn specializations_match_base_id_and_skip_class_template_parameters() {
+        let mut design_entity = entity("demo.Box", vec!["run"]);
+        design_entity.template_parameters = Some(vec![TemplateParameter::Type {
+            name: "T".to_string(),
+            is_pack: false,
+        }]);
+        let design = index(vec![design_entity]);
+        for (template_kind, id) in [
+            (ClassTemplateKind::PartialSpecialization, "demo::Box<T*>"),
+            (ClassTemplateKind::ExplicitSpecialization, "demo::Box<int>"),
+        ] {
+            let implementation = index(vec![SimpleEntity {
+                template_kind,
+                ..entity(id, vec!["run"])
+            }]);
+            let result = validate_class_design_implementation(&design, &implementation);
+            assert!(
+                result.is_empty(),
+                "{template_kind:?}: {:?}",
+                result.failures
+            );
+        }
     }
 
     #[test]

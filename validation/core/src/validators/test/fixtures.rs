@@ -15,7 +15,9 @@ use crate::models::{
     ComponentDiagramInputs, ComponentRelationType, ComponentType, EndpointRole, InternalApiIndex,
     LogicComponent, LogicRelation, SequenceDiagramInputs,
 };
-use class_diagram::{ClassDiagram, EntityType, Method, SimpleEntity, Visibility};
+use class_diagram::{
+    ClassDiagram, ClassTemplateKind, EntityType, Method, SimpleEntity, Visibility,
+};
 use component_diagram::SourceLocation;
 use sequence_logic::{
     Block, Interaction, Node, ParticipantType, SequenceParticipant, SequenceTree,
@@ -225,6 +227,7 @@ fn simple_entity(name: &str, entity_type: EntityType, namespace: Option<&str>) -
         enclosing_namespace_id: namespace.map(str::to_string),
         stereotypes: Vec::new(),
         entity_type,
+        template_kind: ClassTemplateKind::NonTemplate,
         type_aliases: Vec::new(),
         variables: Vec::new(),
         methods: Vec::new(),

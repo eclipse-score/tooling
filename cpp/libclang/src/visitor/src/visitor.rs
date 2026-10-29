@@ -17,6 +17,7 @@ use std::path::{Path, PathBuf};
 use clang::{Entity, EntityKind};
 use log::warn;
 
+use crate::clang_adapter::class_collection::{classify_class, ClassCollectionDecision};
 use crate::clang_adapter::source_filter;
 use crate::class_visitor::ClassVisitor;
 use crate::context::{CallableDeclarationKey, SourceEntityKey, VisitContext};
@@ -91,11 +92,17 @@ impl<'a> Visitor<'a> {
         }
 
         match entity.get_kind() {
-            EntityKind::ClassDecl | EntityKind::StructDecl => {
+            EntityKind::ClassDecl
+            | EntityKind::StructDecl
+            | EntityKind::ClassTemplate
+            | EntityKind::ClassTemplatePartialSpecialization => {
+                let collection = classify_class(&entity);
                 ClassVisitor::visit(self.ctx, entity);
-            }
-            EntityKind::ClassTemplate | EntityKind::ClassTemplatePartialSpecialization => {
-                ClassVisitor::visit(self.ctx, entity);
+                if !matches!(collection, ClassCollectionDecision::Collect(_)) {
+                    // Returning only from ClassVisitor would still visit members
+                    // and nested types owned by the discarded instantiation.
+                    return;
+                }
             }
             EntityKind::EnumDecl => EnumVisitor::visit(self.ctx, entity),
             EntityKind::FunctionDecl

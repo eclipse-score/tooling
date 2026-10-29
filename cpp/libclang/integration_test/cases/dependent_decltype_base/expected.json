@@ -39,6 +39,7 @@
             "name": "IsMaplikeContainer",
             "enclosing_namespace_id": null,
             "entity_type": "Class",
+            "template_kind": "Primary",
             "enum_literals": [],
             "methods": [],
             "relationships": [],

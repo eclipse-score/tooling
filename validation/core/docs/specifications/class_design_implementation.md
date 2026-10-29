@@ -76,6 +76,42 @@ Template parameters modeled on unit design entities and methods must match the
 template parameters on the corresponding implementation entities and methods.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationTemplateParameterConsistency`)*
 
+For classes, methods, and free functions:
+
+- Parameters match by position, count, kind, and pack marker. Non-type parameter
+  types are normalized before comparison; template-template parameters are
+  compared recursively.
+- Omitted design names are unconstrained; explicit names must match. An absent
+  parameter list is not a wildcard.
+
+**Specialization exception:** implementation partial and explicit full
+specializations are matched by fully qualified base name only. Their class
+template parameters and specialization arguments are not validated against the
+design. This exception does not apply to method template parameters. A debug
+diagnostic explains when the class template-parameter check is skipped.
+
+When matching partial or explicit full specializations exist, a matching primary
+template is included in implementation consistency checks only if its template
+parameters match the design. This allows rejection-only primary templates to be
+excluded from a specialization's interface contract; the validator does not
+determine whether a primary template serves that purpose. Without matching
+specializations, the primary template is checked normally, including
+template-parameter mismatches. Ordinary non-template classes are not subject to
+this primary-template filtering rule.
+
+**Notation:** type, non-type, and template-template parameters support optional
+names and packs: `typename... Ts`, `int... Ns`, and
+`template<typename> class... Cs`. `class` and `typename` are interchangeable for
+type parameters and template-template parameter tails. Packs precede explicit
+names (`typename Ts...` is unsupported). Legacy `T` and `Ts...` denote type
+parameters; unnamed non-type parameters require built-in or unambiguous compound
+types such as `int`, `std::size_t`, or `int*`.
+
+**Scope:** this is a modeling subset, not C++ declaration validation. Defaults,
+constraints, and complex declarators are unsupported; type lookup and semantic
+validity remain the C++ compiler's responsibility. An unsupported template list
+in a quoted name produces no template parameter metadata.
+
 ```text
 ' PlantUML class diagram
 class Repository<T> {
@@ -89,6 +125,56 @@ template <typename T>
 class Repository {
   template <typename Key>
   T FindById(Key id);
+}
+```
+
+### Specialization Interface Matching
+
+A quoted class name may describe a partial or explicit full specialization. Its trailing
+template arguments are removed from the design entity ID; an alias does not
+change that ID.
+
+The declared interface is checked against **every implementation partial or explicit full
+specialization with the same fully qualified base name**, without comparing its
+class template parameters or specialization arguments. The raw design `<…>` text
+is not retained for argument comparison, so a typo such as
+`<ReturnTyp(ArgTypes...), Capacity, Alignment>` or an unrelated list such as
+`<int, X>` does not cause a specialization-argument mismatch. A debug diagnostic
+identifies each skipped class template-parameter check and explains this
+base-name-only matching limitation.
+
+The design therefore defines one shared contract,
+not separate contracts per specialization. Multiple patterns resolve to the
+same ID and follow the declaration-merge rules above; conflicting declarations
+fail before implementation comparison.
+
+For example, a design entity `Box` is checked against both `Box<int>` and
+`Box<double>` explicit full specializations. A design label `Box<int>` still
+resolves to the base ID `Box`; it does not select only the `int` specialization.
+Each specialization must satisfy the shared member and method contract, including
+method template parameters. No template-argument substitution is performed when
+comparing member or method types.
+
+Explicit instantiation definitions (`template class Box<double>;`) and declarations
+(`extern template class Box<float>;`) reuse an existing template implementation;
+they do not define independent interfaces. The C++ extractor excludes these
+declarations and their member traversal from the implementation class model.
+Their concrete type names remain available when referenced by other declarations.
+Implicit uses likewise do not introduce independent interface contracts.
+
+For template-associated class cursors, the extractor distinguishes `template <>`
+specialization headers from explicit instantiation headers using declaration tokens,
+ignoring comments. An unrecognized header (for example an unsupported macro
+expansion) produces a warning and is not collected; it is never silently classified
+as a non-template class or an explicit specialization. Such warnings indicate an
+incomplete extracted model and must be investigated before relying on validation.
+
+```text
+' One design entity; the interface is checked against each matching specialization.
+namespace amp {
+  class "move_only_function<ReturnType(ArgTypes...), Capacity, Alignment>" as move_only_function {
+    + empty() noexcept : bool
+  }
 }
 ```
 

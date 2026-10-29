@@ -142,9 +142,48 @@ type_def_decl = { type_kind ~ named ~ type_decl_suffix* }
 object_def_decl = { object_keyword ~ named ~ type_decl_suffix* }
 object_keyword = @{ "object" ~ keyword_boundary }
 type_decl_suffix = _{ extends_clause | implements_clause | link_annotation | stereotype | color }
-template_param = @{ identifier ~ varargs? }
+template_param = { explicit_type_template_param | template_template_param | non_type_template_param | function_signature_template_param | legacy_type_template_param }
+
+template_template_param = { template_keyword ~ "<" ~ template_template_param_list ~ ">" ~ explicit_type_template_param }
+template_template_param_list = _{ template_template_inner_param ~ ("," ~ template_template_inner_param)* }
+template_template_inner_param = { explicit_type_template_param | template_template_param | non_type_template_param | legacy_type_template_param }
+
+// Non-type parameters share one shape: type, optional pack marker, optional name.
+non_type_template_param = {
+    non_type_template_param_type ~ varargs? ~ identifier? ~ template_param_boundary
+}
+non_type_template_param_type = {
+    (non_type_template_builtin_type | !uml_type_param_shorthand ~ const_prefix* ~ qualified_type ~ generic_type_args?)
+    ~ pointer_suffix* ~ reference_suffix?
+}
+non_type_template_builtin_type = {
+    non_type_template_scalar_keyword
+    | signedness_keyword? ~ (char_keyword | short_keyword ~ int_keyword? | long_keyword ~ long_keyword? ~ int_keyword? | int_keyword)
+    | signedness_keyword
+}
+non_type_template_scalar_keyword = @{ ("bool" | "wchar_t" | "char8_t" | "char16_t" | "char32_t") ~ keyword_boundary }
+// T / Ts... alone denote UML type parameters; Widget N / Widget* do not.
+uml_type_param_shorthand = _{ identifier ~ varargs? ~ template_param_boundary }
+template_param_boundary = _{ &("," | ">") }
+
+template_keyword = @{ "template" ~ keyword_boundary }
+template_type_keyword = @{ ("typename" | "class") ~ keyword_boundary }
+signedness_keyword = @{ ("unsigned" | "signed") ~ keyword_boundary }
+char_keyword = @{ "char" ~ keyword_boundary }
+short_keyword = @{ "short" ~ keyword_boundary }
+long_keyword = @{ "long" ~ keyword_boundary }
+int_keyword = @{ "int" ~ keyword_boundary }
+explicit_type_template_param = { template_type_keyword ~ varargs? ~ identifier? }
+legacy_type_template_param = { identifier ~ varargs? }
 template_param_list = _{ "<" ~ template_param ~ ("," ~ template_param)* ~ ">" }
 type_generic_param_list = { template_param_list }
+type_generic_param_list_exact = { SOI ~ type_generic_param_list ~ EOI }
+
+// Accept specialization arguments containing function signatures, but do not
+// infer template parameter metadata for a list containing such a signature.
+function_signature_template_param = { identifier ~ "(" ~ function_signature_template_arg_list? ~ ")" }
+function_signature_template_arg_list = { function_signature_template_arg ~ ("," ~ function_signature_template_arg)* }
+function_signature_template_arg = { identifier ~ varargs? }
 
 extends_clause = { "extends" ~ extends_target ~ ("," ~ extends_target)* }
 extends_target = { class_name_path }

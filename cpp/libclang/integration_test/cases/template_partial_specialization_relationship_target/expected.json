@@ -6,6 +6,7 @@
       "entity_type": "Class",
       "enum_literals": [],
       "id": "demo::Endpoint<void (ArgTypes...)>",
+      "template_kind": "PartialSpecialization",
       "methods": [
         {
           "modifiers": [],
@@ -61,6 +62,7 @@
       "entity_type": "Class",
       "enum_literals": [],
       "id": "demo::Endpoint",
+      "template_kind": "Primary",
       "methods": [],
       "name": "Endpoint",
       "relationships": [],

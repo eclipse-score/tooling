@@ -73,8 +73,8 @@
                     "visibility": "Public",
                     "name": "foo",
                     "template_parameters": [
-                      "T",
-                      "U"
+                      {"Type": {"name": "T", "is_pack": false}},
+                      {"Type": {"name": "U", "is_pack": false}}
                     ],
                     "params": [
                       {
