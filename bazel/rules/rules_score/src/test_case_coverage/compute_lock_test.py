@@ -266,6 +266,18 @@ def test_compute_lock_resolves_spec_and_drops_gwt():
     assert tc.spec_ref == "@@//pkg:spec"
 
 
+def test_compute_lock_records_reference_as_written_in_test():
+    record = TestRecord(uid="S:T", lobster_traces=["P.R"], spec_ref="@spec_repo//pkg:spec")
+    lock = compute_lock([_meta("P.R")], {"P.R": [record]}, {"@spec_repo//pkg:spec": _SPEC})
+    assert lock.requirements[0].test_cases[0].spec.ref == "@spec_repo//pkg:spec"
+
+
+def test_compute_lock_ambiguous_reference_does_not_resolve():
+    record = TestRecord(uid="S:T", lobster_traces=["P.R"], spec_ref="//pkg:spec")
+    lock = compute_lock([_meta("P.R")], {"P.R": [record]}, {"//pkg:spec": None})
+    assert lock.requirements[0].test_cases[0].spec is None
+
+
 def test_compute_lock_keeps_unresolved_spec_ref():
     record = TestRecord(uid="S:T", lobster_traces=["P.R"], spec_ref="//pkg:missing")
     lock = compute_lock([_meta("P.R")], {"P.R": [record]}, {})

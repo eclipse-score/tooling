@@ -23,8 +23,18 @@ time (see ``parse_test_spec.py``) and writes a ``<name>.test_spec.json``::
       "steps": [{"precondition": "...", "action": "...", "expected": "..."}]
     }
 
-The coverage runners receive a manifest with one JSON path per line and look
-up the ``test-spec`` reference of each test case by its normalized label.
+``ref`` and ``aliases`` are labels relative to the repository of the spec, so
+they do not change when the SEooC is built as an external dependency.
+
+The coverage runners receive a manifest with one entry per line::
+
+    <path to .test_spec.json>[<TAB><reference>]
+
+``<reference>`` is the spec label as written in ``unit(test_specs = ...)``,
+spelled in the repository of the unit (e.g. ``//pkg:name`` or
+``@spec_repo//pkg:name``). Test cases of that unit use the same spelling, so it
+resolves independently of canonical repository names. As a fallback, ``ref``
+and ``aliases`` of the JSON resolve too, unless they are ambiguous.
 """
 
 from __future__ import annotations
@@ -46,20 +56,39 @@ def load_test_spec_json(path: Path) -> tuple[TestSpec, list[str]]:
     return spec, [str(a) for a in data.get("aliases", [])]
 
 
-def load_test_spec_manifest(manifest_path: Path | None) -> dict[str, TestSpec]:
-    """Return ``{normalized label: TestSpec}`` for every JSON listed in *manifest_path*.
+def _add(table: dict[str, TestSpec | None], key: str, spec: TestSpec) -> None:
+    """Add *spec* under *key*; a key claimed by two different specs becomes ambiguous (``None``)."""
+    if key in table and table[key] != spec:
+        table[key] = None
+    else:
+        table.setdefault(key, spec)
 
-    Both the ``test_specification`` target label and its alias labels (the RST
-    source file) are keys. ``None`` or an empty manifest yields an empty mapping.
+
+def load_test_spec_manifest(manifest_path: Path | None) -> dict[str, TestSpec | None]:
+    """Return ``{normalized reference: TestSpec}`` for every entry of *manifest_path*.
+
+    References given in the manifest (as written in ``test_specs``) take
+    precedence. The ``ref`` and ``aliases`` of each JSON are added as fallback.
+    A key that two different specs claim maps to ``None`` (ambiguous), so it
+    does not resolve. ``None`` or an empty manifest yields an empty mapping.
     """
-    specs: dict[str, TestSpec] = {}
     if manifest_path is None:
-        return specs
+        return {}
+
+    explicit: dict[str, TestSpec | None] = {}
+    fallback: dict[str, TestSpec | None] = {}
+    cache: dict[str, tuple[TestSpec, list[str]]] = {}
     for line in manifest_path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
+        if not line.strip():
             continue
-        spec, aliases = load_test_spec_json(resolve_path(line))
+        path, _, reference = line.partition("\t")
+        path = path.strip()
+        if path not in cache:
+            cache[path] = load_test_spec_json(resolve_path(path))
+        spec, aliases = cache[path]
+        if reference.strip():
+            _add(explicit, normalize_label(reference), spec)
         for label in [spec.ref, *aliases]:
-            specs[normalize_label(label)] = spec
-    return specs
+            _add(fallback, normalize_label(label), spec)
+
+    return {**fallback, **explicit}

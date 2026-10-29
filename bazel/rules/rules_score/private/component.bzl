@@ -60,7 +60,7 @@ def _component_update_impl(ctx):
     # instead of running subrule_lobster_gtest a second time.
     cov_info = ctx.attr.component[ComponentTestCaseCoverageInfo]
     gtest_lobster_file = cov_info.gtest_lobster_file
-    test_spec_files = cov_info.test_spec_files.to_list()
+    test_specs = cov_info.test_specs.to_list()
 
     # Write a runfiles manifest (short paths) — used by the runner at bazel run time.
     runfiles_manifest = ctx.actions.declare_file("{}_req_lobster_runfiles_manifest.txt".format(ctx.label.name))
@@ -71,7 +71,7 @@ def _component_update_impl(ctx):
     spec_manifest = ctx.actions.declare_file("{}_test_spec_runfiles_manifest.txt".format(ctx.label.name))
     ctx.actions.write(
         output = spec_manifest,
-        content = "".join([f.short_path + "\n" for f in test_spec_files]),
+        content = "".join(["{}\t{}\n".format(s.spec_json.short_path, s.reference) for s in test_specs]),
     )
 
     # The lock file is written back to the source tree by update_runner using
@@ -87,7 +87,7 @@ def _component_update_impl(ctx):
         is_executable = True,
     )
 
-    all_inputs = req_lobster_files + test_spec_files + [gtest_lobster_file, runfiles_manifest, spec_manifest]
+    all_inputs = req_lobster_files + [s.spec_json for s in test_specs] + [gtest_lobster_file, runfiles_manifest, spec_manifest]
     runfiles = ctx.runfiles(files = all_inputs)
     runfiles = runfiles.merge(ctx.attr._update_runner[DefaultInfo].default_runfiles)
 
@@ -251,7 +251,7 @@ def _component_impl(ctx):
             collected_unit_test_files.append(component[UnitInfo].tests)
             collected_test_specs.append(component[UnitInfo].test_specs)
         if ComponentTestCaseCoverageInfo in component:
-            collected_test_specs.append(component[ComponentTestCaseCoverageInfo].test_spec_files)
+            collected_test_specs.append(component[ComponentTestCaseCoverageInfo].test_specs)
         if ComponentInfo in component:
             if component[ComponentInfo].tests:
                 collected_tests.append(component[ComponentInfo].tests)
@@ -368,7 +368,7 @@ def _component_impl(ctx):
         ComponentTestCaseCoverageInfo(
             gtest_lobster_file = gtest_lobster_file,
             test_case_coverage_lock_file = ctx.file.test_case_coverage_lock,
-            test_spec_files = depset(transitive = collected_test_specs),
+            test_specs = depset(transitive = collected_test_specs),
         ),
         # SphinxSourcesInfo: RST sources from component requirements + transitive sources from sub-components/units
         SphinxSourcesInfo(

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -48,7 +48,7 @@ class TestSpec:
 
     __test__ = False  # not a pytest test class
 
-    ref: str  # canonical Bazel label of the test_specification target
+    ref: str  # label of the test_specification, as referenced by the test case
     goal: str = ""
     focus: str = ""  # optional
     steps: tuple[TestStep, ...] = ()
@@ -278,14 +278,18 @@ def load_lock_file(path: Path) -> LockFile:
 # ---------------------------------------------------------------------------
 
 
-def _record_to_test_case(rec: "TestRecord", specs: dict[str, TestSpec]) -> TestCase:
+def _record_to_test_case(rec: "TestRecord", specs: dict[str, TestSpec | None]) -> TestCase:
     if not rec.spec_ref:
         return TestCase(uid=rec.uid, given=rec.given, when=rec.when, then=rec.then, gtest_tag=rec.gtest_tag)
     # A spec replaces given/when/then. GWT that lobster-gtest derived from the
     # test name (or set as properties) is dropped instead of being mixed in.
+    reference = normalize_label(rec.spec_ref)
+    spec = specs.get(reference)
     return TestCase(
         uid=rec.uid,
-        spec=specs.get(normalize_label(rec.spec_ref)),
+        # Record the reference as written in the test: it is what the reviewer
+        # sees in the source and it does not depend on canonical repo names.
+        spec=replace(spec, ref=reference) if spec is not None else None,
         spec_ref=rec.spec_ref,
         gtest_tag=rec.gtest_tag,
     )
@@ -294,7 +298,7 @@ def _record_to_test_case(rec: "TestRecord", specs: dict[str, TestSpec]) -> TestC
 def compute_lock(
     req_metadata: list[RequirementMeta],
     test_cases_by_req: dict[str, list["TestRecord"]],
-    specs: dict[str, TestSpec] | None = None,
+    specs: dict[str, TestSpec | None] | None = None,
 ) -> LockFile:
     """Build a LockFile from scanned test records, sorted deterministically.
 

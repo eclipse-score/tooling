@@ -157,7 +157,10 @@ def _unit_impl(ctx):
             implementation_sequence_fbs = depset(),
             implementation = depset(ctx.attr.implementation),
             tests = tests_depset,
-            test_specs = depset([spec[TestSpecificationInfo].spec_json for spec in ctx.attr.test_specs]),
+            test_specs = depset([
+                struct(reference = reference, spec_json = spec[TestSpecificationInfo].spec_json)
+                for spec, reference in ctx.attr.test_specs.items()
+            ]),
             dependent_labels = depset([struct(
                 unit_label = ctx.label,
                 dependencies = depset(transitive = collected_dependent_labels),
@@ -200,10 +203,10 @@ _unit_attrs = {
         cfg = "exec",
         doc = "Test targets that verify the unit (cc_test, py_test, rust_test, etc.)",
     ),
-    "test_specs": attr.label_list(
-        default = [],
+    "test_specs": attr.label_keyed_string_dict(
+        default = {},
         providers = [TestSpecificationInfo],
-        doc = "test_specification targets that test cases of this unit reference via RecordProperty('test-spec', '<label>').",
+        doc = "test_specification targets, each mapped to the label as written in the unit macro's test_specs (spelled in the unit's repository). Test cases reference a spec with that spelling via RecordProperty('test-spec', '<label>').",
     ),
     "maturity": attr.string(
         default = "release",
@@ -232,6 +235,22 @@ _unit = rule(
 # ============================================================================
 # Public Macro
 # ============================================================================
+
+def _test_spec_reference(spec):
+    """Spell a test_specs entry as an absolute label of the calling repository.
+
+    Test cases reference a test_specification with this spelling. It uses the
+    repository names as seen from the unit's BUILD file (e.g. ``//pkg:name`` or
+    ``@spec_repo//pkg:name``), so it does not depend on canonical repository
+    names, which differ when the SEooC is built as an external dependency.
+    """
+    if type(spec) == "Label":
+        if spec.repo_name == native.repo_name():
+            return "//{}:{}".format(spec.package, spec.name)
+        return str(spec)
+    if spec.startswith("@") or spec.startswith("//"):
+        return spec
+    return "//{}:{}".format(native.package_name(), spec.removeprefix(":"))
 
 def unit(
         name,
@@ -263,7 +282,8 @@ def unit(
             that verify the unit implementation.
         test_specs: Optional list of labels to test_specification targets. A test
             case references one of them with RecordProperty("test-spec", "<label>")
-            instead of Given/When/Then.
+            instead of Given/When/Then, spelling the label as written here (a
+            package-relative ":name" is spelled "//<package>:name").
         design_name: Optional name matched against the PlantUML component-diagram
             alias, decoupled from the Bazel target name (analogous to py_binary's
             `main`). Defaults to name.
@@ -298,7 +318,7 @@ def unit(
         implementation = implementation,
         scope = [str(native.package_relative_label(scope_entry)) for scope_entry in scope],
         tests = tests,
-        test_specs = test_specs,
+        test_specs = {spec: _test_spec_reference(spec) for spec in test_specs},
         design_name = design_name or "",
         testonly = testonly,
         **kwargs

@@ -1476,14 +1476,16 @@ def _dependable_element_index_impl(ctx):
         )
 
         # Manifest of the test_specification JSON files that test cases may
-        # reference via RecordProperty("test-spec", ...).
-        test_spec_files = cov_info.test_spec_files.to_list()
+        # reference via RecordProperty("test-spec", ...), each with the label
+        # as written in the unit's test_specs.
+        test_specs = cov_info.test_specs.to_list()
+        test_spec_files = [s.spec_json for s in test_specs]
         cov_spec_manifest = ctx.actions.declare_file(
             "{}/test_case_coverage/{}.spec_manifest.txt".format(ctx.label.name, comp_path),
         )
         ctx.actions.write(
             output = cov_spec_manifest,
-            content = "".join([f.path + "\n" for f in test_spec_files]),
+            content = "".join(["{}\t{}\n".format(s.spec_json.path, s.reference) for s in test_specs]),
         )
 
         cov_lobster = ctx.actions.declare_file(

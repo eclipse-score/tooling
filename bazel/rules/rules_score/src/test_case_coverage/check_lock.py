@@ -134,8 +134,8 @@ def validate_specs(computed: LockFile) -> tuple[bool, list[str]]:
             if tc.spec_ref:
                 issues.append(
                     f"  ! [{req.id}] test-spec {tc.spec_ref!r} does not resolve: {tc.uid}\n"
-                    f"    Reference a test_specification target by its Bazel label (e.g. //pkg:my_spec) "
-                    f"and add it to the unit's test_specs."
+                    f"    Add the test_specification to the unit's test_specs and reference it in the test "
+                    f"with the same label as written there (e.g. //pkg:my_spec)."
                 )
                 continue
             missing = [name for name, val in (("given", tc.given), ("then", tc.then)) if not val.strip()]

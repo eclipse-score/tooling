@@ -50,14 +50,16 @@ test_specification_action_test = analysistest.make(_test_specification_action_te
 
 def _unit_test_specs_test_impl(ctx):
     """
-    Given a unit with test_specs,
+    Given a unit with the package-relative test_specs entry ":test_spec_sample",
     When it is analyzed,
-    Then UnitInfo.test_specs carries the JSON of each test_specification.
+    Then UnitInfo.test_specs carries the JSON of the test_specification together
+         with the reference spelled as an absolute label of the unit's repository.
     """
     env = analysistest.begin(ctx)
     target = analysistest.target_under_test(env)
-    names = [f.basename for f in target[UnitInfo].test_specs.to_list()]
-    asserts.equals(env, ["test_spec_sample.test_spec.json"], names)
+    specs = target[UnitInfo].test_specs.to_list()
+    asserts.equals(env, ["test_spec_sample.test_spec.json"], [s.spec_json.basename for s in specs])
+    asserts.equals(env, ["//:test_spec_sample"], [s.reference for s in specs])
     return analysistest.end(env)
 
 unit_test_specs_test = analysistest.make(_unit_test_specs_test_impl)

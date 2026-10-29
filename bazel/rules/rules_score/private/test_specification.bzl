@@ -21,10 +21,12 @@ Given/When/Then. The RST format is validated at build time.
 
 load("//bazel/rules/rules_score:providers.bzl", "SphinxSourcesInfo", "TestSpecificationInfo")
 
-def _main_repo_label(label):
-    """Render *label* as ``//pkg:name`` for the main repository, else ``str(label)``."""
-    if label.repo_name:
-        return str(label)
+def _repo_relative_label(label):
+    """Render *label* as ``//pkg:name``, relative to its own repository.
+
+    Independent of the canonical repository name, so the result does not change
+    when the spec is built as part of an external dependency.
+    """
     return "//{}:{}".format(label.package, label.name)
 
 def _test_specification_impl(ctx):
@@ -33,8 +35,8 @@ def _test_specification_impl(ctx):
 
     args = ctx.actions.args()
     args.add("--src", src)
-    args.add("--ref", _main_repo_label(ctx.label))
-    args.add("--alias", _main_repo_label(src.owner))
+    args.add("--ref", _repo_relative_label(ctx.label))
+    args.add("--alias", _repo_relative_label(src.owner))
     args.add("--out", spec_json)
 
     ctx.actions.run(
