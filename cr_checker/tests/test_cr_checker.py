@@ -100,7 +100,6 @@ def prepare_test_no_header(request, tmp_path):
     extension = request.param
     test_file = tmp_path / ("file." + extension)
     header_template = load_template(extension)
-    current_year = datetime.now().year
     test_file.write_text(
         "some content\n",
         encoding="utf-8",
@@ -1412,3 +1411,226 @@ def test_atomic_write_succeeds_and_leaves_no_temp_file(tmp_path):
     assert target.read_text(encoding="utf-8") == "new content\n"
     leftover = [p for p in tmp_path.iterdir() if p != target]
     assert leftover == []
+
+
+# --- comment form per language (block / line comments) -----------------------
+
+
+def _rendered(extension):
+    return load_template(extension).format(year=datetime.now().year, author="Author")
+
+
+def _to_slash(block_header):
+    """Rewrites a ``/* */`` header as a ``//`` header with a shorter border."""
+    lines = block_header.splitlines()
+    out = ["// " + "*" * 77]
+    out += [("// " + line[3:]) if line.startswith(" * ") else "//" for line in lines[1:-1]]
+    out.append("// " + "*" * 77)
+    return "\n".join(out) + "\n"
+
+
+def _to_block(slash_header):
+    """Rewrites a ``//`` header as a ``/* */`` header with a shorter border."""
+    lines = slash_header.splitlines()
+    out = ["/" + "*" * 77]
+    out += [(" * " + line[3:]) if line.startswith("// ") else " *" for line in lines[1:-1]]
+    out.append(" " + "*" * 77 + "/")
+    return "\n".join(out) + "\n"
+
+
+def _alternative_form_header(extension):
+    """Header for `extension` in the comment form its template doesn't use."""
+    rendered = _rendered(extension)
+    return _to_block(rendered) if extension == "rs" else _to_slash(rendered)
+
+
+def _check(cr_checker, path, extension, fix=False, config=None, force=False):
+    return cr_checker.process_files(
+        [path],
+        {extension: load_template(extension)},
+        fix,
+        config=config,
+        use_mmap=False,
+        encoding="utf-8",
+        offset=0,
+        remove_offset=0,
+        force=force,
+    )
+
+
+@pytest.mark.parametrize("extension", ["c", "cpp", "h", "hpp", "trlc", "rsl"])
+def test_style_variants_adds_slash_form_to_block_template(extension):
+    cr_checker = load_cr_checker_module()
+    template = load_template(extension)
+
+    variants = cr_checker.style_variants(template, extension)
+
+    assert len(variants) == 2
+    assert variants[0] == template
+    lines = variants[1].splitlines()
+    assert lines[0].startswith("// *****")
+    assert lines[-1].startswith("// *****")
+    assert "// Copyright (c) {year} {author}" in lines
+    assert "//" in lines
+    assert not any(line.startswith(" *") for line in lines)
+
+
+def test_style_variants_adds_block_form_to_slash_template():
+    cr_checker = load_cr_checker_module()
+    template = load_template("rs")
+
+    variants = cr_checker.style_variants(template, "rs")
+
+    assert len(variants) == 2
+    assert variants[0] == template
+    lines = variants[1].splitlines()
+    assert lines[0].startswith("/*****")
+    assert lines[-1].startswith(" *****") and lines[-1].endswith("*/")
+    assert " * Copyright (c) {year} {author}" in lines
+    assert " *" in lines
+
+
+@pytest.mark.parametrize("extension", ["py", "sh", "bzl", "BUILD", "bazel", "yml", "yaml", "ini", "rst", "md", "puml"])
+def test_style_variants_keeps_single_form_for_other_languages(extension):
+    cr_checker = load_cr_checker_module()
+    template = load_template(extension)
+
+    assert cr_checker.style_variants(template, extension) == (template,)
+
+
+def test_style_variants_ignores_extensions_without_allowed_forms():
+    cr_checker = load_cr_checker_module()
+    template = load_template("cpp")
+
+    assert cr_checker.style_variants(template, "txt") == (template,)
+
+
+def test_style_variants_ignores_template_without_borders():
+    cr_checker = load_cr_checker_module()
+    template = "// Copyright (c) {year} {author}\n//\n// SPDX-License-Identifier: Apache-2.0\n"
+
+    assert cr_checker.style_variants(template, "h") == (template,)
+
+
+@pytest.mark.parametrize("extension", ["c", "cpp", "h", "hpp", "trlc", "rsl", "rs"])
+def test_process_files_accepts_header_in_alternative_comment_form(tmp_path, extension):
+    cr_checker = load_cr_checker_module()
+    test_file = tmp_path / f"file.{extension}"
+    content = _alternative_form_header(extension) + "\nbody\n"
+    test_file.write_text(content, encoding="utf-8")
+
+    check_results = _check(cr_checker, test_file, extension)
+    fix_results = _check(cr_checker, test_file, extension, fix=True, config=write_config(tmp_path, "Author"))
+
+    zero = {"missing": 0, "misplaced": 0, "wrong_format": 0, "duplicate": 0, "license_mismatch": 0, "fixed": 0}
+    assert check_results == zero
+    assert fix_results == zero
+    assert test_file.read_text(encoding="utf-8") == content
+
+
+@pytest.mark.parametrize(
+    "extension,header",
+    [
+        ("py", _to_slash(_rendered("cpp"))),
+        ("sh", _to_slash(_rendered("cpp"))),
+        ("md", _to_slash(_rendered("cpp"))),
+        ("puml", _to_slash(_rendered("cpp"))),
+        ("h", _rendered("py")),
+        ("trlc", _rendered("py")),
+        ("rs", _rendered("py")),
+    ],
+)
+def test_process_files_rejects_comment_form_not_allowed_for_language(tmp_path, extension, header):
+    cr_checker = load_cr_checker_module()
+    test_file = tmp_path / f"file.{extension}"
+    test_file.write_text(header + "\nbody\n", encoding="utf-8")
+
+    results = _check(cr_checker, test_file, extension)
+
+    assert results["wrong_format"] == 1
+
+
+def test_process_files_reports_license_mismatch_for_alternative_comment_form(tmp_path):
+    cr_checker = load_cr_checker_module()
+    test_file = tmp_path / "file.h"
+    content = _to_slash(_rendered("h")).replace("Apache-2.0", "MIT") + "\nbody\n"
+    test_file.write_text(content, encoding="utf-8")
+    config = write_config(tmp_path, "Author")
+
+    check_results = _check(cr_checker, test_file, "h")
+    fix_results = _check(cr_checker, test_file, "h", fix=True, config=config, force=True)
+
+    assert check_results["license_mismatch"] == 1
+    assert fix_results["fixed"] == 0
+    assert test_file.read_text(encoding="utf-8") == content
+
+
+def test_process_files_detects_duplicate_header_in_alternative_comment_form(tmp_path):
+    cr_checker = load_cr_checker_module()
+    test_file = tmp_path / "file.h"
+    header = _to_slash(_rendered("h"))
+    test_file.write_text(header + header + "\nbody\n", encoding="utf-8")
+
+    results = _check(cr_checker, test_file, "h")
+
+    assert results["duplicate"] == 1
+
+
+def test_process_files_fix_repairs_broken_header_in_its_own_comment_form(tmp_path):
+    cr_checker = load_cr_checker_module()
+    test_file = tmp_path / "file.h"
+    broken = _to_slash(_rendered("h")).replace("Apache License", "Apache Licence")
+    test_file.write_text(broken + "\nbody\n", encoding="utf-8")
+    config = write_config(tmp_path, "Author")
+
+    fix_results = _check(cr_checker, test_file, "h", fix=True, config=config)
+
+    fixed = test_file.read_text(encoding="utf-8")
+    assert fix_results["fixed"] == 1
+    assert fixed.startswith("// *****")
+    assert "Licence" not in fixed
+    assert "/*" not in fixed
+    assert not any(line.startswith(" *") for line in fixed.splitlines())
+    assert fixed.endswith("\n\nbody\n")
+    assert _check(cr_checker, test_file, "h")["wrong_format"] == 0
+
+
+def test_process_files_fix_repairs_broken_block_header_in_block_form(tmp_path):
+    cr_checker = load_cr_checker_module()
+    test_file = tmp_path / "file.rs"
+    broken = _to_block(_rendered("rs")).replace("Apache License", "Apache Licence")
+    test_file.write_text(broken + "\nfn main() {}\n", encoding="utf-8")
+    config = write_config(tmp_path, "Author")
+
+    fix_results = _check(cr_checker, test_file, "rs", fix=True, config=config)
+
+    fixed = test_file.read_text(encoding="utf-8")
+    assert fix_results["fixed"] == 1
+    assert fixed.startswith("/*****")
+    assert "Licence" not in fixed
+    assert not any(line.startswith("//") for line in fixed.splitlines())
+    assert _check(cr_checker, test_file, "rs")["wrong_format"] == 0
+
+
+def test_process_files_fix_uses_template_form_for_missing_header(tmp_path):
+    cr_checker = load_cr_checker_module()
+    test_file = tmp_path / "file.h"
+    test_file.write_text("int x;\n", encoding="utf-8")
+    config = write_config(tmp_path, "Author")
+
+    _check(cr_checker, test_file, "h", fix=True, config=config)
+
+    assert test_file.read_text(encoding="utf-8").startswith("/*****")
+
+
+def test_select_variant_follows_the_files_comment_form():
+    cr_checker = load_cr_checker_module()
+    variants = cr_checker.style_variants(load_template("h"), "h")
+
+    def pick(header):
+        return cr_checker.select_variant(cr_checker.locate_header(header + "int x;\n"), variants, None)
+
+    assert pick(_rendered("h")) == variants[0]
+    assert pick(_to_slash(_rendered("h"))) == variants[1]
+    assert pick(_to_slash(_rendered("h")).replace("Apache License", "Apache Licence")) == variants[1]
+    assert cr_checker.select_variant(cr_checker.locate_header("int x;\n"), variants, None) == variants[0]

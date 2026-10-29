@@ -666,6 +666,94 @@ def compile_template_regex(template):
     return re.compile("".join(regex_parts) + "\n?")
 
 
+@dataclass(frozen=True)
+class CommentStyle:
+    """Comment syntax a header can be written in.
+
+    A header is an opening border line, text lines and a closing border line:
+    ``first + run``, ``middle + text`` and ``last + run + suffix``.
+    """
+
+    first: str
+    middle: str
+    last: str
+    suffix: str
+
+    def split(self, template):
+        """Returns ``(first_run, texts, last_run)`` if `template` is written in this
+        style, else None. The runs are the border fill strings."""
+        lines = template.rstrip("\n").split("\n")
+        if len(lines) < 3:
+            return None
+        first, *middle, last = lines
+        if not (first.startswith(self.first) and last.startswith(self.last) and last.endswith(self.suffix)):
+            return None
+        first_run = first[len(self.first) :]
+        last_run = last[len(self.last) : len(last) - len(self.suffix)]
+        if not (BORDER_FILL_PATTERN.fullmatch(first_run) and BORDER_FILL_PATTERN.fullmatch(last_run)):
+            return None
+        texts = []
+        for line in middle:
+            if line == self.middle.rstrip():
+                texts.append("")
+            elif line.startswith(self.middle):
+                texts.append(line[len(self.middle) :])
+            else:
+                return None
+        return first_run, texts, last_run
+
+    def render(self, parts):
+        """Builds a template from `split` output."""
+        first_run, texts, last_run = parts
+        lines = [self.first + first_run]
+        lines += [self.middle + text if text else self.middle.rstrip() for text in texts]
+        lines.append(self.last + last_run + self.suffix)
+        return "\n".join(lines) + "\n"
+
+
+C_BLOCK_COMMENT = CommentStyle(first="/", middle=" * ", last=" ", suffix="/")
+SLASH_LINE_COMMENT = CommentStyle(first="// ", middle="// ", last="// ", suffix="")
+
+# Comment forms the language accepts for a file header, by extension key.
+# Extensions not listed accept only the template's own form.
+ALLOWED_COMMENT_STYLES = {
+    extension: (C_BLOCK_COMMENT, SLASH_LINE_COMMENT) for extension in ("c", "cpp", "h", "hpp", "rs", "trlc", "rsl")
+}
+
+
+@functools.lru_cache(maxsize=None)
+def style_variants(template, extension):
+    """Returns `template` followed by the same header in every other comment
+    form `extension` allows, or just `(template,)` when the template isn't
+    written in one of those forms."""
+    styles = ALLOWED_COMMENT_STYLES.get(extension, ())
+    for canonical in styles:
+        parts = canonical.split(template)
+        if parts:
+            return (template, *(style.render(parts) for style in styles if style is not canonical))
+    return (template,)
+
+
+def select_variant(layout, variants, config):
+    """Picks the variant to judge and rewrite the file's header against: the
+    first one the header matches, else the most similar one (so a broken
+    header is repaired in its own comment form), else the first one when
+    there is no header."""
+    if len(variants) == 1 or not layout.blocks:
+        return variants[0]
+    block_text = layout.blocks[0].text
+    extended_text = layout.leading_junk + block_text
+    best, best_similarity = variants[0], -1.0
+    for variant in variants:
+        regex = compile_template_regex(variant)
+        if regex.match(block_text) or regex.match(extended_text):
+            return variant
+        similarity = fuzz.ratio(block_text, render_template(variant, config))
+        if similarity > best_similarity:
+            best, best_similarity = variant, similarity
+    return best
+
+
 def _blocks_in_duplicate_window(layout, template):
     """Blocks close enough to `layout.prefix_end` to count as (part of) the
     file's real header, for both DUPLICATE detection and rewriting.
@@ -1186,7 +1274,9 @@ def _process_file_check(item, template, encoding, offset, use_mmap, config, resu
     text, _ = _strip_bom(raw)
     text = _normalize_line_endings(text)
 
-    layout = locate_header(text, manual_prefix_offset=offset, extension=extension_key(item))
+    extension = extension_key(item)
+    layout = locate_header(text, manual_prefix_offset=offset, extension=extension)
+    template = select_variant(layout, style_variants(template, extension), config)
     status, similarity = classify(layout, template, config)
     _log_status(item, status, layout, similarity, template)
     _tally(status, results)
@@ -1207,7 +1297,9 @@ def _process_file_fix(item, template, encoding, offset, remove_offset, config, r
     line_ending = _detect_line_ending(text)
     text = _normalize_line_endings(text)
 
-    layout = locate_header(text, manual_prefix_offset=offset, extension=extension_key(item))
+    extension = extension_key(item)
+    layout = locate_header(text, manual_prefix_offset=offset, extension=extension)
+    template = select_variant(layout, style_variants(template, extension), config)
     status, similarity = classify(layout, template, config)
     _log_status(item, status, layout, similarity, template)
     _tally(status, results)

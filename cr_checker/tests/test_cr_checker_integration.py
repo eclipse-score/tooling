@@ -121,6 +121,50 @@ def test_fix_then_check_across_comment_styles(tmp_path, extension):
     assert ("\n\n\n" + body) not in fixed_content
 
 
+# --- Block and line comment forms accepted side by side ---------------------
+
+
+def _slash_form(block_header):
+    lines = block_header.splitlines()
+    body = [("// " + line[3:]) if line.startswith(" * ") else "//" for line in lines[1:-1]]
+    return "\n".join(["// " + "*" * 77, *body, "// " + "*" * 77]) + "\n"
+
+
+def test_main_accepts_mixed_block_and_line_comment_headers(tmp_path):
+    cr_checker = load_cr_checker_module()
+    config_file = write_config(tmp_path, "Author")
+    block_header = load_template("cpp").format(year=datetime.now().year, author="Author")
+    files = {"block.h": block_header, "line.h": _slash_form(block_header), "line.cpp": _slash_form(block_header)}
+    for name, header in files.items():
+        (tmp_path / name).write_text(header + "\nint x;\n", encoding="utf-8")
+    paths = [str(tmp_path / name) for name in files]
+
+    exit_code = cr_checker.main(["-t", str(REAL_TEMPLATES_FILE), "-c", str(config_file), *paths])
+
+    assert exit_code == 0
+
+
+def test_main_fix_keeps_each_files_comment_form(tmp_path):
+    cr_checker = load_cr_checker_module()
+    config_file = write_config(tmp_path, "Author")
+    block_header = load_template("cpp").format(year=datetime.now().year, author="Author")
+    block_file = tmp_path / "block.h"
+    line_file = tmp_path / "line.h"
+    block_file.write_text(block_header.replace("Apache License", "Apache Licence") + "\nint x;\n", encoding="utf-8")
+    line_file.write_text(
+        _slash_form(block_header).replace("Apache License", "Apache Licence") + "\nint x;\n", encoding="utf-8"
+    )
+    args = ["-t", str(REAL_TEMPLATES_FILE), "-c", str(config_file)]
+
+    fix_exit_code = cr_checker.main([*args, "--fix", str(block_file), str(line_file)])
+    check_exit_code = cr_checker.main([*args, str(block_file), str(line_file)])
+
+    assert fix_exit_code == 1
+    assert check_exit_code == 0
+    assert block_file.read_text(encoding="utf-8").startswith("/*")
+    assert line_file.read_text(encoding="utf-8").startswith("// ")
+
+
 # --- Duplicate header detection, exercised through the CLI -----------------
 
 
