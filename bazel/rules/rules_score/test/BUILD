@@ -536,7 +536,6 @@ safety_analysis(
     # failure_modes = [],
     # assessments = [],
     # safety_measures = [], # AoUs, component requirements
-    arch_design = ":arch_design",
     fault_trees = ":samplelibrary_fault_trees",
 )
 
@@ -681,6 +680,7 @@ dependable_element(
 # :public_api_example_link_rendered_test below.
 architectural_design(
     name = "arch_design_public_api_example",
+    package = "package_pub_api",
     public_api = ["fixtures/clickable_example/public_api_detail.puml"],
     static = ["fixtures/clickable_example/public_api_overview.puml"],
 )
@@ -693,6 +693,7 @@ architectural_design(
 failure_modes(
     name = "public_api_example_failure_modes",
     srcs = ["fixtures/clickable_example/public_api_failure_modes.trlc"],
+    deps = [":arch_design_public_api_example"],
 )
 
 fault_trees(
@@ -703,7 +704,6 @@ fault_trees(
 
 safety_analysis(
     name = "public_api_example_safety_analysis",
-    arch_design = ":arch_design_public_api_example",
     failure_modes = [":public_api_example_failure_modes"],
     fault_trees = ":public_api_example_fault_trees",
 )
@@ -723,6 +723,7 @@ dependability_analysis(
 failure_modes(
     name = "multi_failure_mode_example_failure_modes",
     srcs = ["fixtures/clickable_example/multi_failure_mode_failure_modes.trlc"],
+    deps = [":arch_design_public_api_example"],
 )
 
 fault_trees(
@@ -733,7 +734,6 @@ fault_trees(
 
 safety_analysis(
     name = "multi_failure_mode_example_safety_analysis",
-    arch_design = ":arch_design_public_api_example",
     failure_modes = [":multi_failure_mode_example_failure_modes"],
     fault_trees = ":multi_failure_mode_example_fault_trees",
 )
@@ -751,6 +751,7 @@ dependability_analysis(
 failure_modes(
     name = "aou_root_cause_failure_modes",
     srcs = ["fixtures/aou_root_cause/failure_modes.trlc"],
+    deps = [":arch_design_public_api_example"],
 )
 
 fault_trees(
@@ -767,7 +768,6 @@ assumptions_of_use(
 
 safety_analysis(
     name = "aou_root_cause_safety_analysis",
-    arch_design = ":arch_design_public_api_example",
     assessments = ["fixtures/aou_root_cause/assessments.trlc"],
     failure_modes = [":aou_root_cause_failure_modes"],
     fault_trees = ":aou_root_cause_fault_trees",
@@ -791,7 +791,6 @@ component_requirements(
 
 safety_analysis(
     name = "comp_req_measure_safety_analysis",
-    arch_design = ":arch_design_public_api_example",
     assessments = ["fixtures/comp_req_measure/assessments.trlc"],
     failure_modes = [":aou_root_cause_failure_modes"],
     fault_trees = ":aou_root_cause_fault_trees",
@@ -811,7 +810,6 @@ build_test(
 # A measure target with its own spec: the assembler needs the extra RSL to parse it.
 safety_analysis(
     name = "measure_spec_safety_analysis",
-    arch_design = ":arch_design_public_api_example",
     failure_modes = [":aou_root_cause_failure_modes"],
     fault_trees = ":aou_root_cause_fault_trees",
     safety_measures = ["//fixtures/spec_extras:spec_extras_comp_req"],
@@ -1405,6 +1403,7 @@ sh_test(
 architectural_design(
     name = "arch_design_dynamic_example",
     dynamic = ["fixtures/clickable_example/dynamic_overview.puml"],
+    package = "dynamic_example_api",
     public_api = ["fixtures/clickable_example/dynamic_public_api_detail.puml"],
     static = ["fixtures/clickable_example/dynamic_component_detail.puml"],
 )
@@ -1467,6 +1466,7 @@ component(
 failure_modes(
     name = "dynamic_example_failure_modes",
     srcs = ["fixtures/clickable_example/dynamic_public_api_failure_modes.trlc"],
+    deps = [":arch_design_dynamic_example"],
 )
 
 fault_trees(
@@ -1477,7 +1477,6 @@ fault_trees(
 
 safety_analysis(
     name = "dynamic_example_safety_analysis",
-    arch_design = ":arch_design_dynamic_example",
     failure_modes = [":dynamic_example_failure_modes"],
     fault_trees = ":dynamic_example_fault_trees",
 )
@@ -1823,7 +1822,6 @@ aou_derived_test(
 # AoU target contribute it once; only the first assesses the root cause.
 safety_analysis(
     name = "aou_root_cause_safety_analysis_dup",
-    arch_design = ":arch_design_public_api_example",
     failure_modes = [":aou_root_cause_failure_modes"],
     fault_trees = ":aou_root_cause_fault_trees",
     safety_measures = [":aou_root_cause_aous"],
@@ -2594,7 +2592,6 @@ lobster_ci_report_test(
 
 safety_analysis(
     name = "unassessed_root_cause_safety_analysis",
-    arch_design = ":arch_design_public_api_example",
     failure_modes = [":aou_root_cause_failure_modes"],
     fault_trees = ":aou_root_cause_fault_trees",
 )
@@ -2630,7 +2627,6 @@ lobster_ci_report_test(
 
 safety_analysis(
     name = "unused_aou_safety_analysis",
-    arch_design = ":arch_design_public_api_example",
     assessments = ["fixtures/aou_root_cause/assessments_unused_aou.trlc"],
     failure_modes = [":aou_root_cause_failure_modes"],
     fault_trees = ":aou_root_cause_fault_trees",
@@ -2668,7 +2664,6 @@ lobster_ci_report_test(
 
 safety_analysis(
     name = "stale_measure_version_safety_analysis",
-    arch_design = ":arch_design_public_api_example",
     assessments = ["fixtures/aou_root_cause/assessments_stale_version.trlc"],
     failure_modes = [":aou_root_cause_failure_modes"],
     fault_trees = ":aou_root_cause_fault_trees",

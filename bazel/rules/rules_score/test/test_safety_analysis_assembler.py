@@ -46,15 +46,6 @@ class _FakeRenderer:
     def objects_by_fqn(self):
         return self._objs
 
-    def render_table_to_string(self, columns, fqns=None, name_header="Name", link_fn=None):
-        if fqns is None:
-            fqns = list(self._objs)
-        if link_fn is not None:
-            rows = "\n".join(link_fn(f, self._objs[f].name) for f in fqns)
-        else:
-            rows = "\n".join(self._objs[f].name for f in fqns)
-        return f"TABLE[{name_header}]\n{rows}\n"
-
     def render_records_to_string(self, fqns, fields):
         return "RECORDS(" + ",".join(fqns) + ")\n"
 
@@ -71,14 +62,14 @@ def _objs():
             "FM_A",
             "FailureMode",
             {
-                "guideword": "LossOfFunction",
+                "guidewords": ["LossOfFunction", "TooLate"],
                 "safety": "B",
-                "interface": "Lib.Api",
+                "interface": ["Lib.Api", "Lib.Api2"],
                 "failureeffect": "world ends",
                 "description": "fm a description",
             },
         ),
-        "Lib.FM_Orphan": _Obj("FM_Orphan", "FailureMode", {"safety": "QM", "guideword": "TooLate"}),
+        "Lib.FM_Orphan": _Obj("FM_Orphan", "FailureMode", {"safety": "QM", "guidewords": ["TooLate"]}),
         "Lib.AoU_1": _Obj("AoU_1", "AoU", {"safety": "B", "description": "aou one", "version": 3}),
         "Lib.AoU_Orphan": _Obj("AoU_Orphan", "AoU", {"safety": "D"}),
         "Lib.RC_A": _Obj(
@@ -290,6 +281,13 @@ class BuildBodyTest(unittest.TestCase):
         body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
         self.assertIn("Title\n=====", body)
         self.assertIn("Overview", body)
+        # Overview table lists each failure mode with its interface.
+        overview = body.split("Failure Modes\n-------------")[0]
+        self.assertIn("   * - Failure Mode\n     - Guidewords\n     - ASIL\n     - Interface\n", overview)
+        self.assertIn(
+            ":ref:`FM_A <safety-analysis-lib-fm-a>`\n     - ``LossOfFunction``, ``TooLate``\n     - B\n", overview
+        )
+        self.assertIn("     - ``Lib.Api``, ``Lib.Api2``\n", overview)
         # Top-level grouping sections.
         self.assertIn("Failure Modes\n-------------", body)
         # FM dropdown titled by its full fqn only (no ASIL in the heading).
@@ -299,13 +297,14 @@ class BuildBodyTest(unittest.TestCase):
         # Attributes as a grid of cards; no inner requirement id.
         self.assertNotIn(".. requirement:definition::", body)
         self.assertIn(".. grid:: 2", body)
-        # Guideword / ASIL are bare centred grid items (no card chrome).
+        # Guidewords / ASIL are bare centred grid items (no card chrome).
         self.assertIn(".. grid-item::", body)
         self.assertIn(":class: sd-text-center", body)
-        self.assertIn(":bdg-info:`LossOfFunction`", body)
+        self.assertIn(":bdg-info:`LossOfFunction` :bdg-info:`TooLate`", body)
         self.assertIn(":bdg-warning:`ASIL B`", body)
         self.assertNotIn(".. grid-item-card:: Guideword", body)
         self.assertIn(".. grid-item-card:: Interface", body)
+        self.assertIn("``Lib.Api``, ``Lib.Api2``", body)
         # Description as a prominent card.
         self.assertIn(".. grid-item-card:: Description", body)
         self.assertIn("fm a description", body)
@@ -433,10 +432,14 @@ enum Asil {
     D
 }
 
+type ApiMethod {
+    signatures String [1..*]
+}
+
 type FailureMode {
-    guideword optional String
+    guidewords optional String [1..*]
     safety Asil
-    interface optional String
+    interface optional ApiMethod [1..*]
     failureeffect optional String
     description optional String
 }
@@ -477,11 +480,19 @@ _FM_TRLC = """\
 package TestSafetyAnalysis
 
 FailureMode FmA {
-    guideword = "TooLate"
+    guidewords = ["TooLate"]
     safety = Asil.D
-    interface = "Lib.Api"
+    interface = [TestSafetyAnalysis.ApiA]
     failureeffect = "downstream timeout"
     description = "fm a description"
+}
+"""
+
+_API_TRLC = """\
+package TestSafetyAnalysis
+
+ApiMethod ApiA {
+    signatures = ["void Lib::Api::A()"]
 }
 """
 
@@ -595,6 +606,7 @@ class MainIntegrationTest(unittest.TestCase):
     def test_full_page_assembled_from_real_trlc(self):
         with tempfile.TemporaryDirectory() as tmp:
             rsl = self._write(tmp, "types.rsl", _RSL)
+            api = self._write(tmp, "api.trlc", _API_TRLC)
             fm = self._write(tmp, "fm.trlc", _FM_TRLC)
             aou = self._write(tmp, "aou.trlc", _AOU_TRLC)
             cr = self._write(tmp, "cr.trlc", _COMPREQ_TRLC)
@@ -627,6 +639,7 @@ class MainIntegrationTest(unittest.TestCase):
                     cr,
                     "--dep-files",
                     rsl,
+                    api,
                 ]
             )
 
@@ -664,6 +677,7 @@ class MainIntegrationTest(unittest.TestCase):
 
     def _assemble(self, tmp, failuremodes=(), assessments=(), safetymeasures=(), spec=()):
         rsl = self._write(tmp, "types.rsl", _RSL)
+        api = self._write(tmp, "api.trlc", _API_TRLC)
         fta = self._write(tmp, "fta_events.trlc", _FTA_TRLC)
         template = self._write(tmp, "tmpl.rst", "{body}\n")
         argv = [
@@ -686,6 +700,7 @@ class MainIntegrationTest(unittest.TestCase):
             *safetymeasures,
             "--dep-files",
             rsl,
+            api,
             *spec,
         ]
         self._run_main(argv)

@@ -13,6 +13,7 @@
 package OtherLibraryFmea
 
 import ScoreReq
+import other_library_api
 
 ScoreReq.FailureMode ComputeOverloaded {
     guidewords = [ScoreReq.Guideword.TooLate]
@@ -20,5 +21,5 @@ ScoreReq.FailureMode ComputeOverloaded {
     failureeffect = "Results are delivered late or not at all"
     version = 1
     safety = ScoreReq.Asil.B
-    interface = "other_seooc.OtherLibraryAPI.Compute"
+    interface = [other_library_api.other_seooc_OtherLibraryAPI_Compute]
 }

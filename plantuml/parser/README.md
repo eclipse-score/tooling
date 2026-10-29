@@ -22,7 +22,7 @@ The PlantUML Parser is a multi-file parser that processes PlantUML diagram files
 The parser takes `.puml` source files as input and produces:
 
 - **FlatBuffers binary** (`.fbs.bin`) — primary structured output for downstream consumers
-- **LOBSTER traceability JSON** (`.lobster`) — for component diagrams, enables traceability linking via the LOBSTER toolchain
+- **Public API TRLC** (`--api-output-file`) — one `ScoreReq.ApiMethod` record per public method (all overloads) and per free function of the class diagrams, in the TRLC package given by `--api-package`
 - **Debug JSON** — raw and resolved ASTs when `--log-level debug` or higher is set
 
 
@@ -32,8 +32,7 @@ Rust-based parser that produces an AST for the following PlantUML diagram types:
 - Sequence Diagram
 - Component Diagram
 
-Outputs are `.fbs.bin` FlatBuffers binaries (diagram AST) and optionally `.lobster`
-traceability files (for component diagrams).
+Outputs are `.fbs.bin` FlatBuffers binaries (diagram AST).
 
 ## Usage
 
@@ -56,7 +55,8 @@ Options:
 | `--log-level <error\|warn\|info\|debug\|trace>` | Logging verbosity | `warn` |
 | `--diagram-type <component\|class\|sequence\|none>` | Diagram type hint | `none` |
 | `--fbs-output-dir <DIR>` | Output directory for `.fbs.bin` FlatBuffers files | none (no output) |
-| `--lobster-output-dir <DIR>` | Output directory for `.lobster` traceability files | none (no output) |
+| `--api-output-file <FILE>` | Output file for the public API TRLC (`ApiMethod` records of class diagrams); all inputs must be class diagrams; requires `--api-package` | none (no output) |
+| `--api-package <NAME>` | TRLC package of the public API file (a TRLC identifier); requires `--api-output-file` | none |
 | `--output-stem <STEM>` | Override the file stem used to name every output file for this run, instead of deriving it from the input file's own basename. Requires exactly one input file. | none (uses the input file's basename) |
 
 At least one of `--file` or `--folders` is required. Inputs must have the `.puml`

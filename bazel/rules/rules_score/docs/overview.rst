@@ -136,9 +136,10 @@ Bazel/C++ implementation:
   methods, enum literals, relationships) must match the generated C++
   implementation model
   (:doc:`spec <tool_reference/specs/class_design_implementation>`).
-- **Public API ↔ failure modes** — every public API interface item must be
-  referenced by a ``FailureMode`` (via ``FailureMode.interface``) in the
-  SEooC's own safety analysis; unreferenced interfaces fail traceability
+- **Public API ↔ failure modes** — every public API method (``ApiMethod``
+  record generated from the public API class diagrams) must be referenced by a
+  ``FailureMode`` (via ``FailureMode.interface``) in the SEooC's own safety
+  analysis; unreferenced methods fail traceability
   (:doc:`spec <user_guide/dependability_analysis>`).
 
 Certified scope (build)

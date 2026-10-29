@@ -14,7 +14,9 @@
 @startuml PublicInterface
 
 package package_pub {
-    interface PublicInterface
+    interface PublicInterface {
+        + Send(): void
+    }
 }
 
 @enduml

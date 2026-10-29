@@ -443,12 +443,14 @@ architectural_design
 
 Bundles static, dynamic, public-API, and internal-API architecture views into a
 single target. Provides ``ArchitecturalDesignInfo`` consumed by ``dependable_element``
-and ``safety_analysis``.
+and ``dependability_analysis``, and ``TrlcProviderInfo`` for the generated ``public_api.trlc``
+(``ScoreReq.ApiMethod`` records) that ``failure_modes`` lists in ``deps``.
 
 .. code-block:: python
 
    architectural_design(
        name         = "arch",
+       package      = "arch_api",
        static       = ["docs/static_design.puml"],
        dynamic      = ["docs/sequence.puml"],
        public_api   = ["docs/public_api.puml"],
@@ -478,7 +480,7 @@ and ``safety_analysis``.
    * - ``public_api``
      - label list
      - no
-     - Public-API diagram files (``.puml``); also generates traceability items for safety analysis, exposed via ``ArchitecturalDesignInfo.public_api_lobster_files``. Several class diagrams resolve as one group (default ``[]``)
+     - Public-API class diagram files (``.puml``; other diagram kinds fail the build); generate ``public_api.trlc`` with one ``ScoreReq.ApiMethod`` record per public method (all overloads) and per free function, no class items; attributes, enums, typedefs and non-public members yield no record. Reports show the generated ``public_api.trlc`` as item location, not the ``.puml`` source. ``lobster-trlc`` turns the records into the Public API traceability level, exposed via ``ArchitecturalDesignInfo.public_api_lobster_files``. Several class diagrams resolve as one group (default ``[]``)
    * - ``internal_api``
      - label list
      - no
@@ -487,12 +489,16 @@ and ``safety_analysis``.
      - string
      - no
      - ``"release"`` (default) treats validation findings as errors; ``"development"`` emits warnings and continues
+   * - ``package``
+     - string
+     - with ``public_api``
+     - TRLC package of the generated ``public_api.trlc``; failure mode files ``import`` it. Building fails when ``public_api`` diagrams are given without it
    * - ``visibility``
      - —
      - no
      - Bazel visibility
 
-**Generated targets:** ``<name>`` (provides ``ArchitecturalDesignInfo``; no standalone test — consistency is validated as part of ``bazel test //pkg:my_element``)
+**Generated targets:** ``<name>`` (provides ``ArchitecturalDesignInfo`` and ``TrlcProviderInfo``; no standalone test — consistency is validated as part of ``bazel test //pkg:my_element``)
 
 .. _multiple-static-puml-files:
 
@@ -643,13 +649,16 @@ failure_modes
 
 Stage 1 of the safety analysis: the ``FailureMode`` records. The
 ``fault_trees`` diagrams reference them as tree top events (list the target in
-``fault_trees.deps``); ``safety_analysis`` renders and traces them.
+``fault_trees.deps``); ``safety_analysis`` renders and traces them. Each record's
+``interface`` lists ``ApiMethod`` records of the ``architectural_design``
+target, which therefore belongs in ``deps``.
 
 .. code-block:: python
 
    failure_modes(
        name = "my_failure_modes",
        srcs = ["docs/failure_modes.trlc"],
+       deps = [":arch"],
    )
 
 .. list-table::
@@ -755,7 +764,6 @@ records of the root causes and the measures they list.
 
    safety_analysis(
        name            = "my_safety_analysis",
-       arch_design     = ":arch",
        assessments     = ["docs/assessments.trlc"],
        failure_modes   = [":my_failure_modes"],
        fault_trees     = ":my_fault_trees",
@@ -790,10 +798,6 @@ records of the root causes and the measures they list.
      - label list
      - no
      - Measures the assessments list (default ``[]``): ``assumptions_of_use`` / ``component_requirements`` targets. Only the records of these targets are rendered and traced; the targets in their ``deps`` are used to resolve references only. The ``assumptions_of_use`` targets listed here are the *own* AoUs of the ``dependable_element`` whose ``dependability_analysis`` includes this target: they are rendered in the safety analysis, forwarded to dependees, and shown once however many safety analyses list them. An ``assumptions_of_use`` target that no ``safety_analysis`` lists here is neither rendered nor forwarded.
-   * - ``arch_design``
-     - label
-     - yes
-     - ``architectural_design`` target
    * - ``visibility``
      - —
      - no

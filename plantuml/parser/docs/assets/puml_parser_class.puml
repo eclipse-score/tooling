@@ -73,12 +73,6 @@ package "Puml Parser" {
         }
     }
 
-    package "Lobster Output" {
-        class LobsterWriter <<writer>> {
-            + model_to_lobster(model: HashMap<String, LogicComponent>, source_path: &str) : Value
-            + write_lobster_to_file(model: HashMap<String, LogicComponent>, source_path: &str, output_dir: &Path)
-        }
-    }
 }
 
 ' Data Flow
@@ -86,6 +80,5 @@ CLI --> Preprocessor : preprocess
 CLI --> DiagramParser : dispatch
 CLI --> ComponentResolver : visit_document
 CLI --> ComponentSerializer : serialize
-CLI --> LobsterWriter : write lobster trace
 
 @enduml

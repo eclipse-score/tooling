@@ -10,25 +10,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-
-rust_library(
-    name = "puml_lobster",
-    srcs = ["src/lib.rs"],
-    visibility = ["//plantuml/parser:__subpackages__"],
-    deps = [
-        "//tools/metamodel/class:class_diagram",
-        "//tools/metamodel/component:component_diagram",
-        "@crates_score_tooling//:serde_json",
-    ],
-)
-
-rust_test(
-    name = "puml_lobster_test",
-    crate = ":puml_lobster",
-    deps = [
-        "//tools/metamodel/class:class_diagram",
-        "//tools/metamodel/component:component_diagram",
-    ],
-)
+# lobster-trlc configuration for the ApiMethod records generated from the
+# public API class diagrams.
+inputs:
+  - .
+conversion-rules:
+  - package: ScoreReq
+    record-type: ApiMethod
+    namespace: req
+    description-fields: signatures

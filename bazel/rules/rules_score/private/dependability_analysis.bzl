@@ -21,7 +21,7 @@ A dependability analysis aggregates sub-analysis rules
   * **security_analysis** – security analysis rule targets (placeholder,
                             optional).
 
-The traceability test runs ``lobster-ci-report`` over Architecture <- Failure
+The traceability test runs ``lobster-ci-report`` over Public API <- Failure
 Modes <- Root Causes.  Coverage of root causes by assessments is checked
 in the ``dependable_element`` traceability report.
 """
@@ -128,15 +128,15 @@ def _dependability_analysis_impl(ctx):
     all_rst_aux = depset(transitive = rst_aux_transitive) if rst_aux_transitive else depset()
 
     # =========================================================================
-    # Lobster traceability report (Architecture, Failure Modes, Root Causes)
+    # Lobster traceability report (Public API, Failure Modes, Root Causes)
     # =========================================================================
     lobster_report_file = None
     lobster_html_file = None
     report_files = []
 
     all_lobster_file_objects = [f for files in lobster_files.values() for f in files]
-    arch_lobster_files = arch_design_info.public_api_lobster_files.to_list() if arch_design_info else []
-    all_lobster_file_objects = list(all_lobster_file_objects) + arch_lobster_files
+    api_lobster_files = arch_design_info.public_api_lobster_files.to_list() if arch_design_info else []
+    all_lobster_file_objects = list(all_lobster_file_objects) + api_lobster_files
     if all_lobster_file_objects:
         lobster_config = ctx.actions.declare_file(
             "{}/traceability_config".format(ctx.label.name),
@@ -146,7 +146,7 @@ def _dependability_analysis_impl(ctx):
             template = ctx.file._lobster_sa_template,
             output = lobster_config,
             substitutions = {
-                "{ARCH_SOURCES}": format_lobster_sources(arch_lobster_files),
+                "{PUBLIC_API_SOURCES}": format_lobster_sources(api_lobster_files),
                 "{FM_SOURCES}": format_lobster_sources(lobster_files.get("failuremodes.lobster", [])),
                 "{RC_SOURCES}": format_lobster_sources(lobster_files.get("fta_root_causes.lobster", [])),
             },
@@ -292,7 +292,7 @@ def dependability_analysis(
     """Define dependability analysis following S-CORE process guidelines.
 
     Aggregates up to three sub-analysis rules and validates the combined
-    traceability chain (Architecture <- Failure Modes <- Root Causes) via
+    traceability chain (Public API <- Failure Modes <- Root Causes) via
     ``lobster-ci-report``.  Coverage of root causes by assessments is checked by
     the ``dependable_element`` traceability report.
 

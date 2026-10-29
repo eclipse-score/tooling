@@ -98,7 +98,7 @@ artifacts that must be linked together:
      - Created in
    * - **Public API Interfaces**
      - PlantUML (from ``architectural_design.public_api``)
-     - Interfaces where failures can manifest; referenced by ``FailureMode.interface``
+     - Interfaces where failures can manifest; the generated ``public_api.trlc`` holds one ``ApiMethod`` record per method, referenced by ``FailureMode.interface``
      - :doc:`architectural_design`
    * - **Failure Modes**
      - TRLC (``.trlc``)
@@ -115,9 +115,9 @@ artifacts that must be linked together:
 
 The artifacts are linked as follows:
 
-- ``FailureMode.interface`` references an element of the ``public_api`` of the
-  ``architectural_design`` target. This connects the architectural view to the
-  safety analysis.
+- ``FailureMode.interface`` references the ``ApiMethod`` record(s) generated
+  from the ``public_api`` class diagrams of the ``architectural_design`` target.
+  This connects the architectural view to the safety analysis.
 - Every ``$FailureMode`` node in an FTA diagram names the **TRLC
   fully-qualified record name(s)** (``Package.RecordName``) of the
   ``FailureMode`` record(s) it covers.
@@ -194,6 +194,7 @@ it is not derived from the Bazel target name and is not enforced by the rule
     package SampleLibrary
 
     import ScoreReq
+    import sample_seooc_api
 
     ScoreReq.FailureMode SampleFailureMode{
         guidewords = [ScoreReq.Guideword.LossOfFunction]
@@ -201,8 +202,14 @@ it is not derived from the Bazel target name and is not enforced by the rule
         failureeffect = "The world as we know it will end"
         version = 1
         safety = ScoreReq.Asil.B
-        interface = "safety_software_seooc_example.SampleLibraryAPI.GetNumber"
+        interface = [sample_seooc_api.safety_software_seooc_example_SampleLibraryAPI_GetNumber]
     }
+
+The ``failure_modes`` target lists the ``architectural_design`` target in
+``deps``; the generated ``public_api.trlc`` it provides lives in the TRLC package
+set by ``architectural_design(package = ...)``. Its record names are
+``<namespace>_<Interface>_<method>`` (``.`` replaced by ``_``); overloads share
+one record, free functions get one record each.
 
 .. list-table::
    :header-rows: 1
@@ -217,9 +224,9 @@ it is not derived from the Bazel target name and is not enforced by the rule
    * - ``failureeffect``
      - Consequence for the caller / system (see Step 2).
    * - ``interface``
-     - Fully-qualified name of the affected ``public_api`` element
-       (``<namespace>.<Interface>.<Method>``). Links the failure mode to the
-       architecture.
+     - ``ApiMethod`` record(s) of the affected public API method(s), written
+       ``<package>.<record>`` and generated from the ``public_api`` diagrams.
+       Links the failure mode to the architecture.
    * - ``safety``
      - ASIL of the safety goal the failure mode can violate (see *ASIL
        rationale* in Step 3).
@@ -552,6 +559,7 @@ Step 4 — Wire the analysis into Bazel
    failure_modes(
        name = "sample_failure_modes",
        srcs = ["sample_safety_analysis_failure_modes.trlc"],
+       deps = ["//design:sample_seooc_design"],
    )
 
    fault_trees(
@@ -564,7 +572,6 @@ Step 4 — Wire the analysis into Bazel
 
    safety_analysis(
        name = "sample_safety_analysis",
-       arch_design = "//design:sample_seooc_design",
        assessments = ["sample_safety_analysis_assessments.trlc"],
        failure_modes = [":sample_failure_modes"],
        fault_trees = ":sample_fault_trees",
@@ -573,7 +580,8 @@ Step 4 — Wire the analysis into Bazel
    )
 
 The analysis is split in three targets to avoid a dependency cycle: the
-``failure_modes`` target holds the ``FailureMode`` records, the ``fault_trees``
+``failure_modes`` target holds the ``FailureMode`` records and, via ``deps``, the
+``ApiMethod`` records of the ``architectural_design`` they reference, the ``fault_trees``
 target generates the ``<fta_package>`` package with the ``RootCause`` records
 referencing them, and the ``safety_analysis`` target lists the failure modes,
 the assessments (which reference the root causes) and the measures they list.
@@ -643,7 +651,7 @@ root causes:
 
 ::
 
-          public_api interface ← FailureMode.interface
+          ApiMethod (public_api.trlc) ← FailureMode.interface
                                             |
                                         $FailureMode
                                             |

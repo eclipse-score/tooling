@@ -54,21 +54,21 @@ def _unit_design_impl(ctx):
     # One `puml_cli` action per view; its diagrams resolve as one group and
     # the views never mix. Diagram type is autodetected.
     stems = disambiguated_stems(ctx, ctx.files.static + ctx.files.dynamic)
-    static_fbs_list, _static_lobster, static_idmap_list = run_puml_parser(
+    static = run_puml_parser(
         ctx,
         ctx.files.static,
         stems,
         progress_label = "{} (static)".format(ctx.label),
     )
-    dynamic_fbs_list, _dynamic_lobster, dynamic_idmap_list = run_puml_parser(
+    dynamic = run_puml_parser(
         ctx,
         ctx.files.dynamic,
         stems,
         progress_label = "{} (dynamic)".format(ctx.label),
     )
-    idmap_list = static_idmap_list + dynamic_idmap_list
-    static_fbs = depset(static_fbs_list)
-    dynamic_fbs = depset(dynamic_fbs_list)
+    idmap_list = static.idmap + dynamic.idmap
+    static_fbs = depset(static.fbs)
+    dynamic_fbs = depset(dynamic.fbs)
 
     # Stage idmap sidecars into the sphinx sources alongside the source
     # diagrams so `clickable_plantuml` (which scans `srcdir` recursively for

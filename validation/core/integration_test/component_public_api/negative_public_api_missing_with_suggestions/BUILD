@@ -17,6 +17,7 @@ load("//validation/core/integration_test:puml_fixture.bzl", "provider_fbs_fixtur
 architectural_design(
     name = "design",
     maturity = "development",
+    package = "negative_public_api_missing_with_suggestions_api",
     public_api = ["public_api.puml"],
     static = ["static_design.puml"],
     visibility = ["//visibility:private"],

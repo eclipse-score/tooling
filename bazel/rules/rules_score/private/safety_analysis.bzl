@@ -71,21 +71,25 @@ Both rules are **build-only**.  The combined traceability *test* is owned by the
 ``dependability_analysis`` rule which wraps ``safety_analysis``.
 """
 
+load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo")
-load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "ArchitecturalDesignInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FailureModesInfo", "FaultTreesInfo", "SafetyAnalysisProviderInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FailureModesInfo", "FaultTreesInfo", "SafetyAnalysisProviderInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:lobster_config.bzl", "MERGE_LOBSTER_ITEMS_ATTR", "merge_lobster_files")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
+_LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+_IDENTIFIER_CHARS = _LETTERS + "0123456789_"
+
 def _default_fta_package(label):
     """Best-effort conversion of a Bazel *label* into a valid TRLC package
-    identifier (``[A-Za-z_][A-Za-z0-9_]*``).
+    identifier (an ASCII letter followed by ASCII letters, digits and ``_``).
 
     Package and name are joined with ``__`` so equally named targets of
     different packages get distinct packages in one TRLC build. The repository
     is left out: it differs between a root build and a build as a dependency,
     which would change the package that downstream records reference.
-    Non-identifier characters (e.g. ``-``, ``/``) become ``_``; a result
-    starting with a digit gets a leading ``_``.
+    Non-identifier characters (e.g. ``-``, ``/``) become ``_``; a result not
+    starting with a letter gets a leading ``P``.
 
     A ``_fta`` suffix is appended: TRLC rejects packages whose name is "too
     similar" (same modulo case/underscores) to another declared package, and
@@ -95,12 +99,9 @@ def _default_fta_package(label):
     collide with that package.
     """
     name = "__".join([p for p in [label.package, label.name] if p])
-    out = ""
-    for i in range(len(name)):
-        c = name[i]
-        out += c if (c.isalnum() or c == "_") else "_"
-    if out[:1].isdigit():
-        out = "_" + out
+    out = "".join([c if c in _IDENTIFIER_CHARS else "_" for c in name.elems()])
+    if not out or out[0] not in _LETTERS:
+        out = "P" + out
     return out + "_fta"
 
 # ============================================================================
@@ -135,10 +136,9 @@ def _process_root_causes(ctx, fta_package):
     fta_events_trlc = ctx.actions.declare_file("{}/fta_events.trlc".format(ctx.label.name))
 
     if not puml_inputs:
-        # No fault trees: emit an empty stub so the assembler still runs
-        # (rendering every failure mode without root causes). No
-        # "import ScoreReq" here: with zero records it would be flagged as an
-        # unused import by TRLC.
+        # No fault trees: the assembler still runs, rendering every failure
+        # mode without root causes. No `import ScoreReq`: with zero records TRLC
+        # flags it as unused.
         ctx.actions.write(
             fta_events_trlc,
             "// no root cause diagrams\npackage {}\n".format(fta_package),
@@ -160,27 +160,6 @@ def _process_root_causes(ctx, fta_package):
     )
 
     return puml_inputs, fta_events_trlc
-
-# ============================================================================
-# Lobster (TRLC traceability) helper
-# ============================================================================
-
-def _lobster_trlc(ctx, trlc_files, config, out_name):
-    """Run ``lobster-trlc`` over *trlc_files* (incl. the model spec) producing ``{label}/<out_name>``."""
-    if not trlc_files:
-        return None
-    out = ctx.actions.declare_file("{}/{}".format(ctx.label.name, out_name))
-    args = ctx.actions.args()
-    args.add("--config", config.path)
-    args.add("--out", out.path)
-    ctx.actions.run(
-        inputs = depset(trlc_files + [config]),
-        outputs = [out],
-        executable = ctx.executable._lobster_trlc,
-        arguments = [args],
-        progress_message = "lobster-trlc {}".format(out.path),
-    )
-    return out
 
 # ============================================================================
 # Private Rule Implementation
@@ -209,11 +188,9 @@ def _fault_trees_impl(ctx):
 
     lobster_files = {}
     if diagrams:
-        lobster_files["fta_root_causes.lobster"] = _lobster_trlc(
-            ctx,
+        lobster_files["fta_root_causes.lobster"], _ = subrule_lobster_trlc(
             [fta_events_trlc] + fm_files.to_list() + spec.to_list(),
             ctx.file._rc_lobster_config,
-            "fta_root_causes.lobster",
         )
 
     return [
@@ -320,11 +297,9 @@ def _safety_analysis_impl(ctx):
         lobster_files["failuremodes.lobster"] = fm_lobster_files[0]
 
     if assessment_files:
-        lobster_files["assessments.lobster"] = _lobster_trlc(
-            ctx,
+        lobster_files["assessments.lobster"], _ = subrule_lobster_trlc(
             assessment_files + fta_and_fm_files + measure_files + context_files + spec_files,
             ctx.file._assessments_lobster_config,
-            "assessments.lobster",
         )
 
     # The .puml diagrams are referenced inline via ``.. uml::`` but
@@ -389,13 +364,6 @@ _fault_trees = rule(
                 cfg = "exec",
                 doc = "puml_cli binary used in FTA mode to extract fta_events.trlc.",
             ),
-            "_lobster_trlc": attr.label(
-                default = Label("@lobster//:lobster-trlc"),
-                executable = True,
-                allow_files = True,
-                cfg = "exec",
-                doc = "lobster-trlc executable used to generate the RC lobster file.",
-            ),
             "_rc_lobster_config": attr.label(
                 default = Label("//bazel/rules/rules_score/lobster/config:fta_root_causes_config"),
                 allow_single_file = True,
@@ -404,6 +372,7 @@ _fault_trees = rule(
         },
         **VERBOSITY_ATTR
     ),
+    subrules = [subrule_lobster_trlc],
 )
 
 _safety_analysis = rule(
@@ -442,24 +411,12 @@ _safety_analysis = rule(
                 doc = "TRLC model specification files (``.rsl``) required for import resolution. " +
                       "Defaults to the S-CORE requirements model.",
             ),
-            "arch_design": attr.label(
-                providers = [ArchitecturalDesignInfo],
-                mandatory = True,
-                doc = "architectural_design target for traceability.",
-            ),
             "_safety_analysis_assembler": attr.label(
                 default = Label("//bazel/rules/rules_score:safety_analysis_assembler"),
                 executable = True,
                 allow_files = True,
                 cfg = "exec",
                 doc = "Safety-analysis page assembler (imports the extended TRLCRST library).",
-            ),
-            "_lobster_trlc": attr.label(
-                default = Label("@lobster//:lobster-trlc"),
-                executable = True,
-                allow_files = True,
-                cfg = "exec",
-                doc = "lobster-trlc executable used to generate the assessments lobster file.",
             ),
             "_assessments_lobster_config": attr.label(
                 default = Label("//bazel/rules/rules_score/lobster/config:assessments_config"),
@@ -474,6 +431,7 @@ _safety_analysis = rule(
         },
         **dict(VERBOSITY_ATTR, **MERGE_LOBSTER_ITEMS_ATTR)
     ),
+    subrules = [subrule_lobster_trlc],
 )
 
 # ============================================================================
@@ -522,7 +480,6 @@ def fault_trees(
 
 def safety_analysis(
         name,
-        arch_design,
         fault_trees,
         failure_modes = [],
         safety_measures = [],
@@ -550,8 +507,6 @@ def safety_analysis(
 
     Args:
         name: Target name.
-        arch_design: ``architectural_design`` target for traceability; its
-            ``public_api`` is what ``FailureMode.interface`` references.
         fault_trees: ``fault_trees`` target providing the root causes.
         failure_modes: ``failure_modes`` targets whose records are rendered and
             traced. Every failure mode a root cause references must be listed.
@@ -574,6 +529,5 @@ def safety_analysis(
         failure_modes = failure_modes,
         safety_measures = safety_measures,
         assessments = assessments,
-        arch_design = arch_design,
         **kwargs
     )

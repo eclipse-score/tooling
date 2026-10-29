@@ -202,16 +202,18 @@ Complete Example
 
    # Architecture
    architectural_design(name = "arch",
+                        package = "my_arch_api",
                         static = ["docs/arch.puml"],
                         dynamic = ["docs/sequence.puml"],
                         public_api = ["docs/public_api.puml"])
 
    # Safety analysis
-   failure_modes(name = "my_failure_modes", srcs = ["docs/failures.trlc"])
+   failure_modes(name = "my_failure_modes", srcs = ["docs/failures.trlc"],
+                 deps = [":arch"])
    fault_trees(name = "my_fault_trees",
         srcs = ["docs/fta.puml"],
         deps = [":my_failure_modes"])
-   safety_analysis(name = "my_safety_analysis", arch_design = ":arch",
+   safety_analysis(name = "my_safety_analysis",
         assessments     = ["docs/assessments.trlc"],
         failure_modes   = [":my_failure_modes"],
         fault_trees     = ":my_fault_trees",

@@ -20,9 +20,6 @@
 //!   child elements, class members, or this diagram is the detail view).
 //! * **references** – leaf mentions and relation endpoints (elements that
 //!   should link *away* to wherever they are elaborated).
-//!
-//! This mirrors the structure of `puml_lobster` but produces idmap JSON
-//! rather than LOBSTER trace JSON.
 
 use class_diagram::ClassDiagram;
 use component_diagram::LogicComponent;

@@ -18,6 +18,7 @@ rust_library(
         "src/label_markup.rs",
         "src/lib.rs",
         "src/log.rs",
+        "src/trlc.rs",
         "src/write_files.rs",
     ],
     visibility = ["//plantuml/parser:__subpackages__"],

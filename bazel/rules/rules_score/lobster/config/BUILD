@@ -51,6 +51,12 @@ filegroup(
 )
 
 filegroup(
+    name = "api_methods_config",
+    srcs = ["lobster_api_methods.yaml"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
     name = "aou_config",
     srcs = ["lobster_aou.yaml"],
     visibility = ["//visibility:public"],

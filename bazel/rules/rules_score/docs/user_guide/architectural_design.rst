@@ -535,7 +535,13 @@ for the user of the dependable element and state which functions of the dependab
 related information.
 
 As a proof for their safety relevance for each public method a FMEA should be carried out. This is documented by linking each method to a safety analysis:
-``FailureMode`` records reference interface items by name (via the ``interface`` field), enabling traceability from each failure mode back to the architecture.
+the build generates one ``ApiMethod`` TRLC record per public method (all overloads) and per free function of the public API class diagrams (the view accepts class diagrams only), and
+``FailureMode`` records reference them (via the ``interface`` field), enabling traceability from each failure mode back to the architecture.
+Attributes, enums, typedefs and non-public members yield no record.
+Constructors and destructors are public methods like any other and get a record each (``<Class>_<Class>``, ``<Class>_destructor``).
+The ``const`` qualifier is not part of a recorded signature yet, so const and non-const overloads are merged.
+The records live in a generated ``public_api.trlc`` of the ``architectural_design`` target (reports show this file as item location, not the ``.puml`` source); list the target in the ``deps`` of ``failure_modes``
+and ``import`` its TRLC package in the failure mode file. The ``package`` attribute names that package and is required with ``public_api``.
 
 PlantUML
 ~~~~~~~~~
@@ -555,10 +561,9 @@ Bazel
 
     architectural_design(
         name       = "my_arch",
+        package    = "my_arch_api",
         public_api = ["public_api.puml"],
     )
-
-The ``public_api`` attribute also generates traceability items that can be referenced by ``safety_analysis`` targets (see :doc:`dependability_analysis`) via the ``arch_design`` attribute.
 
 Internal API
 --------------

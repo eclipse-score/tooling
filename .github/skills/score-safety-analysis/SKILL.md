@@ -73,14 +73,14 @@ aliases, BUILD wired, `trlc` clean.
 for each, apply the applicable fault models and ask *"can this occur, and would it violate a
 safety goal?"* Dismiss low-relevance models with a short rationale.
 
-| Fault-model category | Example models | `GuideWord` labels |
+| Fault-model category | Example models | `Guideword` labels |
 |----------------------|----------------|--------------------|
 | Message (send/receive) | not sent/received, corrupted, lost, unintended (`MF_01_*`) | `LossOfFunction`, `PartialFunction`, `Corrupted`, `UnintendedFunction`, `Wrong` |
 | Timing / duration | too late/early, boundary violated (`CO_01_*`) | `TooEarly`, `TooLate`, `DelayedFunction` |
 | Execution | wrong result, loss, arbitrary/incomplete (`EX_01_*`) | `Wrong`, `LossOfFunction`, `ExceedingFunction`, `ArbitraryExecution` |
 
 > **Clustering:** one `FailureMode` per *(interface, guide word)* effect — group methods sharing a
-> root cause in the `interface` field; one root cause under two guide words → two records.
+> root cause in the `interface` list; one root cause under two guide words → two records.
 
 **Step 2 — effect, then causes.** Write `failureeffect` from the **caller/system perspective** in
 worst-case terms relative to the safety goal. Then build the FTA top-down to **actionable root
@@ -108,24 +108,30 @@ Package: match the existing package declaration in the folder structure
 ```trlc
 package <Pkg>
 import ScoreReq
+import <ArchApiPkg>
 
 ScoreReq.FailureMode <RecordName> {
-    guideword      = ScoreReq.GuideWord.<Word>
+    guidewords     = [ScoreReq.Guideword.<Word>]
     description    = "statement describing the expected behaviour"
     failureeffect  = "What goes wrong for the caller / system"
-    potentialcause = "Root cause(s) from the FMEA"
-    interface      = "<Interface>.<Method>[, <Interface>.<Method>]"
+    interface      = [<ArchApiPkg>.<Entity>_<method>]
     version        = 1
     safety         = ScoreReq.Asil.B
 }
 ```
 
-**GuideWord enum values:** `LossOfFunction`, `PartialFunction`, `Corrupted`, `UnintendedFunction`, `TooEarly`, `TooLate`, `Wrong`, `DelayedFunction`, `ExceedingFunction`, `ArbitraryExecution`
+`<ArchApiPkg>` is the `package` of the `architectural_design` target. The build generates one
+`ScoreReq.ApiMethod` record per public method (all overloads) and per free function of its
+`public_api` class diagrams, named `<Entity>_<method>` (`<Entity>` = namespace-qualified
+entity id, `.` → `_`, e.g. `ns_Interface_Send`); the
+`failure_modes` target lists the `architectural_design` in `deps`.
+
+**Guideword enum values:** `LossOfFunction`, `PartialFunction`, `Corrupted`, `UnintendedFunction`, `TooEarly`, `TooLate`, `Wrong`, `DelayedFunction`, `ExceedingFunction`, `ArbitraryExecution`
 
 **Rules:**
 - One record per FailureMode, not per interface method.
-- Same root cause spanning multiple guide words → separate records (trlc only allows one `guideword` per record).
-- `interface` may list multiple methods as a comma-separated string when root cause is shared.
+- Same root cause spanning multiple guide words → separate records.
+- `interface` may list several `ApiMethod` records when the root cause is shared.
 
 ## Step 2 — Create FTA Diagrams (`fta_<snake_name>.puml`)
 
@@ -197,10 +203,10 @@ The `@<version>` of a measure pins the reviewed version; a version change of the
 **Rule:** every `$RootCause` alias must be listed in the `root_causes` of exactly one `RootCauseAssessment`, and every own `AoU` must be listed in the `measures` of at least one. This is checked by lobster in the traceability report of the enclosing `dependable_element` (the Root Cause Assessments level traces to Root Causes and Assumptions of Use; uncovered items are reported as `missing reference to Root Cause Assessments`, and fail `bazel test <dependable_element>` with `maturity = "release"`). The safety analysis is three rules: `failure_modes` (the `FailureMode` records), `fault_trees` (`srcs` = FTA diagrams, `deps` = the `failure_modes` targets; generates the `<fta_package>` root causes) and `safety_analysis` (`failure_modes`, `fault_trees`, `assessments` and `safety_measures`: `assumptions_of_use` / `component_requirements` targets the assessments list; only their own records are rendered, targets in their `deps` just resolve references; raw `.trlc` files in `assessments` may only hold `RootCauseAssessment` records, every failure mode a root cause references must be in `failure_modes`, and an assessment may only list measures of `safety_measures`). Every `assumptions_of_use` target passed as `safety_measures` is an own AoU of the enclosing `dependable_element` (derived, deduplicated by label, forwarded to dependees); one no `safety_analysis` lists is neither rendered nor forwarded:
 
 ```python
-failure_modes(name = "fm", srcs = ["failure_modes.trlc"])
+failure_modes(name = "fm", srcs = ["failure_modes.trlc"], deps = [":arch"])
 fault_trees(name = "ft", srcs = [":fta_files"], deps = [":fm"])
 assumptions_of_use(name = "aous", srcs = ["aous.trlc"])
-safety_analysis(name = "sa", arch_design = ":arch", failure_modes = [":fm"], fault_trees = ":ft",
+safety_analysis(name = "sa", failure_modes = [":fm"], fault_trees = ":ft",
                 assessments = ["assessments.trlc"], safety_measures = [":aous"])
 ```
 
@@ -228,7 +234,7 @@ Pre-existing RSL union-type errors (`expected identifier, encountered '['`) are 
 **Traceability chain that must be complete:**
 
 ```
-FailureMode.interface  →  public_api interface name
+FailureMode.interface  →  ApiMethod record (generated from the public_api class diagram)
 FailureMode record     →  $FailureMode fm1..fm8 arguments
 $RootCause alias      →  RootCauseAssessment.root_causes
 RootCauseAssessment   →  measures (AoU / CompReq, versioned)

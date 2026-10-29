@@ -58,7 +58,7 @@ def _measure_deps_are_context_only_test_impl(ctx):
         _basenames(_flag_values(argv, "--assessments")),
     )
     asserts.true(env, "aou.trlc" in _basenames(_flag_values(argv, "--dep-files")))
-    asserts.true(env, _action_with_output(env, "assessments.lobster") != None)
+    asserts.true(env, _action_with_output(env, "comp_req_measure_safety_analysis.lobster") != None)
     return analysistest.end(env)
 
 measure_deps_are_context_only_test = analysistest.make(_measure_deps_are_context_only_test_impl)

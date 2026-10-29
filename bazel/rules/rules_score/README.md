@@ -110,7 +110,8 @@ that `:satisfies:` / `:derived_from:` resolve in.
 ```starlark
 architectural_design(
     name = "my_design",
-    static = ["class.puml", "component.puml"],
+    package = "my_design_api",
+    static = ["component.puml"],
     dynamic = ["sequence.puml"],
     public_api = ["api.puml"],
 )
@@ -118,13 +119,19 @@ architectural_design(
 
 **`bazel build`** — runs `puml_parser` on every `.puml` file, producing:
 - a `.fbs.bin` FlatBuffers binary (diagram AST) — consumed by validation/core checks
-- a `.lobster` traceability file (Interface elements only) — consumed by LOBSTER
 - a `validation.log` from the `architectural-design` validation profile
 - a `.idmap.json` sidecar — consumed by the `clickable_plantuml` Sphinx extension
   to resolve cross-diagram links based on element *defines/references* roles
+- a `public_api.trlc` — one `ScoreReq.ApiMethod` record per public method (all
+  overloads) and per free function of the `public_api` class diagrams (other
+  diagram kinds in `public_api` fail the build; attributes, enums, typedefs and
+  non-public members yield no record). The `package` attribute names its TRLC
+  package and is required with `public_api`. Provided as `TrlcProviderInfo`, so
+  `failure_modes(deps = [...])` can reference the records
 
-Diagrams in `public_api` are classified separately so their lobster items flow
-through `public_api_lobster_files` for failure-mode traceability.
+`lobster-trlc` runs on `public_api.trlc` and the result flows through
+`public_api_lobster_files` for failure-mode traceability. Reports show the
+generated `public_api.trlc` as item location, not the `.puml` source.
 
 ---
 
@@ -194,6 +201,7 @@ requirements).
 failure_modes(
     name = "my_failure_modes",
     srcs = ["failure_modes.trlc"],
+    deps = [":my_design"],  # provides the ApiMethod records of FailureMode.interface
 )
 
 fault_trees(
@@ -209,7 +217,6 @@ assumptions_of_use(
 
 safety_analysis(
     name = "my_safety_analysis",
-    arch_design = ":my_design",
     assessments = ["assessments.trlc"],
     failure_modes = [":my_failure_modes"],
     fault_trees = ":my_fault_trees",
