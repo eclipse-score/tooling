@@ -34,7 +34,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build-docs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
@@ -243,7 +243,7 @@ jobs:
   deploy-pages:
     needs: build-docs
     if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
