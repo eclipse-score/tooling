@@ -22,6 +22,20 @@ requirements:
         given: a default-constructed Foo instance
         when: GetNumber is called
         then: it returns 42
+      - uid: //Foo:GetNumberRepeatedly
+        spec:
+          ref: //unit_1:get_number_spec
+          goal: Show that the read operation of the numeric value management interface returns the expected uint8_t value, independent of how often and through which kind of reference it is called.
+          focus: |-
+            - interface behavior of Foo::GetNumber
+            - repeated reads through mutable and const references
+          steps:
+            - precondition: A default-constructed Foo instance exists.
+              action: Call GetNumber once.
+              expected: The returned value is 42.
+            - precondition: ''
+              action: Call GetNumber again through a const reference to the same instance.
+              expected: The returned value is still 42.
       - uid: //Foo:GetNumberViaConstInstance
         given: a const default-constructed Foo instance
         when: GetNumber is called through a const reference

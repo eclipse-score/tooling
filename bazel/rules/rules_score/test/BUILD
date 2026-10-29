@@ -31,6 +31,7 @@ load(
     "rst_to_trlc",
     "safety_analysis",
     "sphinx_module",
+    "test_specification",
     "unit",
     "unit_design",
 )
@@ -162,6 +163,13 @@ load(
     "seooc_serve_alias_test",
     "seooc_sphinx_entry_point_is_root_index_test",
     "seooc_sphinx_module_generated_test",
+)
+load(
+    ":test_specification_test.bzl",
+    "coverage_check_consumes_test_specs_test",
+    "test_specification_action_test",
+    "test_specification_test_suite",
+    "unit_test_specs_test",
 )
 load(
     ":unit_component_test.bzl",
@@ -1653,11 +1661,35 @@ unit_design(
     static = ["fixtures/seooc_test/static_architecture.rst"],
 )
 
+# Formal RST test specification, referenced by test_unit (see test_specification_test.bzl)
+test_specification(
+    name = "test_spec_sample",
+    src = "fixtures/test_specification/sample_spec.rst",
+)
+
+test_specification_action_test(
+    name = "test_specification_action_test",
+    target_under_test = ":test_spec_sample",
+)
+
+unit_test_specs_test(
+    name = "unit_test_specs_test",
+    target_under_test = ":test_unit",
+)
+
+coverage_check_consumes_test_specs_test(
+    name = "coverage_check_consumes_test_specs_test",
+    target_under_test = ":test_dependable_element_coverage_release_index",
+)
+
+test_specification_test_suite(name = "test_specification_test_suite")
+
 # Test Unit
 unit(
     name = "test_unit",
     testonly = True,
     scope = ["//:mock_lib1"],
+    test_specs = [":test_spec_sample"],
     tests = [":test_unit_tests"],
     unit_design = [":test_unit_design"],
     implementation = [

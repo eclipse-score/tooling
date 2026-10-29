@@ -12,6 +12,7 @@
 # *******************************************************************************
 load(
     "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
+    "test_specification",
     "unit",
 )
 
@@ -20,6 +21,9 @@ unit(
     #    scope = ["//bazel/rules/rules_score/examples/seooc/unit_1:__pkg__"],
     #    scope = ["//bazel/rules/rules_score/examples/seooc:__subpackages__"],
     scope = ["//unit_1:unit_1_lib"],
+    test_specs = [
+        ":get_number_spec",
+    ],
     tests = [
         ":unit_1_test",
     ],
@@ -30,6 +34,13 @@ unit(
     implementation = [
         ":unit_1_lib",
     ],
+)
+
+# Formal test specification, referenced by a test case via
+# RecordProperty("test-spec", "//unit_1:get_number_spec").
+test_specification(
+    name = "get_number_spec",
+    src = "get_number_spec.rst",
 )
 
 cc_library(

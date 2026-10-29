@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from lobster.common.io import lobster_write
@@ -77,3 +78,23 @@ def write_gtest_lobster(
     item.add_tracing_target(Tracing_Tag("req", req_id))
     with path.open("w", encoding="utf-8") as fd:
         lobster_write(fd, Activity, "lobster_gtest", [item])
+
+
+def write_test_spec_manifest(tmp_path: Path, ref: str = "//pkg:spec", goal: str = "goal") -> Path:
+    """Write one ``.test_spec.json`` plus a manifest listing it; return the manifest path."""
+    spec_json = tmp_path / "spec.test_spec.json"
+    spec_json.write_text(
+        json.dumps(
+            {
+                "ref": ref,
+                "aliases": [],
+                "goal": goal,
+                "focus": "",
+                "steps": [{"precondition": "", "action": "a", "expected": "e"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest = tmp_path / "spec_manifest.txt"
+    manifest.write_text(f"{spec_json}\n", encoding="utf-8")
+    return manifest

@@ -20,6 +20,10 @@ covered by automated test cases. Coverage is locked and confirmed by a committed
 
 Requirement IDs are extracted automatically and test records are read from the ``gtest.lobster`` file.
 
+A test case is specified either by Given/When/Then or by a formal test
+specification in RST that it references with ``RecordProperty("test-spec", "<label>")``
+(see :doc:`../user_guide/validation`).
+
 .. note::
 
    For how to annotate tests with ``lobster-tracing`` see
@@ -77,6 +81,8 @@ Architecture
 
    bazel/rules/rules_score/src/test_case_coverage/
    ├── read_gtest_lobster.py       # reads gtest.lobster; also resolve_path, scan, req_ids
+   ├── parse_test_spec.py          # test_specification rule: validates RST, writes JSON
+   ├── test_spec.py                # loads test_specification JSON by label
    ├── compute_lock.py             # uid/spec serialisation + YAML lock
    ├── check_lock.py               # committed vs computed comparison
    ├── lobster_generator.py        # emits LOBSTER activity artifact
@@ -90,11 +96,13 @@ Data flow
 
    Requirements targets (.lobster) ──► extract requirement IDs
    subrule_lobster_gtest ───────────► gtest.lobster
-                                              │
-                                    read_gtest_lobster
-                                    (uid, req refs, spec text)
-                                              │
-                                        compute_lock
+   test_specification (RST) ─► parse_test_spec ─► <name>.test_spec.json
+                                              │                 │
+                                    read_gtest_lobster      test_spec
+                                    (uid, req refs, GWT,    (spec by label,
+                                     test-spec label)        via manifest)
+                                              │                 │
+                                        compute_lock ◄──────────┘
                                     ┌─────────┴──────────────┐
                               RUN phase                TEST phase
                           (bazel run .update)       (bazel test)
@@ -121,6 +129,15 @@ reviewing ``git diff``.
            given: a connected client
            when:  the OS IPC call fails
            then:  the client receives an error
+         - uid:   "//score/message_passing/ConnectionSuite:OsIpcReconnectTest"
+           spec:
+             ref:   //score/message_passing/test_specs:reconnect
+             goal:  Show that a client reconnects after the server restarts.
+             focus: fault injection
+             steps:
+               - precondition: a connected client
+                 action:       restart the server
+                 expected:     the client reconnects within 1 s
 
 .. list-table::
    :header-rows: 1
@@ -136,7 +153,46 @@ reviewing ``git diff``.
      - Individual GWT fields from ``RecordProperty`` annotations or the test
        name; any change makes the lock stale. ``given`` and ``then`` must be
        non-blank. ``when`` may be empty and is then stored as ``''``
+   * - ``test_cases[].spec``
+     - Formal test specification of a test case that sets ``test-spec``; replaces
+       ``given``/``when``/``then`` (an entry with both is rejected). Holds
+       ``ref`` (the ``test-spec`` reference as written in the test), ``goal``, ``focus`` and
+       ``steps`` (``precondition``, ``action``, ``expected``) as parsed from the
+       RST; any change makes the lock stale. Multi-line text is written as a YAML
+       literal block
 
 Upgrading ``lobster`` to a version that derives the GWT fields from test names
 changes the text of tests that follow the naming pattern and set no properties.
 Run ``.update`` and review the diff, see :doc:`../user_guide/validation`.
+
+Test specifications
+-------------------
+
+``test_specification`` targets run ``parse_test_spec`` as the build action
+``TestSpecificationCheck``: a malformed RST fails the build regardless of
+``maturity``. The action writes ``<name>.test_spec.json`` with the parsed content
+and the labels of the target and of its RST file, relative to their own
+repository (``//pkg:name``, ``//pkg:name.rst``).
+
+The test case references a spec as text in a ``RecordProperty``, so Bazel's
+repository mapping does not apply to it. Instead, the ``unit`` macro records how
+each ``test_specs`` entry is spelled in the unit's repository (``:name`` in
+``//pkg`` becomes ``//pkg:name``, ``@spec_repo//specs:name`` is kept) and resolves
+the label itself as usual. ``unit`` and ``component`` pass these pairs to both
+runners in a manifest (``TEST_CASE_COVERAGE_SPEC_MANIFEST``), one
+``<json path><TAB><reference>`` per line.
+
+For each test case with a ``test-spec`` property the runners normalize the
+reference (``@@//pkg:name``, ``@//pkg:name`` and ``//pkg/name`` become
+``//pkg:name``) and look it up:
+
+#. among the references from the ``test_specs`` entries;
+#. otherwise among the repository-relative labels of the JSON files.
+
+A key that two different specifications claim is ambiguous and does not resolve.
+A reference that does not resolve is reported like a missing Given/Then and is
+subject to the same ``maturity`` handling.
+
+None of this depends on canonical repository names, so a SEooC that is built as an
+external dependency (e.g. by an integrator module) resolves its references the
+same way.

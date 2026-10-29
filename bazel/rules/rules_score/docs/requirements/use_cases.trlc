@@ -185,10 +185,22 @@ section "Use Cases" {
     ToolQualification.UseCase Detect_Specification_Drift {
         description = '''
             In the CI pipeline I want to detect automatically when a test's
-            given/when/then specification has changed without re-approval so
-            that stale coverage claims are caught before release.
+            given/when/then specification or formal test specification has
+            changed without re-approval so that stale coverage claims are
+            caught before release.
         '''
         affected_tools = [Tools.TestCaseCoverage]
+    }
+
+    ToolQualification.UseCase Formal_Test_Specification {
+        description = '''
+            As a test engineer I want to specify a complex test case in a
+            formal test specification document (test goal, test focus, test
+            steps) instead of a given/when/then description, so that
+            multi-step and higher-order tests are specified completely and
+            the specification is part of the reviewed coverage claim.
+        '''
+        affected_tools = [Tools.TestCaseCoverage, Tools.Bazel]
     }
 
     ToolQualification.UseCase Detect_Coverage_Set_Changes {

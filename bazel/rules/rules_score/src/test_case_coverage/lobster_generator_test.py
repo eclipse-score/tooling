@@ -13,7 +13,7 @@
 import json
 from pathlib import Path
 
-from test_case_coverage.compute_lock import LockFile, RequirementEntry, TestCase
+from test_case_coverage.compute_lock import LockFile, RequirementEntry, TestCase, TestSpec, TestStep
 from test_case_coverage.lobster_generator import generate_lobster
 
 
@@ -236,6 +236,48 @@ def test_not_covered_message_includes_label(tmp_path):
     generate_lobster(computed, None, "//pkg:cov", out)
     item = json.loads(out.read_text())["data"][0]
     assert any("//pkg:cov" in m for m in item["messages"])
+
+
+# ---------------------------------------------------------------------------
+# Formal test specification (test-spec)
+# ---------------------------------------------------------------------------
+
+_SPEC = TestSpec(
+    ref="//pkg:spec",
+    goal="line one\n\nline two",
+    focus="fault injection",
+    steps=(TestStep(action="act", expected="exp"),),
+)
+
+
+def _spec_tc(spec=_SPEC):
+    return TestCase(uid="Suite:A", spec=spec)
+
+
+def test_text_contains_test_spec(tmp_path):
+    out = tmp_path / "out.lobster"
+    generate_lobster(_make_lock(_req("P.R", _spec_tc())), None, "//pkg:cov", out)
+    text = json.loads(out.read_text())["data"][0]["text"]
+    assert ":Test specification: ``//pkg:spec``" in text
+    assert ":Test goal:\n   line one\n\n   line two\n" in text
+    assert ":Test focus: fault injection" in text
+    assert ".. list-table:: Test steps" in text
+    assert "     - \\-\n     - act\n     - exp" in text
+    assert ":Given:" not in text
+
+
+def test_same_test_spec_is_ok(tmp_path):
+    out = tmp_path / "out.lobster"
+    lock = _make_lock(_req("P.R", _spec_tc()))
+    generate_lobster(lock, _make_lock(_req("P.R", _spec_tc())), "//pkg:cov", out)
+    assert json.loads(out.read_text())["data"][0]["status"] == "ok"
+
+
+def test_changed_test_spec_fails(tmp_path):
+    out = tmp_path / "out.lobster"
+    changed = TestSpec(ref="//pkg:spec", goal="other", steps=_SPEC.steps)
+    generate_lobster(_make_lock(_req("P.R", _spec_tc(changed))), _make_lock(_req("P.R", _spec_tc())), "//pkg:cov", out)
+    assert json.loads(out.read_text())["data"][0]["status"] == "fail"
 
 
 if __name__ == "__main__":

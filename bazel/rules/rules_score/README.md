@@ -27,6 +27,7 @@ for safety related automotive software.
 | `assumptions_of_use` | `AssumptionsOfUseInfo` |
 | `architectural_design` | `ArchitecturalDesignInfo` |
 | `unit` | `UnitInfo`, `CertifiedScope` |
+| `test_specification` | `TestSpecificationInfo` |
 | `component` | `ComponentInfo` |
 | `failure_modes` | `FailureModesInfo`, `TrlcProviderInfo` |
 | `fault_trees` | `FaultTreesInfo`, `TrlcProviderInfo` |
@@ -135,6 +136,7 @@ unit(
     unit_design = [":my_design"],
     implementation = [":my_lib"],
     tests = [":my_tests"],
+    test_specs = [":my_test_spec"],  # optional
 )
 ```
 
@@ -143,6 +145,23 @@ references into `UnitInfo`. Also runs unit tests via `gtest_report` and
 produces `.lobster` traceability items for LOBSTER.
 
 **`bazel test`** — executes the wrapped test targets.
+
+---
+
+## `test_specification`
+
+```starlark
+test_specification(
+    name = "my_test_spec",
+    src = "my_test_spec.rst",
+)
+```
+
+A formal test specification in RST (Test Goal, Test Focus, Test Steps). A test
+case references it with `RecordProperty("test-spec", "//pkg:my_test_spec")`
+instead of Given/When/Then; the parsed content is recorded in the coverage lock.
+
+**`bazel build`** — validates the RST format and fails on a malformed file.
 
 ---
 

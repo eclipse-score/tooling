@@ -10,12 +10,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+import pytest
+
 from test_case_coverage.compute_lock import (
     SCHEMA_VERSION,
     LockFile,
     RequirementEntry,
     RequirementMeta,
     TestCase,
+    TestSpec,
+    TestStep,
     compute_lock,
     deserialize,
     serialize,
@@ -190,6 +194,96 @@ def test_gtest_tag_excluded_from_serialized_yaml():
     restored = deserialize(yaml_str)
     tc = restored.requirements[0].test_cases[0]
     assert tc.gtest_tag == ""
+
+
+# ---------------------------------------------------------------------------
+# Formal test specification (test-spec)
+# ---------------------------------------------------------------------------
+
+_SPEC = TestSpec(
+    ref="//pkg:spec",
+    goal="goal",
+    focus="focus",
+    steps=(TestStep(precondition="p", action="a", expected="e"), TestStep(action="a2", expected="e2")),
+)
+
+
+def test_spec_test_case_serializes_without_gwt_keys():
+    lock = LockFile(
+        schema_version=SCHEMA_VERSION,
+        requirements=[RequirementEntry(id="P.R", version="1", test_cases=[TestCase(uid="//pkg/S:T", spec=_SPEC)])],
+    )
+    text = serialize(lock)
+    assert "given" not in text and "when" not in text and "then" not in text
+    assert "ref: //pkg:spec" in text
+    assert deserialize(text) == lock
+
+
+def test_multiline_text_is_serialized_as_literal_block():
+    spec = TestSpec(ref="//pkg:spec", goal="line one\n\nline two", steps=(TestStep(action="a", expected="e"),))
+    lock = LockFile(
+        schema_version=SCHEMA_VERSION,
+        requirements=[RequirementEntry(id="P.R", test_cases=[TestCase(uid="S:T", spec=spec)])],
+    )
+    text = serialize(lock)
+    assert "goal: |-\n" in text
+    assert deserialize(text) == lock
+
+
+def test_deserialize_rejects_spec_mixed_with_gwt():
+    yaml_str = f"""
+schema_version: {SCHEMA_VERSION}
+requirements:
+  - id: P.R
+    test_cases:
+      - uid: S:T
+        given: g
+        spec: {{ref: "//pkg:spec", goal: g, steps: []}}
+"""
+    with pytest.raises(ValueError, match="both 'spec' and given"):
+        deserialize(yaml_str)
+
+
+def test_deserialize_rejects_spec_without_ref():
+    yaml_str = f"""
+schema_version: {SCHEMA_VERSION}
+requirements:
+  - id: P.R
+    test_cases:
+      - uid: S:T
+        spec: {{goal: g}}
+"""
+    with pytest.raises(ValueError, match="non-empty 'ref'"):
+        deserialize(yaml_str)
+
+
+def test_compute_lock_resolves_spec_and_drops_gwt():
+    record = TestRecord(uid="S:T", lobster_traces=["P.R"], given="g", then="t", spec_ref="@@//pkg:spec")
+    lock = compute_lock([_meta("P.R")], {"P.R": [record]}, {"//pkg:spec": _SPEC})
+    tc = lock.requirements[0].test_cases[0]
+    assert tc.spec == _SPEC
+    assert (tc.given, tc.when, tc.then) == ("", "", "")
+    assert tc.spec_ref == "@@//pkg:spec"
+
+
+def test_compute_lock_records_reference_as_written_in_test():
+    record = TestRecord(uid="S:T", lobster_traces=["P.R"], spec_ref="@spec_repo//pkg:spec")
+    lock = compute_lock([_meta("P.R")], {"P.R": [record]}, {"@spec_repo//pkg:spec": _SPEC})
+    assert lock.requirements[0].test_cases[0].spec.ref == "@spec_repo//pkg:spec"
+
+
+def test_compute_lock_ambiguous_reference_does_not_resolve():
+    record = TestRecord(uid="S:T", lobster_traces=["P.R"], spec_ref="//pkg:spec")
+    lock = compute_lock([_meta("P.R")], {"P.R": [record]}, {"//pkg:spec": None})
+    assert lock.requirements[0].test_cases[0].spec is None
+
+
+def test_compute_lock_keeps_unresolved_spec_ref():
+    record = TestRecord(uid="S:T", lobster_traces=["P.R"], spec_ref="//pkg:missing")
+    lock = compute_lock([_meta("P.R")], {"P.R": [record]}, {})
+    tc = lock.requirements[0].test_cases[0]
+    assert tc.spec is None
+    assert tc.spec_ref == "//pkg:missing"
 
 
 if __name__ == "__main__":

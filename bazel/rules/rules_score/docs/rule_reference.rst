@@ -844,6 +844,48 @@ Running ``bazel test`` validates the full FMEA traceability chain.
 
 **Generated targets:** ``<name>`` (build → documentation; ``bazel test //pkg:analysis`` → full FMEA traceability validation)
 
+.. _rule-test-specification:
+
+test_specification
+~~~~~~~~~~~~~~~~~~
+
+A formal test specification written in RST. Test cases reference it by its label
+with ``RecordProperty("test-spec", "<label>")`` instead of Given/When/Then. The file
+holds one title section with the subsections ``Test Goal`` (mandatory),
+``Test Focus`` (optional) and ``Test Steps`` (mandatory; one subsection per step
+with the fields ``:Precondition:`` (optional), ``:Action:`` and ``:Expected:``).
+See :doc:`user_guide/validation` for the format.
+
+.. code-block:: python
+
+   test_specification(
+       name = "get_number_spec",
+       src  = "get_number_spec.rst",
+   )
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``name``
+     - string
+     - yes
+     - Target name; its label is what test cases reference
+   * - ``src``
+     - label
+     - yes
+     - The ``.rst`` file holding exactly one test specification
+   * - ``visibility``
+     - —
+     - no
+     - Bazel visibility
+
+**Generated targets:** ``<name>`` (provides ``TestSpecificationInfo``; ``bazel build`` validates the RST format and fails on a malformed file)
+
 
 Structural Rules
 ----------------
@@ -895,6 +937,10 @@ diagram.
      - label list
      - yes
      - Test targets that verify this unit (may be ``[]``)
+   * - ``test_specs``
+     - label list
+     - no
+     - ``test_specification`` targets that test cases of this unit reference with ``RecordProperty("test-spec", "<label>")``, spelling the label as written here (``":name"`` as ``"//<package>:name"``) (default ``[]``)
    * - ``scope``
      - string list
      - no

@@ -45,6 +45,7 @@ class TestRecord:
     given: str = ""  # :Given: text from RecordProperty or the test name
     when: str = ""  # :When: text; may be empty
     then: str = ""  # :Then: text
+    spec_ref: str = ""  # :Test-spec: label of a test_specification target
     gtest_tag: str = ""  # raw, unprefixed "Suite:TestName" tag — survives the
     # package-prefixing done to `uid` in scan_gtest_lobster, so it always
     # matches the Tracing_Tag("gtest", ...) of the underlying gtest item.
@@ -54,17 +55,29 @@ _GWT_KEYS: tuple[tuple[str, str], ...] = (
     ("given", ":Given:"),
     ("when", ":When:"),
     ("then", ":Then:"),
+    # RecordProperty("test-spec", "<label>"); lobster-gtest capitalises it.
+    ("spec_ref", ":Test-spec:"),
 )
 
 
 def _parse_gwt(text: str) -> tuple[str, str, str]:
     """Parse a ``:Given:/:When:/:Then:`` text field into its three components.
 
+    See :func:`_parse_item_fields` for the accepted format.
+    """
+    fields = _parse_item_fields(text)
+    return fields["given"], fields["when"], fields["then"]
+
+
+def _parse_item_fields(text: str) -> dict[str, str]:
+    """Parse the item text into given, when, then and the test-spec reference.
+
     lobster-gtest capitalises RecordProperty keys, so the expected format is::
 
         :Given: value
         :When: value
         :Then: value
+        :Test-spec: //pkg:spec_label
 
     A part that lobster-gtest did not emit, such as ``:When:`` for a test name
     without ``_When<Y>``, yields an empty string.
@@ -77,7 +90,7 @@ def _parse_gwt(text: str) -> tuple[str, str, str]:
       until the next recognised key or the end of the text.
     * If a key appears more than once, the last occurrence wins.
     """
-    values = {"given": "", "when": "", "then": ""}
+    values = {key: "" for key, _ in _GWT_KEYS}
     current: str | None = None
     for raw_line in text.splitlines():
         line = raw_line.strip()
@@ -93,7 +106,7 @@ def _parse_gwt(text: str) -> tuple[str, str, str]:
             current = matched_key
         elif current is not None:
             values[current] = f"{values[current]} {line}".strip()
-    return values["given"], values["when"], values["then"]
+    return values
 
 
 def read_gtest_lobster(lobster_path: Path) -> list[TestRecord]:
@@ -127,14 +140,15 @@ def read_gtest_lobster(lobster_path: Path) -> list[TestRecord]:
         if not refs:
             continue
 
-        gwt = _parse_gwt(item.text or "")
+        fields = _parse_item_fields(item.text or "")
         records.append(
             TestRecord(
                 uid=item.tag.tag,
                 lobster_traces=refs,
-                given=gwt[0],
-                when=gwt[1],
-                then=gwt[2],
+                given=fields["given"],
+                when=fields["when"],
+                then=fields["then"],
+                spec_ref=fields["spec_ref"],
                 gtest_tag=item.tag.tag,
             )
         )

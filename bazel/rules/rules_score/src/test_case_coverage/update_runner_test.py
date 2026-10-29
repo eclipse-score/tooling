@@ -16,7 +16,7 @@ import pytest
 
 from test_case_coverage.compute_lock import deserialize
 from test_case_coverage.update_runner import main as update_main
-from test_case_coverage.conftest import write_req_lobster, write_gtest_lobster
+from test_case_coverage.conftest import write_gtest_lobster, write_req_lobster, write_test_spec_manifest
 
 _SPEC = ":Given: g\n:When: w\n:Then: t"
 _UID = "Suite:T"
@@ -125,6 +125,38 @@ def test_update_missing_env_exits_1(monkeypatch):
     with pytest.raises(SystemExit) as exc_info:
         update_main([])
     assert exc_info.value.code == 1
+
+
+def _set_env(monkeypatch, lm, gtest, lock):
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LOBSTER_MANIFEST", str(lm))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_GTEST_LOBSTER", str(gtest))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LOCK_FILE_WORKSPACE_PATH", str(lock))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LABEL", "//pkg:cov")
+    monkeypatch.setenv("TEST_CASE_COVERAGE_PACKAGE", "//pkg")
+
+
+def test_update_writes_test_spec_instead_of_gwt(tmp_path, monkeypatch):
+    lm, gtest, lock = _setup(tmp_path, ["P.R"])
+    write_gtest_lobster(gtest, _UID, "P.R", spec=":Given: g\n:Then: t\n:Test-spec: //pkg:spec")
+    _set_env(monkeypatch, lm, gtest, lock)
+    monkeypatch.setenv("TEST_CASE_COVERAGE_SPEC_MANIFEST", str(write_test_spec_manifest(tmp_path)))
+    update_main([])
+    text = lock.read_text()
+    assert "given:" not in text
+    test_case = deserialize(text).requirements[0].test_cases[0]
+    assert test_case.spec is not None
+    assert test_case.spec.ref == "//pkg:spec"
+
+
+def test_update_fails_on_unresolved_test_spec(tmp_path, monkeypatch, capsys):
+    lm, gtest, lock = _setup(tmp_path, ["P.R"])
+    write_gtest_lobster(gtest, _UID, "P.R", spec=":Test-spec: //pkg:missing")
+    _set_env(monkeypatch, lm, gtest, lock)
+    monkeypatch.setenv("TEST_CASE_COVERAGE_SPEC_MANIFEST", str(write_test_spec_manifest(tmp_path)))
+    with pytest.raises(SystemExit):
+        update_main([])
+    assert not lock.exists()
+    assert "does not resolve" in capsys.readouterr().err
 
 
 if __name__ == "__main__":

@@ -15,9 +15,9 @@ from pathlib import Path
 
 import pytest
 
-from test_case_coverage.compute_lock import LockFile, RequirementEntry, TestCase, serialize
+from test_case_coverage.compute_lock import LockFile, RequirementEntry, TestCase, TestSpec, TestStep, serialize
 from test_case_coverage.test_runner import main as runner_main
-from test_case_coverage.conftest import write_req_lobster, write_gtest_lobster
+from test_case_coverage.conftest import write_gtest_lobster, write_req_lobster, write_test_spec_manifest
 
 _SPEC = ":Given: g\n:When: w\n:Then: t"
 _UID = "Suite:T"  # raw uid in gtest.lobster tag
@@ -204,6 +204,61 @@ def test_missing_then_allowed_with_allow_check_failures(tmp_path, monkeypatch):
     _set_env(monkeypatch, lm, gtest, lock, lobster_out)
     runner_main(["--allow-check-failures"])  # must not raise
     assert lobster_out.exists()
+
+
+# ---------------------------------------------------------------------------
+# Formal test specification (test-spec)
+# ---------------------------------------------------------------------------
+
+
+def _setup_spec(tmp_path: Path, monkeypatch, committed_goal="goal", spec_goal="goal"):
+    req_lobster = tmp_path / "reqs.lobster"
+    write_req_lobster(req_lobster, ["P.R"])
+    lm = tmp_path / "lobster_manifest.txt"
+    lm.write_text(str(req_lobster) + "\n")
+    gtest = tmp_path / "gtest.lobster"
+    write_gtest_lobster(gtest, _UID, "P.R", spec=":Test-spec: //pkg:spec")
+
+    committed_spec = TestSpec(ref="//pkg:spec", goal=committed_goal, steps=(TestStep(action="a", expected="e"),))
+    lock = tmp_path / "test_case_coverage.lock.yaml"
+    lock.write_text(
+        serialize(
+            LockFile(
+                schema_version=3,
+                requirements=[
+                    RequirementEntry(
+                        id="P.R",
+                        version="1",
+                        test_cases=[TestCase(uid=f"{_PACKAGE}/{_UID}", spec=committed_spec)],
+                    )
+                ],
+            )
+        )
+    )
+    lobster_out = tmp_path / "out.lobster"
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LOBSTER_MANIFEST", str(lm))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_GTEST_LOBSTER", str(gtest))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LOCK_FILE", str(lock))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LABEL", _LABEL)
+    monkeypatch.setenv("TEST_CASE_COVERAGE_PACKAGE", _PACKAGE)
+    monkeypatch.setenv("TEST_CASE_COVERAGE_LOBSTER_OUTPUT", str(lobster_out))
+    monkeypatch.setenv("TEST_CASE_COVERAGE_SPEC_MANIFEST", str(write_test_spec_manifest(tmp_path, goal=spec_goal)))
+    return lobster_out
+
+
+def test_test_spec_clean_pass(tmp_path, monkeypatch):
+    lobster_out = _setup_spec(tmp_path, monkeypatch)
+    runner_main([])  # must not raise
+    item = json.loads(lobster_out.read_text())["data"][0]
+    assert item["status"] == "ok"
+    assert ":Test specification: ``//pkg:spec``" in item["text"]
+
+
+def test_test_spec_content_drift_fails(tmp_path, monkeypatch, capsys):
+    _setup_spec(tmp_path, monkeypatch, spec_goal="changed goal")
+    with pytest.raises(SystemExit):
+        runner_main([])
+    assert "test-spec goal changed" in capsys.readouterr().err
 
 
 if __name__ == "__main__":

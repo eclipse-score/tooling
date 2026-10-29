@@ -84,6 +84,7 @@ UnitInfo = provider(
         "implementation_sequence_fbs": "Depset of FlatBuffers binaries generated from implementation sequence diagrams.",
         "implementation": "Depset of implementation targets (cc_library, rust_library, etc.).",
         "tests": "Depset of test targets (cc_test, rust_test, etc.).",
+        "test_specs": "Depset of struct(reference, spec_json): each test_specification of the unit, with the label as written in the unit's test_specs (how test cases reference it) and its normalized JSON File.",
         "dependent_labels": "Depset containing one struct for this unit with its label and a depset of transitive implementation dependency labels.",
         "validation_log": "Struct with file and name fields describing the UnitValidate (design-vs-implementation) log entry produced by this unit target.",
     },
@@ -194,6 +195,7 @@ ComponentTestCaseCoverageInfo = provider(
     fields = {
         "gtest_lobster_file": "The component's own gtest.lobster File produced by lobster-gtest. Used by the dependable_element to run the coverage lock check.",
         "test_case_coverage_lock_file": "The committed test_case_coverage.lock.yaml File, or None if no test_case_coverage_lock is declared on the component.",
+        "test_specs": "Depset of struct(reference, spec_json) of the test_specification targets that the component's test cases may reference via RecordProperty('test-spec', ...); see UnitInfo.test_specs.",
     },
 )
 
@@ -338,5 +340,13 @@ FilteredExecpathInfo = provider(
         "resolved_path": "String – the resolved path suffix (after /bin/) to the matched output.",
         "arg": "String – the fully formed argument: flag=resolved_path.",
         "matched_file": "File – the matched output file from the target.",
+    },
+)
+
+TestSpecificationInfo = provider(
+    doc = "Provider for a formal RST test specification (see the test_specification rule).",
+    fields = {
+        "src": "The RST source File of the test specification.",
+        "spec_json": "The validated, normalized JSON File (ref, aliases, goal, focus, steps) consumed by the test case coverage runners.",
     },
 )

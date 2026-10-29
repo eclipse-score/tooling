@@ -20,6 +20,9 @@ TEST_CASE_COVERAGE_GTEST_LOBSTER
     Path to the gtest.lobster file produced by subrule_lobster_gtest.
 TEST_CASE_COVERAGE_LOCK_FILE
     Path to the committed lock YAML (short_path in runfiles).
+TEST_CASE_COVERAGE_SPEC_MANIFEST
+    Optional. Path to a newline-delimited file listing the ``.test_spec.json``
+    files of the test_specification targets referenced via ``test-spec``.
 TEST_CASE_COVERAGE_LABEL
     Bazel label of the test_case_coverage target.
 TEST_CASE_COVERAGE_LOBSTER_OUTPUT
@@ -37,7 +40,7 @@ from test_case_coverage.check_lock import compare_lock_files, validate_specs
 from test_case_coverage.compute_lock import load_lock_file
 from test_case_coverage.lobster_generator import generate_lobster
 from test_case_coverage.read_gtest_lobster import resolve_path
-from test_case_coverage.runner_common import require_env, scan_and_compute
+from test_case_coverage.runner_common import optional_spec_manifest, require_env, scan_and_compute
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +66,18 @@ def main(argv: list[str] | None = None) -> None:
     lobster_output_raw = os.environ.get("TEST_CASE_COVERAGE_LOBSTER_OUTPUT")
 
     # Steps 1-3: extract requirement metadata, scan gtest.lobster, compute lock
-    _req_metadata, computed = scan_and_compute(lobster_manifest, gtest_lobster_path, package=package, label=label)
+    _req_metadata, computed = scan_and_compute(
+        lobster_manifest,
+        gtest_lobster_path,
+        package=package,
+        label=label,
+        spec_manifest=optional_spec_manifest(),
+    )
 
-    # Step 3b: validate GWT specs (collect, don't exit yet — artifact must be written first)
+    # Step 3b: validate GWT / test-spec (collect, don't exit yet — artifact must be written first)
     spec_ok, spec_issues = validate_specs(computed)
     if not spec_ok:
-        logger.error("One or more test cases are missing a Given or Then specification.")
+        logger.error("One or more test cases are missing a specification (Given/Then or test-spec).")
         for line in spec_issues:
             logger.error(line)
 
