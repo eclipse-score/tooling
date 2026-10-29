@@ -167,6 +167,21 @@ Example templates.ini:
 // Copyright (c) {year} {author}
 ```
 
+#### Accepted comment forms
+
+Border lines may use any run of 5 or more of `/*#'-=+`. Beyond that, the comment form of the
+template's own section is canonical and, for the languages below, the checker also accepts the
+same header in the other form the language allows. No second template is needed.
+
+| Extensions | Accepted forms |
+| --- | --- |
+| `c`, `cpp`, `h`, `hpp`, `rs`, `trlc`, `rsl` | `/* */` block and `//` line |
+| all other extensions | only the form used by the template |
+
+The header text, the copyright line and the SPDX identifier must still match the template.
+`--fix` leaves a compliant header in either form untouched, repairs a broken header in the
+form it is already written in, and writes a missing header in the template's form.
+
 ## Exit Codes
 
 - 0: All files contain the required copyright text.
