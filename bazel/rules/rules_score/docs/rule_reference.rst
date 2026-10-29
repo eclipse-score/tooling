@@ -940,7 +940,7 @@ diagram.
    * - ``test_specs``
      - label list
      - no
-     - ``test_specification`` targets that test cases of this unit reference with ``RecordProperty("test-spec", "<label>")`` (default ``[]``)
+     - ``test_specification`` targets that test cases of this unit reference with ``RecordProperty("test-spec", "<label>")``, spelling the label as written here (``":name"`` as ``"//<package>:name"``) (default ``[]``)
    * - ``scope``
      - string list
      - no

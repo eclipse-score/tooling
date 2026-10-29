@@ -156,7 +156,7 @@ reviewing ``git diff``.
    * - ``test_cases[].spec``
      - Formal test specification of a test case that sets ``test-spec``; replaces
        ``given``/``when``/``then`` (an entry with both is rejected). Holds
-       ``ref`` (label of the ``test_specification``), ``goal``, ``focus`` and
+       ``ref`` (the ``test-spec`` reference as written in the test), ``goal``, ``focus`` and
        ``steps`` (``precondition``, ``action``, ``expected``) as parsed from the
        RST; any change makes the lock stale. Multi-line text is written as a YAML
        literal block
@@ -171,12 +171,28 @@ Test specifications
 ``test_specification`` targets run ``parse_test_spec`` as the build action
 ``TestSpecificationCheck``: a malformed RST fails the build regardless of
 ``maturity``. The action writes ``<name>.test_spec.json`` with the parsed content
-and the labels that refer to it (the target label and the label of the RST file).
+and the labels of the target and of its RST file, relative to their own
+repository (``//pkg:name``, ``//pkg:name.rst``).
 
-``unit(test_specs = ...)`` passes the JSON files to the ``component``, which hands
-them, listed in a manifest (``TEST_CASE_COVERAGE_SPEC_MANIFEST``), to both runners.
-For each test case with a ``test-spec`` property the runners look up the
-normalized label (``@@//pkg:name``, ``@//pkg:name`` and ``//pkg/name`` are
-accepted as ``//pkg:name``). A label that does not resolve is reported like a
-missing Given/Then and is subject to the same ``maturity`` handling. Only labels
-of the main repository are supported.
+The test case references a spec as text in a ``RecordProperty``, so Bazel's
+repository mapping does not apply to it. Instead, the ``unit`` macro records how
+each ``test_specs`` entry is spelled in the unit's repository (``:name`` in
+``//pkg`` becomes ``//pkg:name``, ``@spec_repo//specs:name`` is kept) and resolves
+the label itself as usual. ``unit`` and ``component`` pass these pairs to both
+runners in a manifest (``TEST_CASE_COVERAGE_SPEC_MANIFEST``), one
+``<json path><TAB><reference>`` per line.
+
+For each test case with a ``test-spec`` property the runners normalize the
+reference (``@@//pkg:name``, ``@//pkg:name`` and ``//pkg/name`` become
+``//pkg:name``) and look it up:
+
+#. among the references from the ``test_specs`` entries;
+#. otherwise among the repository-relative labels of the JSON files.
+
+A key that two different specifications claim is ambiguous and does not resolve.
+A reference that does not resolve is reported like a missing Given/Then and is
+subject to the same ``maturity`` handling.
+
+None of this depends on canonical repository names, so a SEooC that is built as an
+external dependency (e.g. by an integrator module) resolves its references the
+same way.

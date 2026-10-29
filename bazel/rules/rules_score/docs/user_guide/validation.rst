@@ -202,9 +202,9 @@ Declare the file with a ``test_specification`` target and list it in the
    )
 
 A test case references the specification by its Bazel label with the
-``test-spec`` property. Only labels are accepted, for example
-``//unit_1:get_number_spec`` (``//unit_1:get_number_spec.rst``, the label of the
-RST file, works as well):
+``test-spec`` property, spelled as in the unit's ``test_specs``. A package-relative
+entry such as ``":get_number_spec"`` in ``//unit_1`` is spelled
+``//unit_1:get_number_spec``:
 
 .. code-block:: cpp
 
@@ -222,8 +222,16 @@ RST file, works as well):
 * A specification replaces Given/When/Then completely. If the test also sets
   ``given``/``when``/``then`` or its name follows the Given/When/Then pattern, that
   text is ignored and a warning is printed.
-* Specifications from a repository other than the main repository are not supported
-  yet.
+* The ``test_specification`` may live in another package (grant ``visibility`` to
+  the unit's package) or in another repository. A spec of another repository is
+  listed and referenced with the repository name the unit's module uses, for example
+  ``@spec_repo//specs:conn_fault``.
+* References do not depend on canonical repository names. The spelling stays valid
+  when the SEooC is built as a dependency of another module.
+* If a reference does not match a ``test_specs`` entry, the label of the
+  ``test_specification`` within its own repository (``//pkg:name``) or of its RST
+  file (``//pkg:name.rst``) is tried, unless two specifications of the component
+  share it.
 
 The traceability report shows the specification with its goal, focus and a table
 of the steps.

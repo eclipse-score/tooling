@@ -383,10 +383,13 @@ section "Tool Requirements" {
         ToolQualification.ToolRequirement Resolve_Test_Specification {
             description = '''
                 For a test case with a test-spec reference, the tool shall
-                look up the test_specification by its Bazel label among the
-                test_specs of the component's units, and shall use its test
-                goal, test focus, and test steps instead of the given, when,
-                and then parts, which shall be ignored with a warning.
+                look up the test_specification among the test_specs of the
+                component's units by the label as written in the unit's
+                test_specs, independent of canonical repository names. It
+                shall use its test goal, test focus, and test steps instead of
+                the given, when, and then parts, which shall be ignored with a
+                warning. A reference that matches different test
+                specifications shall not resolve.
             '''
             derived_from = [Formal_Test_Specification, Detect_Specification_Drift]
             satisfied_by = Tools.TestCaseCoverage

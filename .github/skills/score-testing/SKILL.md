@@ -192,9 +192,12 @@ TEST(Foo, GetNumberRepeatedly) {
 ```
 
 - `bazel build` validates the RST (action `TestSpecificationCheck`), independent of `maturity`.
-- Only Bazel labels of the main repository are accepted (`//pkg:name`; the RST file label
-  `//pkg:name.rst` works too). A label not listed in the `test_specs` of the component's units is
-  reported like a missing Given/Then.
+- Reference the spec with its label spelled as in the unit's `test_specs` (`":name"` in `//pkg`
+  → `//pkg:name`; another repository as `@spec_repo//specs:name`). The macro records that spelling,
+  so it works regardless of canonical repo names (e.g. a SEooC built as a dependency of another
+  module). Fallback: the spec's repo-relative label `//pkg:name` or `//pkg:name.rst`, unless ambiguous.
+  A reference that does not resolve is reported like a missing Given/Then.
+- Cross-package specs need `visibility` granted to the unit's package.
 - A spec replaces Given/When/Then completely; GWT from properties or the test name is ignored with
   a warning.
 
@@ -228,7 +231,7 @@ requirements:
         then:  the client receives an error
       - uid:   "//score/message_passing/ConnectionSuite:OsIpcReconnectTest"
         spec:                       # test case with RecordProperty("test-spec", ...)
-          ref:   //score/message_passing/test_specs:reconnect
+          ref:   //score/message_passing/test_specs:reconnect   # as written in the test
           goal:  Show that a client reconnects after the server restarts.
           focus: fault injection
           steps:
