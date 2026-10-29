@@ -68,7 +68,13 @@ impl<'a> ClassDesignSequenceValidator<'a> {
     }
 
     fn check_participant_class_consistency(&mut self) {
-        for (participant, participant_info) in self.sequence_diagram.participants() {
+        // Actors and external systems are not classes of the unit.
+        for (participant, participant_info) in self
+            .sequence_diagram
+            .participants()
+            .iter()
+            .filter(|(_, info)| info.environment.is_none())
+        {
             self.validate_participant(participant, participant_info);
         }
     }
@@ -154,6 +160,10 @@ impl<'a> ClassDesignSequenceValidator<'a> {
     }
 
     fn validate_observed_call(&mut self, observed_call: &ObservedSequenceCall) {
+        if observed_call.callee_environment.is_some() {
+            return;
+        }
+
         let ParticipantResolution::Matched(callee_class) =
             self.resolve_participant_class(&observed_call.callee)
         else {

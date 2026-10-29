@@ -45,10 +45,6 @@ mod tests {
     fn bare_name_is_the_uid() {
         assert_eq!(participant_uid("Client").as_deref(), Ok("Client"));
         assert_eq!(participant_uid("<b>Client</b>").as_deref(), Ok("Client"));
-        assert_eq!(
-            participant_uid("ExternalEndpoint").as_deref(),
-            Ok("ExternalEndpoint")
-        );
     }
 
     #[test]

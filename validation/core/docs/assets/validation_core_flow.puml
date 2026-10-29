@@ -24,6 +24,7 @@ participant "validate_component_sequence()" as sequence_validator
 participant "validate_component_class()" as class_validator
 participant "validate_component_internal_api()" as component_internal_api_validator
 participant "validate_sequence_internal_api()" as sequence_internal_api_validator
+participant "validate_sequence_public_api_boundary()" as sequence_public_api_validator
 participant "Errors" as errors
 participant "Report writer" as report_writer
 
@@ -51,7 +52,7 @@ alt architectural-design profile
     cli -> cli: InternalApiIndex::build_index(&mut errors)
   end
 
-  opt public_api provided (planned)
+  opt public_api provided
     cli -> class_reader: read(public_api)
     class_reader --> cli: ClassDiagramInputs
     cli -> cli: PublicApiIndex::build_index(&mut errors)
@@ -78,6 +79,12 @@ alt architectural-design profile
   opt sequence + internal API available
     cli -> sequence_internal_api_validator: validate_sequence_internal_api(..., optional component, Errors::default())
     sequence_internal_api_validator --> cli: Errors
+    cli -> errors: merge_errors(...)
+  end
+
+  opt sequence + public API available
+    cli -> sequence_public_api_validator: validate_sequence_public_api_boundary(..., Errors::default())
+    sequence_public_api_validator --> cli: Errors
     cli -> errors: merge_errors(...)
   end
 

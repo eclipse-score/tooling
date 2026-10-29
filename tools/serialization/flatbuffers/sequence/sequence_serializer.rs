@@ -16,12 +16,22 @@ use sequence_fbs::sequence_metamodel as fb;
 use sequence_logic::{
     Block as LogicBlock, Branch as LogicBranch, BranchCase as LogicBranchCase,
     EarlyExit as LogicEarlyExit, Interaction as LogicInteraction, LifecycleAction,
-    Loop as LogicLoop, Node as LogicNode, Parallel as LogicParallel,
+    Loop as LogicLoop, MessageKind, Node as LogicNode, Parallel as LogicParallel,
     ParallelBranch as LogicParallelBranch, ParticipantLifecycle, ParticipantType, Reference,
     SequenceParticipant, SequenceTree, SourceLocation,
 };
 
 pub struct SequenceSerializer;
+
+fn map_message_kind(value: MessageKind) -> fb::MessageKind {
+    match value {
+        MessageKind::SynchCall => fb::MessageKind::SynchCall,
+        MessageKind::AsynchCall => fb::MessageKind::AsynchCall,
+        MessageKind::Reply => fb::MessageKind::Reply,
+        MessageKind::Create => fb::MessageKind::Create,
+        MessageKind::Delete => fb::MessageKind::Delete,
+    }
+}
 
 fn map_participant_type(value: &ParticipantType) -> fb::ParticipantType {
     match value {
@@ -183,6 +193,7 @@ impl SequenceSerializer {
                 receiver,
                 message,
                 source_location: Some(source_location),
+                kind: map_message_kind(interaction.kind),
             },
         )
     }

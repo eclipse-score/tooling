@@ -132,6 +132,10 @@ Bazel/C++ implementation:
   target interface (including cross-unit call roles); interface methods should
   be exercised somewhere
   (:doc:`spec <tool_reference/specs/sequence_internal_api>`).
+- **Dynamic ↔ public API** — calls from an actor to the SEooC and callbacks to
+  an actor must use public API interfaces and methods
+  (:doc:`spec <tool_reference/specs/sequence_public_api>`).
+  How to draw sequence diagrams: :doc:`guide <tool_reference/specs/sequence_design>`.
 - **Design ↔ implementation** — unit design class diagrams (types, members,
   methods, enum literals, relationships) must match the generated C++
   implementation model

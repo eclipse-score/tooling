@@ -136,6 +136,11 @@ fn test_sequence_lifecycle_nodes() {
 }
 
 #[test]
+fn test_create_statement_message_kind() {
+    run_sequence_resolver_case("create_statement_message_kind");
+}
+
+#[test]
 fn test_sequence_group_container() {
     run_sequence_resolver_case("sequence_group_container");
 }
@@ -216,16 +221,6 @@ fn test_uid_bare_name() {
 }
 
 #[test]
-fn test_uid_external_endpoint() {
-    run_sequence_resolver_case("uid_external_endpoint");
-}
-
-#[test]
-fn test_uid_external_endpoint_aliased() {
-    run_sequence_resolver_case("uid_external_endpoint_aliased");
-}
-
-#[test]
 fn test_uid_backslash_n_first_line() {
     run_sequence_resolver_case("uid_backslash_n_first_line");
 }
@@ -233,11 +228,6 @@ fn test_uid_backslash_n_first_line() {
 #[test]
 fn test_invalid_prose_label() {
     run_sequence_resolver_case("invalid_prose_label");
-}
-
-#[test]
-fn test_invalid_external_endpoint_alias() {
-    run_sequence_resolver_case("invalid_external_endpoint_alias");
 }
 
 #[test]

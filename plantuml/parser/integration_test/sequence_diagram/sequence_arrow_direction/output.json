@@ -42,6 +42,7 @@
             "sender": "A",
             "receiver": "B",
             "message": "dashed right",
+            "kind": "Reply",
             "source_location": { "file": "", "line": 21 }
           }
         },
@@ -50,6 +51,7 @@
             "sender": "B",
             "receiver": "A",
             "message": "dashed left",
+            "kind": "Reply",
             "source_location": { "file": "", "line": 22 }
           }
         }

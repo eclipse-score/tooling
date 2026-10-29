@@ -48,6 +48,7 @@ package "validation/core" {
     component "SequenceDiagramIndex\n(used participant set)" as MSeq
     component "ClassDiagramIndex (planned)\n(enclosing namespace set)" as MClass
     component "InternalApiIndex\n(interface methods)" as MInternalApi
+    component "PublicApiIndex\n(interface methods)" as MPublicApi
   }
 
   ' Validators: compare domain models and return accumulated findings
@@ -57,6 +58,7 @@ package "validation/core" {
     component "validate_component_internal_api()" as VCIA
     component "validate_component_sequence()" as VCS
     component "validate_sequence_internal_api()" as VSIA
+    component "validate_sequence_public_api_boundary()" as VSPA
   }
 
   ' Reporting: collect findings and write validation reports
@@ -79,6 +81,7 @@ CDR --> MComp : converts
 SDR --> MSeq : converts
 ClDR --> MClass : converts
 ClDR --> MInternalApi : converts
+ClDR --> MPublicApi : converts
 
 ' Validator inputs: consume only the domain models required by each rule
 MBazel --> VBC
@@ -90,8 +93,10 @@ MComp  ..> VSIA : optional context
 MClass --> VCC
 MSeq   --> VCS
 MSeq   --> VSIA
+MSeq   --> VSPA
 MInternalApi --> VCIA
 MInternalApi --> VSIA
+MPublicApi --> VSPA
 
 ' Findings: merge reader and validator findings into one report
 VBC --> Err : findings
@@ -99,6 +104,7 @@ VCC --> Err : findings
 VCIA --> Err : findings
 VCS --> Err : findings
 VSIA --> Err : findings
+VSPA --> Err : findings
 ReaderLayer --> Err : parse/index findings
 Err --> ReportWriter : final status
 ReportWriter --> Report

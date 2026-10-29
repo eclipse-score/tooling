@@ -32,6 +32,7 @@
             "sender": "Service",
             "receiver": null,
             "message": "outgoing",
+            "kind": "Reply",
             "source_location": {
               "file": "",
               "line": 17

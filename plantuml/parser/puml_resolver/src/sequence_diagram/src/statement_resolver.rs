@@ -11,10 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
+use parser_core::common_ast::{Arrow, ArrowDecor};
 use parser_core::format_arrow;
 use sequence_logic::{
-    Block, Interaction, LifecycleAction, Node, ParticipantId, ParticipantLifecycle, Reference,
-    SourceLocation,
+    Block, Interaction, LifecycleAction, MessageKind, Node, ParticipantId, ParticipantLifecycle,
+    Reference, SourceLocation,
 };
 use sequence_parser::{GroupCmd, Message, MessageEndpoint, MessageSuffix, RefCmd, Statement};
 
@@ -131,6 +132,7 @@ fn message_nodes(
         sender: sender_name.clone(),
         receiver: receiver_name.clone(),
         message: message.description.clone(),
+        kind: message_kind(&message.arrow, &lifecycle_ops),
         source_location: message.source_location.clone(),
     }));
 
@@ -155,6 +157,35 @@ fn message_nodes(
     }
 
     Ok(nodes)
+}
+
+// lobster-trace: Tools.ArchitectureModelingSequenceCreate
+// lobster-trace: Tools.ArchitectureModelingSequenceMessageKinds
+/// Create (`**`) and delete (`!!`) suffixes take precedence, then a dashed line
+/// is a reply, then an open arrowhead (`>>`) is asynchronous.
+fn message_kind(arrow: &Arrow, lifecycle_ops: &[LifecycleOp]) -> MessageKind {
+    let has_action = |action| lifecycle_ops.iter().any(|op| op.action == action);
+
+    if has_action(LifecycleAction::Create) {
+        return MessageKind::Create;
+    }
+    if has_action(LifecycleAction::Destroy) {
+        return MessageKind::Delete;
+    }
+    if arrow.line.raw.contains("--") || arrow.line.raw.contains("..") {
+        return MessageKind::Reply;
+    }
+
+    let open_head = |decor: &Option<ArrowDecor>| {
+        decor
+            .as_ref()
+            .is_some_and(|d| d.raw.contains(">>") || d.raw.contains("<<"))
+    };
+    if open_head(&arrow.left) || open_head(&arrow.right) {
+        MessageKind::AsynchCall
+    } else {
+        MessageKind::SynchCall
+    }
 }
 
 fn collect_message_lifecycle_ops(suffix: Option<&MessageSuffix>) -> Vec<LifecycleOp> {
@@ -355,6 +386,46 @@ mod message_arrow_tests {
     }
 
     #[test]
+    fn test_message_kind_follows_arrow_and_suffix() {
+        let kind_of = |arrow: Arrow, suffix: Option<MessageSuffix>| {
+            let mut msg = message(arrow);
+            msg.suffix = suffix;
+            let nodes = resolve_message(&msg).expect("message must resolve");
+            nodes
+                .iter()
+                .find_map(|node| match node {
+                    Node::Interaction(interaction) => Some(interaction.kind),
+                    _ => None,
+                })
+                .expect("interaction expected")
+        };
+
+        assert_eq!(kind_of(arrow("-", Some(">")), None), MessageKind::SynchCall);
+        assert_eq!(
+            kind_of(arrow("-", Some(">\\")), None),
+            MessageKind::SynchCall
+        );
+        assert_eq!(
+            kind_of(arrow("-", Some(">>")), None),
+            MessageKind::AsynchCall
+        );
+        assert_eq!(kind_of(arrow("--", Some(">")), None), MessageKind::Reply);
+        assert_eq!(kind_of(arrow("--", Some(">>")), None), MessageKind::Reply);
+        assert_eq!(
+            kind_of(arrow("-", Some(">")), Some(MessageSuffix::Create)),
+            MessageKind::Create
+        );
+        assert_eq!(
+            kind_of(arrow("-", Some(">")), Some(MessageSuffix::Destroy)),
+            MessageKind::Delete
+        );
+        assert_eq!(
+            kind_of(arrow("-", Some(">")), Some(MessageSuffix::Activate)),
+            MessageKind::SynchCall
+        );
+    }
+
+    #[test]
     fn test_bidirectional_arrow_is_rejected() {
         let err = directed_endpoints(&message(bidirectional_arrow()))
             .expect_err("must reject bidirectional arrows");
@@ -485,6 +556,32 @@ mod message_arrow_tests {
                 && create.action == LifecycleAction::Create
                 && activate.participant.as_ref() == "B"
                 && activate.action == LifecycleAction::Activate
+        ));
+    }
+
+    #[test]
+    fn test_create_statement_keeps_following_message_a_call() {
+        let create_b = Statement::CreateCmd(sequence_parser::CreateCmd {
+            participant_type: sequence_parser::ParticipantType::Participant,
+            identifier: ParticipantIdentifier {
+                display_name: "B".to_string(),
+                alias: None,
+            },
+            stereotype: None,
+            source_location: SourceLocation::new("", 1),
+        });
+        let statements = [create_b, Statement::Message(message(arrow("-", Some(">"))))];
+
+        let root = build_sequence_tree(&statements, &table_for(&statements))
+            .expect("statements must resolve");
+
+        assert!(matches!(
+            root.items.as_slice(),
+            [
+                Node::Lifecycle(create),
+                Node::Interaction(interaction),
+            ] if create.action == LifecycleAction::Create
+                && interaction.kind == MessageKind::SynchCall
         ));
     }
 

@@ -35,7 +35,6 @@ behaviour described here with executable goldens.
 | Name must be an identifier path; prose is an error | implemented | `prose_names`, `invalid_prose_label` cases |
 | Alias is a local reference key; names of aliased elements are not references | implemented | `invalid_reference_by_label` cases |
 | Reference resolution (`S.r`, else unique leaf; leading `.`/`::` roots) | implemented | `qualified_reference`, `relation_simple_name_prefers_direct_hit` |
-| `ExternalEndpoint` matched on the name | implemented | `doc_6_external_endpoint` |
 | Several files of one view resolve as one group (reparenting, peer references) | implemented | `group_*` cases |
 | Root anchor (Bazel-package prefix) | not implemented; ids are unique per dependable element | — |
 
@@ -432,20 +431,6 @@ documents: there is nothing to merge or reference.
 
 ## 5. Special cases
 
-**`ExternalEndpoint`** — the reserved marker for an actor outside the described
-architecture. It is matched on the name and emitted verbatim, with no scope
-([Rule E](#rule-e)).
-
-```text
-participant ExternalEndpoint
-participant "ExternalEndpoint" as ext
-ExternalEndpoint -> Backend : Notify()
-```
-
-→ `ExternalEndpoint`, in every diagram, so it always matches itself.
-`participant "Outside World" as ExternalEndpoint` is a free-text error.
-Participant uids are unique, so a diagram declares the marker at most once.
-
 **FTA diagrams** — node aliases that are TRLC fully-qualified names
 (`Package.Record`) address TRLC safety records, not architecture elements. They
 are emitted verbatim ([Rule E](#rule-e)). Activity diagrams carry no
@@ -505,7 +490,7 @@ construct of its own kind, so that it joins the right group:
    nested: `participant "package::Component::Unit" as unit`.
 5. **Mirror the nesting** between component and class diagrams — the scope
    segments must be identical on both sides.
-6. **Use `ExternalEndpoint` verbatim** for out-of-scope actors.
+6. **Declare out-of-scope parties** as `actor` or `participant X <<external>>`; they need no counterpart in the architecture.
 7. **Treat identifiers as derived, not authored.** To change one, change the
    structure (nesting or name) — there is no override.
 8. **Make references unambiguous.** If a name exists in several scopes, qualify
@@ -611,8 +596,7 @@ prefix for aggregated builds is parked; the intended shape is explicit roots
 ### Rule E
 
 **Exemptions.** Emitted verbatim, with no scope: FTA node aliases that are
-valid TRLC FQNs (they address TRLC records, not architecture elements), and the
-reserved sequence participant `ExternalEndpoint`, matched on its name.
+valid TRLC FQNs (they address TRLC records, not architecture elements).
 
 ### Rule F
 

@@ -16,6 +16,7 @@ use super::*;
 use crate::models::{ClassDiagramInputs, ClassEntityIndex, SequenceDiagramInputs};
 use crate::ValidationResult;
 use class_diagram::{ClassDiagram, RelationType, Relationship};
+use sequence_logic::MessageKind;
 
 fn validate(
     design_classes: ClassDiagramInputs,
@@ -215,4 +216,37 @@ fn relationship(source: &str, target: &str, relation_type: RelationType) -> Rela
         target_multiplicity: None,
         source_location: dummy_source_location(),
     }
+}
+
+#[test]
+fn skips_actor_external_and_gate_participants() {
+    let mut controller = class_entity("Controller", None);
+    controller.methods = vec![method("Run"), method("Tick")];
+    let design_classes = class_diagrams(vec![controller]);
+    let sequence_diagrams = sequence_of(
+        vec![
+            actor_participant("User"),
+            external_participant("Peer"),
+            element_participant("Controller"),
+        ],
+        &[
+            (
+                Some("User"),
+                Some("Controller"),
+                "Run()",
+                MessageKind::SynchCall,
+            ),
+            (
+                Some("Controller"),
+                Some("Peer"),
+                "Notify()",
+                MessageKind::AsynchCall,
+            ),
+            (None, Some("Controller"), "Tick()", MessageKind::AsynchCall),
+        ],
+    );
+
+    let validation_result = validate(design_classes, sequence_diagrams);
+
+    assert!(validation_result.failures.is_empty());
 }

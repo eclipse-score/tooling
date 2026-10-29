@@ -89,6 +89,14 @@ section "Tool Requirements" {
                 activate UnitSample / deactivate UnitSample'''
             }
 
+            ToolRequirement ArchitectureModelingSequenceCreate {
+                description = '''The tool shall resolve a message ending in `**` as a create message and a message ending in `!!` as a delete message.'''
+            }
+
+            ToolRequirement ArchitectureModelingSequenceMessageKinds {
+                description = '''The tool shall resolve a message with a dashed line as a reply, a message with an `>>` arrowhead as an asynchronous call, and any other message as a synchronous call.'''
+            }
+
         }
 
         section "Group Resolution" {
