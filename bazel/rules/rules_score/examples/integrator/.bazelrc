@@ -6,3 +6,5 @@ common --registry=https://raw.githubusercontent.com/eclipse-score/bazel_registry
 common --registry=https://bcr.bazel.build
 
 common --extra_toolchains=//bazel/toolchains:integrator_libclang_toolchain
+
+try-import %workspace%/user.bazelrc
