@@ -23,8 +23,8 @@ struct Context
 struct Worker
 
 Base <|-- Worker
-Owned *-- Worker
-Borrowed o-- Worker
+Worker *-- Owned
+Worker o-- Borrowed
 Worker --> Result
 Worker ..> Context
 

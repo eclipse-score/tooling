@@ -13,12 +13,13 @@
 
 @startuml
 
-struct Manufacturer
+struct Driver
 
-struct Engine {
-    + vendor : Manufacturer
+struct Car {
+    + driver : Driver
 }
 
-Manufacturer o-- Engine
+' The driver is modeled as independently managed; the implementation intentionally differs.
+Car o-- Driver
 
 @enduml

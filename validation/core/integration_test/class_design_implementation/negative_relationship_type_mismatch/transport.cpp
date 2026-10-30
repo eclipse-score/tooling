@@ -11,11 +11,12 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-struct Manufacturer
+struct Driver
 {
 };
 
-struct Engine
+struct Car
 {
-    Manufacturer vendor;
+    // Deliberately by value: extraction yields Composition, unlike the design's Aggregation.
+    Driver driver;
 };

@@ -248,30 +248,7 @@
           }
         ],
         "variables": [],
-        "relationships": [
-          {
-            "source": "sample.newline.ErrorInfo",
-            "target": "sample.newline.StartResponsePayload",
-            "relation_type": "Aggregation",
-            "source_multiplicity": null,
-            "target_multiplicity": null,
-            "source_location": {
-              "file": "",
-              "line": 136
-            }
-          },
-          {
-            "source": "sample.newline.ErrorInfo",
-            "target": "sample.newline.ServiceImpl",
-            "relation_type": "Composition",
-            "source_multiplicity": "0..*",
-            "target_multiplicity": "1",
-            "source_location": {
-              "file": "",
-              "line": 137
-            }
-          }
-        ],
+        "relationships": [],
         "source_location": {
           "file": "plantuml/parser/integration_test/class_diagram/class_diagram_syntax_coverage/class_diagram_syntax_coverage.puml",
           "line": 60
@@ -308,6 +285,17 @@
             "source_location": {
               "file": "",
               "line": 135
+            }
+          },
+          {
+            "source": "sample.newline.StartResponsePayload",
+            "target": "sample.newline.ErrorInfo",
+            "relation_type": "Aggregation",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 136
             }
           }
         ],
@@ -788,6 +776,17 @@
             "source_location": {
               "file": "",
               "line": 133
+            }
+          },
+          {
+            "source": "sample.newline.ServiceImpl",
+            "target": "sample.newline.ErrorInfo",
+            "relation_type": "Composition",
+            "source_multiplicity": "1",
+            "target_multiplicity": "0..*",
+            "source_location": {
+              "file": "",
+              "line": 137
             }
           },
           {

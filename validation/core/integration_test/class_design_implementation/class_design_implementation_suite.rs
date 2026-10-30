@@ -103,6 +103,11 @@ fn positive_relationship_features() {
 }
 
 #[test]
+fn positive_relationship_diamonds() {
+    assert_case("positive_relationship_diamonds");
+}
+
+#[test]
 fn positive_variable_features() {
     assert_case("positive_variable_features");
 }
