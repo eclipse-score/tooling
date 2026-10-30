@@ -24,6 +24,8 @@ struct Worker
 
 Base <|-- Worker
 Worker *-- Owned
+Worker o-- Owned
+Worker ..> Owned
 Worker o-- Borrowed
 Worker --> Result
 Worker ..> Context

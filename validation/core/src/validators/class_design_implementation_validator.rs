@@ -578,17 +578,24 @@ impl ClassDesignImplementationValidator {
             let key = relationship_key(design_relationship);
             let display_name = relationship_display_name(design_relationship);
             match implementation_relationships.get(key.as_str()) {
-                Some(implementation_relationship)
-                    if design_relationship.relation_type
-                        == implementation_relationship.relation_type => {}
-                Some(implementation_relationship) => {
+                Some(candidates)
+                    if candidates.iter().any(|candidate| {
+                        candidate.relation_type == design_relationship.relation_type
+                    }) => {}
+                Some(candidates) => {
+                    let mut candidate_names = candidates
+                        .iter()
+                        .map(|candidate| relationship_display_name(candidate))
+                        .collect::<Vec<_>>();
+                    candidate_names.sort();
+                    candidate_names.dedup();
                     self.result.add_failure(Self::format_mismatch(
                         design_entity,
                         implementation_entity,
                         "relationship type",
                         FieldReferenceStyle::Quoted,
                         &display_name,
-                        &relationship_display_name(implementation_relationship),
+                        &candidate_names.join("; "),
                     ))
                 }
                 None => {
@@ -1432,12 +1439,15 @@ fn enum_literal_value(literal: &EnumLiteral) -> String {
     }
 }
 
-fn relationship_map(entity: &SimpleEntity) -> BTreeMap<String, &Relationship> {
-    entity
-        .relationships
-        .iter()
-        .map(|relationship| (relationship_key(relationship), relationship))
-        .collect()
+fn relationship_map(entity: &SimpleEntity) -> BTreeMap<String, Vec<&Relationship>> {
+    let mut relationships: BTreeMap<String, Vec<&Relationship>> = BTreeMap::new();
+    for relationship in &entity.relationships {
+        relationships
+            .entry(relationship_key(relationship))
+            .or_default()
+            .push(relationship);
+    }
+    relationships
 }
 
 fn relationship_key(relationship: &Relationship) -> String {
@@ -2319,6 +2329,53 @@ mod tests {
             "Expected pass, got: {:?}",
             result.failures
         );
+    }
+
+    #[test]
+    fn relationship_candidates_match_each_design_type_independently() {
+        use RelationType::{Aggregation, Dependency};
+
+        for design_types in [
+            vec![Aggregation],
+            vec![Dependency],
+            vec![Aggregation, Dependency],
+        ] {
+            for (implementation_types, missing_dependency) in [
+                (vec![Aggregation, Dependency], false),
+                (vec![Dependency, Aggregation], false),
+                (vec![Aggregation], true),
+            ] {
+                let mut design_entity = entity("vehicle.Engine", vec![]);
+                design_entity.relationships = design_types
+                    .iter()
+                    .map(|kind| relationship("vehicle.Engine", "vehicle.Part", *kind))
+                    .collect();
+                let mut implementation_entity = entity("vehicle::Engine", vec![]);
+                implementation_entity.relationships = implementation_types
+                    .iter()
+                    .map(|kind| relationship("vehicle::Engine", "vehicle::Part", *kind))
+                    .collect();
+
+                let result = validate_class_design_implementation(
+                    &index(vec![design_entity]),
+                    &index(vec![implementation_entity]),
+                );
+                let expected_failures =
+                    usize::from(missing_dependency && design_types.contains(&Dependency));
+                assert_eq!(
+                    result.failures.len(),
+                    expected_failures,
+                    "design {design_types:?}, implementation {implementation_types:?}: {:?}",
+                    result.failures,
+                );
+                if expected_failures == 1 {
+                    let failure = &result.failures[0];
+                    assert!(failure.contains("[Implementation] Field \"relationship type\""));
+                    assert!(failure.contains("vehicle::Engine -> Dependency -> vehicle::Part"));
+                    assert!(!failure.contains("not found"));
+                }
+            }
+        }
     }
 
     #[test]
