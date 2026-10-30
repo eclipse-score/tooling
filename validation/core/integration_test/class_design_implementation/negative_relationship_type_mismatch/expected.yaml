@@ -12,13 +12,13 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  [Implementation] Field "relationship type" on entity "Engine" differs between the unit design and the C++ class implementation.
-    Entity                     : "Engine"
+  [Implementation] Field "relationship type" on entity "Car" differs between the unit design and the C++ class implementation.
+    Entity                     : "Car"
     Field                      : relationship type
-    Design value               : Engine -> Aggregation -> Manufacturer
+    Design value               : Car -> Aggregation -> Driver
     Design source file         : "validation/core/integration_test/class_design_implementation/negative_relationship_type_mismatch/class_diagram.puml"
     Design source line         : 18
-    Implementation value       : Engine -> Composition -> Manufacturer
+    Implementation value       : Car -> Composition -> Driver
     Implementation source file : "validation/core/integration_test/class_design_implementation/negative_relationship_type_mismatch/transport.cpp"
     Implementation source line : 18
-    Fix                        : Make "relationship type" in entity "Engine" consistent between the unit design and the C++ class implementation.
+    Fix                        : Make "relationship type" in entity "Car" consistent between the unit design and the C++ class implementation.

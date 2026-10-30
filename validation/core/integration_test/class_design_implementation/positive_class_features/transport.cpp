@@ -15,7 +15,7 @@
 
 namespace vehicle
 {
-struct Manufacturer
+struct Piston
 {
     int id;
 };
@@ -37,7 +37,7 @@ struct Engine
 
     int speed;
     static int instance_count;
-    Manufacturer vendor;
+    Piston piston;
 
     void start(int mode);
     void configure(int mode, int force);

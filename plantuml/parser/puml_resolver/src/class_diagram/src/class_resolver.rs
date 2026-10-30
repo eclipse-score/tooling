@@ -1031,20 +1031,21 @@ impl ClassResolver {
         }
 
         // ---------------- Composition ----------------
-        // *--   or   --*
+        // The diamond marks the owner: normalize owner -> part.
         if left == "*" {
-            return Ok((RelationType::Composition, true));
+            return Ok((RelationType::Composition, false));
         }
         if right == "*" {
-            return Ok((RelationType::Composition, false));
+            return Ok((RelationType::Composition, true));
         }
 
         // ---------------- Aggregation ----------------
+        // The diamond marks the owner: normalize owner -> part.
         if left == "o" {
-            return Ok((RelationType::Aggregation, true));
+            return Ok((RelationType::Aggregation, false));
         }
         if right == "o" {
-            return Ok((RelationType::Aggregation, false));
+            return Ok((RelationType::Aggregation, true));
         }
 
         // ---------------- Association ----------------
@@ -1917,12 +1918,12 @@ mod tests {
             Case {
                 arrow: make_arrow(None, "--", Some("*")),
                 expected_ty: RelationType::Composition,
-                expected_reversed: false,
+                expected_reversed: true,
             },
             Case {
                 arrow: make_arrow(None, "--", Some("o")),
                 expected_ty: RelationType::Aggregation,
-                expected_reversed: false,
+                expected_reversed: true,
             },
             Case {
                 arrow: make_arrow(Some("<"), "--", None),
