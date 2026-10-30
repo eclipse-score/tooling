@@ -22,7 +22,11 @@ unit_design(
 
 cc_library(
     name = "implementation",
-    srcs = ["implementation.cpp"],
+    srcs = [
+        "event_subscription_control.cpp",
+        "implementation.cpp",
+    ],
+    hdrs = ["event_subscription_control.h"],
 )
 
 unit(

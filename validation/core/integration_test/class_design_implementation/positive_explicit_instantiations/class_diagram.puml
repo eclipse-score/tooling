@@ -24,4 +24,16 @@ class "Contract<T*>" as Contract {
 
 class Plain
 
+namespace score {
+    namespace mw {
+        namespace com {
+            namespace impl {
+                namespace lola {
+                    class "EventSubscriptionControl<template<class> class AtomicIndirectorType>" as EventSubscriptionControl
+                }
+            }
+        }
+    }
+}
+
 @enduml
