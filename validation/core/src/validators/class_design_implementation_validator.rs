@@ -19,8 +19,8 @@ use crate::models::ClassEntityIndex;
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::ValidationResult;
 use class_diagram::{
-    ClassTemplateKind, EnumLiteral, FreeFunctionDecl, MemberVariable, Method, Relationship,
-    SimpleEntity, TemplateParameter, TypeAlias,
+    ClassTemplateKind, EnumLiteral, FreeFunctionDecl, MemberVariable, Method, MethodModifier,
+    Relationship, SimpleEntity, TemplateParameter, TypeAlias,
 };
 use source_location::SourceLocation;
 use std::collections::BTreeMap;
@@ -414,9 +414,9 @@ impl ClassDesignImplementationValidator {
                     design_method,
                     implementation_method,
                 ),
-                // NOTE: Parameter mismatch diagnostics are emitted only when a same-named
-                // implementation method is unique. Overloaded methods are left as missing full
-                // signatures because the validator cannot safely choose a candidate yet.
+                // NOTE: Parameter and const-qualification mismatch diagnostics are emitted only
+                // when a same-named implementation method is unique. Overloaded methods are left
+                // as missing full signatures because the validator cannot safely choose a candidate.
                 None => {
                     match unique_method_index_by_name(implementation_entity, &design_method.name)
                         .and_then(|index| implementation_entity.methods.get(index))
@@ -1076,7 +1076,12 @@ fn free_function_key(function: &FreeFunctionDecl) -> String {
 
 fn method_key(method: &Method) -> String {
     let parameter_types = parameter_signature(&method.parameters);
-    format!("{}({})", method.name, parameter_types)
+    let const_qualifier = if method.modifiers.contains(&MethodModifier::Const) {
+        " const"
+    } else {
+        ""
+    };
+    format!("{}({}){}", method.name, parameter_types, const_qualifier)
 }
 
 fn parameter_signature(parameters: &[class_diagram::FunctionArgument]) -> String {
@@ -1679,6 +1684,12 @@ mod tests {
         assert_eq!(
             method_key(&method),
             "dispatch(uint8_t, vehicle::Payload...)"
+        );
+
+        method.modifiers = vec![MethodModifier::Const, MethodModifier::Noexcept];
+        assert_eq!(
+            method_key(&method),
+            "dispatch(uint8_t, vehicle::Payload...) const"
         );
     }
 

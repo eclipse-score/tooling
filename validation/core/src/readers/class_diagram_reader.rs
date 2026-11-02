@@ -441,6 +441,7 @@ fn map_method_modifier(
         fb_class::MethodModifier::Destructor => Ok(MethodModifier::Destructor),
         fb_class::MethodModifier::Noexcept => Ok(MethodModifier::Noexcept),
         fb_class::MethodModifier::Final => Ok(MethodModifier::Final),
+        fb_class::MethodModifier::Const => Ok(MethodModifier::Const),
         _ => Err(unsupported_enum(context, "method_modifier", value)),
     }
 }

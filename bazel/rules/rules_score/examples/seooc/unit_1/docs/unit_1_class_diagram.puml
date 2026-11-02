@@ -16,7 +16,7 @@
 namespace unit_1 {
     class Foo {
 
-        + GetNumber() : uint8_t
+        + GetNumber() : uint8_t <<const>>
         + SetNumber(value : uint8_t) : void
     }
 }

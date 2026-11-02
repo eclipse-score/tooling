@@ -39,6 +39,8 @@ pub struct CallableDeclarationKey {
 pub struct CallableSignatureKey {
     pub name: String,
     pub parameters: Vec<CallableArgumentKey>,
+    /// Trailing member-function const; always false for free functions.
+    pub is_const_method: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

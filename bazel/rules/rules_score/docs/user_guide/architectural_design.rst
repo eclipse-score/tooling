@@ -539,7 +539,11 @@ the build generates one ``ApiMethod`` TRLC record per public method (all overloa
 ``FailureMode`` records reference them (via the ``interface`` field), enabling traceability from each failure mode back to the architecture.
 Attributes, enums, typedefs and non-public members yield no record.
 Constructors and destructors are public methods like any other and get a record each (``<Class>_<Class>``, ``<Class>_destructor``).
-The ``const`` qualifier is not part of a recorded signature yet, so const and non-const overloads are merged.
+Method ``const`` qualification is retained as a trailing qualifier in each recorded
+signature, after the parameter list and before ``noexcept`` when present.
+Const and non-const overloads remain distinct signatures within the same
+``ApiMethod`` record, for example ``bool Engine::Check()`` and
+``bool Engine::Check() const``; exact duplicate signatures are listed only once.
 The records live in a generated ``public_api.trlc`` of the ``architectural_design`` target (reports show this file as item location, not the ``.puml`` source); list the target in the ``deps`` of ``failure_modes``
 and ``import`` its TRLC package in the failure mode file. The ``package`` attribute names that package and is required with ``public_api``.
 

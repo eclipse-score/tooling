@@ -22,7 +22,7 @@
           "name": "getIdRef",
           "return_type": "const int &",
           "parameters": [],
-          "modifiers": [],
+          "modifiers": ["Const"],
           "template_parameters": null,
           "visibility": "public",
           "source_location": {
@@ -34,7 +34,7 @@
           "name": "getIdRValueRef",
           "return_type": "const int &&",
           "parameters": [],
-          "modifiers": [],
+          "modifiers": ["Const"],
           "template_parameters": null,
           "visibility": "public",
           "source_location": {
@@ -58,7 +58,7 @@
           "name": "getPinnedIdPtr",
           "return_type": "const int *const",
           "parameters": [],
-          "modifiers": [],
+          "modifiers": ["Const"],
           "template_parameters": null,
           "visibility": "public",
           "source_location": {
@@ -70,7 +70,7 @@
           "name": "getHistory",
           "return_type": "std::vector<int>",
           "parameters": [],
-          "modifiers": [],
+          "modifiers": ["Const"],
           "template_parameters": null,
           "visibility": "public",
           "source_location": {
@@ -82,7 +82,7 @@
           "name": "getNames",
           "return_type": "std::vector<const char *>",
           "parameters": [],
-          "modifiers": [],
+          "modifiers": ["Const"],
           "template_parameters": null,
           "visibility": "public",
           "source_location": {
@@ -94,7 +94,7 @@
           "name": "getConstPointerMatrix",
           "return_type": "std::vector<std::vector<const int *>>",
           "parameters": [],
-          "modifiers": [],
+          "modifiers": ["Const"],
           "template_parameters": null,
           "visibility": "public",
           "source_location": {
@@ -106,7 +106,7 @@
           "name": "getNameIndex",
           "return_type": "std::map<int, std::vector<const char *>>",
           "parameters": [],
-          "modifiers": [],
+          "modifiers": ["Const"],
           "template_parameters": null,
           "visibility": "public",
           "source_location": {
@@ -118,7 +118,7 @@
           "name": "getRouteInfoById",
           "return_type": "std::map<int, external_types::RouteInfo>",
           "parameters": [],
-          "modifiers": [],
+          "modifiers": ["Const"],
           "template_parameters": null,
           "visibility": "public",
           "source_location": {
