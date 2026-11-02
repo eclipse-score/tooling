@@ -15,7 +15,7 @@
 
 namespace unit_3 {
     class Formatter <<final>> {
-        + Format(foo : const unit_1::Foo &) : std::string
+        + Format(foo : const unit_1::Foo &) : std::string <<const>>
     }
 }
 

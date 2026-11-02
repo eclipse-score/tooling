@@ -21,7 +21,7 @@ class Bar <<final>> {
     - foo_ : unique_ptr<unit_1::Foo>
     --
     + Bar(foo : unique_ptr<unit_1::Foo>)
-    + AssertNumber() : bool
+    + AssertNumber() : bool <<const>>
 }
 
 @enduml

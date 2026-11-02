@@ -15,7 +15,7 @@
 
 namespace amp {
     class "move_only_function<ReturnType(ArgTypes...), Capacity, Alignment>" as signature_specialization {
-        + empty() noexcept : bool
+        + empty() const noexcept : bool
     }
 }
 

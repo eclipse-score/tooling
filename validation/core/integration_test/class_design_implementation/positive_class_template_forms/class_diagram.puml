@@ -16,15 +16,15 @@
 namespace amp {
     ' Declaration forms: unquoted, quoted, aliases, and legacy parameter packs.
     class ordinary_template<T, U> {
-        + value() : T
+        + value() const : T
     }
 
     class "quoted_template_alias<T, U>" as quoted_template_alias {
-        + value() : T
+        + value() const : T
     }
 
     class "quoted_template_no_alias<T, U>" {
-        + value() : T
+        + value() const : T
     }
 
     class "Proxy<Spec...>" as P

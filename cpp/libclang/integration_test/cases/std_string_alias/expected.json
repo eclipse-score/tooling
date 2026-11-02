@@ -17,7 +17,7 @@
                             "param_type": "const std::string &"
                         }
                     ],
-                    "modifiers": [],
+                    "modifiers": ["Const"],
                     "template_parameters": null,
                     "visibility": "public",
                     "source_location": {

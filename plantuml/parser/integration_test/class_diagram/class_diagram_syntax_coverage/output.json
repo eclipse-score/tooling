@@ -484,7 +484,7 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": [],
+            "modifiers": ["Const"],
             "source_location": {
               "file": "",
               "line": 83

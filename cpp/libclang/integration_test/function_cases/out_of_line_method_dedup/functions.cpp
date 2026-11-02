@@ -14,3 +14,4 @@
 #include "functions.hpp"
 
 void A::run() {}
+void A::run() const {}
