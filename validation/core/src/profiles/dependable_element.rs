@@ -36,6 +36,7 @@ pub fn run(inputs: &DependableElementInputs) -> Result<ProfileRun, String> {
         &mut result,
         |raw: BazelInput, errs| raw.to_bazel_architecture(errs),
     )?;
+    let bazel = bazel.filter(|architecture| !architecture.seooc_set.is_empty());
     let component = read_and_convert::<ComponentDiagramReader, ComponentDiagramArchitecture>(
         inputs.component_diagrams.as_slice(),
         &mut result,

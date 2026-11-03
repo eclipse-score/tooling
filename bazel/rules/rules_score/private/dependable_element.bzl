@@ -997,7 +997,7 @@ def _collect_architecture_components(ctx):
         elif UnitInfo in comp:
             de_units.append({"label": str(comp.label), "design_name": comp[UnitInfo].design_name})
 
-    de_entry = {}
+    de_entry = {"design_name": ctx.attr.module_name}
     if de_components:
         de_entry["components"] = de_components
     if de_units:
@@ -1914,6 +1914,7 @@ def _dependable_element_index_attrs():
         ),
         "components": attr.label_list(
             mandatory = True,
+            providers = [[ComponentInfo], [UnitInfo]],
             aspects = [collect_current_architecture_aspect],
             doc = "Component targets (aspect is applied here and passed to subrule).",
         ),

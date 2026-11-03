@@ -14,7 +14,7 @@ should_pass: false
 error_contains: |
   [Naming] Unit "unit_3" from the PlantUML component diagram not found in Bazel.
     Name                    : "unit_3"
-    Parent                  : component_example
+    Parent                  : safety_software_seooc_example.component_example
     Component source file   : "validation/core/integration_test/bazel_component/negative_extra_unit/component_diagram.puml"
     Component source line   : 20
     Suggestion for "unit_3" : Did you mean unit "unit_1"?
