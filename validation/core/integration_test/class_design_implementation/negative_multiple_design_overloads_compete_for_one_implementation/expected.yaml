@@ -1,0 +1,26 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains: |-
+  [Implementation] No injective overload matching covers all design declarations for free function partial::Select.
+    Reason                     : Design declarations compete for the same implementation declarations. No one-to-one matching can cover all design declarations.
+    Design value 1             : partial::Select(mode: int)
+    Design source file 1       : "validation/core/integration_test/class_design_implementation/negative_multiple_design_overloads_compete_for_one_implementation/class_diagram.puml"
+    Design source line 1       : 18
+    Design value 2             : partial::Select(mode: int, force: int)
+    Design source file 2       : "validation/core/integration_test/class_design_implementation/negative_multiple_design_overloads_compete_for_one_implementation/class_diagram.puml"
+    Design source line 2       : 19
+    Implementation value       : partial::Select(mode: int, force: int)
+    Implementation source file : "validation/core/integration_test/class_design_implementation/negative_multiple_design_overloads_compete_for_one_implementation/implementation.cpp"
+    Implementation source line : 15
+    Fix                        : Provide distinct matching implementation overloads or correct the design so that each design declaration can select a different implementation declaration.

@@ -135,6 +135,24 @@ under every containing design path. Conflicting component paths are excluded
 from downstream matching diagnostics to avoid cascading errors. An entry without
 its own `design_name` is rejected when reading the JSON.
 
+## Class Design Validation Semantics
+
+For `unit`, the design constrains the implementation; this is not C++ call resolution.
+
+- Nonempty function and template **declaration** parameter lists may omit trailing
+  implementation parameters without defaults. Explicit entries remain constrained;
+  `f()` requires zero parameters, and absent/empty template lists are not wildcards.
+- Types require full equality under the documented comparison rules, including all
+  template actual arguments: `Map<K, V>` does not match `Map<K, V, Allocator>`.
+- Overload groups require a one-to-one assignment covering every design
+  declaration and satisfying all field checks. Multiple valid assignments pass;
+  unused implementation overloads are allowed. Ambiguous parameter-compatible
+  candidates are refined by parameter names, return types, template declarations,
+  and applicable visibility/modifiers, without an exact-signature preference.
+
+See the [class design implementation specification](docs/specifications/class_design_implementation.md)
+for detailed rules and current limitations.
+
 ## Run
 
 Build the CLI:
