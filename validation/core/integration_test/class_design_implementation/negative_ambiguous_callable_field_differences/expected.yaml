@@ -1,0 +1,50 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains:
+  - |-
+    [Implementation] No field-consistent overload matching covers all design declarations for method diagnostics.Worker::Run.
+      Reason : Parameter-compatible candidates exist, but no one-to-one assignment satisfies all field checks.
+
+      Design 1
+        Declaration : diagnostics.Worker::Run(expected: int)
+        Source file : "validation/core/integration_test/class_design_implementation/negative_ambiguous_callable_field_differences/class_diagram.puml"
+        Source line : 18
+
+        Candidate 1
+          Declaration : diagnostics.Worker::Run(actual: int)
+          Source file : "validation/core/integration_test/class_design_implementation/negative_ambiguous_callable_field_differences/implementation.cpp"
+          Source line : 16
+
+          Differences
+            Field               | Design value  | Candidate value
+            return type         | int           | void
+            visibility          | Public        | Private
+            parameter name      | expected: int | actual: int
+            template parameters | ["T"]         | None
+            modifiers           | []            | [Static]
+
+        Candidate 2
+          Declaration : diagnostics.Worker::Run(actual: int, extra: bool)
+          Source file : "validation/core/integration_test/class_design_implementation/negative_ambiguous_callable_field_differences/implementation.cpp"
+          Source line : 17
+
+          Differences
+            Field               | Design value  | Candidate value
+            return type         | int           | void
+            visibility          | Public        | Private
+            parameter name      | expected: int | actual: int
+            template parameters | ["T"]         | None
+            modifiers           | []            | [Static]
+
+      Fix    : Correct the design or implementation so that each design declaration can be assigned a distinct candidate satisfying all field checks.

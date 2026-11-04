@@ -1,0 +1,59 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+should_pass: false
+error_contains:
+  - |-
+    [Implementation] No field-consistent overload matching covers all design declarations for free function diagnostics::Run.
+      Reason : Each design declaration has a matching candidate, but no assignment can give every design a different implementation declaration. An implementation declaration cannot cover multiple design declarations.
+
+      Design 1
+        Declaration : diagnostics::Run(x: int)
+        Source file : "validation/core/integration_test/class_design_implementation/negative_ambiguous_field_consistent_contention/class_diagram.puml"
+        Source line : 18
+
+        Candidate 1
+          Declaration  : diagnostics::Run(x: int, extra: bool)
+          Source file  : "validation/core/integration_test/class_design_implementation/negative_ambiguous_field_consistent_contention/implementation.cpp"
+          Source line  : 15
+          Field checks : All fields match
+
+        Candidate 2
+          Declaration : diagnostics::Run(x: int, extra: bool, tail: bool)
+          Source file : "validation/core/integration_test/class_design_implementation/negative_ambiguous_field_consistent_contention/implementation.cpp"
+          Source line : 16
+
+          Differences
+            Field       | Design value | Candidate value
+            return type | int          | void
+
+      Design 2
+        Declaration : diagnostics::Run(x: int, extra: bool)
+        Source file : "validation/core/integration_test/class_design_implementation/negative_ambiguous_field_consistent_contention/class_diagram.puml"
+        Source line : 19
+
+        Candidate 1
+          Declaration  : diagnostics::Run(x: int, extra: bool)
+          Source file  : "validation/core/integration_test/class_design_implementation/negative_ambiguous_field_consistent_contention/implementation.cpp"
+          Source line  : 15
+          Field checks : All fields match
+
+        Candidate 2
+          Declaration : diagnostics::Run(x: int, extra: bool, tail: bool)
+          Source file : "validation/core/integration_test/class_design_implementation/negative_ambiguous_field_consistent_contention/implementation.cpp"
+          Source line : 16
+
+          Differences
+            Field       | Design value | Candidate value
+            return type | int          | void
+
+      Fix    : Provide a separate matching implementation for each design declaration, or correct the design to avoid describing the same implementation twice.

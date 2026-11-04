@@ -14,9 +14,12 @@
 //! Class implementation validation: compare unit design class diagrams with
 //! C++ implementation produced by the C++ parser.
 
-use super::shared::best_string_suggestion;
+use super::shared::{
+    any_covering_matching, best_string_suggestion, candidate_graph, nonempty_candidate_rows,
+    unique_covering_matching, MatchingOutcome,
+};
 use crate::models::ClassEntityIndex;
-use crate::results::{ErrorBuilder, ErrorCategory};
+use crate::results::{ErrorBuilder, ErrorCategory, ErrorSection};
 use crate::ValidationResult;
 use class_diagram::{
     ClassTemplateKind, EnumLiteral, FreeFunctionDecl, MemberVariable, Method, MethodModifier,
@@ -51,6 +54,12 @@ enum ParameterDifference {
     PackExpansion,
 }
 
+struct FieldDifference {
+    field: String,
+    design: String,
+    implementation: String,
+}
+
 impl ClassDesignImplementationValidator {
     fn new() -> Self {
         Self {
@@ -76,31 +85,93 @@ impl ClassDesignImplementationValidator {
         design_classes: &ClassEntityIndex,
         implementation_classes: &ClassEntityIndex,
     ) {
-        let implementation_functions = free_function_map(implementation_classes);
-        for design_function in design_classes.free_functions() {
-            let key = free_function_key(design_function);
-            let implementation_function = implementation_functions
-                .get(&key)
-                .copied()
-                .or_else(|| unique_free_function_by_name(implementation_classes, design_function));
-
-            if let Some(implementation_function) = implementation_function {
-                self.append_free_function_comparison_diagnostics(
-                    design_function,
-                    implementation_function,
-                );
-                if !free_functions_match(design_function, implementation_function) {
-                    self.check_free_function_fields(design_function, implementation_function);
+        let design_groups = free_function_groups(design_classes);
+        let implementation_groups = free_function_groups(implementation_classes);
+        let suggestions = free_function_map(implementation_classes);
+        for (name, designs) in design_groups {
+            let implementations = implementation_groups
+                .get(&name)
+                .map(Vec::as_slice)
+                .unwrap_or_default();
+            let candidates =
+                candidate_graph(&designs, implementations, |design, implementation| {
+                    parameter_types_match(&design.parameters, &implementation.parameters)
+                });
+            // Preserve legacy diagnostics for empty rows independently of matching
+            // the remaining rows. Ambiguous groups are refined by full field checks.
+            for (row, design) in designs.iter().enumerate() {
+                if !candidates[row].is_empty() {
+                    continue;
                 }
-            } else {
-                self.result.add_failure(Self::format_missing_free_function(
-                    design_function,
-                    best_string_suggestion(
-                        &key,
-                        implementation_functions.keys().map(String::as_str),
-                    )
-                    .as_deref(),
-                ));
+                if implementations.len() == 1 {
+                    self.append_free_function_comparison_diagnostics(design, implementations[0]);
+                    self.check_free_function_fields(design, implementations[0]);
+                } else {
+                    self.result.add_failure(Self::format_missing_free_function(
+                        design,
+                        best_string_suggestion(
+                            &free_function_key(design),
+                            suggestions.keys().map(String::as_str),
+                        )
+                        .as_deref(),
+                    ));
+                }
+            }
+            let (designs, candidates) = nonempty_candidate_rows(&designs, &candidates);
+            match callable_covering_matching(
+                &designs,
+                implementations,
+                &candidates,
+                free_functions_match,
+            ) {
+                Ok(matching) => {
+                    for (row, column) in matching.into_iter().enumerate() {
+                        let design = designs[row];
+                        let implementation = implementations[column];
+                        self.append_free_function_comparison_diagnostics(design, implementation);
+                        if !free_functions_match(design, implementation) {
+                            self.check_free_function_fields(design, implementation);
+                        }
+                    }
+                }
+                Err(outcome) => self.result.add_failure(format_overload_matching_failure(
+                    &format!("free function {name}"),
+                    &outcome,
+                    designs.iter().map(|function| {
+                        (
+                            format_function_declaration(
+                                &normalize_qualified_name(&function.qualified_name()),
+                                &function.parameters,
+                            ),
+                            &function.source_location,
+                        )
+                    }),
+                    implementations.iter().map(|function| {
+                        (
+                            format_function_declaration(
+                                &normalize_qualified_name(&function.qualified_name()),
+                                &function.parameters,
+                            ),
+                            &function.source_location,
+                        )
+                    }),
+                    callable_candidate_comparisons(
+                        &outcome,
+                        &designs,
+                        implementations,
+                        &candidates,
+                        |function, _| {
+                            (
+                                format_function_declaration(
+                                    &function.qualified_name(),
+                                    &function.parameters,
+                                ),
+                                &function.source_location,
+                            )
+                        },
+                        free_function_field_differences,
+                    ),
+                )),
             }
         }
     }
@@ -110,49 +181,14 @@ impl ClassDesignImplementationValidator {
         design_function: &FreeFunctionDecl,
         implementation_function: &FreeFunctionDecl,
     ) {
-        if normalized_optional_type(&design_function.return_type)
-            != normalized_optional_type(&implementation_function.return_type)
+        for difference in free_function_field_differences(design_function, implementation_function)
         {
             self.result.add_failure(Self::format_free_function_mismatch(
                 design_function,
                 implementation_function,
-                "return type",
-                &render_optional_type(&design_function.return_type),
-                &render_optional_type(&implementation_function.return_type),
-            ));
-        }
-
-        if !template_parameters_match(
-            &design_function.template_parameters,
-            &implementation_function.template_parameters,
-        ) {
-            self.result.add_failure(Self::format_free_function_mismatch(
-                design_function,
-                implementation_function,
-                "template parameters",
-                &render_template_parameters(&design_function.template_parameters),
-                &render_template_parameters(&implementation_function.template_parameters),
-            ));
-        }
-
-        self.check_free_function_parameter_fields(design_function, implementation_function);
-    }
-
-    fn check_free_function_parameter_fields(
-        &mut self,
-        design_function: &FreeFunctionDecl,
-        implementation_function: &FreeFunctionDecl,
-    ) {
-        for (difference, design_value, implementation_value) in parameter_differences(
-            &design_function.parameters,
-            &implementation_function.parameters,
-        ) {
-            self.result.add_failure(Self::format_free_function_mismatch(
-                design_function,
-                implementation_function,
-                &format!("parameter {}", parameter_difference_name(difference)),
-                &design_value,
-                &implementation_value,
+                &difference.field,
+                &difference.design,
+                &difference.implementation,
             ));
         }
     }
@@ -361,9 +397,10 @@ impl ClassDesignImplementationValidator {
     ) {
         let variable_name = &design_variable.name;
 
-        if normalized_optional_type(&design_variable.data_type)
-            != normalized_optional_type(&implementation_variable.data_type)
-        {
+        if !optional_types_match(
+            &design_variable.data_type,
+            &implementation_variable.data_type,
+        ) {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
@@ -402,49 +439,114 @@ impl ClassDesignImplementationValidator {
         design_entity: &SimpleEntity,
         implementation_entity: &SimpleEntity,
     ) {
-        let implementation_methods = method_map(implementation_entity);
-        for design_method in &design_entity.methods {
-            let key = method_key_for_matching(design_entity, design_method);
-            match implementation_methods.get(key.as_str()) {
-                Some(implementation_method)
-                    if conversion_target(design_method).is_none()
-                        && methods_match(design_method, implementation_method) => {}
-                Some(implementation_method) => self.check_method_fields(
-                    design_entity,
-                    implementation_entity,
-                    design_method,
-                    implementation_method,
-                ),
-                // NOTE: Parameter and const-qualification mismatch diagnostics are emitted only
-                // when a same-named implementation method is unique. Overloaded methods are left
-                // as missing full signatures because the validator cannot safely choose a candidate.
-                None => {
-                    match unique_method_index_by_matching_name(
-                        implementation_entity,
+        let design_groups = method_groups(design_entity);
+        let implementation_groups = method_groups(implementation_entity);
+        let suggestions = method_map(implementation_entity);
+        for (name, designs) in design_groups {
+            let implementations = implementation_groups
+                .get(&name)
+                .map(Vec::as_slice)
+                .unwrap_or_default();
+            let candidates =
+                candidate_graph(&designs, implementations, |design, implementation| {
+                    parameter_types_match(&design.parameters, &implementation.parameters)
+                        && design.modifiers.contains(&MethodModifier::Const)
+                            == implementation.modifiers.contains(&MethodModifier::Const)
+                });
+            // An unmatched declaration must not hide independent mismatches or
+            // contention among declarations that do have candidates.
+            for (row, design) in designs.iter().enumerate() {
+                if !candidates[row].is_empty() {
+                    continue;
+                }
+                if implementations.len() == 1 {
+                    self.check_method_fields(
                         design_entity,
-                        design_method,
-                    )
-                    .and_then(|index| implementation_entity.methods.get(index))
-                    {
-                        Some(implementation_method) => self.check_method_fields(
-                            design_entity,
-                            implementation_entity,
-                            design_method,
-                            implementation_method,
-                        ),
-                        None => self.result.add_failure(Self::format_missing_member(
-                            design_entity,
-                            implementation_entity,
-                            "method",
-                            &key,
-                            best_string_suggestion(
-                                &key,
-                                implementation_methods.keys().map(String::as_str),
-                            )
-                            .as_deref(),
-                        )),
+                        implementation_entity,
+                        design,
+                        implementations[0],
+                    );
+                } else {
+                    self.result.add_failure(Self::format_missing_member(
+                        design_entity,
+                        implementation_entity,
+                        "method",
+                        &method_key(design),
+                        best_string_suggestion(
+                            &method_key(design),
+                            suggestions.keys().map(String::as_str),
+                        )
+                        .as_deref(),
+                    ));
+                }
+            }
+            let (designs, candidates) = nonempty_candidate_rows(&designs, &candidates);
+            let fields_match = |design: &Method, implementation: &Method| {
+                methods_match(design_entity, implementation_entity, design, implementation)
+            };
+            match callable_covering_matching(&designs, implementations, &candidates, fields_match) {
+                Ok(matching) => {
+                    for (row, column) in matching.into_iter().enumerate() {
+                        if !fields_match(designs[row], implementations[column]) {
+                            self.check_method_fields(
+                                design_entity,
+                                implementation_entity,
+                                designs[row],
+                                implementations[column],
+                            );
+                        }
                     }
                 }
+                Err(outcome) => self.result.add_failure(format_overload_matching_failure(
+                    &format!("method {}::{name}", design_entity.id),
+                    &outcome,
+                    designs.iter().map(|method| {
+                        (
+                            format_function_declaration(
+                                &format!("{}::{name}", design_entity.id),
+                                &method.parameters,
+                            ),
+                            &method.source_location,
+                        )
+                    }),
+                    implementations.iter().map(|method| {
+                        (
+                            format_function_declaration(
+                                &format!("{}::{name}", implementation_entity.id),
+                                &method.parameters,
+                            ),
+                            &method.source_location,
+                        )
+                    }),
+                    callable_candidate_comparisons(
+                        &outcome,
+                        &designs,
+                        implementations,
+                        &candidates,
+                        |method, is_implementation| {
+                            let owner = if is_implementation {
+                                implementation_entity
+                            } else {
+                                design_entity
+                            };
+                            (
+                                format_function_declaration(
+                                    &format!("{}::{}", owner.id, method.name),
+                                    &method.parameters,
+                                ),
+                                &method.source_location,
+                            )
+                        },
+                        |design, implementation| {
+                            method_field_differences(
+                                design_entity,
+                                implementation_entity,
+                                design,
+                                implementation,
+                            )
+                        },
+                    ),
+                )),
             }
         }
     }
@@ -456,9 +558,7 @@ impl ClassDesignImplementationValidator {
         design_method: &Method,
         implementation_method: &Method,
     ) {
-        let method_name = &design_method.name;
-
-        if !method_return_types_match(
+        for difference in method_field_differences(
             design_entity,
             implementation_entity,
             design_method,
@@ -467,78 +567,10 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
-                &format!("method \"{method_name}\" return type"),
+                &format!("method \"{}\" {}", design_method.name, difference.field),
                 FieldReferenceStyle::Verbatim,
-                &render_optional_type(&design_method.return_type),
-                &render_optional_type(&implementation_method.return_type),
-            ));
-        }
-
-        if design_method.visibility != implementation_method.visibility {
-            self.result.add_failure(Self::format_mismatch(
-                design_entity,
-                implementation_entity,
-                &format!("method \"{method_name}\" visibility"),
-                FieldReferenceStyle::Verbatim,
-                &format!("{:?}", design_method.visibility),
-                &format!("{:?}", implementation_method.visibility),
-            ));
-        }
-
-        self.check_method_parameter_fields(
-            design_entity,
-            implementation_entity,
-            design_method,
-            implementation_method,
-        );
-
-        if !template_parameters_match(
-            &design_method.template_parameters,
-            &implementation_method.template_parameters,
-        ) {
-            self.result.add_failure(Self::format_mismatch(
-                design_entity,
-                implementation_entity,
-                &format!("method \"{method_name}\" template parameters"),
-                FieldReferenceStyle::Verbatim,
-                &render_template_parameters(&design_method.template_parameters),
-                &render_template_parameters(&implementation_method.template_parameters),
-            ));
-        }
-
-        if design_method.modifiers != implementation_method.modifiers {
-            self.result.add_failure(Self::format_mismatch(
-                design_entity,
-                implementation_entity,
-                &format!("method \"{method_name}\" modifiers"),
-                FieldReferenceStyle::Verbatim,
-                &format!("{:?}", design_method.modifiers),
-                &format!("{:?}", implementation_method.modifiers),
-            ));
-        }
-    }
-
-    fn check_method_parameter_fields(
-        &mut self,
-        design_entity: &SimpleEntity,
-        implementation_entity: &SimpleEntity,
-        design_method: &Method,
-        implementation_method: &Method,
-    ) {
-        let method_name = &design_method.name;
-        for (difference, design_value, implementation_value) in
-            parameter_differences(&design_method.parameters, &implementation_method.parameters)
-        {
-            self.result.add_failure(Self::format_mismatch(
-                design_entity,
-                implementation_entity,
-                &format!(
-                    "method \"{method_name}\" parameter {}",
-                    parameter_difference_name(difference)
-                ),
-                FieldReferenceStyle::Verbatim,
-                &design_value,
-                &implementation_value,
+                &difference.design,
+                &difference.implementation,
             ));
         }
     }
@@ -828,6 +860,348 @@ impl ClassDesignImplementationValidator {
     }
 }
 
+fn method_groups(entity: &SimpleEntity) -> BTreeMap<String, Vec<&Method>> {
+    let mut groups: BTreeMap<String, Vec<&Method>> = BTreeMap::new();
+    for method in &entity.methods {
+        let group = groups
+            .entry(method_name_for_matching(entity, method))
+            .or_default();
+        if !group
+            .iter()
+            .any(|existing| normalized_method(existing) == normalized_method(method))
+        {
+            group.push(method);
+        }
+    }
+    groups
+}
+
+fn free_function_groups(index: &ClassEntityIndex) -> BTreeMap<String, Vec<&FreeFunctionDecl>> {
+    let mut groups: BTreeMap<String, Vec<&FreeFunctionDecl>> = BTreeMap::new();
+    for function in index.free_functions() {
+        let group = groups
+            .entry(normalize_qualified_name(&function.qualified_name()))
+            .or_default();
+        if !group.iter().any(|existing| {
+            normalized_free_function(existing) == normalized_free_function(function)
+        }) {
+            group.push(function);
+        }
+    }
+    groups
+}
+
+fn normalized_method(method: &Method) -> Method {
+    let mut normalized = method.clone();
+    normalized.source_location = SourceLocation::new("", 0);
+    normalized.conversion_target = normalized
+        .conversion_target
+        .as_deref()
+        .map(render_type_name);
+    if let Some(target) = &normalized.conversion_target {
+        normalized.name = format!("operator {target}");
+    }
+    normalize_callable_types(
+        &mut normalized.return_type,
+        &mut normalized.parameters,
+        &mut normalized.template_parameters,
+    );
+    normalized
+}
+
+/// Normalize spelling only; preserve list lengths and constraints.
+fn normalized_free_function(function: &FreeFunctionDecl) -> FreeFunctionDecl {
+    let mut normalized = function.clone();
+    normalized.source_location = SourceLocation::new("", 0);
+    normalized.enclosing_namespace_id = normalized
+        .enclosing_namespace_id
+        .as_deref()
+        .map(normalize_qualified_name);
+    normalize_callable_types(
+        &mut normalized.return_type,
+        &mut normalized.parameters,
+        &mut normalized.template_parameters,
+    );
+    normalized
+}
+
+fn normalize_callable_types(
+    return_type: &mut Option<String>,
+    parameters: &mut [class_diagram::FunctionArgument],
+    template_parameters: &mut Option<Vec<TemplateParameter>>,
+) {
+    *return_type = return_type.as_deref().map(render_type_name);
+    for parameter in parameters {
+        parameter.param_type = parameter.param_type.as_deref().map(render_type_name);
+    }
+    if let Some(parameters) = template_parameters {
+        normalize_template_declarations(parameters);
+    }
+}
+
+fn normalize_template_declarations(parameters: &mut [TemplateParameter]) {
+    for parameter in parameters {
+        match parameter {
+            TemplateParameter::NonType { value_type, .. } => {
+                *value_type = normalize_non_type_template_parameter_type(value_type);
+            }
+            TemplateParameter::Template { parameters, .. } => {
+                normalize_template_declarations(parameters);
+            }
+            TemplateParameter::Type { .. } => {}
+        }
+    }
+}
+
+/// Keep detailed field diagnostics for unique candidates. For ambiguous candidates,
+/// accept any covering assignment whose pairs satisfy every existing field check.
+fn callable_covering_matching<T>(
+    designs: &[&T],
+    implementations: &[&T],
+    candidates: &[Vec<usize>],
+    fields_match: impl Fn(&T, &T) -> bool,
+) -> Result<Vec<usize>, MatchingOutcome> {
+    match unique_covering_matching(candidates, implementations.len()) {
+        MatchingOutcome::Ambiguous => {
+            let valid_candidates = candidates
+                .iter()
+                .enumerate()
+                .map(|(row, columns)| {
+                    columns
+                        .iter()
+                        .copied()
+                        .filter(|&column| fields_match(designs[row], implementations[column]))
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>();
+            any_covering_matching(&valid_candidates, implementations.len())
+                .ok_or(MatchingOutcome::Ambiguous)
+        }
+        MatchingOutcome::Unique(matching) => Ok(matching),
+        MatchingOutcome::NoSolution => Err(MatchingOutcome::NoSolution),
+    }
+}
+
+struct OverloadComparisons {
+    designs: Vec<ErrorSection>,
+    every_design_has_valid_candidate: bool,
+}
+
+fn declaration_section(
+    title: String,
+    declaration: String,
+    source: &SourceLocation,
+) -> ErrorSection {
+    ErrorSection::new(title)
+        .field("Declaration", declaration)
+        .field("Source file", format!("\"{}\"", source_file(source)))
+        .field("Source line", source_line(source))
+}
+
+fn callable_candidate_comparisons<'a, T>(
+    outcome: &MatchingOutcome,
+    designs: &[&'a T],
+    implementations: &[&'a T],
+    candidates: &[Vec<usize>],
+    declaration: impl Fn(&'a T, bool) -> (String, &'a SourceLocation),
+    differences: impl Fn(&T, &T) -> Vec<FieldDifference>,
+) -> Option<OverloadComparisons> {
+    if !matches!(outcome, MatchingOutcome::Ambiguous) {
+        return None;
+    }
+
+    let sort_key = |(declaration, source): &(String, &SourceLocation)| {
+        (declaration.clone(), source_file(source), source.display().1)
+    };
+    // Sort diagnostic indices only; candidate and matching priorities stay unchanged.
+    let mut columns = candidates.iter().flatten().copied().collect::<Vec<_>>();
+    columns.sort_unstable();
+    columns.dedup();
+    columns.sort_by_key(|&column| sort_key(&declaration(implementations[column], true)));
+    let mut rows = (0..designs.len()).collect::<Vec<_>>();
+    rows.sort_by_key(|&row| sort_key(&declaration(designs[row], false)));
+    let mut sections = Vec::new();
+    let mut every_design_has_valid_candidate = true;
+    for (index, row) in rows.into_iter().enumerate() {
+        let (design, design_source) = declaration(designs[row], false);
+        let section = declaration_section(format!("Design {}", index + 1), design, design_source);
+        let (section, has_valid_candidate) = design_candidate_comparison(
+            section,
+            designs[row],
+            implementations,
+            &candidates[row],
+            &columns,
+            &declaration,
+            &differences,
+        );
+        every_design_has_valid_candidate &= has_valid_candidate;
+        sections.push(section);
+    }
+    Some(OverloadComparisons {
+        designs: sections,
+        every_design_has_valid_candidate,
+    })
+}
+
+fn design_candidate_comparison<'a, T>(
+    mut section: ErrorSection,
+    design: &'a T,
+    implementations: &[&'a T],
+    candidates: &[usize],
+    columns: &[usize],
+    declaration: &impl Fn(&'a T, bool) -> (String, &'a SourceLocation),
+    differences: &impl Fn(&T, &T) -> Vec<FieldDifference>,
+) -> (ErrorSection, bool) {
+    let mut has_valid_candidate = false;
+    for (candidate_id, &column) in columns.iter().enumerate() {
+        if !candidates.contains(&column) {
+            continue;
+        }
+        let (implementation, implementation_source) = declaration(implementations[column], true);
+        let differences = differences(design, implementations[column]);
+        has_valid_candidate |= differences.is_empty();
+        section = section.section(candidate_comparison_section(
+            candidate_id + 1,
+            implementation,
+            implementation_source,
+            differences,
+        ));
+    }
+    (section, has_valid_candidate)
+}
+
+fn candidate_comparison_section(
+    candidate_number: usize,
+    declaration: String,
+    source: &SourceLocation,
+    differences: Vec<FieldDifference>,
+) -> ErrorSection {
+    let candidate =
+        declaration_section(format!("Candidate {candidate_number}"), declaration, source);
+    if differences.is_empty() {
+        candidate.field("Field checks", "All fields match")
+    } else {
+        candidate.section(ErrorSection::new("Differences").table(
+            ["Field", "Design value", "Candidate value"],
+            differences.into_iter().map(|difference| {
+                [
+                    difference.field,
+                    difference.design,
+                    difference.implementation,
+                ]
+            }),
+        ))
+    }
+}
+
+fn format_overload_matching_failure<'a>(
+    name: &str,
+    outcome: &MatchingOutcome,
+    design: impl Iterator<Item = (String, &'a SourceLocation)>,
+    implementation: impl Iterator<Item = (String, &'a SourceLocation)>,
+    comparisons: Option<OverloadComparisons>,
+) -> String {
+    if matches!(outcome, MatchingOutcome::Ambiguous) {
+        let comparisons = comparisons.expect("ambiguous failures require candidate comparisons");
+        let (reason, fix) = if comparisons.every_design_has_valid_candidate {
+            (
+                "Each design declaration has a matching candidate, but no assignment can give every design a different implementation declaration. An implementation declaration cannot cover multiple design declarations.",
+                "Provide a separate matching implementation for each design declaration, or correct the design to avoid describing the same implementation twice.",
+            )
+        } else {
+            (
+                "Parameter-compatible candidates exist, but no one-to-one assignment satisfies all field checks.",
+                "Correct the design or implementation so that each design declaration can be assigned a distinct candidate satisfying all field checks.",
+            )
+        };
+        let mut error = ErrorBuilder::new(ErrorCategory::Implementation)
+            .title(format!(
+                "no field-consistent overload matching covers all design declarations for {name}"
+            ))
+            .field("Reason", reason);
+        for section in comparisons.designs {
+            error = error.section(section);
+        }
+        return error.fix(fix).build();
+    }
+    let design = design.collect::<Vec<_>>();
+    let implementation = implementation.collect::<Vec<_>>();
+    let (title, reason, fix) = match outcome {
+        MatchingOutcome::NoSolution => (
+            "no injective overload matching covers all design declarations",
+            "Design declarations compete for the same implementation declarations. No one-to-one matching can cover all design declarations.",
+            "Provide distinct matching implementation overloads or correct the design so that each design declaration can select a different implementation declaration.",
+        ),
+        MatchingOutcome::Unique(_) | MatchingOutcome::Ambiguous => unreachable!("only no-solution failures use flat diagnostics"),
+    };
+    let error = ErrorBuilder::new(ErrorCategory::Implementation)
+        .title(format!("{title} for {name}"))
+        .field("Reason", reason);
+    let error = append_declaration_fields(error, "Design", design);
+    let error = append_declaration_fields(error, "Implementation", implementation);
+    error.fix(fix).build()
+}
+
+fn append_declaration_fields<'a>(
+    mut error: ErrorBuilder,
+    label: &str,
+    items: impl IntoIterator<Item = (String, &'a SourceLocation)>,
+) -> ErrorBuilder {
+    // Sort only diagnostic values, never candidates or matching priorities.
+    // Keep identical rendered declarations, including identical locations.
+    let mut items = items.into_iter().collect::<Vec<_>>();
+    items.sort_by_key(|(declaration, location)| {
+        (
+            declaration.clone(),
+            source_file(location),
+            location.display().1,
+        )
+    });
+    let numbered = items.len() != 1;
+    for (index, (declaration, location)) in items.into_iter().enumerate() {
+        let suffix = if numbered {
+            format!(" {}", index + 1)
+        } else {
+            String::new()
+        };
+        error = error
+            .field(format!("{label} value{suffix}"), declaration)
+            .field(
+                format!("{label} source file{suffix}"),
+                format!("\"{}\"", source_file(location)),
+            )
+            .field(
+                format!("{label} source line{suffix}"),
+                source_line(location),
+            );
+    }
+    error
+}
+
+fn format_function_declaration(
+    name: &str,
+    parameters: &[class_diagram::FunctionArgument],
+) -> String {
+    // Diagnostic spelling is raw: do not normalize types or literal whitespace.
+    let parameters = parameters.iter().map(|parameter| {
+        if parameter.is_variadic {
+            return "...".to_string();
+        }
+
+        let mut rendered = match (parameter.name.is_empty(), parameter.param_type.as_deref()) {
+            (true, data_type) => data_type.unwrap_or("<unknown>").to_string(),
+            (false, data_type) => {
+                format!("{}: {}", parameter.name, data_type.unwrap_or("<unknown>"))
+            }
+        };
+        if parameter.is_pack_expansion {
+            rendered.push_str("...");
+        }
+        rendered
+    });
+    format!("{name}({})", render_joined(parameters))
+}
+
 fn format_field_reference(field: &str, style: FieldReferenceStyle) -> String {
     match style {
         FieldReferenceStyle::Quoted => format!("\"{field}\""),
@@ -926,8 +1300,10 @@ fn type_alias_map(entity: &SimpleEntity) -> BTreeMap<&str, &TypeAlias> {
 
 fn type_aliases_match(design_alias: &TypeAlias, implementation_alias: &TypeAlias) -> bool {
     design_alias.alias == implementation_alias.alias
-        && normalize_type_name(&design_alias.original_type)
-            == normalize_type_name(&implementation_alias.original_type)
+        && comparison_types_match(
+            &design_alias.original_type,
+            &implementation_alias.original_type,
+        )
 }
 
 fn variable_map(entity: &SimpleEntity) -> BTreeMap<&str, &MemberVariable> {
@@ -943,8 +1319,10 @@ fn member_variables_match(
     implementation_variable: &MemberVariable,
 ) -> bool {
     design_variable.name == implementation_variable.name
-        && normalized_optional_type(&design_variable.data_type)
-            == normalized_optional_type(&implementation_variable.data_type)
+        && optional_types_match(
+            &design_variable.data_type,
+            &implementation_variable.data_type,
+        )
         && design_variable.visibility == implementation_variable.visibility
         && design_variable.is_static == implementation_variable.is_static
 }
@@ -1018,8 +1396,10 @@ fn method_return_types_match(
     let design_is_conversion = conversion_target(design_method).is_some();
     let implementation_is_conversion = conversion_target(implementation_method).is_some();
     if !design_is_conversion && !implementation_is_conversion {
-        return normalized_optional_type(&design_method.return_type)
-            == normalized_optional_type(&implementation_method.return_type);
+        return optional_types_match(
+            &design_method.return_type,
+            &implementation_method.return_type,
+        );
     }
 
     if design_is_conversion != implementation_is_conversion {
@@ -1048,39 +1428,20 @@ fn method_return_types_match(
             == implementation_return
 }
 
-fn unique_method_index_by_matching_name(
-    implementation_entity: &SimpleEntity,
+fn methods_match(
     design_entity: &SimpleEntity,
+    implementation_entity: &SimpleEntity,
     design_method: &Method,
-) -> Option<usize> {
-    if conversion_target(design_method).is_none() {
-        return unique_method_index_by_name(implementation_entity, &design_method.name);
-    }
-    let name = method_name_for_matching(design_entity, design_method);
-    let mut matches = implementation_entity
-        .methods
-        .iter()
-        .enumerate()
-        .filter(|(_, method)| method_name_for_matching(implementation_entity, method) == name);
-    let (index, _) = matches.next()?;
-    matches.next().is_none().then_some(index)
-}
-
-fn unique_method_index_by_name(entity: &SimpleEntity, method_name: &str) -> Option<usize> {
-    let mut matching_methods = entity
-        .methods
-        .iter()
-        .enumerate()
-        .filter(|(_, method)| method.name == method_name);
-    let (index, _) = matching_methods.next()?;
-    matching_methods.next().is_none().then_some(index)
-}
-
-fn methods_match(design_method: &Method, implementation_method: &Method) -> bool {
-    design_method.name == implementation_method.name
-        && design_method.conversion_target == implementation_method.conversion_target
-        && normalized_optional_type(&design_method.return_type)
-            == normalized_optional_type(&implementation_method.return_type)
+    implementation_method: &Method,
+) -> bool {
+    method_name_for_matching(design_entity, design_method)
+        == method_name_for_matching(implementation_entity, implementation_method)
+        && method_return_types_match(
+            design_entity,
+            implementation_entity,
+            design_method,
+            implementation_method,
+        )
         && design_method.visibility == implementation_method.visibility
         && parameters_match(&design_method.parameters, &implementation_method.parameters)
         && template_parameters_match(
@@ -1107,7 +1468,7 @@ fn template_parameter_lists_match(
     design: &[TemplateParameter],
     implementation: &[TemplateParameter],
 ) -> bool {
-    design.len() == implementation.len()
+    parameter_count_matches(design.len(), implementation.len())
         && design
             .iter()
             .zip(implementation)
@@ -1171,17 +1532,37 @@ fn parameters_match(
     design_parameters: &[class_diagram::FunctionArgument],
     implementation_parameters: &[class_diagram::FunctionArgument],
 ) -> bool {
-    design_parameters.len() == implementation_parameters.len()
-        && design_parameters.iter().zip(implementation_parameters).all(
-            |(design_parameter, implementation_parameter)| {
-                design_parameter.name == implementation_parameter.name
-                    && normalized_optional_parameter_type(&design_parameter.param_type)
-                        == normalized_optional_parameter_type(&implementation_parameter.param_type)
-                    && design_parameter.is_variadic == implementation_parameter.is_variadic
-                    && design_parameter.is_pack_expansion
-                        == implementation_parameter.is_pack_expansion
-            },
-        )
+    parameter_types_match(design_parameters, implementation_parameters)
+        && design_parameters
+            .iter()
+            .zip(implementation_parameters)
+            .all(|(design, implementation)| design.name == implementation.name)
+}
+
+/// Parameter compatibility excludes names, return types, visibility, template
+/// declarations and modifiers. Method candidates additionally require equal const
+/// qualification; remaining fields are checked only after selection.
+fn parameter_types_match(
+    design: &[class_diagram::FunctionArgument],
+    implementation: &[class_diagram::FunctionArgument],
+) -> bool {
+    parameter_count_matches(design.len(), implementation.len())
+        && design
+            .iter()
+            .zip(implementation)
+            .all(|(design, implementation)| {
+                optional_parameter_types_match(&design.param_type, &implementation.param_type)
+                    && design.is_variadic == implementation.is_variadic
+                    && design.is_pack_expansion == implementation.is_pack_expansion
+            })
+}
+
+fn parameter_count_matches(design: usize, implementation: usize) -> bool {
+    if design == 0 {
+        implementation == 0
+    } else {
+        design <= implementation
+    }
 }
 
 fn free_function_key(function: &FreeFunctionDecl) -> String {
@@ -1216,7 +1597,7 @@ fn parameter_signature(parameters: &[class_diagram::FunctionArgument]) -> String
                 parameter
                     .param_type
                     .as_deref()
-                    .map(normalize_parameter_type)
+                    .map(render_type_name)
                     .unwrap_or_default(),
                 variadic
             )
@@ -1229,7 +1610,7 @@ fn parameter_differences(
     design_parameters: &[class_diagram::FunctionArgument],
     implementation_parameters: &[class_diagram::FunctionArgument],
 ) -> Vec<(ParameterDifference, String, String)> {
-    if design_parameters.len() != implementation_parameters.len() {
+    if !parameter_count_matches(design_parameters.len(), implementation_parameters.len()) {
         return vec![(
             ParameterDifference::Count,
             format_parameter_count(design_parameters),
@@ -1249,9 +1630,10 @@ fn parameter_differences(
             ));
         }
 
-        if normalized_optional_parameter_type(&design_parameter.param_type)
-            != normalized_optional_parameter_type(&implementation_parameter.param_type)
-        {
+        if !optional_parameter_types_match(
+            &design_parameter.param_type,
+            &implementation_parameter.param_type,
+        ) {
             differences.push((
                 ParameterDifference::Type,
                 format_parameter(design_parameter),
@@ -1289,16 +1671,92 @@ fn parameter_difference_name(difference: ParameterDifference) -> &'static str {
     }
 }
 
-fn unique_free_function_by_name<'a>(
-    index: &'a ClassEntityIndex,
-    design_function: &FreeFunctionDecl,
-) -> Option<&'a FreeFunctionDecl> {
-    let design_name = normalize_qualified_name(&design_function.qualified_name());
-    let mut matches = index
-        .free_functions()
-        .filter(|function| normalize_qualified_name(&function.qualified_name()) == design_name);
-    let function = matches.next()?;
-    matches.next().is_none().then_some(function)
+fn parameter_field_differences(
+    design: &[class_diagram::FunctionArgument],
+    implementation: &[class_diagram::FunctionArgument],
+) -> Vec<FieldDifference> {
+    parameter_differences(design, implementation)
+        .into_iter()
+        .map(|(difference, design, implementation)| FieldDifference {
+            field: format!("parameter {}", parameter_difference_name(difference)),
+            design,
+            implementation,
+        })
+        .collect()
+}
+
+fn free_function_field_differences(
+    design: &FreeFunctionDecl,
+    implementation: &FreeFunctionDecl,
+) -> Vec<FieldDifference> {
+    let mut differences = Vec::new();
+    if !optional_types_match(&design.return_type, &implementation.return_type) {
+        differences.push(FieldDifference {
+            field: "return type".to_string(),
+            design: render_optional_type(&design.return_type),
+            implementation: render_optional_type(&implementation.return_type),
+        });
+    }
+    if !template_parameters_match(
+        &design.template_parameters,
+        &implementation.template_parameters,
+    ) {
+        differences.push(FieldDifference {
+            field: "template parameters".to_string(),
+            design: render_template_parameters(&design.template_parameters),
+            implementation: render_template_parameters(&implementation.template_parameters),
+        });
+    }
+    differences.extend(parameter_field_differences(
+        &design.parameters,
+        &implementation.parameters,
+    ));
+    differences
+}
+
+fn method_field_differences(
+    design_entity: &SimpleEntity,
+    implementation_entity: &SimpleEntity,
+    design: &Method,
+    implementation: &Method,
+) -> Vec<FieldDifference> {
+    let mut differences = Vec::new();
+    if !method_return_types_match(design_entity, implementation_entity, design, implementation) {
+        differences.push(FieldDifference {
+            field: "return type".to_string(),
+            design: render_optional_type(&design.return_type),
+            implementation: render_optional_type(&implementation.return_type),
+        });
+    }
+    if design.visibility != implementation.visibility {
+        differences.push(FieldDifference {
+            field: "visibility".to_string(),
+            design: format!("{:?}", design.visibility),
+            implementation: format!("{:?}", implementation.visibility),
+        });
+    }
+    differences.extend(parameter_field_differences(
+        &design.parameters,
+        &implementation.parameters,
+    ));
+    if !template_parameters_match(
+        &design.template_parameters,
+        &implementation.template_parameters,
+    ) {
+        differences.push(FieldDifference {
+            field: "template parameters".to_string(),
+            design: render_template_parameters(&design.template_parameters),
+            implementation: render_template_parameters(&implementation.template_parameters),
+        });
+    }
+    if design.modifiers != implementation.modifiers {
+        differences.push(FieldDifference {
+            field: "modifiers".to_string(),
+            design: format!("{:?}", design.modifiers),
+            implementation: format!("{:?}", implementation.modifiers),
+        });
+    }
+    differences
 }
 
 fn free_functions_match(
@@ -1307,8 +1765,10 @@ fn free_functions_match(
 ) -> bool {
     normalize_qualified_name(&design_function.qualified_name())
         == normalize_qualified_name(&implementation_function.qualified_name())
-        && normalized_optional_type(&design_function.return_type)
-            == normalized_optional_type(&implementation_function.return_type)
+        && optional_types_match(
+            &design_function.return_type,
+            &implementation_function.return_type,
+        )
         && parameters_match(
             &design_function.parameters,
             &implementation_function.parameters,
@@ -1337,11 +1797,19 @@ fn render_joined(items: impl Iterator<Item = String>) -> String {
 }
 
 fn render_optional_type(type_name: &Option<String>) -> String {
-    render_optional_value(type_name.as_deref(), "None", normalize_type_name)
+    render_optional_value(type_name.as_deref(), "None", render_type_name)
 }
 
 fn render_parameter_type(type_name: &Option<String>) -> String {
-    render_optional_value(type_name.as_deref(), "<unknown>", normalize_type_name)
+    render_optional_value(type_name.as_deref(), "<unknown>", render_type_name)
+}
+
+fn render_type_name(type_name: &str) -> String {
+    if contains_literal(type_name) {
+        type_name.to_string()
+    } else {
+        normalize_type_name(type_name)
+    }
 }
 
 fn format_parameter(parameter: &class_diagram::FunctionArgument) -> String {
@@ -1459,12 +1927,43 @@ fn template_pack_marker(is_pack: bool) -> &'static str {
     }
 }
 
-fn normalized_optional_type(type_name: &Option<String>) -> Option<String> {
-    type_name.as_deref().map(normalize_type_name)
+fn optional_types_match(design: &Option<String>, implementation: &Option<String>) -> bool {
+    match (design.as_deref(), implementation.as_deref()) {
+        (None, None) => true,
+        (Some(design), Some(implementation)) => comparison_types_match(design, implementation),
+        _ => false,
+    }
 }
 
-fn normalized_optional_parameter_type(type_name: &Option<String>) -> Option<String> {
-    type_name.as_deref().map(normalize_parameter_type)
+fn comparison_types_match(design: &str, implementation: &str) -> bool {
+    // Conservative literal detection also covers raw and character literals.
+    // Never rewrite namespaces, punctuation or whitespace inside their contents.
+    if contains_literal(design) || contains_literal(implementation) {
+        design == implementation
+    } else {
+        normalize_type_name(design) == normalize_type_name(implementation)
+    }
+}
+
+fn contains_literal(type_name: &str) -> bool {
+    type_name.contains('"') || type_name.contains('\'')
+}
+
+fn optional_parameter_types_match(
+    design: &Option<String>,
+    implementation: &Option<String>,
+) -> bool {
+    match (design.as_deref(), implementation.as_deref()) {
+        (None, None) => true,
+        (Some(design), Some(implementation)) => {
+            if contains_literal(design) || contains_literal(implementation) {
+                design == implementation
+            } else {
+                normalize_parameter_type(design) == normalize_parameter_type(implementation)
+            }
+        }
+        _ => false,
+    }
 }
 
 fn normalize_parameter_type(type_name: &str) -> String {
@@ -1523,8 +2022,8 @@ fn tighten_pointer_const(type_name: &str) -> String {
 fn normalize_non_type_template_parameter_type(type_name: &str) -> String {
     // Preserve existing behavior for potentially literal-bearing expressions.
     // Whitespace within literals is significant and must not be collapsed.
-    if type_name.contains('"') || type_name.contains('\'') {
-        return normalize_type_name(type_name);
+    if contains_literal(type_name) {
+        return type_name.to_string();
     }
 
     normalize_type_name(&type_name.split_whitespace().collect::<Vec<_>>().join(" "))
@@ -1641,1151 +2140,5 @@ fn relationship_display_name(relationship: &Relationship) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::models::ClassDiagramInputs;
-    use class_diagram::{
-        ClassDiagram, EntityType, FreeFunctionDecl, FunctionArgument, MemberVariable, Method,
-        RelationType, Relationship, SimpleEntity, Visibility,
-    };
-    use source_location::SourceLocation;
-    use std::sync::Once;
-
-    struct TestLogger;
-
-    impl log::Log for TestLogger {
-        fn enabled(&self, _metadata: &log::Metadata<'_>) -> bool {
-            true
-        }
-
-        fn log(&self, _record: &log::Record<'_>) {}
-
-        fn flush(&self) {}
-    }
-
-    static LOGGER: TestLogger = TestLogger;
-    static INIT_LOGGER: Once = Once::new();
-
-    fn enable_trace_diagnostics() {
-        INIT_LOGGER.call_once(|| {
-            let _ = log::set_logger(&LOGGER);
-        });
-        log::set_max_level(log::LevelFilter::Trace);
-    }
-
-    fn method(name: &str) -> Method {
-        Method {
-            name: name.to_string(),
-            conversion_target: None,
-            return_type: None,
-            return_multiplicity: None,
-            source_location: SourceLocation::new("test.puml", 1),
-            visibility: Visibility::Public,
-            parameters: Vec::new(),
-            template_parameters: None,
-            modifiers: Vec::new(),
-        }
-    }
-
-    fn method_with_return_type(name: &str, return_type: &str) -> Method {
-        Method {
-            return_type: Some(return_type.to_string()),
-            ..method(name)
-        }
-    }
-
-    fn method_with_parameter_types(name: &str, parameter_types: &[&str]) -> Method {
-        Method {
-            parameters: parameter_types
-                .iter()
-                .map(|parameter_type| FunctionArgument {
-                    name: String::new(),
-                    param_type: Some((*parameter_type).to_string()),
-                    direction: None,
-                    multiplicity: None,
-                    is_variadic: false,
-                    is_pack_expansion: false,
-                })
-                .collect(),
-            ..method(name)
-        }
-    }
-
-    fn parameter(name: &str, param_type: &str, is_pack_expansion: bool) -> FunctionArgument {
-        FunctionArgument {
-            name: name.to_string(),
-            param_type: Some(param_type.to_string()),
-            direction: None,
-            multiplicity: None,
-            is_variadic: false,
-            is_pack_expansion,
-        }
-    }
-
-    fn entity(id: &str, methods: Vec<&str>) -> SimpleEntity {
-        entity_in_namespace(id, None, methods)
-    }
-
-    fn variable(name: &str, data_type: &str) -> MemberVariable {
-        MemberVariable {
-            name: name.to_string(),
-            data_type: Some(data_type.to_string()),
-            visibility: Visibility::Private,
-            is_static: false,
-            source_location: SourceLocation::new("test.puml", 1),
-        }
-    }
-
-    fn relationship(source: &str, target: &str, relation_type: RelationType) -> Relationship {
-        Relationship {
-            source: source.to_string(),
-            target: target.to_string(),
-            relation_type,
-            source_multiplicity: None,
-            target_multiplicity: None,
-            source_location: SourceLocation::new("test.puml", 1),
-        }
-    }
-
-    fn entity_in_namespace(
-        id: &str,
-        enclosing_namespace_id: Option<&str>,
-        methods: Vec<&str>,
-    ) -> SimpleEntity {
-        SimpleEntity {
-            id: id.to_string(),
-            name: id.rsplit('.').next().unwrap_or(id).to_string(),
-            enclosing_namespace_id: enclosing_namespace_id.map(str::to_string),
-            stereotypes: Vec::new(),
-            entity_type: EntityType::Class,
-            template_kind: ClassTemplateKind::NonTemplate,
-            type_aliases: Vec::new(),
-            variables: Vec::new(),
-            methods: methods.into_iter().map(method).collect(),
-            template_parameters: None,
-            enum_literals: Vec::new(),
-            relationships: Vec::new(),
-            source_location: SourceLocation::new("test.puml", 1),
-        }
-    }
-
-    fn index(entities: Vec<SimpleEntity>) -> ClassEntityIndex {
-        let diagrams: ClassDiagramInputs = vec![ClassDiagram {
-            name: "unit".to_string(),
-            entities,
-            free_functions: Vec::new(),
-        }];
-        ClassEntityIndex::build_diagram_index(&diagrams, &mut ValidationResult::default())
-    }
-
-    fn index_with_free_functions(free_functions: Vec<FreeFunctionDecl>) -> ClassEntityIndex {
-        let diagrams: ClassDiagramInputs = vec![ClassDiagram {
-            name: "unit".to_string(),
-            entities: Vec::new(),
-            free_functions,
-        }];
-        ClassEntityIndex::build_diagram_index(&diagrams, &mut ValidationResult::default())
-    }
-
-    fn free_function(name: &str, parameter_types: &[&str]) -> FreeFunctionDecl {
-        FreeFunctionDecl {
-            name: name.to_string(),
-            enclosing_namespace_id: None,
-            return_type: Some("void".to_string()),
-            return_multiplicity: None,
-            parameters: parameter_types
-                .iter()
-                .map(|parameter_type| parameter("", parameter_type, false))
-                .collect(),
-            template_parameters: None,
-            source_location: SourceLocation::new("test.puml", 1),
-        }
-    }
-
-    #[test]
-    fn specialization_base_id_strips_only_the_class_template_arguments() {
-        assert_eq!(
-            specialization_base_id(
-                "amp::Outer<Policy>::move_only_function<ReturnType (ArgTypes...), Capacity>"
-            ),
-            "amp::Outer<Policy>::move_only_function"
-        );
-        assert_eq!(
-            specialization_base_id("amp::move_only_function"),
-            "amp::move_only_function"
-        );
-        assert_eq!(
-            specialization_base_id("amp::Outer<Policy>::move_only_function"),
-            "amp::Outer<Policy>::move_only_function"
-        );
-    }
-
-    #[test]
-    fn trailing_template_arguments_start_finds_only_the_final_argument_list() {
-        assert_eq!(trailing_template_arguments_start("amp::Box<int>"), Some(8));
-        assert_eq!(
-            trailing_template_arguments_start("amp::Outer<Policy>::Box<int>"),
-            Some("amp::Outer<Policy>::Box".len())
-        );
-        assert_eq!(trailing_template_arguments_start("amp::Box"), None);
-        assert_eq!(
-            trailing_template_arguments_start("amp::Outer<Policy>::Box"),
-            None
-        );
-    }
-
-    #[test]
-    fn specialization_matching_requires_the_complete_qualified_base_id() {
-        assert!(specialization_matches_design(
-            "amp::move_only_function<ReturnType (ArgTypes...), Capacity, Alignment>",
-            "amp::move_only_function"
-        ));
-        assert!(!specialization_matches_design(
-            "amp::move_only_function_extra<ReturnType (ArgTypes...), Capacity, Alignment>",
-            "amp::move_only_function"
-        ));
-        assert!(!specialization_matches_design(
-            "other::move_only_function<ReturnType (ArgTypes...), Capacity, Alignment>",
-            "amp::move_only_function"
-        ));
-    }
-
-    #[test]
-    fn qualified_name_normalization_preserves_id_values_but_equates_separators() {
-        assert_eq!(
-            normalize_qualified_name("amp.move_only_function"),
-            normalize_qualified_name("amp::move_only_function")
-        );
-    }
-
-    #[test]
-    fn conversion_alias_names_match_without_expansion() {
-        let mut owner = entity("ns.Owner", vec![]);
-        owner.type_aliases.push(TypeAlias {
-            alias: "pointer".into(),
-            original_type: "PointedType*".into(),
-            source_location: Default::default(),
-        });
-        for (ty, expected) in [
-            ("pointer", "pointer"),
-            ("Owner::pointer", "pointer"),
-            ("::ns::Owner::pointer", "pointer"),
-            ("other::Owner::pointer", "other::Owner::pointer"),
-            ("pointer<T>", "pointer<T>"),
-            ("pointer&", "pointer&"),
-            ("PointedType *", "PointedType*"),
-        ] {
-            assert_eq!(normalize_conversion_type_name(&owner, ty), expected);
-        }
-
-        owner.methods.push(Method {
-            conversion_target: Some("pointer".into()),
-            ..method_with_return_type("operator pointer", "pointer")
-        });
-        let design = index(vec![owner.clone()]);
-        // libclang qualifies the alias even though the C++ source uses `pointer`.
-        owner.methods[0].name = "operator ns::Owner::pointer".into();
-        owner.methods[0].conversion_target = Some("ns::Owner::pointer".into());
-        owner.methods[0].return_type = Some("ns::Owner::pointer".into());
-        let result = validate_class_design_implementation(&design, &index(vec![owner]));
-        assert!(result.failures.is_empty(), "{:?}", result.failures);
-    }
-
-    #[test]
-    fn method_key_normalizes_parameter_types_and_marks_variadic_parameters() {
-        let mut method = method("dispatch");
-        method.parameters = vec![
-            parameter("mode", "std::uint8_t", false),
-            parameter("args", "vehicle.Payload", true),
-        ];
-
-        assert_eq!(
-            method_key(&method),
-            "dispatch(uint8_t, vehicle::Payload...)"
-        );
-
-        method.modifiers = vec![MethodModifier::Const, MethodModifier::Noexcept];
-        assert_eq!(
-            method_key(&method),
-            "dispatch(uint8_t, vehicle::Payload...) const"
-        );
-    }
-
-    #[test]
-    fn uml_parameter_directions_do_not_affect_cpp_matching_or_overload_identity() {
-        use class_diagram::ParameterDirection::{In, InOut, Out};
-        let implementation = method_with_parameter_types("update", &["T"]);
-        for direction in [In, Out, InOut] {
-            let mut design = implementation.clone();
-            design.parameters[0].direction = Some(direction);
-            assert_eq!(method_key(&design), method_key(&implementation));
-            assert!(parameters_match(
-                &design.parameters,
-                &implementation.parameters
-            ));
-        }
-    }
-
-    #[test]
-    fn free_function_key_normalizes_qualified_name_and_parameters() {
-        let function = FreeFunctionDecl {
-            name: "Dispatch".to_string(),
-            enclosing_namespace_id: Some("vehicle.core".to_string()),
-            return_type: Some("void".to_string()),
-            return_multiplicity: None,
-            parameters: vec![
-                parameter("mode", "std::uint8_t", false),
-                parameter("args", "vehicle.Payload", true),
-            ],
-            template_parameters: None,
-            source_location: SourceLocation::new("test.puml", 1),
-        };
-
-        assert_eq!(
-            free_function_key(&function),
-            "vehicle::core::Dispatch(uint8_t, vehicle::Payload...)"
-        );
-    }
-
-    #[test]
-    fn uml_parameter_multiplicities_do_not_affect_cpp_matching_or_overload_identity() {
-        let implementation = method_with_parameter_types("update", &["T"]);
-        for value in ["0..1", "0..*", "1..*", "*", "2..5"] {
-            let mut design = implementation.clone();
-            design.parameters[0].multiplicity = Some(value.to_string());
-            assert_eq!(method_key(&design), method_key(&implementation));
-            assert!(parameters_match(
-                &design.parameters,
-                &implementation.parameters
-            ));
-            let design_function = FreeFunctionDecl {
-                name: "update".to_string(),
-                parameters: design.parameters.clone(),
-                ..Default::default()
-            };
-            let implementation_function = FreeFunctionDecl {
-                parameters: implementation.parameters.clone(),
-                ..design_function.clone()
-            };
-            assert_eq!(
-                free_function_key(&design_function),
-                free_function_key(&implementation_function)
-            );
-            // Metadata must not relax the actual type comparison.
-            design.parameters[0].param_type = Some("T*".to_string());
-            assert!(!parameters_match(
-                &design.parameters,
-                &implementation.parameters
-            ));
-        }
-    }
-
-    #[test]
-    fn method_parameter_formatting_includes_count_names_types_and_variadic_marker() {
-        let parameters = vec![
-            parameter("mode", "int", false),
-            parameter("args", "IngArg&&", true),
-        ];
-
-        assert_eq!(
-            format_parameter_count(&parameters),
-            "2 parameters (mode: int, args: IngArg&&...)"
-        );
-    }
-
-    #[test]
-    fn template_parameter_matching_only_relaxes_omitted_design_names() {
-        let ty = |name: &str, is_pack| TemplateParameter::Type {
-            name: name.to_string(),
-            is_pack,
-        };
-        let value = |name: &str, value_type: &str, is_pack| TemplateParameter::NonType {
-            name: name.to_string(),
-            value_type: value_type.to_string(),
-            is_pack,
-        };
-        let nested = |name: &str, inner| TemplateParameter::Template {
-            name: name.to_string(),
-            parameters: vec![inner],
-            is_pack: false,
-        };
-        let assert_match = |design, implementation, expected| {
-            assert_eq!(
-                template_parameters_match(&design, &implementation),
-                expected,
-                "design: {design:?}, implementation: {implementation:?}",
-            );
-        };
-
-        // List presence, length and positional matching are independent of name relaxation.
-        for (design, implementation, expected) in [
-            (None, None, true),
-            (None, Some(vec![ty("T", false)]), false),
-            (Some(vec![]), None, false),
-            (Some(vec![]), Some(vec![]), true),
-            (Some(vec![ty("", false)]), Some(vec![]), false),
-            (
-                Some(vec![ty("T", false), ty("", false)]),
-                Some(vec![ty("U", false), ty("", false)]),
-                false,
-            ),
-            (
-                Some(vec![ty("T", false), ty("", false)]),
-                Some(vec![ty("", false), ty("", false)]),
-                false,
-            ),
-            (
-                Some(vec![ty("T", false), ty("", false)]),
-                Some(vec![ty("", false), ty("T", false)]),
-                false,
-            ),
-            (
-                Some(vec![ty("T", false), ty("", false)]),
-                Some(vec![ty("T", false)]),
-                false,
-            ),
-            (
-                Some(vec![ty("", false), value("", "int", false)]),
-                Some(vec![value("N", "int", false), ty("T", false)]),
-                false,
-            ),
-        ] {
-            assert_match(design, implementation, expected);
-        }
-
-        // Each parameter rule is checked alone and after a matching prefix parameter.
-        // An empty name is unnamed; is_pack is explicit in both constructors.
-        for (design, implementation, expected) in [
-            // Type names: omission is allowed only on the design side.
-            (ty("", false), ty("", false), true),
-            (ty("", false), ty("T", false), true),
-            (ty("T", false), ty("T", false), true),
-            (ty("T", false), ty("U", false), false),
-            (ty("T", false), ty("", false), false),
-            // Packs and parameter kinds remain constrained even without a name.
-            (ty("", true), ty("Ts", true), true),
-            (ty("", false), ty("Ts", true), false),
-            (ty("", true), ty("T", false), false),
-            (ty("", false), value("N", "int", false), false),
-            // Non-type parameters compare normalized types, names and pack flags.
-            (value("", "int", false), value("N", "int", false), true),
-            (value("", "int", false), value("N", "long", false), false),
-            (
-                value("", "unsigned  long", false),
-                value("N", "unsigned long", false),
-                true,
-            ),
-            (
-                value("N", "unsigned\t long   *", false),
-                value("N", "unsigned long*", false),
-                true,
-            ),
-            (
-                value("N", "const\t Widget   &", false),
-                value("N", "const Widget&", false),
-                true,
-            ),
-            (
-                value("N", "size_t", false),
-                value("N", " ::std::size_t \t", false),
-                true,
-            ),
-            (
-                value("", "vehicle.Payload*", false),
-                value("P", " vehicle::Payload * ", false),
-                true,
-            ),
-            (
-                value("N", "size_t", false),
-                value("M", "std::size_t", false),
-                false,
-            ),
-            (
-                value("", "size_t", true),
-                value("Ns", "std::size_t", false),
-                false,
-            ),
-            (
-                value("", "size_t", false),
-                value("Ns", "std::size_t", true),
-                false,
-            ),
-        ] {
-            assert_match(
-                Some(vec![design.clone()]),
-                Some(vec![implementation.clone()]),
-                expected,
-            );
-            assert_match(
-                Some(vec![ty("T", false), design]),
-                Some(vec![ty("T", false), implementation]),
-                expected,
-            );
-        }
-
-        // Template-template parameters apply the same constraints recursively.
-        for (design, implementation, expected) in [
-            // Template-template parameters allow omitted outer and inner design names.
-            (nested("", ty("", false)), nested("C", ty("U", false)), true),
-            // An explicit outer template-template parameter name must match.
-            (
-                nested("C", ty("", false)),
-                nested("D", ty("U", false)),
-                false,
-            ),
-            // An explicit nested parameter name must also match recursively.
-            (
-                nested("C", ty("T", false)),
-                nested("C", ty("U", false)),
-                false,
-            ),
-            // Omitting nested names does not allow a different nested parameter kind.
-            (
-                nested("", ty("", false)),
-                nested("C", value("N", "int", false)),
-                false,
-            ),
-            // Value-type normalization also applies recursively.
-            (
-                nested("", nested("", value("", "size_t", false))),
-                nested("C", nested("D", value("N", " std::size_t ", false))),
-                true,
-            ),
-        ] {
-            assert_match(Some(vec![design]), Some(vec![implementation]), expected);
-        }
-    }
-
-    #[test]
-    fn template_parameter_formatting_handles_kinds_packs_and_lists() {
-        let assert_declaration = |parameter: &TemplateParameter, expected: &str| {
-            assert_eq!(
-                render_template_parameter_content(parameter),
-                expected,
-                "parameter: {parameter:?}"
-            );
-            let nested = TemplateParameter::Template {
-                name: "Factory".to_string(),
-                parameters: vec![parameter.clone()],
-                is_pack: false,
-            };
-            assert_eq!(
-                render_template_parameters(&Some(vec![nested])),
-                format!("[\"template <{expected}> typename Factory\"]"),
-                "nested parameter: {parameter:?}"
-            );
-        };
-
-        // Type parameters use declarations when nested and shorthand at the top level.
-        for (name, is_pack, declaration, shorthand) in [
-            ("", false, "typename", ""),
-            ("T", false, "typename T", "T"),
-            ("", true, "typename...", "..."),
-            ("Ts", true, "typename... Ts", "Ts..."),
-        ] {
-            let parameter = TemplateParameter::Type {
-                name: name.to_string(),
-                is_pack,
-            };
-            assert_declaration(&parameter, declaration);
-            assert_eq!(
-                render_template_parameter(&parameter),
-                format!("\"{shorthand}\""),
-                "parameter: {parameter:?}"
-            );
-        }
-
-        // Non-type parameters trim outer whitespace without normalizing type spelling.
-        for (value_type, name, is_pack, expected) in [
-            (" \tint\t ", "", false, "int"),
-            (" \tint\t ", "N", false, "int N"),
-            (" \tint\t ", "", true, "int..."),
-            (" \tint\t ", "Ns", true, "int... Ns"),
-            (" \t::std::size_t\t ", "Ns", true, "::std::size_t... Ns"),
-            (" unsigned  long ", "N", false, "unsigned  long N"),
-        ] {
-            let parameter = TemplateParameter::NonType {
-                name: name.to_string(),
-                value_type: value_type.to_string(),
-                is_pack,
-            };
-            assert_declaration(&parameter, expected);
-            assert_eq!(
-                render_template_parameter(&parameter),
-                format!("\"{expected}\""),
-                "parameter: {parameter:?}"
-            );
-        }
-
-        // Template-template parameters use declarations at every nesting level.
-        for (name, is_pack, expected) in [
-            ("", false, "template <typename> typename"),
-            ("C", false, "template <typename> typename C"),
-            ("", true, "template <typename> typename..."),
-            ("Cs", true, "template <typename> typename... Cs"),
-        ] {
-            let parameter = TemplateParameter::Template {
-                name: name.to_string(),
-                parameters: vec![TemplateParameter::Type {
-                    name: String::new(),
-                    is_pack: false,
-                }],
-                is_pack,
-            };
-            assert_declaration(&parameter, expected);
-            assert_eq!(
-                render_template_parameter(&parameter),
-                format!("\"{expected}\""),
-                "parameter: {parameter:?}"
-            );
-        }
-
-        // Mixed lists preserve order and combine all three parameter kinds.
-        let template_parameters = Some(vec![
-            TemplateParameter::Type {
-                name: "T".to_string(),
-                is_pack: true,
-            },
-            TemplateParameter::NonType {
-                name: "Capacity".to_string(),
-                value_type: "unsigned long".to_string(),
-                is_pack: false,
-            },
-            TemplateParameter::Template {
-                name: "Factory".to_string(),
-                parameters: vec![TemplateParameter::NonType {
-                    name: "Size".to_string(),
-                    value_type: "int".to_string(),
-                    is_pack: false,
-                }],
-                is_pack: false,
-            },
-        ]);
-        assert_eq!(
-            render_template_parameters(&template_parameters),
-            "[\"T...\", \"unsigned long Capacity\", \"template <int Size> typename Factory\"]"
-        );
-    }
-
-    #[test]
-    fn relationship_helpers_normalize_namespace_separators() {
-        let relationship = relationship(
-            "vehicle.Engine",
-            "vehicle.Manufacturer",
-            RelationType::Composition,
-        );
-
-        assert_eq!(
-            relationship_key(&relationship),
-            "vehicle::Engine -> vehicle::Manufacturer"
-        );
-        assert_eq!(
-            relationship_display_name(&relationship),
-            "vehicle::Engine -> Composition -> vehicle::Manufacturer"
-        );
-    }
-
-    #[test]
-    fn parameter_type_normalization_ignores_top_level_const() {
-        // Top-level const on a by-value parameter is not part of the signature.
-        for (type_name, expected) in [
-            ("void* const", "void*"),
-            ("void *const", "void*"),
-            ("void*const", "void*"),
-            ("int* const", "int*"),
-            ("const int", "int"),
-            ("const std::vector<int>", "vector<int>"),
-            ("const std::vector<int*>", "vector<int*>"),
-            ("const std::function<void(int&)>", "function<void(int&)>"),
-        ] {
-            assert_eq!(
-                normalize_parameter_type(type_name),
-                expected,
-                "type_name: {type_name:?}",
-            );
-        }
-    }
-
-    #[test]
-    fn parameter_type_normalization_preserves_low_level_const() {
-        // Const that qualifies the pointee/referent is significant and kept.
-        for (type_name, expected) in [
-            ("const int*", "const int*"),
-            ("const void*", "const void*"),
-            ("const int&", "const int&"),
-            ("const int* const", "const int*"),
-            ("const int[]", "const int[]"),
-            ("const char[8]", "const char[8]"),
-            ("int* const*", "int*const*"),
-            ("int* const&", "int*const&"),
-        ] {
-            assert_eq!(
-                normalize_parameter_type(type_name),
-                expected,
-                "type_name: {type_name:?}",
-            );
-        }
-    }
-
-    #[test]
-    fn parameter_type_normalization_keeps_const_within_identifiers() {
-        for type_name in ["Constant", "WidgetConst", "const_iterator"] {
-            assert_eq!(
-                normalize_parameter_type(type_name),
-                normalize_type_name(type_name),
-                "type_name: {type_name:?}",
-            );
-        }
-    }
-
-    #[test]
-    fn non_type_whitespace_normalization_collapses_whitespace() {
-        for (type_name, expected) in [
-            ("unsigned  long", "unsigned long"),
-            (" \tunsigned\t  long  ", "unsigned long"),
-            ("unsigned\t long   *", "unsigned long*"),
-            ("const\t Widget   &", "const Widget&"),
-        ] {
-            assert_eq!(
-                normalize_non_type_template_parameter_type(type_name),
-                expected,
-                "type_name: {type_name:?}",
-            );
-        }
-    }
-
-    #[test]
-    fn non_type_whitespace_normalization_preserves_literal_behavior() {
-        for type_name in [
-            "Tag<\"a  b\">",
-            "Tag<' '>",
-            "Tag<R\"delim(a  b)delim\">",
-            "Tag<\"a * b\">",
-        ] {
-            assert_eq!(
-                normalize_non_type_template_parameter_type(type_name),
-                normalize_type_name(type_name),
-            );
-        }
-        assert_ne!(
-            normalize_non_type_template_parameter_type("Tag<\"a  b\">"),
-            normalize_non_type_template_parameter_type("Tag<\"a b\">"),
-        );
-    }
-
-    #[test]
-    fn type_name_normalization_ignores_pointer_and_reference_spacing() {
-        assert_eq!(normalize_type_name("std::uint8_t *"), "uint8_t*");
-        assert_eq!(
-            normalize_type_name("vehicle.Payload &"),
-            "vehicle::Payload&"
-        );
-    }
-
-    #[test]
-    fn type_name_normalization_tightens_whitespace_before_pointer_const() {
-        for (type_name, expected) in [
-            ("int* const", "int*const"),
-            ("int *const", "int*const"),
-            ("int*  const", "int*const"),
-            ("int*\tconst", "int*const"),
-            ("const int* const", "const int*const"),
-            ("Foo* constant", "Foo* constant"),
-            ("Foo* const_iterator", "Foo* const_iterator"),
-        ] {
-            assert_eq!(
-                normalize_type_name(type_name),
-                expected,
-                "type_name: {type_name:?}",
-            );
-        }
-    }
-
-    #[test]
-    fn type_name_normalization_strips_leading_global_namespace() {
-        assert_eq!(normalize_type_name("::std::uint8_t"), "uint8_t");
-        assert_eq!(
-            normalize_type_name(" ::vehicle::Payload "),
-            "vehicle::Payload"
-        );
-    }
-
-    #[test]
-    fn class_implementation_validation_passes_when_design_class_and_methods_exist() {
-        let design = index(vec![entity("Sample", vec!["run"])]);
-        let implementation = index(vec![entity("sample", vec!["run", "helper"])]);
-
-        let result = validate_class_design_implementation(&design, &implementation);
-
-        assert!(
-            result.is_empty(),
-            "Expected pass, got: {:?}",
-            result.failures
-        );
-    }
-
-    #[test]
-    fn class_implementation_validation_reports_missing_class() {
-        let design = index(vec![entity("Sample", vec!["run"])]);
-        let implementation = index(vec![]);
-
-        let result = validate_class_design_implementation(&design, &implementation);
-
-        assert!(result
-            .failures
-            .iter()
-            .any(|message| message.contains("[Class] Class \"Sample\" from the unit design not found in the C++ class implementation.")));
-    }
-
-    #[test]
-    fn class_implementation_validation_reports_missing_method() {
-        let design = index(vec![entity("Sample", vec!["run"])]);
-        let implementation = index(vec![entity("Sample", vec!["init"])]);
-
-        let result = validate_class_design_implementation(&design, &implementation);
-
-        assert!(result
-            .failures
-            .iter()
-            .any(|message| message.contains("[Member] Method \"run()\" from entity \"Sample\" in the unit design not found in the C++ class implementation.")));
-    }
-
-    #[test]
-    fn primary_template_is_filtered_only_with_matching_partial_specializations() {
-        for (primary_parameters_match, include_partials, expected_failures) in
-            [(false, true, 0), (true, true, 1), (false, false, 2)]
-        {
-            let mut design_entity = entity("amp.move_only_function", vec!["empty"]);
-            design_entity.template_parameters = Some(vec![TemplateParameter::Type {
-                name: "ReturnType".to_string(),
-                is_pack: false,
-            }]);
-            let primary = SimpleEntity {
-                template_kind: ClassTemplateKind::Primary,
-                template_parameters: Some(vec![TemplateParameter::Type {
-                    name: if primary_parameters_match {
-                        "ReturnType"
-                    } else {
-                        "Signature"
-                    }
-                    .to_string(),
-                    is_pack: false,
-                }]),
-                ..entity("amp::move_only_function", vec![])
-            };
-            let mut entities = vec![primary];
-            if include_partials {
-                entities.extend([
-                    SimpleEntity {
-                        template_kind: ClassTemplateKind::PartialSpecialization,
-                        ..entity(
-                            "amp::move_only_function<R(Args...), Capacity, Alignment>",
-                            vec!["empty"],
-                        )
-                    },
-                    SimpleEntity {
-                        template_kind: ClassTemplateKind::PartialSpecialization,
-                        ..entity(
-                            "amp::move_only_function<R (*)(Args...), Capacity, Alignment>",
-                            vec!["empty"],
-                        )
-                    },
-                ]);
-            }
-
-            let result =
-                validate_class_design_implementation(&index(vec![design_entity]), &index(entities));
-
-            assert_eq!(
-                result.failures.len(),
-                expected_failures,
-                "{:?}",
-                result.failures,
-            );
-            if expected_failures > 0 {
-                assert!(result
-                    .failures
-                    .iter()
-                    .any(|message| { message.contains("Method \"empty()\"") }));
-            }
-            assert_eq!(
-                result
-                    .failures
-                    .iter()
-                    .any(|message| { message.contains("template_parameters") }),
-                !primary_parameters_match && !include_partials,
-            );
-        }
-    }
-
-    #[test]
-    fn specializations_match_base_id_and_skip_class_template_parameters() {
-        let mut design_entity = entity("demo.Box", vec!["run"]);
-        design_entity.template_parameters = Some(vec![TemplateParameter::Type {
-            name: "T".to_string(),
-            is_pack: false,
-        }]);
-        let design = index(vec![design_entity]);
-        for (template_kind, id) in [
-            (ClassTemplateKind::PartialSpecialization, "demo::Box<T*>"),
-            (ClassTemplateKind::ExplicitSpecialization, "demo::Box<int>"),
-        ] {
-            let implementation = index(vec![SimpleEntity {
-                template_kind,
-                ..entity(id, vec!["run"])
-            }]);
-            let result = validate_class_design_implementation(&design, &implementation);
-            assert!(
-                result.is_empty(),
-                "{template_kind:?}: {:?}",
-                result.failures
-            );
-        }
-    }
-
-    #[test]
-    fn class_implementation_validation_reports_full_signature_for_missing_free_function_overloads()
-    {
-        let design = index_with_free_functions(vec![
-            free_function("Select", &["int"]),
-            free_function("Select", &["int", "int"]),
-        ]);
-        let implementation = index_with_free_functions(Vec::new());
-
-        let result = validate_class_design_implementation(&design, &implementation);
-
-        assert!(result
-            .failures
-            .iter()
-            .any(|message| message.contains("Free function \"Select(int)\"")));
-        assert!(result
-            .failures
-            .iter()
-            .any(|message| message.contains("Free function \"Select(int, int)\"")));
-    }
-
-    #[test]
-    fn class_implementation_validation_normalizes_nested_namespace_in_free_function_mismatch() {
-        let mut design_function = free_function("Dispatch", &["int"]);
-        design_function.enclosing_namespace_id = Some("vehicle.core".to_string());
-        let mut implementation_function = free_function("Dispatch", &["int"]);
-        implementation_function.enclosing_namespace_id = Some("vehicle::core".to_string());
-        implementation_function.return_type = Some("bool".to_string());
-
-        let design = index_with_free_functions(vec![design_function]);
-        let implementation = index_with_free_functions(vec![implementation_function]);
-
-        let result = validate_class_design_implementation(&design, &implementation);
-
-        assert!(result.failures.iter().any(|message| {
-            message.contains("free function \"vehicle::core::Dispatch\"")
-                && !message.contains("vehicle.core::Dispatch")
-        }));
-    }
-
-    #[test]
-    fn class_implementation_validation_ignores_std_prefix_for_method_return_type() {
-        let mut design_entity = entity("Sample", vec![]);
-        design_entity.methods = vec![method_with_return_type("GetNumber", "uint8_t")];
-        let mut implementation_entity = entity("Sample", vec![]);
-        implementation_entity.methods = vec![method_with_return_type("GetNumber", "std::uint8_t")];
-
-        let design = index(vec![design_entity]);
-        let implementation = index(vec![implementation_entity]);
-
-        let result = validate_class_design_implementation(&design, &implementation);
-
-        assert!(
-            result.is_empty(),
-            "Expected pass, got: {:?}",
-            result.failures
-        );
-    }
-
-    #[test]
-    fn class_implementation_validation_reports_variable_mismatch() {
-        let mut design_entity = entity("Sample", vec![]);
-        design_entity.variables = vec![variable("value_", "uint8_t")];
-        let mut implementation_entity = entity("Sample", vec![]);
-        implementation_entity.variables = vec![variable("value_", "uint16_t")];
-
-        let design = index(vec![design_entity]);
-        let implementation = index(vec![implementation_entity]);
-
-        let result = validate_class_design_implementation(&design, &implementation);
-
-        assert!(result.failures.iter().any(|message| {
-            message.contains("[Implementation] Field variable \"value_\" data type on entity \"Sample\" differs between the unit design and the C++ class implementation.")
-                && message.contains("variable \"value_\" data type")
-        }));
-    }
-
-    #[test]
-    fn class_implementation_validation_reports_parameter_mismatch_for_unique_same_name_method() {
-        let mut design_entity = entity("Sample", vec![]);
-        design_entity.methods = vec![method_with_parameter_types("stop", &["int", "int"])];
-        let mut implementation_entity = entity("Sample", vec![]);
-        implementation_entity.methods =
-            vec![method_with_parameter_types("stop", &["int", "double"])];
-
-        let design = index(vec![design_entity]);
-        let implementation = index(vec![implementation_entity]);
-
-        let result = validate_class_design_implementation(&design, &implementation);
-
-        assert!(result.failures.iter().any(|message| {
-            message.contains("method \"stop\" parameter type")
-                && message.contains("int")
-                && message.contains("double")
-        }));
-        assert!(result
-            .failures
-            .iter()
-            .all(|message| !message.contains("[member] method")));
-    }
-
-    #[test]
-    fn class_implementation_validation_normalizes_namespace_separator_for_relationships() {
-        let mut design_entity = entity("vehicle.Engine", vec![]);
-        design_entity.relationships = vec![relationship(
-            "vehicle.Engine",
-            "vehicle.Manufacturer",
-            RelationType::Composition,
-        )];
-        let mut implementation_entity = entity("vehicle::Engine", vec![]);
-        implementation_entity.relationships = vec![relationship(
-            "vehicle::Engine",
-            "vehicle::Manufacturer",
-            RelationType::Composition,
-        )];
-
-        let design = index(vec![design_entity]);
-        let implementation = index(vec![implementation_entity]);
-
-        let result = validate_class_design_implementation(&design, &implementation);
-
-        assert!(
-            result.is_empty(),
-            "Expected pass, got: {:?}",
-            result.failures
-        );
-    }
-
-    #[test]
-    fn relationship_candidates_match_each_design_type_independently() {
-        use RelationType::{Aggregation, Dependency};
-
-        for design_types in [
-            vec![Aggregation],
-            vec![Dependency],
-            vec![Aggregation, Dependency],
-        ] {
-            for (implementation_types, missing_dependency) in [
-                (vec![Aggregation, Dependency], false),
-                (vec![Dependency, Aggregation], false),
-                (vec![Aggregation], true),
-            ] {
-                let mut design_entity = entity("vehicle.Engine", vec![]);
-                design_entity.relationships = design_types
-                    .iter()
-                    .map(|kind| relationship("vehicle.Engine", "vehicle.Part", *kind))
-                    .collect();
-                let mut implementation_entity = entity("vehicle::Engine", vec![]);
-                implementation_entity.relationships = implementation_types
-                    .iter()
-                    .map(|kind| relationship("vehicle::Engine", "vehicle::Part", *kind))
-                    .collect();
-
-                let result = validate_class_design_implementation(
-                    &index(vec![design_entity]),
-                    &index(vec![implementation_entity]),
-                );
-                let expected_failures =
-                    usize::from(missing_dependency && design_types.contains(&Dependency));
-                assert_eq!(
-                    result.failures.len(),
-                    expected_failures,
-                    "design {design_types:?}, implementation {implementation_types:?}: {:?}",
-                    result.failures,
-                );
-                if expected_failures == 1 {
-                    let failure = &result.failures[0];
-                    assert!(failure.contains("[Implementation] Field \"relationship type\""));
-                    assert!(failure.contains("vehicle::Engine -> Dependency -> vehicle::Part"));
-                    assert!(!failure.contains("not found"));
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn class_implementation_validation_matches_exact_overloaded_method_signature() {
-        let mut design_entity = entity("Sample", vec![]);
-        design_entity.methods = vec![method_with_parameter_types("stop", &["int", "int"])];
-        let mut implementation_entity = entity("Sample", vec![]);
-        implementation_entity.methods = vec![
-            method_with_parameter_types("stop", &["int", "double"]),
-            method_with_parameter_types("stop", &["int", "int"]),
-        ];
-
-        let design = index(vec![design_entity]);
-        let implementation = index(vec![implementation_entity]);
-
-        let result = validate_class_design_implementation(&design, &implementation);
-
-        assert!(
-            result.is_empty(),
-            "Expected pass, got: {:?}",
-            result.failures
-        );
-    }
-
-    #[test]
-    fn class_implementation_validation_does_not_guess_between_overloaded_methods() {
-        let mut design_entity = entity("Sample", vec![]);
-        design_entity.methods = vec![method_with_parameter_types("stop", &["int", "int"])];
-        let mut implementation_entity = entity("Sample", vec![]);
-        implementation_entity.methods = vec![
-            method_with_parameter_types("stop", &["int", "double"]),
-            method_with_parameter_types("stop", &["int", "int", "bool"]),
-        ];
-
-        let design = index(vec![design_entity]);
-        let implementation = index(vec![implementation_entity]);
-
-        let result = validate_class_design_implementation(&design, &implementation);
-
-        assert!(result.failures.iter().any(|message| {
-            message.contains("[Member] Method \"stop(int, int)\" from entity \"Sample\" in the unit design not found in the C++ class implementation.")
-                && message.contains("stop(int, int)")
-        }));
-        assert!(result
-            .failures
-            .iter()
-            .all(|message| !message.contains("parameter type")
-                && !message.contains("parameter_count")));
-    }
-
-    #[test]
-    fn class_implementation_validation_keeps_failures_and_diagnostics_separate() {
-        enable_trace_diagnostics();
-
-        let mut design_entity = entity("Sample", vec![]);
-        design_entity.variables = vec![variable("value_", "uint8_t")];
-        let mut implementation_entity = entity("Sample", vec![]);
-        implementation_entity.variables = vec![variable("value_", "uint16_t")];
-
-        let design = index(vec![design_entity]);
-        let implementation = index(vec![implementation_entity]);
-
-        let result = validate_class_design_implementation(&design, &implementation);
-        let diagnostics = result.diagnostics.render();
-
-        assert!(result
-            .failures
-            .iter()
-            .any(|message| message.contains("[Implementation] Field")));
-        assert!(diagnostics.contains("Comparing design entity"));
-        assert!(!diagnostics.contains("[Implementation] Field"));
-    }
-}
+#[path = "test/class_design_implementation_validator_test.rs"]
+mod tests;

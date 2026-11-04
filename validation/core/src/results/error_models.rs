@@ -64,10 +64,117 @@ fn normalize_sentence_case(value: impl Into<String>) -> String {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+enum ErrorContent {
+    Field(String, String),
+    Section(ErrorSection),
+    Table(Vec<Vec<String>>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ErrorSection {
+    title: String,
+    content: Vec<ErrorContent>,
+}
+
+impl ErrorSection {
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            content: Vec::new(),
+        }
+    }
+
+    pub fn field(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.content
+            .push(ErrorContent::Field(uppercase_first_char(key), value.into()));
+        self
+    }
+
+    pub fn section(mut self, section: ErrorSection) -> Self {
+        self.content.push(ErrorContent::Section(section));
+        self
+    }
+
+    pub fn table<const N: usize>(
+        mut self,
+        headers: [&str; N],
+        rows: impl IntoIterator<Item = [String; N]>,
+    ) -> Self {
+        self.content.push(table_content(headers, rows));
+        self
+    }
+}
+
+fn table_content<const N: usize>(
+    headers: [&str; N],
+    rows: impl IntoIterator<Item = [String; N]>,
+) -> ErrorContent {
+    ErrorContent::Table(
+        std::iter::once(headers.map(str::to_string).to_vec())
+            .chain(rows.into_iter().map(|row| row.to_vec()))
+            .collect(),
+    )
+}
+
+fn render_content(message: &mut String, content: &[ErrorContent], indent: usize) {
+    let label_width = content
+        .iter()
+        .filter_map(|item| match item {
+            ErrorContent::Field(key, _) => Some(key.len()),
+            _ => None,
+        })
+        .max()
+        .unwrap_or(0);
+    let mut previous_group = false;
+    for (index, item) in content.iter().enumerate() {
+        let group = !matches!(item, ErrorContent::Field(..));
+        if index > 0 && (group || previous_group) {
+            message.push('\n');
+        }
+        match item {
+            ErrorContent::Field(key, value) => {
+                write!(message, "\n{:indent$}{key:label_width$} : {value}", "")
+                    .expect("writing to String cannot fail");
+            }
+            ErrorContent::Section(section) => {
+                write!(message, "\n{:indent$}{}", "", section.title)
+                    .expect("writing to String cannot fail");
+                render_content(message, &section.content, indent + 2);
+            }
+            ErrorContent::Table(rows) => {
+                let widths = (0..rows[0].len())
+                    .map(|column| {
+                        rows.iter()
+                            .map(|row| row[column].chars().count())
+                            .max()
+                            .unwrap_or(0)
+                    })
+                    .collect::<Vec<_>>();
+                for row in rows {
+                    write!(message, "\n{:indent$}", "").expect("writing to String cannot fail");
+                    for (column, value) in row.iter().enumerate() {
+                        if column > 0 {
+                            message.push_str(" | ");
+                        }
+                        if column + 1 == row.len() {
+                            message.push_str(value);
+                        } else {
+                            write!(message, "{value:width$}", width = widths[column])
+                                .expect("writing to String cannot fail");
+                        }
+                    }
+                }
+            }
+        }
+        previous_group = group;
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ErrorBuilder {
     category: ErrorCategory,
     title: Option<String>,
-    fields: Vec<(String, String)>,
+    content: Vec<ErrorContent>,
     fix: Option<String>,
 }
 
@@ -76,7 +183,7 @@ impl ErrorBuilder {
         Self {
             category,
             title: None,
-            fields: Vec::new(),
+            content: Vec::new(),
             fix: None,
         }
     }
@@ -87,7 +194,22 @@ impl ErrorBuilder {
     }
 
     pub fn field(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.fields.push((uppercase_first_char(key), value.into()));
+        self.content
+            .push(ErrorContent::Field(uppercase_first_char(key), value.into()));
+        self
+    }
+
+    pub fn section(mut self, section: ErrorSection) -> Self {
+        self.content.push(ErrorContent::Section(section));
+        self
+    }
+
+    pub fn table<const N: usize>(
+        mut self,
+        headers: [&str; N],
+        rows: impl IntoIterator<Item = [String; N]>,
+    ) -> Self {
+        self.content.push(table_content(headers, rows));
         self
     }
 
@@ -115,30 +237,17 @@ impl ErrorBuilder {
         )
     }
 
-    pub fn build(self) -> String {
-        let label_width = self
-            .fields
-            .iter()
-            .map(|(key, _)| key.len())
-            .chain(self.fix.iter().map(|_| "Fix".len()))
-            .max()
-            .unwrap_or(0);
-
+    pub fn build(mut self) -> String {
         let title = self.title.unwrap_or_default();
         let mut message = String::new();
         write!(&mut message, "[{}] {title}", self.category.as_tag())
             .expect("writing to String cannot fail");
 
-        for (key, value) in self.fields {
-            write!(&mut message, "\n  {key:label_width$} : {value}")
-                .expect("writing to String cannot fail");
-        }
-
         if let Some(fix) = self.fix {
-            write!(&mut message, "\n  {:label_width$} : {fix}", "Fix")
-                .expect("writing to String cannot fail");
+            self.content
+                .push(ErrorContent::Field("Fix".to_string(), fix));
         }
-
+        render_content(&mut message, &self.content, 2);
         message
     }
 }

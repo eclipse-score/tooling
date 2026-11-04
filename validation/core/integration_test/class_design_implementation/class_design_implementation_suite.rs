@@ -83,8 +83,48 @@ fn positive_class_features() {
 }
 
 #[test]
+fn positive_normalized_callable_duplicates() {
+    assert_case("positive_normalized_callable_duplicates");
+}
+
+#[test]
 fn positive_free_function_features() {
     assert_case("positive_free_function_features");
+}
+
+#[test]
+fn positive_partial_parameters() {
+    assert_case("positive_partial_parameters");
+}
+
+#[test]
+fn negative_complete_type_actual_mismatch() {
+    assert_case("negative_complete_type_actual_mismatch");
+}
+
+#[test]
+fn positive_parameter_prefix_matches_multiple_implementation_overloads() {
+    assert_case("positive_parameter_prefix_matches_multiple_implementation_overloads");
+}
+
+#[test]
+fn negative_ambiguous_callable_field_differences() {
+    assert_case("negative_ambiguous_callable_field_differences");
+}
+
+#[test]
+fn negative_ambiguous_field_consistent_contention() {
+    assert_case("negative_ambiguous_field_consistent_contention");
+}
+
+#[test]
+fn negative_multiple_design_overloads_compete_for_one_implementation() {
+    assert_case("negative_multiple_design_overloads_compete_for_one_implementation");
+}
+
+#[test]
+fn negative_zero_parameter_design_with_parameterized_implementation() {
+    assert_case("negative_zero_parameter_design_with_parameterized_implementation");
 }
 
 #[test]
