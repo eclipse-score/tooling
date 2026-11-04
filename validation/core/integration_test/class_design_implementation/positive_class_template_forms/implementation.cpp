@@ -11,6 +11,10 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
+#include <functional>
+#include <scoped_allocator>
+#include <utility>
+
 namespace amp
 {
 template <typename T, typename U>
@@ -94,3 +98,37 @@ class NestedUnnamedTemplate
 {
 };
 }  // namespace amp
+
+namespace score
+{
+namespace memory
+{
+namespace shared
+{
+// The allocator only needs a declaration: this fixture does not instantiate the map.
+template <typename T>
+class PolymorphicOffsetPtrAllocator;
+}  // namespace shared
+}  // namespace memory
+
+namespace mw
+{
+namespace com
+{
+namespace impl
+{
+namespace lola
+{
+template <typename Key,
+          typename MappedType,
+          typename KeyEqual = std::equal_to<Key>,
+          typename Allocator =
+              std::scoped_allocator_adaptor<memory::shared::PolymorphicOffsetPtrAllocator<std::pair<Key, MappedType>>>>
+class LinearSearchMap
+{
+};
+}  // namespace lola
+}  // namespace impl
+}  // namespace com
+}  // namespace mw
+}  // namespace score
