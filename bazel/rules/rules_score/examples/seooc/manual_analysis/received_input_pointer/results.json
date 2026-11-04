@@ -1,0 +1,27 @@
+{
+  "analysis": "manual_analysis/received_input_pointer/analysis.yaml",
+  "results": [
+    {
+      "type": "action",
+      "description": "Compare OtherLibrary.ValidInputPointer@1 with REQ_COMP_EXTRA_004 and record how non-nullness, lifetime, and absence of concurrent modification are covered.",
+      "result": "REQ_COMP_EXTRA_004 version 1 references OtherLibrary.ValidInputPointer@1. Taking the address of a call-local const uint8_t supplies a non-null pointer, a lifetime enclosing the synchronous call, and an object without a mutable alias. This example evidence was reviewed by the coding assistant, not independently approved by a human reviewer."
+    },
+    {
+      "type": "action",
+      "description": "Enumerate all Compute calls in unit_1 and review the argument object, pointer escapes, lifetime, and possible writers. Confirm the reviewed call sites cover the unit_1 implementation target.",
+      "result": "unit_1_lib lists only foo.cpp and foo.h. The sole Compute call is in Foo::GetNumber. It passes &value, where value is a call-local const std::uint8_t initialized to 42. The address is not otherwise exposed; separate invocations have separate objects. The object remains alive until the call returns and GetNumber exits. The C++ context includes the collected implementation files and selected rule attributes, not the entire BUILD file or explicit dependency edges. Changes to collected file content or recorded attributes trigger impact review."
+    },
+    {
+      "type": "action",
+      "description": "Inspect the dependency Compute contract and implementation to confirm the read is synchronous and the pointer is neither retained nor passed to asynchronous work.",
+      "result": "other_library.h implements Compute as return *value with a const uint8_t pointer parameter. There is no storage of the pointer, callback, or asynchronous work. public_api.puml states that the read is synchronous and the pointer is not retained. The upstream AoU and API description are included through the contract context. The dependency implementation and selected rule attributes are collected transitively through the C++ context; the entire dependency BUILD file is not included."
+    },
+    {
+      "type": "assertion",
+      "description": "Do all reviewed unit_1 calls satisfy the received AoU through REQ_COMP_EXTRA_004, with no uncovered call sites or unresolved findings?",
+      "answer": "Yes",
+      "passed": true,
+      "justification": "Within the reviewed unit_1 implementation, the only Compute call uses the address of a live call-local const object, and Compute reads it synchronously without retaining it. All three upstream input conditions are covered. This is source-review evidence for the example, not proof for arbitrary callers or an independent human safety approval."
+    }
+  ]
+}

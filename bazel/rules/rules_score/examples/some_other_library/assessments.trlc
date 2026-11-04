@@ -31,3 +31,11 @@ ScoreReq.RootCauseAssessment MemoryBudgetExceededAssessed {
     rationale = "The caller keeps invocations within the memory budget."
     version = 1
 }
+
+ScoreReq.RootCauseAssessment InvalidInputPointerAssessed {
+    root_causes = [other_library_fta.InvalidInputPointer]
+    measures = [OtherLibrary.ValidInputPointer@1]
+    safety = ScoreReq.Asil.B
+    rationale = "The caller guarantees a non-null input pointer, object lifetime, and absence of concurrent modification throughout Compute."
+    version = 1
+}

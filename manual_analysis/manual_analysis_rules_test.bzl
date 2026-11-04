@@ -153,6 +153,27 @@ def _manual_analysis_update_env_test_impl(ctx):
     asserts.true(env, "MANUAL_ANALYSIS_YAML" in run_env, "Missing analysis yaml env")
     asserts.true(env, "MANUAL_ANALYSIS_RESULTS_FILE" in run_env, "Missing results file env")
 
+    runfiles_by_path = {}
+    for file in target_under_test[DefaultInfo].default_runfiles.files.to_list():
+        runfiles_by_path[file.short_path] = file
+    aliases = {
+        entry.path: entry.target_file
+        for entry in target_under_test[DefaultInfo].default_runfiles.root_symlinks.to_list()
+    }
+    for path in run_env.values():
+        asserts.true(env, path in aliases, "Update environment must reference an explicit runfiles alias: " + path)
+    manifests = [
+        action
+        for action in analysistest.target_actions(env)
+        if any([file.basename.endswith("_file_manifest.tsv") for file in action.outputs.to_list()])
+    ]
+    asserts.equals(env, 1, len(manifests))
+    for row in manifests[0].content.splitlines():
+        display, runtime = row.split("\t")
+        asserts.true(env, display in runfiles_by_path, "Manifest input must be exported in runfiles: " + display)
+        asserts.true(env, runtime in aliases, "Manifest input must have a runfiles alias: " + runtime)
+        asserts.equals(env, runfiles_by_path[display], aliases[runtime])
+
     default_files = target_under_test[DefaultInfo].files.to_list()
     asserts.true(
         env,
@@ -186,6 +207,11 @@ def _manual_analysis_test_env_test_impl(ctx):
     asserts.true(env, "MANUAL_ANALYSIS_YAML" in run_env, "Missing analysis yaml env")
     asserts.true(env, "MANUAL_ANALYSIS_RESULTS_FILE" in run_env, "Missing results file env")
     asserts.true(env, "MANUAL_ANALYSIS_LABEL" in run_env, "Missing analysis label env")
+    asserts.false(
+        env,
+        "MANUAL_ANALYSIS_LOBSTER_OUTPUT" in run_env,
+        "Tests must not overwrite the build-generated LOBSTER artifact in read-only runfiles",
+    )
 
     default_info = target_under_test[DefaultInfo]
     executable = default_info.files_to_run.executable
