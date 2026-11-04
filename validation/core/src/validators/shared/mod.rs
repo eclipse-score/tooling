@@ -13,9 +13,13 @@
 
 //! Shared validator analysis and helper utilities.
 
+mod bipartite_matching;
 mod diagram_analysis;
 mod helpers;
 
+pub(in crate::validators) use bipartite_matching::{
+    candidate_graph, nonempty_candidate_rows, unique_covering_matching, MatchingOutcome,
+};
 pub(in crate::validators) use diagram_analysis::{
     build_container_units, build_observed_call_contexts, build_unit_bindings, match_element,
     ContainerUnits, ElementMatch, SequenceCallContext, UnitBindings, UnitInterfaces,

@@ -441,12 +441,21 @@ fn resolve_decl_based(ty: &Type) -> Option<ResolvedType> {
     // Template arguments are recursively resolved into the same semantic model.
     let declaration = ty.get_declaration()?;
     let base = entity_id_from_decl(&declaration);
-    let args = ty
-        .get_template_argument_types()
-        .unwrap_or_default()
+    let argument_types = ty.get_template_argument_types().unwrap_or_default();
+    if argument_types.iter().any(Option::is_none) {
+        // Non-type/unsupported arguments must not disappear and shift later positions.
+        // Preserve clang's entire spelling: rebuilding a qualified base plus a suffix
+        // would be unsafe for nested owning types. This fallback may be less qualified
+        // than the declaration-derived identity and is not mixed-argument resolution.
+        return Some(ResolvedType::Unknown(unqualified_named_spelling(
+            &ty.get_display_name(),
+            ty.is_const_qualified(),
+            ty.is_volatile_qualified(),
+        )));
+    }
+    let args = argument_types
         .into_iter()
-        .flatten()
-        .map(|argument| resolve_type(&argument))
+        .filter_map(|argument| argument.map(|argument| resolve_type(&argument)))
         .collect::<Vec<_>>();
 
     (!args.is_empty())
@@ -459,6 +468,55 @@ fn resolve_decl_based(ty: &Type) -> Option<ResolvedType> {
 
 fn unknown(ty: &Type) -> ResolvedType {
     ResolvedType::Unknown(ty.get_display_name())
+}
+
+// resolve_type re-applies top-level cv. Do not retain it a second time in
+// an opaque named-template spelling; inner argument qualifiers remain untouched.
+fn unqualified_named_spelling(spelling: &str, is_const: bool, is_volatile: bool) -> String {
+    let mut spelling = spelling.trim();
+    loop {
+        let previous = spelling;
+        for (qualifier, present) in [("const", is_const), ("volatile", is_volatile)] {
+            if present {
+                if let Some(rest) = spelling
+                    .strip_prefix(qualifier)
+                    .filter(|rest| rest.starts_with(char::is_whitespace))
+                {
+                    spelling = rest.trim_start();
+                }
+                if let Some(rest) = spelling
+                    .strip_suffix(qualifier)
+                    .filter(|rest| rest.ends_with(char::is_whitespace))
+                {
+                    spelling = rest.trim_end();
+                }
+            }
+        }
+        if spelling == previous {
+            return spelling.to_string();
+        }
+    }
+}
+
+#[cfg(test)]
+mod opaque_template_tests {
+    use super::unqualified_named_spelling;
+
+    #[test]
+    fn removes_only_outer_qualifiers_before_reapplying_them() {
+        assert_eq!(
+            unqualified_named_spelling("const volatile ns::Mixed<const T, 3>", true, true),
+            "ns::Mixed<const T, 3>"
+        );
+        assert_eq!(
+            unqualified_named_spelling("ns::Mixed<const T, 3> const", true, false),
+            "ns::Mixed<const T, 3>"
+        );
+        assert_eq!(
+            unqualified_named_spelling("constant<T, 3>", true, false),
+            "constant<T, 3>"
+        );
+    }
 }
 
 fn entity_id_from_decl(entity: &Entity) -> String {

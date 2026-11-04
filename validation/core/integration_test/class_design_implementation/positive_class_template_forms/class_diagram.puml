@@ -63,4 +63,18 @@ namespace amp {
     }
 }
 
+namespace score {
+    namespace mw {
+        namespace com {
+            namespace impl {
+                namespace lola {
+                    ' A template declaration with an alias may omit trailing parameters.
+                    class "LinearSearchMap<Key, MappedType>" as LinearSearchMap {
+                    }
+                }
+            }
+        }
+    }
+}
+
 @enduml
