@@ -14,9 +14,9 @@ should_pass: false
 error_contains: |
   [Design] Unit "unit_1" is defined more than once in the component diagram.
     Unit                  : "unit_1"
-    Parent                : component_a
+    Parent                : package_a.component_a
     Component source file : "validation/core/integration_test/component_model/negative_duplicate_unit_alias_casefolded/component_diagram.puml"
     Component source line : 18
     Duplicate source file : "validation/core/integration_test/component_model/negative_duplicate_unit_alias_casefolded/component_diagram.puml"
     Duplicate source line : 19
-    Fix                   : Keep only one unit "unit_1" under "component_a", or rename one of the duplicate entities.
+    Fix                   : Keep only one unit "unit_1" under "package_a.component_a", or rename one of the duplicate entities.

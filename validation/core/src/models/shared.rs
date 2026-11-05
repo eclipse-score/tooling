@@ -15,10 +15,17 @@
 
 use crate::{ErrorBuilder, ErrorCategory};
 
-/// Composite key: `(canonical_alias, parent_alias)`. `parent_alias` is `None`
-/// for top-level entities. Using the parent as part of the key means two
-/// identically-named entities under different parents are treated as distinct.
+/// Composite key: `(design_name, full_parent_design_path)` (lowercased).
+/// The parent is `None` for top-level entities.
 pub type EntityKey = (String, Option<String>);
+
+pub(super) fn entity_path(key: &EntityKey) -> String {
+    let (design_name, parent_path) = key;
+    match parent_path {
+        Some(parent) => format!("{parent}.{design_name}"),
+        None => design_name.clone(),
+    }
+}
 
 /// Extract the target name from a Bazel label like `@//path/to/package:target`
 /// -> `"target"`. Returns the full label unchanged if it contains no colon.

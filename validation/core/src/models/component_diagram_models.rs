@@ -183,7 +183,7 @@ impl ComponentDiagramArchitecture {
             let name = entity.match_key();
             let parent_key = match &entity.parent_id {
                 Some(parent_id) => match id_index.get(&parent_id.to_lowercase()) {
-                    Some(parent) => Some(parent.match_key()),
+                    Some(parent) => Some(parent.id.to_lowercase()),
                     None => {
                         let kind = entity_kind_name(entity);
                         let name = entity.match_key();
@@ -269,7 +269,7 @@ fn entity_parent_key(
     entity.parent_id.as_deref().map(|parent_id| {
         id_index
             .get(&parent_id.to_lowercase())
-            .map(|parent| parent.match_key())
+            .map(|parent| parent.id.to_lowercase())
             .unwrap_or_else(|| parent_id.to_string())
     })
 }
@@ -464,7 +464,7 @@ mod tests {
         );
         assert!(architecture
             .unit_set
-            .contains_key(&("c".to_string(), Some("b".to_string()))));
+            .contains_key(&("c".to_string(), Some("a.b".to_string()))));
     }
 
     #[test]

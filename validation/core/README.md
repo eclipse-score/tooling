@@ -124,6 +124,15 @@ Bazel rules declare the profile and provide the input bundle. The Rust
 validation layer decides which validators belong to the selected profile and
 maps the profile inputs to those validators.
 
+The architecture JSON maps full Bazel labels to entries containing their own
+required `design_name` and optional `units` and `components` lists. Child references
+contain a `label` and `design_name`. Matching uses the entity design name and
+the full parent design path. Duplicate sibling names are checked within each
+actual parent target, identified by its label. A shared component is matched
+under every containing design path. Conflicting component paths are excluded
+from downstream matching diagnostics to avoid cascading errors. An entry without
+its own `design_name` is rejected when reading the JSON.
+
 ## Run
 
 Build the CLI:

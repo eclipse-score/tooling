@@ -51,6 +51,8 @@ def _collect_current_architecture_aspect_impl(target, ctx):
                 components_dict.update(nested_info.components)
 
         component_structure = {}
+        if ComponentInfo in target:
+            component_structure["design_name"] = target[ComponentInfo].design_name
         if current_units:
             component_structure["units"] = current_units
         if current_components:
