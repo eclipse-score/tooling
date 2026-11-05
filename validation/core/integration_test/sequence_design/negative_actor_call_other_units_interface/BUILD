@@ -18,6 +18,7 @@ architectural_design(
     name = "design",
     dynamic = ["sequence_diagram.puml"],
     maturity = "development",
+    package = "negative_actor_call_other_units_interface_api",
     public_api = ["public_api_diagram.puml"],
     static = ["component_diagram.puml"],
     visibility = ["//visibility:private"],

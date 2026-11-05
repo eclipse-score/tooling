@@ -18,6 +18,7 @@ architectural_design(
     name = "design",
     dynamic = ["sequence_diagram.puml"],
     maturity = "development",
+    package = "positive_actor_boundary_api",
     public_api = ["public_api_diagram.puml"],
     visibility = ["//visibility:private"],
 )
