@@ -73,6 +73,12 @@ local_path_override(
     path = "../../../..",
 )
 
+tooling_provenance = use_extension(
+    "@score_tooling//bazel/rules/rules_score/private:tooling_provenance.bzl",
+    "tooling_provenance",
+)
+use_repo(tooling_provenance, "tooling_provenance")
+
 register_toolchains(
     "//:score_toolchain",
 )

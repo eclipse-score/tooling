@@ -56,6 +56,15 @@ section "Use Cases" {
         affected_tools = [Tools.Bazel]
     }
 
+    ToolQualification.UseCase Identify_Report_Tooling_Version {
+        description = '''
+            As a safety assessor I want every dependable element report to
+            state the tooling version it was generated with so that the report
+            can be attributed to a released and qualified tooling version.
+        '''
+        affected_tools = [Tools.Bazel, Tools.Docs]
+    }
+
     ToolQualification.UseCase Parse_Architectural_Diagrams {
         description = '''
             As a software architect I want PlantUML component and sequence

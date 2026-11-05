@@ -26,6 +26,26 @@ produce the final outputs.
    :alt: SEooC build flow
    :width: 90%
 
+Tooling Version in Reports
+--------------------------
+
+The generated ``dependable_element`` landing page identifies the resolved
+``score_tooling`` module version automatically. For the normal integration:
+
+.. code-block:: python
+
+   bazel_dep(name = "score_tooling", version = "3.0.2")
+
+the report displays ``Generated with score_tooling version 3.0.2``, unless
+Bazel dependency resolution selects a newer version. The same
+information is retained when embedding the generated ``<name>_rst`` sources
+in another Sphinx build.
+
+This identifies the Bazel module version, not a Git revision. Unversioned
+modules display ``unavailable (unversioned module)``. Git, archive and local
+override identification are not supported with respect
+to version-representation in reports.
+
 .. _rule-toolchain-configuration:
 
 Toolchain Setup
@@ -52,7 +72,7 @@ instead of reproducing it:
 
 .. code-block:: python
 
-   bazel_dep(name = "score_tooling", version = "1.3.2")
+   bazel_dep(name = "score_tooling", version = "3.0.2")
 
    # Dependency providing your custom Sphinx extension
    bazel_dep(name = "score_docs_as_code", version = "3.0.1", dev_dependency = True)

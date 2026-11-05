@@ -39,6 +39,17 @@ section "Potential Errors" {
             impact_type = ToolQualification.Impact_Type.Safety
         }
 
+        ToolQualification.PotentialError Wrong_Tooling_Version_In_Report {
+            description = '''
+                The dependable element report states no tooling version, or a
+                version other than the resolved score_tooling module version,
+                such as the version of the consuming module.
+            '''
+            impacts = ["Report cannot be attributed to the tooling version that generated it"]
+            affects = [Identify_Report_Tooling_Version]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
     }
 
     section "Requirement Traceability" {
