@@ -59,7 +59,8 @@ The following participant declaration forms are supported:
 participant Service
 participant OrderService <<service>>
 participant "orders::OrderService" as OrderService
-participant "ExternalEndpoint" as ext
+actor User
+participant Platform <<external>>
 ```
 
 The written name is the participant identity and must be an identifier path (letters, digits and `_`, separated by `.` or `::`). A free-text name such as `participant "Order Service" as OrderService` is rejected. The alias is only a local reference key; use it, or the declared name when there is no alias, in messages. See [Element Identifiers](element-identifiers.md) for how the identifier is built from the name and why the qualified form
@@ -110,16 +111,33 @@ Service -> Worker : process(item)
 Worker --> Service :result
 ```
 
-The difference between `->` and `-->` is only the line style. The resolver parses both as the same kind of logical message (`Interaction`).
+The line style and arrowhead select the message kind, as in UML:
 
-`-->` does not automatically acquire response semantics. If a response only needs to be shown in the PlantUML diagram, **use `return`**:
+| Arrow | Kind |
+|-------|------|
+| `A -> B` | synchronous call |
+| `A ->> B` | asynchronous call |
+| `A --> B`, `A -->> B` | reply |
+| `A -> B **` | create |
+| `A -> B !!` | delete |
+
+Half arrowheads (`\`, `/`) only change the drawing; the message stays a synchronous call.
+
+A `create B` statement only declares the participant and emits a lifecycle node. It does not change the kind of any message; a create message needs the `**` suffix. The `destroy B` statement ends the lifeline and is not a
+message.
+
+All kinds are resolved as an `Interaction` with the sender and receiver of the
+arrow and a `kind`. Validators treat only synchronous and asynchronous messages
+as operation calls; replies, create and delete messages are not matched against
+an API. A response that only needs to be shown in the PlantUML diagram can use
+`return`:
 
 ```text
 Service -> Worker : process(item)
 return result
 ```
 
-The parser accepts `return result` and PlantUML can render it as a response. The resolver does not convert it into an interaction node in the logical model. If the response must enter the logical model, use an explicit reverse message such as `Worker --> Service : result`. This is resolved as `Worker -> Service` with the message text `"result"`.
+The parser accepts `return result`. The resolver does not convert it into an interaction node; an explicit reverse message such as `Worker --> Service : result` is resolved as a reply `Worker -> Service` with the message text `"result"`.
 
 Self-messages, messages with a missing endpoint, and lost/found markers are supported:
 
@@ -131,7 +149,7 @@ Service --> : outgoing response
 Service -->] : outgoing to outside
 ```
 
-Messages with missing endpoints and lost/found markers (`[`, `]`, and `?`) are represented with a `null` endpoint in the logical model and do not create user-declared participants. Avoid these forms unless necessary; when modeling an external interaction, explicitly declaring a participant is recommended.
+Messages with missing endpoints and lost/found markers (`[`, `]`, and `?`) are represented with a `null` endpoint in the logical model (a UML gate) and do not create user-declared participants. Validators treat the `null` endpoint as an unspecified environment. When the partner is known, declare an `actor` or a `participant ... <<external>>` instead.
 
 ### Lifecycle
 

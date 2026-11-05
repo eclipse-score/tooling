@@ -16,15 +16,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use uid_utils::UidMatch;
-
 use super::shared::{
-    best_id_suggestion, build_observed_call_contexts, build_unit_bindings, format_name_list,
-    intersect_interfaces, resolve_unit, SequenceCallContext, UnitBindings,
+    best_id_suggestion, build_container_units, build_observed_call_contexts, build_unit_bindings,
+    format_name_list, intersect_interfaces, match_element, ContainerUnits, ElementMatch,
+    SequenceCallContext, UnitBindings,
 };
 use crate::models::{
-    is_external_endpoint, ComponentDiagramArchitecture, SequenceDiagramIndex,
-    SequenceParticipantInfo,
+    ComponentDiagramArchitecture, Environment, SequenceDiagramIndex, SequenceParticipantInfo,
 };
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::{Diagnostics, ValidationResult};
@@ -44,6 +42,7 @@ struct ComponentSequenceValidator<'a> {
     observed_call_contexts: Vec<SequenceCallContext>,
     connected_unit_pairs: ConnectedUnitPairs,
     unit_bindings: UnitBindings,
+    container_units: ContainerUnits,
     result: ValidationResult,
 }
 
@@ -87,14 +86,19 @@ impl<'a> ComponentSequenceValidator<'a> {
         sequence_diagram: &'a SequenceDiagramIndex,
     ) -> Self {
         let unit_bindings = build_unit_bindings(component_diagram);
-        let observed_call_contexts =
-            build_observed_call_contexts(sequence_diagram.observed_calls(), &unit_bindings);
+        let container_units = build_container_units(component_diagram);
+        let observed_call_contexts = build_observed_call_contexts(
+            sequence_diagram.observed_calls(),
+            &unit_bindings,
+            &container_units,
+        );
 
         Self {
             participants: sequence_diagram.participants(),
             observed_call_contexts,
             connected_unit_pairs: build_connected_unit_pairs(&unit_bindings),
             unit_bindings,
+            container_units,
             result: ValidationResult::default(),
         }
     }
@@ -121,24 +125,56 @@ impl<'a> ComponentSequenceValidator<'a> {
         let mut linked_units = BTreeSet::new();
         let mut participant_errors = Vec::new();
 
-        for (participant, info) in self
-            .participants
-            .iter()
-            .filter(|(participant, _)| !is_external_endpoint(participant))
-        {
-            match resolve_unit(&self.unit_bindings, participant) {
-                UidMatch::Resolved(unit_id) => {
+        for (participant, info) in self.participants {
+            let matched = match_element(&self.unit_bindings, &self.container_units, participant);
+
+            if let Some(environment) = info.environment {
+                // An actor or external system is environment, not an element:
+                // naming a unit or component is a modelling error. The named
+                // unit counts as linked to avoid a second, misleading error.
+                let element_ids: Vec<&str> = match matched {
+                    ElementMatch::Unit(id) | ElementMatch::Container(id) => vec![id],
+                    ElementMatch::Ambiguous(ids) => ids,
+                    ElementMatch::Unresolved => continue,
+                };
+                linked_units.extend(
+                    element_ids
+                        .iter()
+                        .copied()
+                        .filter(|id| self.unit_bindings.contains_key(*id)),
+                );
+                participant_errors.push(environment_names_element_error(
+                    participant,
+                    info,
+                    environment,
+                    &element_ids,
+                    self.element_noun(&element_ids),
+                ));
+                continue;
+            }
+
+            match matched {
+                ElementMatch::Unit(unit_id) => {
                     linked_units.insert(unit_id);
                 }
-                UidMatch::Ambiguous(unit_ids) => {
-                    linked_units.extend(unit_ids.iter().copied());
+                // A component or SEooC lifeline is a black box and does not
+                // cover its units.
+                ElementMatch::Container(_) => {}
+                ElementMatch::Ambiguous(element_ids) => {
+                    linked_units.extend(
+                        element_ids
+                            .iter()
+                            .copied()
+                            .filter(|id| self.unit_bindings.contains_key(*id)),
+                    );
                     participant_errors.push(ambiguous_participant_error(
                         participant,
                         info,
-                        &unit_ids,
+                        &element_ids,
+                        self.element_noun(&element_ids),
                     ));
                 }
-                UidMatch::Unresolved => {
+                ElementMatch::Unresolved => {
                     participant_errors.push(self.unknown_participant_error(participant, info));
                 }
             }
@@ -153,6 +189,22 @@ impl<'a> ComponentSequenceValidator<'a> {
 
         for error in missing_unit_errors.into_iter().chain(participant_errors) {
             self.result.add_failure(error);
+        }
+    }
+
+    /// "unit" or "component" when all ids are of that kind, else "element".
+    fn element_noun(&self, element_ids: &[&str]) -> &'static str {
+        let units = element_ids
+            .iter()
+            .filter(|id| self.unit_bindings.contains_key(**id))
+            .count();
+
+        if units == element_ids.len() {
+            "unit"
+        } else if units == 0 {
+            "component"
+        } else {
+            "element"
         }
     }
 
@@ -173,9 +225,9 @@ impl<'a> ComponentSequenceValidator<'a> {
         if let Some(suggested_name) = best_id_suggestion(
             unit_id,
             self.participants
-                .keys()
-                .filter(|participant| !is_external_endpoint(participant))
-                .map(String::as_str),
+                .iter()
+                .filter(|(_, info)| info.environment.is_none())
+                .map(|(participant, _)| participant.as_str()),
         )
         .as_deref()
         {
@@ -201,12 +253,17 @@ impl<'a> ComponentSequenceValidator<'a> {
             .field("sequence source file", format!("\"{source_file}\""))
             .field("sequence source line", source_line.to_string())
             .fix(format!(
-                "add component unit \"{participant}\" in the component diagram, or remove it from the sequence diagram"
+                "add component unit \"{participant}\" in the component diagram, declare it as 'actor {participant}' or 'participant {participant} <<external>>' if it is outside the described architecture, or remove it from the sequence diagram"
             ));
 
-        if let Some(suggested_name) =
-            best_id_suggestion(participant, self.unit_bindings.keys().map(String::as_str))
-                .as_deref()
+        if let Some(suggested_name) = best_id_suggestion(
+            participant,
+            self.unit_bindings
+                .keys()
+                .chain(self.container_units.keys())
+                .map(String::as_str),
+        )
+        .as_deref()
         {
             error.suggest(participant, None, suggested_name)
         } else {
@@ -263,10 +320,18 @@ impl<'a> ComponentSequenceValidator<'a> {
         }
     }
 
+    /// A call between elements exercises a unit pair when its caller and
+    /// callee are exactly the two units. A component or SEooC lifeline is a
+    /// black box and does not cover the pairs of its units.
     fn has_observed_call_between_units(&self, left_unit: &str, right_unit: &str) -> bool {
         self.observed_call_contexts.iter().any(|call_context| {
-            call_context.normalized_left_unit() == left_unit
-                && call_context.normalized_right_unit() == right_unit
+            if call_context.involves_environment() {
+                return false;
+            }
+
+            let (caller, callee) = (&call_context.caller_unit, &call_context.callee_unit);
+            (caller == left_unit && callee == right_unit)
+                || (caller == right_unit && callee == left_unit)
         })
     }
 
@@ -274,11 +339,11 @@ impl<'a> ComponentSequenceValidator<'a> {
         let mut seen_pairs = BTreeSet::new();
 
         for call_context in &self.observed_call_contexts {
-            if call_involves_external_endpoint(call_context) {
+            if call_context.involves_environment() {
                 continue;
             }
 
-            if call_context.caller_unit == call_context.callee_unit {
+            if call_context.caller_unit == call_context.callee_unit || call_context.ends_overlap() {
                 continue;
             }
 
@@ -298,6 +363,11 @@ impl<'a> ComponentSequenceValidator<'a> {
 
             let left_unit = call_context.normalized_left_unit();
             let right_unit = call_context.normalized_right_unit();
+            let noun = if call_context.involves_container {
+                "element"
+            } else {
+                "unit"
+            };
             let unit_pair = format_unit_pair(left_unit, right_unit);
             let left_interface_label = format!("interfaces for \"{left_unit}\"");
             let right_interface_label = format!("interfaces for \"{right_unit}\"");
@@ -306,9 +376,9 @@ impl<'a> ComponentSequenceValidator<'a> {
             self.result.add_failure(
                 ErrorBuilder::new(ErrorCategory::Interface)
                     .title(format!(
-                        "sequence-connected units \"{left_unit}\" and \"{right_unit}\" have no corresponding shared interface connection in the component diagram."
+                        "sequence-connected {noun}s \"{left_unit}\" and \"{right_unit}\" have no corresponding shared interface connection in the component diagram."
                     ))
-                    .field("unit pair", unit_pair)
+                    .field(format!("{noun} pair"), unit_pair)
                     .field("sequence source file", format!("\"{source_file}\""))
                     .field("sequence source line", source_line.to_string())
                     .field(&left_interface_label, format_name_list(left_interfaces))
@@ -322,36 +392,61 @@ impl<'a> ComponentSequenceValidator<'a> {
     }
 }
 
-fn ambiguous_participant_error(
+fn environment_names_element_error(
     participant: &str,
     info: &SequenceParticipantInfo,
-    unit_ids: &[&str],
+    environment: Environment,
+    element_ids: &[&str],
+    noun: &str,
 ) -> String {
     let (source_file, source_line) = info.source_location.display();
-    let matching_units = unit_ids
+    let matching_elements = element_ids
         .iter()
-        .map(|unit_id| format!("\"{unit_id}\""))
+        .map(|element_id| format!("\"{element_id}\""))
         .collect::<Vec<_>>()
         .join(", ");
-    let example = unit_ids.first().copied().unwrap_or(participant);
 
     ErrorBuilder::new(ErrorCategory::Naming)
         .title(format!(
-            "participant \"{participant}\" from the sequence diagram matches multiple units in the component diagram"
+            "participant \"{participant}\" is declared as {} but names a {noun} of the component diagram",
+            environment.label()
         ))
         .field("participant", format!("\"{participant}\""))
-        .field("matching units", matching_units)
+        .field(format!("matching {noun}s"), matching_elements)
         .field("sequence source file", format!("\"{source_file}\""))
         .field("sequence source line", source_line.to_string())
         .fix(format!(
-            "write the qualified id of the intended unit as the label of participant \"{participant}\" in the sequence diagram, for example participant \"{example}\" as {participant}, or rename one of the matching units in the component diagram"
+            "declare participant \"{participant}\" as a regular participant if it is part of the described architecture, or rename it so that it does not match a {noun} id"
         ))
         .build()
 }
 
-fn call_involves_external_endpoint(call_context: &SequenceCallContext) -> bool {
-    is_external_endpoint(&call_context.caller_unit)
-        || is_external_endpoint(&call_context.callee_unit)
+fn ambiguous_participant_error(
+    participant: &str,
+    info: &SequenceParticipantInfo,
+    element_ids: &[&str],
+    noun: &str,
+) -> String {
+    let (source_file, source_line) = info.source_location.display();
+    let matching_elements = element_ids
+        .iter()
+        .map(|element_id| format!("\"{element_id}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let example = element_ids.first().copied().unwrap_or(participant);
+
+    ErrorBuilder::new(ErrorCategory::Naming)
+        .title(format!(
+            "participant \"{participant}\" from the sequence diagram matches multiple {noun}s in the component diagram"
+        ))
+        .field("participant", format!("\"{participant}\""))
+        .field(format!("matching {noun}s"), matching_elements)
+        .field("sequence source file", format!("\"{source_file}\""))
+        .field("sequence source line", source_line.to_string())
+        .fix(format!(
+            "write the qualified id of the intended {noun} as the label of participant \"{participant}\" in the sequence diagram, for example participant \"{example}\" as {participant}, or rename one of the matching {noun}s in the component diagram"
+        ))
+        .build()
 }
 
 fn append_debug_log<'a>(

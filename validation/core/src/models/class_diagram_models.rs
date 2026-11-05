@@ -281,15 +281,23 @@ impl InternalApiIndex {
     }
 }
 
+/// Last dotted segment of an interface id.
+fn id_leaf(id: &str) -> &str {
+    id.rsplit('.').next().unwrap_or(id)
+}
+
 /// Indexed public-API data prepared for component/public-API validators.
 pub struct PublicApiIndex {
     api_names: BTreeSet<String>, // interface id leaves
+    /// Methods per interface id leaf.
+    methods: BTreeMap<String, BTreeSet<String>>,
 }
 
 impl PublicApiIndex {
     /// Build a [`PublicApiIndex`] from public-API class diagram inputs.
     pub fn build_index(diagrams: &[ClassDiagramInput]) -> Self {
         let mut api_names: BTreeSet<String> = BTreeSet::new();
+        let mut methods: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
 
         for diagram in diagrams {
             for entity in &diagram.entities {
@@ -297,16 +305,59 @@ impl PublicApiIndex {
                     continue;
                 }
 
-                let leaf = entity.id.rsplit('.').next().unwrap_or(&entity.id);
+                let leaf = id_leaf(&entity.id);
                 api_names.insert(leaf.to_string());
+                methods.entry(leaf.to_string()).or_default().extend(
+                    entity
+                        .methods
+                        .iter()
+                        .map(|method| method.name.clone())
+                        .filter(|name| !name.is_empty()),
+                );
             }
         }
 
-        Self { api_names }
+        Self { api_names, methods }
     }
 
     pub fn api_names(&self) -> impl Iterator<Item = &String> + '_ {
         self.api_names.iter()
+    }
+
+    /// `name` is an interface name or id; only its last segment is compared.
+    pub fn declares_interface(&self, name: &str) -> bool {
+        self.api_names.contains(id_leaf(name))
+    }
+
+    /// `interface` is an interface id and `name` an interface name or id; only
+    /// their last segments are compared.
+    pub fn is_interface_named(&self, interface: &str, name: &str) -> bool {
+        id_leaf(interface) == id_leaf(name) && self.declares_interface(interface)
+    }
+
+    pub fn declares_method(&self, name: &str) -> bool {
+        self.methods.values().any(|methods| methods.contains(name))
+    }
+
+    /// `interface` is an interface id; only its last segment is compared.
+    pub fn interface_declares_method(&self, interface: &str, method: &str) -> bool {
+        self.methods
+            .get(id_leaf(interface))
+            .is_some_and(|methods| methods.contains(method))
+    }
+
+    /// Methods declared on `interface` (an interface id), if it is public API.
+    pub fn interface_method_names(&self, interface: &str) -> impl Iterator<Item = &str> + '_ {
+        self.methods
+            .get(id_leaf(interface))
+            .into_iter()
+            .flatten()
+            .map(String::as_str)
+    }
+
+    /// All method names declared on any public API interface.
+    pub fn method_names(&self) -> impl Iterator<Item = &str> + '_ {
+        self.methods.values().flatten().map(String::as_str)
     }
 }
 

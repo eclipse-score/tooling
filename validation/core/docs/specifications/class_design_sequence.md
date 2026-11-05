@@ -11,10 +11,6 @@
   SPDX-License-Identifier: Apache-2.0
 ----------------------------------------------------------------------------- -->
 
----
-orphan: true
----
-
 # Class Design Sequence Specification
 
 ## Purpose
@@ -48,7 +44,8 @@ to exactly one class in the design class model.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignSequenceParticipantClassConsistency`)*
 
 This check validates that the sequence does not reference unknown or ambiguous
-classes.
+classes. Actors and `<<external>>` participants are not classes of the unit and
+are skipped, as are messages sent to them.
 
 Participant resolution matches the participant uid against class ids:
 

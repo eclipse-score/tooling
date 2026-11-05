@@ -136,6 +136,7 @@ mod lifecycle_validator_tests {
             sender: Some(sender.to_string().into()),
             receiver: Some(receiver.to_string().into()),
             message: Some("message".to_string()),
+            kind: Default::default(),
             source_location: dummy_source_location(),
         })
     }

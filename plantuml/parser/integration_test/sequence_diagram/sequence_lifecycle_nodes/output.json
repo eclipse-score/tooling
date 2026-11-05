@@ -74,6 +74,7 @@
             "sender": "Service",
             "receiver": "Worker",
             "message": "create()",
+            "kind": "Create",
             "source_location": {
               "file": "",
               "line": 20
@@ -117,6 +118,7 @@
             "sender": "Client",
             "receiver": "Worker",
             "message": "destroy()",
+            "kind": "Delete",
             "source_location": {
               "file": "",
               "line": 23

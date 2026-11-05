@@ -18,7 +18,7 @@ participant Client1
 participant Client2
 
 Service -> Client1 : solid right
-Service <-- Client2 : solid left
+Service <-- Client2 : dashed left short
 Service --> Client1 : dashed right
 Service <--- Client2 : dashed left
 Service -[#red]x Client1 : cross head right
