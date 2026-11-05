@@ -171,6 +171,7 @@ load(
     "test_specification_test_suite",
     "unit_test_specs_test",
 )
+load(":tooling_provenance_test.bzl", "tooling_provenance_test_suite")
 load(
     ":unit_component_test.bzl",
     "component_direct_asr_test",
@@ -188,6 +189,8 @@ load(
 )
 
 package(default_visibility = ["//visibility:public"])
+
+tooling_provenance_test_suite(name = "tooling_provenance")
 
 architecture_collection_test_suite(name = "architecture_collection_test_suite")
 

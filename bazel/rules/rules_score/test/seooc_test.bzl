@@ -22,6 +22,7 @@ Tests the SEooC (Safety Element out of Context) functionality including:
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 load("@score_tooling//bazel/rules/rules_score:providers.bzl", "SphinxIndexFileInfo", "SphinxModuleInfo", "SphinxNeedsInfo")
+load("@tooling_provenance//:provenance.bzl", "TOOLING_VERSION")
 
 def _seooc_index_generation_test_impl(ctx):
     """Test that dependable_element generates proper index.rst file."""
@@ -330,6 +331,19 @@ def _seooc_index_file_provider_test_impl(ctx):
     )
 
     index_file = target_under_test[SphinxIndexFileInfo].index_file
+
+    index_actions = [
+        action
+        for action in analysistest.target_actions(env)
+        if action.mnemonic == "TemplateExpand" and index_file in action.outputs.to_list()
+    ]
+    asserts.equals(env, 1, len(index_actions))
+    if index_actions:
+        asserts.equals(
+            env,
+            TOOLING_VERSION,
+            index_actions[0].substitutions["{tooling_version}"],
+        )
 
     asserts.true(
         env,

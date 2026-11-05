@@ -13,6 +13,12 @@
 
 module(name = "score_tooling")
 
+tooling_provenance = use_extension(
+    "//bazel/rules/rules_score/private:tooling_provenance.bzl",
+    "tooling_provenance",
+)
+use_repo(tooling_provenance, "tooling_provenance")
+
 ###############################################################################
 # Core Dependencies
 ###############################################################################
