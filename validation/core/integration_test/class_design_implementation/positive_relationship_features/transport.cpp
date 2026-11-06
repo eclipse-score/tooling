@@ -34,7 +34,9 @@ struct Context
 struct Worker : Base
 {
     Owned owned;
+    Owned* shared_owned;
     Borrowed* borrowed;
 
+    void use_owned(Owned& value);
     Result make_result(const Context& context);
 };

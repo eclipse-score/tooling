@@ -13,9 +13,9 @@
 
 @startuml
 
+struct Car
 struct Engine
-struct Manufacturer
 
-Engine *-- Manufacturer
+Car *-- Engine
 
 @enduml

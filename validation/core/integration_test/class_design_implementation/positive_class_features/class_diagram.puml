@@ -14,7 +14,7 @@
 @startuml
 
 package vehicle {
-    struct Manufacturer {
+    struct Piston {
         + id : int
     }
 
@@ -38,7 +38,7 @@ package vehicle {
         + {static} Reset() : void
     }
 
-    Manufacturer *-- Engine
+    Engine *-- Piston
 }
 
 @enduml
