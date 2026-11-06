@@ -24,6 +24,12 @@ struct Engine
     int select(int mode);
     int select(int mode, int force);
 
+    bool check();
+    bool check() const;
+    int& value();
+    const int& value() const;
+    bool empty() const noexcept;
+
     static Engine* Create(const char* name);
 
   private:

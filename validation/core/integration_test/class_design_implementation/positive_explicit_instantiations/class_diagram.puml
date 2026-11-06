@@ -15,11 +15,11 @@
 
 class "Box<typename T>" as Box {
     + value : T
-    + get() : T
+    + get() const : T
 }
 
 class "Contract<T*>" as Contract {
-    + empty() : bool
+    + empty() const : bool
 }
 
 class Plain

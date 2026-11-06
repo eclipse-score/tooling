@@ -210,6 +210,7 @@ pub enum MethodModifier {
     Destructor,
     Noexcept,
     Final,
+    Const,
 }
 
 impl MethodModifier {

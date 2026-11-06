@@ -12,12 +12,12 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  [Member] Method "empty()" from entity "amp.move_only_function" in the unit design not found in the C++ class implementation.
+  [Member] Method "empty() const" from entity "amp.move_only_function" in the unit design not found in the C++ class implementation.
     Entity                     : "amp.move_only_function"
-    Member                     : method "empty()"
+    Member                     : method "empty() const"
     Design source file         : "validation/core/integration_test/class_design_implementation/negative_partial_specialization_interface_mismatch/class_diagram.puml"
     Design source line         : 17
     Implementation entity      : "amp.move_only_function<ReturnType (*)(ArgTypes...), Capacity, Alignment>"
     Implementation source file : "validation/core/integration_test/class_design_implementation/negative_partial_specialization_interface_mismatch/implementation.cpp"
     Implementation source line : 29
-    Fix                        : Add method "empty()" to entity "amp.move_only_function" in the C++ class implementation, or remove it from the unit design.
+    Fix                        : Add method "empty() const" to entity "amp.move_only_function" in the C++ class implementation, or remove it from the unit design.

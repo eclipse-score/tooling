@@ -15,4 +15,5 @@
 
 struct A {
     void run();
+    void run() const;
 };

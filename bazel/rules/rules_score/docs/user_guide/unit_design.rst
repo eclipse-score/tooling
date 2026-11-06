@@ -80,7 +80,7 @@ class ``Foo``, and ``unit_2`` implements a class ``Bar`` that composes
     namespace unit_1 {
         class Foo <<final>>{
             --
-            + GetNumber() : uint8_t
+            + GetNumber() const : uint8_t
             + SetNumber(value : uint8_t) : void
         }
     }

@@ -40,6 +40,9 @@ pub(crate) fn render_signature(parts: &SignatureParts) -> String {
     }
     let rendered: Vec<String> = parts.parameters.iter().map(render_parameter).collect();
     out.push_str(&format!("({})", rendered.join(", ")));
+    if parts.modifiers.contains(&MethodModifier::Const) {
+        out.push_str(" const");
+    }
     if parts.modifiers.contains(&MethodModifier::Noexcept) {
         out.push_str(" noexcept");
     }

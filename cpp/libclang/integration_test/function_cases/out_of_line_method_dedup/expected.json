@@ -17,6 +17,24 @@
         "Builtin": "void"
       },
       "body": []
+    },
+    {
+      "id": {
+        "scope": {
+          "Type": {
+            "namespace": [],
+            "type_path": [
+              "A"
+            ]
+          }
+        },
+        "name": "run"
+      },
+      "kind": "Method",
+      "return_type": {
+        "Builtin": "void"
+      },
+      "body": []
     }
   ],
   "types": {
@@ -37,6 +55,18 @@
           "source_location": {
             "file": "cpp/libclang/integration_test/function_cases/out_of_line_method_dedup/functions.hpp",
             "line": 17
+          }
+        },
+        {
+          "name": "run",
+          "return_type": "void",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": ["Const"],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/function_cases/out_of_line_method_dedup/functions.hpp",
+            "line": 18
           }
         }
       ],

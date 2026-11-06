@@ -11,7 +11,7 @@
           "name": "getNameOffset",
           "return_type": "flatbuffers::Offset<flatbuffers::String>",
           "parameters": [],
-          "modifiers": [],
+          "modifiers": ["Const"],
           "template_parameters": null,
           "visibility": "public",
           "source_location": {

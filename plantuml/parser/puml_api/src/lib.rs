@@ -23,8 +23,9 @@
 //! Record names are compared like TRLC does (ignoring case and `_`); two items
 //! mapping to the same name are an error.
 //!
-//! The `const` qualifier is not part of a signature yet: const and non-const
-//! overloads of a method render identically and are merged.
+//! Trailing method `const` is rendered after the parameters and before `noexcept`.
+//! Const and non-const overloads retain distinct signatures in the same record;
+//! exact duplicate signatures are listed only once.
 
 mod collector;
 mod naming;

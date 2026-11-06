@@ -838,6 +838,7 @@ impl ClassResolver {
         let is_abstract = has_modifier(&m.modifiers, "abstract");
         let is_override = has_modifier(&m.modifiers, "override");
         let is_final = has_modifier(&m.modifiers, "final");
+        let is_const = has_modifier(&m.modifiers, "const");
         // A method that is abstract or overriding a base method is implicitly virtual in C++.
         let is_virtual = has_modifier(&m.modifiers, "virtual") || is_abstract || is_override;
 
@@ -862,6 +863,7 @@ impl ClassResolver {
                 (is_constructor, MethodModifier::Constructor),
                 (is_destructor, MethodModifier::Destructor),
                 (is_final, MethodModifier::Final),
+                (is_const, MethodModifier::Const),
             ]),
             source_location: m.source_location.clone(),
         }

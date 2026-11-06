@@ -142,7 +142,7 @@ impl ApiCollector {
                 );
             }
             Some(entry) if entry.origin == origin => {
-                // const and non-const overloads yield equal signatures.
+                // Preserve distinct overloads, but list exact duplicate signatures only once.
                 if !entry.method.signatures.contains(&signature) {
                     entry.method.signatures.push(signature);
                 }
@@ -251,6 +251,55 @@ mod tests {
 
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].signatures, vec!["A::f()".to_string()]);
+    }
+
+    #[test]
+    fn const_and_non_const_overloads_retain_distinct_signatures_in_one_record() {
+        let mut first = method("Check", 3);
+        first.return_type = Some("bool".to_string());
+        first.parameters = vec![param("int")];
+        let mut overload = first.clone();
+        overload.source_location = SourceLocation::new("d.puml", 4);
+        overload.modifiers = vec![MethodModifier::Const];
+        let model = diagram(vec![entity("A", vec![first, overload])], vec![]);
+
+        let items = collect(&model).unwrap();
+
+        assert_eq!(
+            items,
+            vec![ApiMethod {
+                name: "A_Check".to_string(),
+                signatures: vec![
+                    "bool A::Check(int)".to_string(),
+                    "bool A::Check(int) const".to_string(),
+                ],
+                diagram: "pkg/d.puml".to_string(),
+                line: 3,
+            }]
+        );
+    }
+
+    #[test]
+    fn const_overload_with_different_return_type_retains_trailing_const() {
+        let mut first = method("find", 3);
+        first.return_type = Some("iterator".to_string());
+        first.parameters = vec![param("const Key&")];
+        let mut overload = first.clone();
+        overload.source_location = SourceLocation::new("d.puml", 4);
+        overload.return_type = Some("const_iterator".to_string());
+        overload.modifiers = vec![MethodModifier::Const];
+        let model = diagram(vec![entity("A", vec![first, overload])], vec![]);
+
+        let items = collect(&model).unwrap();
+
+        assert_eq!(items.len(), 1);
+        assert_eq!(
+            items[0].signatures,
+            vec![
+                "iterator A::find(const Key&)".to_string(),
+                "const_iterator A::find(const Key&) const".to_string(),
+            ]
+        );
     }
 
     #[test]
