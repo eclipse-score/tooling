@@ -67,6 +67,17 @@
               "file": "",
               "line": 34
             }
+          },
+          {
+            "source": "sample.relationships.WorkerImpl",
+            "target": "sample.relationships.WorkerStatus",
+            "relation_type": "Composition",
+            "source_multiplicity": "1",
+            "target_multiplicity": "0..*",
+            "source_location": {
+              "file": "",
+              "line": 37
+            }
           }
         ],
         "source_location": {
@@ -105,6 +116,17 @@
             "source_location": {
               "file": "",
               "line": 35
+            }
+          },
+          {
+            "source": "sample.relationships.WorkerResponse",
+            "target": "sample.relationships.WorkerStatus",
+            "relation_type": "Aggregation",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 36
             }
           }
         ],
@@ -152,30 +174,7 @@
         "template_parameters": null,
         "enum_literals": [],
         "variables": [],
-        "relationships": [
-          {
-            "source": "sample.relationships.WorkerStatus",
-            "target": "sample.relationships.WorkerResponse",
-            "relation_type": "Aggregation",
-            "source_multiplicity": null,
-            "target_multiplicity": null,
-            "source_location": {
-              "file": "",
-              "line": 36
-            }
-          },
-          {
-            "source": "sample.relationships.WorkerStatus",
-            "target": "sample.relationships.WorkerImpl",
-            "relation_type": "Composition",
-            "source_multiplicity": "0..*",
-            "target_multiplicity": "1",
-            "source_location": {
-              "file": "",
-              "line": 37
-            }
-          }
-        ],
+        "relationships": [],
         "source_location": {
           "file": "plantuml/parser/integration_test/class_diagram/class_diagram_relationship_variants/class_diagram_relationship_variants.puml",
           "line": 31

@@ -114,19 +114,7 @@
           }
         ],
         "variables": [],
-        "relationships": [
-          {
-            "source": "core.Color",
-            "target": "core.geometry.Circle",
-            "relation_type": "Aggregation",
-            "source_multiplicity": null,
-            "target_multiplicity": null,
-            "source_location": {
-              "file": "",
-              "line": 118
-            }
-          }
-        ],
+        "relationships": [],
         "source_location": {
           "file": "plantuml/parser/integration_test/class_diagram/class_diagram_positive/class_diagram_positive.puml",
           "line": 35
@@ -178,17 +166,6 @@
             "source_location": {
               "file": "",
               "line": 114
-            }
-          },
-          {
-            "source": "core.Shape",
-            "target": "core.Canvas",
-            "relation_type": "Composition",
-            "source_multiplicity": null,
-            "target_multiplicity": null,
-            "source_location": {
-              "file": "",
-              "line": 116
             }
           }
         ],
@@ -283,6 +260,17 @@
         "relationships": [
           {
             "source": "core.Canvas",
+            "target": "core.Shape",
+            "relation_type": "Composition",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 116
+            }
+          },
+          {
+            "source": "core.Canvas",
             "target": "util.Logger",
             "relation_type": "Dependency",
             "source_multiplicity": null,
@@ -353,6 +341,17 @@
             "source_location": {
               "file": "",
               "line": 108
+            }
+          },
+          {
+            "source": "core.geometry.Circle",
+            "target": "core.Color",
+            "relation_type": "Aggregation",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": {
+              "file": "",
+              "line": 118
             }
           },
           {

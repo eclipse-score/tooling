@@ -16,6 +16,6 @@
 struct Wheel
 struct Car
 
-Wheel *-- Car
+Car *-- Wheel
 
 @enduml

@@ -11,10 +11,10 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-struct Manufacturer
+struct Engine
 {
 };
 
-struct Engine
+struct Car
 {
 };
